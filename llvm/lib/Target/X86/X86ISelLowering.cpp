@@ -4554,7 +4554,7 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
+static ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
@@ -4562,7 +4562,7 @@ static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
 }
 
 static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
-  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
+  ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
   return CNode->getConstVal();
@@ -18327,13 +18327,6 @@ unsigned X86TargetLowering::getGlobalWrapperKind(
   if (Subtarget.isPICStyleRIPRel() &&
       (OpFlags == X86II::MO_NO_FLAG || OpFlags == X86II::MO_COFFSTUB ||
        OpFlags == X86II::MO_DLLIMPORT))
-    return X86ISD::WrapperRIP;
-
-  // In the medium model, functions can always be referenced RIP-relatively,
-  // since they must be within 2GiB. This is also possible in non-PIC mode, and
-  // shorter than the 64-bit absolute immediate that would otherwise be emitted.
-  if (getTargetMachine().getCodeModel() == CodeModel::Medium &&
-      isa_and_nonnull<Function>(GV))
     return X86ISD::WrapperRIP;
 
   // GOTPCREL references must always use RIP.
@@ -40864,7 +40857,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
   SDValue BC = peekThroughOneUseBitcasts(Mask);
   EVT BCVT = BC.getValueType();
   auto *Load = dyn_cast<LoadSDNode>(BC);
-  if (!Load)
+  if (!Load || !Load->getBasePtr().hasOneUse())
     return false;
 
   const Constant *C = getTargetConstantFromNode(Load);
@@ -49953,18 +49946,17 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         }
         auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
                                ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
-          if (!UserUndefs.isSubsetOf(Undefs))
-            return false;
           for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
             if (Undefs[I])
               continue;
-            if (Bits[I] != UserBits[I])
+            if (UserUndefs[I] || Bits[I] != UserBits[I])
               return false;
           }
           return true;
         };
         // See if we are loading a constant that matches in the lower
         // bits of a longer constant (but from a different constant pool ptr).
+        EVT UserVT = User->getValueType(0);
         SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
         const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
         const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
@@ -49974,11 +49966,12 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
             APInt Undefs, UserUndefs;
             SmallVector<APInt> Bits, UserBits;
-            if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-                getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                              UserBits)) {
-              UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-              UserBits.truncate(Bits.size());
+            unsigned NumBits = std::min(RegVT.getScalarSizeInBits(),
+                                        UserVT.getScalarSizeInBits());
+            if (getTargetConstantBitsFromNode(SDValue(N, 0), NumBits, Undefs,
+                                              Bits) &&
+                getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
+                                              UserUndefs, UserBits)) {
               if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
                 SDValue Extract = extractSubVector(
                     SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());

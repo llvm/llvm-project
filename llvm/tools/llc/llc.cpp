@@ -307,15 +307,11 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 }
 
 struct LLCDiagnosticHandler : public DiagnosticHandler {
-  bool *HasError;
-  LLCDiagnosticHandler(bool *HasErrorPtr) : HasError(HasErrorPtr) {}
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    DiagnosticHandler::handleDiagnostics(DI);
     if (DI.getKind() == llvm::DK_SrcMgr) {
       const auto &DISM = cast<DiagnosticInfoSrcMgr>(DI);
       const SMDiagnostic &SMD = DISM.getSMDiag();
-
-      if (SMD.getKind() == SourceMgr::DK_Error)
-        *HasError = true;
 
       SMD.print(nullptr, errs());
 
@@ -325,9 +321,6 @@ struct LLCDiagnosticHandler : public DiagnosticHandler {
 
       return true;
     }
-
-    if (DI.getSeverity() == DS_Error)
-      *HasError = true;
 
     if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
       if (!Remark->isEnabled())
@@ -413,9 +406,7 @@ int main(int argc, char **argv) {
   Context.setDiscardValueNames(DiscardValueNames);
 
   // Set a diagnostic handler that doesn't exit on the first error
-  bool HasError = false;
-  Context.setDiagnosticHandler(
-      std::make_unique<LLCDiagnosticHandler>(&HasError));
+  Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
@@ -757,9 +748,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     PM.run(*M);
 
-    auto HasError =
-        ((const LLCDiagnosticHandler *)(Context.getDiagHandlerPtr()))->HasError;
-    if (*HasError)
+    if (Context.getDiagHandlerPtr()->HasErrors)
       return 1;
 
     // Compare the two outputs and make sure they're the same

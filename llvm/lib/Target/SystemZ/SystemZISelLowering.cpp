@@ -1362,6 +1362,16 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   report_fatal_error("Invalid register name global variable");
 }
 
+Register SystemZTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return Subtarget.isTargetXPLINK64() ? SystemZ::R1D : SystemZ::R6D;
+}
+
+Register SystemZTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return Subtarget.isTargetXPLINK64() ? SystemZ::R2D : SystemZ::R7D;
+}
+
 void SystemZTargetLowering::LowerAsmOperandForConstraint(
     SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
@@ -1427,24 +1437,6 @@ bool SystemZTargetLowering::allowTruncateForTailCall(Type *FromType,
 
 bool SystemZTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
-}
-
-// We do not yet support 128-bit single-element vector types.  If the user
-// attempts to use such types as function argument or return type, prefer
-// to error out instead of emitting code violating the ABI.
-static void VerifyVectorType(MVT VT, EVT ArgVT) {
-  if (ArgVT.isVector() && !VT.isVector())
-    report_fatal_error("Unsupported vector argument or return type");
-}
-
-static void VerifyVectorTypes(const SmallVectorImpl<ISD::InputArg> &Ins) {
-  for (unsigned i = 0; i < Ins.size(); ++i)
-    VerifyVectorType(Ins[i].VT, Ins[i].ArgVT);
-}
-
-static void VerifyVectorTypes(const SmallVectorImpl<ISD::OutputArg> &Outs) {
-  for (unsigned i = 0; i < Outs.size(); ++i)
-    VerifyVectorType(Outs[i].VT, Outs[i].ArgVT);
 }
 
 // Value is a value that has been passed to us in the location described by VA
@@ -1585,10 +1577,6 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       MF.getInfo<SystemZMachineFunctionInfo>();
   auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
-
-  // Detect unsupported vector argument types.
-  if (Subtarget.hasVector())
-    VerifyVectorTypes(Ins);
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1890,12 +1878,6 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (Subtarget.isTargetXPLINK64())
     IsTailCall = false;
 
-  // Detect unsupported vector argument and return types.
-  if (Subtarget.hasVector()) {
-    VerifyVectorTypes(Outs);
-    VerifyVectorTypes(Ins);
-  }
-
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
@@ -2139,10 +2121,6 @@ CanLowerReturn(CallingConv::ID CallConv,
                MachineFunction &MF, bool isVarArg,
                const SmallVectorImpl<ISD::OutputArg> &Outs,
                LLVMContext &Context) const {
-  // Detect unsupported vector return types.
-  if (Subtarget.hasVector())
-    VerifyVectorTypes(Outs);
-
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
@@ -2161,10 +2139,6 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-
-  // Detect unsupported vector return types.
-  if (Subtarget.hasVector())
-    VerifyVectorTypes(Outs);
 
   // Assign locations to each returned value.
   SmallVector<CCValAssign, 16> RetLocs;

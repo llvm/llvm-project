@@ -418,6 +418,12 @@ private:
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ
 
+    // The frontend that generates the memory annotation structures should
+    // validate that the address to map the snippet in at is a multiple of
+    // the page size. Assert that this is true here.
+    assert(Key.SnippetAddress % getpagesize() == 0 &&
+           "The snippet address needs to be aligned to a page boundary.");
+
     size_t FunctionDataCopySize = this->Function.FunctionBytes.size();
     void *MapAddress = NULL;
     int MapFlags = MAP_PRIVATE | MAP_ANONYMOUS;

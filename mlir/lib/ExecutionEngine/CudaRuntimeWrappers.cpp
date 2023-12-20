@@ -487,8 +487,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
 
   globalStrides[0] = globalDim[0] * elementSizeInBytes[tensorDataType];
   for (int r = 1; r < tensorRank - 1; r++)
-    globalStrides[r] = globalStrides[r - 1] * globalDim[1] *
-                       elementSizeInBytes[tensorDataType];
+    globalStrides[r] = globalStrides[r - 1] * globalDim[r];
 
   ScopedContext scopedContext;
   mgpuTensorMapEncodeTiled(&tensorMap, tensorDataType, tensorRank32,

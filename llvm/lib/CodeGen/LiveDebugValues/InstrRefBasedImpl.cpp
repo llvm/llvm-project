@@ -1375,15 +1375,8 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   if (!MI.isDebugValue())
     return false;
 
-  const DILocalVariable *Var = MI.getDebugVariable();
-  const DIExpression *Expr = MI.getDebugExpression();
-  const DILocation *DebugLoc = MI.getDebugLoc();
-  const DILocation *InlinedAt = DebugLoc->getInlinedAt();
-  assert(Var->isValidLocationForIntrinsic(DebugLoc) &&
+  assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
          "Expected inlined-at fields to agree");
-
-  DebugVariable V(Var, Expr, InlinedAt);
-  DbgValueProperties Properties(MI);
 
   // If there are no instructions in this lexical scope, do no location tracking
   // at all, this variable shouldn't get a legitimate location range.
@@ -1417,7 +1410,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         }
       }
     }
-    VTracker->defVar(MI, Properties, DebugOps);
+    VTracker->defVar(MI, DbgValueProperties(MI), DebugOps);
   }
 
   // If performing final tracking of transfers, report this variable definition

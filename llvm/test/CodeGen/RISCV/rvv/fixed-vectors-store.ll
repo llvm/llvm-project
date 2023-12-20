@@ -244,7 +244,7 @@ define void @exact_vlen_i32_m1(ptr %p) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i32> zeroinitializer, ptr %p
   ret void
@@ -255,7 +255,7 @@ define void @exact_vlen_i8_m1(ptr %p) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <16 x i8> zeroinitializer, ptr %p
   ret void
@@ -266,7 +266,7 @@ define void @exact_vlen_i8_m2(ptr %p) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <32 x i8> zeroinitializer, ptr %p
   ret void
@@ -277,7 +277,7 @@ define void @exact_vlen_i8_m8(ptr %p) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <128 x i8> zeroinitializer, ptr %p
   ret void
@@ -288,7 +288,7 @@ define void @exact_vlen_i64_m8(ptr %p) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <16 x i64> zeroinitializer, ptr %p
   ret void

@@ -28,11 +28,9 @@
 namespace llvm {
 
 class GISelChangeObserver;
-class APFloat;
 class APInt;
 class ConstantFP;
 class GPtrAdd;
-class GStore;
 class GZExtLoad;
 class MachineIRBuilder;
 class MachineInstrBuilder;
