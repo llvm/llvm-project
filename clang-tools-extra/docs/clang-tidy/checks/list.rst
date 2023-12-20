@@ -380,6 +380,7 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-builtin-literals <readability/use-builtin-literals>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
 

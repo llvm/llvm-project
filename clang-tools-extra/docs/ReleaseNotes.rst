@@ -218,6 +218,12 @@ New checks
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
 
+- New :doc:`readability-use-builtin-literals
+  <clang-tidy/checks/readability/use-builtin-literals>` check.
+
+  Finds literals explicitly casted to a type that could be expressed using
+  builtin prefixes or suffixes.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
