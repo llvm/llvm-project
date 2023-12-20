@@ -376,7 +376,7 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // _ZGV<isa><mask><vlen><parameters>_<scalarname>.
   StringRef VectorName = MangledName;
 
-  // Parse the fixed size part of the manled name
+  // Parse the fixed size part of the mangled name
   if (!MangledName.consume_front("_ZGV"))
     return std::nullopt;
 

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
+#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -44,6 +45,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "vector-to-vector"
@@ -1578,6 +1580,60 @@ struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
+/// Example:
+/// ```
+/// %a = vector.reduction <add> %x : vector<2xf32> into f32
+/// ```
+/// is transformed into:
+/// ```
+/// %y = vector.extract %x[0] : f32 from vector<2xf32>
+/// %z = vector.extract %x[1] : f32 from vector<2xf32>
+/// %a = arith.addf %y, %z : f32
+/// ```
+struct BreakDownVectorReduction final : OpRewritePattern<vector::ReductionOp> {
+  BreakDownVectorReduction(MLIRContext *context,
+                           unsigned maxNumElementsToExtract,
+                           PatternBenefit benefit)
+      : OpRewritePattern(context, benefit),
+        maxNumElementsToExtract(maxNumElementsToExtract) {}
+
+  LogicalResult matchAndRewrite(vector::ReductionOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType type = op.getSourceVectorType();
+    if (type.isScalable() || op.isMasked())
+      return failure();
+    assert(type.getRank() == 1 && "Expected a 1-d vector");
+
+    int64_t numElems = type.getNumElements();
+    if (numElems > maxNumElementsToExtract) {
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv("has too many vector elements ({0}) to break down "
+                            "(max allowed: {1})",
+                            numElems, maxNumElementsToExtract));
+    }
+
+    Location loc = op.getLoc();
+    SmallVector<Value> extracted(numElems, nullptr);
+    for (auto [idx, extractedElem] : llvm::enumerate(extracted))
+      extractedElem = rewriter.create<vector::ExtractOp>(
+          loc, op.getVector(), static_cast<int64_t>(idx));
+
+    Value res = extracted.front();
+    for (auto extractedElem : llvm::drop_begin(extracted))
+      res = vector::makeArithReduction(rewriter, loc, op.getKind(), res,
+                                       extractedElem, op.getFastmathAttr());
+    if (Value acc = op.getAcc())
+      res = vector::makeArithReduction(rewriter, loc, op.getKind(), res, acc,
+                                       op.getFastmathAttr());
+
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+
+private:
+  unsigned maxNumElementsToExtract = 0;
+};
+
 } // namespace
 
 void mlir::vector::populateFoldArithExtensionPatterns(
@@ -1654,6 +1710,13 @@ void mlir::vector::populateChainedVectorReductionFoldingPatterns(
   patterns.add<ChainedReduction>(patterns.getContext(), benefit);
   patterns.add<ReduceRedundantZero>(patterns.getContext(),
                                     PatternBenefit(benefit.getBenefit() + 1));
+}
+
+void mlir::vector::populateBreakDownVectorReductionPatterns(
+    RewritePatternSet &patterns, unsigned maxNumElementsToExtract,
+    PatternBenefit benefit) {
+  patterns.add<BreakDownVectorReduction>(patterns.getContext(),
+                                         maxNumElementsToExtract, benefit);
 }
 
 //===----------------------------------------------------------------------===//

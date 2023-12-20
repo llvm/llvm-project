@@ -1566,7 +1566,6 @@ void LazyValueInfoImpl::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 
 bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
   Info.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   if (auto *Impl = Info.getImpl())
     Impl->clear();
@@ -1627,9 +1626,8 @@ void LazyValueInfoWrapperPass::releaseMemory() { Info.releaseMemory(); }
 LazyValueInfo LazyValueAnalysis::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
-  auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
 
-  return LazyValueInfo(&AC, &F.getParent()->getDataLayout(), &TLI);
+  return LazyValueInfo(&AC, &F.getParent()->getDataLayout());
 }
 
 /// Returns true if we can statically tell that this value will never be a
@@ -1714,11 +1712,11 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
 
 static LazyValueInfo::Tristate
 getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
-                   const DataLayout &DL, TargetLibraryInfo *TLI) {
+                   const DataLayout &DL) {
   // If we know the value is a constant, evaluate the conditional.
   Constant *Res = nullptr;
   if (Val.isConstant()) {
-    Res = ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL, TLI);
+    Res = ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL);
     if (ConstantInt *ResCI = dyn_cast_or_null<ConstantInt>(Res))
       return ResCI->isZero() ? LazyValueInfo::False : LazyValueInfo::True;
     return LazyValueInfo::Unknown;
@@ -1759,15 +1757,13 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
     if (Pred == ICmpInst::ICMP_EQ) {
       // !C1 == C -> false iff C1 == C.
       Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
-                                            Val.getNotConstant(), C, DL,
-                                            TLI);
+                                            Val.getNotConstant(), C, DL);
       if (Res && Res->isNullValue())
         return LazyValueInfo::False;
     } else if (Pred == ICmpInst::ICMP_NE) {
       // !C1 != C -> true iff C1 == C.
       Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
-                                            Val.getNotConstant(), C, DL,
-                                            TLI);
+                                            Val.getNotConstant(), C, DL);
       if (Res && Res->isNullValue())
         return LazyValueInfo::True;
     }
@@ -1787,7 +1783,7 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
   ValueLatticeElement Result =
       getOrCreateImpl(M).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
-  return getPredicateResult(Pred, C, Result, M->getDataLayout(), TLI);
+  return getPredicateResult(Pred, C, Result, M->getDataLayout());
 }
 
 LazyValueInfo::Tristate
@@ -1811,7 +1807,7 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
   ValueLatticeElement Result =
       UseBlockValue ? Impl.getValueInBlock(V, CxtI->getParent(), CxtI)
                     : Impl.getValueAt(V, CxtI);
-  Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
+  Tristate Ret = getPredicateResult(Pred, C, Result, DL);
   if (Ret != Unknown)
     return Ret;
 
