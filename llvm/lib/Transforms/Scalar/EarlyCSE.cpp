@@ -1744,6 +1744,33 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           // fallthrough - we can exploit information about this store
         }
 
+        // For loading from pointers we use two load instructions, one for
+        // loading the address and then another one to load the value from the
+        // address.
+        //   0 = load p
+        //   x = load 0
+        //   ...
+        //   store x, 0
+        // In order to be able to remove redundant load/store of this pattern,
+        // before we update the previously stored value load instruction in the
+        // hash table we should update the generation of the pointer load as
+        // well.
+        LoadValue PrevLoad = AvailableLoads.lookup(MemInst.getPointerOperand());
+        if (PrevLoad.DefInst != nullptr) {
+          LoadInst *PtrLoad = dyn_cast<LoadInst>(MemInst.getPointerOperand());
+          if (PtrLoad != nullptr) {
+            ParseMemoryInst PtrMemInst(PtrLoad, TTI);
+            LoadValue PtrLoadVal =
+                AvailableLoads.lookup(PtrMemInst.getPointerOperand());
+            if (PtrLoadVal.DefInst != nullptr)
+              AvailableLoads.insert(PtrMemInst.getPointerOperand(),
+                                    LoadValue(PtrLoad, CurrentGeneration,
+                                              PtrMemInst.getMatchingId(),
+                                              PtrMemInst.isAtomic(),
+                                              PtrMemInst.isLoad()));
+          }
+        }
+
         // Okay, we just invalidated anything we knew about loaded values.  Try
         // to salvage *something* by remembering that the stored value is a live
         // version of the pointer.  It is safe to forward from volatile stores
