@@ -345,12 +345,14 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   }
 
   // 4. Expand from the padded result to the stripMinedShape.
-  // Check if any dims are not factorable.  A dim is factorable if the expansion
-  // requires at most dynamnic dim
-  RankedTensorType expandDestType = RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
+  RankedTensorType expandDestType =
+      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   SmallVector<int64_t> transpPerm =
       invertPermutationVector(packedToStripMinedShapePerm);
   Operation *reshapeOp;
+  // Check if any dims are not factorable and thus need a `tensor.reshape`
+  // instead of a `tensor.expand_shape` op. A dim is factorable if the expansion
+  // requires at most dynamnic dim
   if (llvm::any_of(packingMetadata.reassociations,
                    [&](const auto &rAssoc) -> bool {
                      return llvm::count_if(rAssoc, [&](int64_t r) {
@@ -360,7 +362,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     SmallVector<OpFoldResult> sizes =
         tensor::getMixedSizes(rewriter, loc, packOp.getDest());
     applyPermutationToVector(sizes, transpPerm);
-    // Create a `tensor` of `index` types for the `shape` operand of `tensor.reshape`
+    // Create a `tensor` of `index` types for the `shape` operand of
+    // `tensor.reshape`
     Value shapeInitTensor = rewriter.create<tensor::EmptyOp>(
         loc,
         RankedTensorType::get({expandDestType.getRank()},
