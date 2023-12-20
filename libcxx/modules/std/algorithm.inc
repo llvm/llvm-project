@@ -41,12 +41,12 @@ export namespace std {
   }
 
   // [alg.contains], contains
-#if 0
   namespace ranges {
     using std::ranges::contains;
+#if 0
     using std::ranges::contains_subrange;
-  } // namespace ranges
 #endif
+  } // namespace ranges
 
   // [alg.foreach], for each
   using std::for_each;
