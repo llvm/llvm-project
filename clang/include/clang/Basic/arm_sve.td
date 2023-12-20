@@ -2049,8 +2049,8 @@ def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}_{3}]", "ddhhi", "f",  MergeNone
 }
 
 let TargetGuard = "sve2p1|sme2" in {
-def SVSCLAMP : SInst<"svclamp[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sclamp", [IsStreamingCompatible], []>;
-def SVUCLAMP : SInst<"svclamp[_{d}]", "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uclamp", [IsStreamingCompatible], []>;
+def SVSCLAMP : SInst<"svclamp[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sclamp", [IsStreamingOrSVE2p1], []>;
+def SVUCLAMP : SInst<"svclamp[_{d}]", "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uclamp", [IsStreamingOrSVE2p1], []>;
 
 defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUlbhfd", "aarch64_sve_revd">;
 }
