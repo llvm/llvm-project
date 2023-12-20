@@ -419,6 +419,31 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func @test_vectorize_unpack
+func.func @test_vectorize_unpack(%0 : tensor<7x1136x16x16xf32>) -> tensor<100x18176xf32>  {
+    // CHECK %[[c0:.*]] = arith.constant 0 : index
+    // CHECK: %[[tr0:.*]] = vector.mask %[[m0:.*]] {{.*}} vector.transfer_read %{{.*}} : tensor<7x1136x16x16xf32>, vector<7x1136x16x16xf32> } : vector<7x1136x16x16xi1> -> vector<7x1136x16x16xf32>
+    // CHECK: %[[trans0:.*]] = vector.transpose %[[tr0]], [0, 2, 1, 3] : vector<7x1136x16x16xf32> to vector<7x16x1136x16xf32>
+    // CHECK: %[[sc0:.*]] = vector.shape_cast %[[trans0]]  : vector<7x16x1136x16xf32> to vector<112x18176xf32>
+    // CHECK: %[[empt0:.*]] = tensor.empty() : tensor<100x18176xf32>
+    // CHECK: %[[tw0:.*]] = vector.transfer_write %[[sc0]], %[[empt0]]
+    // CHECK: return %[[tw0]]
+    %8 = tensor.empty() : tensor<100x18176xf32>
+    %unpack = tensor.unpack %0 inner_dims_pos = [0, 1] inner_tiles = [16, 16] into %8 : tensor<7x1136x16x16xf32> -> tensor<100x18176xf32>
+    return %unpack : tensor<100x18176xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @test_masked_vectorize_pad
 func.func @test_masked_vectorize_pad(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index)
