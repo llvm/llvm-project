@@ -58,8 +58,8 @@ struct ExpectedHint {
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
   if (arg.label != ExpectedView.trim(" ") ||
-      arg.paddingLeft != ExpectedView.startswith(" ") ||
-      arg.paddingRight != ExpectedView.endswith(" ")) {
+      arg.paddingLeft != ExpectedView.starts_with(" ") ||
+      arg.paddingRight != ExpectedView.ends_with(" ")) {
     *result_listener << "label is '" << arg.label << "'";
     return false;
   }

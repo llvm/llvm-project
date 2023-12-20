@@ -138,11 +138,18 @@ STRIP-DEBUG-NOT: -debug:dwarf
 RUN: ld.lld -### -m i386pep foo.o -pdb out.pdb 2>&1 | FileCheck -check-prefix PDB %s
 RUN: ld.lld -### -m i386pep foo.o -pdb=out.pdb 2>&1 | FileCheck -check-prefix PDB %s
 PDB: -debug -pdb:out.pdb
-PDB-NOT: -debug:dwarf
+PDB-NOT: -debug:
 
 RUN: ld.lld -### -m i386pep foo.o -pdb= 2>&1 | FileCheck -check-prefix PDB-DEFAULT %s
 PDB-DEFAULT: -debug
 PDB-DEFAULT-NOT: -pdb:{{.*}}
+PDB-DEFAULT-NOT: -debug:
+
+RUN: ld.lld -### -m i386pep foo.o -pdb= -S 2>&1 | FileCheck -check-prefix PDB-NODWARF %s
+PDB-NODWARF: -debug -debug:nodwarf,symtab
+
+RUN: ld.lld -### -m i386pep foo.o -pdb= -s 2>&1 | FileCheck -check-prefix PDB-NODWARF-NOSYMTAB %s
+PDB-NODWARF-NOSYMTAB: -debug -debug:nodwarf,nosymtab
 
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware 2>&1 | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware

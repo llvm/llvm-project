@@ -90,9 +90,9 @@ public:
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                   llvm::StringRef TyName,
                                    llvm::hlsl::ResourceClass RC,
                                    llvm::hlsl::ResourceKind RK, bool IsROV,
+                                   llvm::hlsl::ElementType ET,
                                    BufferResBinding &Binding);
   void addConstant(VarDecl *D, Buffer &CB);
   void addBufferDecls(const DeclContext *DC, Buffer &CB);

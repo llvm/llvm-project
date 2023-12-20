@@ -46,6 +46,9 @@ void test_algorithms() {
   std::clamp(2, 1, 3);
   std::clamp(2, 3, 1, std::greater<int>());
 #endif
+#if TEST_STD_VER >= 23
+  std::ranges::contains(arr, arr + 1, 1);
+#endif
   std::count_if(std::begin(arr), std::end(arr), P());
   std::count(std::begin(arr), std::end(arr), 1);
   std::equal_range(std::begin(arr), std::end(arr), 1);

@@ -25,9 +25,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
-    _InputIter
-    next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _InputIter
+next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
   _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
                                "Attempt to next(it, n) with negative n on a non-bidirectional iterator");
 
@@ -44,15 +43,13 @@ namespace __next {
 
 struct __fn {
   template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr _Ip operator()(_Ip __x) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
     ++__x;
     return __x;
   }
 
   template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
     ranges::advance(__x, __n);
     return __x;
   }
@@ -73,7 +70,7 @@ struct __fn {
 } // namespace __next
 
 inline namespace __cpo {
-  inline constexpr auto next = __next::__fn{};
+inline constexpr auto next = __next::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
