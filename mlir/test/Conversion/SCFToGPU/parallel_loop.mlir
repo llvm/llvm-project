@@ -232,9 +232,9 @@ module {
         %19 = memref.load %16[%arg5, %arg6] : memref<?x?xf32, strided<[?, ?], offset: ?>>
         %20 = arith.addf %17, %18 : f32
         memref.store %20, %16[%arg5, %arg6] : memref<?x?xf32, strided<[?, ?], offset: ?>>
-        scf.yield
+        scf.reduce
       } {mapping = [#gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = thread_x>, #gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = thread_y>]}
-      scf.yield
+      scf.reduce
     } {mapping = [#gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = block_x>, #gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = block_y>]}
     return
   }
@@ -404,9 +404,9 @@ func.func @step_invariant() {
       %1 = memref.load %alloc_0[%arg0, %arg1] : memref<1x1xf64>
       %2 = arith.addf %0, %1 : f64
       memref.store %2, %alloc[%arg0, %arg1] : memref<1x1xf64>
-      scf.yield
+      scf.reduce
     } {mapping = [#gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
-    scf.yield
+    scf.reduce
   } {mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
   memref.dealloc %alloc_1 : memref<1x1xf64>
   memref.dealloc %alloc_0 : memref<1x1xf64>
