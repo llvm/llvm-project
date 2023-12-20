@@ -94,10 +94,10 @@
 // CHECK-SAME:  : vector<2xf32>, vector<3xf32>
 //
 //      CHECK: return %[[c3]] : vector<2x3xf32>
-func.func @matmul(%arg0: vector<2x4xf32>,
-                  %arg1: vector<4x3xf32>,
-                  %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
-  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+func.func @matmul(%A: vector<2x4xf32>,
+                  %B: vector<4x3xf32>,
+                  %C: vector<2x3xf32>) -> vector<2x3xf32> {
+  %0 = vector.contract #matmat_trait_0 %A, %B, %C
     : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
@@ -130,10 +130,10 @@ func.func @matmul(%arg0: vector<2x4xf32>,
 // CHECK-SAME:  : vector<2xf32>, vector<[3]xf32>
 //
 //      CHECK: return %[[c3]] : vector<2x[3]xf32>
-func.func @matmul_scalable(%arg0: vector<2x4xf32>,
-                           %arg1: vector<4x[3]xf32>,
-                           %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
-  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+func.func @matmul_scalable(%A: vector<2x4xf32>,
+                           %B: vector<4x[3]xf32>,
+                           %C: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
+  %0 = vector.contract #matmat_trait_0 %A, %B, %C
     : vector<2x4xf32>, vector<4x[3]xf32> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
 }
@@ -155,11 +155,11 @@ func.func @matmul_scalable(%arg0: vector<2x4xf32>,
 // CHECK:         %[[T_MASK_R4:.*]] = vector.extract %[[T_MASK]][4] : vector<3x7xi1> from vector<5x3x7xi1>
 // CHECK:         %{{.*}} = vector.mask %[[T_MASK_R4]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<7xf32> } : vector<3x7xi1> -> vector<3x7xf32>
 
-func.func @masked_matmul(%arg0: vector<3x5xf32>,
-                         %arg1: vector<5x7xf32>,
-                         %arg2: vector<3x7xf32>,
+func.func @masked_matmul(%A: vector<3x5xf32>,
+                         %B: vector<5x7xf32>,
+                         %C: vector<3x7xf32>,
                          %m : vector<3x7x5xi1>) -> vector<3x7xf32> {
-  %0 = vector.mask %m { vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+  %0 = vector.mask %m { vector.contract #matmat_trait_0 %A, %B, %C
   : vector<3x5xf32>, vector<5x7xf32> into vector<3x7xf32> } : vector<3x7x5xi1> -> vector<3x7xf32>
   return %0 : vector<3x7xf32>
 }
@@ -181,11 +181,11 @@ func.func @masked_matmul(%arg0: vector<3x5xf32>,
 // CHECK:         %[[T_MASK_R4:.*]] = vector.extract %[[T_MASK]][4] : vector<3x[7]xi1> from vector<5x3x[7]xi1>
 // CHECK:         %{{.*}} = vector.mask %[[T_MASK_R4]] { vector.outerproduct %{{.*}} {kind = #vector.kind<add>} : vector<3xf32>, vector<[7]xf32> } : vector<3x[7]xi1> -> vector<3x[7]xf32>
 
-func.func @masked_matmul_scalable(%arg0: vector<3x5xf32>,
-                                  %arg1: vector<5x[7]xf32>,
-                                  %arg2: vector<3x[7]xf32>,
+func.func @masked_matmul_scalable(%A: vector<3x5xf32>,
+                                  %B: vector<5x[7]xf32>,
+                                  %C: vector<3x[7]xf32>,
                                   %m : vector<3x[7]x5xi1>) -> vector<3x[7]xf32> {
-  %0 = vector.mask %m { vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+  %0 = vector.mask %m { vector.contract #matmat_trait_0 %A, %B, %C
   : vector<3x5xf32>, vector<5x[7]xf32> into vector<3x[7]xf32> } : vector<3x[7]x5xi1> -> vector<3x[7]xf32>
   return %0 : vector<3x[7]xf32>
 }
@@ -201,11 +201,11 @@ func.func @masked_matmul_scalable(%arg0: vector<3x5xf32>,
 //      CHECK: %[[b1:.*]] = arith.extf %[[b0]] : vector<3xf16> to vector<3xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a1]], %[[b1]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x3xf32>
-func.func @matmul_mixed(%arg0: vector<2x1xf16>,
-                          %arg1: vector<1x3xf16>,
-                          %arg2: vector<2x3xf32>) -> vector<2x3xf32>
+func.func @matmul_mixed(%A: vector<2x1xf16>,
+                        %B: vector<1x3xf16>,
+                        %C: vector<2x3xf32>) -> vector<2x3xf32>
 {
-  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_0 %A, %B, %C
     : vector<2x1xf16>, vector<1x3xf16> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
@@ -221,11 +221,11 @@ func.func @matmul_mixed(%arg0: vector<2x1xf16>,
 //      CHECK: %[[b1:.*]] = arith.extf %[[b0]] : vector<[3]xf16> to vector<[3]xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a1]], %[[b1]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x[3]xf32>
-func.func @matmul_mixed_scalable(%arg0: vector<2x1xf16>,
-                                   %arg1: vector<1x[3]xf16>,
-                                   %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+func.func @matmul_mixed_scalable(%A: vector<2x1xf16>,
+                                 %B: vector<1x[3]xf16>,
+                                 %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
 {
-  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_0 %A, %B, %C
     : vector<2x1xf16>, vector<1x[3]xf16> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
 }
@@ -243,11 +243,11 @@ func.func @matmul_mixed_scalable(%arg0: vector<2x1xf16>,
 //      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<3xf32> from vector<1x3xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x3xf32>
-func.func @matmul_1(%arg0: vector<2x1xf32>,
-                    %arg1: vector<3x1xf32>,
-                    %arg2: vector<2x3xf32>) -> vector<2x3xf32>
+func.func @matmul_1(%A: vector<2x1xf32>,
+                    %B: vector<3x1xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32>
 {
-  %0 = vector.contract #matmat_trait_1 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_1 %A, %B, %C
     : vector<2x1xf32>, vector<3x1xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
@@ -262,11 +262,11 @@ func.func @matmul_1(%arg0: vector<2x1xf32>,
 //      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<[3]xf32> from vector<1x[3]xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x[3]xf32>
-func.func @matmul_1_scalable(%arg0: vector<2x1xf32>,
-                             %arg1: vector<[3]x1xf32>,
-                             %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+func.func @matmul_1_scalable(%A: vector<2x1xf32>,
+                             %B: vector<[3]x1xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
 {
-  %0 = vector.contract #matmat_trait_1 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_1 %A, %B, %C
     : vector<2x1xf32>, vector<[3]x1xf32> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
 }
@@ -282,11 +282,11 @@ func.func @matmul_1_scalable(%arg0: vector<2x1xf32>,
 //      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<3xf32> from vector<1x3xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x3xf32>
-func.func @matmul_2(%arg0: vector<1x2xf32>,
-                    %arg1: vector<1x3xf32>,
-                    %arg2: vector<2x3xf32>) -> vector<2x3xf32>
+func.func @matmul_2(%A: vector<1x2xf32>,
+                    %B: vector<1x3xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32>
 {
-  %0 = vector.contract #matmat_trait_2 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_2 %A, %B, %C
     : vector<1x2xf32>, vector<1x3xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
@@ -299,11 +299,11 @@ func.func @matmul_2(%arg0: vector<1x2xf32>,
 //      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<[3]xf32> from vector<1x[3]xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x[3]xf32>
-func.func @matmul_2_scalable(%arg0: vector<1x2xf32>,
-                             %arg1: vector<1x[3]xf32>,
-                             %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+func.func @matmul_2_scalable(%A: vector<1x2xf32>,
+                             %B: vector<1x[3]xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
 {
-  %0 = vector.contract #matmat_trait_2 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_2 %A, %B, %C
     : vector<1x2xf32>, vector<1x[3]xf32> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
 }
@@ -320,11 +320,11 @@ func.func @matmul_2_scalable(%arg0: vector<1x2xf32>,
 //      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<3xf32> from vector<1x3xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x3xf32>
-func.func @matmul_3(%arg0: vector<1x2xf32>,
-                    %arg1: vector<3x1xf32>,
-                    %arg2: vector<2x3xf32>) -> vector<2x3xf32>
+func.func @matmul_3(%A: vector<1x2xf32>,
+                    %B: vector<3x1xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32>
 {
-  %0 = vector.contract #matmat_trait_3 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_3 %A, %B, %C
     : vector<1x2xf32>, vector<3x1xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
 }
@@ -338,11 +338,11 @@ func.func @matmul_3(%arg0: vector<1x2xf32>,
 //      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<[3]xf32> from vector<1x[3]xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<2x[3]xf32>
-func.func @matmul_3_scalable(%arg0: vector<1x2xf32>,
-                             %arg1: vector<[3]x1xf32>,
-                             %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+func.func @matmul_3_scalable(%A: vector<1x2xf32>,
+                             %B: vector<[3]x1xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
 {
-  %0 = vector.contract #matmat_trait_3 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_3 %A, %B, %C
     : vector<1x2xf32>, vector<[3]x1xf32> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
 }
@@ -359,11 +359,11 @@ func.func @matmul_3_scalable(%arg0: vector<1x2xf32>,
 //      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<2xf32> from vector<1x2xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<3x2xf32>
-func.func @matmul_4(%arg0: vector<2x1xf32>,
-                    %arg1: vector<1x3xf32>,
-                    %arg2: vector<3x2xf32>) -> vector<3x2xf32>
+func.func @matmul_4(%A: vector<2x1xf32>,
+                    %B: vector<1x3xf32>,
+                    %C: vector<3x2xf32>) -> vector<3x2xf32>
 {
-  %0 = vector.contract #matmat_trait_4 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_4 %A, %B, %C
     : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
   return %0 : vector<3x2xf32>
 }
@@ -377,11 +377,11 @@ func.func @matmul_4(%arg0: vector<2x1xf32>,
 //      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<[2]xf32> from vector<1x[2]xf32>
 //      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
 //      CHECK: return %[[c0]] : vector<3x[2]xf32>
-func.func @matmul_4_scalable(%arg0: vector<[2]x1xf32>,
-                             %arg1: vector<1x3xf32>,
-                             %arg2: vector<3x[2]xf32>) -> vector<3x[2]xf32>
+func.func @matmul_4_scalable(%A: vector<[2]x1xf32>,
+                             %B: vector<1x3xf32>,
+                             %C: vector<3x[2]xf32>) -> vector<3x[2]xf32>
 {
-  %0 = vector.contract #matmat_trait_4 %arg0, %arg1, %arg2
+  %0 = vector.contract #matmat_trait_4 %A, %B, %C
     : vector<[2]x1xf32>, vector<1x3xf32> into vector<3x[2]xf32>
   return %0 : vector<3x[2]xf32>
 }
