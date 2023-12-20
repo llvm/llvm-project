@@ -169,11 +169,17 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32bf16, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
@@ -185,10 +191,15 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16bf16, Expand);
 
   setOperationAction(ISD::STORE, MVT::f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::f32, MVT::i32);
