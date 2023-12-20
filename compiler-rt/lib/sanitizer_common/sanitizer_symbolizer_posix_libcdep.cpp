@@ -347,7 +347,7 @@ class InternalSymbolizer final : public SymbolizerTool {
       return nullptr;
     CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
     CHECK(__sanitizer_symbolize_set_inline_frames(
-          common_flags()->symbolize_inline_frames));
+        common_flags()->symbolize_inline_frames));
     return new (*alloc) InternalSymbolizer();
   }
 
@@ -377,9 +377,7 @@ class InternalSymbolizer final : public SymbolizerTool {
     return result;
   }
 
-  void Flush() override {
-    __sanitizer_symbolize_flush();
-  }
+  void Flush() override { __sanitizer_symbolize_flush(); }
 
   const char *Demangle(const char *name) override {
     if (__sanitizer_symbolize_demangle(name, buffer_, sizeof(buffer_))) {
