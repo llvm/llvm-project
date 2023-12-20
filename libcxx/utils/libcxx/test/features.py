@@ -343,7 +343,6 @@ macros = {
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_NO_STD_MODULES":  "libcpp-has-no-std-modules",
     "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH": "libcpp-pstl-cpu-backend-libdispatch",
 }
 for macro, feature in macros.items():
