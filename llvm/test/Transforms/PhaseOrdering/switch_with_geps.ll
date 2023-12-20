@@ -3,6 +3,8 @@
 ; RUN: opt -S -passes='default<O2>' < %s | FileCheck %s
 ; RUN: opt -S -passes='default<O3>' < %s | FileCheck %s
 
+target datalayout = "n64"
+
 %"OpKind::Zero" = type { [1 x i32], i32 }
 %"OpKind::One" = type { [1 x i32], i32, i16, [1 x i16] }
 %"OpKind::Two" = type { [1 x i32], i32, i16, i16 }
