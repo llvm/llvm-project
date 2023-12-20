@@ -2,8 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from __future__ import annotations
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, Union
 
 from .... import ir
 from .. import AnyOpType, OperationType, NamedSequenceOp, YieldOp
@@ -25,8 +24,8 @@ class Handle(ir.Value):
         self,
         v: ir.Value,
         *,
-        parent: Optional[Handle] = None,
-        children: Optional[Sequence[Handle]] = None,
+        parent: Optional["Handle"] = None,
+        children: Optional[Sequence["Handle"]] = None,
     ):
         super().__init__(v)
         self.parent = parent
@@ -52,11 +51,13 @@ class OpHandle(Handle):
 
     def match_ops(
         self,
-        ops: str
-        | ir.OpView
-        | structured.MatchInterfaceEnum
-        | Sequence[str | ir.OpView],
-    ) -> OpHandle:
+        ops: Union[
+            str,
+            ir.OpView,
+            structured.MatchInterfaceEnum,
+            Sequence[Union[str, ir.OpView]],
+        ],
+    ) -> "OpHandle":
         """
         Emits a `transform.structured.MatchOp`.
         Returns a handle to payload ops that match the given names, types, or
@@ -100,7 +101,7 @@ class OpHandle(Handle):
 
 
 def insert_transform_script(
-    block_or_insertion_point: ir.Block | ir.InsertionPoint,
+    block_or_insertion_point: Union[ir.Block, ir.InsertionPoint],
     script: Callable[[OpHandle], None],
     dump_script: bool = False,
 ) -> None:
