@@ -2338,6 +2338,35 @@ def StdFindOp : CIR_Op<"std.find", [SameFirstSecondOperandAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// IterBegin/End
+//===----------------------------------------------------------------------===//
+
+def IterBeginOp : CIR_Op<"iterator_begin"> {
+  let arguments = (ins FlatSymbolRefAttr:$original_fn, AnyType:$container);
+  let summary = "Returns an iterator to the first element of a container";
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    `(`
+      $original_fn `,` $container `:` type($container)
+    `)` `->` type($result) attr-dict
+  }];
+  let hasVerifier = 0;
+}
+
+def IterEndOp : CIR_Op<"iterator_end"> {
+  let arguments = (ins FlatSymbolRefAttr:$original_fn, AnyType:$container);
+  let summary = "Returns an iterator to the element following the last element"
+                " of a container";
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    `(`
+      $original_fn `,` $container `:` type($container)
+    `)` `->` type($result) attr-dict
+  }];
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FAbsOp
 //===----------------------------------------------------------------------===//
 
