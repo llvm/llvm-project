@@ -7,8 +7,9 @@
 
 // Compiling with differnt configs.
 // RUN: %clang_pgogen -o %t -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp -c -o %t-main.o
-// RUN: %clang_pgogen -o %t -g -mllvm --debug-info-correlate -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp -c -o %t-main.debug.o
-// RUN: %clang_pgogen -o %t -g -mllvm --debug-info-correlate -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-foo.cpp -fpic -shared -Wl,--build-id -o %t-libfoo.debug.so
+// RUN: %clang_pgogen -o %t -g -mllvm -profile-correlate=debug-info -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp -c -o %t-main.debug.o
+// RUN: %clang_pgogen -o %t -mllvm -profile-correlate=binary -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-foo.cpp -c -o %t-foo.binary.o
+// RUN: %clang_pgogen -o %t -g -mllvm -profile-correlate=debug-info -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-foo.cpp -fpic -shared -Wl,--build-id -o %t-libfoo.debug.so
 // RUN: %clang_pgogen -o %t -mllvm -profile-correlate=binary -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-foo.cpp -fpic -shared -Wl,--build-id -o %t-libfoo.binary.so
 
 // Test mixing default raw profile and lightweight raw profile generated with debug info correlate.

@@ -534,7 +534,7 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelators>> InstrProfCorrelators::get(
     if (!Inserted && WarnCounter->shouldEmitWarning()) {
       std::lock_guard<std::mutex> Guard(*WarnLock);
       WithColor::warning() << format(
-          "Duplicate build id (%s) found for %s and %s\n", BuildID.c_str(),
+          "Duplicate build id (\"%s\") found for %s and %s\n", BuildID.c_str(),
           FileMap[BuildID].str().c_str(), Input.first.str().c_str());
     }
   }

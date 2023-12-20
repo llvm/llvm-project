@@ -47,5 +47,3 @@
 // RUN: diff %t.normal.merged.profdata.show %t-4.profdata.show
 // RUN: diff %t.normal.merged.report %t-4.report
 // RUN: diff %t.normal.merged.show %t-4.show
-
-// TODO: After adding support for binary ID, test binaries with different binary IDs.
