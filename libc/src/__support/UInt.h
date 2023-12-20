@@ -30,7 +30,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in BigInt should be a multiple of 64.");
   LIBC_INLINE_VAR static constexpr size_t WORDCOUNT = Bits / 64;
-  uint64_t val[WORDCOUNT]{};
+  cpp::array<uint64_t, WORDCOUNT> val{};
 
   LIBC_INLINE_VAR static constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
@@ -978,7 +978,8 @@ template <typename To, typename From,
           typename = cpp::enable_if_t<internal::is_custom_uint<To>::value>>
 LIBC_INLINE constexpr To bit_cast(const From &from) {
   To out;
-  cpp::memcpy_inline<sizeof(out)>(out.val, &from);
+  using Storage = decltype(out.val);
+  out.val = cpp::bit_cast<Storage>(from);
   return out;
 }
 
@@ -990,9 +991,7 @@ template <
                                 cpp::is_trivially_copyable<To>::value &&
                                 cpp::is_trivially_copyable<UInt<Bits>>::value>>
 LIBC_INLINE constexpr To bit_cast(const UInt<Bits> &from) {
-  To out;
-  cpp::memcpy_inline<sizeof(out)>(&out, from.val);
-  return out;
+  return cpp::bit_cast<To>(from.val);
 }
 
 } // namespace LIBC_NAMESPACE::cpp
