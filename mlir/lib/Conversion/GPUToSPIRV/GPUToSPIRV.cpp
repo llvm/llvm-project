@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -592,12 +593,12 @@ public:
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (isa<VectorType>(adaptor.getValue().getType()))
-      return failure();
+    if (!isa<spirv::ScalarType>(adaptor.getValue().getType()))
+      return rewriter.notifyMatchFailure(op, "reduction type is not a scalar");
 
     auto result = createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(),
                                       adaptor.getOp(),
-                                      /*isGroup*/ false, op.getUniform());
+                                      /*isGroup*/ false, adaptor.getUniform());
     if (!result)
       return failure();
 
