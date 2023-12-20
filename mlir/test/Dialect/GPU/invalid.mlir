@@ -333,9 +333,17 @@ func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
 
 // -----
 
-func.func @subgroup_reduce_bad_type(%arg0 : vector<2xf32>) {
-  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float}}
-  %res = gpu.subgroup_reduce add %arg0 : (vector<2xf32>) -> vector<2xf32>
+func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or vector of}}
+  %res = gpu.subgroup_reduce add %arg0 : (vector<2x2xf32>) -> vector<2x2xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_bad_type_scalable(%arg0 : vector<[2]xf32>) {
+  // expected-error@+1 {{is not compatible with scalable vector types}}
+  %res = gpu.subgroup_reduce add %arg0 : (vector<[2]xf32>) -> vector<[2]xf32>
   return
 }
 
