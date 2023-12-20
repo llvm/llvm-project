@@ -19,7 +19,7 @@
 #ifndef TEST_SME2
 #define ATTR
 #else
-#define ATTR __arm_streaming_compatible
+#define ATTR __arm_streaming
 #endif
 
 // CHECK-LABEL: @test_svld1_u8_x2(
