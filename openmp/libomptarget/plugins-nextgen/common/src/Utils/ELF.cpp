@@ -12,9 +12,6 @@
 
 #include "Utils/ELF.h"
 
-#include "Shared/APITypes.h"
-#include "Shared/Debug.h"
-
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
