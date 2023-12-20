@@ -2299,10 +2299,11 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         Comments.clear();
 
         if (BTF)
-          printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LV
+          printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
+
         // Hexagon handles relocs in pretty printer
         if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
-          while (findRel()) { 
+          while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             if (RelCur->getSymbol() != Obj.symbol_end()) {
               Expected<section_iterator> SymSI =
