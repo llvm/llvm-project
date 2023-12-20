@@ -149,7 +149,6 @@ def testGenerateRegionOp():
     with Context(), Location.unknown():
         module = Module.create()
         with InsertionPoint(module.body):
-
             # CHECK: %[[VAL_0:.*]] = arith.constant 1 : index
             # CHECK: %[[VAL_1:.*]] = arith.constant 2 : index
             one = arith.constant(T.index(), 1)
