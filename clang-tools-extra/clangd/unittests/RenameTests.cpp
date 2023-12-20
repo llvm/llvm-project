@@ -876,6 +876,55 @@ TEST(RenameTest, WithinFileRename) {
   }
 }
 
+TEST(RenameTest, ObjCWithinFileRename) {
+  struct TestCase {
+    llvm::StringRef Input;
+    llvm::StringRef NewName;
+    llvm::StringRef Expected;
+  };
+  TestCase Tests[] = {{
+      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action w^ith:(int)value;
+        @end
+        @implementation Foo
+        - (int)performAc^tion:(int)action w^ith:(int)value {
+          [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+      "performNewAction:by:",
+      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+  }};
+  for (TestCase T : Tests) {
+    SCOPED_TRACE(T.Input);
+    Annotations Code(T.Input);
+    auto TU = TestTU::withCode(Code.code());
+    TU.ExtraArgs.push_back("-xobjective-c");
+    auto AST = TU.build();
+    auto Index = TU.index();
+    for (const auto &RenamePos : Code.points()) {
+      auto RenameResult =
+          rename({RenamePos, T.NewName, AST, testPath(TU.Filename),
+                  getVFSFromAST(AST), Index.get()});
+      ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+      ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+      EXPECT_EQ(
+          applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+          T.Expected);
+    }
+  }
+}
+
 TEST(RenameTest, Renameable) {
   struct Case {
     const char *Code;
@@ -926,12 +975,12 @@ TEST(RenameTest, Renameable) {
         void f(X x) {x+^+;})cpp",
           "no symbol", HeaderFile},
 
-      {R"cpp(// disallow rename on non-normal identifiers.
+      {R"cpp(
          @interface Foo {}
-         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         -(int) [[fo^o]]:(int)x;
          @end
        )cpp",
-       "not a supported kind", HeaderFile},
+       nullptr, HeaderFile},
       {R"cpp(
          void foo(int);
          void foo(char);

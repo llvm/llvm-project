@@ -16,6 +16,8 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Refactor/RefactoringOptions.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 
@@ -502,93 +504,7 @@ namespace {
 typedef llvm::DenseMap<unsigned, std::pair<IndexedOccurrence, unsigned>>
     SourceLocationsToIndexedOccurrences;
 
-enum class ObjCSymbolSelectorKind { MessageSend, MethodDecl };
-
 } // end anonymous namespace
-
-static bool isMatchingSelectorName(const Token &Tok, const Token &Next,
-                                   StringRef NamePiece) {
-  if (NamePiece.empty())
-    return Tok.is(tok::colon);
-  return Tok.is(tok::raw_identifier) && Next.is(tok::colon) &&
-         Tok.getRawIdentifier() == NamePiece;
-}
-
-static bool
-findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const SymbolName &Name,
-                             SmallVectorImpl<SourceLocation> &Pieces,
-                             ObjCSymbolSelectorKind Kind) {
-  assert(!Tokens.empty() && "no tokens");
-  assert(Name.getNamePieces()[0].empty() ||
-         Tokens[0].getRawIdentifier() == Name.getNamePieces()[0]);
-  assert(Name.getNamePieces().size() > 1);
-  assert(Pieces.empty());
-
-  Pieces.push_back(Tokens[0].getLocation());
-
-  // We have to track square brackets, parens and braces as we want to skip the
-  // tokens inside them. This ensures that we don't use identical selector
-  // pieces in inner message sends, blocks, lambdas and @selector expressions.
-  unsigned SquareCount = 0;
-  unsigned ParenCount = 0;
-  unsigned BraceCount = 0;
-
-  // Start looking for the next selector piece.
-  unsigned Last = Tokens.size() - 1;
-  // Skip the ':' or any other token after the first selector piece token.
-  for (unsigned Index = Name.getNamePieces()[0].empty() ? 1 : 2; Index < Last;
-       ++Index) {
-    const auto &Tok = Tokens[Index];
-
-    bool NoScoping = SquareCount == 0 && BraceCount == 0 && ParenCount == 0;
-    if (NoScoping &&
-        isMatchingSelectorName(Tok, Tokens[Index + 1],
-                               Name.getNamePieces()[Pieces.size()])) {
-      if (!Name.getNamePieces()[Pieces.size()].empty()) {
-        // Skip the ':' after the name. This ensures that it won't match a
-        // follow-up selector piece with an empty name.
-        ++Index;
-      }
-      Pieces.push_back(Tok.getLocation());
-      // All the selector pieces have been found.
-      if (Pieces.size() == Name.getNamePieces().size())
-        return true;
-    } else if (Tok.is(tok::r_square)) {
-      // Stop scanning at the end of the message send.
-      // Also account for spurious ']' in blocks or lambdas.
-      if (Kind == ObjCSymbolSelectorKind::MessageSend && !SquareCount &&
-          !BraceCount)
-        break;
-      if (SquareCount)
-        --SquareCount;
-    } else if (Tok.is(tok::l_square))
-      ++SquareCount;
-    else if (Tok.is(tok::l_paren))
-      ++ParenCount;
-    else if (Tok.is(tok::r_paren)) {
-      if (!ParenCount)
-        break;
-      --ParenCount;
-    } else if (Tok.is(tok::l_brace)) {
-      // Stop scanning at the start of the of the method's body.
-      // Also account for any spurious blocks inside argument parameter types
-      // or parameter attributes.
-      if (Kind == ObjCSymbolSelectorKind::MethodDecl && !BraceCount &&
-          !ParenCount)
-        break;
-      ++BraceCount;
-    } else if (Tok.is(tok::r_brace)) {
-      if (!BraceCount)
-        break;
-      --BraceCount;
-    }
-    // Stop scanning at the end of the method's declaration.
-    if (Kind == ObjCSymbolSelectorKind::MethodDecl && NoScoping &&
-        (Tok.is(tok::semi) || Tok.is(tok::minus) || Tok.is(tok::plus)))
-      break;
-  }
-  return false;
-}
 
 // Scan the file and find multi-piece selector occurrences in a token stream.
 static void
@@ -634,7 +550,7 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
   const auto FromFile = SM.getBufferOrFake(SM.getMainFileID());
   Lexer RawLex(SM.getMainFileID(), FromFile, SM, LangOpts);
 
-  std::vector<Token> Tokens;
+  std::vector<syntax::Token> Tokens;
   bool SaveTokens = false;
   Token RawTok;
   RawLex.LexFromRawLexer(RawTok);
@@ -647,35 +563,38 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
         SaveTokens = true;
     }
     if (SaveTokens)
-      Tokens.push_back(RawTok);
+      Tokens.emplace_back(RawTok);
     RawLex.LexFromRawLexer(RawTok);
   }
 
   for (const auto &I : llvm::enumerate(Tokens)) {
     const auto &Tok = I.value();
-    auto It = MappedIndexedOccurrences.find(Tok.getLocation().getRawEncoding());
+    auto It = MappedIndexedOccurrences.find(Tok.location().getRawEncoding());
     if (It == MappedIndexedOccurrences.end())
       continue;
     unsigned SymbolIndex = It->second.second;
-    if (Tok.getKind() != tok::raw_identifier &&
+    if (Tok.kind() != tok::raw_identifier &&
         !(Symbols[SymbolIndex].Name.getNamePieces()[0].empty() &&
-          Tok.is(tok::colon)))
+          Tok.kind() == tok::colon))
       continue;
     const IndexedOccurrence &Occurrence = It->second.first;
 
     // Scan the source for the remaining selector pieces.
-    SmallVector<SourceLocation, 4> SelectorPieces;
     ObjCSymbolSelectorKind Kind =
         Occurrence.Kind == IndexedOccurrence::IndexedObjCMessageSend
             ? ObjCSymbolSelectorKind::MessageSend
             : ObjCSymbolSelectorKind::MethodDecl;
-    if (findObjCSymbolSelectorPieces(
-            ArrayRef(Tokens).drop_front(I.index()),
-            Symbols[SymbolIndex].Name, SelectorPieces, Kind)) {
+    llvm::Expected<SmallVector<SourceLocation>> SelectorPieces =
+        findObjCSymbolSelectorPieces(Tokens, SM, Tok.location(),
+                                     Symbols[SymbolIndex].Name, Kind);
+    if (SelectorPieces) {
       OldSymbolOccurrence Result(OldSymbolOccurrence::MatchingSymbol,
                                  /*IsMacroExpansion=*/false, SymbolIndex,
-                                 std::move(SelectorPieces));
+                                 std::move(*SelectorPieces));
       Consumer.handleOccurrence(Result, SM, LangOpts);
+    } else {
+      // Ignore the error. We simply skip over all selectors that didn't match.
+      consumeError(SelectorPieces.takeError());
     }
   }
 }
