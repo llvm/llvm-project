@@ -5224,7 +5224,10 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
     const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);
     GV->setAlignment(std::max(TypeAlign, PtrAlign));
-
+    // Mark the GV with dso_local attribute to prevent the GOT relocations
+    // for non-pic/pie code.
+    // TODO :later we refactor these changes if you think otherwise like
+    // GV is preemptible(for no-pic object,not sure case exist).
     if (!GV->isDSOLocal()) {
       bool IsPIE = GV->getParent()->getPIELevel() != llvm::PIELevel::Default;
       bool IsPIC = GV->getParent()->getPICLevel() != llvm::PICLevel::NotPIC;
