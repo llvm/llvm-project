@@ -30,6 +30,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -2122,14 +2123,13 @@ static void createBodyOfOp(
     llvm::SmallVector<mlir::Type> tiv(args.size(), loopVarType);
     llvm::SmallVector<mlir::Location> locs(args.size(), loc);
     firOpBuilder.createBlock(&op.getRegion(), {}, tiv, locs);
-    int argIndex = 0;
     // The argument is not currently in memory, so make a temporary for the
     // argument, and store it there, then bind that location to the argument.
-    for (const Fortran::semantics::Symbol *arg : args) {
+    for (auto [argIndex, argSymbol] : llvm::enumerate(args)) {
       mlir::Value indexVal =
           fir::getBase(op.getRegion().front().getArgument(argIndex));
-      storeOp = createAndSetPrivatizedLoopVar(converter, loc, indexVal, arg);
-      argIndex++;
+      storeOp =
+          createAndSetPrivatizedLoopVar(converter, loc, indexVal, argSymbol);
     }
   } else {
     firOpBuilder.createBlock(&op.getRegion());
@@ -2190,18 +2190,17 @@ static void genBodyOfTargetDataOp(
 
   firOpBuilder.createBlock(&region, {}, useDeviceTypes, useDeviceLocs);
 
-  unsigned argIndex = 0;
-  for (const Fortran::semantics::Symbol *sym : useDeviceSymbols) {
+  for (auto [argIndex, argSymbol] : llvm::enumerate(useDeviceSymbols)) {
     const mlir::BlockArgument &arg = region.front().getArgument(argIndex);
-    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*argSymbol);
     if (auto refType = arg.getType().dyn_cast<fir::ReferenceType>()) {
       if (fir::isa_builtin_cptr_type(refType.getElementType())) {
-        converter.bindSymbol(*sym, arg);
+        converter.bindSymbol(*argSymbol, arg);
       } else {
         extVal.match(
             [&](const fir::MutableBoxValue &mbv) {
               converter.bindSymbol(
-                  *sym,
+                  *argSymbol,
                   fir::MutableBoxValue(
                       arg, fir::factory::getNonDeferredLenParams(extVal), {}));
             },
@@ -2214,7 +2213,6 @@ static void genBodyOfTargetDataOp(
       TODO(converter.getCurrentLocation(),
            "use_device clause operand unsupported type");
     }
-    argIndex++;
   }
 
   // Insert dummy instruction to remember the insertion position. The
@@ -2470,8 +2468,6 @@ static void genBodyOfTargetOp(
   auto *regionBlock =
       firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
 
-  unsigned argIndex = 0;
-
   // Clones the `bounds` placing them inside the target region and returns them.
   auto cloneBound = [&](mlir::Value bound) {
     if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
@@ -2491,43 +2487,44 @@ static void genBodyOfTargetOp(
   };
 
   // Bind the symbols to their corresponding block arguments.
-  for (const Fortran::semantics::Symbol *sym : mapSymbols) {
+  for (auto [argIndex, argSymbol] : llvm::enumerate(mapSymbols)) {
     const mlir::BlockArgument &arg = region.getArgument(argIndex);
-    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*argSymbol);
     extVal.match(
         [&](const fir::BoxValue &v) {
-          converter.bindSymbol(*sym,
+          converter.bindSymbol(*argSymbol,
                                fir::BoxValue(arg, cloneBounds(v.getLBounds()),
                                              v.getExplicitParameters(),
                                              v.getExplicitExtents()));
         },
         [&](const fir::MutableBoxValue &v) {
           converter.bindSymbol(
-              *sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
-                                         v.getMutableProperties()));
+              *argSymbol, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                                               v.getMutableProperties()));
         },
         [&](const fir::ArrayBoxValue &v) {
           converter.bindSymbol(
-              *sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
-                                       cloneBounds(v.getLBounds()),
-                                       v.getSourceBox()));
+              *argSymbol, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
+                                             cloneBounds(v.getLBounds()),
+                                             v.getSourceBox()));
         },
         [&](const fir::CharArrayBoxValue &v) {
           converter.bindSymbol(
-              *sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
-                                           cloneBounds(v.getExtents()),
-                                           cloneBounds(v.getLBounds())));
+              *argSymbol, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
+                                                 cloneBounds(v.getExtents()),
+                                                 cloneBounds(v.getLBounds())));
         },
         [&](const fir::CharBoxValue &v) {
-          converter.bindSymbol(*sym,
+          converter.bindSymbol(*argSymbol,
                                fir::CharBoxValue(arg, cloneBound(v.getLen())));
         },
-        [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
+        [&](const fir::UnboxedValue &v) {
+          converter.bindSymbol(*argSymbol, arg);
+        },
         [&](const auto &) {
           TODO(converter.getCurrentLocation(),
                "target map clause operand unsupported type");
         });
-    argIndex++;
   }
 
   // Check if cloning the bounds introduced any dependency on the outer region.
