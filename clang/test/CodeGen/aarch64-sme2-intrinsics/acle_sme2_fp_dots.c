@@ -36,7 +36,7 @@
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_multi_za32_vg1x2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16x2_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,,_za32,_f16,_vg1x2)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_za32,,,_f16,_vg1x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svdot_multi_za32_vg1x4_f16(
@@ -66,7 +66,7 @@ void test_svdot_multi_za32_vg1x2_f16(uint32_t slice_base, svfloat16x2_t zn, svfl
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_multi_za32_vg1x4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16x4_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,,_za32,_f16,_vg1x4)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_za32,,,_f16,_vg1x4)(slice_base, zn, zm);
 }
 
 
@@ -87,7 +87,7 @@ void test_svdot_multi_za32_vg1x4_f16(uint32_t slice_base, svfloat16x4_t zn, svfl
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_single_za32_vg1x2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,_single,_za32,_f16,_vg1x2)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_single_za32,,_f16,,_vg1x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svdot_single_za32_vg1x4_f16(
@@ -109,7 +109,7 @@ void test_svdot_single_za32_vg1x2_f16(uint32_t slice_base, svfloat16x2_t zn, svf
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_single_za32_vg1x4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,_single,_za32,_f16,_vg1x4)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_single_za32,,_f16,,_vg1x4)(slice_base, zn, zm);
 }
 
 
@@ -130,7 +130,7 @@ void test_svdot_single_za32_vg1x4_f16(uint32_t slice_base, svfloat16x4_t zn, svf
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_lane_za32_vg1x2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot_lane,,_za32,_f16,_vg1x2)(slice_base, zn, zm, 3);
+  SVE_ACLE_FUNC(svdot_lane_za32,,,_f16,_vg1x2)(slice_base, zn, zm, 3);
 }
 
 // CHECK-LABEL: @test_svdot_lane_za32_vg1x4_f16(
@@ -152,7 +152,7 @@ void test_svdot_lane_za32_vg1x2_f16(uint32_t slice_base, svfloat16x2_t zn, svflo
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_lane_za32_vg1x4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot_lane,,_za32,_f16,_vg1x4)(slice_base, zn, zm, 3);
+  SVE_ACLE_FUNC(svdot_lane_za32,,,_f16,_vg1x4)(slice_base, zn, zm, 3);
 }
 
 
@@ -177,7 +177,7 @@ void test_svdot_lane_za32_vg1x4_f16(uint32_t slice_base, svfloat16x4_t zn, svflo
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_multi_za32_vg1x2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16x2_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,,_za32,_bf16,_vg1x2)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_za32,,,_bf16,_vg1x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svdot_multi_za32_vg1x4_bf16(
@@ -207,7 +207,7 @@ void test_svdot_multi_za32_vg1x2_bf16(uint32_t slice_base, svbfloat16x2_t zn, sv
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_multi_za32_vg1x4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16x4_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,,_za32,_bf16,_vg1x4)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_za32,,,_bf16,_vg1x4)(slice_base, zn, zm);
 }
 
 
@@ -228,7 +228,7 @@ void test_svdot_multi_za32_vg1x4_bf16(uint32_t slice_base, svbfloat16x4_t zn, sv
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_single_za32_vg1x2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,_single,_za32,_bf16,_vg1x2)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_single_za32,,_bf16,,_vg1x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svdot_single_za32_vg1x4_bf16(
@@ -250,7 +250,7 @@ void test_svdot_single_za32_vg1x2_bf16(uint32_t slice_base, svbfloat16x2_t zn, s
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_single_za32_vg1x4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot,_single,_za32,_bf16,_vg1x4)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svdot_single_za32,,_bf16,,_vg1x4)(slice_base, zn, zm);
 }
 
 
@@ -271,7 +271,7 @@ void test_svdot_single_za32_vg1x4_bf16(uint32_t slice_base, svbfloat16x4_t zn, s
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_lane_za32_vg1x2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot_lane,,_za32,_bf16,_vg1x2)(slice_base, zn, zm, 3);
+  SVE_ACLE_FUNC(svdot_lane_za32,,_bf16,,_vg1x2)(slice_base, zn, zm, 3);
 }
 
 // CHECK-LABEL: @test_svdot_lane_za32_vg1x4_bf16(
@@ -293,5 +293,5 @@ void test_svdot_lane_za32_vg1x2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svb
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svdot_lane_za32_vg1x4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svdot_lane,,_za32,_bf16,_vg1x4)(slice_base, zn, zm, 3);
+  SVE_ACLE_FUNC(svdot_lane_za32,,_bf16,,_vg1x4)(slice_base, zn, zm, 3);
 }
