@@ -97,23 +97,6 @@ public:
     return cpp::bit_cast<long double>(bits);
   }
 
-  // If the number is subnormal, the exponent is treated as if it were the
-  // minimum exponent for a normal number. This is to keep continuity between
-  // the normal and subnormal ranges, but it causes problems for functions where
-  // values are calculated from the exponent, since just subtracting the bias
-  // will give a slightly incorrect result. Additionally, zero has an exponent
-  // of zero, and that should actually be treated as zero.
-  LIBC_INLINE constexpr int get_explicit_exponent() const {
-    const int biased_exp = int(get_biased_exponent());
-    if (is_zero()) {
-      return 0;
-    } else if (biased_exp == 0) {
-      return 1 - EXP_BIAS;
-    } else {
-      return biased_exp - EXP_BIAS;
-    }
-  }
-
   LIBC_INLINE constexpr bool is_inf() const {
     return get_biased_exponent() == MAX_BIASED_EXPONENT &&
            get_mantissa() == 0 && get_implicit_bit() == 1;
