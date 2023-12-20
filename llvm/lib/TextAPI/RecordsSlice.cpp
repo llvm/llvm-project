@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/RecordsSlice.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/TextAPI/Record.h"
 #include "llvm/TextAPI/Symbol.h"
 #include <utility>
@@ -142,8 +143,10 @@ GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
   if (Result.second)
     Result.first->second =
         std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV);
-  else
+  else {
     updateLinkage(Result.first->second.get(), Linkage);
+    updateFlags(Result.first->second.get(), Flags);
+  }
   return Result.first->second.get();
 }
 
@@ -163,6 +166,19 @@ ObjCInterfaceRecord *RecordsSlice::addObjCInterface(StringRef Name,
   }
 
   return Result.first->second.get();
+}
+SymbolFlags Record::mergeFlags(SymbolFlags Flags, RecordLinkage Linkage) {
+  // Add Linkage properties into Flags.
+  switch (Linkage) {
+  case RecordLinkage::Rexported:
+    Flags |= SymbolFlags::Rexported;
+    return Flags;
+  case RecordLinkage::Undefined:
+    Flags |= SymbolFlags::Undefined;
+    return Flags;
+  default:
+    return Flags;
+  }
 }
 
 bool ObjCInterfaceRecord::addObjCCategory(ObjCCategoryRecord *Record) {
@@ -188,11 +204,26 @@ ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
   return Result.first->second.get();
 }
 
+std::vector<ObjCIVarRecord *> ObjCContainerRecord::getObjCIVars() const {
+  std::vector<ObjCIVarRecord *> Records;
+  llvm::for_each(IVars,
+                 [&](auto &Record) { Records.push_back(Record.second.get()); });
+  return Records;
+}
+
+std::vector<ObjCCategoryRecord *>
+ObjCInterfaceRecord::getObjCCategories() const {
+  std::vector<ObjCCategoryRecord *> Records;
+  llvm::for_each(Categories,
+                 [&](auto &Record) { Records.push_back(Record.second); });
+  return Records;
+}
+
 ObjCIVarRecord *ObjCContainerRecord::addObjCIVar(StringRef IVar,
                                                  RecordLinkage Linkage) {
   auto Result = IVars.insert({IVar, nullptr});
   if (Result.second)
-    Result.first->second = std::make_unique<ObjCIVarRecord>(Name, Linkage);
+    Result.first->second = std::make_unique<ObjCIVarRecord>(IVar, Linkage);
   return Result.first->second.get();
 }
 
@@ -221,4 +252,89 @@ RecordsSlice::BinaryAttrs &RecordsSlice::getBinaryAttrs() {
   if (!hasBinaryAttrs())
     BA = std::make_unique<BinaryAttrs>();
   return *BA;
+}
+
+void RecordsSlice::visit(RecordVisitor &V) const {
+  for (auto &G : Globals)
+    V.visitGlobal(*G.second);
+  for (auto &C : Classes)
+    V.visitObjCInterface(*C.second);
+  for (auto &Cat : Categories)
+    V.visitObjCCategory(*Cat.second);
+}
+
+static std::unique_ptr<InterfaceFile>
+createInterfaceFile(const Records &Slices, StringRef InstallName) {
+  // Pickup symbols first.
+  auto Symbols = std::make_unique<SymbolSet>();
+  for (auto &S : Slices) {
+    if (S->empty())
+      continue;
+    auto &BA = S->getBinaryAttrs();
+    if (BA.InstallName != InstallName)
+      continue;
+
+    SymbolConverter Converter(Symbols.get(), S->getTarget(),
+                              !BA.TwoLevelNamespace);
+    S->visit(Converter);
+  }
+
+  auto File = std::make_unique<InterfaceFile>(std::move(Symbols));
+  File->setInstallName(InstallName);
+  // Assign other attributes.
+  for (auto &S : Slices) {
+    if (S->empty())
+      continue;
+    auto &BA = S->getBinaryAttrs();
+    if (BA.InstallName != InstallName)
+      continue;
+    const Target &Targ = S->getTarget();
+    File->addTarget(Targ);
+    if (File->getFileType() == FileType::Invalid)
+      File->setFileType(BA.File);
+    if (BA.AppExtensionSafe && !File->isApplicationExtensionSafe())
+      File->setApplicationExtensionSafe();
+    if (BA.TwoLevelNamespace && !File->isTwoLevelNamespace())
+      File->setTwoLevelNamespace();
+    if (BA.OSLibNotForSharedCache && !File->isOSLibNotForSharedCache())
+      File->setOSLibNotForSharedCache();
+    if (File->getCurrentVersion().empty())
+      File->setCurrentVersion(BA.CurrentVersion);
+    if (File->getCompatibilityVersion().empty())
+      File->setCompatibilityVersion(BA.CompatVersion);
+    if (File->getSwiftABIVersion() == 0)
+      File->setSwiftABIVersion(BA.SwiftABI);
+    if (File->getPath().empty())
+      File->setPath(BA.Path);
+    if (!BA.ParentUmbrella.empty())
+      File->addParentUmbrella(Targ, BA.ParentUmbrella);
+    for (const auto &Client : BA.AllowableClients)
+      File->addAllowableClient(Client, Targ);
+    for (const auto &Lib : BA.RexportedLibraries)
+      File->addReexportedLibrary(Lib, Targ);
+  }
+
+  return File;
+}
+
+std::unique_ptr<InterfaceFile>
+llvm::MachO::convertToInterfaceFile(const Records &Slices) {
+  std::unique_ptr<InterfaceFile> File;
+  if (Slices.empty())
+    return File;
+
+  SetVector<StringRef> InstallNames;
+  for (auto &S : Slices) {
+    auto Name = S->getBinaryAttrs().InstallName;
+    if (Name.empty())
+      continue;
+    InstallNames.insert(Name);
+  }
+
+  File = createInterfaceFile(Slices, *InstallNames.begin());
+  for (auto it = std::next(InstallNames.begin()); it != InstallNames.end();
+       ++it)
+    File->addDocument(createInterfaceFile(Slices, *it));
+
+  return File;
 }
