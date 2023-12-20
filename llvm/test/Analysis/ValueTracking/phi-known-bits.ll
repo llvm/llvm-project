@@ -1002,12 +1002,7 @@ define i1 @recursiveGEP_orcmp(ptr %val1, i64 %val2) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
-; CHECK-NEXT:    [[ORVAL:%.*]] = or i64 [[SUB_PTR_SUB_I]], [[VAL2:%.*]]
-; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq i64 [[ORVAL]], 0
-; CHECK-NEXT:    ret i1 [[BOOL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %while.cond.i
@@ -1039,12 +1034,7 @@ define i1 @recursiveGEP_orcmp_orOperandsCommuted(ptr %val1, i64 %val2) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
-; CHECK-NEXT:    [[ORVAL:%.*]] = or i64 [[SUB_PTR_SUB_I]], [[VAL2:%.*]]
-; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq i64 [[ORVAL]], 0
-; CHECK-NEXT:    ret i1 [[BOOL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %while.cond.i
@@ -1077,20 +1067,13 @@ define i1 @recursiveGEP_orcmpMultiUse(ptr %val1, i64 %val2, ptr %dv1, ptr %dv2) 
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
-; CHECK-NEXT:    [[ORVAL:%.*]] = or i64 [[SUB_PTR_SUB_I]], [[VAL2:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = icmp eq i64 [[ORVAL]], 0
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END4:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_END4:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[DV1:%.*]], [[DV2:%.*]]
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       if.end4:
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP]], [[IF_THEN]] ], [ true, [[IF_END4]] ]
-; CHECK-NEXT:    ret i1 [[RETVAL_0]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %while.cond.i
