@@ -135,9 +135,16 @@ concept __doesnt_need_empty_state =
          //    is_nothrow_move_constructible_v<T> is true.
          : movable<_Tp> || is_nothrow_move_constructible_v<_Tp>);
 
-// we can only use no_unique_address if _Tp has assignment operators,
-// so that we don't need to add our own assignment operator, which
-// contains problematic construct_at
+// When _Tp doesn't have an assignment operator, we must implement __movable_box's assignment operator
+// by doing destroy_at followed by construct_at. However, that implementation strategy leads to UB if the nested
+// _Tp is potentially overlapping. As it is doing a non-transparent replacement of the sub-object, which means that
+// we're not considered "nested" inside the movable-box anymore, and since we're not nested within it, [basic.life]/1.5
+// says that we essentially just reused the storage of the movable-box for a completely unrelated object and ended the
+// movable-box's lifetime.
+// https://github.com/llvm/llvm-project/issues/70494#issuecomment-1845646490
+//
+// Hence, when the _Tp doesn't have an assignment operator, we can't risk making it a potentially-overlapping
+// subobject because of the above, and we don't use [[no_unique_address]] in that case.
 template <class _Tp>
 concept __can_use_no_unique_address = (copy_constructible<_Tp> ? copyable<_Tp> : movable<_Tp>);
 
@@ -157,41 +164,39 @@ concept __can_use_no_unique_address = copyable<_Tp>;
 #  endif
 
 template <class _Tp>
-struct __movable_box_base {
+struct __movable_box_holder {
   _Tp __val_;
 
   template <class... _Args>
-    requires is_constructible_v<_Tp, _Args&&...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_base(_Args&&... __args)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_holder(in_place_t, _Args&&... __args)
       : __val_(std::forward<_Args>(__args)...) {}
 };
 
 template <class _Tp>
   requires __can_use_no_unique_address<_Tp>
-struct __movable_box_base<_Tp> {
+struct __movable_box_holder<_Tp> {
   _LIBCPP_NO_UNIQUE_ADDRESS _Tp __val_;
 
   template <class... _Args>
-    requires is_constructible_v<_Tp, _Args&&...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_base(_Args&&... __args)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_holder(in_place_t, _Args&&... __args)
       : __val_(std::forward<_Args>(__args)...) {}
 };
 
 template <__movable_box_object _Tp>
   requires __doesnt_need_empty_state<_Tp>
-class __movable_box<_Tp> : private __movable_box_base<_Tp> {
-  using __base = __movable_box_base<_Tp>;
+class __movable_box<_Tp> {
+  _LIBCPP_NO_UNIQUE_ADDRESS __movable_box_holder<_Tp> __holder_;
 
 public:
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box(in_place_t, _Args&&... __args) noexcept(
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box(in_place_t __inplace, _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Tp, _Args...>)
-      : __base(std::forward<_Args>(__args)...) {}
+      : __holder_(__inplace, std::forward<_Args>(__args)...) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __movable_box() noexcept(is_nothrow_default_constructible_v<_Tp>)
     requires default_initializable<_Tp>
-      : __base() {}
+      : __holder_(in_place_t{}) {}
 
   _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box const&) = default;
   _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box&&)      = default;
@@ -209,8 +214,8 @@ public:
     static_assert(is_nothrow_copy_constructible_v<_Tp>);
     static_assert(!__can_use_no_unique_address<_Tp>);
     if (this != std::addressof(__other)) {
-      std::destroy_at(std::addressof(this->__val_));
-      std::construct_at(std::addressof(this->__val_), __other.__val_);
+      std::destroy_at(std::addressof(__holder_.__val_));
+      std::construct_at(std::addressof(__holder_.__val_), __other.__holder_.__val_);
     }
     return *this;
   }
@@ -219,17 +224,17 @@ public:
     static_assert(is_nothrow_move_constructible_v<_Tp>);
     static_assert(!__can_use_no_unique_address<_Tp>);
     if (this != std::addressof(__other)) {
-      std::destroy_at(std::addressof(this->__val_));
-      std::construct_at(std::addressof(this->__val_), std::move(__other.__val_));
+      std::destroy_at(std::addressof(__holder_.__val_));
+      std::construct_at(std::addressof(__holder_.__val_), std::move(__other.__holder_.__val_));
     }
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return this->__val_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return this->__val_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return __holder_.__val_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return __holder_.__val_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept { return std::addressof(this->__val_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept { return std::addressof(this->__val_); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept { return std::addressof(__holder_.__val_); }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept { return std::addressof(__holder_.__val_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __has_value() const noexcept { return true; }
 };

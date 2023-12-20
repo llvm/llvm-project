@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// clang-cl and cl currently don't support [[no_unique_address]]
+// XFAIL: msvc
+
 // This test ensures that <copyable-box> behaves correctly when it holds an empty type.
 
 #include <ranges>
@@ -20,7 +23,7 @@
 template <class T, bool ExpectNoUniqueAddress>
 void test_no_unique_address() {
   struct Test {
-    _LIBCPP_NO_UNIQUE_ADDRESS std::ranges::__movable_box<T> box_;
+    [[no_unique_address]] std::ranges::__movable_box<T> box_;
     bool b2;
   };
 

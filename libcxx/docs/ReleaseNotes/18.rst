@@ -166,6 +166,10 @@ ABI Affecting Changes
   to throw a different exception when attempting allocations that are too large
   (``std::bad_alloc`` vs ``std::length_error``).
 
+- The ABI of some classes inside `std::ranges` that use `movable-box` have changed in order to fix a bug which could 
+  result in overwriting user data followed  by the `movable-box`. The affected views are `take_while_view`, `filter_view`, 
+  `single_view`, `drop_while_view`, `repeat_view`, `transform_view`, `chunk_by_view`
+
 Build System Changes
 --------------------
 
