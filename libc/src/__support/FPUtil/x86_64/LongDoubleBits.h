@@ -102,11 +102,6 @@ public:
     return cpp::bit_cast<long double>(bits);
   }
 
-  LIBC_INLINE constexpr StorageType uintval() {
-    // We zero the padding bits as they can contain garbage.
-    return bits & FP_MASK;
-  }
-
   LIBC_INLINE constexpr long double get_val() const {
     return cpp::bit_cast<long double>(bits);
   }

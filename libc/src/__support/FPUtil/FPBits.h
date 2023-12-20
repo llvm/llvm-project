@@ -68,6 +68,8 @@ public:
   LIBC_INLINE constexpr bool get_sign() const {
     return (bits & SIGN_MASK) != 0;
   }
+
+  LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
 };
 
 } // namespace internal
@@ -139,15 +141,13 @@ public:
 
   LIBC_INLINE constexpr FPBits() : UP() {}
 
-  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
-
   LIBC_INLINE constexpr void set_val(T value) {
     bits = cpp::bit_cast<StorageType>(value);
   }
 
-  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
-  LIBC_INLINE constexpr StorageType uintval() const { return bits; }
+  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
   LIBC_INLINE constexpr int get_exponent() const {
     return int(get_biased_exponent()) - EXP_BIAS;
