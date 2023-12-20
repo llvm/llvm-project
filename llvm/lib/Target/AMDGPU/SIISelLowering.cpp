@@ -1462,6 +1462,13 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       // for S_BUFFER_* instructions).
       if (!isInt<21>(AM.BaseOffs))
         return false;
+
+      // FIXME: When addressing scalar memory, it is illegal and undefined for
+      // IOFFSET + (M0 or soffset) to be negative. This also need to
+      // verify that M0 or soffset is present. For now it is only rejecting
+      // all negative offsets.
+      if (AM.BaseOffs < 0)
+        return false;
     } else {
       // On GFX12, all offsets are signed 24-bit in bytes.
       if (!isInt<24>(AM.BaseOffs))
