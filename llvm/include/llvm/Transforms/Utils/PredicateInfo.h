@@ -57,7 +57,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
 
@@ -192,7 +191,6 @@ public:
 protected:
   // Used by PredicateInfo annotater, dumpers, and wrapper pass.
   friend class PredicateInfoAnnotatedWriter;
-  friend class PredicateInfoPrinterLegacyPass;
   friend class PredicateInfoBuilder;
 
 private:
@@ -207,18 +205,6 @@ private:
   DenseMap<const Value *, const PredicateBase *> PredicateMap;
   // The set of ssa_copy declarations we created with our custom mangling.
   SmallSet<AssertingVH<Function>, 20> CreatedDeclarations;
-};
-
-// This pass does eager building and then printing of PredicateInfo. It is used
-// by
-// the tests to be able to build, dump, and verify PredicateInfo.
-class PredicateInfoPrinterLegacyPass : public FunctionPass {
-public:
-  PredicateInfoPrinterLegacyPass();
-
-  static char ID;
-  bool runOnFunction(Function &) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 /// Printer pass for \c PredicateInfo.

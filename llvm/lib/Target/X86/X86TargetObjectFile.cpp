@@ -56,3 +56,13 @@ const MCExpr *X86ELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
   return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_DTPOFF, getContext());
 }
+
+const MCExpr *X86ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+  int64_t FinalOffset = Offset + MV.getConstant();
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, getContext());
+  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
+  return MCBinaryExpr::createAdd(Res, Off, getContext());
+}

@@ -13,7 +13,7 @@ from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 def boilerplate(attr: st.EncodingAttr):
@@ -32,11 +32,28 @@ func.func @main(%p : !llvm.ptr) -> () attributes {{ llvm.emit_c_interface }} {{
 def expected(id_map):
     """Returns expected contents of output.
 
+    +-----+-----+-----+-----+-----+
+    | 1 0 | . . | . . | . . | 0 3 |
+    | 0 2 | . . | . . | . . | 0 0 |
+    +-----+-----+-----+-----+-----+
+    | . . | . . | . . | . . | . . |
+    | . . | . . | . . | . . | . . |
+    +-----+-----+-----+-----+-----+
+    | . . | . . | 5 0 | . . | . . |
+    | . . | . . | 0 0 | . . | . . |
+    +-----+-----+-----+-----+-----+
+    | . . | . . | . . | . . | . . |
+    | . . | . . | . . | . . | . . |
+    +-----+-----+-----+-----+-----+
+    | 0 0 | . . | . . | . . | . . |
+    | 4 0 | . . | . . | . . | . . |
+    +-----+-----+-----+-----+-----+
+
     Output appears as dimension coordinates but lexicographically
-    sorted by level coordinates.
+    sorted by level coordinates. For BSR, the blocks are filled.
     """
-    return (
-        f"""# extended FROSTT format
+    if id_map is 0:
+        return f"""# extended FROSTT format
 2 5
 10 10
 1 1 1
@@ -45,8 +62,8 @@ def expected(id_map):
 5 5 5
 10 1 4
 """
-        if id_map
-        else f"""# extended FROSTT format
+    if id_map is 1:
+        return f"""# extended FROSTT format
 2 5
 10 10
 1 1 1
@@ -55,7 +72,28 @@ def expected(id_map):
 5 5 5
 1 10 3
 """
-    )
+    if id_map is 2:
+        return f"""# extended FROSTT format
+2 16
+10 10
+1 1 1
+1 2 0
+2 1 0
+2 2 2
+1 9 0
+1 10 3
+2 9 0
+2 10 0
+5 5 5
+5 6 0
+6 5 0
+6 6 0
+9 1 0
+9 2 0
+10 1 4
+10 2 0
+"""
+    raise AssertionError("unexpected id_map")
 
 
 def build_compile_and_run_output(attr: st.EncodingAttr, compiler, expected):
@@ -87,17 +125,17 @@ def main():
         # regular and loose compression and various metadata bitwidths.
         # For these simple orderings, dim2lvl and lvl2dim are the same.
         levels = [
-            [st.DimLevelType.compressed_nu, st.DimLevelType.singleton],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.dense, st.DimLevelType.loose_compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [st.LevelType.compressed_nu, st.LevelType.singleton],
+            [st.LevelType.dense, st.LevelType.compressed],
+            [st.LevelType.dense, st.LevelType.loose_compressed],
+            [st.LevelType.compressed, st.LevelType.compressed],
         ]
         orderings = [
-            (ir.AffineMap.get_permutation([0, 1]), True),
-            (ir.AffineMap.get_permutation([1, 0]), False),
+            (ir.AffineMap.get_permutation([0, 1]), 0),
+            (ir.AffineMap.get_permutation([1, 0]), 1),
         ]
-        bitwidths = [8, 16, 32, 64]
-        compiler = sparse_compiler.SparseCompiler(
+        bitwidths = [8, 64]
+        compiler = sparsifier.Sparsifier(
             options="", opt_level=2, shared_libs=[support_lib]
         )
         for level in levels:
@@ -111,10 +149,10 @@ def main():
 
         # Now do the same for BSR.
         level = [
-            st.DimLevelType.dense,
-            st.DimLevelType.compressed,
-            st.DimLevelType.dense,
-            st.DimLevelType.dense,
+            st.LevelType.dense,
+            st.LevelType.compressed,
+            st.LevelType.dense,
+            st.LevelType.dense,
         ]
         d0 = ir.AffineDimExpr.get(0)
         d1 = ir.AffineDimExpr.get(1)
@@ -135,11 +173,10 @@ def main():
         l3 = ir.AffineDimExpr.get(3)
         lvl2dim = ir.AffineMap.get(4, 0, [2 * l0 + l2, 2 * l1 + l3])
         attr = st.EncodingAttr.get(level, dim2lvl, lvl2dim, 0, 0)
-        # TODO: enable this one CONVERSION on BSR is working
-        # build_compile_and_run_output(attr, compiler, block_expected())
+        build_compile_and_run_output(attr, compiler, expected(2))
         count = count + 1
 
-    # CHECK: Passed 33 tests
+    # CHECK: Passed 17 tests
     print("Passed", count, "tests")
 
 

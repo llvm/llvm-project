@@ -86,7 +86,10 @@ if.end5:                                          ; preds = %while.body
   br i1 %cmp6, label %if.end14, label %cleanup.thread40
 
 if.end14:                                         ; preds = %if.end5
-  %22 = load i8, ptr inttoptr (i64 add (i64 lshr (i64 ptrtoint (ptr @a to i64), i64 3), i64 2147450880) to ptr)
+  %lshr1 = lshr i64 ptrtoint (ptr @a to i64), 3
+  %add1 = add i64 %lshr1, 2147450880
+  %inttoptr1 = inttoptr i64 %add1 to ptr
+  %22 = load i8, ptr %inttoptr1
   %23 = icmp ne i8 %22, 0
   br i1 %23, label %24, label %25
 
@@ -177,7 +180,10 @@ cleanup.thread40:                                 ; preds = %if.end5
   br label %enoent
 
 cleanup:                                          ; preds = %while.body
-  %61 = load i8, ptr inttoptr (i64 add (i64 lshr (i64 ptrtoint (ptr @b to i64), i64 3), i64 2147450880) to ptr)
+  %lshr2 = lshr i64 ptrtoint (ptr @b to i64), 3
+  %add2 = add i64 %lshr2, 2147450880
+  %inttoptr2 = inttoptr i64 %add2 to ptr
+  %61 = load i8, ptr %inttoptr2
   %62 = icmp ne i8 %61, 0
   br i1 %62, label %63, label %66
 

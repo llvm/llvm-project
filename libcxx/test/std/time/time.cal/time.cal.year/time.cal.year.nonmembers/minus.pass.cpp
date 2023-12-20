@@ -25,37 +25,30 @@
 
 #include "test_macros.h"
 
-template <typename Y, typename Ys>
-constexpr bool testConstexpr()
-{
-    Y y{2313};
-    Ys offset{1006};
-    if (y - offset != Y{1307}) return false;
-    if (y - Y{1307} != offset) return false;
-    return true;
+using year  = std::chrono::year;
+using years = std::chrono::years;
+
+constexpr bool test() {
+  year y{1223};
+  for (int i = 1100; i <= 1110; ++i) {
+    year y1   = y - years{i};
+    years ys1 = y - year{i};
+    assert(static_cast<int>(y1) == 1223 - i);
+    assert(ys1.count() == 1223 - i);
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using year  = std::chrono::year;
-    using years = std::chrono::years;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<year>() - std::declval<years>());
+  ASSERT_SAME_TYPE(year, decltype(std::declval<year>() - std::declval<years>()));
 
-    ASSERT_NOEXCEPT(                 std::declval<year>() - std::declval<years>());
-    ASSERT_SAME_TYPE(year , decltype(std::declval<year>() - std::declval<years>()));
+  ASSERT_NOEXCEPT(std::declval<year>() - std::declval<year>());
+  ASSERT_SAME_TYPE(years, decltype(std::declval<year>() - std::declval<year>()));
 
-    ASSERT_NOEXCEPT(                 std::declval<year>() - std::declval<year>());
-    ASSERT_SAME_TYPE(years, decltype(std::declval<year>() - std::declval<year>()));
-
-    static_assert(testConstexpr<year, years>(), "");
-
-    year y{1223};
-    for (int i = 1100; i <= 1110; ++i)
-    {
-        year  y1 = y - years{i};
-        years ys1 = y - year{i};
-        assert(static_cast<int>(y1) == 1223 - i);
-        assert(ys1.count()          == 1223 - i);
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

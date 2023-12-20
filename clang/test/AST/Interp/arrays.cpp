@@ -27,6 +27,10 @@ static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
 
+constexpr int SomeInt[] = {1};
+constexpr int getSomeInt() { return *SomeInt; }
+static_assert(getSomeInt() == 1, "");
+
 /// A init list for a primitive value.
 constexpr int f{5};
 static_assert(f == 5, "");

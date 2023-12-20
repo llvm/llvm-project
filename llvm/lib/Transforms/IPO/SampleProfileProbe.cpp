@@ -237,7 +237,8 @@ void SampleProfileProber::computeProbeIdForCallsites() {
       if (LastProbeId >= 0xFFFF) {
         std::string Msg = "Pseudo instrumentation incomplete for " +
                           std::string(F->getName()) + " because it's too large";
-        Ctx.diagnose(DiagnosticInfoSampleProfile(M->getName().data(), Msg));
+        Ctx.diagnose(
+            DiagnosticInfoSampleProfile(M->getName().data(), Msg, DS_Warning));
         return;
       }
 

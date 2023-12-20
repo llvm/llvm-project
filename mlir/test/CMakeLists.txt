@@ -28,6 +28,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If arch-specific Arm integration tests run emulated, find Arm native utility libraries in this directory.")
   set(MLIR_GPU_COMPILATION_TEST_FORMAT "fatbin" CACHE STRING
       "The GPU compilation format used by the tests.")
+  set(ARM_SME_ABI_ROUTINES_SHLIB "" CACHE STRING
+      "Path to a shared library containing Arm SME ABI routines, required for Arm SME integration tests.")
   option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
@@ -43,10 +45,10 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
   endif()
 
-  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS 
-  # configuration flag, we automatically include sm80 tests when build for 
-  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and 
-  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in 
+  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS
+  # configuration flag, we automatically include sm80 tests when build for
+  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and
+  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in
   # addition to those.
   if (MLIR_ENABLE_CUDA_CUSPARSE)
     set(MLIR_RUN_CUDA_SM80_TESTS ON)
@@ -99,6 +101,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-pdll-lsp-server
@@ -137,6 +140,14 @@ endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
+endif()
+
+if(MLIR_ENABLE_SYCL_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
+endif()
+
+if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
+  list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
 
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)

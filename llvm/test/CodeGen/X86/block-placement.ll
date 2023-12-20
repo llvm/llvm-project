@@ -318,8 +318,7 @@ define void @unnatural_cfg1() {
 ; CHECK-LABEL: unnatural_cfg1
 ; CHECK: %entry
 ; CHECK: %loop.header
-; CHECK: %loop.body2
-; CHECK: %loop.body3
+; CHECK: %loop.body5
 
 entry:
   br label %loop.header

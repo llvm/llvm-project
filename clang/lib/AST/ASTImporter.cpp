@@ -3513,6 +3513,14 @@ public:
     return {};
   }
 
+  std::optional<bool>
+  VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
+    // The "associated declaration" can be the same as ParentDC.
+    if (isAncestorDeclContextOf(ParentDC, T->getAssociatedDecl()))
+      return true;
+    return {};
+  }
+
   std::optional<bool> VisitConstantArrayType(const ConstantArrayType *T) {
     if (T->getSizeExpr() && isAncestorDeclContextOf(ParentDC, T->getSizeExpr()))
       return true;
@@ -3573,6 +3581,8 @@ private:
 };
 } // namespace
 
+/// This function checks if the function has 'auto' return type that contains
+/// a reference (in any way) to a declaration inside the same function.
 bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
   QualType FromTy = D->getType();
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
@@ -8993,10 +9003,6 @@ class AttrImporter {
 public:
   AttrImporter(ASTImporter &I) : Importer(I), NImporter(I) {}
 
-  // Useful for accessing the imported attribute.
-  template <typename T> T *castAttrAs() { return cast<T>(ToAttr); }
-  template <typename T> const T *castAttrAs() const { return cast<T>(ToAttr); }
-
   // Create an "importer" for an attribute parameter.
   // Result of the 'value()' of that object is to be passed to the function
   // 'importAttr', in the order that is expected by the attribute class.
@@ -9063,6 +9069,7 @@ public:
 
     ToAttr = FromAttr->clone(Importer.getToContext());
     ToAttr->setRange(ToRange);
+    ToAttr->setAttrName(Importer.Import(FromAttr->getAttrName()));
   }
 
   // Get the result of the previous import attempt (can be used only once).
@@ -9201,15 +9208,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     AI.importAttr(From,
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());
-    break;
-  }
-  case attr::CountedBy: {
-    AI.cloneAttr(FromAttr);
-    const auto *CBA = cast<CountedByAttr>(FromAttr);
-    Expected<SourceRange> SR = Import(CBA->getCountedByFieldLoc()).get();
-    if (!SR)
-      return SR.takeError();
-    AI.castAttrAs<CountedByAttr>()->setCountedByFieldLoc(SR.get());
     break;
   }
 

@@ -35,7 +35,7 @@
 // CHECK:            scf.yield %[[RET_1]]
 // CHECK:         }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
-// CHECK:        return %[[NT1]] : tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:        return %[[NT1]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 func.func @sparse_reshape(%arg0: tensor<4x25xf64, #SparseMatrix>) -> tensor<10x10xf64, #SparseMatrix> {
   %shape = arith.constant dense <[ 10, 10 ]> : tensor<2xi32>

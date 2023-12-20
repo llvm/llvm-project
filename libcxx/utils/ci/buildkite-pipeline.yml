@@ -41,49 +41,6 @@ definitions:
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
 
-# Define agents using YAML anchors to reduce duplication
-agents_definitions:
-  _linux_agent: &linux_agent
-    agents:
-      queue: libcxx-builders
-      os: linux
-  _windows_agent: &windows_agent
-    agents:
-      queue: windows
-
-  # Mac OS Builders
-  _mac_agent_x86: &mac_agent_x86
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64
-  _mac_agent_arm64: &mac_agent_arm64
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: arm64
-  _mac_agent_any_arch: &mac_agent_any_arch
-    agents:
-      queue: libcxx-builders
-      os: macos
-  _arm_agent_aarch64: &arm_agent_aarch64
-    agents:
-      queue: libcxx-builders-linaro-arm
-      arch: aarch64
-  _arm_agent_armv8l: &arm_agent_armv8l
-    agents:
-      queue: libcxx-builders-linaro-arm
-      arch: armv8l
-  _aix_agent: &aix_agent
-    agents:
-      queue: libcxx-builders
-      os: aix
-  _android_agent: &android_agent
-    agents:
-      queue: libcxx-builders
-      os: android
-
-
 environment_definitions:
   _common_env: &common_env
       ENABLE_CLANG_TIDY: "On"
@@ -101,408 +58,177 @@ environment_definitions:
 
 
 steps:
-  #
-  # General testing with the default configuration, under all the supported
-  # Standard modes, with Clang and GCC. This catches most issues upfront.
-  # The goal of this step is to catch most issues while being very fast.
-  #
-- label: GCC ${GCC_STABLE_VERSION} / C++latest
-  command: libcxx/utils/ci/run-buildbot generic-gcc
-  env:
-    <<: *common_env
-    CC: gcc-${GCC_STABLE_VERSION}
-    CXX: g++-${GCC_STABLE_VERSION}
-  <<: *common
-  <<: *linux_agent
-  
-
-
-- label: C++26
-  command: libcxx/utils/ci/run-buildbot generic-cxx26
-  env:
-    <<: *common_env
-    <<: *absolute_path_clang
-  <<: *linux_agent
-  <<: *common
-
-- label: Modular build
-  command: libcxx/utils/ci/run-buildbot generic-modules
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: C++11
-  command: libcxx/utils/ci/run-buildbot generic-cxx11
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: C++03
-  command: libcxx/utils/ci/run-buildbot generic-cxx03
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-  #
-  # All other supported configurations of libc++.
-  #
-- wait
-
-- label: C++23
-  command: libcxx/utils/ci/run-buildbot generic-cxx23
-  env:
-    <<: *common_env
-    <<: *absolute_path_clang
-    ENABLE_STD_MODULES: 'On'
-  <<: *linux_agent
-  <<: *common
-
-- label: C++20
-  command: libcxx/utils/ci/run-buildbot generic-cxx20
-  env:
-    <<: *common_env
-    <<: *absolute_path_clang
-    ENABLE_STD_MODULES: 'On'
-  <<: *linux_agent
-  <<: *common
-
-- label: C++17
-  command: libcxx/utils/ci/run-buildbot generic-cxx17
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: C++14
-  command: libcxx/utils/ci/run-buildbot generic-cxx14
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: GCC ${GCC_STABLE_VERSION} / C++11
-  command: libcxx/utils/ci/run-buildbot generic-gcc-cxx11
-  env:
-    <<: *common_env
-    CC: gcc-${GCC_STABLE_VERSION}
-    CXX: g++-${GCC_STABLE_VERSION}
-  <<: *linux_agent
-  <<: *common
-
-- label: Clang 16
-  command: libcxx/utils/ci/run-buildbot generic-cxx23
-  env:
-    <<: *common_env
-    CC: clang-16
-    CXX: clang++-16
-    ENABLE_STD_MODULES: 'Off'
-  <<: *linux_agent
-  <<: *common
-
-- label: Clang 17
-  command: libcxx/utils/ci/run-buildbot generic-cxx23
-  env:
-    <<: *common_env
-    CC: /usr/lib/llvm-17/bin/clang
-    CXX: /usr/lib/llvm-17/bin/clang++
-  <<: *linux_agent
-  <<: *common
-
-- group: Sanitizers
-  steps:
-  - label: ASAN
-    command: libcxx/utils/ci/run-buildbot generic-asan
-    env:
-      <<: *common_env
-    <<: *linux_agent
-    <<: *common
-
-  - label: TSAN
-    command: libcxx/utils/ci/run-buildbot generic-tsan
-    env:
-      <<: *common_env
-    <<: *linux_agent
-    <<: *common
-
-  - label: UBSAN
-    command: libcxx/utils/ci/run-buildbot generic-ubsan
-    env:
-      <<: *common_env
-    <<: *linux_agent
-    <<: *common
-
-  - label: MSAN
-    command: libcxx/utils/ci/run-buildbot generic-msan
-    env:
-      <<: *common_env
-    <<: *linux_agent
-    <<: *common
-
-
-- label: Bootstrapping build
-  command: libcxx/utils/ci/run-buildbot bootstrapping-build
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Static libraries
-  command: libcxx/utils/ci/run-buildbot generic-static
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Shared library with merged ABI and unwinder libraries
-  command: libcxx/utils/ci/run-buildbot generic-merged
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Fast hardening mode
-  command: libcxx/utils/ci/run-buildbot generic-hardening-mode-fast
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Fast hardening mode with ABI breaks
-  command: libcxx/utils/ci/run-buildbot generic-hardening-mode-fast-with-abi-breaks
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Extensive hardening mode
-  command: libcxx/utils/ci/run-buildbot generic-hardening-mode-extensive
-  env:
-    <<: *common_env
-    <<: *absolute_path_clang
-  <<: *linux_agent
-  <<: *common
-
-- label: Debug hardening mode
-  command: libcxx/utils/ci/run-buildbot generic-hardening-mode-debug
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: With LLVM's libunwind
-  command: libcxx/utils/ci/run-buildbot generic-with_llvm_unwinder
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Modular build with Local Submodule Visibility
-  command: libcxx/utils/ci/run-buildbot generic-modules-lsv
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- group: Parts disabled
-  steps:
-  - label: No threads
-    command: libcxx/utils/ci/run-buildbot generic-no-threads
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-
-  - label: No filesystem
-    command: libcxx/utils/ci/run-buildbot generic-no-filesystem
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-  - label: No random device
-    command: libcxx/utils/ci/run-buildbot generic-no-random_device
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-  - label: No locale
-    command: libcxx/utils/ci/run-buildbot generic-no-localization
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-  - label: No Unicode
-    command: libcxx/utils/ci/run-buildbot generic-no-unicode
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-  - label: No wide characters
-    command: libcxx/utils/ci/run-buildbot generic-no-wide-characters
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-  - label: No time zone database
-    command: libcxx/utils/ci/run-buildbot generic-no-tzdb
-    env:
-      <<: *common_env
-    <<: *linux_agent
-    <<: *common
-
-  - label: No experimental features
-    command: libcxx/utils/ci/run-buildbot generic-no-experimental
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-  - label: No exceptions
-    command: libcxx/utils/ci/run-buildbot generic-no-exceptions
-    env:
-      <<: *common_env
-      <<: *absolute_path_clang
-    <<: *linux_agent
-    <<: *common
-
-- label: Unstable ABI
-  command: libcxx/utils/ci/run-buildbot generic-abi-unstable
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Benchmarks
-  command: libcxx/utils/ci/run-buildbot benchmarks
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
 - group: ':windows: Windows'
   steps:
   - label: Clang-cl (DLL)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-dll
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: Clang-cl (Static)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-static
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: Clang-cl (no vcruntime exceptions)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-no-vcruntime
     <<: *common
-    <<: *windows_agent
+    agents:
+      queue: windows
 
   - label: Clang-cl (Debug mode)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-debug
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: Clang-cl (Static CRT)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-static-crt
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: MinGW (DLL, x86_64)
     command: bash libcxx/utils/ci/run-buildbot mingw-dll
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: MinGW (Static, x86_64)
     command: bash libcxx/utils/ci/run-buildbot mingw-static
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: MinGW (DLL, i686)
     command: bash libcxx/utils/ci/run-buildbot mingw-dll-i686
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
 - group: ':mac: Apple'
   steps:
   - label: MacOS x86_64
     command: libcxx/utils/ci/run-buildbot generic-cxx23
-    <<: *mac_agent_x86
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64
     <<: *common
 
   - label: MacOS arm64
     command: libcxx/utils/ci/run-buildbot generic-cxx23
-    <<: *mac_agent_arm64
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: arm64
     <<: *common
 
   - label: MacOS with Modules
     command: libcxx/utils/ci/run-buildbot generic-modules
-    <<: *mac_agent_any_arch
+    agents:
+      queue: libcxx-builders
+      os: macos
+    <<: *common
+
+  - label: MacOS with C++03
+    command: libcxx/utils/ci/run-buildbot generic-cxx03
+    agents:
+      queue: libcxx-builders
+      os: macos
     <<: *common
 
     # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: Apple system
     command: libcxx/utils/ci/run-buildbot apple-system
-    <<: *mac_agent_arm64  # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: arm64 # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
     <<: *common
 
   - label: Apple back-deployment macosx10.13
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13
-    <<: *mac_agent_x86 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
     <<: *common
 
   - label: Apple back-deployment macosx10.15
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15
-    <<: *mac_agent_x86 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
     <<: *common
 
   - label: Apple back-deployment with hardening enabled
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0
-    <<: *mac_agent_x86  # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
     <<: *common
 
 - group: ARM
   steps:
   - label: AArch64
     command: libcxx/utils/ci/run-buildbot aarch64
-    <<: *arm_agent_aarch64
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
     <<: *common
 
   - label: AArch64 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot aarch64-no-exceptions
-    <<: *arm_agent_aarch64
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
     <<: *common
 
   - label: Armv8
     command: libcxx/utils/ci/run-buildbot armv8
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv8 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv8-no-exceptions
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv7
     command: libcxx/utils/ci/run-buildbot armv7
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv7 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
+    <<: *common
+
+  - label: Armv7-M picolibc
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
+
+  - label: Armv7-M picolibc -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc-no-exceptions
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
     <<: *common
 
 - group: AIX
@@ -513,7 +239,9 @@ steps:
       CC: clang
       CXX: clang++
       OBJECT_MODE: '32'
-    <<: *aix_agent
+    agents:
+      queue: libcxx-builders
+      os: aix
     <<: *common
 
   - label: AIX (64-bit)
@@ -522,7 +250,9 @@ steps:
       CC: clang
       CXX: clang++
       OBJECT_MODE: '64'
-    <<: *aix_agent
+    agents:
+      queue: libcxx-builders
+      os: aix
     <<: *common
 
 - group: ':freebsd: FreeBSD'
@@ -542,14 +272,16 @@ steps:
   steps:
   - label: Android 5.0, x86 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
-    soft_fail: true
-    <<: *android_agent
+    agents:
+      queue: libcxx-builders
+      os: android
     <<: *common
 
   - label: Android 13, x86_64 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64
-    soft_fail: true
-    <<: *android_agent
+    agents:
+      queue: libcxx-builders
+      os: android
     <<: *common
 
 

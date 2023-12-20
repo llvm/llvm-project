@@ -134,6 +134,18 @@ add_gen_header(
 )
 
 add_gen_header(
+  search
+  DEF_FILE search.h.def
+  GEN_HDR search.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.ACTION
+    .llvm-libc-types.ENTRY
+    .llvm-libc-types.struct_hsearch_data
+    .llvm-libc-types.size_t
+)
+
+add_gen_header(
   time
   DEF_FILE time.h.def
   GEN_HDR time.h
@@ -405,8 +417,10 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_socket_macros
-    .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_gen_header(

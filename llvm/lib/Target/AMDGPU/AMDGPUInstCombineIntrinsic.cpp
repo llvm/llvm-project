@@ -992,14 +992,27 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceOperand(II, 0, UndefValue::get(Old->getType()));
   }
   case Intrinsic::amdgcn_permlane16:
-  case Intrinsic::amdgcn_permlanex16: {
+  case Intrinsic::amdgcn_permlane16_var:
+  case Intrinsic::amdgcn_permlanex16:
+  case Intrinsic::amdgcn_permlanex16_var: {
     // Discard vdst_in if it's not going to be read.
     Value *VDstIn = II.getArgOperand(0);
     if (isa<UndefValue>(VDstIn))
       break;
 
-    ConstantInt *FetchInvalid = cast<ConstantInt>(II.getArgOperand(4));
-    ConstantInt *BoundCtrl = cast<ConstantInt>(II.getArgOperand(5));
+    // FetchInvalid operand idx.
+    unsigned int FiIdx = (IID == Intrinsic::amdgcn_permlane16 ||
+                          IID == Intrinsic::amdgcn_permlanex16)
+                             ? 4  /* for permlane16 and permlanex16 */
+                             : 3; /* for permlane16_var and permlanex16_var */
+
+    // BoundCtrl operand idx.
+    // For permlane16 and permlanex16 it should be 5
+    // For Permlane16_var and permlanex16_var it should be 4
+    unsigned int BcIdx = FiIdx + 1;
+
+    ConstantInt *FetchInvalid = cast<ConstantInt>(II.getArgOperand(FiIdx));
+    ConstantInt *BoundCtrl = cast<ConstantInt>(II.getArgOperand(BcIdx));
     if (!FetchInvalid->getZExtValue() && !BoundCtrl->getZExtValue())
       break;
 
@@ -1228,6 +1241,10 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     ConstantInt *DMask = cast<ConstantInt>(Args[DMaskIdx]);
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
 
+    // dmask 0 has special semantics, do not simplify.
+    if (DMaskVal == 0)
+      return nullptr;
+
     // Mask off values that are undefined because the dmask doesn't cover them
     DemandedElts &= (1 << llvm::popcount(DMaskVal)) - 1;
 
@@ -1248,7 +1265,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   unsigned NewNumElts = DemandedElts.popcount();
   if (!NewNumElts)
-    return UndefValue::get(IIVTy);
+    return PoisonValue::get(IIVTy);
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
     if (DMaskIdx >= 0)
@@ -1286,7 +1303,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   if (IsLoad) {
     if (NewNumElts == 1) {
-      return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
+      return IC.Builder.CreateInsertElement(PoisonValue::get(IIVTy), NewCall,
                                             DemandedElts.countr_zero());
     }
 

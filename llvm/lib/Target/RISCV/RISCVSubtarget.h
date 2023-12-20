@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
+#include <bitset>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"
@@ -44,6 +45,8 @@ struct RISCVTuneInfo {
   uint16_t PrefetchDistance;
   uint16_t MinPrefetchStride;
   unsigned MaxPrefetchIterationsAhead;
+
+  unsigned MinimumJumpTableEntries;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -140,16 +143,12 @@ public:
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
-  bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
   bool hasStdExtZfhOrZhinx() const { return HasStdExtZfh || HasStdExtZhinx; }
-  bool hasStdExtZhinxOrZhinxmin() const {
-    return HasStdExtZhinx || HasStdExtZhinxmin;
-  }
-  bool hasStdExtZfhOrZfhminOrZhinxOrZhinxmin() const {
-    return hasStdExtZfhOrZfhmin() || hasStdExtZhinxOrZhinxmin();
+  bool hasStdExtZfhminOrZhinxmin() const {
+    return HasStdExtZfhmin || HasStdExtZhinxmin;
   }
   bool hasHalfFPLoadStoreMove() const {
-    return hasStdExtZfhOrZfhmin() || HasStdExtZfbfmin;
+    return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
@@ -190,14 +189,15 @@ public:
     return UserReservedRegister[i];
   }
 
-  bool hasMacroFusion() const { return hasLUIADDIFusion(); }
+  bool hasMacroFusion() const {
+    return hasLUIADDIFusion() || hasAUIPCADDIFusion() ||
+           hasShiftedZExtFusion() || hasLDADDFusion();
+  }
 
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
-  bool hasVInstructionsF16Minimal() const {
-    return HasStdExtZvfhmin || HasStdExtZvfh;
-  }
+  bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
   bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
@@ -270,6 +270,8 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return TuneInfo->MaxPrefetchIterationsAhead;
   };
+
+  unsigned getMinimumJumpTableEntries() const;
 };
 } // End llvm namespace
 

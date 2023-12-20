@@ -100,8 +100,7 @@ bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
          (is(tok::l_brace) &&
           (getBlockKind() == BK_Block || is(TT_DictLiteral) ||
            (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
-         (is(tok::less) && (Style.Language == FormatStyle::LK_Proto ||
-                            Style.Language == FormatStyle::LK_TextProto));
+         (is(tok::less) && Style.isProto());
 }
 
 TokenRole::~TokenRole() {}

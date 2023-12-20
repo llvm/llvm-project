@@ -11,7 +11,7 @@ define void @another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-11 + %n)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-11 + %n)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

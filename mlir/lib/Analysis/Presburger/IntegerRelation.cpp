@@ -449,6 +449,12 @@ void IntegerRelation::swapVar(unsigned posA, unsigned posB) {
   if (posA == posB)
     return;
 
+  VarKind kindA = space.getVarKindAt(posA);
+  VarKind kindB = space.getVarKindAt(posB);
+  unsigned relativePosA = posA - getVarKindOffset(kindA);
+  unsigned relativePosB = posB - getVarKindOffset(kindB);
+  space.swapVar(kindA, kindB, relativePosA, relativePosB);
+
   inequalities.swapColumns(posA, posB);
   equalities.swapColumns(posA, posB);
 }
@@ -1351,7 +1357,6 @@ void IntegerRelation::simplify() {
     changed |= removeDuplicateConstraints();
   }
   // Current set is not empty.
-  return;
 }
 
 /// Removes local variables using equalities. Each equality is checked if it

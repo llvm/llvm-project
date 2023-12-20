@@ -20,3 +20,13 @@ void instantiate_template_cases() {
   type_dependent_variables<int>();
   type_dependent_variables<float>();
 }
+
+namespace gh57297{
+// The expression to check may not be the dependent operand in a dependent
+// operator.
+
+// Explicitly not declaring a (templated) stream operator
+// so the `<<` is a `binaryOperator` with a dependent type.
+struct Stream { };
+template <typename T> void f() { T t; Stream x; x << t; }
+} // namespace gh57297

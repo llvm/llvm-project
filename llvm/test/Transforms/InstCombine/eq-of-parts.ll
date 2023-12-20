@@ -584,17 +584,8 @@ define i1 @eq_21_not_adjacent(i32 %x, i32 %y) {
 
 define i1 @eq_shift_in_zeros(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_shift_in_zeros(
-; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
-; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i24
-; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
-; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
-; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i24
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[X_1]], [[Y_1]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i24 [[X_2]], [[Y_2]]
-; CHECK-NEXT:    [[C_210:%.*]] = and i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    [[C_210_UNSHIFTED:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ult i32 [[C_210_UNSHIFTED]], 256
 ; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
@@ -1249,17 +1240,8 @@ define i1 @ne_21_not_adjacent(i32 %x, i32 %y) {
 
 define i1 @ne_shift_in_zeros(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_shift_in_zeros(
-; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
-; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i24
-; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
-; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
-; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i24
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i24 [[X_2]], [[Y_2]]
-; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    [[C_210_UNSHIFTED:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ugt i32 [[C_210_UNSHIFTED]], 255
 ; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8

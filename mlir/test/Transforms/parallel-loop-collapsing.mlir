@@ -43,4 +43,4 @@ func.func @parallel_many_dims() {
 // CHECK:   [[V2:%.*]] = arith.muli [[V0]], [[C10]] : index
 // CHECK:   [[I3:%.*]] = arith.addi [[V2]], [[C9]] : index
 // CHECK:   "magic.op"([[I0]], [[C3]], [[C6]], [[I3]], [[C12]]) : (index, index, index, index, index) -> index
-// CHECK:   scf.yield
+// CHECK:   scf.reduce

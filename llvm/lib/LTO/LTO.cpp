@@ -610,13 +610,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    StringRef Name = Sym.getName();
-    // Strip the __imp_ prefix from COFF dllimport symbols (similar to the
-    // way they are handled by lld), otherwise we can end up with two
-    // global resolutions (one with and one for a copy of the symbol without).
-    if (TT.isOSBinFormatCOFF() && Name.startswith("__imp_"))
-      Name = Name.substr(strlen("__imp_"));
-    auto &GlobalRes = GlobalResolutions[Name];
+    auto &GlobalRes = GlobalResolutions[Sym.getName()];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&

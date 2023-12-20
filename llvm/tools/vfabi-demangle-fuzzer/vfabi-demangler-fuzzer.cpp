@@ -27,15 +27,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // present. We need to make sure we can even invoke
   // `getOrInsertFunction` because such method asserts on strings with
   // zeroes.
-  if (!MangledName.empty() && MangledName.find_first_of(0) == StringRef::npos)
-    M->getOrInsertFunction(
-        MangledName,
-        FunctionType::get(Type::getVoidTy(M->getContext()), false));
-  const auto Info = VFABI::tryDemangleForVFABI(MangledName, *M);
+  // TODO: What is this actually testing? That we don't crash?
+  if (!MangledName.empty() && MangledName.find_first_of(0) == StringRef::npos) {
+    FunctionType *FTy =
+        FunctionType::get(Type::getVoidTy(M->getContext()), false);
+    const auto Info = VFABI::tryDemangleForVFABI(MangledName, FTy);
 
-  // Do not optimize away the return value. Inspired by
-  // https://github.com/google/benchmark/blob/main/include/benchmark/benchmark.h#L307-L345
-  asm volatile("" : : "r,m"(Info) : "memory");
+    // Do not optimize away the return value. Inspired by
+    // https://github.com/google/benchmark/blob/main/include/benchmark/benchmark.h#L307-L345
+    asm volatile("" : : "r,m"(Info) : "memory");
+  }
 
   return 0;
 }

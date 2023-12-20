@@ -58,6 +58,10 @@ using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
 /// Returns the set of all fields in the type.
 FieldSet getObjectFields(QualType Type);
 
+/// Returns whether `Fields` and `FieldLocs` contain the same fields.
+bool containsSameFields(const FieldSet &Fields,
+                        const RecordStorageLocation::FieldToLoc &FieldLocs);
+
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
   /// context-sensitive analysis entirely.
@@ -92,10 +96,38 @@ public:
                               /*Logger=*/nullptr});
   ~DataflowAnalysisContext();
 
+  /// Sets a callback that returns the names and types of the synthetic fields
+  /// to add to a `RecordStorageLocation` of a given type.
+  /// Typically, this is called from the constructor of a `DataflowAnalysis`
+  ///
+  /// To maintain the invariant that all `RecordStorageLocation`s of a given
+  /// type have the same fields:
+  /// *  The callback must always return the same result for a given type
+  /// *  `setSyntheticFieldCallback()` must be called before any
+  //     `RecordStorageLocation`s are created.
+  void setSyntheticFieldCallback(
+      std::function<llvm::StringMap<QualType>(QualType)> CB) {
+    assert(!RecordStorageLocationCreated);
+    SyntheticFieldCallback = CB;
+  }
+
   /// Returns a new storage location appropriate for `Type`.
   ///
   /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
+
+  /// Creates a `RecordStorageLocation` for the given type and with the given
+  /// fields.
+  ///
+  /// Requirements:
+  ///
+  ///  `FieldLocs` must contain exactly the fields returned by
+  ///  `getModeledFields(Type)`.
+  ///  `SyntheticFields` must contain exactly the fields returned by
+  ///  `getSyntheticFields(Type)`.
+  RecordStorageLocation &createRecordStorageLocation(
+      QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+      RecordStorageLocation::SyntheticFieldMap SyntheticFields);
 
   /// Returns a stable storage location for `D`.
   StorageLocation &getStableStorageLocation(const ValueDecl &D);
@@ -168,6 +200,15 @@ public:
   /// Returns the fields of `Type`, limited to the set of fields modeled by this
   /// context.
   FieldSet getModeledFields(QualType Type);
+
+  /// Returns the names and types of the synthetic fields for the given record
+  /// type.
+  llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
+    assert(Type->isRecordType());
+    if (SyntheticFieldCallback)
+      return SyntheticFieldCallback(Type);
+    return {};
+  }
 
 private:
   friend class Environment;
@@ -250,6 +291,11 @@ private:
   FieldSet ModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
+
+  std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
+
+  /// Has any `RecordStorageLocation` been created yet?
+  bool RecordStorageLocationCreated = false;
 };
 
 } // namespace dataflow

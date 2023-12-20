@@ -66,7 +66,7 @@ public:
   llvm::Error UnbundleArchive();
 };
 
-/// Obtain the offload kind, real machine triple, and an optional GPUArch
+/// Obtain the offload kind, real machine triple, and an optional TargetID
 /// out of the target information specified by the user.
 /// Bundle Entry ID (or, Offload Target String) has following components:
 ///  * Offload Kind - Host, OpenMP, or HIP

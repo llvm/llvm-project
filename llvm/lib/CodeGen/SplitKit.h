@@ -159,6 +159,10 @@ private:
   /// NumThroughBlocks - Number of live-through blocks.
   unsigned NumThroughBlocks = 0u;
 
+  /// LooksLikeLoopIV - The variable defines what looks like it could be a loop
+  /// IV, where it defs a variable in the latch.
+  bool LooksLikeLoopIV = false;
+
   // Sumarize statistics by counting instructions using CurLI.
   void analyzeUses();
 
@@ -208,6 +212,8 @@ public:
   unsigned getNumLiveBlocks() const {
     return getUseBlocks().size() - NumGapBlocks + getNumThroughBlocks();
   }
+
+  bool looksLikeLoopIV() const { return LooksLikeLoopIV; }
 
   /// countLiveBlocks - Return the number of blocks where li is live. This is
   /// guaranteed to return the same number as getNumLiveBlocks() after calling

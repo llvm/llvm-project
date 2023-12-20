@@ -205,3 +205,23 @@ void test_sendmsg(int sockfd, const struct msghdr *msg, int flags) {
   ssize_t Ret = sendmsg(sockfd, msg, flags);
   clang_analyzer_eval(Ret != 0); // expected-warning{{TRUE}}
 }
+
+void test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlink("path", Buf, Bufsize);
+  if (Ret == 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{TRUE}}
+  else if (Ret > 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
+  else
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_readlinkat_bufsize_zero(int fd, char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlinkat(fd, "path", Buf, Bufsize);
+  if (Ret == 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{TRUE}}
+  else if (Ret > 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
+  else
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
+}

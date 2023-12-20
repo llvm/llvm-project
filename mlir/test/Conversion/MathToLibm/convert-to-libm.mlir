@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -convert-math-to-libm -canonicalize | FileCheck %s
 
+// CHECK-DAG: @acos(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @acosf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @atan(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @atanf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @erf(f64) -> f64 attributes {llvm.readnone}
@@ -22,12 +24,51 @@
 // CHECK-DAG: @truncf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @cos(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @cosf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @cosh(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @coshf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @sin(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @sinf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @floor(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @floorf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @ceil(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @ceilf(f32) -> f32 attributes {llvm.readnone}
+
+// CHECK-LABEL: func @acos_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @acos_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @acosf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.acos %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @acos(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.acos %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL:   func @acos_vec_caller(
+// CHECK-SAME:                           %[[VAL_0:.*]]: vector<2xf32>,
+// CHECK-SAME:                           %[[VAL_1:.*]]: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+// CHECK-DAG:       %[[CVF:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+// CHECK-DAG:       %[[CVD:.*]] = arith.constant dense<0.000000e+00> : vector<2xf64>
+// CHECK:           %[[IN0_F32:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<2xf32>
+// CHECK:           %[[OUT0_F32:.*]] = call @acosf(%[[IN0_F32]]) : (f32) -> f32
+// CHECK:           %[[VAL_8:.*]] = vector.insert %[[OUT0_F32]], %[[CVF]] [0] : f32 into vector<2xf32>
+// CHECK:           %[[IN1_F32:.*]] = vector.extract %[[VAL_0]][1] : f32 from vector<2xf32>
+// CHECK:           %[[OUT1_F32:.*]] = call @acosf(%[[IN1_F32]]) : (f32) -> f32
+// CHECK:           %[[VAL_11:.*]] = vector.insert %[[OUT1_F32]], %[[VAL_8]] [1] : f32 into vector<2xf32>
+// CHECK:           %[[IN0_F64:.*]] = vector.extract %[[VAL_1]][0] : f64 from vector<2xf64>
+// CHECK:           %[[OUT0_F64:.*]] = call @acos(%[[IN0_F64]]) : (f64) -> f64
+// CHECK:           %[[VAL_14:.*]] = vector.insert %[[OUT0_F64]], %[[CVD]] [0] : f64 into vector<2xf64>
+// CHECK:           %[[IN1_F64:.*]] = vector.extract %[[VAL_1]][1] : f64 from vector<2xf64>
+// CHECK:           %[[OUT1_F64:.*]] = call @acos(%[[IN1_F64]]) : (f64) -> f64
+// CHECK:           %[[VAL_17:.*]] = vector.insert %[[OUT1_F64]], %[[VAL_14]] [1] : f64 into vector<2xf64>
+// CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
+// CHECK:         }
+func.func @acos_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+  %float_result = math.acos %float : vector<2xf32>
+  %double_result = math.acos %double : vector<2xf64>
+  return %float_result, %double_result : vector<2xf32>, vector<2xf64>
+}
 
 // CHECK-LABEL: func @atan_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
@@ -84,6 +125,30 @@ func.func @tanh_caller(%float: f32, %double: f64) -> (f32, f64)  {
   %float_result = math.tanh %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @tanh(%[[DOUBLE]]) : (f64) -> f64
   %double_result = math.tanh %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @cosh_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @cosh_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @coshf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.cosh %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @cosh(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.cosh %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @sinh_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @sinh_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @sinhf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.sinh %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @sinh(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.sinh %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
 }

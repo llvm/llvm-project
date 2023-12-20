@@ -883,6 +883,18 @@ bool Thread::ShouldStop(Event *event_ptr) {
           // If a Controlling Plan wants to stop, we let it. Otherwise, see if
           // the plan's parent wants to stop.
 
+          // Temporary logging to figure out a crash on Arm/AArch64 Linux.
+          {
+            LLDB_LOGF(log, "^^^^^^^^ Thread::ShouldStop plan stack before "
+                           "PopPlan ^^^^^^^^");
+            StreamString s;
+            s.IndentMore();
+            GetProcess()->DumpThreadPlansForTID(
+                s, GetID(), eDescriptionLevelVerbose, true /* internal */,
+                false /* condense_trivial */, true /* skip_unreported */);
+            LLDB_LOG(log, s.GetData());
+          }
+
           PopPlan();
           if (should_stop && current_plan->IsControllingPlan() &&
               !current_plan->OkayToDiscard()) {
@@ -1589,12 +1601,12 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   return Status();
 }
 
-void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
-                                     bool stop_format) {
+bool Thread::DumpUsingFormat(Stream &strm, uint32_t frame_idx,
+                             const FormatEntity::Entry *format) {
   ExecutionContext exe_ctx(shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == nullptr)
-    return;
+  if (!process || !format)
+    return false;
 
   StackFrameSP frame_sp;
   SymbolContext frame_sc;
@@ -1606,6 +1618,14 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
     }
   }
 
+  return FormatEntity::Format(*format, strm, frame_sp ? &frame_sc : nullptr,
+                              &exe_ctx, nullptr, nullptr, false, false);
+}
+
+void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
+                                     bool stop_format) {
+  ExecutionContext exe_ctx(shared_from_this());
+
   const FormatEntity::Entry *thread_format;
   if (stop_format)
     thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
@@ -1614,8 +1634,7 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
 
   assert(thread_format);
 
-  FormatEntity::Format(*thread_format, strm, frame_sp ? &frame_sc : nullptr,
-                       &exe_ctx, nullptr, nullptr, false, false);
+  DumpUsingFormat(strm, frame_idx, thread_format);
 }
 
 void Thread::SettingsInitialize() {}

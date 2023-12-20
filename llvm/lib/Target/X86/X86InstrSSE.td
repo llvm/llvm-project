@@ -6706,31 +6706,31 @@ let Constraints = "$src1 = $dst" in {
 
 // FIXME: Is there a better scheduler class for SHA than WriteVecIMul?
 multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
-                      X86FoldableSchedWrite sched, bit UsesXMM0 = 0> {
-  def rr : I<Opc, MRMSrcReg, (outs VR128:$dst),
-             (ins VR128:$src1, VR128:$src2),
-             !if(UsesXMM0,
-                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-             [!if(UsesXMM0,
-                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
-                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
-             T8PS, Sched<[sched]>;
+                      X86FoldableSchedWrite sched, string Suffix = "", bit UsesXMM0 = 0> {
+  def rr#Suffix : I<Opc, MRMSrcReg, (outs VR128:$dst),
+                    (ins VR128:$src1, VR128:$src2),
+                    !if(UsesXMM0,
+                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+                    [!if(UsesXMM0,
+                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
+                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
+                    T8PS, Sched<[sched]>;
 
-  def rm : I<Opc, MRMSrcMem, (outs VR128:$dst),
-             (ins VR128:$src1, i128mem:$src2),
-             !if(UsesXMM0,
-                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-             [!if(UsesXMM0,
-                  (set VR128:$dst, (IntId VR128:$src1,
-                    (memop addr:$src2), XMM0)),
-                  (set VR128:$dst, (IntId VR128:$src1,
-                    (memop addr:$src2))))]>, T8PS,
-             Sched<[sched.Folded, sched.ReadAfterFold]>;
+  def rm#Suffix : I<Opc, MRMSrcMem, (outs VR128:$dst),
+                    (ins VR128:$src1, i128mem:$src2),
+                    !if(UsesXMM0,
+                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+                    [!if(UsesXMM0,
+                         (set VR128:$dst, (IntId VR128:$src1,
+                           (memop addr:$src2), XMM0)),
+                         (set VR128:$dst, (IntId VR128:$src1,
+                           (memop addr:$src2))))]>, T8PS,
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
+let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
   def SHA1RNDS4rri : Ii8<0xCC, MRMSrcReg, (outs VR128:$dst),
                          (ins VR128:$src1, VR128:$src2, u8imm:$src3),
                          "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
@@ -6757,7 +6757,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
 
   let Uses=[XMM0] in
   defm SHA256RNDS2 : SHAI_binop<0xCB, "sha256rnds2", int_x86_sha256rnds2,
-                                SchedWriteVecIMul.XMM, 1>;
+                                SchedWriteVecIMul.XMM, "", 1>;
 
   defm SHA256MSG1 : SHAI_binop<0xCC, "sha256msg1", int_x86_sha256msg1,
                                SchedWriteVecIMul.XMM>;
@@ -6765,11 +6765,47 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
                                SchedWriteVecIMul.XMM>;
 }
 
-// Aliases with explicit %xmm0
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rr VR128:$dst, VR128:$src2), 0>;
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rm VR128:$dst, i128mem:$src2), 0>;
+let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in {
+  def SHA1RNDS4rri_EVEX: Ii8<0xD4, MRMSrcReg, (outs VR128:$dst),
+                             (ins VR128:$src1, VR128:$src2, u8imm:$src3),
+                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                             [(set VR128:$dst,
+                               (int_x86_sha1rnds4 VR128:$src1, VR128:$src2,
+                                (i8 timm:$src3)))]>,
+                         EVEX_NoCD8, T_MAP4PS, Sched<[SchedWriteVecIMul.XMM]>;
+  def SHA1RNDS4rmi_EVEX: Ii8<0xD4, MRMSrcMem, (outs VR128:$dst),
+                             (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
+                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                             [(set VR128:$dst,
+                               (int_x86_sha1rnds4 VR128:$src1,
+                                (memop addr:$src2),
+                                (i8 timm:$src3)))]>,
+                         EVEX_NoCD8, T_MAP4PS,
+                         Sched<[SchedWriteVecIMul.XMM.Folded,
+                                SchedWriteVecIMul.XMM.ReadAfterFold]>;
+
+  defm SHA1NEXTE : SHAI_binop<0xD8, "sha1nexte", int_x86_sha1nexte,
+                                   SchedWriteVecIMul.XMM, "_EVEX">,
+                        EVEX_NoCD8, T_MAP4PS;
+  defm SHA1MSG1  : SHAI_binop<0xD9, "sha1msg1", int_x86_sha1msg1,
+                              SchedWriteVecIMul.XMM, "_EVEX">,
+                   EVEX_NoCD8, T_MAP4PS;
+  defm SHA1MSG2  : SHAI_binop<0xDA, "sha1msg2", int_x86_sha1msg2,
+                              SchedWriteVecIMul.XMM, "_EVEX">,
+                   EVEX_NoCD8, T_MAP4PS;
+
+  let Uses=[XMM0] in
+  defm SHA256RNDS2 : SHAI_binop<0xDB, "sha256rnds2", int_x86_sha256rnds2,
+                                SchedWriteVecIMul.XMM, "_EVEX", 1>,
+                     EVEX_NoCD8, T_MAP4PS;
+
+  defm SHA256MSG1 : SHAI_binop<0xDC, "sha256msg1", int_x86_sha256msg1,
+                               SchedWriteVecIMul.XMM, "_EVEX">,
+                    EVEX_NoCD8, T_MAP4PS;
+  defm SHA256MSG2 : SHAI_binop<0xDD, "sha256msg2", int_x86_sha256msg2,
+                               SchedWriteVecIMul.XMM, "_EVEX">,
+                    EVEX_NoCD8, T_MAP4PS;
+}
 
 //===----------------------------------------------------------------------===//
 // AES-NI Instructions
@@ -7093,35 +7129,35 @@ def VBROADCASTSDYrr  : avx2_broadcast_rr<0x19, "vbroadcastsd", VR256,
 //                  halves of a 256-bit vector.
 //
 let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX2] in
-def VBROADCASTI128 : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
-                           (ins i128mem:$src),
-                           "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,
-                           Sched<[WriteShuffleLd]>, VEX, VEX_L;
+def VBROADCASTI128rm : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
+                             (ins i128mem:$src),
+                             "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,
+                             Sched<[WriteShuffleLd]>, VEX, VEX_L;
 
 let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX],
     ExeDomain = SSEPackedSingle in
-def VBROADCASTF128 : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
-                           (ins f128mem:$src),
-                           "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,
-                           Sched<[SchedWriteFShuffle.XMM.Folded]>, VEX, VEX_L;
+def VBROADCASTF128rm : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
+                             (ins f128mem:$src),
+                             "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,
+                             Sched<[SchedWriteFShuffle.XMM.Folded]>, VEX, VEX_L;
 
 let Predicates = [HasAVX, NoVLX] in {
 def : Pat<(v4f64 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v8f32 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 // NOTE: We're using FP instructions here, but execution domain fixing can
 // convert to integer when profitable.
 def : Pat<(v4i64 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v8i32 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v16i16 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v16f16 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7316,7 +7352,7 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 // AVX_VNNI
 //===----------------------------------------------------------------------===//
 let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI], Constraints = "$src1 = $dst",
-    ExplicitVEXPrefix = 1, checkVEXPredicate = 1 in
+    explicitOpPrefix = ExplicitVEX in
 multiclass avx_vnni_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                        bit IsCommutable> {
   let isCommutable = IsCommutable in
@@ -7358,11 +7394,6 @@ defm VPDPBUSD   : avx_vnni_rm<0x50, "vpdpbusd", X86Vpdpbusd, 0>;
 defm VPDPBUSDS  : avx_vnni_rm<0x51, "vpdpbusds", X86Vpdpbusds, 0>;
 defm VPDPWSSD   : avx_vnni_rm<0x52, "vpdpwssd",  X86Vpdpwssd, 1>;
 defm VPDPWSSDS  : avx_vnni_rm<0x53, "vpdpwssds", X86Vpdpwssds, 1>;
-
-def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
-                             (X86vpmaddwd node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
 
 let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI] in {
   def : Pat<(v8i32 (add VR256:$src1,
@@ -8142,8 +8173,7 @@ let isCommutable = 0 in {
 }
 
 // AVX-IFMA
-let Predicates = [HasAVXIFMA, NoVLX_Or_NoIFMA], Constraints = "$src1 = $dst",
-    checkVEXPredicate = 1 in
+let Predicates = [HasAVXIFMA, NoVLX_Or_NoIFMA], Constraints = "$src1 = $dst" in
 multiclass avx_ifma_rm<bits<8> opc, string OpcodeStr, SDNode OpNode> {
   // NOTE: The SDNode have the multiply operands first with the add last.
   // This enables commuted load patterns to be autogenerated by tablegen.
@@ -8287,7 +8317,6 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8XD;
   defm VCVTNEOPH2PS : AVX_NE_CONVERT_BASE<0xb0, "vcvtneoph2ps", f128mem,
        f256mem>, T8PS;
-  let checkVEXPredicate = 1 in
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8XS, ExplicitVEXPrefix;
 
   def : Pat<(v8bf16 (X86vfpround (v8f32 VR256:$src))),

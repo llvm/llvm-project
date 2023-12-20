@@ -1445,7 +1445,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     // So long as the new type has more bits than the bits we're extending we
     // don't need to break it apart.
-    if (NarrowTy.getScalarSizeInBits() >= SizeInBits) {
+    if (NarrowTy.getScalarSizeInBits() > SizeInBits) {
       Observer.changingInstr(MI);
       // We don't lose any non-extension bits by truncating the src and
       // sign-extending the dst.
@@ -1488,14 +1488,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     Register AshrCstReg =
         MIRBuilder.buildConstant(NarrowTy, NarrowTy.getScalarSizeInBits() - 1)
             .getReg(0);
-    Register FullExtensionReg = 0;
-    Register PartialExtensionReg = 0;
+    Register FullExtensionReg;
+    Register PartialExtensionReg;
 
     // Do the operation on each small part.
     for (int i = 0; i < NumParts; ++i) {
-      if ((i + 1) * NarrowTy.getScalarSizeInBits() < SizeInBits)
+      if ((i + 1) * NarrowTy.getScalarSizeInBits() <= SizeInBits) {
         DstRegs.push_back(SrcRegs[i]);
-      else if (i * NarrowTy.getScalarSizeInBits() > SizeInBits) {
+        PartialExtensionReg = DstRegs.back();
+      } else if (i * NarrowTy.getScalarSizeInBits() >= SizeInBits) {
         assert(PartialExtensionReg &&
                "Expected to visit partial extension before full");
         if (FullExtensionReg) {
@@ -2405,6 +2406,16 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
+  case TargetOpcode::G_ROTR:
+  case TargetOpcode::G_ROTL:
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_SMIN:
@@ -2483,6 +2494,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_IS_FPCLASS:
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
@@ -2818,6 +2830,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_FADD:
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
@@ -3570,10 +3583,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFFloor(MI);
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN: {
+  case TargetOpcode::G_FRINT: {
     // Since round even is the assumed rounding mode for unconstrained FP
     // operations, rint and roundeven are the same operation.
-    changeOpcode(MI, TargetOpcode::G_FRINT);
+    changeOpcode(MI, TargetOpcode::G_INTRINSIC_ROUNDEVEN);
     return Legalized;
   }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
@@ -3780,6 +3793,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
+  case G_VAARG:
+    return lowerVAArg(MI);
   }
 }
 
@@ -6968,8 +6983,8 @@ LegalizerHelper::lowerExtractInsertVectorElt(MachineInstr &MI) {
   Align EltAlign;
 
   MachinePointerInfo PtrInfo;
-  auto StackTemp = createStackTemporary(TypeSize::Fixed(VecTy.getSizeInBytes()),
-                                        VecAlign, PtrInfo);
+  auto StackTemp = createStackTemporary(
+      TypeSize::getFixed(VecTy.getSizeInBytes()), VecAlign, PtrInfo);
   MIRBuilder.buildStore(SrcVec, StackTemp, PtrInfo, VecAlign);
 
   // Get the pointer to the element, and be sure not to hit undefined behavior
@@ -7039,21 +7054,12 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   return Legalized;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
-  const auto &MF = *MI.getMF();
-  const auto &TFI = *MF.getSubtarget().getFrameLowering();
-  if (TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp)
-    return UnableToLegalize;
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register AllocSize = MI.getOperand(1).getReg();
-  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
-
-  LLT PtrTy = MRI.getType(Dst);
+Register LegalizerHelper::getDynStackAllocTargetPtr(Register SPReg,
+                                                    Register AllocSize,
+                                                    Align Alignment,
+                                                    LLT PtrTy) {
   LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
 
-  Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
   auto SPTmp = MIRBuilder.buildCopy(PtrTy, SPReg);
   SPTmp = MIRBuilder.buildCast(IntPtrTy, SPTmp);
 
@@ -7068,7 +7074,25 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
     Alloc = MIRBuilder.buildAnd(IntPtrTy, Alloc, AlignCst);
   }
 
-  SPTmp = MIRBuilder.buildCast(PtrTy, Alloc);
+  return MIRBuilder.buildCast(PtrTy, Alloc).getReg(0);
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
+  const auto &MF = *MI.getMF();
+  const auto &TFI = *MF.getSubtarget().getFrameLowering();
+  if (TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp)
+    return UnableToLegalize;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register AllocSize = MI.getOperand(1).getReg();
+  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+  LLT PtrTy = MRI.getType(Dst);
+  Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
+  Register SPTmp =
+      getDynStackAllocTargetPtr(SPReg, AllocSize, Alignment, PtrTy);
+
   MIRBuilder.buildCopy(SPReg, SPTmp);
   MIRBuilder.buildCopy(Dst, SPTmp);
 
@@ -7863,6 +7887,56 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
     return Legalized;
   }
   return UnableToLegalize;
+}
+
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
+  MachineFunction &MF = *MI.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  Register ListPtr = MI.getOperand(1).getReg();
+  LLT PtrTy = MRI.getType(ListPtr);
+
+  // LstPtr is a pointer to the head of the list. Get the address
+  // of the head of the list.
+  Align PtrAlignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
+  MachineMemOperand *PtrLoadMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
+  auto VAList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
+
+  const Align A(MI.getOperand(2).getImm());
+  LLT PtrTyAsScalarTy = LLT::scalar(PtrTy.getSizeInBits());
+  if (A > TLI.getMinStackArgumentAlignment()) {
+    Register AlignAmt =
+        MIRBuilder.buildConstant(PtrTyAsScalarTy, A.value() - 1).getReg(0);
+    auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, VAList, AlignAmt);
+    auto AndDst = MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(A));
+    VAList = AndDst.getReg(0);
+  }
+
+  // Increment the pointer, VAList, to the next vaarg
+  // The list should be bumped by the size of element in the current head of
+  // list.
+  Register Dst = MI.getOperand(0).getReg();
+  LLT LLTTy = MRI.getType(Dst);
+  Type *Ty = getTypeForLLT(LLTTy, Ctx);
+  auto IncAmt =
+      MIRBuilder.buildConstant(PtrTyAsScalarTy, DL.getTypeAllocSize(Ty));
+  auto Succ = MIRBuilder.buildPtrAdd(PtrTy, VAList, IncAmt);
+
+  // Store the increment VAList to the legalized pointer
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, PtrAlignment);
+  MIRBuilder.buildStore(Succ, ListPtr, *StoreMMO);
+  // Load the actual argument out of the pointer VAList
+  Align EltAlignment = DL.getABITypeAlign(Ty);
+  MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
+  MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {

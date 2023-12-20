@@ -271,7 +271,7 @@ def ptxas_version(ptxas):
     ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
     ptxas_out = ptxas_cmd.stdout.read().decode("ascii")
     ptxas_cmd.wait()
-    match = re.search("release (\d+)\.(\d+)", ptxas_out)
+    match = re.search(r"release (\d+)\.(\d+)", ptxas_out)
     if match:
         return (int(match.group(1)), int(match.group(2)))
     print("couldn't determine ptxas version")
@@ -571,6 +571,9 @@ if "darwin" == sys.platform:
         result = sysctl_cmd.stdout.read().decode("ascii")
         if "hw.optional.fma: 1" in result:
             config.available_features.add("fma3")
+
+if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 17063:
+    config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
 if not re.match(

@@ -18,4 +18,6 @@ if (DEFINED MSVC)
   add_flang_library(Fortran_main.dynamic_dbg STATIC INSTALL_WITH_TOOLCHAIN
     Fortran_main.c
   )
+  add_dependencies(Fortran_main Fortran_main.static Fortran_main.dynamic
+    Fortran_main.static_dbg Fortran_main.dynamic_dbg)
 endif()

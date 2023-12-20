@@ -738,6 +738,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
 
   // AMDGCN-based processors.
+  // clang-format off
   EF_AMDGPU_MACH_AMDGCN_GFX600        = 0x020,
   EF_AMDGPU_MACH_AMDGCN_GFX601        = 0x021,
   EF_AMDGPU_MACH_AMDGCN_GFX700        = 0x022,
@@ -778,15 +779,18 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1036       = 0x045,
   EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x046,
   EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X48 = 0x048,
+  EF_AMDGPU_MACH_AMDGCN_GFX1200       = 0x048,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49 = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151       = 0x04a,
   EF_AMDGPU_MACH_AMDGCN_GFX941        = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX942,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1201,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -840,6 +844,49 @@ enum : unsigned {
 // ELF Relocation types for AMDGPU
 enum {
 #include "ELFRelocs/AMDGPU.def"
+};
+
+// NVPTX specific e_flags.
+enum : unsigned {
+  // Processor selection mask for EF_CUDA_SM* values.
+  EF_CUDA_SM = 0xff,
+
+  // SM based processor values.
+  EF_CUDA_SM20 = 0x14,
+  EF_CUDA_SM21 = 0x15,
+  EF_CUDA_SM30 = 0x1e,
+  EF_CUDA_SM32 = 0x20,
+  EF_CUDA_SM35 = 0x23,
+  EF_CUDA_SM37 = 0x25,
+  EF_CUDA_SM50 = 0x32,
+  EF_CUDA_SM52 = 0x34,
+  EF_CUDA_SM53 = 0x35,
+  EF_CUDA_SM60 = 0x3c,
+  EF_CUDA_SM61 = 0x3d,
+  EF_CUDA_SM62 = 0x3e,
+  EF_CUDA_SM70 = 0x46,
+  EF_CUDA_SM72 = 0x48,
+  EF_CUDA_SM75 = 0x4b,
+  EF_CUDA_SM80 = 0x50,
+  EF_CUDA_SM86 = 0x56,
+  EF_CUDA_SM87 = 0x57,
+  EF_CUDA_SM89 = 0x59,
+  // The sm_90a variant uses the same machine flag.
+  EF_CUDA_SM90 = 0x5a,
+
+  // Unified texture binding is enabled.
+  EF_CUDA_TEXMODE_UNIFIED = 0x100,
+  // Independent texture binding is enabled.
+  EF_CUDA_TEXMODE_INDEPENDANT = 0x200,
+  // The target is using 64-bit addressing.
+  EF_CUDA_64BIT_ADDRESS = 0x400,
+  // Set when using the sm_90a processor.
+  EF_CUDA_ACCELERATORS = 0x800,
+  // Undocumented software feature.
+  EF_CUDA_SW_FLAG_V2 = 0x1000,
+
+  // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
+  EF_CUDA_VIRTUAL_SM = 0xff0000,
 };
 
 // ELF Relocation types for BPF
@@ -1056,6 +1103,9 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Special aarch64-specific section for MTE support, as described in:
+  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#section-types
+  SHT_AARCH64_AUTH_RELR = 0x70000004U,
   // Special aarch64-specific sections for MTE support, as described in:
   // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#7section-types
   SHT_AARCH64_MEMTAG_GLOBALS_STATIC = 0x70000007U,
@@ -1643,6 +1693,11 @@ enum {
   NT_ANDROID_TYPE_MEMTAG = 4,
 };
 
+// ARM note types.
+enum {
+  NT_ARM_TYPE_PAUTH_ABI_TAG = 1,
+};
+
 // Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.
 enum {
   // Enumeration to determine the tagging mode. In Android-land, 'SYNC' means
@@ -1681,6 +1736,7 @@ enum : unsigned {
 enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
   GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
+  GNU_PROPERTY_AARCH64_FEATURE_1_GCS = 1 << 2,
 };
 
 // x86 processor feature bits.

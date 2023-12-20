@@ -468,15 +468,7 @@ public:
   virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx,
                                               bool can_create = true);
 
-  // this will always create the children if necessary
-  lldb::ValueObjectSP GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
-                                          size_t *index_of_error = nullptr);
-
-  lldb::ValueObjectSP
-  GetChildAtIndexPath(llvm::ArrayRef<std::pair<size_t, bool>> idxs,
-                      size_t *index_of_error = nullptr);
-
-  // this will always create the children if necessary
+  // The method always creates missing children in the path, if necessary.
   lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names);
 
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,

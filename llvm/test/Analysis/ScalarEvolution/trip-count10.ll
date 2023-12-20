@@ -32,7 +32,7 @@ define void @b(i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %t0 = icmp sgt i64 %n, 0
@@ -55,7 +55,7 @@ define void @c(i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %t0 = icmp sgt i64 %n, 0
@@ -136,7 +136,7 @@ define void @constant_phi_operands() nounwind {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 2
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
 entry:
   br label %loop

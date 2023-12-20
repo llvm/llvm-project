@@ -5327,30 +5327,6 @@ multiclass CondStores<RegisterOperand cls, SDPatternOperator store,
   }
 }
 
-// OPERATOR is ATOMIC_SWAP or an ATOMIC_LOAD_* operation.  PAT and OPERAND
-// describe the second (non-memory) operand.
-class AtomicLoadBinary<SDPatternOperator operator, RegisterOperand cls,
-                       dag pat, DAGOperand operand>
-  : Pseudo<(outs cls:$dst), (ins bdaddr20only:$ptr, operand:$src2),
-           [(set cls:$dst, (operator bdaddr20only:$ptr, pat))]> {
-  let Defs = [CC];
-  let Has20BitOffset = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
-  let usesCustomInserter = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
-// Specializations of AtomicLoadWBinary.
-class AtomicLoadBinaryReg32<SDPatternOperator operator>
-  : AtomicLoadBinary<operator, GR32, (i32 GR32:$src2), GR32>;
-class AtomicLoadBinaryImm32<SDPatternOperator operator, ImmOpWithPattern imm>
-  : AtomicLoadBinary<operator, GR32, (i32 imm:$src2), imm>;
-class AtomicLoadBinaryReg64<SDPatternOperator operator>
-  : AtomicLoadBinary<operator, GR64, (i64 GR64:$src2), GR64>;
-class AtomicLoadBinaryImm64<SDPatternOperator operator, ImmOpWithPattern imm>
-  : AtomicLoadBinary<operator, GR64, (i64 imm:$src2), imm>;
-
 // OPERATOR is ATOMIC_SWAPW or an ATOMIC_LOADW_* operation.  PAT and OPERAND
 // describe the second (non-memory) operand.
 class AtomicLoadWBinary<SDPatternOperator operator, dag pat,

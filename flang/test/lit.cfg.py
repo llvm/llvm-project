@@ -163,7 +163,10 @@ if config.cc:
         and os.path.isdir(include)
     ):
         config.available_features.add("c-compiler")
-        tools.append(ToolSubst("%cc", command=config.cc, unresolved="fatal"))
+        cc_cmd = config.cc
+        if config.osx_sysroot:
+            cc_cmd += " -isysroot " + config.osx_sysroot
+        tools.append(ToolSubst("%cc", command=cc_cmd, unresolved="fatal"))
         tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
         tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
         tools.append(ToolSubst("%include", command=include, unresolved="fatal"))

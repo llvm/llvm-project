@@ -163,7 +163,7 @@ define i32 @f5(ptr %val) {
 ; CHECK-NEXT:    symbolic max exit count for for.condt: false
 ; CHECK-NEXT:  Loop %for.end: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.end: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.end: Trip multiple is 1
 ;
 entry:
   br label %for.end

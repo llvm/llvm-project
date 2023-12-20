@@ -1,5 +1,6 @@
-// RUN: %clangxx_hwasan -O0 %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_hwasan -O3 %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -O0 %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --implicit-check-not=RETURN_FROM_TEST
+// RUN: %clangxx_hwasan -O3 %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --implicit-check-not=RETURN_FROM_TEST
+// RUN: %clangxx_hwasan -O0 %s -o %t && not %env_hwasan_opts=halt_on_error=0:symbolize=0 %run %t 2>&1 | FileCheck %s --implicit-check-not=RETURN_FROM_TEST --check-prefixes=CHECK,RECOVER
 
 // UNSUPPORTED: android
 
@@ -29,5 +30,7 @@ int main(int argc, char *argv[]) {
   // CHECK: [[PTR]] is located 1 bytes before a 1000-byte region
 
   free(buf);
+  fprintf(stderr, "RETURN_FROM_TEST\n");
+  // RECOVER: RETURN_FROM_TEST
   return 0;
 }

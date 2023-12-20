@@ -2160,13 +2160,13 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::FRem:
   case Instruction::And:
   case Instruction::Or:
+  case Instruction::LShr:
+  case Instruction::AShr:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
   case Instruction::Xor:
     return true;
   default:
@@ -2482,16 +2482,6 @@ Constant *ConstantExpr::getShl(Constant *C1, Constant *C2,
   return get(Instruction::Shl, C1, C2, Flags);
 }
 
-Constant *ConstantExpr::getLShr(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::LShr, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
-Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::AShr, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
 Constant *ConstantExpr::getExactLogBase2(Constant *C) {
   Type *Ty = C->getType();
   const APInt *IVal;
@@ -2564,6 +2554,32 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
     default:
       return nullptr;
   }
+}
+
+Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
+  switch (ID) {
+  case Intrinsic::umax:
+    return Constant::getNullValue(Ty);
+  case Intrinsic::umin:
+    return Constant::getAllOnesValue(Ty);
+  case Intrinsic::smax:
+    return Constant::getIntegerValue(
+        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+  case Intrinsic::smin:
+    return Constant::getIntegerValue(
+        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+  default:
+    return nullptr;
+  }
+}
+
+Constant *ConstantExpr::getIdentity(Instruction *I, Type *Ty,
+                                    bool AllowRHSConstant, bool NSZ) {
+  if (I->isBinaryOp())
+    return getBinOpIdentity(I->getOpcode(), Ty, AllowRHSConstant, NSZ);
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    return getIntrinsicIdentity(II->getIntrinsicID(), Ty);
+  return nullptr;
 }
 
 Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty) {

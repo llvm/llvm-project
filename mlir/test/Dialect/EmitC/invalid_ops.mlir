@@ -25,48 +25,48 @@ func.func @empty_constant() {
 // -----
 
 func.func @index_args_out_of_range_1() {
-    // expected-error @+1 {{'emitc.call' op index argument is out of range}}
-    emitc.call "test" () {args = [0 : index]} : () -> ()
+    // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
+    emitc.call_opaque "test" () {args = [0 : index]} : () -> ()
     return
 }
 
 // -----
 
 func.func @index_args_out_of_range_2(%arg : i32) {
-    // expected-error @+1 {{'emitc.call' op index argument is out of range}}
-    emitc.call "test" (%arg, %arg) {args = [2 : index]} : (i32, i32) -> ()
+    // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
+    emitc.call_opaque "test" (%arg, %arg) {args = [2 : index]} : (i32, i32) -> ()
     return
 }
 
 // -----
 
 func.func @empty_callee() {
-    // expected-error @+1 {{'emitc.call' op callee must not be empty}}
-    emitc.call "" () : () -> ()
+    // expected-error @+1 {{'emitc.call_opaque' op callee must not be empty}}
+    emitc.call_opaque "" () : () -> ()
     return
 }
 
 // -----
 
 func.func @nonetype_arg(%arg : i32) {
-    // expected-error @+1 {{'emitc.call' op array argument has no type}}
-    emitc.call "nonetype_arg"(%arg) {args = [0 : index, [0, 1, 2]]} : (i32) -> i32
+    // expected-error @+1 {{'emitc.call_opaque' op array argument has no type}}
+    emitc.call_opaque "nonetype_arg"(%arg) {args = [0 : index, [0, 1, 2]]} : (i32) -> i32
     return
 }
 
 // -----
 
 func.func @array_template_arg(%arg : i32) {
-    // expected-error @+1 {{'emitc.call' op template argument has invalid type}}
-    emitc.call "nonetype_template_arg"(%arg) {template_args = [[0, 1, 2]]} : (i32) -> i32
+    // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
+    emitc.call_opaque "nonetype_template_arg"(%arg) {template_args = [[0, 1, 2]]} : (i32) -> i32
     return
 }
 
 // -----
 
 func.func @dense_template_argument(%arg : i32) {
-    // expected-error @+1 {{'emitc.call' op template argument has invalid type}}
-    emitc.call "dense_template_argument"(%arg) {template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]} : (i32) -> i32
+    // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
+    emitc.call_opaque "dense_template_argument"(%arg) {template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]} : (i32) -> i32
     return
 }
 
@@ -203,7 +203,7 @@ func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @test_misplaced_yield() {
-  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.if, emitc.for'}}
+  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for'}}
   emitc.yield
   return
 }
@@ -223,4 +223,61 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
   // expected-error @+1 {{'emitc.assign' op requires value's type ('f32') to match variable's type ('i32')}}
   emitc.assign %arg1 : f32 to %v : i32
   return
+}
+
+// -----
+
+func.func @test_expression_no_yield() -> i32 {
+  // expected-error @+1 {{'emitc.expression' op must yield a value at termination}}
+  %r = emitc.expression : i32 {
+    %c7 = "emitc.constant"(){value = 7 : i32} : () -> i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_illegal_op(%arg0 : i1) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op contains an unsupported operation}}
+  %r = emitc.expression : i32 {
+    %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+    emitc.yield %x : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_no_use(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
+  %r = emitc.expression : i32 {
+    %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
+  %r = emitc.expression : i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %arg1, %a : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' op requires exactly one result for each operation}}
+  %r = emitc.expression : i32 {
+    %a:2 = emitc.call_opaque "bar" (%arg0) : (i32) -> (i32, i32)
+    emitc.yield %a : i32
+  }
+  return %r : i32
 }

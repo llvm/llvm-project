@@ -144,8 +144,8 @@ template<> void Foo<int>(int Bar);
       },
       "location": {
         "position": {
-          "character": 27,
-          "line": 1
+          "character": 26,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -271,8 +271,8 @@ template<> void Foo<int>(int Bar);
       },
       "location": {
         "position": {
-          "character": 17,
-          "line": 3
+          "character": 16,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

@@ -1233,18 +1233,6 @@ value llvm_const_shl(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_lshr(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstLShr(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_ashr(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstAShr(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
 /* lltype -> llvalue -> llvalue array -> llvalue */
 value llvm_const_gep(value Ty, value ConstantVal, value Indices) {
   mlsize_t Length = Wosize_val(Indices);
