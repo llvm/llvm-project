@@ -53,7 +53,7 @@ struct AMDGPUImplicitArgsTyCOV4 {
   uint8_t Unused[56];
 };
 
-uint32_t getImplicitArgsSize(uint16_t Version) {
+inline uint32_t getImplicitArgsSize(uint16_t Version) {
   return Version < ELF::ELFABIVERSION_AMDGPU_HSA_V5
              ? sizeof(AMDGPUImplicitArgsTyCOV4)
              : sizeof(AMDGPUImplicitArgsTy);
@@ -173,44 +173,44 @@ private:
     if (!V.first.isString())
       return Error::success();
 
-    const auto isKey = [](const msgpack::DocNode &DK, StringRef SK) {
+    const auto IsKey = [](const msgpack::DocNode &DK, StringRef SK) {
       return DK.getString() == SK;
     };
 
-    const auto getSequenceOfThreeInts = [](msgpack::DocNode &DN,
+    const auto GetSequenceOfThreeInts = [](msgpack::DocNode &DN,
                                            uint32_t *Vals) {
       assert(DN.isArray() && "MsgPack DocNode is an array node");
       auto DNA = DN.getArray();
       assert(DNA.size() == 3 && "ArrayNode has at most three elements");
 
-      int i = 0;
+      int I = 0;
       for (auto DNABegin = DNA.begin(), DNAEnd = DNA.end(); DNABegin != DNAEnd;
            ++DNABegin) {
-        Vals[i++] = DNABegin->getUInt();
+        Vals[I++] = DNABegin->getUInt();
       }
     };
 
-    if (isKey(V.first, ".name")) {
+    if (IsKey(V.first, ".name")) {
       KernelName = V.second.toString();
-    } else if (isKey(V.first, ".sgpr_count")) {
+    } else if (IsKey(V.first, ".sgpr_count")) {
       KernelData.SGPRCount = V.second.getUInt();
-    } else if (isKey(V.first, ".sgpr_spill_count")) {
+    } else if (IsKey(V.first, ".sgpr_spill_count")) {
       KernelData.SGPRSpillCount = V.second.getUInt();
-    } else if (isKey(V.first, ".vgpr_count")) {
+    } else if (IsKey(V.first, ".vgpr_count")) {
       KernelData.VGPRCount = V.second.getUInt();
-    } else if (isKey(V.first, ".vgpr_spill_count")) {
+    } else if (IsKey(V.first, ".vgpr_spill_count")) {
       KernelData.VGPRSpillCount = V.second.getUInt();
-    } else if (isKey(V.first, ".private_segment_fixed_size")) {
+    } else if (IsKey(V.first, ".private_segment_fixed_size")) {
       KernelData.PrivateSegmentSize = V.second.getUInt();
-    } else if (isKey(V.first, ".group_segement_fixed_size")) {
+    } else if (IsKey(V.first, ".group_segement_fixed_size")) {
       KernelData.GroupSegmentList = V.second.getUInt();
-    } else if (isKey(V.first, ".reqd_workgroup_size")) {
-      getSequenceOfThreeInts(V.second, KernelData.RequestedWorkgroupSize);
-    } else if (isKey(V.first, ".workgroup_size_hint")) {
-      getSequenceOfThreeInts(V.second, KernelData.WorkgroupSizeHint);
-    } else if (isKey(V.first, ".wavefront_size")) {
+    } else if (IsKey(V.first, ".reqd_workgroup_size")) {
+      GetSequenceOfThreeInts(V.second, KernelData.RequestedWorkgroupSize);
+    } else if (IsKey(V.first, ".workgroup_size_hint")) {
+      GetSequenceOfThreeInts(V.second, KernelData.WorkgroupSizeHint);
+    } else if (IsKey(V.first, ".wavefront_size")) {
       KernelData.WavefronSize = V.second.getUInt();
-    } else if (isKey(V.first, ".max_flat_workgroup_size")) {
+    } else if (IsKey(V.first, ".max_flat_workgroup_size")) {
       KernelData.MaxFlatWorkgroupSize = V.second.getUInt();
     }
 
@@ -273,9 +273,10 @@ private:
 
 /// Reads the AMDGPU specific metadata from the ELF file and propagates the
 /// KernelInfoMap
-Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
-                                  StringMap<KernelMetaDataTy> &KernelInfoMap,
-                                  uint16_t &ELFABIVersion) {
+inline Error
+readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
+                            StringMap<KernelMetaDataTy> &KernelInfoMap,
+                            uint16_t &ELFABIVersion) {
   Error Err = Error::success(); // Used later as out-parameter
 
   auto ELFOrError = object::ELF64LEFile::create(MemBuffer.getBuffer());
