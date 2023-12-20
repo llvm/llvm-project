@@ -69,6 +69,7 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
+  clangToolingSyntax
 )
 
 if (CLANG_ENABLE_ARCMT)

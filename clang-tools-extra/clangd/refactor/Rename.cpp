@@ -26,6 +26,8 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -39,6 +41,8 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+using tooling::SymbolName;
 
 std::optional<std::string> filePath(const SymbolLocation &Loc,
                                     llvm::StringRef HintFilePath) {
@@ -517,25 +521,28 @@ static bool mayBeValidIdentifier(llvm::StringRef Ident) {
 // Check if we can rename the given RenameDecl into NewName.
 // Return details if the rename would produce a conflict.
 std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
-                                     llvm::StringRef NewName) {
+                                     const SymbolName &NewName) {
   trace::Span Tracer("CheckName");
   static constexpr trace::Metric InvalidNameMetric(
       "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
   auto &ASTCtx = RenameDecl.getASTContext();
   std::optional<InvalidName> Result;
-  if (isKeyword(NewName, ASTCtx.getLangOpts()))
-    Result = InvalidName{InvalidName::Keywords, NewName.str()};
-  else if (!mayBeValidIdentifier(NewName))
-    Result = InvalidName{InvalidName::BadIdentifier, NewName.str()};
-  else {
-    // Name conflict detection.
-    // Function conflicts are subtle (overloading), so ignore them.
-    if (RenameDecl.getKind() != Decl::Function &&
-        RenameDecl.getKind() != Decl::CXXMethod) {
-      if (auto *Conflict = lookupSiblingWithName(ASTCtx, RenameDecl, NewName))
-        Result = InvalidName{
-            InvalidName::Conflict,
-            Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
+  if (auto Identifier = NewName.getSinglePiece()) {
+    if (isKeyword(*Identifier, ASTCtx.getLangOpts()))
+      Result = InvalidName{InvalidName::Keywords, *Identifier};
+    else if (!mayBeValidIdentifier(*Identifier))
+      Result = InvalidName{InvalidName::BadIdentifier, *Identifier};
+    else {
+      // Name conflict detection.
+      // Function conflicts are subtle (overloading), so ignore them.
+      if (RenameDecl.getKind() != Decl::Function &&
+          RenameDecl.getKind() != Decl::CXXMethod) {
+        if (auto *Conflict =
+                lookupSiblingWithName(ASTCtx, RenameDecl, *Identifier))
+          Result = InvalidName{
+              InvalidName::Conflict,
+              Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
+      }
     }
   }
   if (Result)
@@ -546,7 +553,7 @@ std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
 // AST-based rename, it renames all occurrences in the main file.
 llvm::Expected<tooling::Replacements>
 renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
-                 llvm::StringRef NewName) {
+                 const SymbolName &OldName, const SymbolName &NewName) {
   trace::Span Tracer("RenameWithinFile");
   const SourceManager &SM = AST.getSourceManager();
 
@@ -569,9 +576,28 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
     //   }
     if (!isInsideMainFile(RenameLoc, SM))
       continue;
-    if (auto Err = FilteredChanges.add(tooling::Replacement(
-            SM, CharSourceRange::getTokenRange(RenameLoc), NewName)))
-      return std::move(Err);
+    if (std::optional<std::string> Identifier = NewName.getSinglePiece()) {
+      tooling::Replacement NewReplacement(
+          SM, CharSourceRange::getTokenRange(RenameLoc), *Identifier);
+      if (auto Err = FilteredChanges.add(NewReplacement))
+        return std::move(Err);
+    } else {
+      llvm::Expected<SmallVector<SourceLocation>> PieceLocations =
+          findObjCSymbolSelectorPieces(
+              AST.getTokens().expandedTokens(), SM, RenameLoc, OldName,
+              tooling::ObjCSymbolSelectorKind::Unknown);
+      if (!PieceLocations) {
+        return PieceLocations.takeError();
+      }
+      assert(PieceLocations->size() == NewName.getNamePieces().size());
+      for (auto [Location, NewPiece] :
+           llvm::zip_equal(*PieceLocations, NewName.getNamePieces())) {
+        tooling::Replacement NewReplacement(
+            SM, CharSourceRange::getTokenRange(Location), NewPiece);
+        if (auto Err = FilteredChanges.add(NewReplacement))
+          return std::move(Err);
+      }
+    }
   }
   return FilteredChanges;
 }
@@ -779,12 +805,14 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
   const auto &RenameDecl = **DeclsUnderCursor.begin();
-  const auto *ID = RenameDecl.getIdentifier();
-  if (!ID)
+  DeclarationName Name = RenameDecl.getDeclName();
+  if (!Name)
     return makeError(ReasonToReject::UnsupportedSymbol);
-  if (ID->getName() == RInputs.NewName)
+  SymbolName OldSymbolName(Name);
+  SymbolName NewSymbolName(RInputs.NewName, AST.getLangOpts());
+  if (OldSymbolName == NewSymbolName)
     return makeError(ReasonToReject::SameName);
-  auto Invalid = checkName(RenameDecl, RInputs.NewName);
+  auto Invalid = checkName(RenameDecl, NewSymbolName);
   if (Invalid)
     return makeError(std::move(*Invalid));
 
@@ -802,7 +830,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   // To make cross-file rename work for local symbol, we use a hybrid solution:
   //   - run AST-based rename on the main file;
   //   - run index-based rename on other affected files;
-  auto MainFileRenameEdit = renameWithinFile(AST, RenameDecl, RInputs.NewName);
+  auto MainFileRenameEdit =
+      renameWithinFile(AST, RenameDecl, OldSymbolName, NewSymbolName);
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
 

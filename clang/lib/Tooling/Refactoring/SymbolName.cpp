@@ -13,6 +13,11 @@
 namespace clang {
 namespace tooling {
 
+SymbolName::SymbolName(const DeclarationName &DeclName)
+    : SymbolName(DeclName.getAsString(),
+                 /*IsObjectiveCSelector=*/DeclName.getNameKind() ==
+                     DeclarationName::NameKind::ObjCMultiArgSelector) {}
+
 SymbolName::SymbolName(StringRef Name, const LangOptions &LangOpts)
     : SymbolName(Name, LangOpts.ObjC) {}
 
@@ -32,6 +37,21 @@ SymbolName::SymbolName(StringRef Name, bool IsObjectiveCSelector) {
 SymbolName::SymbolName(ArrayRef<StringRef> NamePieces) {
   for (const auto &Piece : NamePieces)
     this->NamePieces.push_back(Piece.str());
+}
+
+std::optional<std::string> SymbolName::getSinglePiece() const {
+  if (getNamePieces().size() == 1) {
+    return NamePieces.front();
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::string SymbolName::getAsString() const {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  this->print(OS);
+  return Result;
 }
 
 void SymbolName::print(raw_ostream &OS) const {
