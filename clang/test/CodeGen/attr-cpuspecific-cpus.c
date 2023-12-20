@@ -32,11 +32,9 @@ ATTR(cpu_specific(haswell)) void CPU(void){}
 ATTR(cpu_specific(core_4th_gen_avx_tsx)) void CPU(void){}
 ATTR(cpu_specific(broadwell)) void CPU(void){}
 ATTR(cpu_specific(core_5th_gen_avx_tsx)) void CPU(void){}
-ATTR(cpu_specific(knl)) void CPU(void){}
 ATTR(cpu_specific(skylake)) void CPU(void){}
 ATTR(cpu_specific(skylake_avx512)) void CPU(void){}
 ATTR(cpu_specific(cannonlake)) void CPU(void){}
-ATTR(cpu_specific(knm)) void CPU(void){}
 ATTR(cpu_specific(cascadelake)) void CPU(void){}
 ATTR(cpu_specific(cooperlake)) void CPU(void){}
 ATTR(cpu_specific(icelake_client)) void CPU(void){}
@@ -50,7 +48,6 @@ ATTR(cpu_specific(core_2nd_gen_avx)) void CPU1(void){}
 ATTR(cpu_specific(core_3rd_gen_avx)) void CPU2(void){}
 ATTR(cpu_specific(core_4th_gen_avx)) void CPU3(void){}
 ATTR(cpu_specific(core_5th_gen_avx)) void CPU4(void){}
-ATTR(cpu_specific(mic_avx512)) void CPU5(void){}
 ATTR(cpu_specific(pentiumpro)) void CPU6(void){}
 ATTR(cpu_specific(pentium3)) void CPU7(void){}
 ATTR(cpu_specific(pentium3m)) void CPU8(void){}

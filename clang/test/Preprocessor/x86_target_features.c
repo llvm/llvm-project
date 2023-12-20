@@ -287,7 +287,6 @@
 
 // RUN: %clang -target i386-unknown-unknown -march=nehalem -mno-sse4.2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=CPUPOPCNT %s
 // RUN: %clang -target i386-unknown-unknown -march=silvermont -mno-sse4.2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=CPUPOPCNT %s
-// RUN: %clang -target i386-unknown-unknown -march=knl -mno-sse4.2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=CPUPOPCNT %s
 
 // CPUPOPCNT: #define __POPCNT__ 1
 
@@ -305,7 +304,6 @@
 
 // RUN: %clang -target i386-unknown-unknown -march=pentium3 -mno-sse -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MARCHMMXNOSSE %s
 // RUN: %clang -target i386-unknown-unknown -march=atom -mno-sse -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MARCHMMXNOSSE %s
-// RUN: %clang -target i386-unknown-unknown -march=knl -mno-sse -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MARCHMMXNOSSE %s
 // RUN: %clang -target i386-unknown-unknown -march=btver1 -mno-sse -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MARCHMMXNOSSE %s
 // RUN: %clang -target i386-unknown-unknown -march=znver1 -mno-sse -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=MARCHMMXNOSSE %s
 

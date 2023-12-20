@@ -42,7 +42,7 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
     llvm::StringMap<StringRef> ArchMap({
         {"AVX", "sandybridge"},
         {"AVX2", "haswell"},
-        {"AVX512F", "knl"},
+        {"AVX512F", "skylake-avx512"},
         {"AVX512", "skylake-avx512"},
     });
     if (Triple.getArch() == llvm::Triple::x86) {

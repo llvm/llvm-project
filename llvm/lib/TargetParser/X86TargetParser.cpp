@@ -93,13 +93,6 @@ constexpr FeatureBitset FeaturesHaswell =
 constexpr FeatureBitset FeaturesBroadwell =
     FeaturesHaswell | FeatureADX | FeaturePRFCHW | FeatureRDSEED;
 
-// Intel Knights Landing and Knights Mill
-// Knights Landing has feature parity with Broadwell.
-constexpr FeatureBitset FeaturesKNL =
-    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureEVEX512 |
-    FeatureAVX512CD | FeatureAVX512ER | FeatureAVX512PF | FeaturePREFETCHWT1;
-constexpr FeatureBitset FeaturesKNM = FeaturesKNL | FeatureAVX512VPOPCNTDQ;
-
 // Intel Skylake processors.
 constexpr FeatureBitset FeaturesSkylakeClient =
     FeaturesBroadwell | FeatureAES | FeatureCLFLUSHOPT | FeatureXSAVEC |
@@ -379,11 +372,6 @@ constexpr ProcInfo Processors[] = {
   { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
-  // Knights Landing processor.
-  { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
-  { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
-  // Knights Mill processor.
-  { {"knm"}, CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM, 'j', false },
   // Lakemont microarchitecture based processors.
   { {"lakemont"}, CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false },
   // K6 architecture processors.

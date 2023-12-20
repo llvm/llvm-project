@@ -633,11 +633,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     // recent primary x86 CPUs, and we should keep it that way.
     defineCPUMacros(Builder, "corei7");
     break;
-  case CK_KNL:
-    defineCPUMacros(Builder, "knl");
-    break;
-  case CK_KNM:
-    break;
   case CK_Lakemont:
     defineCPUMacros(Builder, "i586", /*Tuning*/false);
     defineCPUMacros(Builder, "pentium", /*Tuning*/false);
@@ -1569,8 +1564,6 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_GraniterapidsD:
     case CK_Emeraldrapids:
     case CK_Clearwaterforest:
-    case CK_KNL:
-    case CK_KNM:
     // K7
     case CK_Athlon:
     case CK_AthlonXP:
