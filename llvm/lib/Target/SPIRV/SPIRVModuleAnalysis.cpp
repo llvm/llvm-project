@@ -307,10 +307,9 @@ static InstrSignature instrToSignature(MachineInstr &MI,
     if (MO.isReg()) {
       Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
       // mimic llvm::hash_value(const MachineOperand &MO)
-      h = hash_combine(MO.getType(), (unsigned)RegAlias,
-                       MO.getSubReg(), MO.isDef());
-    }
-    else
+      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
+                       MO.isDef());
+    } else
       h = hash_value(MO);
     ret.push_back(h);
   }
@@ -321,7 +320,7 @@ static InstrSignature instrToSignature(MachineInstr &MI,
 // numbering has already occurred by this point. We can directly compare reg
 // arguments when detecting duplicates.
 static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
-                              SPIRV::ModuleSectionType MSType, InstrTraces& IS,
+                              SPIRV::ModuleSectionType MSType, InstrTraces &IS,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
   InstrSignature MISign = instrToSignature(MI, MAI);
