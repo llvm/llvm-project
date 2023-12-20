@@ -25,6 +25,47 @@
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
+#matmat_accesses_1 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_1 = {
+  indexing_maps = #matmat_accesses_1,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_2 = [
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_2 = {
+  indexing_maps = #matmat_accesses_2,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_3 = [
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_3 = {
+  indexing_maps = #matmat_accesses_3,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_4 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_4 = {
+  indexing_maps = #matmat_accesses_4,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+
 // CHECK-LABEL: func @matmul
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x4xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x3xf32>,
@@ -192,16 +233,6 @@ func.func @matmul_mixed_scalable(%arg0: vector<2x1xf16>,
 // ============================================================================
 //  Matmul 1 (plain)
 // ============================================================================
-#matmat_accesses_1 = [
-  affine_map<(m, n, k) -> (m, k)>,
-  affine_map<(m, n, k) -> (n, k)>,
-  affine_map<(m, n, k) -> (m, n)>
-]
-#matmat_trait_1 = {
-  indexing_maps = #matmat_accesses_1,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
 // CHECK-LABEL: func @matmul_1
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<3x1xf32>,
@@ -243,16 +274,6 @@ func.func @matmul_1_scalable(%arg0: vector<2x1xf32>,
 // ============================================================================
 //  Matmul 2 (plain)
 // ============================================================================
-#matmat_accesses_2 = [
-  affine_map<(m, n, k) -> (k, m)>,
-  affine_map<(m, n, k) -> (k, n)>,
-  affine_map<(m, n, k) -> (m, n)>
-]
-#matmat_trait_2 = {
-  indexing_maps = #matmat_accesses_2,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
 // CHECK-LABEL: func @matmul_2
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x2xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
@@ -290,16 +311,6 @@ func.func @matmul_2_scalable(%arg0: vector<1x2xf32>,
 // ============================================================================
 //  Matmul 3 (plain)
 // ============================================================================
-#matmat_accesses_3 = [
-  affine_map<(m, n, k) -> (k, m)>,
-  affine_map<(m, n, k) -> (n, k)>,
-  affine_map<(m, n, k) -> (m, n)>
-]
-#matmat_trait_3 = {
-  indexing_maps = #matmat_accesses_3,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
 // CHECK-LABEL: func @matmul_3
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x2xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<3x1xf32>,
@@ -339,16 +350,6 @@ func.func @matmul_3_scalable(%arg0: vector<1x2xf32>,
 // ============================================================================
 //  Matmul 4 (plain)
 // ============================================================================
-#matmat_accesses_4 = [
-  affine_map<(m, n, k) -> (m, k)>,
-  affine_map<(m, n, k) -> (k, n)>,
-  affine_map<(m, n, k) -> (n, m)>
-]
-#matmat_trait_4 = {
-  indexing_maps = #matmat_accesses_4,
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-
 // CHECK-LABEL: func @matmul_4
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
