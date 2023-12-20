@@ -937,11 +937,11 @@ def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 1, "mul">;
 def GPU_AllReduceOpMinUI : I32EnumAttrCase<"MINUI", 2, "minui">;
 def GPU_AllReduceOpMinSI : I32EnumAttrCase<"MINSI", 3, "minsi">;
 // Follows the `arith.minnumf` semantics.
-def GPU_AllReduceOpMinF : I32EnumAttrCase<"MINF", 4, "minf">;
+def GPU_AllReduceOpMinnumF : I32EnumAttrCase<"MINNUMF", 4, "minnumf">;
 def GPU_AllReduceOpMaxUI : I32EnumAttrCase<"MAXUI", 5, "maxui">;
 def GPU_AllReduceOpMaxSI : I32EnumAttrCase<"MAXSI", 6, "maxsi">;
 // Follows the `arith.maxnumf` semantics.
-def GPU_AllReduceOpMaxF : I32EnumAttrCase<"MAXF", 7, "maxf">;
+def GPU_AllReduceOpMaxnumF : I32EnumAttrCase<"MAXNUMF", 7, "maxnumf">;
 def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 8, "and">;
 def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  9, "or">;
 def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 10, "xor">;
@@ -957,10 +957,10 @@ def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
       GPU_AllReduceOpMul,
       GPU_AllReduceOpMinUI,
       GPU_AllReduceOpMinSI,
-      GPU_AllReduceOpMinF,
+      GPU_AllReduceOpMinnumF,
       GPU_AllReduceOpMaxUI,
       GPU_AllReduceOpMaxSI,
-      GPU_AllReduceOpMaxF,
+      GPU_AllReduceOpMaxnumF,
       GPU_AllReduceOpAnd,
       GPU_AllReduceOpOr,
       GPU_AllReduceOpXor,
@@ -999,7 +999,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     accumulation as code region. The reduction operation must be one of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
-    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+    *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
        `maximumf`
 
     If `uniform` flag is set either none or all work items of a workgroup
@@ -1039,7 +1039,7 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
-    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+    *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
        `maximumf`
   }];
 
