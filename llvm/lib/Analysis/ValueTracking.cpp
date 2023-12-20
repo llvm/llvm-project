@@ -3199,6 +3199,13 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
       isNonEqualPointersWithRecursiveGEP(V2, V1, Q))
     return true;
 
+  Value *A, *B;
+  // PtrToInts are NonEqual if their Ptrs are NonEqual.
+  // Check PtrToInt type matches the pointer size.
+  if (match(V1, m_PtrToIntSameSize(Q.DL, m_Value(A))) &&
+      match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
+    return isKnownNonEqual(A, B, Depth + 1, Q);
+
   return false;
 }
 
