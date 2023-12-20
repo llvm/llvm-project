@@ -714,14 +714,14 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
-name:            select_vectorized_conditon_v2s32
+name:            select_vectorized_condition_v2s32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; CHECK-LABEL: name: select_vectorized_conditon_v2s32
+    ; CHECK-LABEL: name: select_vectorized_condition_v2s32
     ; CHECK: liveins: $w0, $w1, $w2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %reg0:gpr32all = COPY $w0
@@ -761,4 +761,88 @@ body:             |
     %select:fpr(<2 x s32>) = G_SELECT %cond, %true, %false
     %extract:fpr(s32) = G_EXTRACT_VECTOR_ELT %select:fpr(<2 x s32>), %idx:gpr(s64)
     $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            select_vectorized_condition_v4s16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; CHECK-LABEL: name: select_vectorized_condition_v4s16
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    ; CHECK-NEXT: [[ADRP1:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRDui1:%[0-9]+]]:fpr64 = LDRDui [[ADRP1]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    ; CHECK-NEXT: [[ADRP2:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRDui2:%[0-9]+]]:fpr64 = LDRDui [[ADRP2]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    ; CHECK-NEXT: %select:fpr64 = BSLv8i8 [[LDRDui2]], [[LDRDui]], [[LDRDui1]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %select, %subreg.dsub
+    ; CHECK-NEXT: %zext:gpr32 = UMOVvi16 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: $w0 = COPY %zext
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %idx:gpr(s64) = G_CONSTANT i64 1
+    %reg0:gpr(s32) = COPY $w0
+    %reg1:gpr(s32) = COPY $w1
+    %reg2:gpr(s32) = COPY $w2
+    %reg3:gpr(s32) = COPY $w0
+    %reg4:gpr(s32) = COPY $w1
+    %reg5:gpr(s32) = COPY $w2
+    %const0:gpr(s16) = G_CONSTANT i16 9
+    %const1:gpr(s16) = G_CONSTANT i16 11
+    %true:fpr(<4 x s16>) = G_BUILD_VECTOR %const0(s16), %const1(s16), %const0(s16), %const1(s16)
+    %false:fpr(<4 x s16>) = G_BUILD_VECTOR %const0(s16), %const1(s16), %const0(s16), %const1(s16)
+    %cond:fpr(<4 x s16>) = G_BUILD_VECTOR %const0(s16), %const1(s16), %const0(s16), %const1(s16)
+    %select:fpr(<4 x s16>) = G_SELECT %cond, %true, %false
+    %extract:fpr(s16) = G_EXTRACT_VECTOR_ELT %select:fpr(<4 x s16>), %idx:gpr(s64)
+    %extra:gpr(s16) = COPY %extract:fpr(s16)
+    %zext:gpr(s32) = G_ZEXT %extra:gpr(s16)
+    $w0 = COPY %zext(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            select_vectorized_condition_v16s8
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; CHECK-LABEL: name: select_vectorized_condition_v16s8
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
+    ; CHECK-NEXT: [[ADRP1:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRQui1:%[0-9]+]]:fpr128 = LDRQui [[ADRP1]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
+    ; CHECK-NEXT: [[ADRP2:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK-NEXT: [[LDRQui2:%[0-9]+]]:fpr128 = LDRQui [[ADRP2]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
+    ; CHECK-NEXT: %select:fpr128 = BSLv16i8 [[LDRQui2]], [[LDRQui]], [[LDRQui1]]
+    ; CHECK-NEXT: %zext:gpr32 = UMOVvi8 %select, 1
+    ; CHECK-NEXT: $w0 = COPY %zext
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %idx:gpr(s64) = G_CONSTANT i64 1
+    %reg0:gpr(s32) = COPY $w0
+    %reg1:gpr(s32) = COPY $w1
+    %reg2:gpr(s32) = COPY $w2
+    %reg3:gpr(s32) = COPY $w0
+    %reg4:gpr(s32) = COPY $w1
+    %reg5:gpr(s32) = COPY $w2
+    %const0:gpr(s8) = G_CONSTANT i8 9
+    %const1:gpr(s8) = G_CONSTANT i8 11
+    %true:fpr(<16 x s8>) = G_BUILD_VECTOR %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8)
+    %false:fpr(<16 x s8>) = G_BUILD_VECTOR %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8)
+    %cond:fpr(<16 x s8>) = G_BUILD_VECTOR %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8), %const0(s8), %const1(s8)
+    %select:fpr(<16 x s8>) = G_SELECT %cond, %true, %false
+    %extract:fpr(s8) = G_EXTRACT_VECTOR_ELT %select:fpr(<16 x s8>), %idx:gpr(s64)
+    %extra:gpr(s8) = COPY %extract:fpr(s8)
+    %zext:gpr(s32) = G_ZEXT %extra:gpr(s8)
+    $w0 = COPY %zext(s32)
     RET_ReallyLR implicit $w0
