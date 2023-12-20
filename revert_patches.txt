@@ -1,3 +1,5 @@
+revert: needs time to be worked
+[Libomptarget] Remove __tgt_image_info and use the ELF directly (#75720)
 
 revert: breaks MIOpen composableKernel build 
 [clang][Sema] Add -Wswitch-default warning option (#73077)  

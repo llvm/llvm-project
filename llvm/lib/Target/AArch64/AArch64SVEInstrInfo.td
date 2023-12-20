@@ -4003,10 +4003,10 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PNRasPPR8:$Pd), 0>;
 } // End HasSVE2p1_or_HasSME2
 
 //===----------------------------------------------------------------------===//
-// SVE2.1 non-widening BFloat16 to BFloat16 instructions
+// Non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasSVE2p1, HasB16B16, UseExperimentalZeroingPseudos] in {
+let Predicates = [HasSVE2orSME2, HasB16B16, UseExperimentalZeroingPseudos] in {
 defm BFADD_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fadd>;
 defm BFSUB_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fsub>;
 defm BFMUL_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmul>;
@@ -4014,9 +4014,9 @@ defm BFMAXNM_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmaxnm>;
 defm BFMINNM_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fminnm>;
 defm BFMIN_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmax>;
-} //HasSVE2p1_or_HasSME2p1, HasB16B16, UseExperimentalZeroingPseudos
+} // HasSVE2orSME2, HasB16B16, UseExperimentalZeroingPseudos
 
-let Predicates = [HasSVE2p1, HasB16B16] in {
+let Predicates = [HasSVE2orSME2, HasB16B16] in {
 
 defm BFMLA_ZPmZZ : sve_fp_3op_p_zds_a_bf<0b00, "bfmla", "BFMLA_ZPZZZ", AArch64fmla_m1>;
 defm BFMLS_ZPmZZ : sve_fp_3op_p_zds_a_bf<0b01, "bfmls", "BFMLS_ZPZZZ", AArch64fmls_m1>;
@@ -4056,7 +4056,7 @@ defm BFMINNM_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fminnm_p>;
 defm BFMUL_ZZZI : sve2p1_fp_bfmul_by_indexed_elem<"bfmul", int_aarch64_sve_fmul_lane>;
 
 defm BFCLAMP_ZZZ : sve2p1_bfclamp<"bfclamp", int_aarch64_sve_fclamp>;
-} // End HasSVE2p1_or_HasSME2p1, HasB16B16
+} // End HasSVE2orSME2, HasB16B16
 
 
 //===----------------------------------------------------------------------===//

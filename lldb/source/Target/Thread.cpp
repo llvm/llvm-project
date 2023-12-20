@@ -883,6 +883,18 @@ bool Thread::ShouldStop(Event *event_ptr) {
           // If a Controlling Plan wants to stop, we let it. Otherwise, see if
           // the plan's parent wants to stop.
 
+          // Temporary logging to figure out a crash on Arm/AArch64 Linux.
+          {
+            LLDB_LOGF(log, "^^^^^^^^ Thread::ShouldStop plan stack before "
+                           "PopPlan ^^^^^^^^");
+            StreamString s;
+            s.IndentMore();
+            GetProcess()->DumpThreadPlansForTID(
+                s, GetID(), eDescriptionLevelVerbose, true /* internal */,
+                false /* condense_trivial */, true /* skip_unreported */);
+            LLDB_LOG(log, s.GetData());
+          }
+
           PopPlan();
           if (should_stop && current_plan->IsControllingPlan() &&
               !current_plan->OkayToDiscard()) {

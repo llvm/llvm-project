@@ -11,8 +11,9 @@
 // CHECK: Trying to match opcode PSHUFBrm
 // CHECK:   Matching formal operand class MCK_Mem128 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
-// CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range Opcode result: complete match, selecting this opcode
-// CHECK: AsmMatcher: found 2 encodings with mnemonic 'sha1rnds4'
+// CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
+// CHECK:   Opcode result: complete match, selecting this opcode
+// CHECK: AsmMatcher: found 4 encodings with mnemonic 'sha1rnds4'
 // CHECK: Trying to match opcode SHA1RNDS4rri
 // CHECK:   Matching formal operand class MCK_ImmUnsignedi8 against actual operand at index 1 (Imm:1): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
