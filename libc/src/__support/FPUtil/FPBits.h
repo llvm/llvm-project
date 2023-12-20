@@ -86,6 +86,10 @@ public:
   }
 
   LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
+
+  LIBC_INLINE constexpr bool is_zero() const {
+    return (bits & EXP_SIG_MASK) == 0;
+  }
 };
 
 } // namespace internal
@@ -121,6 +125,7 @@ public:
   using UP::TOTAL_LEN;
 
   using UP::get_biased_exponent;
+  using UP::is_zero;
 
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
@@ -173,10 +178,6 @@ public:
     } else {
       return biased_exp - EXP_BIAS;
     }
-  }
-
-  LIBC_INLINE constexpr bool is_zero() const {
-    return (bits & EXP_SIG_MASK) == 0;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {

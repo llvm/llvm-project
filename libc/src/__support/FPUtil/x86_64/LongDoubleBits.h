@@ -114,10 +114,6 @@ public:
     }
   }
 
-  LIBC_INLINE constexpr bool is_zero() const {
-    return (bits & EXP_SIG_MASK) == 0;
-  }
-
   LIBC_INLINE constexpr bool is_inf() const {
     return get_biased_exponent() == MAX_BIASED_EXPONENT &&
            get_mantissa() == 0 && get_implicit_bit() == 1;
