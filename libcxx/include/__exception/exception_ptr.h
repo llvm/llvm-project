@@ -28,11 +28,12 @@
 namespace __cxxabiv1 {
 
 extern "C" {
-void* __cxa_allocate_exception(size_t) throw();
-void __cxa_free_exception(void*) throw();
+_LIBCPP_OVERRIDABLE_FUNC_VIS void* __cxa_allocate_exception(size_t) throw();
+_LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_free_exception(void*) throw();
 
 struct __cxa_exception;
-__cxa_exception* __cxa_init_primary_exception(void*, std::type_info*, void (*)(void*)) throw();
+_LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception*
+__cxa_init_primary_exception(void*, std::type_info*, void (*)(void*)) throw();
 }
 
 } // namespace __cxxabiv1
