@@ -1175,7 +1175,8 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   // sure that the main() function from Fortran_main.a is pulled in by the
   // linker. However, it shouldn't be used if it's already active.
   // TODO: Find an equivalent of `--whole-archive` for Darwin.
-  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX()) {
+  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
+      !TC.getTriple().isOSAIX()) {
     CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lFortran_main");
     CmdArgs.push_back("--no-whole-archive");
