@@ -2000,15 +2000,14 @@ void AsmPrinter::emitFunctionBody() {
 
   // Emit section containing BB address offsets and their metadata, when
   // BB labels are requested for this function. Skip empty functions.
-  bool HasBBLabels = MF->hasBBLabels();
-  if (HasBBLabels && HasAnyRealCode)
-    emitBBAddrMapSection(*MF);
-  else if (!HasBBLabels && HasAnyRealCode &&
-           PgoAnalysisMapFeatures.getBits() != 0)
-    MF->getContext().reportWarning(
-        SMLoc(), "pgo-analysis-map is enabled but the following machine "
-                 "function was does not have labels: " +
-                     MF->getName());
+  if (HasAnyRealCode) {
+    if (MF->hasBBLabels())
+      emitBBAddrMapSection(*MF);
+    else if (PgoAnalysisMapFeatures.getBits() != 0)
+      MF->getContext().reportWarning(
+          SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
+                       " but it does not have labels");
+  }
 
   // Emit sections containing instruction and function PCs.
   emitPCSections(*MF);
