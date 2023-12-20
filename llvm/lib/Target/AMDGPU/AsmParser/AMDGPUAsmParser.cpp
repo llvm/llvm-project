@@ -2635,7 +2635,7 @@ AMDGPUAsmParser::getRegularReg(RegisterKind RegKind,
   if (RegKind == IS_SGPR || RegKind == IS_TTMP) {
     // SGPR and TTMP registers must be aligned.
     // Max required alignment is 4 dwords.
-    AlignSize = std::min(RegWidth / 32, 4u);
+    AlignSize = std::min(llvm::bit_ceil(RegWidth / 32), 4u);
   }
 
   if (RegNum % AlignSize != 0) {

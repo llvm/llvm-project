@@ -14,7 +14,7 @@ void func() {
 
   for (int i = 0; i < 10; ++i) {
     // expected-error@+3{{expected '('}}
-    // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+    // expected-error@+2{{invalid OpenACC clause 'clause'}}
     // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
     #pragma acc cache clause list
   }
@@ -25,7 +25,7 @@ void func() {
   }
 
   for (int i = 0; i < 10; ++i) {
-    // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+    // expected-error@+2{{invalid OpenACC clause 'clause'}}
     // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
     #pragma acc cache() clause-list
   }

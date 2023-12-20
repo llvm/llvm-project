@@ -1,4 +1,5 @@
 ; RUN: llc -filetype asm -o - %s | FileCheck %s
+; REQUIRES: x86-registered-target
 
 ; Ensure that we do not emit any live ranges for the fragment as it is
 ; bit-sliced which cannot be represented in CodeView.

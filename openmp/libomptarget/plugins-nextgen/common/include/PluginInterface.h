@@ -290,7 +290,7 @@ struct GenericKernelTy {
   /// Return true if this kernel is a constructor or destructor.
   bool isCtorOrDtor() const {
     // TODO: This is not a great solution and should be revisited.
-    return StringRef(Name).endswith("tor");
+    return StringRef(Name).ends_with("tor");
   }
 
   /// Get the kernel image.
@@ -397,6 +397,9 @@ protected:
 
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// If the kernel is a bare kernel.
+  bool IsBareKernel = false;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned

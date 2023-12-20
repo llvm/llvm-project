@@ -101,6 +101,9 @@ void InstallAtExitCheckLeaks() {
 }
 
 void InstallAtForkHandler() {
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+  return;  // FIXME: Implement FutexWait.
+#  endif
   auto before = []() {
     LockGlobal();
     LockThreads();

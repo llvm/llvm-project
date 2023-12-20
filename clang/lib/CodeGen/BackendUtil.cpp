@@ -1068,11 +1068,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
   }
   if (CodeGenOpts.FatLTO) {
-    // Set module flags, like EnableSplitLTOUnit and UnifiedLTO, since FatLTO
+    // Set the EnableSplitLTOUnit and UnifiedLTO module flags, since FatLTO
     // uses a different action than Backend_EmitBC or Backend_EmitLL.
-    if (!TheModule->getModuleFlag("ThinLTO"))
-      TheModule->addModuleFlag(llvm::Module::Error, "ThinLTO",
-                               uint32_t(CodeGenOpts.PrepareForThinLTO));
     if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
       TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                uint32_t(CodeGenOpts.EnableSplitLTOUnit));

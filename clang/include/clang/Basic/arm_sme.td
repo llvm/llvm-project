@@ -299,6 +299,44 @@ multiclass ZAAddSub<string n_suffix> {
 defm SVADD : ZAAddSub<"add">;
 defm SVSUB : ZAAddSub<"sub">;
 
+// SME2 - MOVA
+
+//
+// Single, 2 and 4 vector-group read/write intrinsics.
+//
+
+multiclass ZAWrite_VG<string n, string t, string i, list<ImmCheck> checks> {
+  def NAME # _VG2_H : Inst<"svwrite_hor_" # n # "[_{d}]_vg2",   "vim2", t, MergeNone, i # "_hor_vg2", [IsSharedZA, IsStreaming], checks>;
+  def NAME # _VG2_V : Inst<"svwrite_ver_" # n # "[_{d}]_vg2",   "vim2", t, MergeNone, i # "_ver_vg2", [IsSharedZA, IsStreaming], checks>;
+  def NAME # _VG4_H : Inst<"svwrite_hor_" # n # "[_{d}]_vg4",   "vim4", t, MergeNone, i # "_hor_vg4", [IsSharedZA, IsStreaming], checks>;
+  def NAME # _VG4_V : Inst<"svwrite_ver_" # n # "[_{d}]_vg4",   "vim4", t, MergeNone, i # "_ver_vg4", [IsSharedZA, IsStreaming], checks>;
+  def NAME # _VG1x2 : Inst<"svwrite_"     # n # "[_{d}]_vg1x2", "vm2",  t, MergeNone, i # "_vg1x2",   [IsSharedZA, IsStreaming], []>;
+  def NAME # _VG1x4 : Inst<"svwrite_"     # n # "[_{d}]_vg1x4", "vm4",  t, MergeNone, i # "_vg1x4",   [IsSharedZA, IsStreaming], []>;
+}
+
+let TargetGuard = "sme2" in {
+  defm SVWRITE_ZA8  : ZAWrite_VG<"za8",  "cUc",   "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
+  defm SVWRITE_ZA16 : ZAWrite_VG<"za16", "sUshb", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_1>]>;
+  defm SVWRITE_ZA32 : ZAWrite_VG<"za32", "iUif",  "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVWRITE_ZA64 : ZAWrite_VG<"za64", "lUld",  "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>]>;
+}
+
+multiclass ZARead_VG<string n, string t, string i, list<ImmCheck> checks> {
+  def NAME # _VG2_H : Inst<"svread_hor_" # n # "_{d}_vg2",   "2im", t, MergeNone, i # "_hor_vg2", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+  def NAME # _VG2_V : Inst<"svread_ver_" # n # "_{d}_vg2",   "2im", t, MergeNone, i # "_ver_vg2", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+  def NAME # _VG4_H : Inst<"svread_hor_" # n # "_{d}_vg4",   "4im", t, MergeNone, i # "_hor_vg4", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+  def NAME # _VG4_V : Inst<"svread_ver_" # n # "_{d}_vg4",   "4im", t, MergeNone, i # "_ver_vg4", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+  def NAME # _VG1x2 : Inst<"svread_"     # n # "_{d}_vg1x2", "2m",  t, MergeNone, i # "_vg1x2",   [IsSharedZA, IsPreservesZA, IsStreaming], []>;
+  def NAME # _VG1x4 : Inst<"svread_"     # n # "_{d}_vg1x4", "4m",  t, MergeNone, i # "_vg1x4",   [IsSharedZA, IsPreservesZA, IsStreaming], []>;
+}
+
+let TargetGuard = "sme2" in {
+  defm SVREAD_ZA8  : ZARead_VG<"za8",  "cUc",   "aarch64_sme_read", [ImmCheck<0, ImmCheck0_0>]>;
+  defm SVREAD_ZA16 : ZARead_VG<"za16", "sUshb", "aarch64_sme_read", [ImmCheck<0, ImmCheck0_1>]>;
+  defm SVREAD_ZA32 : ZARead_VG<"za32", "iUif",  "aarch64_sme_read", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVREAD_ZA64 : ZARead_VG<"za64", "lUld",  "aarch64_sme_read", [ImmCheck<0, ImmCheck0_7>]>;
+}
+
 //
 // Outer product and accumulate/subtract
 //
