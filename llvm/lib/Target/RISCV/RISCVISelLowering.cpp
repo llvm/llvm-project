@@ -13594,6 +13594,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
 //   (fp_to_int_sat (ffloor X))     -> (select X == nan, 0, (fcvt X, rdn))
 //   (fp_to_int_sat (fceil X))      -> (select X == nan, 0, (fcvt X, rup))
 //   (fp_to_int_sat (fround X))     -> (select X == nan, 0, (fcvt X, rmm))
+//   (fp_to_int_sat (frint X))      -> (select X == nan, 0, (fcvt X, dyn))
 static SDValue performFP_TO_INT_SATCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const RISCVSubtarget &Subtarget) {

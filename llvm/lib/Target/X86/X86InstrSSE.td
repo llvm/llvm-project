@@ -6706,31 +6706,31 @@ let Constraints = "$src1 = $dst" in {
 
 // FIXME: Is there a better scheduler class for SHA than WriteVecIMul?
 multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
-                      X86FoldableSchedWrite sched, bit UsesXMM0 = 0> {
-  def rr : I<Opc, MRMSrcReg, (outs VR128:$dst),
-             (ins VR128:$src1, VR128:$src2),
-             !if(UsesXMM0,
-                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-             [!if(UsesXMM0,
-                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
-                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
-             T8PS, Sched<[sched]>;
+                      X86FoldableSchedWrite sched, string Suffix = "", bit UsesXMM0 = 0> {
+  def rr#Suffix : I<Opc, MRMSrcReg, (outs VR128:$dst),
+                    (ins VR128:$src1, VR128:$src2),
+                    !if(UsesXMM0,
+                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+                    [!if(UsesXMM0,
+                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
+                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
+                    T8PS, Sched<[sched]>;
 
-  def rm : I<Opc, MRMSrcMem, (outs VR128:$dst),
-             (ins VR128:$src1, i128mem:$src2),
-             !if(UsesXMM0,
-                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-             [!if(UsesXMM0,
-                  (set VR128:$dst, (IntId VR128:$src1,
-                    (memop addr:$src2), XMM0)),
-                  (set VR128:$dst, (IntId VR128:$src1,
-                    (memop addr:$src2))))]>, T8PS,
-             Sched<[sched.Folded, sched.ReadAfterFold]>;
+  def rm#Suffix : I<Opc, MRMSrcMem, (outs VR128:$dst),
+                    (ins VR128:$src1, i128mem:$src2),
+                    !if(UsesXMM0,
+                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+                    [!if(UsesXMM0,
+                         (set VR128:$dst, (IntId VR128:$src1,
+                           (memop addr:$src2), XMM0)),
+                         (set VR128:$dst, (IntId VR128:$src1,
+                           (memop addr:$src2))))]>, T8PS,
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
+let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
   def SHA1RNDS4rri : Ii8<0xCC, MRMSrcReg, (outs VR128:$dst),
                          (ins VR128:$src1, VR128:$src2, u8imm:$src3),
                          "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
@@ -6757,7 +6757,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
 
   let Uses=[XMM0] in
   defm SHA256RNDS2 : SHAI_binop<0xCB, "sha256rnds2", int_x86_sha256rnds2,
-                                SchedWriteVecIMul.XMM, 1>;
+                                SchedWriteVecIMul.XMM, "", 1>;
 
   defm SHA256MSG1 : SHAI_binop<0xCC, "sha256msg1", int_x86_sha256msg1,
                                SchedWriteVecIMul.XMM>;
@@ -6765,11 +6765,47 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
                                SchedWriteVecIMul.XMM>;
 }
 
-// Aliases with explicit %xmm0
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rr VR128:$dst, VR128:$src2), 0>;
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rm VR128:$dst, i128mem:$src2), 0>;
+let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in {
+  def SHA1RNDS4rri_EVEX: Ii8<0xD4, MRMSrcReg, (outs VR128:$dst),
+                             (ins VR128:$src1, VR128:$src2, u8imm:$src3),
+                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                             [(set VR128:$dst,
+                               (int_x86_sha1rnds4 VR128:$src1, VR128:$src2,
+                                (i8 timm:$src3)))]>,
+                         EVEX_NoCD8, T_MAP4PS, Sched<[SchedWriteVecIMul.XMM]>;
+  def SHA1RNDS4rmi_EVEX: Ii8<0xD4, MRMSrcMem, (outs VR128:$dst),
+                             (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
+                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                             [(set VR128:$dst,
+                               (int_x86_sha1rnds4 VR128:$src1,
+                                (memop addr:$src2),
+                                (i8 timm:$src3)))]>,
+                         EVEX_NoCD8, T_MAP4PS,
+                         Sched<[SchedWriteVecIMul.XMM.Folded,
+                                SchedWriteVecIMul.XMM.ReadAfterFold]>;
+
+  defm SHA1NEXTE : SHAI_binop<0xD8, "sha1nexte", int_x86_sha1nexte,
+                                   SchedWriteVecIMul.XMM, "_EVEX">,
+                        EVEX_NoCD8, T_MAP4PS;
+  defm SHA1MSG1  : SHAI_binop<0xD9, "sha1msg1", int_x86_sha1msg1,
+                              SchedWriteVecIMul.XMM, "_EVEX">,
+                   EVEX_NoCD8, T_MAP4PS;
+  defm SHA1MSG2  : SHAI_binop<0xDA, "sha1msg2", int_x86_sha1msg2,
+                              SchedWriteVecIMul.XMM, "_EVEX">,
+                   EVEX_NoCD8, T_MAP4PS;
+
+  let Uses=[XMM0] in
+  defm SHA256RNDS2 : SHAI_binop<0xDB, "sha256rnds2", int_x86_sha256rnds2,
+                                SchedWriteVecIMul.XMM, "_EVEX", 1>,
+                     EVEX_NoCD8, T_MAP4PS;
+
+  defm SHA256MSG1 : SHAI_binop<0xDC, "sha256msg1", int_x86_sha256msg1,
+                               SchedWriteVecIMul.XMM, "_EVEX">,
+                    EVEX_NoCD8, T_MAP4PS;
+  defm SHA256MSG2 : SHAI_binop<0xDD, "sha256msg2", int_x86_sha256msg2,
+                               SchedWriteVecIMul.XMM, "_EVEX">,
+                    EVEX_NoCD8, T_MAP4PS;
+}
 
 //===----------------------------------------------------------------------===//
 // AES-NI Instructions
