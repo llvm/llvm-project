@@ -1,7 +1,7 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=riscv64-linux-gnu  -mcpu=veyron-v1 -x=mir < %s \
+# RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+shifted-zext-fusion,+ld-add-fusion \
+# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+zexth-fusion,+zextw-fusion,+shifted-zextw-fusion,+ld-add-fusion \
 # RUN:   | FileCheck %s
 
 # CHECK: lui_addi:%bb.0
