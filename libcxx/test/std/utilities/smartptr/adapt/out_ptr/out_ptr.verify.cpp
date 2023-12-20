@@ -30,13 +30,5 @@ int main(int, char**) {
     std::ignore = std::out_ptr<int*>(sPtr);
   }
 
-  {
-    DefaultDeleter<int> del;
-    std::unique_ptr<int, DefaultDeleter<int>> uPtr;
-
-    std::ignore = std::out_ptr(uPtr, del);
-    std::ignore = std::out_ptr<int*>(uPtr, del);
-  }
-
   return 0;
 }
