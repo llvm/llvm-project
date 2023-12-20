@@ -142,7 +142,7 @@ void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
 void quantizedRegionBuilder(ImplicitLocOpBuilder &b, Block &block,
                             ArrayRef<NamedAttribute> attrs);
 void getEffects(
-    DepthwiseConvolutionOpInterface op,
+    Operation *op,
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects);
 ParseResult parse(OpAsmParser &parser, OperationState &result,

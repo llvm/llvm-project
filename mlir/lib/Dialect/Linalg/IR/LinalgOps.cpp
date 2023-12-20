@@ -1727,6 +1727,20 @@ void mlir::linalg::detail::depthwise_convolution_impl::quantizedRegionBuilder(
   helper.yieldOutputs({value8});
 }
 
+void mlir::linalg::detail::depthwise_convolution_impl::getEffects(
+    Operation *op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (!isa<DepthwiseConvolutionOpInterface>(op))
+    return;
+  if (LinalgOp linalgOp = dyn_cast<LinalgOp>(op)) {
+    if (linalgOp.hasTensorSemantics())
+      return;
+    getGenericEffectsImpl(effects, linalgOp.getOperation()->getResults(),
+                          linalgOp.getDpsInputs(), linalgOp.getDpsInits());
+  }
+}
+
 ArrayAttr DepthwiseConvNDOp::getIndexingMaps() {
   ArrayAttr cached = (*this)->getAttrOfType<ArrayAttr>(
       LinalgDialect::kMemoizedIndexingMapsAttrName);
@@ -1744,10 +1758,7 @@ ArrayAttr DepthwiseConvNDOp::getIndexingMaps() {
 void DepthwiseConvNDOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  if (hasTensorSemantics())
-    return;
-  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
-                        getDpsInits());
+  return detail::depthwise_convolution_impl::getEffects(*this, effects);
 }
 
 ArrayAttr DepthwiseConvNDQOp::getIndexingMaps() {
@@ -1763,6 +1774,7 @@ ArrayAttr DepthwiseConvNDQOp::getIndexingMaps() {
           ctx, numSpatial, getChannelPosition(), getStridesVector(),
           getDilationsVector())
           .getValue());
+  // Add scalar maps for `zero_points` operands
   SmallVector<Attribute> scalarMaps(
       2, AffineMapAttr::get(AffineMap::get(3 + 2 * numSpatial, 0, {}, ctx)));
   maps.insert(maps.end() - 1, scalarMaps.begin(), scalarMaps.end());
@@ -1774,10 +1786,7 @@ ArrayAttr DepthwiseConvNDQOp::getIndexingMaps() {
 void DepthwiseConvNDQOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  if (hasTensorSemantics())
-    return;
-  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
-                        getDpsInits());
+  return detail::depthwise_convolution_impl::getEffects(*this, effects);
 }
 
 //===----------------------------------------------------------------------===//

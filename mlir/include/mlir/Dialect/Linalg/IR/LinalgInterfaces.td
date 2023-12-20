@@ -900,9 +900,9 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     "int64_t", "getChannelPosition", (ins)
     >,
     InterfaceMethod<[{
-      Returns indexing maps for any spatial dimension.
+      Returns iterator types for any spatial dimension.
     }],
-    "::mlir::ArrayAttr", "getIteratorTypes", (ins),
+    "::mlir::ArrayAttr", "getIteratorTypes",(ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
         return detail::depthwise_convolution_impl::getIteratorTypes($_op);
