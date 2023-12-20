@@ -1625,6 +1625,22 @@ gentbl_cc_library(
     deps = [":EmitCTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "EmitCPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=EmitC",
+            ],
+            "include/mlir/Dialect/EmitC/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/EmitC/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
 cc_library(
     name = "TargetCpp",
     srcs = glob([
@@ -3640,6 +3656,25 @@ cc_library(
         ":EmitCOpsIncGen",
         ":IR",
         ":SideEffectInterfaces",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "EmitCTransforms",
+    srcs = glob([
+        "lib/Dialect/EmitC/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/EmitC/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+        ":EmitCPassIncGen",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -8841,6 +8876,7 @@ cc_library(
         ":ConvertToLLVM",
         ":DLTIDialect",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":FuncDialect",
         ":FuncToLLVM",
         ":FuncToSPIRV",
