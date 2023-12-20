@@ -11,6 +11,7 @@ add_mlir_translation_library(MLIRTargetKokkosCpp
   MLIRControlFlowDialect
   MLIREmitCDialect
   MLIRFuncDialect
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRMathDialect
   MLIRSCFDialect
