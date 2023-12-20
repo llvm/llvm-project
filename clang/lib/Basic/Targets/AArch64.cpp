@@ -680,7 +680,6 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
-      .Case("sve2p1", HasSVE2p1)
       .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
@@ -760,13 +759,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       FPU |= SveMode;
       HasFullFP16 = true;
       HasSVE2 = true;
-    }
-    if (Feature == "+sve2p1") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2p1 = true;
     }
     if (Feature == "+sve2-aes") {
       FPU |= NeonMode;
