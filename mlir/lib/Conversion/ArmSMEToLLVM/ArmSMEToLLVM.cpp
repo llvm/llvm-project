@@ -19,6 +19,7 @@
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -31,6 +32,8 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+
+static constexpr StringLiteral kInMemoryTileId("arm_sme.in_memory_tile_id");
 
 /// Helper to create an arm_sme.intr.ld1*.(horiz|vert)' intrinsic.
 static Operation *createLoadTileSliceIntrinsic(
@@ -128,6 +131,209 @@ IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
         "expected tile ID to be allocated before conversion to LLVM");
   return tileId;
 }
+
+/// Creates a alloca matching the size of tile used by `tileOp`. The alloca is
+/// placed in the first block of the function.
+static memref::AllocaOp
+createAllocaForTile(RewriterBase &rewriter, Location loc,
+                    FunctionOpInterface func,
+                    arm_sme::ArmSMETileOpInterface tileOp) {
+  RewriterBase::InsertionGuard g(rewriter);
+  // Move to the first operation in the function.
+  rewriter.setInsertionPoint(&func.getBlocks().front().front());
+  // Create an alloca matching the tile size of the `tileOp`.
+  auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
+  auto tileElementType =
+      llvm::cast<VectorType>(tileOp.getTileType()).getElementType();
+  auto memrefType = MemRefType::get(
+      {ShapedType::kDynamic, ShapedType::kDynamic}, tileElementType);
+  auto minElements = arm_sme::getSMETileSliceMinNumElts(tileElementType);
+  auto minElementsOp =
+      rewriter.create<arith::ConstantIndexOp>(loc, minElements);
+  auto vectorLen = rewriter.create<arith::MulIOp>(loc, vscale, minElementsOp);
+  auto alloca = rewriter.create<memref::AllocaOp>(
+      loc, memrefType, ValueRange{vectorLen, vectorLen});
+  return alloca;
+}
+
+/// Finds or creates an alloca for a spill of a tile.
+static memref::AllocaOp
+getOrCreateTileMemory(RewriterBase &rewriter, Location loc,
+                      FunctionOpInterface func,
+                      arm_sme::ArmSMETileOpInterface tileOp, unsigned tileId) {
+  // Find an alloca at the top of the function tagged with a
+  // 'arm_sme.in_memory_tile_id' that matches `tileId`.
+  for (auto &op : func.getBlocks().front()) {
+    auto alloca = llvm::dyn_cast<memref::AllocaOp>(op);
+    if (!alloca)
+      continue;
+    auto inMemoryTileId = llvm::dyn_cast_or_null<IntegerAttr>(
+        alloca->getDiscardableAttr(kInMemoryTileId));
+    if (!inMemoryTileId)
+      continue;
+    if (inMemoryTileId.getInt() == tileId)
+      return alloca;
+  }
+  // Otherwise, create a new alloca:
+  auto alloca = createAllocaForTile(rewriter, loc, func, tileOp);
+  alloca->setDiscardableAttr(kInMemoryTileId,
+                             rewriter.getI32IntegerAttr(tileId));
+  return alloca;
+}
+
+/// Very naive lowering of in-memory tiles (i.e. tiles that were not assigned a
+/// hardware tile ID) to ArmSME intrinsics. Currently, this works by assigning
+/// the op to tile 0, then emitting a full tile swap between ZA and memory
+/// before + after the tile op.
+///
+/// Example:
+///
+///    arm_sme.tile_op { tile_id = <IN MEMORY TILE> }
+///
+/// is converted to:
+///     // At function entry:
+///     %alloca = memref.alloca ... : memref<?x?xty>
+///
+///     // Around op:
+///     scf.for %slice_idx {
+///       %current_slice = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
+///       "arm_sme.intr.ld1h.horiz"(%alloca, %slice_idx)  <{tile_id = 0 : i32}>
+///       vector.store %current_slice, %alloca[%slice_idx, %c0]
+///     }
+///     arm_sme.tile_op { tile_id = 0 }
+///     scf.for %slice_idx {
+///       %current_slice = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
+///       "arm_sme.intr.ld1h.horiz"(%alloca, %slice_idx)  <{tile_id = 0 : i32}>
+///       vector.store %current_slice, %alloca[%slice_idx, %c0]
+///     }
+///
+/// Note that these spills/fills are not inserted earlier as concept of a
+/// register, and the need to swap the contents, can't really be represented
+/// correctly at a high level in MLIR.
+///
+/// TODO: Reduce the spills/reloads to single slices where possible.
+struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
+
+  ConvertArmSMESpillsAndFillsToLLVM(StringRef rootOpName,
+                                    const LLVMTypeConverter &typeConverter,
+                                    PatternBenefit benefit)
+      : ConvertToLLVMPattern(rootOpName, &typeConverter.getContext(),
+                             typeConverter, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto tileOp = cast<arm_sme::ArmSMETileOpInterface>(op);
+    // Tile has a real (hardware) tile. No spills/reloads required.
+    if (!tileOp.isInMemoryTile())
+      return failure();
+
+    // Step 1. Create an alloca for the tile at the top of the function (if one
+    // does not already exist).
+    auto loc = tileOp.getLoc();
+    auto func = tileOp->getParentOfType<FunctionOpInterface>();
+    auto tileAlloca = getOrCreateTileMemory(rewriter, loc, func, tileOp,
+                                            tileOp.getTileId().getInt());
+
+    // Step 2. Assign the op a real tile ID.
+    // For simplicity, we always use tile 0.
+    auto zeroTileId = rewriter.getI32IntegerAttr(0);
+    {
+      rewriter.startRootUpdate(tileOp);
+      tileOp.setTileId(zeroTileId);
+      rewriter.finalizeRootUpdate(tileOp);
+    }
+
+    VectorType tileVectorType = tileOp.getTileType();
+    auto sliceType = VectorType::Builder(tileOp.getTileType()).dropDim(0);
+    auto emitTileSwap = [&] {
+      emitFullTileSwap(rewriter, loc, tileAlloca,
+                       *arm_sme::getSMETileType(tileVectorType), sliceType,
+                       zeroTileId);
+    };
+
+    // Step 3. Emit tile swaps before and after the op.
+    // TODO: Reduce the amount spilled to the amount of data the `tileOp`
+    // touches (i.e. a single tile slice).
+    {
+      rewriter.setInsertionPoint(op);
+      // Swap the in-memory tile's contents into ZA before the op.
+      emitTileSwap();
+      rewriter.setInsertionPointAfter(op);
+      // Swap the tile back out to memory again after the op.
+      emitTileSwap();
+    }
+
+    return success();
+  }
+
+  /// Extracts a pointer to a slice of an in-memory tile.
+  Value getInMemoryTileSlicePtr(RewriterBase &rewriter, Location loc,
+                                Value tileMemory, Value sliceIndex) const {
+    auto llvmType = getTypeConverter()->convertType(tileMemory.getType());
+    auto descriptor =
+        rewriter.create<UnrealizedConversionCastOp>(loc, llvmType, tileMemory);
+    auto zero = rewriter.create<arith::ConstantIntOp>(loc, 0, /*width=*/64);
+    auto sliceIndexI64 = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getI64Type(), sliceIndex);
+    return getStridedElementPtr(
+        loc, llvm::cast<MemRefType>(tileMemory.getType()),
+        descriptor.getResult(0), {sliceIndexI64, zero},
+        static_cast<ConversionPatternRewriter &>(rewriter));
+  }
+
+  /// Emits an in-place swap of a slice of a tile in ZA and a slice of a
+  /// tile-sized memref (`tileAlloca`).
+  void emitSliceSwap(RewriterBase &rewriter, Location loc, Value tileAlloca,
+                     arm_sme::ArmSMETileType tileType, VectorType sliceType,
+                     IntegerAttr tileId, Value sliceIndex) const {
+    // Cast the slice index to an i32.
+    auto sliceIndexI32 = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getI32Type(), sliceIndex);
+    // Create an all-true predicate for the slice.
+    auto predicateType = sliceType.clone(rewriter.getI1Type());
+    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(predicateType, true));
+    // Create zero padding vector (never used due to all-true predicate).
+    auto zeroVector = rewriter.create<arith::ConstantOp>(
+        loc, sliceType, rewriter.getZeroAttr(sliceType));
+    // Get a pointer to the current slice.
+    auto slicePtr =
+        getInMemoryTileSlicePtr(rewriter, loc, tileAlloca, sliceIndex);
+    // Read the value of the current slice from ZA.
+    auto currentTileSlice = rewriter.create<arm_sme::aarch64_sme_read_horiz>(
+        loc, sliceType, zeroVector, allTruePredicate, tileId, sliceIndexI32);
+    // Load the new tile slice back from memory into ZA.
+    createLoadTileSliceIntrinsic(
+        rewriter, loc, tileType, arm_sme::TileSliceLayout::Horizontal,
+        allTruePredicate, slicePtr, tileId, sliceIndexI32);
+    // Store the current tile slice to memory.
+    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    rewriter.create<vector::StoreOp>(loc, currentTileSlice, tileAlloca,
+                                     ValueRange{sliceIndex, zero});
+  }
+
+  /// Emits a full in-place swap of the contents of a tile in ZA and a
+  /// tile-sized memref (`tileAlloca`).
+  void emitFullTileSwap(RewriterBase &rewriter, Location loc, Value tileAlloca,
+                        arm_sme::ArmSMETileType tileType, VectorType sliceType,
+                        IntegerAttr tileId) const {
+    RewriterBase::InsertionGuard guard(rewriter);
+    // Create an scf.for over all tile slices.
+    auto minNumElts =
+        rewriter.create<arith::ConstantIndexOp>(loc, sliceType.getDimSize(0));
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto upperBound = rewriter.create<arith::MulIOp>(
+        loc, minNumElts, rewriter.create<vector::VectorScaleOp>(loc));
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    // Emit a swap for each tile slice.
+    rewriter.setInsertionPointToStart(forOp.getBody());
+    auto sliceIndex = forOp.getInductionVar();
+    emitSliceSwap(rewriter, loc, tileAlloca, tileType, sliceType, tileId,
+                  sliceIndex);
+  }
+};
 
 struct GetTileConversion : public ConvertOpToLLVMPattern<arm_sme::GetTileOp> {
   using ConvertOpToLLVMPattern<arm_sme::GetTileOp>::ConvertOpToLLVMPattern;
@@ -576,6 +782,17 @@ struct ConvertArmSMEToLLVMPass
   }
 };
 
+template <typename... TileOp>
+static void addSpillAndFillsForTileOp(RewritePatternSet &patterns,
+                                      LLVMTypeConverter const &typeConverter) {
+  // Add spill/fill conversions with a very high benefit to ensure they are
+  // lowered first.
+  (patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(TileOp::getOperationName(),
+                                                   typeConverter,
+                                                   /*benefit=*/1337),
+   ...);
+}
+
 } // namespace
 
 void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
@@ -597,7 +814,10 @@ void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
       arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa,
       arm_sme::aarch64_sme_cntsb, arm_sme::aarch64_sme_cntsh,
       arm_sme::aarch64_sme_cntsw, arm_sme::aarch64_sme_cntsd>();
-  target.addLegalDialect<arith::ArithDialect>();
+  target.addLegalDialect<arith::ArithDialect,
+                         /* The following are used to lower tile spills/fills */
+                         vector::VectorDialect, scf::SCFDialect,
+                         memref::MemRefDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
 }
 
@@ -610,6 +830,12 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
       return type;
     return std::nullopt;
   });
+
+  // Register ops that need spills/fills.
+  addSpillAndFillsForTileOp<
+      arm_sme::LoadTileSliceOp, arm_sme::MoveTileSliceToVectorOp,
+      arm_sme::MoveVectorToTileSliceOp, arm_sme::StoreTileSliceOp,
+      arm_sme::OuterProductOp, arm_sme::ZeroOp>(patterns, converter);
 
   patterns.add<LoadTileSliceConversion, MoveTileSliceToVectorConversion,
                MoveVectorToTileSliceConversion, StoreTileSliceConversion,
