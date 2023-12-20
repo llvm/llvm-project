@@ -112,9 +112,8 @@ public:
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {
-    bits |= SIGN_MASK;
-    if (!signVal)
-      bits -= SIGN_MASK;
+    if (get_sign() != signVal)
+      bits ^= SIGN_MASK;
   }
 
   LIBC_INLINE constexpr bool get_sign() const {

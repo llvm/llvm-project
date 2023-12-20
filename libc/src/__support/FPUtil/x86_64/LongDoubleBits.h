@@ -84,13 +84,12 @@ public:
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {
-    bits &= ~SIGN_MASK;
-    StorageType sign1 = StorageType(signVal) << (TOTAL_LEN - 1);
-    bits |= sign1;
+    if (get_sign() != signVal)
+      bits ^= SIGN_MASK;
   }
 
   LIBC_INLINE constexpr bool get_sign() const {
-    return bool((bits & SIGN_MASK) >> (TOTAL_LEN - 1));
+    return (bits & SIGN_MASK) != 0;
   }
 
   LIBC_INLINE constexpr FPBits() : UP() {}
