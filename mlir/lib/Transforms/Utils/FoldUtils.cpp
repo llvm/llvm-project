@@ -309,8 +309,7 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   }
 
   // If one doesn't exist, try to materialize one.
-  if (!(constOp = materializeConstant(dialect, rewriter, value, type,
-                                      erasedFoldedLocation)))
+  if (!(constOp = materializeConstant(dialect, rewriter, value, type, loc)))
     return nullptr;
 
   // Check to see if the generated constant is in the expected dialect.
