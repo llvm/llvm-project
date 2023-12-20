@@ -926,9 +926,7 @@ public:
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
 
-  bool hasScalarDwordx3Loads() const {
-    return HasScalarDwordx3Loads;
-  }
+  bool hasScalarDwordx3Loads() const { return HasScalarDwordx3Loads; }
 
   bool hasScalarStores() const {
     return HasScalarStores;

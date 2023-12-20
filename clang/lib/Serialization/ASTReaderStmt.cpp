@@ -3851,11 +3851,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) BuiltinBitCastExpr(Empty);
       break;
 
-    case EXPR_USER_DEFINED_LITERAL:
-      S = UserDefinedLiteral::CreateEmpty(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields],
-          /*HasFPFeatures=*/Record[ASTStmtReader::NumExprFields + 1], Empty);
+    case EXPR_USER_DEFINED_LITERAL: {
+      BitsUnpacker CallExprBits(Record[ASTStmtReader::NumExprFields]);
+      auto NumArgs = CallExprBits.getNextBits(/*Width=*/16);
+      auto HasFPFeatures = CallExprBits.getNextBit();
+      S = UserDefinedLiteral::CreateEmpty(Context, NumArgs, HasFPFeatures,
+                                          Empty);
       break;
+    }
 
     case EXPR_CXX_STD_INITIALIZER_LIST:
       S = new (Context) CXXStdInitializerListExpr(Empty);

@@ -1500,7 +1500,7 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
     return Seg.str();
 
   // E.g. "PT_LOAD" -> "LOAD".
-  assert(Seg.startswith("PT_"));
+  assert(Seg.starts_with("PT_"));
   return Seg.drop_front(3).str();
 }
 
@@ -2585,7 +2585,7 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
   llvm::sort(Libs);
 
   for (StringRef L : Libs)
-    W.startLine() << L << "\n";
+    W.printString(L);
 }
 
 template <class ELFT>
@@ -5133,6 +5133,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_PAC, "PAC");
+      DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_GCS, "GCS");
     } else {
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
@@ -5866,13 +5867,13 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
       return FindNote(FreeBSDNoteTypes);
     }
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("NetBSD-CORE")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("NetBSD-CORE")) {
     StringRef Result = FindNote(NetBSDCoreNoteTypes);
     if (!Result.empty())
       return Result;
     return FindNote(CoreNoteTypes);
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("OpenBSD")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("OpenBSD")) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.
     StringRef Result = FindNote(OpenBSDCoreNoteTypes);
     if (!Result.empty())
