@@ -67,7 +67,7 @@ public:
 
   std::vector<std::vector<Point>> getDenominators() { return denominators; }
 
-  GeneratingFunction operator+(const GeneratingFunction &gf) {
+  GeneratingFunction operator+(const GeneratingFunction &gf) const {
     assert(numParam == gf.getNumParams() &&
            "two generating functions with different numbers of parameters "
            "cannot be added!");

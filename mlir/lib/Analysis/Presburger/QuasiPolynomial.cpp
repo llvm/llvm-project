@@ -53,9 +53,10 @@ QuasiPolynomial QuasiPolynomial::simplify() {
     // A term is zero if its coefficient is zero, or
     if (coefficients[i] == Fraction(0, 1) ||
         // if any of the affine functions in the product
-        llvm::any_of(affine[i], [](SmallVector<Fraction> affine_ij) {
+        llvm::any_of(affine[i], [](const SmallVector<Fraction> &affine_ij) {
           // has all its coefficients as zero.
-          return llvm::all_of(affine_ij, [](Fraction f) { return f == 0; });
+          return llvm::all_of(affine_ij,
+                              [](const Fraction &f) { return f == 0; });
         }))
       continue;
     newCoeffs.append({coefficients[i]});

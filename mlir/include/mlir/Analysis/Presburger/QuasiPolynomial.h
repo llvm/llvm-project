@@ -43,7 +43,7 @@ public:
   SmallVector<Fraction> getCoefficients();
   std::vector<std::vector<SmallVector<Fraction>>> getAffine();
 
-  QuasiPolynomial operator+(QuasiPolynomial &x) {
+  QuasiPolynomial operator+(const QuasiPolynomial &x) const {
     assert(numParam == x.getNumParams() &&
            "two quasi-polynomials with different numbers of parameters cannot "
            "be added!");
@@ -56,7 +56,7 @@ public:
     return QuasiPolynomial(numParam, sumCoeffs, sumAff);
   }
 
-  QuasiPolynomial operator-(QuasiPolynomial &x) {
+  QuasiPolynomial operator-(const QuasiPolynomial &x) const {
     assert(numParam == x.getNumParams() &&
            "two quasi-polynomials with different numbers of parameters cannot "
            "be subtracted!");
@@ -66,7 +66,7 @@ public:
     return *this + qp;
   }
 
-  QuasiPolynomial operator*(QuasiPolynomial &x) {
+  QuasiPolynomial operator*(const QuasiPolynomial &x) const {
     assert(numParam == x.getNumParams() &&
            "two quasi-polynomials with different numbers of "
            "parameters cannot be multiplied!");
@@ -92,7 +92,7 @@ public:
     return QuasiPolynomial(numParam, coeffs, aff);
   }
 
-  QuasiPolynomial operator/(Fraction x) {
+  QuasiPolynomial operator/(const Fraction x) const {
     assert(x != 0 && "division by zero!");
     QuasiPolynomial qp(*this);
     for (Fraction &coeff : qp.coefficients)
