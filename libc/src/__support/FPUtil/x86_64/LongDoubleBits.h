@@ -41,6 +41,7 @@ public:
   using UP::EXP_BIAS;
   using UP::EXP_LEN;
   using UP::EXP_MASK;
+  using UP::EXP_MASK_SHIFT;
   using UP::FP_MASK;
   using UP::FRACTION_LEN;
   using UP::FRACTION_MASK;
@@ -64,14 +65,15 @@ public:
     return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
   }
 
-  LIBC_INLINE constexpr void set_biased_exponent(StorageType expVal) {
-    expVal = (expVal << (TOTAL_LEN - 1 - EXP_LEN)) & EXP_MASK;
+  LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
+    // clear exponent bits
     bits &= ~EXP_MASK;
-    bits |= expVal;
+    // set exponent bits
+    bits |= (biased << EXP_MASK_SHIFT) & EXP_MASK;
   }
 
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXP_MASK) >> (TOTAL_LEN - 1 - EXP_LEN));
+    return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
   }
 
   LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
