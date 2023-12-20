@@ -11,6 +11,7 @@
 ; CHECK: @f4 = unnamed_addr alias ptr (), ptr @f3
 ; CHECK: @f5 = unnamed_addr alias ptr (), ptr @f3
 ; CHECK: @f7 = unnamed_addr alias i64 (), ptr @f6
+; CHECK: @f8 = unnamed_addr alias i64 (), ptr @f6
 ;.
 define i1 @f1() unnamed_addr {
 ; CHECK-LABEL: define i1 @f1() unnamed_addr {
@@ -47,4 +48,8 @@ define i64 @f6() unnamed_addr {
 
 define i64 @f7() unnamed_addr {
   ret i64 add (i64 ptrtoint (ptr @g1 to i64), i64 1)
+}
+
+define i64 @f8() unnamed_addr {
+  ret i64 sub (i64 ptrtoint (ptr @g1 to i64), i64 1)
 }
