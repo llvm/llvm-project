@@ -28,6 +28,7 @@
 ; CHECK-NEXT:       mc:padding  llvmcas://{{.*}}
 ; CHECK-NEXT:     mc:debug_info_section  llvmcas://{{.*}}
 ; CHECK-NEXT:       mc:debug_DIE_top_level  llvmcas://{{.*}}
+; CHECK-NEXT:         mc:debug_DIE_Dedupe_top_level  llvmcas://{{.*}}
 ; CHECK-NEXT:         mc:debug_DIE_data       llvmcas://{{.*}}
 ; CHECK-NEXT:         mc:debug_DIE_data       llvmcas://{{.*}}
 ; CHECK-NEXT:         mc:debug_DIE_abbrev_set llvmcas://{{.*}}
