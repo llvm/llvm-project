@@ -189,8 +189,8 @@ RT_API_ATTRS void *CFI_address(
 RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *, const CFI_index_t lower_bounds[],
     const CFI_index_t upper_bounds[], size_t elem_len);
 RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *);
-int CFI_establish(CFI_cdesc_t *, void *base_addr, CFI_attribute_t, CFI_type_t,
-    size_t elem_len, CFI_rank_t, const CFI_index_t extents[]);
+RT_API_ATTRS int CFI_establish(CFI_cdesc_t *, void *base_addr, CFI_attribute_t,
+    CFI_type_t, size_t elem_len, CFI_rank_t, const CFI_index_t extents[]);
 RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *);
 RT_API_ATTRS int CFI_section(CFI_cdesc_t *, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],

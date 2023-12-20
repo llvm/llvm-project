@@ -18,12 +18,12 @@ extern "C" {
 // The most general MATMUL(TRANSPOSE()).  All type and shape information is
 // taken from the arguments' descriptors, and the result is dynamically
 // allocated.
-void RTNAME(MatmulTranspose)(Descriptor &, const Descriptor &,
+void RTDECL(MatmulTranspose)(Descriptor &, const Descriptor &,
     const Descriptor &, const char *sourceFile = nullptr, int line = 0);
 
 // A non-allocating variant; the result's descriptor must be established
 // and have a valid base address.
-void RTNAME(MatmulTransposeDirect)(const Descriptor &, const Descriptor &,
+void RTDECL(MatmulTransposeDirect)(const Descriptor &, const Descriptor &,
     const Descriptor &, const char *sourceFile = nullptr, int line = 0);
 } // extern "C"
 } // namespace Fortran::runtime

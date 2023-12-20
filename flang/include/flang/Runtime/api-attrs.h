@@ -121,4 +121,15 @@
 #undef RT_DEVICE_COMPILATION
 #endif
 
+#if defined(__CUDACC__)
+#define RT_DIAG_PUSH _Pragma("nv_diagnostic push")
+#define RT_DIAG_POP _Pragma("nv_diagnostic pop")
+#define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN \
+  _Pragma("nv_diag_suppress 20011") _Pragma("nv_diag_suppress 20014")
+#else /* !defined(__CUDACC__) */
+#define RT_DIAG_PUSH
+#define RT_DIAG_POP
+#define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+#endif /* !defined(__CUDACC__) */
+
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */
