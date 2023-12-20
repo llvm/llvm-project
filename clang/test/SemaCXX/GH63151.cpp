@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-
+// RUN: %clang_cc1 -fsyntax-only -Wno-c++11-narrowing-const-reference -verify=allow %s
 
 struct A { A(const unsigned &x) {} };
 
@@ -9,4 +9,5 @@ void foo(int p) {
   A c { p }; // expected-error {{non-constant-expression cannot be narrowed from type 'int' to 'unsigned int' in initializer list}}
   A d { 0.5 }; // expected-error {{type 'double' cannot be narrowed to 'unsigned int' in initializer list}}
                // expected-warning@-1 {{implicit conversion from 'double' to 'unsigned int' changes value from 0.5 to 0}}
+               // allow-warning@-2 {{implicit conversion from 'double' to 'unsigned int' changes value from 0.5 to 0}}
 }
