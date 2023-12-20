@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   Option
   TextAPI
+  TextAPIBinaryReader
   )
 
 set(LLVM_TARGET_DEFINITIONS TapiOpts.td)

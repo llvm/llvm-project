@@ -1380,6 +1380,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   return res;
 }
 
+#if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
                  __sanitizer_clockid_t clock, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_clocklock, m, clock, abstime);
@@ -1393,6 +1394,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
     MutexInvalidAccess(thr, pc, (uptr)m);
   return res;
 }
+#endif
 
 #if SANITIZER_GLIBC
 #  if !__GLIBC_PREREQ(2, 34)

@@ -223,6 +223,8 @@ public:
     // Space-optimized forms that implicitly encode integer VT.
     OPC_EmitStringInteger32,
     OPC_EmitRegister,
+    OPC_EmitRegisterI32,
+    OPC_EmitRegisterI64,
     OPC_EmitRegister2,
     OPC_EmitConvertToTarget,
     OPC_EmitConvertToTarget0,

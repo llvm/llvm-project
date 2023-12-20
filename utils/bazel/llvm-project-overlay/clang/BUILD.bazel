@@ -2529,6 +2529,8 @@ cc_binary(
         ":basic",
         ":frontend",
         ":interpreter",
+        ":lex",
+        ":sema",
         ":tooling",
         "//llvm:Core",
         "//llvm:LineEditor",

@@ -913,14 +913,17 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
         // normal undefined upper bits behavior to allow using an in-reg extend
         // with the illegal FP type, so load as an integer and do the
         // from-integer conversion.
-        if (SrcVT.getScalarType() == MVT::f16) {
+        EVT SVT = SrcVT.getScalarType();
+        if (SVT == MVT::f16 || SVT == MVT::bf16) {
           EVT ISrcVT = SrcVT.changeTypeToInteger();
           EVT IDestVT = DestVT.changeTypeToInteger();
           EVT ILoadVT = TLI.getRegisterType(IDestVT.getSimpleVT());
 
           SDValue Result = DAG.getExtLoad(ISD::ZEXTLOAD, dl, ILoadVT, Chain,
                                           Ptr, ISrcVT, LD->getMemOperand());
-          Value = DAG.getNode(ISD::FP16_TO_FP, dl, DestVT, Result);
+          Value =
+              DAG.getNode(SVT == MVT::f16 ? ISD::FP16_TO_FP : ISD::BF16_TO_FP,
+                          dl, DestVT, Result);
           Chain = Result.getValue(1);
           break;
         }
