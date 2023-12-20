@@ -18,7 +18,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Union, NewType
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -214,5 +214,8 @@ class YieldOp(YieldOp):
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
 
 
-def any_op_t():
-    return AnyOpType.get()
+AnyOpTypeT = NewType("AnyOpType", AnyOpType)
+
+
+def any_op_t() -> AnyOpTypeT:
+    return AnyOpTypeT(AnyOpType.get())

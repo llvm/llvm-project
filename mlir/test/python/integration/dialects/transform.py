@@ -9,9 +9,9 @@ from mlir.dialects.transform import (
 )
 from mlir.dialects.transform.structured import structured_match
 from mlir.dialects.transform.loop import loop_unroll
-from mlir.dialects.transform.extras import named_sequence, sequence, apply_patterns
+from mlir.dialects.transform.extras import named_sequence, apply_patterns
 from mlir.extras import types as T
-from mlir.dialects.builtin import module
+from mlir.dialects.builtin import module, ModuleOp
 
 
 def construct_and_print_in_module(f):
@@ -25,9 +25,9 @@ def construct_and_print_in_module(f):
     return f
 
 
-# CHECK-LABEL: TEST: test_sequence_region
+# CHECK-LABEL: TEST: test_named_sequence
 @construct_and_print_in_module
-def test_sequence_region(module_):
+def test_named_sequence(module_):
     # CHECK-LABEL:   func.func @loop_unroll_op() {
     # CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
     # CHECK:           %[[VAL_1:.*]] = arith.constant 42 : index
@@ -58,6 +58,9 @@ def test_sequence_region(module_):
             m = structured_match(any_op_t(), target, ops=["arith.addi"])
             loop = get_parent_op(pdl.op_t(), m, op_name="scf.for")
             loop_unroll(loop, 4)
+
+    # The identifier (name) of the function becomes the Operation
+    assert isinstance(mod.opview, ModuleOp)
 
     print(module_)
 
