@@ -1048,6 +1048,48 @@ func.func @convert_logical_not_to_not_equal(%arg0: vector<3xi64>, %arg1: vector<
   spirv.ReturnValue %3 : vector<3xi1>
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.LogicalEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @logical_equal_same
+func.func @logical_equal_same(%arg0 : i1, %arg1 : vector<3xi1>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+
+  %0 = spirv.LogicalEqual %arg0, %arg0 : i1
+  %1 = spirv.LogicalEqual %arg1, %arg1 : vector<3xi1>
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_logical_equal
+func.func @const_fold_scalar_logical_equal() -> (i1, i1) {
+  %true = spirv.Constant true
+  %false = spirv.Constant false
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.LogicalEqual %true, %false : i1
+  %1 = spirv.LogicalEqual %false, %false : i1
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_logical_equal
+func.func @const_fold_vector_logical_equal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[true, false, true]> : vector<3xi1>
+  %cv1 = spirv.Constant dense<[true, false, false]> : vector<3xi1>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, true, false]>
+  %0 = spirv.LogicalEqual %cv0, %cv1 : vector<3xi1>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
 
 // -----
 
@@ -1062,6 +1104,43 @@ func.func @convert_logical_not_equal_false(%arg: vector<4xi1>) -> vector<4xi1> {
   // CHECK: spirv.ReturnValue %[[ARG]] : vector<4xi1>
   %0 = spirv.LogicalNotEqual %arg, %cst : vector<4xi1>
   spirv.ReturnValue %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: @logical_not_equal_same
+func.func @logical_not_equal_same(%arg0 : i1, %arg1 : vector<3xi1>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.LogicalNotEqual %arg0, %arg0 : i1
+  %1 = spirv.LogicalNotEqual %arg1, %arg1 : vector<3xi1>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_logical_not_equal
+func.func @const_fold_scalar_logical_not_equal() -> (i1, i1) {
+  %true = spirv.Constant true
+  %false = spirv.Constant false
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.LogicalNotEqual %true, %false : i1
+  %1 = spirv.LogicalNotEqual %false, %false : i1
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_logical_not_equal
+func.func @const_fold_vector_logical_not_equal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[true, false, true]> : vector<3xi1>
+  %cv1 = spirv.Constant dense<[true, false, false]> : vector<3xi1>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, false, true]>
+  %0 = spirv.LogicalNotEqual %cv0, %cv1 : vector<3xi1>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
 }
 
 // -----
@@ -1135,6 +1214,92 @@ func.func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3
   %1 = spirv.LogicalOr %arg, %false: vector<3xi1>
   // CHECK: return %[[TRUE]], %[[ARG]]
   return %0, %1: vector<3xi1>, vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.IEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @iequal_same
+func.func @iequal_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+  %0 = spirv.IEqual %arg0, %arg0 : i32
+  %1 = spirv.IEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_iequal
+func.func @const_fold_scalar_iequal() -> (i1, i1) {
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.IEqual %c5, %c6 : i32
+  %1 = spirv.IEqual %c5, %c5 : i32
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_iequal
+func.func @const_fold_vector_iequal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 2]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, false, true]>
+  %0 = spirv.IEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @inotequal_same
+func.func @inotequal_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.INotEqual %arg0, %arg0 : i32
+  %1 = spirv.INotEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_inotequal
+func.func @const_fold_scalar_inotequal() -> (i1, i1) {
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.INotEqual %c5, %c6 : i32
+  %1 = spirv.INotEqual %c5, %c5 : i32
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_inotequal
+func.func @const_fold_vector_inotequal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 2]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, true, false]>
+  %0 = spirv.INotEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
 }
 
 // -----
