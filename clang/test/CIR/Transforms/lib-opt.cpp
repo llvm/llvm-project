@@ -1,3 +1,3 @@
-// RUN: %clang_cc1 -fclangir -emit-cir -mmlir --mlir-print-ir-after-all %s -o - 2>&1 | FileCheck %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-after-all %s -o - 2>&1 | FileCheck %s -check-prefix=CIR
 
 // CIR: IR Dump After LibOpt (cir-lib-opt)
