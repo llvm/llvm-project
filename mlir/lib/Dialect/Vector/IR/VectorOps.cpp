@@ -140,8 +140,8 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   case CombiningKind::OR:
   case CombiningKind::XOR:
     return elementType.isIntOrIndex();
-  case CombiningKind::MINF:
-  case CombiningKind::MAXF:
+  case CombiningKind::MINNUMF:
+  case CombiningKind::MAXNUMF:
   case CombiningKind::MINIMUMF:
   case CombiningKind::MAXIMUMF:
     return llvm::isa<FloatType>(elementType);
@@ -6233,7 +6233,7 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
     result = b.createOrFold<arith::AndIOp>(loc, v1, acc);
     break;
-  case CombiningKind::MAXF:
+  case CombiningKind::MAXNUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
     result = b.createOrFold<arith::MaxNumFOp>(loc, v1, acc, fastmath);
@@ -6243,7 +6243,7 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
            "expected float values");
     result = b.createOrFold<arith::MaximumFOp>(loc, v1, acc, fastmath);
     break;
-  case CombiningKind::MINF:
+  case CombiningKind::MINNUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
     result = b.createOrFold<arith::MinNumFOp>(loc, v1, acc, fastmath);
