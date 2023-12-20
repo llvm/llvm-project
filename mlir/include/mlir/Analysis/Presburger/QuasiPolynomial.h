@@ -39,66 +39,20 @@ public:
   QuasiPolynomial(unsigned numParam, SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {});
 
-  unsigned getNumParams() const;
-  SmallVector<Fraction> getCoefficients() const;
-  std::vector<std::vector<SmallVector<Fraction>>> getAffine() const;
+  // Find the number of parameters involved in the polynomial.
+  unsigned getNumParams() const { return numParam; }
 
-  QuasiPolynomial operator+(const QuasiPolynomial &x) const {
-    assert(numParam == x.getNumParams() &&
-           "two quasi-polynomials with different numbers of parameters cannot "
-           "be added!");
-    SmallVector<Fraction> sumCoeffs = coefficients;
-    sumCoeffs.append(x.coefficients);
-    std::vector<std::vector<SmallVector<Fraction>>> sumAff = affine;
-    sumAff.insert(sumAff.end(), x.affine.begin(), x.affine.end());
-    return QuasiPolynomial(numParam, sumCoeffs, sumAff);
+  SmallVector<Fraction> getCoefficients() const { return coefficients; }
+
+  std::vector<std::vector<SmallVector<Fraction>>> getAffine() const {
+    return affine;
   }
 
-  QuasiPolynomial operator-(const QuasiPolynomial &x) const {
-    assert(numParam == x.getNumParams() &&
-           "two quasi-polynomials with different numbers of parameters cannot "
-           "be subtracted!");
-    QuasiPolynomial qp(numParam, x.coefficients, x.affine);
-    for (Fraction &coeff : qp.coefficients)
-      coeff = -coeff;
-    return *this + qp;
-  }
-
-  QuasiPolynomial operator*(const QuasiPolynomial &x) const {
-    assert(numParam == x.getNumParams() &&
-           "two quasi-polynomials with different numbers of "
-           "parameters cannot be multiplied!");
-
-    SmallVector<Fraction> coeffs;
-    coeffs.reserve(coefficients.size() * x.coefficients.size());
-    for (const Fraction &coeff : coefficients) {
-      for (const Fraction &xcoeff : x.coefficients) {
-        coeffs.push_back(coeff * xcoeff);
-      }
-    }
-
-    std::vector<SmallVector<Fraction>> product;
-    std::vector<std::vector<SmallVector<Fraction>>> aff;
-    aff.reserve(affine.size() * x.affine.size());
-    for (const std::vector<SmallVector<Fraction>> &term : affine) {
-      for (const std::vector<SmallVector<Fraction>> &xterm : x.affine) {
-        product.clear();
-        product.insert(product.end(), term.begin(), term.end());
-        product.insert(product.end(), xterm.begin(), xterm.end());
-        aff.push_back(product);
-      }
-    }
-
-    return QuasiPolynomial(numParam, coeffs, aff);
-  }
-
-  QuasiPolynomial operator/(const Fraction x) const {
-    assert(x != 0 && "division by zero!");
-    QuasiPolynomial qp(*this);
-    for (Fraction &coeff : qp.coefficients)
-      coeff /= x;
-    return qp;
-  };
+  // Arithmetic operations.
+  QuasiPolynomial operator+(const QuasiPolynomial &x) const;
+  QuasiPolynomial operator-(const QuasiPolynomial &x) const;
+  QuasiPolynomial operator*(const QuasiPolynomial &x) const;
+  QuasiPolynomial operator/(const Fraction x) const;
 
   // Removes terms which evaluate to zero from the expression.
   QuasiPolynomial simplify();

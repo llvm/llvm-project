@@ -36,16 +36,61 @@ QuasiPolynomial::QuasiPolynomial(
   }
 }
 
-// Find the number of parameters involved in the polynomial.
-unsigned QuasiPolynomial::getNumParams() const { return numParam; }
-
-SmallVector<Fraction> QuasiPolynomial::getCoefficients() const {
-  return coefficients;
+QuasiPolynomial QuasiPolynomial::operator+(const QuasiPolynomial &x) const {
+  assert(numParam == x.getNumParams() &&
+         "two quasi-polynomials with different numbers of parameters cannot "
+         "be added!");
+  SmallVector<Fraction> sumCoeffs = coefficients;
+  sumCoeffs.append(x.coefficients);
+  std::vector<std::vector<SmallVector<Fraction>>> sumAff = affine;
+  sumAff.insert(sumAff.end(), x.affine.begin(), x.affine.end());
+  return QuasiPolynomial(numParam, sumCoeffs, sumAff);
 }
 
-std::vector<std::vector<SmallVector<Fraction>>>
-QuasiPolynomial::getAffine() const {
-  return affine;
+QuasiPolynomial QuasiPolynomial::operator-(const QuasiPolynomial &x) const {
+  assert(numParam == x.getNumParams() &&
+         "two quasi-polynomials with different numbers of parameters cannot "
+         "be subtracted!");
+  QuasiPolynomial qp(numParam, x.coefficients, x.affine);
+  for (Fraction &coeff : qp.coefficients)
+    coeff = -coeff;
+  return *this + qp;
+}
+
+QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
+  assert(numParam == x.getNumParams() &&
+         "two quasi-polynomials with different numbers of "
+         "parameters cannot be multiplied!");
+
+  SmallVector<Fraction> coeffs;
+  coeffs.reserve(coefficients.size() * x.coefficients.size());
+  for (const Fraction &coeff : coefficients) {
+    for (const Fraction &xcoeff : x.coefficients) {
+      coeffs.push_back(coeff * xcoeff);
+    }
+  }
+
+  std::vector<SmallVector<Fraction>> product;
+  std::vector<std::vector<SmallVector<Fraction>>> aff;
+  aff.reserve(affine.size() * x.affine.size());
+  for (const std::vector<SmallVector<Fraction>> &term : affine) {
+    for (const std::vector<SmallVector<Fraction>> &xterm : x.affine) {
+      product.clear();
+      product.insert(product.end(), term.begin(), term.end());
+      product.insert(product.end(), xterm.begin(), xterm.end());
+      aff.push_back(product);
+    }
+  }
+
+  return QuasiPolynomial(numParam, coeffs, aff);
+}
+
+QuasiPolynomial QuasiPolynomial::operator/(const Fraction x) const {
+  assert(x != 0 && "division by zero!");
+  QuasiPolynomial qp(*this);
+  for (Fraction &coeff : qp.coefficients)
+    coeff /= x;
+  return qp;
 }
 
 // Removes terms which evaluate to zero from the expression.
