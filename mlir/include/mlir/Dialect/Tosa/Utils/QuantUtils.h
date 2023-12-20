@@ -28,7 +28,7 @@ namespace tosa {
 
 /// From a scale value, computes multiplier and shift values
 /// for 16 or 32-bit scale widths.
-void computeMultiplierAndShift(double scale, int32_t &multiplier,
+bool computeMultiplierAndShift(double scale, int32_t &multiplier,
                                int32_t &shift, int32_t scaleWidth);
 
 //// Builds ConvOpQuantizationAttr from input and weight.
