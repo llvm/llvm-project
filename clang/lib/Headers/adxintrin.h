@@ -14,9 +14,6 @@
 #ifndef __ADXINTRIN_H
 #define __ADXINTRIN_H
 
-/* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
-
 /* Use C++ inline semantics in C++, GNU inline for C mode. */
 #if defined(__cplusplus)
 #define __INLINE __inline
@@ -97,6 +94,5 @@ __INLINE unsigned char
 #endif
 
 #undef __INLINE
-#undef __DEFAULT_FN_ATTRS
 
 #endif /* __ADXINTRIN_H */
