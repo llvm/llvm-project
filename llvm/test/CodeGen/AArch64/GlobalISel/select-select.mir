@@ -95,7 +95,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; G_SELECT cc, 0, 1 -> CSINC zreg, zreg, cc
 
     ; CHECK-LABEL: name: csinc_t_0_f_1
     ; CHECK: liveins: $w0, $w1
@@ -123,7 +122,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; G_SELECT cc 0, -1 -> CSINV zreg, zreg cc
 
     ; CHECK-LABEL: name: csinv_t_0_f_neg_1
     ; CHECK: liveins: $w0, $w1
@@ -151,7 +149,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
 
     ; CHECK-LABEL: name: csinc_t_1
     ; CHECK: liveins: $w0, $w1, $w2
@@ -180,7 +177,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, -1, f -> CSINV f, zreg, inv_cc
 
     ; CHECK-LABEL: name: csinv_t_neg_1
     ; CHECK: liveins: $w0, $w1, $w2
@@ -209,7 +205,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, t, 1 -> CSINC t, zreg, cc
 
     ; CHECK-LABEL: name: csinc_f_1
     ; CHECK: liveins: $w0, $w1, $w2
@@ -238,7 +233,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, t, -1 -> CSINC t, zreg, cc
 
     ; CHECK-LABEL: name: csinc_f_neg_1
     ; CHECK: liveins: $w0, $w1, $w2
@@ -267,7 +261,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
 
     ; CHECK-LABEL: name: csinc_t_1_no_cmp
     ; CHECK: liveins: $w0, $w1
@@ -294,7 +287,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; G_SELECT cc, t, 1 -> CSINC t, zreg, cc
 
     ; CHECK-LABEL: name: csinc_f_1_no_cmp
     ; CHECK: liveins: $w0, $w1
@@ -321,7 +313,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
-    ; G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
 
     ; CHECK-LABEL: name: csinc_t_1_no_cmp_s64
     ; CHECK: liveins: $x0, $x1
@@ -350,7 +341,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, true, (G_SUB 0, x) -> CSNEG true, x, cc
 
     ; CHECK-LABEL: name: csneg_s32
     ; CHECK: liveins: $w0, $w1, $w2
@@ -380,7 +370,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, (G_SUB 0, %x), %false -> CSNEG %x, %false, inv_cc
 
     ; CHECK-LABEL: name: csneg_inverted_cc
     ; CHECK: liveins: $w0, $w1, $w2
@@ -410,7 +399,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
-    ; G_SELECT cc, true, (G_SUB 0, x) -> CSNEG true, x, cc
 
     ; CHECK-LABEL: name: csneg_s64
     ; CHECK: liveins: $x0, $x1, $x2
@@ -441,8 +429,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; We should prefer eliminating the G_SUB over eliminating the constant true
-    ; value.
 
     ; CHECK-LABEL: name: csneg_with_true_cst
     ; CHECK: liveins: $w0, $w1, $w2
@@ -472,7 +458,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, true, (G_XOR x, -1) -> CSINV true, x, cc
 
     ; CHECK-LABEL: name: csinv_s32
     ; CHECK: liveins: $w0, $w1, $w2
@@ -502,7 +487,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, (G_XOR x, -1), %false -> CSINV %x, %false, inv_cc
 
     ; CHECK-LABEL: name: csinv_inverted_cc
     ; CHECK: liveins: $w0, $w1, $w2
@@ -532,7 +516,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
-    ; G_SELECT cc, true, (G_XOR x, -1) -> CSINV true, x, cc
 
     ; CHECK-LABEL: name: csinv_s64
     ; CHECK: liveins: $x0, $x1, $x2
@@ -564,7 +547,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
-    ; zext(s32 -1) != s64 -1, so we can't fold it away.
 
     ; CHECK-LABEL: name: xor_not_negative_one
     ; CHECK: liveins: $x0, $x1, $x2
@@ -601,7 +583,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, %true, (G_ADD %x, 1) -> CSINC %true, %x, cc
     ; CHECK-LABEL: name: csinc_s32
     ; CHECK: liveins: $w0, $w1, $w2
     ; CHECK-NEXT: {{  $}}
@@ -630,7 +611,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; G_SELECT cc, (G_ADD %x, 1), %false -> CSINC %x, %false, inv_cc
     ; CHECK-LABEL: name: csinc_s32_inverted_cc
     ; CHECK: liveins: $w0, $w1, $w2
     ; CHECK-NEXT: {{  $}}
@@ -659,7 +639,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
-    ; G_SELECT cc, %true, (G_PTR_ADD %x, 1) -> CSINC %true, %x, cc
 
     ; CHECK-LABEL: name: csinc_ptr_add
     ; CHECK: liveins: $x0, $x1, $x2
@@ -712,4 +691,54 @@ body:             |
     %sub:gpr(s32) = G_SUB %zero(s32), %reg2
     %select:gpr(s32) = G_SELECT %reg0, %xor, %sub
     $w0 = COPY %select(s32)
+    RET_ReallyLR implicit $w0
+...
+---
+name:            select_vectorized_conditon_v2s32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; CHECK-LABEL: name: select_vectorized_conditon_v2s32
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %reg0:gpr32all = COPY $w0
+    ; CHECK-NEXT: %reg1:gpr32 = COPY $w1
+    ; CHECK-NEXT: %reg2:gpr32all = COPY $w2
+    ; CHECK-NEXT: %reg3:gpr32 = COPY $w0
+    ; CHECK-NEXT: %reg4:gpr32all = COPY $w1
+    ; CHECK-NEXT: %reg5:gpr32 = COPY $w2
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %reg0, %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, %reg1
+    ; CHECK-NEXT: %true:fpr64 = COPY [[INSvi32gpr]].dsub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], %reg2, %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, %reg3
+    ; CHECK-NEXT: %false:fpr64 = COPY [[INSvi32gpr1]].dsub
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], %reg4, %subreg.ssub
+    ; CHECK-NEXT: [[INSvi32gpr2:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG2]], 1, %reg5
+    ; CHECK-NEXT: %cond:fpr64 = COPY [[INSvi32gpr2]].dsub
+    ; CHECK-NEXT: %select:fpr64 = BSLv8i8 %cond, %true, %false
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], %select, %subreg.dsub
+    ; CHECK-NEXT: %extract:fpr32 = DUPi32 [[INSERT_SUBREG3]], 1
+    ; CHECK-NEXT: $w0 = COPY %extract
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %idx:gpr(s64) = G_CONSTANT i64 1
+    %reg0:gpr(s32) = COPY $w0
+    %reg1:gpr(s32) = COPY $w1
+    %reg2:gpr(s32) = COPY $w2
+    %reg3:gpr(s32) = COPY $w0
+    %reg4:gpr(s32) = COPY $w1
+    %reg5:gpr(s32) = COPY $w2
+    %true:fpr(<2 x s32>) = G_BUILD_VECTOR %reg0(s32), %reg1(s32)
+    %false:fpr(<2 x s32>) = G_BUILD_VECTOR %reg2(s32), %reg3(s32)
+    %cond:fpr(<2 x s32>) = G_BUILD_VECTOR %reg4(s32), %reg5(s32)
+    %select:fpr(<2 x s32>) = G_SELECT %cond, %true, %false
+    %extract:fpr(s32) = G_EXTRACT_VECTOR_ELT %select:fpr(<2 x s32>), %idx:gpr(s64)
+    $w0 = COPY %extract(s32)
     RET_ReallyLR implicit $w0

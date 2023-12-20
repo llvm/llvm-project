@@ -507,6 +507,9 @@ private:
   /// zero extended.
   bool isDef32(const MachineInstr &MI) const;
 
+  /// Select selects where the condition is a vector.
+  bool selectVectorSelect(GSelect &Sel, MachineIRBuilder &MIB) const;
+
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
   const AArch64InstrInfo &TII;
@@ -1152,6 +1155,34 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
     return GenericOpc;
   };
   return GenericOpc;
+}
+
+bool AArch64InstructionSelector::selectVectorSelect(
+    GSelect &Sel, MachineIRBuilder &MIB) const {
+  MachineRegisterInfo *MRI = MIB.getMRI();
+  Register Dst = Sel.getReg(0);
+  Register Cond = Sel.getCondReg();
+  Register True = Sel.getTrueReg();
+  Register False = Sel.getFalseReg();
+  LLT DestTy = MRI->getType(Dst);
+  LLT CondTy = MRI->getType(Cond);
+
+  // There are no scalable vectors yet.
+  if (CondTy.isScalable())
+    return false;
+
+  // We would need to sext the Cond to the Dest, i.e., sshll.
+  // It will fail for v2s64, v4s32, and v8s16.
+  if (CondTy != DestTy)
+    return false;
+
+  unsigned Opcode =
+      CondTy.getSizeInBits() == 128 ? AArch64::BSLv16i8 : AArch64::BSLv8i8;
+  auto SelMI = MIB.buildInstr(Opcode, {Dst}, {Cond, True, False});
+  constrainSelectedInstRegOperands(*SelMI, TII, TRI, RBI);
+
+  Sel.eraseFromParent();
+  return true;
 }
 
 MachineInstr *
@@ -3441,6 +3472,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     const Register CondReg = Sel.getCondReg();
     const Register TReg = Sel.getTrueReg();
     const Register FReg = Sel.getFalseReg();
+
+    if (MRI.getType(CondReg).isVector())
+      return selectVectorSelect(Sel, MIB);
 
     if (tryOptSelect(Sel))
       return true;

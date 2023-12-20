@@ -708,7 +708,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{s32, s32}, {s64, s32}, {p0, s32}})
+      .legalFor({{s32, s32},
+                 {s64, s32},
+                 {p0, s32},
+                 {v2s32, v2s32},
+                 {v4s16, v4s16},
+                 {v8s8, v8s8},
+                 {v16s8, v16s8}})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s32)
