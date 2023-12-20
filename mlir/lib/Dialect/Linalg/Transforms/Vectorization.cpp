@@ -2426,11 +2426,11 @@ bool isCastOfBlockArgument(Operation *op) {
 bool isSupportedPoolKind(vector::CombiningKind kind) {
   switch (kind) {
   case vector::CombiningKind::ADD:
-  case vector::CombiningKind::MAXF:
+  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
-  case vector::CombiningKind::MINF:
+  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
