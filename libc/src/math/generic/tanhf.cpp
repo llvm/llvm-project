@@ -23,8 +23,7 @@ constexpr double LOG2_E_EXP2_6 = ExpBase::LOG2_B * 2.0;
 LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
-  uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FPBits::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
 
   // When |x| >= 15, or x is inf or nan, or |x| <= 0.078125
   if (LIBC_UNLIKELY((x_abs >= 0x4170'0000U) || (x_abs <= 0x3da0'0000U))) {

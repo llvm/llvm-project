@@ -583,6 +583,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     [[fallthrough]];
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
+  case ExceptionHandling::ZOS:
     ES = new DwarfCFIException(this);
     break;
   case ExceptionHandling::ARM:
