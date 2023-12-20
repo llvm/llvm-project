@@ -624,8 +624,8 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
 
 namespace {
 
-/// Creates TLI for AArch64 and uses it to get the LibFunc names for the FRem
-/// Instruction.
+/// Creates TLI for AArch64 and uses it to get the LibFunc names for the given
+/// Instruction opcode and Type.
 class TLITestAarch64 : public ::testing::Test {
 private:
   const Triple TargetTriple;
@@ -642,21 +642,17 @@ protected:
     TLI = std::make_unique<TargetLibraryInfo>(TargetLibraryInfo(*TLII));
   }
 
-  /// Creates an FRem Instruction of Type \p Ty, and uses it to get the TLI
-  /// function name.
-  StringRef getFremScalarName(Type *Ty) {
-    Value *V = Constant::getNullValue(Ty);
-    Instruction *FRem = BinaryOperator::Create(Instruction::FRem, V, V);
+  /// Returns the TLI function name for the given \p Opcode and type \p Ty.
+  StringRef getScalarName(unsigned int Opcode, Type *Ty) {
     LibFunc Func;
-    if (!TLI->getLibFunc(FRem->getOpcode(), FRem->getType(), Func))
+    if (!TLI->getLibFunc(Opcode, Ty, Func))
       return "";
-    FRem->deleteValue();
     return TLI->getName(Func);
   }
 };
 } // end anonymous namespace
 
 TEST_F(TLITestAarch64, TestFrem) {
-  EXPECT_EQ(getFremScalarName(Type::getDoubleTy(Ctx)), "fmod");
-  EXPECT_EQ(getFremScalarName(Type::getFloatTy(Ctx)), "fmodf");
+  EXPECT_EQ(getScalarName(Instruction::FRem, Type::getDoubleTy(Ctx)), "fmod");
+  EXPECT_EQ(getScalarName(Instruction::FRem, Type::getFloatTy(Ctx)), "fmodf");
 }

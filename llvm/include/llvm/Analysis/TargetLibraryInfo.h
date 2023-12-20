@@ -158,7 +158,7 @@ public:
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  bool getLibFunc(unsigned int Opcode, Type *ScalarTy, LibFunc &F) const;
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -366,8 +366,8 @@ public:
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  bool getLibFunc(unsigned int Opcode, Type *ScalarTy, LibFunc &F) const {
-    return Impl->getLibFunc(Opcode, ScalarTy, F);
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
+    return Impl->getLibFunc(Opcode, Ty, F);
   }
 
   /// Disables all builtins.
