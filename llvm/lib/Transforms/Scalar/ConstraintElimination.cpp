@@ -1378,10 +1378,11 @@ static bool checkOrAndOpImpliedByOther(
   CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
   unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
 
-  // Don't try to simplify the first condition of a select by the second, as
-  // this may make the select more poisonous than the original one.
-  // TODO: check if the first operand may be poison.
-  if (OtherOpIdx != 0 && isa<SelectInst>(JoinOp))
+  // Don't try to simplify the first condition of a select using the other
+  // condition, if this makes the select more poisonous than the original one.
+  if (OtherOpIdx != 0 && isa<SelectInst>(JoinOp) &&
+      !isGuaranteedNotToBeUndefOrPoison(JoinOp->getOperand(OtherOpIdx), nullptr,
+                                        JoinOp))
     return false;
 
   if (!match(JoinOp->getOperand(OtherOpIdx),

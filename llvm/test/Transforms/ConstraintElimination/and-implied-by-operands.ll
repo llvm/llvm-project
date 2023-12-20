@@ -486,7 +486,7 @@ define i1 @and_select_second_implies_first_guaranteed_not_poison(ptr noundef %A,
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr [[B]], i64 -1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt ptr [[GEP]], [[A]]
 ; CHECK-NEXT:    call void @no_noundef(i1 [[C_2]])
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 true, i1 [[C_2]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
 entry:
