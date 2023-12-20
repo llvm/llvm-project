@@ -15,6 +15,11 @@
 using namespace mlir;
 using namespace presburger;
 
+// Test the arithmetic operations on QuasiPolynomials;
+// addition, subtraction, multiplication, and division
+// by a constant.
+// Two QPs of 3 parameters each were generated randomly
+// and their sum, difference, and product computed by hand.
 TEST(QuasiPolynomialTest, arith) {
   QuasiPolynomial qp1(
       3, {Fraction(1, 3), Fraction(1, 1), Fraction(1, 2)},
@@ -110,6 +115,11 @@ TEST(QuasiPolynomialTest, arith) {
              Fraction(0, 1)}}}));
 }
 
+// Test the simplify() operation on QPs, which removes terms that
+// are identically zero. A random QP was generated and terms were
+// changed to account for each condition in simplify() – 
+// the term coefficient being zero, or all the coefficients in some
+// affine term in the product being zero.
 TEST(QuasiPolynomialTest, simplify) {
   QuasiPolynomial qp(2,
                      {Fraction(2, 3), Fraction(0, 1), Fraction(1, 1),
