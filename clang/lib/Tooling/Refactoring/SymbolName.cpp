@@ -16,7 +16,9 @@ namespace tooling {
 SymbolName::SymbolName(const DeclarationName &DeclName)
     : SymbolName(DeclName.getAsString(),
                  /*IsObjectiveCSelector=*/DeclName.getNameKind() ==
-                     DeclarationName::NameKind::ObjCMultiArgSelector) {}
+                         DeclarationName::NameKind::ObjCMultiArgSelector ||
+                     DeclName.getNameKind() ==
+                         DeclarationName::NameKind::ObjCOneArgSelector) {}
 
 SymbolName::SymbolName(StringRef Name, const LangOptions &LangOpts)
     : SymbolName(Name, LangOpts.ObjC) {}

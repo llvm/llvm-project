@@ -690,8 +690,9 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
 // there is no dirty buffer.
 llvm::Expected<FileEdits>
 renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
-                  llvm::StringRef NewName, const SymbolIndex &Index,
-                  size_t MaxLimitFiles, llvm::vfs::FileSystem &FS) {
+                  SymbolName OldName, SymbolName NewName,
+                  const SymbolIndex &Index, size_t MaxLimitFiles,
+                  llvm::vfs::FileSystem &FS) {
   trace::Span Tracer("RenameOutsideFile");
   auto AffectedFiles = findOccurrencesOutsideFile(RenameDecl, MainFilePath,
                                                   Index, MaxLimitFiles);
@@ -709,10 +710,11 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
     }
 
     auto AffectedFileCode = (*ExpBuffer)->getBuffer();
-    auto RenameRanges =
-        adjustRenameRanges(AffectedFileCode, RenameDecl.getNameAsString(),
-                           std::move(FileAndOccurrences.second),
-                           RenameDecl.getASTContext().getLangOpts());
+    syntax::UnexpandedTokenBuffer Tokens(
+        AffectedFileCode, RenameDecl.getASTContext().getLangOpts());
+    std::optional<std::vector<Range>> RenameRanges =
+        adjustRenameRanges(Tokens, OldName.getNamePieces().front(),
+                           std::move(FileAndOccurrences.second));
     if (!RenameRanges) {
       // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
@@ -721,8 +723,8 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
                    "(the index may be stale)",
                    FilePath);
     }
-    auto RenameEdit =
-        buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges, NewName);
+    auto RenameEdit = buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges,
+                                      OldName, NewName, Tokens);
     if (!RenameEdit)
       return error("failed to rename in file {0}: {1}", FilePath,
                    RenameEdit.takeError());
@@ -876,7 +878,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   }
 
   auto OtherFilesEdits = renameOutsideFile(
-      RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
+      RenameDecl, RInputs.MainFilePath, OldSymbolName, NewSymbolName,
+      *RInputs.Index,
       Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
                            : Opts.LimitFiles,
       *RInputs.FS);
@@ -889,10 +892,11 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   return Result;
 }
 
-llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
-                                     llvm::StringRef InitialCode,
-                                     std::vector<Range> Occurrences,
-                                     llvm::StringRef NewName) {
+llvm::Expected<Edit>
+buildRenameEdit(llvm::StringRef AbsFilePath, llvm::StringRef InitialCode,
+                std::vector<Range> Occurrences, SymbolName OldName,
+                SymbolName NewName,
+                const syntax::UnexpandedTokenBuffer &Tokens) {
   trace::Span Tracer("BuildRenameEdit");
   SPAN_ATTACH(Tracer, "file_path", AbsFilePath);
   SPAN_ATTACH(Tracer, "rename_occurrences",
@@ -933,12 +937,34 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
     OccurrencesOffsets.push_back({*StartOffset, *EndOffset});
   }
 
+  const SourceManager &SM = Tokens.sourceManager();
+
   tooling::Replacements RenameEdit;
   for (const auto &R : OccurrencesOffsets) {
-    auto ByteLength = R.second - R.first;
-    if (auto Err = RenameEdit.add(
-            tooling::Replacement(AbsFilePath, R.first, ByteLength, NewName)))
-      return std::move(Err);
+    if (std::optional<std::string> Identifier = NewName.getSinglePiece()) {
+      auto ByteLength = R.second - R.first;
+      if (auto Err = RenameEdit.add(tooling::Replacement(
+              AbsFilePath, R.first, ByteLength, *Identifier)))
+        return std::move(Err);
+    } else {
+      llvm::Expected<SmallVector<SourceLocation>> PieceLocations =
+          findObjCSymbolSelectorPieces(
+              Tokens.tokens(), SM,
+              SM.getLocForStartOfFile(SM.getMainFileID())
+                  .getLocWithOffset(R.first),
+              OldName, tooling::ObjCSymbolSelectorKind::Unknown);
+      if (!PieceLocations) {
+        return PieceLocations.takeError();
+      }
+      assert(PieceLocations->size() == NewName.getNamePieces().size());
+      for (auto [Location, NewPiece] :
+           llvm::zip_equal(*PieceLocations, NewName.getNamePieces())) {
+        tooling::Replacement NewReplacement(
+            SM, CharSourceRange::getTokenRange(Location), NewPiece);
+        if (auto Err = RenameEdit.add(NewReplacement))
+          return std::move(Err);
+      }
+    }
   }
   return Edit(InitialCode, std::move(RenameEdit));
 }
@@ -957,13 +983,13 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 //          were inserted). If such a "near miss" is found, the rename is still
 //          possible
 std::optional<std::vector<Range>>
-adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
-                   std::vector<Range> Indexed, const LangOptions &LangOpts) {
+adjustRenameRanges(const syntax::UnexpandedTokenBuffer &Tokens,
+                   llvm::StringRef Identifier, std::vector<Range> Indexed) {
   trace::Span Tracer("AdjustRenameRanges");
   assert(!Indexed.empty());
   assert(llvm::is_sorted(Indexed));
-  std::vector<Range> Lexed =
-      collectIdentifierRanges(Identifier, DraftCode, LangOpts);
+
+  std::vector<Range> Lexed = collectIdentifierRanges(Identifier, Tokens);
   llvm::sort(Lexed);
   return getMappedRanges(Indexed, Lexed);
 }
