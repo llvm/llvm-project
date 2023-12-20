@@ -6,19 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: clang-modules-build
-// UNSUPPORTED: gcc
+// Make sure that the compile flags contain no module information.
 
-// XFAIL: has-no-cxx-module-support
+// MODULE_DEPENDENCIES:
 
-// A minimal test to validate import works.
-
-// MODULE_DEPENDENCIES: std
-
-import std;
-
-int main(int, char**) {
-  std::println("Hello modular world");
-  return 0;
-}
+// RUN: echo "%{compile_flags}" | grep -v "std.pcm"
+// RUN: echo "%{compile_flags}" | grep -v "std.compat.pcm"
