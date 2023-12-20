@@ -219,6 +219,7 @@ AliasSet::PointerVector AliasSet::getPointers() const {
   } else {
     Result.reserve(MemoryLocs.size());
     DenseSet<const Value *> Seen;
+    Seen.reserve(MemoryLocs.size());
     for (const MemoryLocation &MemLoc : MemoryLocs)
       if (Seen.insert(MemLoc.Ptr).second)
         Result.push_back(MemLoc.Ptr);
