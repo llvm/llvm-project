@@ -70,7 +70,7 @@ def spimm : Operand<OtherVT> {
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return isShiftedUInt<5, 4>(Imm);
+    return isShiftedUInt<2, 4>(Imm);
   }];
 }
 
