@@ -9,8 +9,7 @@
 ; The raw profiles storesd compressed function names, so profile reader should
 ; be built with zlib support to decompress them.
 ; REQUIRES: zlib
-; FIXME: Re-enable the test on powerpc.
-; UNSUPPORTED: powerpc-registered-target
+; REQUIRES: host-byteorder-little-endian
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
