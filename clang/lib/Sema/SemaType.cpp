@@ -261,7 +261,7 @@ namespace {
     QualType getAttributedType(Attr *A, QualType ModifiedType,
                                QualType EquivType) {
       QualType T =
-          sema.Context.getAttributedType(A->getKind(), ModifiedType, EquivType);
+          sema.Context.getAttributedType(A, ModifiedType, EquivType);
       AttrsForTypes.push_back({cast<AttributedType>(T.getTypePtr()), A});
       AttrsForTypesSorted = false;
       return T;
@@ -7454,7 +7454,8 @@ static QualType rebuildAttributedTypeWithoutNullability(ASTContext &ctx,
                     ctx, attributed->getModifiedType());
   assert(modified.getTypePtr() != attributed->getModifiedType().getTypePtr());
   return ctx.getAttributedType(attributed->getAttrKind(), modified,
-                                   attributed->getEquivalentType());
+                               attributed->getEquivalentType(),
+                               attributed->getAttr());
 }
 
 /// Map a nullability attribute kind to a nullability kind.
@@ -7590,8 +7591,7 @@ static bool checkNullabilityTypeSpecifier(Sema &S,
     Attr *A = createNullabilityAttr(S.Context, *parsedAttr, nullability);
     type = state->getAttributedType(A, type, type);
   } else {
-    attr::Kind attrKind = AttributedType::getNullabilityAttrKind(nullability);
-    type = S.Context.getAttributedType(attrKind, type, type);
+    type = S.Context.getAttributedType(nullability, type, type);
   }
   return false;
 }
