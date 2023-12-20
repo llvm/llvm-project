@@ -190,6 +190,50 @@ LogicalResult emitc::ConstantOp::verify() {
 OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
+// ExpressionOp
+//===----------------------------------------------------------------------===//
+
+Operation *ExpressionOp::getRootOp() {
+  auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
+  Value yieldedValue = yieldOp.getResult();
+  Operation *rootOp = yieldedValue.getDefiningOp();
+  assert(rootOp && "Yielded value not defined within expression");
+  return rootOp;
+}
+
+LogicalResult ExpressionOp::verify() {
+  Type resultType = getResult().getType();
+  Region &region = getRegion();
+
+  Block &body = region.front();
+
+  if (!body.mightHaveTerminator())
+    return emitOpError("must yield a value at termination");
+
+  auto yield = cast<YieldOp>(body.getTerminator());
+  Value yieldResult = yield.getResult();
+
+  if (!yieldResult)
+    return emitOpError("must yield a value at termination");
+
+  Type yieldType = yieldResult.getType();
+
+  if (resultType != yieldType)
+    return emitOpError("requires yielded type to match return type");
+
+  for (Operation &op : region.front().without_terminator()) {
+    if (!isCExpression(op))
+      return emitOpError("contains an unsupported operation");
+    if (op.getNumResults() != 1)
+      return emitOpError("requires exactly one result for each operation");
+    if (!op.getResult(0).hasOneUse())
+      return emitOpError("requires exactly one use for each operation");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 
@@ -527,6 +571,23 @@ LogicalResult emitc::VariableOp::verify() {
   if (!llvm::isa<NoneType>(value.getType()) && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()
                          << ") to match op's return type (" << type << ")";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult emitc::YieldOp::verify() {
+  Value result = getResult();
+  Operation *containingOp = getOperation()->getParentOp();
+
+  if (result && containingOp->getNumResults() != 1)
+    return emitOpError() << "yields a value not returned by parent";
+
+  if (!result && containingOp->getNumResults() != 0)
+    return emitOpError() << "does not yield a value to be returned by parent";
+
   return success();
 }
 
