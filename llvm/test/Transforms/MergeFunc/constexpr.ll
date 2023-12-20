@@ -26,17 +26,17 @@ define i1 @f2() unnamed_addr {
 
 define ptr @f3() unnamed_addr {
 ; CHECK-LABEL: define ptr @f3() unnamed_addr {
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g1, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g1, i64 2)
 ;
-  ret ptr getelementptr (i8, ptr @g1, i64 1)
+  ret ptr getelementptr inbounds (i8, ptr @g1, i64 2)
 }
 
 define ptr @f4() unnamed_addr {
-  ret ptr getelementptr (i16, ptr @g1, i64 1)
+  ret ptr getelementptr (i16, ptr @g1, i64 2)
 }
 
 define ptr @f5() unnamed_addr {
-  ret ptr getelementptr inbounds (i8, ptr @g1, i64 1)
+  ret ptr getelementptr (i8, ptr @g1, i64 2)
 }
 
 define i64 @f6() unnamed_addr {
