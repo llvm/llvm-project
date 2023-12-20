@@ -69,61 +69,48 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
   return TLIFunc;
 }
 
-/// Replace the call to the vector intrinsic ( \p FuncToReplace ) with a call to
-/// the corresponding function from the vector library ( \p TLIFunc ).
-static void replaceWithTLIFunction(CallInst &CI, VFInfo &Info,
+/// Replace the call to the vector intrinsic ( \p CalltoReplace ) with a call to
+/// the corresponding function from the vector library ( \p TLIVecFunc ).
+static void replaceWithTLIFunction(CallInst &CalltoReplace, VFInfo &Info,
                                    Function *TLIVecFunc) {
-  IRBuilder<> IRBuilder(&CI);
-  SmallVector<Value *> Args(CI.args());
+  IRBuilder<> IRBuilder(&CalltoReplace);
+  SmallVector<Value *> Args(CalltoReplace.args());
   if (auto OptMaskpos = Info.getParamIndexForOptionalMask()) {
-    if (Args.size() == TLIVecFunc->getFunctionType()->getNumParams())
-      static_assert(true && "mask was already in place");
-
-    auto *MaskTy =
-        VectorType::get(Type::getInt1Ty(CI.getContext()), Info.Shape.VF);
+    auto *MaskTy = VectorType::get(Type::getInt1Ty(CalltoReplace.getContext()),
+                                   Info.Shape.VF);
     Args.insert(Args.begin() + OptMaskpos.value(),
                 Constant::getAllOnesValue(MaskTy));
   }
 
   // Preserve the operand bundles.
   SmallVector<OperandBundleDef, 1> OpBundles;
-  CI.getOperandBundlesAsDefs(OpBundles);
+  CalltoReplace.getOperandBundlesAsDefs(OpBundles);
   CallInst *Replacement = IRBuilder.CreateCall(TLIVecFunc, Args, OpBundles);
-  CI.replaceAllUsesWith(Replacement);
+  CalltoReplace.replaceAllUsesWith(Replacement);
   // Preserve fast math flags for FP math.
   if (isa<FPMathOperator>(Replacement))
-    Replacement->copyFastMathFlags(&CI);
+    Replacement->copyFastMathFlags(&CalltoReplace);
 }
 
-/// Utility method to get the VecDesc, depending on whether there is such a TLI
-/// mapping, prioritizing a masked version.
-static std::optional<const VecDesc *> getVecDesc(const TargetLibraryInfo &TLI,
-                                                 const StringRef &ScalarName,
-                                                 const ElementCount &VF) {
-  if (auto *VDNoMask = TLI.getVectorMappingInfo(ScalarName, VF, false))
-    return VDNoMask;
-  if (auto *VDMasked = TLI.getVectorMappingInfo(ScalarName, VF, true))
-    return VDMasked;
-  return std::nullopt;
-}
-
-/// Returns whether it is able to replace a call to the intrinsic \p CI with a
-/// TLI mapped call.
+/// Returns true when successfully replaced \p CallToReplace with a suitable
+/// function taking vector arguments, based on available mappings in the \p TLI.
+/// Currently only works when \p CallToReplace is a call to vectorized
+/// intrinsic.
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
-                                    CallInst &CI) {
-  if (!CI.getCalledFunction())
+                                    CallInst &CallToReplace) {
+  if (!CallToReplace.getCalledFunction())
     return false;
 
-  auto IntrinsicID = CI.getCalledFunction()->getIntrinsicID();
+  auto IntrinsicID = CallToReplace.getCalledFunction()->getIntrinsicID();
   // Replacement is only performed for intrinsic functions.
   if (IntrinsicID == Intrinsic::not_intrinsic)
     return false;
 
-  // Convert vector arguments to scalar type and check that all vector operands
-  // have identical vector width.
+  // Compute arguments types of the corresponding scalar call. Additionally
+  // checks if in the vector call, all vector operands have the same EC.
   ElementCount VF = ElementCount::getFixed(0);
   SmallVector<Type *> ScalarArgTypes;
-  for (auto Arg : enumerate(CI.args())) {
+  for (auto Arg : enumerate(CallToReplace.args())) {
     auto *ArgTy = Arg.value()->getType();
     if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, Arg.index())) {
       ScalarArgTypes.push_back(ArgTy);
@@ -145,28 +132,24 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // the intrinsic ID and the argument types converted to scalar above.
   std::string ScalarName =
       (Intrinsic::isOverloaded(IntrinsicID)
-           ? Intrinsic::getName(IntrinsicID, ScalarArgTypes, CI.getModule())
+           ? Intrinsic::getName(IntrinsicID, ScalarArgTypes,
+                                CallToReplace.getModule())
            : Intrinsic::getName(IntrinsicID).str());
 
-  // The TargetLibraryInfo does not contain a vectorized version of the scalar
-  // function.
-  if (!TLI.isFunctionVectorizable(ScalarName))
-    return false;
-
   // Try to find the mapping for the scalar version of this intrinsic and the
-  // exact vector width of the call operands in the TargetLibraryInfo.
-  auto OptVD = getVecDesc(TLI, ScalarName, VF);
-  if (!OptVD)
+  // exact vector width of the call operands in the TargetLibraryInfo. First,
+  // check with a non-masked variant, and if that fails try with a masked one.
+  const VecDesc *VD = TLI.getVectorMappingInfo(ScalarName, VF, false);
+  if (!VD && !(VD = TLI.getVectorMappingInfo(ScalarName, VF, true)))
     return false;
 
-  const VecDesc *VD = *OptVD;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Found TLI mapping from: `" << ScalarName
                     << "` and vector width " << VF << " to: `"
                     << VD->getVectorFnName() << "`.\n");
 
   // Replace the call to the intrinsic with a call to the vector library
   // function.
-  Type *ScalarRetTy = CI.getType()->getScalarType();
+  Type *ScalarRetTy = CallToReplace.getType()->getScalarType();
   FunctionType *ScalarFTy =
       FunctionType::get(ScalarRetTy, ScalarArgTypes, /*isVarArg*/ false);
   const std::string MangledName = VD->getVectorFunctionABIVariantString();
@@ -178,10 +161,10 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   if (!VectorFTy)
     return false;
 
-  Function *FuncToReplace = CI.getCalledFunction();
-  Function *TLIFunc = getTLIFunction(CI.getModule(), VectorFTy, FuncToReplace,
-                                     VD->getVectorFnName());
-  replaceWithTLIFunction(CI, *OptInfo, TLIFunc);
+  Function *FuncToReplace = CallToReplace.getCalledFunction();
+  Function *TLIFunc = getTLIFunction(CallToReplace.getModule(), VectorFTy,
+                                     FuncToReplace, VD->getVectorFnName());
+  replaceWithTLIFunction(CallToReplace, *OptInfo, TLIFunc);
 
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `"
                     << FuncToReplace->getName() << "` with call to `"
