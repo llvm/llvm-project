@@ -38,66 +38,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// This function constructs the appropriate integer or float
-/// operation given the vector combining kind and operands. The
-/// supported int operations are : add, mul, min (signed/unsigned),
-/// max(signed/unsigned), and, or, xor. The supported float
-/// operations are : add, mul, min and max.
-static Value genOperator(Location loc, Value x, Value y,
-                         vector::CombiningKind kind,
-                         PatternRewriter &rewriter) {
-  using vector::CombiningKind;
-
-  auto elType = cast<VectorType>(x.getType()).getElementType();
-  bool isInt = elType.isIntOrIndex();
-
-  Value combinedResult{nullptr};
-  switch (kind) {
-  case CombiningKind::ADD:
-    if (isInt)
-      combinedResult = rewriter.create<arith::AddIOp>(loc, x, y);
-    else
-      combinedResult = rewriter.create<arith::AddFOp>(loc, x, y);
-    break;
-  case CombiningKind::MUL:
-    if (isInt)
-      combinedResult = rewriter.create<arith::MulIOp>(loc, x, y);
-    else
-      combinedResult = rewriter.create<arith::MulFOp>(loc, x, y);
-    break;
-  case CombiningKind::MINUI:
-    combinedResult = rewriter.create<arith::MinUIOp>(loc, x, y);
-    break;
-  case CombiningKind::MINSI:
-    combinedResult = rewriter.create<arith::MinSIOp>(loc, x, y);
-    break;
-  case CombiningKind::MAXUI:
-    combinedResult = rewriter.create<arith::MaxUIOp>(loc, x, y);
-    break;
-  case CombiningKind::MAXSI:
-    combinedResult = rewriter.create<arith::MaxSIOp>(loc, x, y);
-    break;
-  case CombiningKind::AND:
-    combinedResult = rewriter.create<arith::AndIOp>(loc, x, y);
-    break;
-  case CombiningKind::OR:
-    combinedResult = rewriter.create<arith::OrIOp>(loc, x, y);
-    break;
-  case CombiningKind::XOR:
-    combinedResult = rewriter.create<arith::XOrIOp>(loc, x, y);
-    break;
-  case CombiningKind::MINF:
-  case CombiningKind::MINIMUMF:
-    combinedResult = rewriter.create<arith::MinimumFOp>(loc, x, y);
-    break;
-  case CombiningKind::MAXF:
-  case CombiningKind::MAXIMUMF:
-    combinedResult = rewriter.create<arith::MaximumFOp>(loc, x, y);
-    break;
-  }
-  return combinedResult;
-}
-
 /// This function checks to see if the vector combining kind
 /// is consistent with the integer or float element type.
 static bool isValidKind(bool isInt, vector::CombiningKind kind) {
@@ -105,9 +45,9 @@ static bool isValidKind(bool isInt, vector::CombiningKind kind) {
   enum class KindType { FLOAT, INT, INVALID };
   KindType type{KindType::INVALID};
   switch (kind) {
-  case CombiningKind::MINF:
+  case CombiningKind::MINNUMF:
   case CombiningKind::MINIMUMF:
-  case CombiningKind::MAXF:
+  case CombiningKind::MAXNUMF:
   case CombiningKind::MAXIMUMF:
     type = KindType::FLOAT;
     break;
@@ -224,8 +164,8 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
         }
       } else {
         Value y = inclusive ? input : lastInput;
-        output = genOperator(loc, lastOutput, y, scanOp.getKind(), rewriter);
-        assert(output != nullptr);
+        output = vector::makeArithReduction(rewriter, loc, scanOp.getKind(),
+                                            lastOutput, y);
       }
       result = rewriter.create<vector::InsertStridedSliceOp>(
           loc, output, result, offsets, strides);

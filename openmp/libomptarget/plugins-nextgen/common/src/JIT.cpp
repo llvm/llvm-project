@@ -47,18 +47,19 @@ using namespace llvm::object;
 using namespace omp;
 using namespace omp::target;
 
-static codegen::RegisterCodeGenFlags RCGF;
-
 namespace {
 
-/// A map from a bitcode image start address to its corresponding triple. If the
-/// image is not in the map, it is not a bitcode image.
-DenseMap<void *, Triple::ArchType> BitcodeImageMap;
-std::shared_mutex BitcodeImageMapMutex;
+bool isImageBitcode(const __tgt_device_image &Image) {
+  StringRef Binary(reinterpret_cast<const char *>(Image.ImageStart),
+                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+
+  return identify_magic(Binary) == file_magic::bitcode;
+}
 
 std::once_flag InitFlag;
 
 void init(Triple TT) {
+  codegen::RegisterCodeGenFlags();
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();
@@ -323,44 +324,30 @@ JITEngine::process(const __tgt_device_image &Image,
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  {
-    std::shared_lock<std::shared_mutex> SharedLock(BitcodeImageMapMutex);
-    auto Itr = BitcodeImageMap.find(Image.ImageStart);
-    if (Itr != BitcodeImageMap.end() && Itr->second == TT.getArch())
-      return compile(Image, ComputeUnitKind, PostProcessing);
-  }
+  if (isImageBitcode(Image))
+    return compile(Image, ComputeUnitKind, PostProcessing);
 
   return &Image;
 }
 
 bool JITEngine::checkBitcodeImage(const __tgt_device_image &Image) {
   TimeTraceScope TimeScope("Check bitcode image");
-  std::lock_guard<std::shared_mutex> Lock(BitcodeImageMapMutex);
 
-  {
-    auto Itr = BitcodeImageMap.find(Image.ImageStart);
-    if (Itr != BitcodeImageMap.end() && Itr->second == TT.getArch())
-      return true;
-  }
+  if (!isImageBitcode(Image))
+    return false;
 
   StringRef Data(reinterpret_cast<const char *>(Image.ImageStart),
                  target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
-  std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
+  auto MB = MemoryBuffer::getMemBuffer(Data, /*BufferName=*/"",
+                                       /*RequiresNullTerminator=*/false);
   if (!MB)
     return false;
 
-  Expected<object::IRSymtabFile> FOrErr = object::readIRSymtab(*MB);
-  if (!FOrErr) {
-    consumeError(FOrErr.takeError());
-    return false;
-  }
+  LLVMContext Context;
+  SMDiagnostic Diagnostic;
+  std::unique_ptr<Module> M =
+      llvm::getLazyIRModule(std::move(MB), Diagnostic, Context,
+                            /*ShouldLazyLoadMetadata=*/true);
 
-  auto ActualTriple = FOrErr->TheReader.getTargetTriple();
-  auto BitcodeTA = Triple(ActualTriple).getArch();
-  BitcodeImageMap[Image.ImageStart] = BitcodeTA;
-
-  DP("Is%s IR Image\n", BitcodeTA == TT.getArch() ? " " : " NOT");
-
-  return BitcodeTA == TT.getArch();
+  return M && Triple(M->getTargetTriple()).getArch() == TT.getArch();
 }

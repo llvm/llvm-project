@@ -4571,6 +4571,13 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
                "}",
                Style);
 
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("extern \"C\"\n"
+               "{\n"
+               "int i;\n"
+               "}",
+               Style);
+
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterExternBlock = true;
   Style.IndentExternBlock = FormatStyle::IEBS_Indent;

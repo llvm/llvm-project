@@ -207,20 +207,13 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   for (DeviceImageTy &DI : PM->deviceImages()) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &DI.getExecutableImage();
-    __tgt_image_info *Info = &DI.getImageInfo();
 
     PluginAdaptorTy *FoundRTL = nullptr;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : PM->pluginAdaptors()) {
-      if (R.is_valid_binary_info) {
-        if (!R.is_valid_binary_info(Img, Info)) {
-          DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-             DPxPTR(Img->ImageStart), R.Name.c_str());
-          continue;
-        }
-      } else if (!R.is_valid_binary(Img)) {
+      if (!R.is_valid_binary(Img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(Img->ImageStart), R.Name.c_str());
         continue;

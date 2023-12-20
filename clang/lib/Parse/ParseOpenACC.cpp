@@ -69,6 +69,29 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(Token Tok) {
       .Default(OpenACCDirectiveKindEx::Invalid);
 }
 
+// Translate single-token string representations to the OpenCC Clause Kind.
+OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
+  // auto is a keyword in some language modes, so make sure we parse it
+  // correctly.
+  if (Tok.is(tok::kw_auto))
+    return OpenACCClauseKind::Auto;
+
+  if (!Tok.is(tok::identifier))
+    return OpenACCClauseKind::Invalid;
+
+  return llvm::StringSwitch<OpenACCClauseKind>(
+             Tok.getIdentifierInfo()->getName())
+      .Case("auto", OpenACCClauseKind::Auto)
+      .Case("finalize", OpenACCClauseKind::Finalize)
+      .Case("if_present", OpenACCClauseKind::IfPresent)
+      .Case("independent", OpenACCClauseKind::Independent)
+      .Case("nohost", OpenACCClauseKind::NoHost)
+      .Case("seq", OpenACCClauseKind::Seq)
+      .Case("vector", OpenACCClauseKind::Vector)
+      .Case("worker", OpenACCClauseKind::Worker)
+      .Default(OpenACCClauseKind::Invalid);
+}
+
 // Since 'atomic' is effectively a compound directive, this will decode the
 // second part of the directive.
 OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
@@ -164,6 +187,10 @@ ParseOpenACCEnterExitDataDirective(Parser &P, Token FirstTok,
     return OpenACCDirectiveKind::Invalid;
   }
 
+  // Consume the second name anyway, this way we can continue on without making
+  // this oddly look like a clause.
+  P.ConsumeAnyToken();
+
   if (!isOpenACCDirectiveKind(OpenACCDirectiveKind::Data, SecondTok)) {
     if (!SecondTok.is(tok::identifier))
       P.Diag(SecondTok, diag::err_expected) << tok::identifier;
@@ -173,8 +200,6 @@ ParseOpenACCEnterExitDataDirective(Parser &P, Token FirstTok,
           << SecondTok.getIdentifierInfo()->getName();
     return OpenACCDirectiveKind::Invalid;
   }
-
-  P.ConsumeToken();
 
   return ExtDirKind == OpenACCDirectiveKindEx::Enter
              ? OpenACCDirectiveKind::EnterData
@@ -208,6 +233,10 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   // introspect on the spelling before then.
   if (FirstTok.isNot(tok::identifier)) {
     P.Diag(FirstTok, diag::err_acc_missing_directive);
+
+    if (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
+      P.ConsumeAnyToken();
+
     return OpenACCDirectiveKind::Invalid;
   }
 
@@ -262,12 +291,57 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   return DirKind;
 }
 
+// The OpenACC Clause List is a comma or space-delimited list of clauses (see
+// the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
+// really have its owner grammar and each individual one has its own definition.
+// However, they all are named with a single-identifier (or auto!) token,
+// followed in some cases by either braces or parens.
+bool ParseOpenACCClause(Parser &P) {
+  if (!P.getCurToken().isOneOf(tok::identifier, tok::kw_auto))
+    return P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
+
+  OpenACCClauseKind Kind = getOpenACCClauseKind(P.getCurToken());
+
+  if (Kind == OpenACCClauseKind::Invalid)
+    return P.Diag(P.getCurToken(), diag::err_acc_invalid_clause)
+           << P.getCurToken().getIdentifierInfo();
+
+  // Consume the clause name.
+  P.ConsumeToken();
+
+  // FIXME: For future clauses, we need to handle parens/etc below.
+  return false;
+}
+
+// Skip until we see the end of pragma token, but don't consume it. This is us
+// just giving up on the rest of the pragma so we can continue executing. We
+// have to do this because 'SkipUntil' considers paren balancing, which isn't
+// what we want.
+void SkipUntilEndOfDirective(Parser &P) {
+  while (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
+    P.ConsumeAnyToken();
+}
+
+// OpenACC 3.3, section 1.7:
+// To simplify the specification and convey appropriate constraint information,
+// a pqr-list is a comma-separated list of pdr items. The one exception is a
+// clause-list, which is a list of one or more clauses optionally separated by
+// commas.
 void ParseOpenACCClauseList(Parser &P) {
-  // FIXME: In the future, we'll start parsing the clauses here, but for now we
-  // haven't implemented that, so just emit the unimplemented diagnostic and
-  // fail reasonably.
-  if (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
-    P.Diag(P.getCurToken(), diag::warn_pragma_acc_unimplemented_clause_parsing);
+  bool FirstClause = true;
+  while (P.getCurToken().isNot(tok::annot_pragma_openacc_end)) {
+    // Comma is optional in a clause-list.
+    if (!FirstClause && P.getCurToken().is(tok::comma))
+      P.ConsumeToken();
+    FirstClause = false;
+
+    // Recovering from a bad clause is really difficult, so we just give up on
+    // error.
+    if (ParseOpenACCClause(P)) {
+      SkipUntilEndOfDirective(P);
+      return;
+    }
+  }
 }
 
 } // namespace
@@ -499,7 +573,9 @@ void Parser::ParseOpenACCDirective() {
   ParseOpenACCClauseList(*this);
 
   Diag(getCurToken(), diag::warn_pragma_acc_unimplemented);
-  SkipUntil(tok::annot_pragma_openacc_end);
+  assert(Tok.is(tok::annot_pragma_openacc_end) &&
+         "Didn't parse all OpenACC Clauses");
+  ConsumeAnnotationToken();
 }
 
 // Parse OpenACC directive on a declaration.
