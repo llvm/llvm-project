@@ -1,6 +1,6 @@
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax < %s \
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s \
 # RUN:     | llvm-readobj -r -x .data - | FileCheck %s --check-prefix=NORELAX
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax < %s \
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s \
 # RUN:     | llvm-readobj -r -x .data - | FileCheck %s --check-prefix=RELAX
 
 # NORELAX:       Relocations [
