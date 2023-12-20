@@ -83,15 +83,6 @@ public:
     return bool((bits & (StorageType(1) << FRACTION_LEN)) >> FRACTION_LEN);
   }
 
-  LIBC_INLINE constexpr void set_sign(bool signVal) {
-    if (get_sign() != signVal)
-      bits ^= SIGN_MASK;
-  }
-
-  LIBC_INLINE constexpr bool get_sign() const {
-    return (bits & SIGN_MASK) != 0;
-  }
-
   LIBC_INLINE constexpr FPBits() : UP() {}
 
   template <typename XType,

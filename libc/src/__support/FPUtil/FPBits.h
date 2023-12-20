@@ -59,6 +59,15 @@ public:
   LIBC_INLINE constexpr StorageType get_mantissa() const {
     return bits & FRACTION_MASK;
   }
+
+  LIBC_INLINE constexpr void set_sign(bool signVal) {
+    if (get_sign() != signVal)
+      bits ^= SIGN_MASK;
+  }
+
+  LIBC_INLINE constexpr bool get_sign() const {
+    return (bits & SIGN_MASK) != 0;
+  }
 };
 
 } // namespace internal
@@ -109,15 +118,6 @@ public:
                 ? (FRACTION_MASK + 1)
                 : 0) |
            (FRACTION_MASK & bits);
-  }
-
-  LIBC_INLINE constexpr void set_sign(bool signVal) {
-    if (get_sign() != signVal)
-      bits ^= SIGN_MASK;
-  }
-
-  LIBC_INLINE constexpr bool get_sign() const {
-    return (bits & SIGN_MASK) != 0;
   }
 
   static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
