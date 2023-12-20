@@ -35,13 +35,14 @@ QuasiPolynomial::QuasiPolynomial(
 }
 
 // Find the number of parameters involved in the polynomial.
-unsigned QuasiPolynomial::getNumParams() { return numParam; }
+unsigned QuasiPolynomial::getNumParams() const { return numParam; }
 
-SmallVector<Fraction> QuasiPolynomial::getCoefficients() {
+SmallVector<Fraction> QuasiPolynomial::getCoefficients() const {
   return coefficients;
 }
 
-std::vector<std::vector<SmallVector<Fraction>>> QuasiPolynomial::getAffine() {
+std::vector<std::vector<SmallVector<Fraction>>>
+QuasiPolynomial::getAffine() const {
   return affine;
 }
 
@@ -59,8 +60,8 @@ QuasiPolynomial QuasiPolynomial::simplify() {
                               [](const Fraction &f) { return f == 0; });
         }))
       continue;
-    newCoeffs.append({coefficients[i]});
-    newAffine.push_back({affine[i]});
+    newCoeffs.push_back(coefficients[i]);
+    newAffine.push_back(affine[i]);
   }
   return QuasiPolynomial(numParam, newCoeffs, newAffine);
 }

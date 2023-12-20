@@ -71,14 +71,14 @@ public:
     assert(numParam == gf.getNumParams() &&
            "two generating functions with different numbers of parameters "
            "cannot be added!");
-    SmallVector<int> sumSigns(signs);
+    SmallVector<int> sumSigns = signs;
     sumSigns.append(gf.signs);
 
-    std::vector<ParamPoint> sumNumerators(numerators);
+    std::vector<ParamPoint> sumNumerators = numerators;
     sumNumerators.insert(sumNumerators.end(), gf.numerators.begin(),
                          gf.numerators.end());
 
-    std::vector<std::vector<Point>> sumDenominators(denominators);
+    std::vector<std::vector<Point>> sumDenominators = denominators;
     sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
                            gf.denominators.end());
     return GeneratingFunction(sumSigns, sumNumerators, sumDenominators);

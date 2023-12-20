@@ -39,19 +39,17 @@ public:
   QuasiPolynomial(unsigned numParam, SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {});
 
-  unsigned getNumParams();
-  SmallVector<Fraction> getCoefficients();
-  std::vector<std::vector<SmallVector<Fraction>>> getAffine();
+  unsigned getNumParams() const;
+  SmallVector<Fraction> getCoefficients() const;
+  std::vector<std::vector<SmallVector<Fraction>>> getAffine() const;
 
   QuasiPolynomial operator+(const QuasiPolynomial &x) const {
     assert(numParam == x.getNumParams() &&
            "two quasi-polynomials with different numbers of parameters cannot "
            "be added!");
-    SmallVector<Fraction> sumCoeffs;
-    sumCoeffs.append(coefficients);
+    SmallVector<Fraction> sumCoeffs = coefficients;
     sumCoeffs.append(x.coefficients);
-    std::vector<std::vector<SmallVector<Fraction>>> sumAff;
-    sumAff.insert(sumAff.end(), affine.begin(), affine.end());
+    std::vector<std::vector<SmallVector<Fraction>>> sumAff = affine;
     sumAff.insert(sumAff.end(), x.affine.begin(), x.affine.end());
     return QuasiPolynomial(numParam, sumCoeffs, sumAff);
   }
@@ -72,14 +70,16 @@ public:
            "parameters cannot be multiplied!");
 
     SmallVector<Fraction> coeffs;
+    coeffs.reserve(coefficients.size() * x.coefficients.size());
     for (const Fraction &coeff : coefficients) {
       for (const Fraction &xcoeff : x.coefficients) {
-        coeffs.append({coeff * xcoeff});
+        coeffs.push_back(coeff * xcoeff);
       }
     }
 
     std::vector<SmallVector<Fraction>> product;
     std::vector<std::vector<SmallVector<Fraction>>> aff;
+    aff.reserve(affine.size() * x.affine.size());
     for (const std::vector<SmallVector<Fraction>> &term : affine) {
       for (const std::vector<SmallVector<Fraction>> &xterm : x.affine) {
         product.clear();
