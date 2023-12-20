@@ -34,10 +34,6 @@ class GlobalModuleCacheTestCase(TestBase):
     # The rerun tests indicate rerunning on Windows doesn't really work, so
     # this one won't either.
     @skipIfWindows
-    # On Arm and AArch64 Linux, this test attempts to pop a thread plan when
-    # we only have the base plan remaining. Skip it until we can figure out
-    # the bug this is exposing.
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
@@ -104,6 +100,13 @@ class GlobalModuleCacheTestCase(TestBase):
                 self.old_debugger = self.dbg
                 self.dbg = new_debugger
                 def cleanupDebugger(self):
+                    # On Arm and AArch64 Linux, it is suspected that destroying
+                    # the debugger first causes lldb to try to pop from an empty
+                    # thread plan stack. Try to prove this by killing the process
+                    # first.
+                    for i in range(self.dbg.GetNumTargets()):
+                        self.dbg.GetTargetAtIndex(i).GetProcess().Kill()
+
                     lldb.SBDebugger.Destroy(self.dbg)
                     self.dbg = self.old_debugger
                     self.old_debugger = None
