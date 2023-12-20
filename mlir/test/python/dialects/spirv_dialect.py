@@ -15,8 +15,7 @@ def testConstantOps():
     with Context() as ctx, Location.unknown():
         module = Module.create()
         with InsertionPoint(module.body):
-            spirv.ConstantOp(
-                value=FloatAttr.get(F32Type.get(), 42.42), constant=F32Type.get()
-            )
-        # CHECK:         %cst_f32 = spirv.Constant 4.242000e+01 : f32
+            i32 = IntegerType.get_signless(32)
+            spirv.ConstantOp(value=IntegerAttr.get(i32, 42), constant=i32)
+        # CHECK: spirv.Constant 42 : i32
         print(module)
