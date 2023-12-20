@@ -52,12 +52,11 @@ const char *InstrProfCorrelator::FunctionNameAttributeName = "Function Name";
 const char *InstrProfCorrelator::CFGHashAttributeName = "CFG Hash";
 const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
 
-bool InstrProfCorrelator::AtomicWarningCounter::shouldEmitWarning() {
-  return MaxWarnings == 0 ||
-         WarningCount.fetch_add(1, std::memory_order_relaxed) < MaxWarnings;
+bool InstrProfCorrelator::WarningCounter::shouldEmitWarning() {
+  return MaxWarnings == 0 || WarningCount++ < MaxWarnings;
 }
 
-InstrProfCorrelator::AtomicWarningCounter::~AtomicWarningCounter() {
+InstrProfCorrelator::WarningCounter::~WarningCounter() {
   if (MaxWarnings > 0 && WarningCount > MaxWarnings) {
     WithColor::warning() << format("Suppressed %d additional warnings\n",
                                    WarningCount - MaxWarnings);
@@ -105,8 +104,7 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
 InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
-                         std::mutex &CorrelateLock, std::mutex &WarnLock,
-                         AtomicWarningCounter *WarnCounter) {
+                         WarningCounter *WarnCounter) {
   if (FileKind == DEBUG_INFO) {
     auto DsymObjectsOrErr =
         object::MachOObjectFile::findDsymObjectMembers(Filename);
@@ -125,16 +123,14 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
     if (auto Err = BufferOrErr.takeError())
       return std::move(Err);
 
-    return get(std::move(*BufferOrErr), FileKind, CorrelateLock, WarnLock,
-               WarnCounter);
+    return get(std::move(*BufferOrErr), FileKind, WarnCounter);
   }
   if (FileKind == BINARY) {
     auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
     if (auto Err = BufferOrErr.takeError())
       return std::move(Err);
 
-    return get(std::move(*BufferOrErr), FileKind, CorrelateLock, WarnLock,
-               WarnCounter);
+    return get(std::move(*BufferOrErr), FileKind, WarnCounter);
   }
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
@@ -144,9 +140,8 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
 InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer,
-                         ProfCorrelatorKind FileKind, std::mutex &CorrelateLock,
-                         std::mutex &WarnLock,
-                         AtomicWarningCounter *WarnCounter) {
+                         ProfCorrelatorKind FileKind,
+                         WarningCounter *WarnCounter) {
   auto BinOrErr = object::createBinary(*Buffer);
   if (auto Err = BinOrErr.takeError())
     return std::move(Err);
@@ -158,12 +153,10 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer,
     auto T = Obj->makeTriple();
     if (T.isArch64Bit())
       return InstrProfCorrelatorImpl<uint64_t>::get(std::move(*CtxOrErr), *Obj,
-                                                    FileKind, CorrelateLock,
-                                                    WarnLock, WarnCounter);
+                                                    FileKind, WarnCounter);
     if (T.isArch32Bit())
       return InstrProfCorrelatorImpl<uint32_t>::get(std::move(*CtxOrErr), *Obj,
-                                                    FileKind, CorrelateLock,
-                                                    WarnLock, WarnCounter);
+                                                    FileKind, WarnCounter);
   }
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile, "not an object file");
@@ -187,17 +180,15 @@ namespace llvm {
 template <>
 InstrProfCorrelatorImpl<uint32_t>::InstrProfCorrelatorImpl(
     std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-    std::mutex &CorrelateLock, std::mutex &WarnLock,
-    AtomicWarningCounter *WarnCounter)
+    WarningCounter *WarnCounter)
     : InstrProfCorrelatorImpl(InstrProfCorrelatorKind::CK_32Bit, std::move(Ctx),
-                              CorrelateLock, WarnLock, WarnCounter) {}
+                              WarnCounter) {}
 template <>
 InstrProfCorrelatorImpl<uint64_t>::InstrProfCorrelatorImpl(
     std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-    std::mutex &CorrelateLock, std::mutex &WarnLock,
-    AtomicWarningCounter *WarnCounter)
+    WarningCounter *WarnCounter)
     : InstrProfCorrelatorImpl(InstrProfCorrelatorKind::CK_64Bit, std::move(Ctx),
-                              CorrelateLock, WarnLock, WarnCounter) {}
+                              WarnCounter) {}
 template <>
 bool InstrProfCorrelatorImpl<uint32_t>::classof(const InstrProfCorrelator *C) {
   return C->getKind() == InstrProfCorrelatorKind::CK_32Bit;
@@ -214,22 +205,20 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
 InstrProfCorrelatorImpl<IntPtrT>::get(
     std::unique_ptr<InstrProfCorrelator::Context> Ctx,
     const object::ObjectFile &Obj, ProfCorrelatorKind FileKind,
-    std::mutex &CorrelateLock, std::mutex &WarnLock,
-    AtomicWarningCounter *WarnCounter) {
+    WarningCounter *WarnCounter) {
   if (FileKind == DEBUG_INFO) {
     if (Obj.isELF() || Obj.isMachO()) {
       auto DICtx = DWARFContext::create(Obj);
       return std::make_unique<DwarfInstrProfCorrelator<IntPtrT>>(
-          std::move(DICtx), std::move(Ctx), CorrelateLock, WarnLock,
-          WarnCounter);
+          std::move(DICtx), std::move(Ctx), WarnCounter);
     }
     return make_error<InstrProfError>(
         instrprof_error::unable_to_correlate_profile,
         "unsupported debug info format (only DWARF is supported)");
   }
   if (Obj.isELF() || Obj.isCOFF())
-    return std::make_unique<BinaryInstrProfCorrelator<IntPtrT>>(
-        std::move(Ctx), CorrelateLock, WarnLock, WarnCounter);
+    return std::make_unique<BinaryInstrProfCorrelator<IntPtrT>>(std::move(Ctx),
+                                                                WarnCounter);
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
       "unsupported binary format (only ELF and COFF are supported)");
@@ -237,7 +226,6 @@ InstrProfCorrelatorImpl<IntPtrT>::get(
 
 template <class IntPtrT>
 Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData() {
-  std::lock_guard<std::mutex> Guard(this->CorrelateLock);
   if (IsCorrelated)
     return Error::success();
   assert(Data.empty() && Names.empty());
@@ -397,7 +385,6 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     }
     if (!FunctionName || !CFGHash || !CounterPtr || !NumCounters) {
       if (this->shouldEmitWarning()) {
-        std::lock_guard<std::mutex> Guard(this->WarnLock);
         WithColor::warning()
             << "Incomplete DIE for function " << FunctionName
             << ": CFGHash=" << CFGHash << "  CounterPtr=" << CounterPtr
@@ -410,7 +397,6 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
     if (*CounterPtr < CountersStart || *CounterPtr >= CountersEnd) {
       if (this->shouldEmitWarning()) {
-        std::lock_guard<std::mutex> Guard(this->WarnLock);
         WithColor::warning()
             << format("CounterPtr out of range for function %s: Actual=0x%x "
                       "Expected=[0x%x, 0x%x)\n",
@@ -420,7 +406,6 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
       return;
     }
     if (!FunctionPtr && this->shouldEmitWarning()) {
-      std::lock_guard<std::mutex> Guard(this->WarnLock);
       WithColor::warning() << format("Could not find address of function %s\n",
                                      *FunctionName);
       LLVM_DEBUG(Die.dump(dbgs()));
@@ -483,7 +468,6 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
     if (CounterPtr < CountersStart || CounterPtr >= CountersEnd) {
       if (this->shouldEmitWarning()) {
-        std::lock_guard<std::mutex> Guard(this->WarnLock);
         WithColor::warning()
             << format("CounterPtr out of range for function: Actual=0x%x "
                       "Expected=[0x%x, 0x%x) at data offset=0x%x\n",
@@ -517,30 +501,27 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelators>> InstrProfCorrelators::get(
   StringMap<std::unique_ptr<InstrProfCorrelator>> CorrelatorMap;
   StringMap<StringRef> FileMap;
   auto WarnCounter =
-      std::make_unique<InstrProfCorrelator::AtomicWarningCounter>(MaxWarnings);
-  std::unique_ptr<std::mutex> CorrelateLock = std::make_unique<std::mutex>();
-  std::unique_ptr<std::mutex> WarnLock = std::make_unique<std::mutex>();
+      std::make_unique<InstrProfCorrelator::WarningCounter>(MaxWarnings);
   for (const auto &Input : CorrelateInputs) {
     std::unique_ptr<InstrProfCorrelator> Correlator;
     if (auto Err = InstrProfCorrelator::get(Input.first, Input.second,
-                                            *CorrelateLock.get(),
-                                            *WarnLock.get(), WarnCounter.get())
+                                            WarnCounter.get())
                        .moveInto(Correlator))
       return Err;
     std::string BuildID = toHex(Correlator->getBuildID());
-    FileMap.try_emplace(BuildID, Input.first);
-    bool Inserted =
-        CorrelatorMap.try_emplace(BuildID, std::move(Correlator)).second;
+    bool Inserted = FileMap.try_emplace(BuildID, Input.first).second;
     if (!Inserted && WarnCounter->shouldEmitWarning()) {
-      std::lock_guard<std::mutex> Guard(*WarnLock);
       WithColor::warning() << format(
           "Duplicate build id (\"%s\") found for %s and %s\n", BuildID.c_str(),
           FileMap[BuildID].str().c_str(), Input.first.str().c_str());
+      continue;
     }
+    if (auto Err = Correlator->correlateProfileData())
+      return Err;
+    CorrelatorMap.try_emplace(BuildID, std::move(Correlator));
   }
-  return std::make_unique<InstrProfCorrelators>(
-      std::move(CorrelatorMap), std::move(CorrelateLock), std::move(WarnLock),
-      std::move(WarnCounter));
+  return std::make_unique<InstrProfCorrelators>(std::move(CorrelatorMap),
+                                                std::move(WarnCounter));
 }
 
 llvm::Expected<const InstrProfCorrelator *>
@@ -551,7 +532,5 @@ InstrProfCorrelators::getCorrelator(object::BuildIDRef BuildID) const {
     return make_error<InstrProfError>(
         instrprof_error::unable_to_correlate_profile,
         "missing correlator file with build id " + BuildIDStr + "\n");
-  if (auto Err = I->getValue()->correlateProfileData())
-    return Err;
   return I->getValue().get();
 }

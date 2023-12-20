@@ -1,11 +1,10 @@
-// REQUIRES: lld-available
 // Test llvm-profdata merging with multiple correlation files mixing different correlation modes.
 
 // RUN: %clang_pgogen -o %t.normal -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp %S/../Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.normal
 // RUN: llvm-profdata merge -o %t.normal.profdata %t.profraw
 
-// Compiling with differnt configs.
+// Compiling with different configs.
 // RUN: %clang_pgogen -o %t -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp -c -o %t-main.o
 // RUN: %clang_pgogen -o %t -g -mllvm -profile-correlate=debug-info -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp -c -o %t-main.debug.o
 // RUN: %clang_pgogen -o %t -mllvm -profile-correlate=binary -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-foo.cpp -c -o %t-foo.binary.o
@@ -25,7 +24,7 @@
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
 // Test lightweight raw profiles generated with debug info correlate and binary correlate.
-// Note we can not mix different correlation modes in static linking because when merging, the same correlate file can not be used for more than one correaltion mode.
+// Note we can not mix different correlation modes in static linking because when merging, the same correlate file can not be used for more than one correlation mode.
 // Two separate lightweight raw profiles.
 // RUN: %clang_pgogen -o %t -g %t-main.debug.o %t-libfoo.binary.so -Wl,--build-id -o %t
 // RUN: rm -rf %t.dir && mkdir %t.dir

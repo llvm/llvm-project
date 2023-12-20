@@ -3076,14 +3076,11 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  InstrProfCorrelator::AtomicWarningCounter WarnCounter(
+  InstrProfCorrelator::WarningCounter WarnCounter(
       MaxDbgCorrelationWarnings);
-  std::mutex CorrelateLock;
-  std::mutex WarnLock;
-  if (auto Err =
-          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO,
-                                   CorrelateLock, WarnLock, &WarnCounter)
-              .moveInto(Correlator))
+  if (auto Err = InstrProfCorrelator::get(
+                     Filename, InstrProfCorrelator::DEBUG_INFO, &WarnCounter)
+                     .moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(OS))

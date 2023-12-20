@@ -36,21 +36,20 @@ public:
   /// correlate.
   enum ProfCorrelatorKind { NONE, DEBUG_INFO, BINARY };
 
-  struct AtomicWarningCounter {
-    AtomicWarningCounter(uint64_t MaxWarnings)
+  struct WarningCounter {
+    WarningCounter(uint64_t MaxWarnings)
         : MaxWarnings(MaxWarnings), WarningCount(0){};
     bool shouldEmitWarning();
-    ~AtomicWarningCounter();
+    ~WarningCounter();
 
   private:
     const uint64_t MaxWarnings;
-    std::atomic<uint64_t> WarningCount;
+    uint64_t WarningCount;
   };
 
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
   get(StringRef Filename, ProfCorrelatorKind FileKind,
-      std::mutex &CorrelateLock, std::mutex &WarnLock,
-      AtomicWarningCounter *WarnCounter);
+      WarningCounter *WarnCounter);
 
   /// Construct a ProfileData vector used to correlate raw instrumentation data
   /// to their functions.
@@ -107,16 +106,13 @@ protected:
   const std::unique_ptr<Context> Ctx;
 
   InstrProfCorrelator(InstrProfCorrelatorKind K, std::unique_ptr<Context> Ctx,
-                      std::mutex &CorrelateLock, std::mutex &WarnLock,
-                      AtomicWarningCounter *WarnCounter)
-      : Ctx(std::move(Ctx)), IsCorrelated(false), CorrelateLock(CorrelateLock),
-        WarnLock(WarnLock), WarnCounter(WarnCounter), Kind(K) {}
+                      WarningCounter *WarnCounter)
+      : Ctx(std::move(Ctx)), IsCorrelated(false), WarnCounter(WarnCounter),
+        Kind(K) {}
 
   std::string Names;
   /// True if correlation is already done.
   bool IsCorrelated;
-  std::mutex &CorrelateLock;
-  std::mutex &WarnLock;
 
   bool shouldEmitWarning();
 
@@ -141,10 +137,9 @@ protected:
 private:
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
   get(std::unique_ptr<MemoryBuffer> Buffer, ProfCorrelatorKind FileKind,
-      std::mutex &CorrelateLock, std::mutex &WarnLock,
-      AtomicWarningCounter *WarnCounter);
+      WarningCounter *WarnCounter);
 
-  AtomicWarningCounter *WarnCounter;
+  WarningCounter *WarnCounter;
   const InstrProfCorrelatorKind Kind;
 };
 
@@ -154,8 +149,7 @@ template <class IntPtrT>
 class InstrProfCorrelatorImpl : public InstrProfCorrelator {
 public:
   InstrProfCorrelatorImpl(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-                          std::mutex &CorrelateLock, std::mutex &WarnLock,
-                          AtomicWarningCounter *WarnCounter);
+                          WarningCounter *WarnCounter);
   static bool classof(const InstrProfCorrelator *C);
 
   /// Return a pointer to the underlying ProfileData vector that this class
@@ -170,8 +164,7 @@ public:
   static llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
   get(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
       const object::ObjectFile &Obj, ProfCorrelatorKind FileKind,
-      std::mutex &CorrelateLock, std::mutex &WarnLock,
-      AtomicWarningCounter *WarnCounter);
+      WarningCounter *WarnCounter);
 
 protected:
   std::vector<RawInstrProf::ProfileData<IntPtrT>> Data;
@@ -196,10 +189,8 @@ protected:
 private:
   InstrProfCorrelatorImpl(InstrProfCorrelatorKind Kind,
                           std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-                          std::mutex &CorrelateLock, std::mutex &WarnLock,
-                          AtomicWarningCounter *WarnCounter)
-      : InstrProfCorrelator(Kind, std::move(Ctx), CorrelateLock, WarnLock,
-                            WarnCounter){};
+                          WarningCounter *WarnCounter)
+      : InstrProfCorrelator(Kind, std::move(Ctx), WarnCounter){};
   llvm::DenseSet<IntPtrT> CounterOffsets;
 };
 
@@ -208,13 +199,10 @@ private:
 template <class IntPtrT>
 class DwarfInstrProfCorrelator : public InstrProfCorrelatorImpl<IntPtrT> {
 public:
-  DwarfInstrProfCorrelator(
-      std::unique_ptr<DWARFContext> DICtx,
-      std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-      std::mutex &CorrelateLock, std::mutex &WarnLock,
-      InstrProfCorrelator::AtomicWarningCounter *WarnCounter)
-      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx), CorrelateLock,
-                                         WarnLock, WarnCounter),
+  DwarfInstrProfCorrelator(std::unique_ptr<DWARFContext> DICtx,
+                           std::unique_ptr<InstrProfCorrelator::Context> Ctx,
+                           InstrProfCorrelator::WarningCounter *WarnCounter)
+      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx), WarnCounter),
         DICtx(std::move(DICtx)) {}
 
 private:
@@ -266,12 +254,9 @@ private:
 template <class IntPtrT>
 class BinaryInstrProfCorrelator : public InstrProfCorrelatorImpl<IntPtrT> {
 public:
-  BinaryInstrProfCorrelator(
-      std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-      std::mutex &CorrelateLock, std::mutex &WarnLock,
-      InstrProfCorrelator::AtomicWarningCounter *WarnCounter)
-      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx), CorrelateLock,
-                                         WarnLock, WarnCounter) {}
+  BinaryInstrProfCorrelator(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
+                            InstrProfCorrelator::WarningCounter *WarnCounter)
+      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx), WarnCounter) {}
 
   /// Return a pointer to the names string that this class constructs.
   const char *getNamesPointer() const { return this->Ctx.NameStart; }
@@ -297,11 +282,8 @@ public:
 
   InstrProfCorrelators(
       StringMap<std::unique_ptr<InstrProfCorrelator>> &&CorrelatorMap,
-      std::unique_ptr<std::mutex> CorrelateLock,
-      std::unique_ptr<std::mutex> WarnLock,
-      std::unique_ptr<InstrProfCorrelator::AtomicWarningCounter> WarnCounter)
+      std::unique_ptr<InstrProfCorrelator::WarningCounter> WarnCounter)
       : CorrelatorMap(std::move(CorrelatorMap)),
-        CorrelateLock(std::move(CorrelateLock)), WarnLock(std::move(WarnLock)),
         WarnCounter(std::move(WarnCounter)) {}
 
   llvm::Expected<const InstrProfCorrelator *>
@@ -313,9 +295,7 @@ public:
 private:
   // A map from BuildID to correlator.
   const StringMap<std::unique_ptr<InstrProfCorrelator>> CorrelatorMap;
-  std::unique_ptr<std::mutex> CorrelateLock;
-  std::unique_ptr<std::mutex> WarnLock;
-  std::unique_ptr<InstrProfCorrelator::AtomicWarningCounter> WarnCounter;
+  std::unique_ptr<InstrProfCorrelator::WarningCounter> WarnCounter;
 };
 } // end namespace llvm
 
