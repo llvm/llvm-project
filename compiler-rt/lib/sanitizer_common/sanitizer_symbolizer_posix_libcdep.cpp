@@ -341,7 +341,7 @@ __sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
-    // These one is the most used one, so we will use it to detect a presense of
+    // These one is the most used one, so we will use it to detect a presence of
     // internal symbolizer.
     if (&__sanitizer_symbolize_code == nullptr)
       return nullptr;
