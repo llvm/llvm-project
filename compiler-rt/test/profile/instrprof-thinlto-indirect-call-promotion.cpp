@@ -13,6 +13,8 @@
 // - Generate ThinLTO summary file with LLVM bitcodes, and run `function-import` pass.
 // - Run `pgo-icall-prom` pass for the IR module which needs to import callees.
 
+// REQUIRES: windows || linux || darwin
+
 // This test and IR test llvm/test/Transforms/PGOProfile/thinlto_indirect_call_promotion.ll
 // are complementary to each other; a compiler-rt test has better test coverage
 // on different platforms, and the IR test is less restrictive in terms of
@@ -35,8 +37,6 @@
 // specifies OS as Triple::OS::Win32
 //
 // UNSUPPORTED: target={{i.86.*windows.*}}
-// FIXME: Re-enable the test on powerpc.
-// UNSUPPORTED: powerpc-registered-target
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
