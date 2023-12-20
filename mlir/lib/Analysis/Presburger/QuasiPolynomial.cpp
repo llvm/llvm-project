@@ -52,13 +52,16 @@ QuasiPolynomial QuasiPolynomial::simplify() {
   std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
   for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
     // A term is zero if its coefficient is zero, or
-    if (coefficients[i] == Fraction(0, 1) ||
+    if (coefficients[i] == Fraction(0, 1))
+      continue;
+    bool product_is_zero =
         // if any of the affine functions in the product
         llvm::any_of(affine[i], [](const SmallVector<Fraction> &affine_ij) {
           // has all its coefficients as zero.
           return llvm::all_of(affine_ij,
                               [](const Fraction &f) { return f == 0; });
-        }))
+        });
+    if (product_is_zero)
       continue;
     newCoeffs.push_back(coefficients[i]);
     newAffine.push_back(affine[i]);
