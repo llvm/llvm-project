@@ -881,7 +881,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
   let description = [{"
     A depthwise convolution is defined in general terms":
     1. It is a convolution as defined by `ConvolutionOpInterface`.
-    2. Operands have the following properties
+    2. Operands have the following properties:
        i) `image` has a batch, channel, and spatial dims
        ii) `kernel` has channel, multipier, and spatial dims
        iii) `init` has a batch, channel, multiplier, and spatial dims
@@ -906,21 +906,27 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
         return detail::depthwise_convolution_impl::getIteratorTypes($_op);
+    }]>,
+    InterfaceMethod<[{
+      Returns strides.
+    }],
+    "::llvm::SmallVector<int64_t, 2>", "getStridesVector", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::depthwise_convolution_impl::getStrides($_op);
+    }]>,
+    InterfaceMethod<[{
+      Returns dilations.
+    }],
+    "::llvm::SmallVector<int64_t, 2>", "getDilationsVector", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::depthwise_convolution_impl::getDilations($_op);
     }]>
   ];
 
   let extraSharedClassDeclaration = [{
-    // TODO (before merge): Figure out how to make `getStridesAttr`
-    // to not conflict with the getter for explicit attr args.
-    // Returns strides attribute.
-    ::mlir::DenseIntElementsAttr getStrides1Attr() {
-        return detail::depthwise_convolution_impl::getStridesAttr($_op);
-    }
-    // Returns dilations attribute.
-    ::mlir::DenseIntElementsAttr getDilations1Attr() {
-        return detail::depthwise_convolution_impl::getDilationsAttr($_op);
-    }
-    // Returns number of spatial dimensions
+    // Returns number of spatial dimensions. Should always be `input_rank - 2` for batched input/output.
     int64_t getNumSpatialDims() {
       return ::llvm::cast<ShapedType>(this->getOperation()->getOperand(0).getType()).getRank() - 2;
     }

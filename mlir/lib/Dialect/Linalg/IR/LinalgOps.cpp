@@ -1733,12 +1733,9 @@ ArrayAttr DepthwiseConvNDOp::getIndexingMaps() {
   if (cached)
     return cached;
 
-  auto numSpatial = getNumSpatialDims();
-  int64_t channelPos = getChannelPosition();
-  SmallVector<int64_t> strides(getStrides1Attr().getValues<int64_t>());
-  SmallVector<int64_t> dilations(getDilations1Attr().getValues<int64_t>());
-  cached = detail::depthwise_convolution_impl::createBasicIndexingMaps(
-      getContext(), numSpatial, channelPos, strides, dilations);
+  cached = detail::depthwise_convolution_impl::createCommonIndexingMaps(
+      getContext(), getNumSpatialDims(), getChannelPosition(),
+      getStridesVector(), getDilationsVector());
 
   (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
   return cached;
@@ -1761,12 +1758,10 @@ ArrayAttr DepthwiseConvNDQOp::getIndexingMaps() {
 
   MLIRContext *ctx = getContext();
   auto numSpatial = getNumSpatialDims();
-  int64_t channelPos = getChannelPosition();
-  SmallVector<int64_t> strides(getStrides1Attr().getValues<int64_t>());
-  SmallVector<int64_t> dilations(getDilations1Attr().getValues<int64_t>());
   SmallVector<Attribute> maps(
-      detail::depthwise_convolution_impl::createBasicIndexingMaps(
-          ctx, numSpatial, channelPos, strides, dilations)
+      detail::depthwise_convolution_impl::createCommonIndexingMaps(
+          ctx, numSpatial, getChannelPosition(), getStridesVector(),
+          getDilationsVector())
           .getValue());
   SmallVector<Attribute> scalarMaps(
       2, AffineMapAttr::get(AffineMap::get(3 + 2 * numSpatial, 0, {}, ctx)));

@@ -119,12 +119,12 @@ namespace detail {
 
 // Common implementations for DepthwiseConvolutionOpInterface
 namespace depthwise_convolution_impl {
-DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
-DenseIntElementsAttr getDilationsAttr(DepthwiseConvolutionOpInterface op);
-ArrayAttr createBasicIndexingMaps(MLIRContext *ctx, int64_t numSpatial,
-                                  int64_t channelPos,
-                                  const SmallVectorImpl<int64_t> &strides,
-                                  SmallVectorImpl<int64_t> &dilations);
+SmallVector<int64_t, 2> getStrides(DepthwiseConvolutionOpInterface op);
+SmallVector<int64_t, 2> getDilations(DepthwiseConvolutionOpInterface op);
+ArrayAttr createCommonIndexingMaps(MLIRContext *ctx, int64_t numSpatial,
+                                   int64_t channelPos,
+                                   const SmallVectorImpl<int64_t> &strides,
+                                   const SmallVectorImpl<int64_t> &dilations);
 ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
 void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
                    ArrayRef<NamedAttribute> attrs);

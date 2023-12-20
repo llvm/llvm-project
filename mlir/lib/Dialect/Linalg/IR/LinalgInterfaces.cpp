@@ -638,35 +638,27 @@ enum class MatchConvolutionResult {
 };
 } // namespace mlir::linalg::detail
 
-DenseIntElementsAttr
-mlir::linalg::detail::depthwise_convolution_impl::getStridesAttr(
+SmallVector<int64_t, 2>
+mlir::linalg::detail::depthwise_convolution_impl::getStrides(
     DepthwiseConvolutionOpInterface op) {
   auto maybeStridesAttr = op->getAttrOfType<DenseIntElementsAttr>("strides");
   if (!maybeStridesAttr) {
     OpBuilder builder(op.getContext());
-    int64_t numSpatialDims = op.getNumSpatialDims();
-    auto type = RankedTensorType::get({static_cast<int64_t>(numSpatialDims)},
-                                      builder.getI64Type());
-    SmallVector<int64_t> strides(numSpatialDims, 1);
-    return DenseIntElementsAttr::get(type, strides);
+    return SmallVector<int64_t, 2>(op.getNumSpatialDims(), 1);
   }
-  return maybeStridesAttr;
+  return llvm::to_vector(maybeStridesAttr.getValues<int64_t>());
 }
 
-DenseIntElementsAttr
-mlir::linalg::detail::depthwise_convolution_impl::getDilationsAttr(
+SmallVector<int64_t, 2>
+mlir::linalg::detail::depthwise_convolution_impl::getDilations(
     DepthwiseConvolutionOpInterface op) {
   auto maybeDilationsAttr =
       op->getAttrOfType<DenseIntElementsAttr>("dilations");
   if (!maybeDilationsAttr) {
     OpBuilder builder(op.getContext());
-    int64_t numSpatialDims = op.getNumSpatialDims();
-    auto type = RankedTensorType::get({static_cast<int64_t>(numSpatialDims)},
-                                      builder.getI64Type());
-    SmallVector<int64_t> strides(numSpatialDims, 1);
-    return DenseIntElementsAttr::get(type, strides);
+    return SmallVector<int64_t, 2>(op.getNumSpatialDims(), 1);
   }
-  return maybeDilationsAttr;
+  return llvm::to_vector(maybeDilationsAttr.getValues<int64_t>());
 }
 
 ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIteratorTypes(
@@ -683,10 +675,10 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIteratorTypes(
 }
 
 ArrayAttr
-mlir::linalg::detail::depthwise_convolution_impl::createBasicIndexingMaps(
+mlir::linalg::detail::depthwise_convolution_impl::createCommonIndexingMaps(
     MLIRContext *ctx, int64_t numSpatial, int64_t channelPos,
     const SmallVectorImpl<int64_t> &strides,
-    SmallVectorImpl<int64_t> &dilations) {
+    const SmallVectorImpl<int64_t> &dilations) {
   // Domain: (n, w, c, m, kw)
   AffineExpr n = getAffineDimExpr(0, ctx);
   SmallVector<AffineExpr> s(
@@ -728,12 +720,12 @@ mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
     return failure();
   if (DepthwiseConvolutionOpInterface conv =
           dyn_cast<DepthwiseConvolutionOpInterface>(op)) {
-    const auto imageType = conv.image().getType().dyn_cast<ShapedType>();
+    const auto imageType = conv.image().getType().cast<ShapedType>();
     const auto imageRank = imageType.getRank();
     const auto kernelRank =
         conv.filter().getType().cast<ShapedType>().getRank();
     const auto initType =
-        cast<LinalgOp>(op).getDpsInits()[0].getType().dyn_cast<ShapedType>();
+        cast<LinalgOp>(op).getDpsInits()[0].getType().cast<ShapedType>();
     const auto initRank = initType.getRank();
     if (imageRank != kernelRank || imageRank != initRank - 1)
       return op->emitError(
