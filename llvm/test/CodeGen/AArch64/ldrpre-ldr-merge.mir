@@ -348,8 +348,6 @@ body:             |
   bb.0:
     liveins: $s0, $s1, $x1
 
-    ; The offset of the second load is not equal to the
-    ; size of the destination register,  and hence can’t be merged.
 
     ; CHECK-LABEL: name: 12-ldrspre-ldrsui-no-merge
     ; CHECK: liveins: $s0, $s1, $x1
@@ -445,8 +443,7 @@ body:             |
     ; CHECK-LABEL: name: 15-ldrqpre-ldrqui-same-dst-reg-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
-    ; CHECK-NEXT: renamable $q0 = LDRQui renamable $x1, 1 :: (load (s128))
+    ; CHECK-NEXT: early-clobber $x1, dead $q2, renamable $q0 = LDPQpre renamable $x1, 2 :: (load (s128))
     ; CHECK-NEXT: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))

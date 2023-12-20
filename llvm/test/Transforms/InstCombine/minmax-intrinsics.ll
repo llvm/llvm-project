@@ -1934,7 +1934,7 @@ define i8 @smax_offset_uses(i8 %x) {
 define <3 x i8> @smin_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_offset(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -127, i8 -127, i8 -127>)
-; CHECK-NEXT:    [[M:%.*]] = or <3 x i8> [[TMP1]], <i8 124, i8 124, i8 124>
+; CHECK-NEXT:    [[M:%.*]] = or disjoint <3 x i8> [[TMP1]], <i8 124, i8 124, i8 124>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %a = add nsw nuw <3 x i8> %x, <i8 124, i8 124, i8 124>

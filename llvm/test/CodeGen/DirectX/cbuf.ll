@@ -34,4 +34,4 @@ attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willre
 
 !hlsl.cbufs = !{!1}
 
-!1 = !{ptr @A.cb., !"A.cb.ty", i32 13, i32 2, i32 1}
+!1 = !{ptr @A.cb., !"A.cb.ty", i32 13, i1 false, i32 2, i32 1}

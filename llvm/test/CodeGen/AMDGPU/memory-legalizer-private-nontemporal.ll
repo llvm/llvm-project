@@ -10,6 +10,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -mattr=+tgsplit -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12-WGP %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12-CU %s
 
 define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX6-LABEL: private_nontemporal_load_0:
@@ -179,6 +181,34 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX11-CU-NEXT:    s_nop 0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: private_nontemporal_load_0:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_clause 0x1
+; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s2 th:TH_LOAD_NT_HT
+; GFX12-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-WGP-NEXT:    s_nop 0
+; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: private_nontemporal_load_0:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_clause 0x1
+; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-CU-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s2 th:TH_LOAD_NT_HT
+; GFX12-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-CU-NEXT:    s_nop 0
+; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(5) %in, ptr addrspace(1) %out) {
 entry:
   %val = load i32, ptr addrspace(5) %in, align 4, !nontemporal !0
@@ -361,6 +391,36 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX11-CU-NEXT:    s_nop 0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: private_nontemporal_load_1:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_clause 0x1
+; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX12-WGP-NEXT:    scratch_load_b32 v0, v0, off th:TH_LOAD_NT_HT
+; GFX12-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-WGP-NEXT:    s_nop 0
+; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: private_nontemporal_load_1:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_clause 0x1
+; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-CU-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX12-CU-NEXT:    scratch_load_b32 v0, v0, off th:TH_LOAD_NT_HT
+; GFX12-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-CU-NEXT:    s_nop 0
+; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(5) %in, ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -532,6 +592,26 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX11-CU-NEXT:    scratch_store_b32 off, v0, s0 glc slc dlc
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: private_nontemporal_store_0:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s2 th:TH_STORE_NT_WB
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: private_nontemporal_store_0:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-CU-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s2 th:TH_STORE_NT_WB
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -708,6 +788,28 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX11-CU-NEXT:    scratch_store_b32 v0, v1, off glc slc dlc
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: private_nontemporal_store_1:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX12-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s0
+; GFX12-WGP-NEXT:    scratch_store_b32 v0, v1, off th:TH_STORE_NT_WB
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: private_nontemporal_store_1:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX12-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s0
+; GFX12-CU-NEXT:    scratch_store_b32 v0, v1, off th:TH_STORE_NT_WB
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

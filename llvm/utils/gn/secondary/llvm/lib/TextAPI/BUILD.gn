@@ -11,6 +11,8 @@ static_library("TextAPI") {
     "InterfaceFile.cpp",
     "PackedVersion.cpp",
     "Platform.cpp",
+    "RecordVisitor.cpp",
+    "RecordsSlice.cpp",
     "Symbol.cpp",
     "SymbolSet.cpp",
     "Target.cpp",

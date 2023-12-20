@@ -6,6 +6,13 @@
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=cortex-a710 -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=generic -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a55 -S < %s | FileCheck %s --check-prefix=CHECKII
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a510 -S < %s | FileCheck %s --check-prefix=CHECKII
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a72 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a710 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s --check-prefix=CHECKOO
 
 %struct.st = type { i32, i64, ptr, ptr, i16, ptr, ptr, i64, i64 }
 

@@ -550,6 +550,8 @@ class NeonEmitter {
 
   void createIntrinsic(Record *R, SmallVectorImpl<Intrinsic *> &Out);
   void genBuiltinsDef(raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs);
+  void genStreamingSVECompatibleList(raw_ostream &OS,
+                                     SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
@@ -592,6 +594,8 @@ public:
 
   // Emit arm_bf16.h.inc
   void runBF16(raw_ostream &o);
+
+  void runVectorTypes(raw_ostream &o);
 
   // Emit all the __builtin prototypes used in arm_neon.h, arm_fp16.h and
   // arm_bf16.h
@@ -2039,6 +2043,30 @@ void NeonEmitter::genBuiltinsDef(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
+void NeonEmitter::genStreamingSVECompatibleList(
+    raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
+  OS << "#ifdef GET_NEON_STREAMING_COMPAT_FLAG\n";
+
+  std::set<std::string> Emitted;
+  for (auto *Def : Defs) {
+    // If the def has a body (that is, it has Operation DAGs), it won't call
+    // __builtin_neon_* so we don't need to generate a definition for it.
+    if (Def->hasBody())
+      continue;
+
+    std::string Name = Def->getMangledName();
+    if (Emitted.find(Name) != Emitted.end())
+      continue;
+
+    // FIXME: We should make exceptions here for some NEON builtins that are
+    // permitted in streaming mode.
+    OS << "case NEON::BI__builtin_neon_" << Name
+       << ": BuiltinType = ArmNonStreaming; break;\n";
+    Emitted.insert(Name);
+  }
+  OS << "#endif\n\n";
+}
+
 /// Generate the ARM and AArch64 overloaded type checking code for
 /// SemaChecking.cpp, checking for unique builtin declarations.
 void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
@@ -2222,6 +2250,8 @@ void NeonEmitter::runHeader(raw_ostream &OS) {
   // Generate ARM overloaded type checking code for SemaChecking.cpp
   genOverloadTypeCheckCode(OS, Defs);
 
+  genStreamingSVECompatibleList(OS, Defs);
+
   // Generate ARM range checking code for shift/lane immediates.
   genIntrinsicRangeCheckCode(OS, Defs);
 }
@@ -2355,13 +2385,7 @@ void NeonEmitter::run(raw_ostream &OS) {
 
   OS << "#include <arm_bf16.h>\n";
 
-  // Emit NEON-specific scalar typedefs.
-  OS << "typedef float float32_t;\n";
-  OS << "typedef __fp16 float16_t;\n";
-
-  OS << "#ifdef __aarch64__\n";
-  OS << "typedef double float64_t;\n";
-  OS << "#endif\n\n";
+  OS << "#include <arm_vector_types.h>\n";
 
   // For now, signedness of polynomial types depends on target
   OS << "#ifdef __aarch64__\n";
@@ -2374,10 +2398,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "typedef int16_t poly16_t;\n";
   OS << "typedef int64_t poly64_t;\n";
   OS << "#endif\n";
-
-  emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPl", OS);
-
-  emitNeonTypeDefs("bQb", OS);
+  emitNeonTypeDefs("PcQPcPsQPsPlQPl", OS);
 
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
@@ -2546,6 +2567,38 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   OS << "#endif /* __ARM_FP16_H */\n";
 }
 
+void NeonEmitter::runVectorTypes(raw_ostream &OS) {
+  OS << "/*===---- arm_vector_types - ARM vector type "
+        "------===\n"
+        " *\n"
+        " *\n"
+        " * Part of the LLVM Project, under the Apache License v2.0 with LLVM "
+        "Exceptions.\n"
+        " * See https://llvm.org/LICENSE.txt for license information.\n"
+        " * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception\n"
+        " *\n"
+        " *===-----------------------------------------------------------------"
+        "------===\n"
+        " */\n\n";
+  OS << "#if !defined(__ARM_NEON_H) && !defined(__ARM_SVE_H)\n";
+  OS << "#error \"This file should not be used standalone. Please include"
+        " arm_neon.h or arm_sve.h instead\"\n\n";
+  OS << "#endif\n";
+  OS << "#ifndef __ARM_NEON_TYPES_H\n";
+  OS << "#define __ARM_NEON_TYPES_H\n";
+  OS << "typedef float float32_t;\n";
+  OS << "typedef __fp16 float16_t;\n";
+
+  OS << "#ifdef __aarch64__\n";
+  OS << "typedef double float64_t;\n";
+  OS << "#endif\n\n";
+
+  emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQd", OS);
+
+  emitNeonTypeDefs("bQb", OS);
+  OS << "#endif // __ARM_NEON_TYPES_H\n";
+}
+
 void NeonEmitter::runBF16(raw_ostream &OS) {
   OS << "/*===---- arm_bf16.h - ARM BF16 intrinsics "
         "-----------------------------------===\n"
@@ -2638,6 +2691,10 @@ void clang::EmitBF16(RecordKeeper &Records, raw_ostream &OS) {
 
 void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
+}
+
+void clang::EmitVectorTypes(RecordKeeper &Records, raw_ostream &OS) {
+  NeonEmitter(Records).runVectorTypes(OS);
 }
 
 void clang::EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {

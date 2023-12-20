@@ -54,7 +54,7 @@
 int main() {
   int arr[5];
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target data map(alloc : arr[LARGE])
   {
 #pragma omp target update CLAUSE(arr[SMALL])
@@ -63,7 +63,7 @@ int main() {
   // CHECK: success
   fprintf(stderr, "success\n");
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target data map(alloc : arr[SMALL])
   {
 #pragma omp target update CLAUSE(arr[LARGE])

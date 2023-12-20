@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; CHECK: vector.body:
 ; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:   %offset.idx = or i64 %index, 1
+; CHECK:   %offset.idx = or disjoint i64 %index, 1
 ; CHECK:   %[[T2:.+]] = add nuw nsw i64 %offset.idx, %tmp0
 ; CHECK:   %[[T3:.+]] = sub nsw i64 %[[T2]], %x
 ; CHECK:   %[[T4:.+]] = getelementptr inbounds i32, ptr %a, i64 %[[T3]]

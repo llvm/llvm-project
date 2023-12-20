@@ -1010,13 +1010,13 @@ static const char *ArmMachOArchNameCPU(StringRef CPU) {
 
   // FIXME: Make sure this MachO triple mangling is really necessary.
   // ARMv5* normalises to ARMv5.
-  if (Arch.startswith("armv5"))
+  if (Arch.starts_with("armv5"))
     Arch = Arch.substr(0, 5);
   // ARMv6*, except ARMv6M, normalises to ARMv6.
-  else if (Arch.startswith("armv6") && !Arch.endswith("6m"))
+  else if (Arch.starts_with("armv6") && !Arch.ends_with("6m"))
     Arch = Arch.substr(0, 5);
   // ARMv7A normalises to ARMv7.
-  else if (Arch.endswith("v7a"))
+  else if (Arch.ends_with("v7a"))
     Arch = Arch.substr(0, 5);
   return Arch.data();
 }
@@ -1281,7 +1281,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   // rpaths. This is currently true from this place, but we need to be
   // careful if this function is ever called before user's rpaths are emitted.
   if (Opts & RLO_AddRPath) {
-    assert(DarwinLibName.endswith(".dylib") && "must be a dynamic library");
+    assert(DarwinLibName.ends_with(".dylib") && "must be a dynamic library");
 
     // Add @executable_path to rpath to support having the dylib copied with
     // the executable.
@@ -1319,8 +1319,8 @@ StringRef Darwin::getSDKName(StringRef isysroot) {
   auto EndSDK = llvm::sys::path::rend(isysroot);
   for (auto IT = BeginSDK; IT != EndSDK; ++IT) {
     StringRef SDK = *IT;
-    if (SDK.endswith(".sdk"))
-      return SDK.slice(0, SDK.size() - 4);
+    if (SDK.ends_with(".sdk"))
+        return SDK.slice(0, SDK.size() - 4);
   }
   return "";
 }
@@ -1959,22 +1959,23 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
 
   auto CreatePlatformFromSDKName =
       [&](StringRef SDK) -> std::optional<DarwinPlatform> {
-    if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
+    if (SDK.starts_with("iPhoneOS") || SDK.starts_with("iPhoneSimulator"))
       return DarwinPlatform::createFromSDK(
           Darwin::IPhoneOS, Version,
-          /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
-    else if (SDK.startswith("MacOSX"))
+          /*IsSimulator=*/SDK.starts_with("iPhoneSimulator"));
+    else if (SDK.starts_with("MacOSX"))
       return DarwinPlatform::createFromSDK(Darwin::MacOS,
                                            getSystemOrSDKMacOSVersion(Version));
-    else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
+    else if (SDK.starts_with("WatchOS") || SDK.starts_with("WatchSimulator"))
       return DarwinPlatform::createFromSDK(
           Darwin::WatchOS, Version,
-          /*IsSimulator=*/SDK.startswith("WatchSimulator"));
-    else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
+          /*IsSimulator=*/SDK.starts_with("WatchSimulator"));
+    else if (SDK.starts_with("AppleTVOS") ||
+             SDK.starts_with("AppleTVSimulator"))
       return DarwinPlatform::createFromSDK(
           Darwin::TvOS, Version,
-          /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
-    else if (SDK.startswith("DriverKit"))
+          /*IsSimulator=*/SDK.starts_with("AppleTVSimulator"));
+    else if (SDK.starts_with("DriverKit"))
       return DarwinPlatform::createFromSDK(Darwin::DriverKit, Version);
     return std::nullopt;
   };
@@ -2073,7 +2074,7 @@ std::optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
         continue;
       A->claim();
       // Accept a -target-variant triple when compiling code that may run on
-      // macOS or Mac Catalust.
+      // macOS or Mac Catalyst.
       if ((Triple.isMacOSX() && TVT.getOS() == llvm::Triple::IOS &&
            TVT.isMacCatalystEnvironment()) ||
           (TVT.isMacOSX() && Triple.getOS() == llvm::Triple::IOS &&
@@ -2339,8 +2340,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     if (SDK.size() > 0) {
       size_t StartVer = SDK.find_first_of("0123456789");
       StringRef SDKName = SDK.slice(0, StartVer);
-      if (!SDKName.startswith(getPlatformFamily()) &&
-          !dropSDKNamePrefix(SDKName).startswith(getPlatformFamily()))
+      if (!SDKName.starts_with(getPlatformFamily()) &&
+          !dropSDKNamePrefix(SDKName).starts_with(getPlatformFamily()))
         getDriver().Diag(diag::warn_incompatible_sysroot)
             << SDKName << getPlatformFamily();
     }

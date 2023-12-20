@@ -55,6 +55,18 @@ public:
     return getCalledFunction()->getIntrinsicID();
   }
 
+  bool isAssociative() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Return true if swapping the first two arguments to the intrinsic produces
   /// the same result.
   bool isCommutative() const {

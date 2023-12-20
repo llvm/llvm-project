@@ -118,8 +118,8 @@ inline bool isa_derived(mlir::Type t) { return t.isa<fir::RecordType>(); }
 /// Is `t` type(c_ptr) or type(c_funptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = t.dyn_cast_or_null<fir::RecordType>())
-    return recTy.getName().endswith("T__builtin_c_ptr") ||
-           recTy.getName().endswith("T__builtin_c_funptr");
+    return recTy.getName().ends_with("T__builtin_c_ptr") ||
+           recTy.getName().ends_with("T__builtin_c_funptr");
   return false;
 }
 

@@ -92,6 +92,15 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
+
+* Neoverse-N2 was incorrectly marked as an Armv8.5a core. This has been
+  changed to an Armv9.0a core. However, crypto options are not enabled
+  by default for Armv9 cores, so `-mcpu=neoverse-n2+crypto` is now required
+  to enable crypto for this core. As far as the compiler is concerned,
+  Armv9.0a has the same features enabled as Armv8.5a, with the exception
+  of crypto.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -102,10 +111,10 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
-* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
-
 Changes to the ARM Backend
 --------------------------
+
+* Added support for Cortex-M52 CPUs.
 
 Changes to the AVR Backend
 --------------------------
@@ -130,6 +139,13 @@ Changes to the RISC-V Backend
 
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
+* Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f for RV64.
+* The Zvbb, Zvbc, Zvkb, Zvkg, Zvkn, Zvknc, Zvkned, Zvkng, Zvknha, Zvknhb, Zvks,
+  Zvksc, Zvksed, Zvksg, Zvksh, and Zvkt extension version was upgraded to 1.0
+  and is no longer experimental.  However, the C intrinsics for these extensions
+  are still experimental.  To use the C intrinsics for these extensions,
+  ``-menable-experimental-extensions`` needs to be passed to Clang.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -155,6 +171,7 @@ Changes to the X86 Backend
 * Support ISA of ``USER_MSR``.
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
 * ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
+* ``-mapxf`` is supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -198,6 +215,27 @@ Changes to the C API
   The option structure exposes an additional setting (i.e., the target ABI) and
   provides default values for unspecified settings.
 
+* Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for getting/setting the new nneg flag
+  on zext instructions, and ``LLVMGetIsDisjoint`` and ``LLVMSetIsDisjoint``
+  for getting/setting the new disjoint flag on or instructions.
+
+* Added the following functions for manipulating operand bundles, as well as
+  building ``call`` and ``invoke`` instructions that use operand bundles:
+
+  * ``LLVMBuildCallWithOperandBundles``
+  * ``LLVMBuildInvokeWithOperandBundles``
+  * ``LLVMCreateOperandBundle``
+  * ``LLVMDisposeOperandBundle``
+  * ``LLVMGetNumOperandBundles``
+  * ``LLVMGetOperandBundleAtIndex``
+  * ``LLVMGetNumOperandBundleArgs``
+  * ``LLVMGetOperandBundleArgAtIndex``
+  * ``LLVMGetOperandBundleTag``
+
+* Added ``LLVMGetFastMathFlags`` and ``LLVMSetFastMathFlags`` for getting/setting
+  the fast-math flags of an instruction, as well as ``LLVMCanValueUseFastMathFlags``
+  for checking if an instruction can use such flags
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -238,6 +276,9 @@ Changes to the LLVM tools
 
 * llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
 
+* llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
+  ELF input and binary output files only.
+
 Changes to LLDB
 ---------------------------------
 
@@ -257,6 +298,13 @@ Changes to LLDB
   (SME) and Scalable Matrix Extension 2 (SME2) for both live processes and core
   files. For details refer to the
   `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+* LLDB now supports symbol and binary acquisition automatically using the
+  DEBUFINFOD protocol. The standard mechanism of specifying DEBUFINOD servers in
+  the ``DEBUGINFOD_URLS`` environment variable is used by default. In addition,
+  users can specify servers to request symbols from using the LLDB setting
+  ``plugin.symbol-locator.debuginfod.server_urls``, override or adding to the
+  environment variable.
+
 
 * When running on AArch64 Linux, ``lldb-server`` now provides register
   field information for the following registers: ``cpsr``, ``fpcr``,

@@ -36,7 +36,7 @@ std::size_t hash_neg(T val) {
 }
 template <class T>
 std::size_t hash_scale(T val) {
-  return val << 1;
+  return static_cast<std::size_t>(val << 1);
 }
 template <class T>
 std::size_t hash_even(T val) {
@@ -56,11 +56,11 @@ std::size_t hash_neg(T* val) {
   return std::numeric_limits<T>::max() - *val;
 }
 template <class T>
-size_t hash_scale(T* val) {
-  return *val << 1;
+std::size_t hash_scale(T* val) {
+  return static_cast<std::size_t>(*val << 1);
 }
 template <class T>
-size_t hash_even(T* val) {
+std::size_t hash_even(T* val) {
   return *val & 1 ? 1 : 0;
 }
 

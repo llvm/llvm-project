@@ -328,7 +328,7 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 
   // If we are currently running Clang inside of the requested system root,
   // add its parent library path to those searched.
-  if (StringRef(D.Dir).startswith(D.SysRoot))
+  if (StringRef(D.Dir).starts_with(D.SysRoot))
     addPathIfExists(D, D.Dir + "/../lib", Paths);
 
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);

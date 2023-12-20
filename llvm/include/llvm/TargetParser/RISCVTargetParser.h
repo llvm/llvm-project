@@ -15,7 +15,6 @@
 #define LLVM_TARGETPARSER_RISCVTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
-#include <vector>
 
 namespace llvm {
 

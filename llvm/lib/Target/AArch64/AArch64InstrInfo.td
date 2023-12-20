@@ -289,6 +289,8 @@ def HasCHK           : Predicate<"Subtarget->hasCHK()">,
                        AssemblerPredicateWithAll<(all_of FeatureCHK), "chk">;
 def HasGCS           : Predicate<"Subtarget->hasGCS()">,
                        AssemblerPredicateWithAll<(all_of FeatureGCS), "gcs">;
+def HasCPA           : Predicate<"Subtarget->hasCPA()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -863,6 +865,12 @@ def AArch64stilp : SDNode<"AArch64ISD::STILP", SDT_AArch64stilp, [SDNPHasChain, 
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
+
+def AArch64probedalloca
+    : SDNode<"AArch64ISD::PROBED_ALLOCA",
+             SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+             [SDNPHasChain, SDNPMayStore]>;
+
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
                         [SDNPHasChain, SDNPOutGlue]>;
@@ -934,7 +942,8 @@ include "SMEInstrFormats.td"
 // Miscellaneous instructions.
 //===----------------------------------------------------------------------===//
 
-let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1, isCodeGenOnly = 1 in {
+let Defs = [SP], Uses = [SP] in {
 // We set Sched to empty list because we expect these instructions to simply get
 // removed in most cases.
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -943,7 +952,35 @@ def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             [(AArch64callseq_end timm:$amt1, timm:$amt2)]>,
                             Sched<[]>;
-} // Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1
+
+}
+
+let Defs = [SP, NZCV], Uses = [SP] in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs GPR64:$scratch),
+                               (ins i64imm:$stacksize, i64imm:$fixed_offset,
+                                i64imm:$scalable_offset),
+                               []>,
+                               Sched<[]>;
+
+// Probed stack allocation of a variable size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC_VAR : Pseudo<(outs),
+                                   (ins GPR64sp:$target),
+                                   []>,
+                                   Sched<[]>;
+
+// Probed stack allocations of a variable size, used for allocas of unknown size
+// when stack-clash protection is enabled.
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                                   (ins GPR64common:$target),
+                                   [(AArch64probedalloca GPR64common:$target)]>,
+                                   Sched<[]>;
+
+} // Defs = [SP, NZCV], Uses = [SP] in 
+} // hasSideEffects = 1, isCodeGenOnly = 1
 
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // FIXME: The following pseudo instructions are only needed because remat
@@ -9367,6 +9404,10 @@ let Predicates = [HasD128] in {
   }
 }
 
+//===----------------------------===//
+// 2023 Architecture Extensions:
+//===----------------------------===//
+
 let Predicates = [HasFP8] in {
   defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
   defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
@@ -9407,6 +9448,19 @@ let Predicates = [HasFP8DOT4] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
 } // End let Predicates = [HasFP8DOT4]
+
+//===----------------------------------------------------------------------===//
+// Checked Pointer Arithmetic (FEAT_CPA)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasCPA] in {
+  // Scalar add/subtract
+  defm ADDPT : AddSubCPA<0, "addpt">;
+  defm SUBPT : AddSubCPA<1, "subpt">;
+
+  // Scalar multiply-add/subtract
+  def MADDPT : MulAccumCPA<0, "maddpt">;
+  def MSUBPT : MulAccumCPA<1, "msubpt">;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

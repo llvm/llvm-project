@@ -27,12 +27,7 @@ def SPIRV_INTELJointMatrixWorkItemLengthOp : SPIRV_IntelVendorOp<"JointMatrixWor
 
     Type is a joint matrix type.
 
-    ``` {.ebnf}
-    joint-matrix-length-op ::= ssa-id `=` `spirv.INTEL.JointMatrixWorkItemLength
-                                    ` : ` joint-matrix-type
-    ```
-
-    For example:
+    #### Example:
 
     ```
     %0 = spirv.INTEL.JointMatrixWorkItemLength : !spirv.jointmatrix<Subgroup, i32, 8, 16>

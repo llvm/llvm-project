@@ -165,7 +165,6 @@ uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
     result -= 0x10000'0000;
   else if (!negativeA && negativeB)
     result += 0x10000'0000;
-
   return result;
 }
 

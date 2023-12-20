@@ -25,10 +25,10 @@
 namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-using MantissaInt = fputil::FPBits<long double>::UIntType;
-
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
+  using LDBits = fputil::FPBits<long double>;
+  using StorageType = LDBits::StorageType;
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the name of the conversion. This converts any
   // conversion name into the letter 'a' with the appropriate case.
@@ -36,22 +36,23 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
   bool is_negative;
   int exponent;
-  MantissaInt mantissa;
+  StorageType mantissa;
   bool is_inf_or_nan;
-  uint32_t mantissa_width;
+  uint32_t fraction_bits;
   if (to_conv.length_modifier == LengthModifier::L) {
-    mantissa_width = fputil::MantissaWidth<long double>::VALUE;
-    fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
-    fputil::FPBits<long double> float_bits(float_raw);
+    fraction_bits = LDBits::FRACTION_LEN;
+    LDBits::StorageType float_raw = to_conv.conv_val_raw;
+    LDBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
   } else {
-    mantissa_width = fputil::MantissaWidth<double>::VALUE;
-    fputil::FPBits<double>::UIntType float_raw =
-        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
-    fputil::FPBits<double> float_bits(float_raw);
+    using LBits = fputil::FPBits<double>;
+    fraction_bits = LBits::FRACTION_LEN;
+    LBits::StorageType float_raw =
+        static_cast<LBits::StorageType>(to_conv.conv_val_raw);
+    LBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
@@ -77,8 +78,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // digits. This is primarily relevant for x86 80 bit long doubles, which have
   // 63 bit mantissas. In the case where the mantissa is 0, however, the
   // exponent should stay as 0.
-  if (mantissa_width % BITS_IN_HEX_DIGIT != 0 && mantissa > 0) {
-    exponent -= mantissa_width % BITS_IN_HEX_DIGIT;
+  if (fraction_bits % BITS_IN_HEX_DIGIT != 0 && mantissa > 0) {
+    exponent -= fraction_bits % BITS_IN_HEX_DIGIT;
   }
 
   // This is the max number of digits it can take to represent the mantissa.
@@ -86,10 +87,10 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
   constexpr size_t MANT_BUFF_LEN =
-      (fputil::MantissaWidth<long double>::VALUE / BITS_IN_HEX_DIGIT) + 1;
+      (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
   char mant_buffer[MANT_BUFF_LEN];
 
-  size_t mant_len = (mantissa_width / BITS_IN_HEX_DIGIT) + 1;
+  size_t mant_len = (fraction_bits / BITS_IN_HEX_DIGIT) + 1;
 
   // Precision only tracks the number of digits after the hexadecimal point, so
   // we have to add one to account for the digit before the hexadecimal point.
@@ -99,9 +100,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     const size_t shift_amount =
         (mant_len - intended_digits) * BITS_IN_HEX_DIGIT;
 
-    const MantissaInt truncated_bits =
-        mantissa & ((MantissaInt(1) << shift_amount) - 1);
-    const MantissaInt halfway_const = MantissaInt(1) << (shift_amount - 1);
+    const StorageType truncated_bits =
+        mantissa & ((StorageType(1) << shift_amount) - 1);
+    const StorageType halfway_const = StorageType(1) << (shift_amount - 1);
 
     mantissa >>= shift_amount;
 
@@ -127,7 +128,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
     // If the rounding caused an overflow, shift the mantissa and adjust the
     // exponent to match.
-    if (mantissa >= (MantissaInt(1) << (intended_digits * BITS_IN_HEX_DIGIT))) {
+    if (mantissa >= (StorageType(1) << (intended_digits * BITS_IN_HEX_DIGIT))) {
       mantissa >>= BITS_IN_HEX_DIGIT;
       exponent += BITS_IN_HEX_DIGIT;
     }
@@ -139,8 +140,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   size_t first_non_zero = 1;
   for (; mant_cur > 0; --mant_cur, mantissa >>= 4) {
     char mant_mod_16 = static_cast<char>(mantissa) & 15;
-    char new_digit =
-        (mant_mod_16 > 9) ? (mant_mod_16 - 10 + a) : (mant_mod_16 + '0');
+    char new_digit = static_cast<char>(
+        (mant_mod_16 > 9) ? (mant_mod_16 - 10 + a) : (mant_mod_16 + '0'));
     mant_buffer[mant_cur - 1] = new_digit;
     if (new_digit != '0' && first_non_zero < mant_cur)
       first_non_zero = mant_cur;
@@ -157,8 +158,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // 15 -> 5
   // 11 -> 4
   // 8  -> 3
-  constexpr size_t EXP_LEN =
-      (((fputil::ExponentWidth<long double>::VALUE * 5) + 15) / 16) + 1;
+  constexpr size_t EXP_LEN = (((LDBits::EXP_LEN * 5) + 15) / 16) + 1;
   char exp_buffer[EXP_LEN];
 
   bool exp_is_negative = false;
@@ -169,7 +169,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
   size_t exp_cur = EXP_LEN;
   for (; exponent > 0; --exp_cur, exponent /= 10) {
-    exp_buffer[exp_cur - 1] = (exponent % 10) + '0';
+    exp_buffer[exp_cur - 1] = static_cast<char>((exponent % 10) + '0');
   }
   if (exp_cur == EXP_LEN) { // if nothing else was written, write a 0.
     exp_buffer[EXP_LEN - 1] = '0';

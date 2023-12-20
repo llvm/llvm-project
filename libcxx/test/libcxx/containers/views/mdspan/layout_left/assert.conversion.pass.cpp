@@ -52,7 +52,7 @@ int main(int, char**) {
     [[maybe_unused]] std::extents<char, D, 5> e(arg_exts);
     // but the product is not, so we can't use it for layout_left
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_left::template mapping<std::extents<char, D, 5>> m(arg); }()),
+        ([=] { std::layout_left::mapping<std::extents<char, D, 5>> m(arg); }()),
         "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
   return 0;

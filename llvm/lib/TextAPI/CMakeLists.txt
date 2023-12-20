@@ -5,6 +5,8 @@ add_llvm_component_library(LLVMTextAPI
   TextStubV5.cpp
   PackedVersion.cpp
   Platform.cpp
+  RecordsSlice.cpp
+  RecordVisitor.cpp
   Symbol.cpp
   SymbolSet.cpp
   Target.cpp
@@ -20,3 +22,5 @@ add_llvm_component_library(LLVMTextAPI
   BinaryFormat
   TargetParser
 )
+
+add_subdirectory(BinaryReader)

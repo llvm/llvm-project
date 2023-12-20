@@ -4,7 +4,7 @@
 define void @test1() {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   br label %exit

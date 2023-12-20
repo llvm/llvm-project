@@ -198,7 +198,7 @@ static void checkPrivateAPINotesName(DiagnosticsEngine &Diags,
   StringRef RealFileName =
       llvm::sys::path::filename(File->tryGetRealPathName());
   StringRef RealStem = llvm::sys::path::stem(RealFileName);
-  if (RealStem.endswith("_private"))
+  if (RealStem.ends_with("_private"))
     return;
 
   unsigned DiagID = diag::warn_apinotes_private_case;

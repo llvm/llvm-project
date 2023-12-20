@@ -31,7 +31,7 @@
 namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-using MantissaInt = fputil::FPBits<long double>::UIntType;
+using StorageType = fputil::FPBits<long double>::StorageType;
 using DecimalString = IntegerToString<intmax_t>;
 using ExponentString =
     IntegerToString<intmax_t, radix::Dec::WithWidth<2>::WithSign>;
@@ -245,7 +245,7 @@ class FloatWriter {
   // -exponent will never overflow because all long double types we support
   // have at most 15 bits of mantissa and the C standard defines an int as
   // being at least 16 bits.
-  static_assert(fputil::FloatProperties<long double>::EXPONENT_WIDTH <
+  static_assert(fputil::FloatProperties<long double>::EXP_LEN <
                 (sizeof(int) * 8));
 
 public:
@@ -477,8 +477,8 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
-  // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  // signed because later we use -FRACTION_LEN
+  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
 
@@ -536,8 +536,8 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
     float_writer.write_first_block(0);
   }
 
-  if (exponent < MANT_WIDTH) {
-    const uint32_t blocks = (precision / BLOCK_SIZE) + 1;
+  if (exponent < FRACTION_LEN) {
+    const uint32_t blocks = (precision / static_cast<uint32_t>(BLOCK_SIZE)) + 1;
     uint32_t i = 0;
     // if all the blocks we should write are zero
     if (blocks <= float_converter.zero_blocks_after_point()) {
@@ -561,16 +561,17 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         RET_IF_RESULT_NEGATIVE(float_writer.write_middle_block(digits));
       } else {
 
-        const uint32_t maximum = precision - BLOCK_SIZE * i;
+        const uint32_t maximum =
+            static_cast<uint32_t>(precision - BLOCK_SIZE * i);
         uint32_t last_digit = 0;
         for (uint32_t k = 0; k < BLOCK_SIZE - maximum; ++k) {
           last_digit = digits % 10;
           digits /= 10;
         }
         RoundDirection round;
-        const bool truncated =
-            !zero_after_digits(exponent - MANT_WIDTH, precision,
-                               float_bits.get_explicit_mantissa(), MANT_WIDTH);
+        const bool truncated = !zero_after_digits(
+            exponent - FRACTION_LEN, precision,
+            float_bits.get_explicit_mantissa(), FRACTION_LEN);
         round = get_round_direction(last_digit, truncated, is_negative);
 
         RET_IF_RESULT_NEGATIVE(
@@ -589,11 +590,11 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
-  // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  // signed because later we use -FRACTION_LEN
+  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
-  MantissaInt mantissa = float_bits.get_explicit_mantissa();
+  StorageType mantissa = float_bits.get_explicit_mantissa();
 
   const char a = (to_conv.conv_name & 32) | 'A';
 
@@ -646,7 +647,8 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   const size_t block_width = IntegerToString<intmax_t>(digits).size();
 
-  final_exponent = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
+  final_exponent = static_cast<int>(cur_block * BLOCK_SIZE) +
+                   static_cast<int>(block_width - 1);
   int positive_exponent = final_exponent < 0 ? -final_exponent : final_exponent;
 
   size_t exponent_width = IntegerToString<intmax_t>(positive_exponent).size();
@@ -731,11 +733,11 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
       }
     }
     // If it's still not truncated and there are digits below the decimal point
-    if (!truncated && exponent - MANT_WIDTH < 0) {
+    if (!truncated && exponent - FRACTION_LEN < 0) {
       // Use the formula from %f.
-      truncated =
-          !zero_after_digits(exponent - MANT_WIDTH, precision - final_exponent,
-                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
+      truncated = !zero_after_digits(
+          exponent - FRACTION_LEN, precision - final_exponent,
+          float_bits.get_explicit_mantissa(), FRACTION_LEN);
     }
   }
   round = get_round_direction(last_digit, truncated, is_negative);
@@ -751,11 +753,11 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
-  // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  // signed because later we use -FRACTION_LEN
+  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
-  MantissaInt mantissa = float_bits.get_explicit_mantissa();
+  StorageType mantissa = float_bits.get_explicit_mantissa();
 
   // From the standard: Let P (init_precision) equal the precision if nonzero, 6
   // if the precision is omitted, or 1 if the precision is zero.
@@ -819,7 +821,8 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   size_t trailing_zeroes = 0;
   size_t trailing_nines = 0;
 
-  base_10_exp = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
+  base_10_exp = static_cast<int>(cur_block * BLOCK_SIZE) +
+                static_cast<int>(block_width - 1);
 
   // If the first block is not also the last block
   if (block_width <= exp_precision + 1) {
@@ -858,13 +861,13 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       trailing_nines = 0;
       trailing_zeroes = 0;
       BlockInt copy_of_digits = digits;
-      int cur_last_digit = copy_of_digits % 10;
+      BlockInt cur_last_digit = copy_of_digits % 10;
       // We only care if it ends in nines or zeroes.
       while (copy_of_digits > 0 &&
              (cur_last_digit == 9 || cur_last_digit == 0)) {
         // If the next digit is not the same as the previous one, then there are
         // no more contiguous trailing digits.
-        if ((copy_of_digits % 10) != cur_last_digit) {
+        if (copy_of_digits % 10 != cur_last_digit) {
           break;
         }
         if (cur_last_digit == 9) {
@@ -977,11 +980,11 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       }
     }
     // If it's still not truncated and there are digits below the decimal point
-    if (!truncated && exponent - MANT_WIDTH < 0) {
+    if (!truncated && exponent - FRACTION_LEN < 0) {
       // Use the formula from %f.
-      truncated =
-          !zero_after_digits(exponent - MANT_WIDTH, exp_precision - base_10_exp,
-                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
+      truncated = !zero_after_digits(
+          exponent - FRACTION_LEN, exp_precision - base_10_exp,
+          float_bits.get_explicit_mantissa(), FRACTION_LEN);
     }
   }
 
@@ -1117,15 +1120,15 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
 LIBC_INLINE int convert_float_decimal(Writer *writer,
                                       const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_decimal_typed<long double>(writer, to_conv,
                                                       float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw =
-        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
+    fputil::FPBits<double>::StorageType float_raw =
+        static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_decimal_typed<double>(writer, to_conv, float_bits);
@@ -1138,15 +1141,15 @@ LIBC_INLINE int convert_float_decimal(Writer *writer,
 LIBC_INLINE int convert_float_dec_exp(Writer *writer,
                                       const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_exp_typed<long double>(writer, to_conv,
                                                       float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw =
-        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
+    fputil::FPBits<double>::StorageType float_raw =
+        static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_exp_typed<double>(writer, to_conv, float_bits);
@@ -1159,15 +1162,15 @@ LIBC_INLINE int convert_float_dec_exp(Writer *writer,
 LIBC_INLINE int convert_float_dec_auto(Writer *writer,
                                        const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_auto_typed<long double>(writer, to_conv,
                                                        float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw =
-        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
+    fputil::FPBits<double>::StorageType float_raw =
+        static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_auto_typed<double>(writer, to_conv, float_bits);
