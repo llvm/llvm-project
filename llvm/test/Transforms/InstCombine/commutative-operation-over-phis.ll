@@ -37,6 +37,68 @@ end:
   ret i8 %ret
 }
 
+define i8 @fold_phi_mul_three(i1 %c, i1 %d, i8 %a, i8 %b)  {
+; CHECK-LABEL: define i8 @fold_phi_mul_three(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN1:%.*]], label [[END:%.*]]
+; CHECK:       then1:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br i1 [[D]], label [[THEN2:%.*]], label [[END]]
+; CHECK:       then2:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = mul i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  br i1 %c, label %then1, label %end
+then1:
+  call void @dummy()
+  br i1 %d, label %then2, label %end
+then2:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi i8 [%a, %entry], [%b, %then1], [%a, %then2]
+  %phi2 = phi i8 [%b, %entry], [%a, %then1], [%b, %then2]
+  %ret = mul i8 %phi1, %phi2
+  ret i8 %ret
+}
+
+define i8 @fold_phi_mul_three_notopt(i1 %c, i1 %d, i8 %a, i8 %b)  {
+; CHECK-LABEL: define i8 @fold_phi_mul_three_notopt(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN1:%.*]], label [[END:%.*]]
+; CHECK:       then1:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br i1 [[D]], label [[THEN2:%.*]], label [[END]]
+; CHECK:       then2:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ [[A]], [[ENTRY:%.*]] ], [ [[B]], [[THEN1]] ], [ [[A]], [[THEN2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[A]], [[THEN1]] ], [ [[A]], [[THEN2]] ]
+; CHECK-NEXT:    [[RET:%.*]] = mul i8 [[PHI1]], [[PHI2]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  br i1 %c, label %then1, label %end
+then1:
+  call void @dummy()
+  br i1 %d, label %then2, label %end
+then2:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi i8 [%a, %entry], [%b, %then1], [%a, %then2]
+  %phi2 = phi i8 [%b, %entry], [%a, %then1], [%a, %then2]
+  %ret = mul i8 %phi1, %phi2
+  ret i8 %ret
+}
+
 define i8 @fold_phi_mul_nsw_nuw(i1 %c, i8 %a, i8 %b)  {
 ; CHECK-LABEL: define i8 @fold_phi_mul_nsw_nuw(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {

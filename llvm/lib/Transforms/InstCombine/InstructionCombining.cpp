@@ -1098,27 +1098,37 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
 
 bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
 
-  if (LHS->getNumIncomingValues() != 2 || RHS->getNumIncomingValues() != 2)
-    return false;
-
   if (LHS->getParent() != RHS->getParent())
     return false;
 
+  if (LHS->getNumIncomingValues() != RHS->getNumIncomingValues())
+    return false;
+
+  if (LHS->getNumIncomingValues() < 2)
+    return false;
+
   BasicBlock *B0 = LHS->getIncomingBlock(0);
-  BasicBlock *B1 = LHS->getIncomingBlock(1);
-
-  bool RHSContainB0 = RHS->getBasicBlockIndex(B0) != -1;
-  bool RHSContainB1 = RHS->getBasicBlockIndex(B1) != -1;
-
-  if (!RHSContainB0 || !RHSContainB1)
+  if (RHS->getBasicBlockIndex(B0) == -1)
     return false;
 
   Value *N1 = LHS->getIncomingValueForBlock(B0);
-  Value *N2 = LHS->getIncomingValueForBlock(B1);
-  Value *N3 = RHS->getIncomingValueForBlock(B0);
-  Value *N4 = RHS->getIncomingValueForBlock(B1);
+  Value *N2 = RHS->getIncomingValueForBlock(B0);
 
-  return N1 == N4 && N2 == N3;
+  for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
+    BasicBlock *B1 = LHS->getIncomingBlock(I);
+
+    if (RHS->getBasicBlockIndex(B1) == -1)
+      return false;
+
+    Value *N3 = LHS->getIncomingValueForBlock(B1);
+    Value *N4 = RHS->getIncomingValueForBlock(B1);
+    if ((N1 == N3 && N2 == N4) || (N1 == N4 && N2 == N3))
+      continue;
+
+    return false;
+  }
+
+  return true;
 }
 
 Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
