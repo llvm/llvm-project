@@ -48,12 +48,8 @@ midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
   return __a + __half_diff;
 }
 
-template <class _TPtr>
-_LIBCPP_HIDE_FROM_ABI constexpr enable_if_t<
-    is_pointer_v<_TPtr> && is_object_v<remove_pointer_t<_TPtr>> && !is_void_v<remove_pointer_t<_TPtr>> &&
-        (sizeof(remove_pointer_t<_TPtr>) > 0),
-    _TPtr>
-midpoint(_TPtr __a, _TPtr __b) noexcept {
+template <class _Tp, enable_if_t<is_object_v<_Tp> && !is_void_v<_Tp> && (sizeof(_Tp) > 0), int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept {
   return __a + std::midpoint(ptrdiff_t(0), __b - __a);
 }
 
