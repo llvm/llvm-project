@@ -858,7 +858,7 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
 /// values 3 and 7 respectively:
 /// before:  6 9 5 4 9 2 1 0
 /// after:   6 3 5 4 7 2 1 0
-static void fixupOrderingIndices(SmallVectorImpl<unsigned> &Order) {
+static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
   const unsigned Sz = Order.size();
   SmallBitVector UnusedIndices(Sz, /*t=*/true);
   SmallBitVector MaskedIndices(Sz);
@@ -2418,7 +2418,8 @@ private:
   std::optional<TargetTransformInfo::ShuffleKind>
   isGatherShuffledSingleRegisterEntry(
       const TreeEntry *TE, ArrayRef<Value *> VL, MutableArrayRef<int> Mask,
-      SmallVectorImpl<const TreeEntry *> &Entries, unsigned Part);
+      SmallVectorImpl<const TreeEntry *> &Entries, unsigned Part,
+      bool ForOrder);
 
   /// Checks if the gathered \p VL can be represented as multi-register
   /// shuffle(s) of previous tree entries.
@@ -2432,7 +2433,7 @@ private:
   isGatherShuffledEntry(
       const TreeEntry *TE, ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
-      unsigned NumParts);
+      unsigned NumParts, bool ForOrder = false);
 
   /// \returns the scalarization cost for this list of values. Assuming that
   /// this subtree gets vectorized, we may need to extract the values from the
@@ -3756,65 +3757,169 @@ static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask) {
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
   assert(TE.State == TreeEntry::NeedToGather && "Expected gather node only.");
-  unsigned NumScalars = TE.Scalars.size();
+  // Try to find subvector extract/insert patterns and reorder only such
+  // patterns.
+  SmallVector<Value *> GatheredScalars(TE.Scalars.begin(), TE.Scalars.end());
+  Type *ScalarTy = GatheredScalars.front()->getType();
+  int NumScalars = GatheredScalars.size();
+  if (!isValidElementType(ScalarTy))
+    return std::nullopt;
+  auto *VecTy = FixedVectorType::get(ScalarTy, NumScalars);
+  int NumParts = TTI->getNumberOfParts(VecTy);
+  if (NumParts == 0 || NumParts >= NumScalars)
+    NumParts = 1;
+  SmallVector<int> ExtractMask;
+  SmallVector<int> Mask;
+  SmallVector<SmallVector<const TreeEntry *>> Entries;
+  SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> ExtractShuffles =
+      tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
+  SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles =
+      isGatherShuffledEntry(&TE, GatheredScalars, Mask, Entries, NumParts,
+                            /*ForOrder=*/true);
+  // No shuffled operands - ignore.
+  if (GatherShuffles.empty() && ExtractShuffles.empty())
+    return std::nullopt;
   OrdersType CurrentOrder(NumScalars, NumScalars);
-  SmallVector<int> Positions;
-  SmallBitVector UsedPositions(NumScalars);
-  const TreeEntry *STE = nullptr;
-  // Try to find all gathered scalars that are gets vectorized in other
-  // vectorize node. Here we can have only one single tree vector node to
-  // correctly identify order of the gathered scalars.
-  for (unsigned I = 0; I < NumScalars; ++I) {
-    Value *V = TE.Scalars[I];
-    if (!isa<LoadInst, ExtractElementInst, ExtractValueInst>(V))
-      continue;
-    if (const auto *LocalSTE = getTreeEntry(V)) {
-      if (!STE)
-        STE = LocalSTE;
-      else if (STE != LocalSTE)
-        // Take the order only from the single vector node.
-        return std::nullopt;
-      unsigned Lane =
-          std::distance(STE->Scalars.begin(), find(STE->Scalars, V));
-      if (Lane >= NumScalars)
-        return std::nullopt;
-      if (CurrentOrder[Lane] != NumScalars) {
-        if (Lane != I)
-          continue;
-        UsedPositions.reset(CurrentOrder[Lane]);
-      }
-      // The partial identity (where only some elements of the gather node are
-      // in the identity order) is good.
-      CurrentOrder[Lane] = I;
-      UsedPositions.set(I);
-    }
+  if (GatherShuffles.size() == 1 &&
+      *GatherShuffles.front() == TTI::SK_PermuteSingleSrc &&
+      Entries.front().front()->isSame(TE.Scalars)) {
+    // Exclude nodes for strided geps from analysis, better to reorder them.
+    if (!TE.UserTreeIndices.empty() &&
+        TE.UserTreeIndices.front().UserTE->State ==
+            TreeEntry::PossibleStridedVectorize &&
+        Entries.front().front()->State == TreeEntry::NeedToGather)
+      return std::nullopt;
+    // Perfect match in the graph, will reuse the previously vectorized
+    // node. Cost is 0.
+    std::iota(CurrentOrder.begin(), CurrentOrder.end(), 0);
+    return CurrentOrder;
   }
-  // Need to keep the order if we have a vector entry and at least 2 scalars or
-  // the vectorized entry has just 2 scalars.
-  if (STE && (UsedPositions.count() > 1 || STE->Scalars.size() == 2)) {
-    auto &&IsIdentityOrder = [NumScalars](ArrayRef<unsigned> CurrentOrder) {
-      for (unsigned I = 0; I < NumScalars; ++I)
-        if (CurrentOrder[I] != I && CurrentOrder[I] != NumScalars)
-          return false;
-      return true;
-    };
-    if (IsIdentityOrder(CurrentOrder))
-      return OrdersType();
-    auto *It = CurrentOrder.begin();
-    for (unsigned I = 0; I < NumScalars;) {
-      if (UsedPositions.test(I)) {
-        ++I;
-        continue;
-      }
-      if (*It == NumScalars) {
-        *It = I;
-        ++I;
-      }
-      ++It;
-    }
-    return std::move(CurrentOrder);
+  auto IsBroadcastMask = [](ArrayRef<int> Mask) {
+    int SingleElt = PoisonMaskElem;
+    return all_of(Mask, [&](int I) {
+      if (SingleElt == PoisonMaskElem && I != PoisonMaskElem)
+        SingleElt = I;
+      return I == PoisonMaskElem || I == SingleElt;
+    });
+  };
+  // Exclusive broadcast mask - ignore.
+  if ((ExtractShuffles.empty() && IsBroadcastMask(Mask) &&
+       (Entries.size() != 1 ||
+        Entries.front().front()->ReorderIndices.empty())) ||
+      (GatherShuffles.empty() && IsBroadcastMask(ExtractMask)))
+    return std::nullopt;
+  SmallBitVector ShuffledSubMasks(NumParts);
+  auto TransformMaskToOrder =
+      [&](MutableArrayRef<unsigned> CurrentOrder, ArrayRef<int> Mask,
+          int PartSz, int NumParts, function_ref<unsigned(unsigned)> GetVF) {
+        for (int I : seq<int>(0, NumParts)) {
+          if (ShuffledSubMasks.test(I))
+            continue;
+          const int VF = GetVF(I);
+          if (VF == 0)
+            continue;
+          MutableArrayRef<unsigned> Slice = CurrentOrder.slice(I * PartSz, PartSz);
+          // Shuffle of at least 2 vectors - ignore.
+          if (any_of(Slice,[&](int I) {return I != NumScalars;})) {
+            std::fill(Slice.begin(), Slice.end(), NumScalars);
+            ShuffledSubMasks.set(I);
+            continue;
+          }
+          // Try to include as much elements from the mask as possible.
+          int FirstMin = INT_MAX;
+          int SecondVecFound = false;
+          for (int K : seq<int>(0, PartSz)) {
+            int Idx = Mask[I * PartSz + K];
+            if (Idx == PoisonMaskElem) {
+              Value *V = GatheredScalars[I * PartSz + K];
+              if (isConstant(V) && !isa<PoisonValue>(V)) {
+                SecondVecFound = true;
+                break;
+              }
+              continue;
+            }
+            if (Idx < VF) {
+              if (FirstMin > Idx)
+                FirstMin = Idx;
+            } else {
+              SecondVecFound = true;
+              break;
+            }
+          }
+          FirstMin = (FirstMin / PartSz) * PartSz;
+          // Shuffle of at least 2 vectors - ignore.
+          if (SecondVecFound) {
+            std::fill(Slice.begin(), Slice.end(), NumScalars);
+            ShuffledSubMasks.set(I);
+            continue;
+          }
+          for (int K : seq<int>(0, PartSz)) {
+            int Idx = Mask[I * PartSz + K];
+            if (Idx == PoisonMaskElem)
+              continue;
+            Idx -= FirstMin;
+            if (Idx >= PartSz) {
+              SecondVecFound = true;
+              break;
+            }
+            if (CurrentOrder[I * PartSz + Idx] >
+                    static_cast<unsigned>(I * PartSz + K) &&
+                CurrentOrder[I * PartSz + Idx] !=
+                    static_cast<unsigned>(I * PartSz + Idx))
+              CurrentOrder[I * PartSz + Idx] = I * PartSz + K;
+          }
+          // Shuffle of at least 2 vectors - ignore.
+          if (SecondVecFound) {
+            std::fill(Slice.begin(), Slice.end(), NumScalars);
+            ShuffledSubMasks.set(I);
+            continue;
+          }
+        }
+      };
+  int PartSz = NumScalars / NumParts;
+  if (!ExtractShuffles.empty())
+    TransformMaskToOrder(
+        CurrentOrder, ExtractMask, PartSz, NumParts, [&](unsigned I) {
+          if (!ExtractShuffles[I])
+            return 0U;
+          unsigned VF = 0;
+          for (unsigned Idx : seq<unsigned>(0, PartSz)) {
+            int K = I * PartSz + Idx;
+            if (ExtractMask[K] == PoisonMaskElem)
+              continue;
+            if (!TE.ReuseShuffleIndices.empty())
+              K = TE.ReuseShuffleIndices[K];
+            if (!TE.ReorderIndices.empty())
+              K = std::distance(TE.ReorderIndices.begin(),
+                                find(TE.ReorderIndices, K));
+            auto *EI = dyn_cast<ExtractElementInst>(TE.Scalars[K]);
+            if (!EI)
+              continue;
+            VF = std::max(VF, cast<VectorType>(EI->getVectorOperandType())
+                                  ->getElementCount()
+                                  .getKnownMinValue());
+          }
+          return VF;
+        });
+  // Check special corner case - single shuffle of the same entry.
+  if (GatherShuffles.size() == 1 && NumParts != 1) {
+    if (ShuffledSubMasks.any())
+      return std::nullopt;
+    PartSz = NumScalars;
+    NumParts = 1;
   }
-  return std::nullopt;
+  if (!Entries.empty())
+    TransformMaskToOrder(CurrentOrder, Mask, PartSz, NumParts, [&](unsigned I) {
+      if (!GatherShuffles[I])
+        return 0U;
+      return std::max(Entries[I].front()->getVectorFactor(),
+                      Entries[I].back()->getVectorFactor());
+    });
+  int NumUndefs =
+      count_if(CurrentOrder, [&](int Idx) { return Idx == NumScalars; });
+  if (ShuffledSubMasks.all() || (NumScalars > 2 && NumUndefs >= NumScalars / 2))
+    return std::nullopt;
+  return std::move(CurrentOrder);
 }
 
 namespace {
@@ -4075,6 +4180,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
+    if (isSplat(TE.Scalars))
+      return std::nullopt;
     // Check if reuse shuffle indices can be improved by reordering.
     // For this, check that reuse mask is "clustered", i.e. each scalar values
     // is used once in each submask of size <number_of_scalars>.
@@ -4083,9 +4190,59 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     //                           0, 1, 2, 3, 3, 3, 1, 0 - not clustered, because
     //                           element 3 is used twice in the second submask.
     unsigned Sz = TE.Scalars.size();
-    if (!ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
-                                                     Sz))
+    if (TE.State == TreeEntry::NeedToGather) {
+      if (std::optional<OrdersType> CurrentOrder =
+              findReusedOrderedScalars(TE)) {
+        SmallVector<int> Mask;
+        fixupOrderingIndices(*CurrentOrder);
+        inversePermutation(*CurrentOrder, Mask);
+        ::addMask(Mask, TE.ReuseShuffleIndices);
+        OrdersType Res(TE.getVectorFactor(), TE.getVectorFactor());
+        unsigned Sz = TE.Scalars.size();
+        for (int K = 0, E = TE.getVectorFactor() / Sz; K < E; ++K) {
+          for (auto [I, Idx] : enumerate(ArrayRef(Mask).slice(K * Sz, Sz)))
+            if (Idx != PoisonMaskElem)
+              Res[Idx + K * Sz] = I + K * Sz;
+        }
+        return std::move(Res);
+      }
+    }
+    if (Sz == 2 && TE.getVectorFactor() == 4 &&
+        TTI->getNumberOfParts(FixedVectorType::get(
+            TE.Scalars.front()->getType(), 2 * TE.getVectorFactor())) == 1)
       return std::nullopt;
+    if (!ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
+                                                     Sz)) {
+      SmallVector<int> ReorderMask(Sz, PoisonMaskElem);
+      if (TE.ReorderIndices.empty())
+        std::iota(ReorderMask.begin(), ReorderMask.end(), 0);
+      else
+        inversePermutation(TE.ReorderIndices, ReorderMask);
+      ::addMask(ReorderMask, TE.ReuseShuffleIndices);
+      unsigned VF = ReorderMask.size();
+      OrdersType ResOrder(VF, VF);
+      unsigned NumParts = VF / Sz;
+      SmallBitVector UsedVals(NumParts);
+      for (unsigned I = 0; I < VF; I += Sz) {
+        int Val = PoisonMaskElem;
+        unsigned UndefCnt = 0;
+        if (any_of(ArrayRef(ReorderMask).slice(I, Sz),
+                   [&](int Idx) {
+                     if (Val == PoisonMaskElem && Idx != PoisonMaskElem)
+                       Val = Idx;
+                     if (Idx == PoisonMaskElem)
+                       ++UndefCnt;
+                     return Idx != PoisonMaskElem && Idx != Val;
+                   }) ||
+            Val >= static_cast<int>(NumParts) || UsedVals.test(Val) ||
+            UndefCnt > Sz / 2)
+          return std::nullopt;
+        UsedVals.set(Val);
+        for (unsigned K = 0; K < NumParts; ++K)
+          ResOrder[Val + Sz * K] = I + K;
+      }
+      return std::move(ResOrder);
+    }
     unsigned VF = TE.getVectorFactor();
     // Try build correct order for extractelement instructions.
     SmallVector<int> ReusedMask(TE.ReuseShuffleIndices.begin(),
@@ -4123,7 +4280,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       transform(CurrentOrder, It, [K](unsigned Pos) { return Pos + K; });
       std::advance(It, Sz);
     }
-    if (all_of(enumerate(ResOrder),
+    if (TE.State == TreeEntry::NeedToGather &&
+        all_of(enumerate(ResOrder),
                [](const auto &Data) { return Data.index() == Data.value(); }))
       return std::nullopt; // No need to reorder.
     return std::move(ResOrder);
@@ -4211,11 +4369,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       OrdersType CurrentOrder;
       bool Reuse = canReuseExtract(TE.Scalars, TE.getMainOp(), CurrentOrder,
                                    /*ResizeAllowed=*/true);
-      if (Reuse || !CurrentOrder.empty()) {
-        if (!CurrentOrder.empty())
-          fixupOrderingIndices(CurrentOrder);
+      if (Reuse || !CurrentOrder.empty())
         return std::move(CurrentOrder);
-      }
     }
     // If the gather node is <undef, v, .., poison> and
     // insertelement poison, v, 0 [+ permute]
@@ -4248,15 +4403,20 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         InstructionCost InsertIdxCost = TTI->getVectorInstrCost(
             Instruction::InsertElement, Ty, TTI::TCK_RecipThroughput, Idx,
             PoisonValue::get(Ty), *It);
-        if (InsertFirstCost + PermuteCost < InsertIdxCost)
+        if (InsertFirstCost + PermuteCost < InsertIdxCost) {
+          OrdersType Order(Sz, Sz);
+          Order[Idx] = 0;
           return std::move(Order);
+        }
       }
     }
-    if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
-      return CurrentOrder;
+    if (isSplat(TE.Scalars))
+      return std::nullopt;
     if (TE.Scalars.size() >= 4)
       if (std::optional<OrdersType> Order = findPartiallyOrderedLoads(TE))
         return Order;
+    if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
+      return CurrentOrder;
   }
   return std::nullopt;
 }
@@ -4301,6 +4461,28 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
             *End = TE.ReuseShuffleIndices.end();
        It != End; std::advance(It, Sz))
     std::iota(It, std::next(It, Sz), 0);
+}
+
+static void combineOrders(MutableArrayRef<unsigned> Order,
+                          ArrayRef<unsigned> SecondaryOrder) {
+  assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
+         "Expected same size of orders");
+  unsigned Sz = Order.size();
+  SmallBitVector UsedIndices(Sz);
+  for (unsigned Idx : seq<unsigned>(0, Sz)) {
+    if (Order[Idx] != Sz)
+      UsedIndices.set(Order[Idx]);
+  }
+  if (SecondaryOrder.empty()) {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (Order[Idx] == Sz && !UsedIndices.test(Idx))
+        Order[Idx] = Idx;
+  } else {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (SecondaryOrder[Idx] != Sz && Order[Idx] == Sz &&
+          !UsedIndices.test(SecondaryOrder[Idx]))
+        Order[Idx] = SecondaryOrder[Idx];
+  }
 }
 
 void BoUpSLP::reorderTopToBottom() {
@@ -4493,18 +4675,48 @@ void BoUpSLP::reorderTopToBottom() {
           ++It->second;
       }
     }
+    if (OrdersUses.empty())
+      continue;
+    auto IsIdentityOrder = [](ArrayRef<unsigned> Order) {
+      const unsigned Sz = Order.size();
+      for (unsigned Idx : seq<unsigned>(0, Sz))
+        if (Idx != Order[Idx] && Order[Idx] != Sz)
+          return false;
+      return true;
+    };
     // Choose the most used order.
-    ArrayRef<unsigned> BestOrder = OrdersUses.front().first;
-    unsigned Cnt = OrdersUses.front().second;
-    for (const auto &Pair : drop_begin(OrdersUses)) {
-      if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty())) {
+    unsigned IdentityCnt = 0;
+    unsigned FilledIdentityCnt = 0;
+    OrdersType IdentityOrder(VF, VF);
+    for (auto &Pair : OrdersUses) {
+      if (Pair.first.empty() || IsIdentityOrder(Pair.first)) {
+        if (!Pair.first.empty())
+          FilledIdentityCnt += Pair.second;
+        IdentityCnt += Pair.second;
+        combineOrders(IdentityOrder, Pair.first);
+      }
+    }
+    MutableArrayRef<unsigned> BestOrder = IdentityOrder;
+    unsigned Cnt = IdentityCnt;
+    for (auto &Pair : OrdersUses) {
+      // Prefer identity order. But, if filled identity found (non-empty order)
+      // with same number of uses, as the new candidate order, we can choose
+      // this candidate order.
+      if (Cnt < Pair.second ||
+          (Cnt == IdentityCnt && IdentityCnt == FilledIdentityCnt &&
+           Cnt == Pair.second && !BestOrder.empty() &&
+             IsIdentityOrder(BestOrder))) {
+        combineOrders(Pair.first, BestOrder);
         BestOrder = Pair.first;
         Cnt = Pair.second;
+      } else {
+        combineOrders(BestOrder, Pair.first);
       }
     }
     // Set order of the user node.
-    if (BestOrder.empty())
+    if (IsIdentityOrder(BestOrder))
       continue;
+    fixupOrderingIndices(BestOrder);
     SmallVector<int> Mask;
     inversePermutation(BestOrder, Mask);
     SmallVector<int> MaskOrder(BestOrder.size(), PoisonMaskElem);
@@ -4605,8 +4817,17 @@ bool BoUpSLP::canReorderOperands(
                               [UserTE, I](const EdgeInfo &EI) {
                                 return EI.UserTE == UserTE && EI.EdgeIdx == I;
                               })) {
-                     assert(TE->isSame(UserTE->getOperand(I)) &&
+#ifndef NDEBUG
+                     ValueList &VL = UserTE->getOperand(I);
+                     if (UserTE->State == TreeEntry::PossibleStridedVectorize &&
+                         !UserTE->ReorderIndices.empty()) {
+                       SmallVector<int> Mask(UserTE->ReorderIndices.begin(),
+                                             UserTE->ReorderIndices.end());
+                       reorderScalars(VL, Mask);
+                     }
+                     assert(TE->isSame(VL) &&
                             "Operand entry does not match operands.");
+#endif // NDEBUG
                      Gather = TE;
                      return true;
                    }
@@ -4622,7 +4843,7 @@ bool BoUpSLP::canReorderOperands(
 
 void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   SetVector<TreeEntry *> OrderedEntries;
-  DenseMap<const TreeEntry *, OrdersType> GathersToOrders;
+  DenseSet<const TreeEntry *> GathersToOrders;
   // Find all reorderable leaf nodes with the given VF.
   // Currently the are vectorized loads,extracts without alternate operands +
   // some gathering of extracts.
@@ -4637,7 +4858,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       if (!(TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::PossibleStridedVectorize) ||
           !TE->ReuseShuffleIndices.empty())
-        GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
+        GathersToOrders.insert(TE.get());
     }
   }
 
@@ -4655,7 +4876,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       if (!(TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::PossibleStridedVectorize ||
             (TE->State == TreeEntry::NeedToGather &&
-             GathersToOrders.count(TE))) ||
+             GathersToOrders.contains(TE))) ||
           TE->UserTreeIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
           !all_of(drop_begin(TE->UserTreeIndices),
                   [TE](const EdgeInfo &EI) {
@@ -4712,12 +4933,17 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           continue;
         if (!OpTE->ReuseShuffleIndices.empty() && !GathersToOrders.count(OpTE))
           continue;
-        const auto &Order = [OpTE, &GathersToOrders]() -> const OrdersType & {
+        const auto Order = [&]() -> const OrdersType {
           if (OpTE->State == TreeEntry::NeedToGather ||
               !OpTE->ReuseShuffleIndices.empty())
-            return GathersToOrders.find(OpTE)->second;
+            return getReorderingData(*OpTE, /*TopToBottom=*/false)
+                .value_or(OrdersType(1));
           return OpTE->ReorderIndices;
         }();
+        // The order is partially ordered, skip it in favor of fully non-ordered
+        // orders.
+        if (Order.size() == 1)
+          continue;
         unsigned NumOps = count_if(
             Data.second, [OpTE](const std::pair<unsigned, TreeEntry *> &P) {
               return P.second == OpTE;
@@ -4744,16 +4970,16 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           OrdersUses.insert(std::make_pair(Order, 0)).first->second += NumOps;
         }
         auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
-        const auto &&AllowsReordering = [IgnoreReorder, &GathersToOrders](
-                                            const TreeEntry *TE) {
+        const auto &&AllowsReordering = [&](const TreeEntry *TE) {
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
               (IgnoreReorder && TE->Idx == 0))
             return true;
           if (TE->State == TreeEntry::NeedToGather) {
-            auto It = GathersToOrders.find(TE);
-            if (It != GathersToOrders.end())
-              return !It->second.empty();
+            if (GathersToOrders.contains(TE))
+              return !getReorderingData(*TE, /*TopToBottom=*/false)
+                          .value_or(OrdersType(1))
+                          .empty();
             return true;
           }
           return false;
@@ -4809,21 +5035,49 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             It->second += Pair.second;
         }
       }
-      // Choose the best order.
-      ArrayRef<unsigned> BestOrder = OrdersUses.front().first;
-      unsigned Cnt = OrdersUses.front().second;
-      for (const auto &Pair : drop_begin(OrdersUses)) {
-        if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty())) {
-          BestOrder = Pair.first;
-          Cnt = Pair.second;
-        }
-      }
-      // Set order of the user node (reordering of operands and user nodes).
-      if (BestOrder.empty()) {
+      if (OrdersUses.empty()) {
         for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
           OrderedEntries.remove(Op.second);
         continue;
       }
+      auto IsIdentityOrder = [](ArrayRef<unsigned> Order) {
+        const unsigned Sz = Order.size();
+        for (unsigned Idx : seq<unsigned>(0, Sz))
+          if (Idx != Order[Idx] && Order[Idx] != Sz)
+            return false;
+        return true;
+      };
+      // Choose the most used order.
+      unsigned IdentityCnt = 0;
+      unsigned VF = Data.second.front().second->getVectorFactor();
+      OrdersType IdentityOrder(VF, VF);
+      for (auto &Pair : OrdersUses) {
+        if (Pair.first.empty() || IsIdentityOrder(Pair.first)) {
+          IdentityCnt += Pair.second;
+          combineOrders(IdentityOrder, Pair.first);
+        }
+      }
+      MutableArrayRef<unsigned> BestOrder = IdentityOrder;
+      unsigned Cnt = IdentityCnt;
+      for (auto &Pair : OrdersUses) {
+        // Prefer identity order. But, if filled identity found (non-empty
+        // order) with same number of uses, as the new candidate order, we can
+        // choose this candidate order.
+        if (Cnt < Pair.second) {
+          combineOrders(Pair.first, BestOrder);
+          BestOrder = Pair.first;
+          Cnt = Pair.second;
+        } else {
+          combineOrders(BestOrder, Pair.first);
+        }
+      }
+      // Set order of the user node.
+      if (IsIdentityOrder(BestOrder)) {
+        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
+          OrderedEntries.remove(Op.second);
+        continue;
+      }
+      fixupOrderingIndices(BestOrder);
       // Erase operands from OrderedEntries list and adjust their orders.
       VisitedOps.clear();
       SmallVector<int> Mask;
@@ -7303,6 +7557,20 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       }
       V1 = Constant::getNullValue(
           FixedVectorType::get(E->Scalars.front()->getType(), CommonVF));
+      // Not identity/broadcast? Try to see if the original vector is better.
+      if (!E->ReorderIndices.empty() && CommonVF == E->ReorderIndices.size() &&
+          CommonVF == CommonMask.size() &&
+          any_of(enumerate(CommonMask),
+                 [](const auto &&P) {
+                   return P.value() != PoisonMaskElem &&
+                          static_cast<unsigned>(P.value()) != P.index();
+                 }) &&
+          any_of(CommonMask,
+                 [](int Idx) { return Idx != PoisonMaskElem && Idx != 0; })) {
+        SmallVector<int> ReorderMask;
+        inversePermutation(E->ReorderIndices, ReorderMask);
+        ::addMask(CommonMask, ReorderMask);
+      }
     } else if (V1 && P2.isNull()) {
       // Shuffle single vector.
       CommonVF = cast<FixedVectorType>(V1->getType())->getNumElements();
@@ -9318,7 +9586,7 @@ BoUpSLP::tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
 std::optional<TargetTransformInfo::ShuffleKind>
 BoUpSLP::isGatherShuffledSingleRegisterEntry(
     const TreeEntry *TE, ArrayRef<Value *> VL, MutableArrayRef<int> Mask,
-    SmallVectorImpl<const TreeEntry *> &Entries, unsigned Part) {
+    SmallVectorImpl<const TreeEntry *> &Entries, unsigned Part, bool ForOrder) {
   Entries.clear();
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
@@ -9333,6 +9601,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   } else {
     TEInsertBlock = TEInsertPt->getParent();
   }
+  if (!DT->isReachableFromEntry(TEInsertBlock))
+    return std::nullopt;
   auto *NodeUI = DT->getNode(TEInsertBlock);
   assert(NodeUI && "Should only process reachable instructions");
   SmallPtrSet<Value *, 4> GatheredScalars(VL.begin(), VL.end());
@@ -9415,6 +9685,21 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       VToTEs.insert(TEPtr);
     }
     if (const TreeEntry *VTE = getTreeEntry(V)) {
+      if (ForOrder) {
+        if (VTE->State != TreeEntry::Vectorize) {
+          auto It = MultiNodeScalars.find(V);
+          if (It == MultiNodeScalars.end())
+            continue;
+          VTE = *It->getSecond().begin();
+          // Iterate through all vectorized nodes.
+          auto *MIt = find_if(It->getSecond(), [](const TreeEntry *MTE) {
+            return MTE->State == TreeEntry::Vectorize;
+          });
+          if (MIt == It->getSecond().end())
+            continue;
+          VTE = *MIt;
+        }
+      }
       Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
       if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
         continue;
@@ -9648,8 +9933,12 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   // scalar in the list.
   for (const std::pair<unsigned, int> &Pair : EntryLanes) {
     unsigned Idx = Part * VL.size() + Pair.second;
-    Mask[Idx] = Pair.first * VF +
-                Entries[Pair.first]->findLaneForValue(VL[Pair.second]);
+    Mask[Idx] =
+        Pair.first * VF +
+        (ForOrder ? std::distance(
+                        Entries[Pair.first]->Scalars.begin(),
+                        find(Entries[Pair.first]->Scalars, VL[Pair.second]))
+                  : Entries[Pair.first]->findLaneForValue(VL[Pair.second]));
     IsIdentity &= Mask[Idx] == Pair.second;
   }
   switch (Entries.size()) {
@@ -9675,7 +9964,7 @@ SmallVector<std::optional<TargetTransformInfo::ShuffleKind>>
 BoUpSLP::isGatherShuffledEntry(
     const TreeEntry *TE, ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
-    unsigned NumParts) {
+    unsigned NumParts, bool ForOrder) {
   assert(NumParts > 0 && NumParts < VL.size() &&
          "Expected positive number of registers.");
   Entries.clear();
@@ -9693,7 +9982,8 @@ BoUpSLP::isGatherShuffledEntry(
     ArrayRef<Value *> SubVL = VL.slice(Part * SliceSize, SliceSize);
     SmallVectorImpl<const TreeEntry *> &SubEntries = Entries.emplace_back();
     std::optional<TTI::ShuffleKind> SubRes =
-        isGatherShuffledSingleRegisterEntry(TE, SubVL, Mask, SubEntries, Part);
+        isGatherShuffledSingleRegisterEntry(TE, SubVL, Mask, SubEntries, Part,
+                                            ForOrder);
     if (!SubRes)
       SubEntries.clear();
     Res.push_back(SubRes);
