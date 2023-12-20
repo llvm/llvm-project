@@ -344,44 +344,46 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     }
   }
 
-  RankedTensorType expandSourceType = padOp.getResult().getType().cast<RankedTensorType>();
-  RankedTensorType expandDestType = RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
-
-  // Dynamic dim is factorable only if the expanded version has at most one dynamic dim
-  bool isFactorable = true;
-  for (const auto &[i, rIndcs] : llvm::enumerate(packingMetadata.reassociations)) {
-    if (!expandSourceType.isDynamicDim(i))
-      continue;
-    int64_t numDyn = 0;
-    for (auto j : rIndcs) {
-      if ((stripMinedShape[j] == ShapedType::kDynamic) && (++numDyn > 1)) {
-        isFactorable = false;
-        break;
-      }
-    }
-  }
-
   // 4. Expand from the padded result to the stripMinedShape.
+  // Check if any dims are not factorable.  A dim is factorable if the expansion
+  // requires at most dynamnic dim
+  RankedTensorType expandDestType = RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   SmallVector<int64_t> transpPerm =
       invertPermutationVector(packedToStripMinedShapePerm);
   Operation *reshapeOp;
-  if (!isFactorable) {
+  if (llvm::any_of(packingMetadata.reassociations,
+                   [&](const auto &rAssoc) -> bool {
+                     return llvm::count_if(rAssoc, [&](int64_t r) {
+                              return stripMinedShape[r] == ShapedType::kDynamic;
+                            }) > 1;
+                   })) {
     SmallVector<OpFoldResult> sizes =
         tensor::getMixedSizes(rewriter, loc, packOp.getDest());
     applyPermutationToVector(sizes, transpPerm);
-    Value shapeInitTensor =
-        rewriter.create<tensor::EmptyOp>(loc, RankedTensorType::get({expandDestType.getRank()}, rewriter.getIndexType()), ValueRange{}); 
+    // Create a `tensor` of `index` types for the `shape` operand of `tensor.reshape`
+    Value shapeInitTensor = rewriter.create<tensor::EmptyOp>(
+        loc,
+        RankedTensorType::get({expandDestType.getRank()},
+                              rewriter.getIndexType()),
+        ValueRange{});
     Value shapeTensor = shapeInitTensor;
     for (const auto &[i, size] : llvm::enumerate(sizes)) {
-      Value dim = (expandDestType.isDynamicDim(i)) ? cast<Value>(size) : rewriter.create<arith::ConstantIndexOp>(loc, getConstantIntValue(size).value()).getResult();
-      shapeTensor = rewriter.create<tensor::InsertOp>(loc, dim, shapeTensor, SmallVector<Value>({rewriter.create<arith::ConstantIndexOp>(loc, i).getResult()}));
+      Value dim = (expandDestType.isDynamicDim(i))
+                      ? cast<Value>(size)
+                      : rewriter
+                            .create<arith::ConstantIndexOp>(
+                                loc, getConstantIntValue(size).value())
+                            .getResult();
+      shapeTensor = rewriter.create<tensor::InsertOp>(
+          loc, dim, shapeTensor,
+          SmallVector<Value>(
+              {rewriter.create<arith::ConstantIndexOp>(loc, i).getResult()}));
     }
-    reshapeOp = rewriter.create<tensor::ReshapeOp>(loc, expandDestType, padOp.getResult(), shapeTensor);
+    reshapeOp = rewriter.create<tensor::ReshapeOp>(
+        loc, expandDestType, padOp.getResult(), shapeTensor);
   } else {
     reshapeOp = rewriter.create<tensor::ExpandShapeOp>(
-        loc,
-        expandDestType,
-        padOp.getResult(), packingMetadata.reassociations);
+        loc, expandDestType, padOp.getResult(), packingMetadata.reassociations);
   }
 
   // 5. Transpose stripMinedShape to packedShape.
