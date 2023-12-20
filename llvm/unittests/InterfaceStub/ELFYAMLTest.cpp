@@ -68,7 +68,9 @@ TEST(ElfYamlTextAPI, YAMLReadsInvalidSymbols) {
       "Weak: true, Warning: \'All fields populated!\' }\n"
       "...\n";
   Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
-  ASSERT_THAT_ERROR(StubOrErr.takeError(), Failed());
+  ASSERT_THAT_ERROR(
+      StubOrErr.takeError(),
+      FailedWithMessage("IFS symbol type for symbol 'not' is unsupported"));
 }
 
 TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
