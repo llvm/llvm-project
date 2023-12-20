@@ -20,7 +20,7 @@ using namespace presburger;
 // by a constant.
 // Two QPs of 3 parameters each were generated randomly
 // and their sum, difference, and product computed by hand.
-TEST(QuasiPolynomialTest, arith) {
+TEST(QuasiPolynomialTest, arithmetic) {
   QuasiPolynomial qp1(
       3, {Fraction(1, 3), Fraction(1, 1), Fraction(1, 2)},
       {{{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
