@@ -352,7 +352,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   Operation *reshapeOp;
   // Check if any dims are not factorable and thus need a `tensor.reshape`
   // instead of a `tensor.expand_shape` op. A dim is factorable if the expansion
-  // requires at most dynamnic dim
+  // requires at most one dynamnic dim
   if (llvm::any_of(packingMetadata.reassociations,
                    [&](const auto &rAssoc) -> bool {
                      return llvm::count_if(rAssoc, [&](int64_t r) {
