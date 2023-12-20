@@ -134,7 +134,7 @@ private:
   void onWorkspaceSymbol(const WorkspaceSymbolParams &,
                          Callback<std::vector<SymbolInformation>>);
   void onPrepareRename(const TextDocumentPositionParams &,
-                       Callback<std::optional<Range>>);
+                       Callback<PrepareRenameResult>);
   void onRename(const RenameParams &, Callback<WorkspaceEdit>);
   void onHover(const TextDocumentPositionParams &,
                Callback<std::optional<Hover>>);

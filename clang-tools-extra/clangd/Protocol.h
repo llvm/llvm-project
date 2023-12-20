@@ -1004,6 +1004,17 @@ struct CodeActionParams {
 };
 bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
+struct PrepareRenameResult {
+  /// The range of the string to rename.
+  Range range;
+  /// A placeholder text of the string content to be renamed.
+  ///
+  /// This is usueful to populate the rename field with an Objective-C selector
+  /// name (eg. `performAction:with:`) when renaming Objective-C methods.
+  std::string placeholder;
+};
+llvm::json::Value toJSON(const PrepareRenameResult &WE);
+
 /// The edit should either provide changes or documentChanges. If the client
 /// can handle versioned document edits and if documentChanges are present,
 /// the latter are preferred over changes.

@@ -36,6 +36,7 @@ class SymbolName {
 public:
   /// Create a new \c SymbolName with the specified pieces.
   explicit SymbolName(ArrayRef<StringRef> NamePieces);
+  explicit SymbolName(ArrayRef<std::string> NamePieces);
 
   explicit SymbolName(const DeclarationName &Name);
 
