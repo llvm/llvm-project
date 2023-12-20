@@ -671,12 +671,10 @@ spirv::LogicalEqualOp::fold(spirv::LogicalEqualOp::FoldAdaptor adaptor) {
   // x == x -> true
   if (getOperand1() == getOperand2()) {
     auto trueAttr = BoolAttr::get(getContext(), true);
-    if (isa<IntegerType>(getType())) {
+    if (isa<IntegerType>(getType()))
       return trueAttr;
-    }
-    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
       return SplatElementsAttr::get(vecTy, trueAttr);
-    }
   }
 
   return constFoldBinaryOp<IntegerAttr>(
@@ -700,12 +698,10 @@ OpFoldResult spirv::LogicalNotEqualOp::fold(FoldAdaptor adaptor) {
   // x == x -> false
   if (getOperand1() == getOperand2()) {
     auto falseAttr = BoolAttr::get(getContext(), false);
-    if (isa<IntegerType>(getType())) {
+    if (isa<IntegerType>(getType()))
       return falseAttr;
-    }
-    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
       return SplatElementsAttr::get(vecTy, falseAttr);
-    }
   }
 
   return constFoldBinaryOp<IntegerAttr>(
@@ -754,12 +750,10 @@ OpFoldResult spirv::IEqualOp::fold(spirv::IEqualOp::FoldAdaptor adaptor) {
   // x == x -> true
   if (getOperand1() == getOperand2()) {
     auto trueAttr = BoolAttr::get(getContext(), true);
-    if (isa<IntegerType>(getType())) {
+    if (isa<IntegerType>(getType()))
       return trueAttr;
-    }
-    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
       return SplatElementsAttr::get(vecTy, trueAttr);
-    }
   }
 
   return constFoldBinaryOp<IntegerAttr>(
@@ -776,12 +770,10 @@ OpFoldResult spirv::INotEqualOp::fold(spirv::INotEqualOp::FoldAdaptor adaptor) {
   // x == x -> false
   if (getOperand1() == getOperand2()) {
     auto falseAttr = BoolAttr::get(getContext(), false);
-    if (isa<IntegerType>(getType())) {
+    if (isa<IntegerType>(getType()))
       return falseAttr;
-    }
-    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
       return SplatElementsAttr::get(vecTy, falseAttr);
-    }
   }
 
   return constFoldBinaryOp<IntegerAttr>(
