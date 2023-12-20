@@ -1,4 +1,4 @@
-//===- FunctionAttr.cpp -------------------------------------------------===//
+//===- FunctionAttr.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This is a generic pass for adding attributes to functions.
-//===----------------------------------------------------------------------==
+//===----------------------------------------------------------------------===//
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 

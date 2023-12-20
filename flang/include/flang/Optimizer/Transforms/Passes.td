@@ -350,7 +350,7 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
 }
 
 def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
-  let summary = "This is a generic pass that adds function attributes that are expected at the LLVM IR level";
+  let summary = "This is a generic pass that adds function attributes expected at LLVM IR level";
   let description = [{ This feature introduces a general attribute aimed at customizing function characteristics. 
      Options include:
      Add "frame-pointer" attribute to functions: Set an attribute for the frame 
@@ -362,7 +362,8 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
   }];
   let options = [
     Option<"framePointerKind", "frame-pointer",
-           "mlir::LLVM::framePointerKind::FramePointerKind", /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+           "mlir::LLVM::framePointerKind::FramePointerKind", 
+           /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
            "frame pointer">,
   ];
   let constructor = "::fir::createFunctionAttrPass()";
