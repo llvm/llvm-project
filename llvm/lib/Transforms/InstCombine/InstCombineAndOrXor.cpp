@@ -2202,9 +2202,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
-  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
-    return replaceInstUsesWith(I, V);
-
   Value *X, *Y;
   if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
       match(Op1, m_One())) {
@@ -3381,9 +3378,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Concat = matchOrConcat(I, Builder))
     return replaceInstUsesWith(I, Concat);
 
-  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
-    return replaceInstUsesWith(I, V);
-
   if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
@@ -4466,14 +4460,11 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
-    return replaceInstUsesWith(I, V);
-
   // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
   // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
   // calls in there are unnecessary as SimplifyDemandedInstructionBits should
   // have already taken care of those cases.
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *M;
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value()))))

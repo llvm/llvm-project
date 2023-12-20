@@ -1573,6 +1573,11 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
       BO.getParent() != Phi1->getParent())
     return nullptr;
 
+  if (BO.isCommutative()) {
+    if (Value *V = SimplifyPhiCommutativeBinaryOp(BO, Phi0, Phi1))
+      return replaceInstUsesWith(BO, V);
+  }
+
   // Fold if there is at least one specific constant value in phi0 or phi1's
   // incoming values that comes from the same block and this specific constant
   // value can be used to do optimization for specific binary operator.
