@@ -100,7 +100,7 @@ module attributes {gpu.container_module} {
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} uniform : (f32) -> f32
       %sum_subgroup1 = gpu.subgroup_reduce add %one uniform : (f32) -> f32
 
-      // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (vector<4xf32>) -> vector<4xf32
+      // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (vector<4xf32>) -> vector<4xf32>
       %sum_subgroup2 = gpu.subgroup_reduce add %vec : (vector<4xf32>) -> vector<4xf32>
 
       %width = arith.constant 7 : i32
