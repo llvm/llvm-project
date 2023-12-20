@@ -371,12 +371,15 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
         ValueRange{});
     Value shapeTensor = shapeInitTensor;
     for (const auto &[i, size] : llvm::enumerate(sizes)) {
-      Value dim = (expandDestType.isDynamicDim(i))
-                      ? cast<Value>(size)
-                      : rewriter
-                            .create<arith::ConstantIndexOp>(
-                                loc, getConstantIntValue(size).value())
-                            .getResult();
+      auto maybeConstInt = getConstantIntValue(size);
+      assert(maybeConstInt.has_value() ||
+             expandDestType.isDynamicDim(i) && "expected dynamic dim");
+      Value dim =
+          (maybeConstInt.has_value())
+              ? rewriter
+                    .create<arith::ConstantIndexOp>(loc, maybeConstInt.value())
+                    .getResult()
+              : cast<Value>(size);
       shapeTensor = rewriter.create<tensor::InsertOp>(
           loc, dim, shapeTensor,
           SmallVector<Value>(
