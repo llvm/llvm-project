@@ -1,4 +1,4 @@
-//===- QuasiPolynomial.h - Quasipolynomial Class ----------------*- C++ -*-===//
+//===- QuasiPolynomial.h - QuasiPolynomial Class ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,10 @@
 //
 // Definition of the QuasiPolynomial class for Barvinok's algorithm,
 // which represents a single-valued function on a set of parameters.
+// It is an expression of the form
+// f(x) = \sum_i c_i * \prod_j ⌊g_{ij}(x)⌋
+// where c_i \in Q and
+// g_{ij} : Q^d -> Q are affine functionals over d parameters.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,10 +24,8 @@
 namespace mlir {
 namespace presburger {
 
-// A class to describe the quasi-polynomials obtained by
-// substituting the unit vector in the type of generating
-// function described above.
-// Consists of a set of terms.
+// A class to describe quasi-polynomials.
+// A quasipolynomial consists of a set of terms.
 // The ith term is a constant `coefficients[i]`, multiplied
 // by the product of a set of affine functions on n parameters.
 // Represents functions f : Q^n -> Q of the form

@@ -72,6 +72,8 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
       EXPECT_EQ(a(row, col), b(row, col));
 }
 
+// Check the coefficients (in order) of two quasipolynomials.
+// Note that this is not a true equality check.
 inline void EXPECT_EQ_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
   EXPECT_EQ(a.getNumParams(), b.getNumParams());
 

@@ -1,4 +1,4 @@
-//===- GeneratingFunction.h - Rational Polynomials over Q^d -----*- C++ -*-===//
+//===- GeneratingFunction.h - Generating Functions over Q^d -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,17 +35,17 @@ using Point = SmallVector<Fraction>;
 // * a sign, ±1, stored in `signs[i]`
 // * a numerator, of the form x^{n},
 //      where n, stored in `numerators[i]`,
-//      is a parametric point (a vertex).
+//      is a parametric point.
 // * a denominator, of the form (1 - x^{d1})...(1 - x^{dn}),
 //      where each dj, stored in `denominators[i][j]`,
-//      is a vector (a generator).
+//      is a vector.
 //
-// Represents functions f : Q^n -> Q of the form
+// Represents functions f_p : Q^n -> Q of the form
 //
-// f(x) = \sum_i s_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
+// f_p(x) = \sum_i s_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
 //
 // where s_i is ±1,
-// n_i \in (Q^d -> Q)^n is an n-vector of affine functions on d parameters, and
+// n_i \in Q^d -> Q^n is an n-vector of affine functions on d parameters, and
 // g_{ij} \in Q^n are vectors.
 class GeneratingFunction {
 public:
@@ -59,8 +59,6 @@ public:
              "parameters!");
   }
 
-  // Find the number of parameters involved in the function
-  // from the dimensionality of the affine functions.
   unsigned getNumParams() { return numParam; }
 
   SmallVector<int> getSigns() { return signs; }
