@@ -152,7 +152,6 @@ UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
                       "Uniformity Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
                     "Uniformity Analysis", true, true)
@@ -160,18 +159,27 @@ INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
 void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<CycleInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
 }
 
 bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
-  auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
   auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &targetTransformInfo =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   m_function = &F;
-  m_uniformityInfo = UniformityInfo{domTree, cycleInfo, &targetTransformInfo};
+
+  // FIXME: CycleInfo is a transitive dependency for UniformityInfo, and we
+  // would have liked to say that CycleInfo is also preserved whenever
+  // UniformityInfo is preserved. But some passes like
+  // AMDGPUUnifyDivergentExitNodes do not update cycle membership and lists of
+  // cycle exits, since that facility is not available. The end result is that
+  // we cannot declare CycleInfo as a transitive depedency for UniformityInfo.
+  // Instead we recompute CycleInfo on demand. This is OK because it is rarely
+  // needed, and only affects the old pass manager.
+  m_cycleInfo.clear();
+  m_cycleInfo.compute(F);
+  m_uniformityInfo = UniformityInfo{domTree, m_cycleInfo, &targetTransformInfo};
 
   // Skip computation if we can assume everything is uniform.
   if (targetTransformInfo.hasBranchDivergence(m_function))

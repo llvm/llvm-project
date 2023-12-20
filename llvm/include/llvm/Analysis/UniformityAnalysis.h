@@ -52,6 +52,7 @@ public:
 /// Legacy analysis pass which computes a \ref CycleInfo.
 class UniformityInfoWrapperPass : public FunctionPass {
   Function *m_function = nullptr;
+  CycleInfo m_cycleInfo;
   UniformityInfo m_uniformityInfo;
 
 public:
