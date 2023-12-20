@@ -995,7 +995,12 @@ void CodeGenModule::Release() {
                               uint32_t(CLANG_VERSION_MINOR));
     getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
-    std::string ProductId = getClangVendor() + "clang";
+    std::string ProductId;
+#ifdef CLANG_VENDOR
+    ProductId = #CLANG_VENDOR;
+#else
+    ProductId = "clang";
+#endif
     getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
                               llvm::MDString::get(VMContext, ProductId));
 
