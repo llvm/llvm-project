@@ -2802,8 +2802,10 @@ void ARMFrameLowering::processFunctionBeforeFrameFinalized(
                    Term.getOpcode() == ARM::t2LDMIA_RET ||
                    Term.getOpcode() == ARM::tPOP_RET;
           });
-        }))
+        })) {
       Info.setRestored(false);
+      break;
+    }
   }
 }
 
