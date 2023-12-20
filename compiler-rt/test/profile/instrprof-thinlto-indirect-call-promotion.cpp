@@ -13,12 +13,7 @@
 // - Generate ThinLTO summary file with LLVM bitcodes, and run `function-import` pass.
 // - Run `pgo-icall-prom` pass for the IR module which needs to import callees.
 
-
 // REQUIRES: windows || linux || darwin
-
-// The test failed on ppc when building the instrumented binary.
-// ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
-// UNSUPPORTED: ppc
 
 // This test and IR test llvm/test/Transforms/PGOProfile/thinlto_indirect_call_promotion.ll
 // are complementary to each other; a compiler-rt test has better test coverage
