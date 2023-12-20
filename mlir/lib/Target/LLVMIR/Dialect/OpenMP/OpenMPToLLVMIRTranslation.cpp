@@ -656,8 +656,26 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
                         moduleTranslation, bodyGenStatus);
   };
   auto finiCB = [&](InsertPointTy codeGenIP) {};
+
+  // Handle copyprivate
+  Operation::operand_range cpVars = singleOp.getCopyprivateVars();
+  std::optional<ArrayAttr> cpFuncs = singleOp.getCopyprivateFuncs();
+  llvm::SmallVector<llvm::Value *> llvmCPVars;
+  llvm::SmallVector<llvm::Function *> llvmCPFuncs;
+  for (size_t i = 0, e = cpVars.size(); i < e; ++i) {
+    llvmCPVars.push_back(moduleTranslation.lookupValue(cpVars[i]));
+    auto llvmFuncOp = SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(
+        singleOp, cast<SymbolRefAttr>((*cpFuncs)[i]));
+    llvmCPFuncs.push_back(
+        moduleTranslation.lookupFunction(llvmFuncOp.getName()));
+  }
+  llvm::Value *didIt = nullptr;
+  if (!llvmCPVars.empty())
+    didIt = builder.CreateAlloca(llvm::Type::getInt32Ty(builder.getContext()));
+
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSingle(
-      ompLoc, bodyCB, finiCB, singleOp.getNowait(), /*DidIt=*/nullptr));
+      ompLoc, bodyCB, finiCB, singleOp.getNowait(), didIt, llvmCPVars,
+      llvmCPFuncs));
   return bodyGenStatus;
 }
 

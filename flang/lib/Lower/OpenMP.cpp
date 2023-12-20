@@ -592,6 +592,10 @@ public:
   processAllocate(llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
                   llvm::SmallVectorImpl<mlir::Value> &allocateOperands) const;
   bool processCopyin() const;
+  bool processCopyPrivate(
+      mlir::Location currentLocation,
+      llvm::SmallVectorImpl<mlir::Value> &copyPrivateVars,
+      llvm::SmallVectorImpl<mlir::Attribute> &copyPrivateFuncs) const;
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
@@ -1159,6 +1163,156 @@ public:
     }
   }
 };
+
+/// Class that extracts information from the specified type.
+class TypeInfo {
+public:
+  TypeInfo(mlir::Location loc, mlir::Type ty) : loc(loc) {
+    name = typeScan(ty);
+  }
+
+  // Returns a textual representation of the type, with characters that are
+  // valid in identifiers.
+  const std::string &getName() const { return name; }
+
+  // Returns the length of character types.
+  std::optional<fir::CharacterType::LenType> getCharLength() const {
+    return charLen;
+  }
+
+  // Returns the shape of array types.
+  const llvm::SmallVector<int64_t> &getShape() const { return shape; }
+
+  // Is the type inside a box?
+  bool isBox() const { return inBox; }
+
+private:
+  // Scan type and return an unique name for it.
+  std::string typeScan(mlir::Type type);
+
+  mlir::Location loc;
+  std::string name;
+  std::optional<fir::CharacterType::LenType> charLen;
+  llvm::SmallVector<int64_t> shape;
+  bool inBox = false;
+};
+
+std::string TypeInfo::typeScan(mlir::Type ty) {
+  std::ostringstream ss;
+
+  auto unexpectedType = [&] {
+    std::string errmsg;
+    llvm::raw_string_ostream rss(errmsg);
+    rss << "Unexpected type: " << ty;
+    fir::emitFatalError(loc, errmsg);
+  };
+
+  if (auto aty = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    // array -> A<rank>(_<extent>)+_<eleTy>
+    assert(shape.empty() && !aty.getShape().empty());
+    shape = llvm::SmallVector<int64_t>(aty.getShape());
+    ss << "A" << aty.getShape().size();
+    for (auto extent : aty.getShape()) {
+      assert(extent > 0 ||
+             extent == aty.getUnknownExtent() && "Unexpected array extent");
+      if (extent == aty.getUnknownExtent())
+        ss << "_u";
+      else
+        ss << "_" << extent;
+    }
+    ss << "_" << typeScan(aty.getEleTy());
+  } else if (auto dty = mlir::dyn_cast<fir::RecordType>(ty)) {
+    ss << "D" << dty.getName().str();
+  } else if (auto bty = mlir::dyn_cast<fir::BoxType>(ty)) {
+    inBox = true;
+    // allocatable (box<heap<...>>)
+    if (auto hty = mlir::dyn_cast<fir::HeapType>(bty.getEleTy()))
+      ss << "H" << typeScan(hty.getEleTy());
+    // pointer (box<ptr<...>>)
+    else if (auto pty = mlir::dyn_cast<fir::PointerType>(bty.getEleTy()))
+      ss << "P" << typeScan(pty.getEleTy());
+    else
+      unexpectedType();
+  } else if (auto sty = mlir::dyn_cast<fir::CharacterType>(ty)) {
+    // character -> s<kind>l<len>
+    fir::CharacterType::LenType len = sty.getLen();
+    assert(len > 0 || len == fir::CharacterType::unknownLen() &&
+                          "Unexpected character length");
+    charLen = len;
+    ss << "s" << sty.getFKind() << "l";
+    if (len == fir::CharacterType::unknownLen())
+      ss << "u";
+    else
+      ss << len;
+  } else if (auto cty = mlir::dyn_cast<fir::ComplexType>(ty)) {
+    ss << "c" << cty.getFKind();
+  } else if (auto lty = mlir::dyn_cast<fir::LogicalType>(ty)) {
+    ss << "l" << lty.getFKind();
+  } else if (ty.isIntOrIndexOrFloat()) {
+    if (ty.isIntOrIndex())
+      ss << "i";
+    else
+      ss << "f";
+    ss << ty.getIntOrFloatBitWidth();
+  } else {
+    unexpectedType();
+  }
+  return ss.str();
+}
+
+// Create a function that performs a copy between two variables, compatible
+// with their types and attributes.
+static mlir::func::FuncOp
+createCopyFunc(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+               mlir::Type varType, fir::FortranVariableFlagsEnum varAttrs) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::ModuleOp module = builder.getModule();
+  TypeInfo typeInfo(loc,
+                    mlir::cast<fir::ReferenceType>(varType).getElementType());
+  std::string copyFuncName = std::string("_copy_") + typeInfo.getName();
+
+  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+    return decl;
+
+  // create function
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::OpBuilder modBuilder(module.getBodyRegion());
+  llvm::SmallVector<mlir::Type> argsTy = {varType, varType};
+  auto funcType = mlir::FunctionType::get(builder.getContext(), argsTy, {});
+  mlir::func::FuncOp funcOp =
+      modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
+  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
+                      {loc, loc});
+  builder.setInsertionPointToStart(&funcOp.getRegion().back());
+  // generate body
+  fir::FortranVariableFlagsAttr attrs;
+  if (varAttrs != fir::FortranVariableFlagsEnum::None)
+    attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(), varAttrs);
+  llvm::SmallVector<mlir::Value> typeparams;
+  if (typeInfo.getCharLength().has_value()) {
+    mlir::Value charLen = builder.createIntegerConstant(
+        loc, builder.getCharacterLengthType(), *typeInfo.getCharLength());
+    typeparams.push_back(charLen);
+  }
+  mlir::Value shape;
+  if (!typeInfo.isBox() && !typeInfo.getShape().empty()) {
+    llvm::SmallVector<mlir::Value> extents;
+    for (auto extent : typeInfo.getShape())
+      extents.push_back(
+          builder.createIntegerConstant(loc, builder.getIndexType(), extent));
+    shape = builder.create<fir::ShapeOp>(loc, extents);
+  }
+  auto declDst = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(0),
+                                                  copyFuncName + "_dst", shape,
+                                                  typeparams, attrs);
+  auto declSrc = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(1),
+                                                  copyFuncName + "_src", shape,
+                                                  typeparams, attrs);
+  converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
+  builder.create<mlir::func::ReturnOp>(loc);
+  return funcOp;
+}
 
 static mlir::omp::ScheduleModifier
 translateScheduleModifier(const Fortran::parser::OmpScheduleModifierType &m) {
@@ -1738,6 +1892,46 @@ bool ClauseProcessor::processCopyin() const {
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);
   return hasCopyin;
+}
+
+bool ClauseProcessor::processCopyPrivate(
+    mlir::Location currentLocation,
+    llvm::SmallVectorImpl<mlir::Value> &copyPrivateVars,
+    llvm::SmallVectorImpl<mlir::Attribute> &copyPrivateFuncs) const {
+  auto addCopyPrivateVar = [&](Fortran::semantics::Symbol *sym) {
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>();
+    if (!declOp)
+      fir::emitFatalError(currentLocation,
+                          "COPYPRIVATE is supported only in HLFIR mode");
+    symVal = declOp.getBase();
+    fir::FortranVariableFlagsEnum attrs = fir::FortranVariableFlagsEnum::None;
+    if (declOp.getFortranAttrs().has_value())
+      attrs = *declOp.getFortranAttrs();
+    copyPrivateVars.push_back(symVal);
+    mlir::func::FuncOp funcOp =
+        createCopyFunc(currentLocation, converter, symVal.getType(), attrs);
+    copyPrivateFuncs.push_back(mlir::SymbolRefAttr::get(funcOp));
+  };
+
+  bool hasCopyPrivate = findRepeatableClause<ClauseTy::Copyprivate>(
+      [&](const ClauseTy::Copyprivate *copyPrivateClause,
+          const Fortran::parser::CharBlock &) {
+        const Fortran::parser::OmpObjectList &ompObjectList =
+            copyPrivateClause->v;
+        for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
+          Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
+          if (const auto *commonDetails =
+                  sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+            for (const auto &mem : commonDetails->objects())
+              addCopyPrivateVar(&*mem);
+            break;
+          }
+          addCopyPrivateVar(sym);
+        }
+      });
+
+  return hasCopyPrivate;
 }
 
 bool ClauseProcessor::processDepend(
@@ -2481,19 +2675,26 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
             const Fortran::parser::OmpClauseList &beginClauseList,
             const Fortran::parser::OmpClauseList &endClauseList) {
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
+  llvm::SmallVector<mlir::Value> copyPrivateVars;
+  llvm::SmallVector<mlir::Attribute> copyPrivateFuncs;
   mlir::UnitAttr nowaitAttr;
 
   ClauseProcessor cp(converter, beginClauseList);
   cp.processAllocate(allocatorOperands, allocateOperands);
-  cp.processTODO<Fortran::parser::OmpClause::Copyprivate>(
-      currentLocation, llvm::omp::Directive::OMPD_single);
 
-  ClauseProcessor(converter, endClauseList).processNowait(nowaitAttr);
+  ClauseProcessor ecp(converter, endClauseList);
+  ecp.processNowait(nowaitAttr);
+  ecp.processCopyPrivate(currentLocation, copyPrivateVars, copyPrivateFuncs);
 
   return genOpWithBody<mlir::omp::SingleOp>(
       converter, eval, genNested, currentLocation,
       /*outerCombined=*/false, &beginClauseList, allocateOperands,
-      allocatorOperands, nowaitAttr);
+      allocatorOperands, copyPrivateVars,
+      copyPrivateFuncs.empty()
+          ? nullptr
+          : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                 copyPrivateFuncs),
+      nowaitAttr);
 }
 
 static mlir::omp::TaskOp
@@ -3367,7 +3568,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   for (const auto &clause : endClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
-    if (!std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
+    if (!std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::Copyprivate>(&clause.u))
       TODO(clauseLocation, "OpenMP Block construct clause");
   }
 
