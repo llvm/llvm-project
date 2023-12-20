@@ -14,7 +14,7 @@ define void @gather_load(ptr noalias nocapture %0, ptr noalias nocapture readonl
 ; SSE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
 ; SSE-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA0]]
 ; SSE-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP3]], align 4, !tbaa [[TBAA0]]
-; SSE-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i64 0
+; SSE-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; SSE-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP6]], i64 1
 ; SSE-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i64 2
 ; SSE-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 3
@@ -30,7 +30,7 @@ define void @gather_load(ptr noalias nocapture %0, ptr noalias nocapture readonl
 ; AVX-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
 ; AVX-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA0]]
 ; AVX-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP3]], align 4, !tbaa [[TBAA0]]
-; AVX-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i64 0
+; AVX-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; AVX-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP6]], i64 1
 ; AVX-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i64 2
 ; AVX-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 3
@@ -46,7 +46,7 @@ define void @gather_load(ptr noalias nocapture %0, ptr noalias nocapture readonl
 ; AVX2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
 ; AVX2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA0]]
 ; AVX2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP3]], align 4, !tbaa [[TBAA0]]
-; AVX2-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i64 0
+; AVX2-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; AVX2-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP6]], i64 1
 ; AVX2-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i64 2
 ; AVX2-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 3
@@ -62,7 +62,7 @@ define void @gather_load(ptr noalias nocapture %0, ptr noalias nocapture readonl
 ; AVX512F-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
 ; AVX512F-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA0]]
 ; AVX512F-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP3]], align 4, !tbaa [[TBAA0]]
-; AVX512F-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i64 0
+; AVX512F-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; AVX512F-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP6]], i64 1
 ; AVX512F-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i64 2
 ; AVX512F-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 3
@@ -78,7 +78,7 @@ define void @gather_load(ptr noalias nocapture %0, ptr noalias nocapture readonl
 ; AVX512VL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
 ; AVX512VL-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA0]]
 ; AVX512VL-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP3]], align 4, !tbaa [[TBAA0]]
-; AVX512VL-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i64 0
+; AVX512VL-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; AVX512VL-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP6]], i64 1
 ; AVX512VL-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i64 2
 ; AVX512VL-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 3

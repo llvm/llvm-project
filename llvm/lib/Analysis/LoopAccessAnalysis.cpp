@@ -143,7 +143,7 @@ static cl::opt<bool, true> HoistRuntimeChecks(
     "hoist-runtime-checks", cl::Hidden,
     cl::desc(
         "Hoist inner loop runtime memory checks to outer loop if possible"),
-    cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(false));
+    cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(true));
 bool VectorizerParams::HoistRuntimeChecks;
 
 bool VectorizerParams::isInterleaveForced() {

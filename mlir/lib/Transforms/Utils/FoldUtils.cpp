@@ -247,10 +247,6 @@ OperationFolder::processFoldResults(Operation *op,
 
     // Check if the result was an SSA value.
     if (auto repl = llvm::dyn_cast_if_present<Value>(foldResults[i])) {
-      if (repl.getType() != op->getResult(i).getType()) {
-        results.clear();
-        return failure();
-      }
       results.emplace_back(repl);
       continue;
     }

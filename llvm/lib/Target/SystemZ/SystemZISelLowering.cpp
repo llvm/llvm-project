@@ -1362,6 +1362,16 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   report_fatal_error("Invalid register name global variable");
 }
 
+Register SystemZTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return Subtarget.isTargetXPLINK64() ? SystemZ::R1D : SystemZ::R6D;
+}
+
+Register SystemZTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return Subtarget.isTargetXPLINK64() ? SystemZ::R2D : SystemZ::R7D;
+}
+
 void SystemZTargetLowering::LowerAsmOperandForConstraint(
     SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
