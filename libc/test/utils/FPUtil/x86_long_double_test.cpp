@@ -22,7 +22,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   constexpr uint32_t COUNT = 100'000;
 
   FPBits bits(0.0l);
-  bits.set_biased_exponent(FPBits::MAX_EXPONENT);
+  bits.set_biased_exponent(FPBits::MAX_BIASED_EXPONENT);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent has the max value and the implicit bit is 0,
     // then the number is a NaN for all values of mantissa.

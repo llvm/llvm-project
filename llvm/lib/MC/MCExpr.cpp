@@ -632,7 +632,8 @@ static void AttemptToFoldSymbolOffsetDifference(
   // instructions and InSet is false (not expressions in directive like
   // .size/.fill), disable the fast path.
   if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !Asm->getContext().getTargetTriple().isRISCV())) {
+                 !(Asm->getContext().getTargetTriple().isRISCV() ||
+                   Asm->getContext().getTargetTriple().isLoongArch()))) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
@@ -942,16 +943,17 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                                   Addrs, InSet)) {
       // Check if both are Target Expressions, see if we can compare them.
       if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS())) {
-        const MCTargetExpr *R = cast<MCTargetExpr>(ABE->getRHS());
-        switch (ABE->getOpcode()) {
-        case MCBinaryExpr::EQ:
-          Res = MCValue::get(L->isEqualTo(R) ? -1 : 0);
-          return true;
-        case MCBinaryExpr::NE:
-          Res = MCValue::get(L->isEqualTo(R) ? 0 : -1);
-          return true;
-        default:
-          break;
+        if (const MCTargetExpr *R = dyn_cast<MCTargetExpr>(ABE->getRHS())) {
+          switch (ABE->getOpcode()) {
+          case MCBinaryExpr::EQ:
+            Res = MCValue::get(L->isEqualTo(R) ? -1 : 0);
+            return true;
+          case MCBinaryExpr::NE:
+            Res = MCValue::get(L->isEqualTo(R) ? 0 : -1);
+            return true;
+          default:
+            break;
+          }
         }
       }
       return false;
