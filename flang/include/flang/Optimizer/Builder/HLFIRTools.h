@@ -404,15 +404,15 @@ mlir::Value inlineElementalOp(
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
-               const hlfir::Entity &entity);
+               hlfir::Entity entity);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
-                 const hlfir::Entity &entity, mlir::Type targetType);
+                 hlfir::Entity entity, mlir::Type targetType);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             const hlfir::Entity &entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
