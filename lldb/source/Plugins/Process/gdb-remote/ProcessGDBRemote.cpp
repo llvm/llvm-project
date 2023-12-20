@@ -303,7 +303,7 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 
   // The general Finalize is going to try to destroy the process and that
   // SHOULD shut down the async thread.  However, if we don't kill it it will
@@ -2377,8 +2377,10 @@ Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
   if (m_public_state.GetValue() == eStateAttaching) {
-    // We are being asked to halt during an attach. We need to just close our
-    // file handle and debugserver will go away, and we can be done...
+    // We are being asked to halt during an attach. We used to just close our
+    // file handle and debugserver will go away, but with remote proxies, it
+    // is better to send a positive signal, so let's send the interrupt first...
+    caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
     m_gdb_comm.Disconnect();
   } else
     caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
@@ -4470,7 +4472,7 @@ bool ParseRegisters(
           // and a simple type. Just in case, look for that too (setting both
           // does no harm).
           if (!gdb_type.empty() && !(encoding_set || format_set)) {
-            if (llvm::StringRef(gdb_type).startswith("int")) {
+            if (llvm::StringRef(gdb_type).starts_with("int")) {
               reg_info.format = eFormatHex;
               reg_info.encoding = eEncodingUint;
             } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
@@ -4480,7 +4482,7 @@ bool ParseRegisters(
               reg_info.format = eFormatFloat;
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
-                       llvm::StringRef(gdb_type).startswith("vec") ||
+                       llvm::StringRef(gdb_type).starts_with("vec") ||
                        gdb_type == "i387_ext" || gdb_type == "uint128") {
               // lldb doesn't handle 128-bit uints correctly (for ymm*h), so
               // treat them as vector (similarly to xmm/ymm)
@@ -5544,7 +5546,7 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
     addr_t addr = wp_res_sp->GetLoadAddress();
     size_t size = wp_res_sp->GetByteSize();
     GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
-    m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,
+    m_gdb_comm.SendGDBStoppointTypePacket(type, enable, addr, size,
                                           GetInterruptTimeout());
   }
 }

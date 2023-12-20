@@ -20,6 +20,10 @@
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
+; REQUIRES: asserts
+
 ; CHECK-SPIRV-DAG:     %[[#LEN2_ID:]] = OpConstant %[[#]] 2
 ; CHECK-SPIRV-DAG:     %[[#LEN3_ID:]] = OpConstant %[[#]] 3
 ; CHECK-SPIRV-DAG:     %[[#ARRAY_T2:]] = OpTypeArray %[[#]] %[[#LEN2_ID]]

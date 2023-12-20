@@ -71,7 +71,7 @@ public:
 // Options
 static std::vector<std::string> ExecFilenames;
 static std::string OutputFilename;
-static bool ContinueOnCuIndexOverflow;
+static std::string ContinueOption;
 
 static Expected<SmallVector<std::string, 16>>
 getDWOFilenames(StringRef ExecFilename) {
@@ -125,6 +125,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   DwpOptTable Tbl;
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
+  OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::HardStop;
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -143,7 +144,23 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
-  ContinueOnCuIndexOverflow = Args.hasArg(OPT_continueOnCuIndexOverflow);
+  if (Arg *Arg = Args.getLastArg(OPT_continueOnCuIndexOverflow,
+                                 OPT_continueOnCuIndexOverflow_EQ)) {
+    if (Arg->getOption().matches(OPT_continueOnCuIndexOverflow)) {
+      OverflowOptValue = OnCuIndexOverflow::Continue;
+    } else {
+      ContinueOption = Arg->getValue();
+      if (ContinueOption == "soft-stop") {
+        OverflowOptValue = OnCuIndexOverflow::SoftStop;
+      } else if (ContinueOption == "continue") {
+        OverflowOptValue = OnCuIndexOverflow::Continue;
+      } else {
+        llvm::errs() << "invalid value for --continue-on-cu-index-overflow"
+                     << ContinueOption << '\n';
+        exit(1);
+      }
+    }
+  }
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
     ExecFilenames.emplace_back(A->getValue());
@@ -255,7 +272,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames, ContinueOnCuIndexOverflow)) {
+  if (auto Err = write(*MS, DWOFilenames, OverflowOptValue)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }

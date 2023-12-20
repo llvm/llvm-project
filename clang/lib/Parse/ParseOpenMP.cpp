@@ -2518,15 +2518,18 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
   switch (DKind) {
   case OMPD_nothing:
-    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
-        ParsedStmtContext())
-      Diag(Tok, diag::err_omp_immediate_directive)
-        << getOpenMPDirectiveName(DKind) << 0;
     ConsumeToken();
-    skipUntilPragmaOpenMPEnd(DKind);
+    // If we are parsing the directive within a metadirective, the directive
+    // ends with a ')'.
+    if (ReadDirectiveWithinMetadirective && Tok.is(tok::r_paren))
+      while (Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+    else
+      skipUntilPragmaOpenMPEnd(DKind);
     if (Tok.is(tok::annot_pragma_openmp_end))
       ConsumeAnnotationToken();
-    break;
+    // return an empty statement
+    return StmtEmpty();
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;

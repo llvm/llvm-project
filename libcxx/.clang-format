@@ -37,7 +37,6 @@ AttributeMacros: [
                   '_LIBCPP_HIDDEN',
                   '_LIBCPP_HIDE_FROM_ABI_AFTER_V1',
                   '_LIBCPP_HIDE_FROM_ABI',
-                  '_LIBCPP_INLINE_VISIBILITY',
                   '_LIBCPP_INTERNAL_LINKAGE',
                   '_LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS',
                   '_LIBCPP_NO_SANITIZE',

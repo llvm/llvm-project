@@ -23,34 +23,44 @@ GlobalVariable *FrontendResource::getGlobalVariable() {
       cast<ConstantAsMetadata>(Entry->getOperand(0))->getValue());
 }
 
-StringRef FrontendResource::getSourceType() {
-  return cast<MDString>(Entry->getOperand(1))->getString();
+ResourceKind FrontendResource::getResourceKind() {
+  return static_cast<ResourceKind>(
+      cast<ConstantInt>(
+          cast<ConstantAsMetadata>(Entry->getOperand(1))->getValue())
+          ->getLimitedValue());
 }
-
-uint32_t FrontendResource::FrontendResource::getResourceKind() {
-  return cast<ConstantInt>(
-             cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue())
-      ->getLimitedValue();
+ElementType FrontendResource::getElementType() {
+  return static_cast<ElementType>(
+      cast<ConstantInt>(
+          cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue())
+          ->getLimitedValue());
 }
-uint32_t FrontendResource::getResourceIndex() {
+bool FrontendResource::getIsROV() {
   return cast<ConstantInt>(
              cast<ConstantAsMetadata>(Entry->getOperand(3))->getValue())
       ->getLimitedValue();
 }
-uint32_t FrontendResource::getSpace() {
+uint32_t FrontendResource::getResourceIndex() {
   return cast<ConstantInt>(
              cast<ConstantAsMetadata>(Entry->getOperand(4))->getValue())
       ->getLimitedValue();
 }
+uint32_t FrontendResource::getSpace() {
+  return cast<ConstantInt>(
+             cast<ConstantAsMetadata>(Entry->getOperand(5))->getValue())
+      ->getLimitedValue();
+}
 
-FrontendResource::FrontendResource(GlobalVariable *GV, StringRef TypeStr,
-                                   ResourceKind RK, uint32_t ResIndex,
-                                   uint32_t Space) {
+FrontendResource::FrontendResource(GlobalVariable *GV, ResourceKind RK,
+                                   ElementType ElTy, bool IsROV,
+                                   uint32_t ResIndex, uint32_t Space) {
   auto &Ctx = GV->getContext();
   IRBuilder<> B(Ctx);
   Entry = MDNode::get(
-      Ctx, {ValueAsMetadata::get(GV), MDString::get(Ctx, TypeStr),
+      Ctx, {ValueAsMetadata::get(GV),
             ConstantAsMetadata::get(B.getInt32(static_cast<int>(RK))),
+            ConstantAsMetadata::get(B.getInt32(static_cast<int>(ElTy))),
+            ConstantAsMetadata::get(B.getInt1(IsROV)),
             ConstantAsMetadata::get(B.getInt32(ResIndex)),
             ConstantAsMetadata::get(B.getInt32(Space))});
 }

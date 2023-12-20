@@ -951,16 +951,15 @@ if.end:
 define void @pre_over_vle(ptr %A) {
 ; CHECK-LABEL: pre_over_vle:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a1, 100
+; CHECK-NEXT:    addi a1, a0, 800
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:  .LBB22_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsext.vf4 v9, v8
 ; CHECK-NEXT:    vse32.v v9, (a0)
-; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 8
-; CHECK-NEXT:    bnez a1, .LBB22_1
+; CHECK-NEXT:    bne a0, a1, .LBB22_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    ret
 entry:

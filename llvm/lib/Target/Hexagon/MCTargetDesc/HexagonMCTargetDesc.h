@@ -16,7 +16,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
-#include <string>
 
 #define Hexagon_POINTER_SIZE 4
 

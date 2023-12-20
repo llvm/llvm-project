@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -20,6 +21,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -1466,7 +1468,8 @@ void VFABI::getVectorVariantNames(
   S.split(ListAttr, ",");
 
   for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
-    std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, CI);
+    std::optional<VFInfo> Info =
+        VFABI::tryDemangleForVFABI(S, CI.getFunctionType());
     if (Info && CI.getModule()->getFunction(Info->VectorName)) {
       LLVM_DEBUG(dbgs() << "VFABI: Adding mapping '" << S << "' for " << CI
                         << "\n");
@@ -1474,6 +1477,32 @@ void VFABI::getVectorVariantNames(
     } else
       LLVM_DEBUG(dbgs() << "VFABI: Invalid mapping '" << S << "'\n");
   }
+}
+
+FunctionType *VFABI::createFunctionType(const VFInfo &Info,
+                                        const FunctionType *ScalarFTy) {
+  // Create vector parameter types
+  SmallVector<Type *, 8> VecTypes;
+  ElementCount VF = Info.Shape.VF;
+  int ScalarParamIndex = 0;
+  for (auto VFParam : Info.Shape.Parameters) {
+    if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
+      VectorType *MaskTy =
+          VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
+      VecTypes.push_back(MaskTy);
+      continue;
+    }
+
+    Type *OperandTy = ScalarFTy->getParamType(ScalarParamIndex++);
+    if (VFParam.ParamKind == VFParamKind::Vector)
+      OperandTy = VectorType::get(OperandTy, VF);
+    VecTypes.push_back(OperandTy);
+  }
+
+  auto *RetTy = ScalarFTy->getReturnType();
+  if (!RetTy->isVoidTy())
+    RetTy = VectorType::get(RetTy, VF);
+  return FunctionType::get(RetTy, VecTypes, false);
 }
 
 bool VFShape::hasValidParameterList() const {

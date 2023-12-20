@@ -7,7 +7,7 @@ define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
 ; CHECK-NEXT:    [[I2:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[I3:%.*]] = and i64 [[ARG:%.*]], -16
-; CHECK-NEXT:    [[I4:%.*]] = or i64 1, [[I3]]
+; CHECK-NEXT:    [[I4:%.*]] = or disjoint i64 1, [[I3]]
 ; CHECK-NEXT:    [[I5:%.*]] = icmp sgt i64 [[I4]], [[I2]]
 ; CHECK-NEXT:    br i1 [[I5]], label [[BB10:%.*]], label [[BB6_PREHEADER:%.*]]
 ; CHECK:       bb6.preheader:
@@ -26,7 +26,7 @@ bb:
   %i = load i32, ptr %arg1, align 4
   %i2 = sext i32 %i to i64
   %i3 = and i64 %arg, -16
-  %i4 = or i64 1, %i3
+  %i4 = or disjoint i64 1, %i3
   %i5 = icmp sgt i64 %i4, %i2
   br i1 %i5, label %bb10, label %bb6
 

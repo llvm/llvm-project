@@ -1,7 +1,10 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
+// Check readtapi only accepts one file. 
 ; RUN: not llvm-readtapi -extract %t/libfoo.tbd %t/libbar.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix EXTRA
+// Check missing argument.
 ; RUN: not llvm-readtapi -extract %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix MISSING
+// Check that TBD file manipulation was not valid and error propagated as expected.
 ; RUN: not llvm-readtapi -arch x86_64 -extract %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix MISMATCH 
 
 ; EXTRA: error: extract only supports one input file

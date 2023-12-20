@@ -54,20 +54,46 @@ enum class ResourceKind : uint32_t {
   NumEntries,
 };
 
+// The value ordering of this enumeration is part of the DXIL ABI. Elements
+// can only be added to the end, and not removed.
+enum class ElementType : uint32_t {
+  Invalid = 0,
+  I1,
+  I16,
+  U16,
+  I32,
+  U32,
+  I64,
+  U64,
+  F16,
+  F32,
+  F64,
+  SNormF16,
+  UNormF16,
+  SNormF32,
+  UNormF32,
+  SNormF64,
+  UNormF64,
+  PackedS8x32,
+  PackedU8x32,
+};
+
 class FrontendResource {
   MDNode *Entry;
 
 public:
   FrontendResource(MDNode *E) : Entry(E) {
-    assert(Entry->getNumOperands() == 5 && "Unexpected metadata shape");
+    assert(Entry->getNumOperands() == 6 && "Unexpected metadata shape");
   }
 
-  FrontendResource(GlobalVariable *GV, StringRef TypeStr, ResourceKind RK,
-                   uint32_t ResIndex, uint32_t Space);
+  FrontendResource(GlobalVariable *GV, ResourceKind RK, ElementType ElTy,
+                   bool IsROV, uint32_t ResIndex, uint32_t Space);
 
   GlobalVariable *getGlobalVariable();
   StringRef getSourceType();
-  uint32_t getResourceKind();
+  ResourceKind getResourceKind();
+  ElementType getElementType();
+  bool getIsROV();
   uint32_t getResourceIndex();
   uint32_t getSpace();
   MDNode *getMetadata() { return Entry; }

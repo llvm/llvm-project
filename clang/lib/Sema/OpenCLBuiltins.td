@@ -563,15 +563,12 @@ foreach name = ["acos", "acosh", "acospi",
                 "log", "log2", "log10", "log1p", "logb",
                 "rint", "round", "rsqrt",
                 "sin", "sinh", "sinpi",
+                "sqrt",
                 "tan", "tanh", "tanpi",
                 "tgamma", "trunc",
                 "lgamma"] in {
     def : Builtin<name, [FGenTypeN, FGenTypeN], Attr.Const>;
 }
-
-// sqrt is handled in opencl-c-base.h to handle
-// -cl-fp32-correctly-rounded-divide-sqrt.
-
 foreach name = ["nan"] in {
   def : Builtin<name, [GenTypeFloatVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
   def : Builtin<name, [GenTypeDoubleVecAndScalar, GenTypeULongVecAndScalar], Attr.Const>;

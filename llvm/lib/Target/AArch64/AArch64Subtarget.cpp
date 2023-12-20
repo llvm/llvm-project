@@ -184,6 +184,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA14:
   case AppleA15:
   case AppleA16:
+  case AppleA17:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -192,6 +193,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     case AppleA14:
     case AppleA15:
     case AppleA16:
+    case AppleA17:
       MaxInterleaveFactor = 4;
       break;
     default:

@@ -661,20 +661,13 @@ void hlfir::ConcatOp::getEffects(
 
 template <typename NumericalReductionOp>
 static mlir::LogicalResult
-verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
-  mlir::Operation *op = reductionOp->getOperation();
-
-  auto results = op->getResultTypes();
-  assert(results.size() == 1);
-
+verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
   mlir::Value array = reductionOp->getArray();
-  mlir::Value dim = reductionOp->getDim();
   mlir::Value mask = reductionOp->getMask();
 
   fir::SequenceType arrayTy =
       hlfir::getFortranElementOrSequenceType(array.getType())
           .cast<fir::SequenceType>();
-  mlir::Type numTy = arrayTy.getEleTy();
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
 
   if (mask) {
@@ -701,6 +694,27 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
       }
     }
   }
+  return mlir::success();
+}
+
+template <typename NumericalReductionOp>
+static mlir::LogicalResult
+verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
+  mlir::Operation *op = reductionOp->getOperation();
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+
+  auto res = verifyArrayAndMaskForReductionOp(reductionOp);
+  if (failed(res))
+    return res;
+
+  mlir::Value array = reductionOp->getArray();
+  mlir::Value dim = reductionOp->getDim();
+  fir::SequenceType arrayTy =
+      hlfir::getFortranElementOrSequenceType(array.getType())
+          .cast<fir::SequenceType>();
+  mlir::Type numTy = arrayTy.getEleTy();
+  llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
 
   mlir::Type resultType = results[0];
   if (hlfir::isFortranScalarNumericalType(resultType)) {
@@ -757,44 +771,20 @@ template <typename CharacterReductionOp>
 static mlir::LogicalResult
 verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
   mlir::Operation *op = reductionOp->getOperation();
-
   auto results = op->getResultTypes();
   assert(results.size() == 1);
 
+  auto res = verifyArrayAndMaskForReductionOp(reductionOp);
+  if (failed(res))
+    return res;
+
   mlir::Value array = reductionOp->getArray();
   mlir::Value dim = reductionOp->getDim();
-  mlir::Value mask = reductionOp->getMask();
-
   fir::SequenceType arrayTy =
       hlfir::getFortranElementOrSequenceType(array.getType())
           .cast<fir::SequenceType>();
   mlir::Type numTy = arrayTy.getEleTy();
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
-
-  if (mask) {
-    fir::SequenceType maskSeq =
-        hlfir::getFortranElementOrSequenceType(mask.getType())
-            .dyn_cast<fir::SequenceType>();
-    llvm::ArrayRef<int64_t> maskShape;
-
-    if (maskSeq)
-      maskShape = maskSeq.getShape();
-
-    if (!maskShape.empty()) {
-      if (maskShape.size() != arrayShape.size())
-        return reductionOp->emitWarning("MASK must be conformable to ARRAY");
-      static_assert(fir::SequenceType::getUnknownExtent() ==
-                    hlfir::ExprType::getUnknownExtent());
-      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
-      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
-        int64_t arrayExtent = arrayShape[i];
-        int64_t maskExtent = maskShape[i];
-        if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
-            (maskExtent != unknownExtent))
-          return reductionOp->emitWarning("MASK must be conformable to ARRAY");
-      }
-    }
-  }
 
   auto resultExpr = results[0].cast<hlfir::ExprType>();
   mlir::Type resultType = resultExpr.getEleTy();
@@ -864,6 +854,84 @@ mlir::LogicalResult hlfir::MinvalOp::verify() {
 }
 
 void hlfir::MinvalOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// MinlocOp
+//===----------------------------------------------------------------------===//
+
+template <typename NumericalReductionOp>
+static mlir::LogicalResult
+verifyResultForMinMaxLoc(NumericalReductionOp reductionOp) {
+  mlir::Operation *op = reductionOp->getOperation();
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+
+  mlir::Value array = reductionOp->getArray();
+  mlir::Value dim = reductionOp->getDim();
+  fir::SequenceType arrayTy =
+      hlfir::getFortranElementOrSequenceType(array.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
+
+  mlir::Type resultType = results[0];
+  if (dim && arrayShape.size() == 1) {
+    if (!fir::isa_integer(resultType))
+      return reductionOp->emitOpError("result must be scalar integer");
+  } else if (auto resultExpr =
+                 mlir::dyn_cast_or_null<hlfir::ExprType>(resultType)) {
+    if (!resultExpr.isArray())
+      return reductionOp->emitOpError("result must be an array");
+
+    if (!fir::isa_integer(resultExpr.getEleTy()))
+      return reductionOp->emitOpError("result must have integer elements");
+
+    llvm::ArrayRef<int64_t> resultShape = resultExpr.getShape();
+    // With dim the result has rank n-1
+    if (dim && resultShape.size() != (arrayShape.size() - 1))
+      return reductionOp->emitOpError(
+          "result rank must be one less than ARRAY");
+    // With dim the result has rank n
+    if (!dim && resultShape.size() != 1)
+      return reductionOp->emitOpError("result rank must be 1");
+  } else {
+    return reductionOp->emitOpError("result must be of numerical expr type");
+  }
+  return mlir::success();
+}
+
+mlir::LogicalResult hlfir::MinlocOp::verify() {
+  auto res = verifyArrayAndMaskForReductionOp(this);
+  if (failed(res))
+    return res;
+
+  return verifyResultForMinMaxLoc(this);
+}
+
+void hlfir::MinlocOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// MaxlocOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::MaxlocOp::verify() {
+  auto res = verifyArrayAndMaskForReductionOp(this);
+  if (failed(res))
+    return res;
+
+  return verifyResultForMinMaxLoc(this);
+}
+
+void hlfir::MaxlocOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
@@ -1228,6 +1296,29 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
   mlir::Type i1Type = builder.getI1Type();
   build(builder, result, {hlfirVariableType, firVarType, i1Type}, source, shape,
         typeparams, nameAttr, fortran_attrs);
+}
+
+void hlfir::AssociateOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Value source,
+    mlir::Value shape, mlir::ValueRange typeparams,
+    fir::FortranVariableFlagsAttr fortran_attrs,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::Type dataType = getFortranElementOrSequenceType(source.getType());
+
+  // Preserve polymorphism of polymorphic expr.
+  mlir::Type firVarType;
+  auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
+  if (sourceExprType && sourceExprType.isPolymorphic())
+    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+  else
+    firVarType = fir::ReferenceType::get(dataType);
+
+  mlir::Type hlfirVariableType =
+      DeclareOp::getHLFIRVariableType(firVarType, /*hasExplicitLbs=*/false);
+  mlir::Type i1Type = builder.getI1Type();
+  build(builder, result, {hlfirVariableType, firVarType, i1Type}, source, shape,
+        typeparams, {}, fortran_attrs);
+  result.addAttributes(attributes);
 }
 
 //===----------------------------------------------------------------------===//

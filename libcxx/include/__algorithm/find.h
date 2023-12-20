@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_H
 #define _LIBCPP___ALGORITHM_FIND_H
 
+#include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__bit/countr.h>
@@ -18,8 +19,10 @@
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__fwd/bit_reference.h>
+#include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_same.h>
+#include <__utility/move.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
@@ -118,8 +121,36 @@ __find_impl(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst>
   return std::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
 
+// segmented iterator implementation
+
+template <class>
+struct __find_segment;
+
+template <class _SegmentedIterator,
+          class _Tp,
+          class _Proj,
+          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
+__find_impl(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
+  return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);
+}
+
+template <class _Tp>
+struct __find_segment {
+  const _Tp& __value_;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __find_segment(const _Tp& __value) : __value_(__value) {}
+
+  template <class _InputIterator, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _InputIterator
+  operator()(_InputIterator __first, _InputIterator __last, _Proj& __proj) const {
+    return std::__find_impl(__first, __last, __value_, __proj);
+  }
+};
+
+// public API
 template <class _InputIterator, class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__rewrap_iter(

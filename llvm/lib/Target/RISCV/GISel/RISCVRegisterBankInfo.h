@@ -48,6 +48,10 @@ private:
   bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                   const TargetRegisterInfo &TRI) const;
 
+  /// \returns true if any use of \p Def only user FPRs.
+  bool anyUseOnlyUseFP(Register Def, const MachineRegisterInfo &MRI,
+                       const TargetRegisterInfo &TRI) const;
+
   /// \returns true if \p MI only defines FPRs.
   bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                      const TargetRegisterInfo &TRI) const;

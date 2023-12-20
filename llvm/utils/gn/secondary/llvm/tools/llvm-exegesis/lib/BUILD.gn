@@ -8,7 +8,7 @@ static_library("lib") {
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/ExecutionEngine",
-    "//llvm/lib/ExecutionEngine/MCJIT",
+    "//llvm/lib/ExecutionEngine/Orc",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/MC",

@@ -36,15 +36,14 @@
 //       CHECK:      %[[TMP_12:.*]] = memref.load %[[TMP_2]][%[[TMP_arg4]]] : memref<?xf32>
 //       CHECK:      %[[TMP_13:.*]] = memref.load %[[TMP_3]][%[[TMP_11]]] : memref<32xf32>
 //       CHECK:      %[[TMP_14:.*]] = arith.mulf %[[TMP_12]], %[[TMP_13]] : f32
-//       CHECK:      scf.reduce(%[[TMP_14]])  : f32 {
+//       CHECK:      scf.reduce(%[[TMP_14]]  : f32) {
 //       CHECK:      ^bb0(%[[TMP_arg5:.*]]: f32, %[[TMP_arg6:.*]]: f32):
 //       CHECK:        %[[TMP_15:.*]] = arith.addf %[[TMP_arg5]], %[[TMP_arg6]] : f32
 //       CHECK:        scf.reduce.return %[[TMP_15]] : f32
 //       CHECK:      }
-//       CHECK:      scf.yield
 //       CHECK:    }
 //       CHECK:    memref.store %[[TMP_10]], %[[TMP_4]][%[[TMP_arg3]]] : memref<16xf32>
-//       CHECK:    scf.yield
+//       CHECK:    scf.reduce
 //       CHECK:  }
 //       CHECK:  %[[TMP_5:.*]] = bufferization.to_tensor %[[TMP_4]] : memref<16xf32>
 //       CHECK:  return %[[TMP_5]] : tensor<16xf32>

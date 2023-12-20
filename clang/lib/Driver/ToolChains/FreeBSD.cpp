@@ -310,7 +310,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else
@@ -398,13 +398,6 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib32"));
   else
     getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
-}
-
-unsigned FreeBSD::GetDefaultDwarfVersion() const {
-  unsigned Major = getTriple().getOSMajorVersion();
-  if (Major >= 12 || Major == 0)
-    return 4;
-  return 2;
 }
 
 void FreeBSD::AddClangSystemIncludeArgs(
@@ -509,14 +502,4 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Memory;
   }
   return Res;
-}
-
-void FreeBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args,
-                                    Action::OffloadKind) const {
-  unsigned Major = getTriple().getOSMajorVersion();
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array,
-                          (Major >= 12 || Major == 0)))
-    CC1Args.push_back("-fno-use-init-array");
 }

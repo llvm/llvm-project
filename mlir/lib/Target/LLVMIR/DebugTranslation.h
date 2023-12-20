@@ -37,6 +37,13 @@ public:
   /// Translate the given location to an llvm debug location.
   llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
+  /// Translates the given DWARF expression metadata to to LLVM.
+  llvm::DIExpression *translateExpression(LLVM::DIExpressionAttr attr);
+
+  /// Translates the given DWARF global variable expression to LLVM.
+  llvm::DIGlobalVariableExpression *
+  translateGlobalVariableExpression(LLVM::DIGlobalVariableExpressionAttr attr);
+
   /// Translate the debug information for the given function.
   void translate(LLVMFuncOp func, llvm::Function &llvmFunc);
 
@@ -72,6 +79,7 @@ private:
   llvm::DILexicalBlockFile *translateImpl(DILexicalBlockFileAttr attr);
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
+  llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
