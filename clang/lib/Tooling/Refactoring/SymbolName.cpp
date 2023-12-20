@@ -41,6 +41,11 @@ SymbolName::SymbolName(ArrayRef<StringRef> NamePieces) {
     this->NamePieces.push_back(Piece.str());
 }
 
+SymbolName::SymbolName(ArrayRef<std::string> NamePieces) {
+  for (const auto &Piece : NamePieces)
+    this->NamePieces.push_back(Piece);
+}
+
 std::optional<std::string> SymbolName::getSinglePiece() const {
   if (getNamePieces().size() == 1) {
     return NamePieces.front();

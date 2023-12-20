@@ -811,7 +811,20 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (!Name)
     return makeError(ReasonToReject::UnsupportedSymbol);
   SymbolName OldSymbolName(Name);
-  SymbolName NewSymbolName(RInputs.NewName, AST.getLangOpts());
+  SymbolName NewSymbolName(ArrayRef<StringRef>{});
+  if (std::optional<StringRef> NewName = RInputs.NewName) {
+    NewSymbolName = SymbolName(*NewName, AST.getLangOpts());
+  } else {
+    // If no new name is given, we are perfoming a pseudo rename for the
+    // prepareRename request to check if the rename is possible. Construct a
+    // new symbol name that has as many name pieces as the old name and is thus
+    // a valid new name.
+    std::vector<std::string> NewNamePieces;
+    for (StringRef Piece : OldSymbolName.getNamePieces()) {
+      NewNamePieces.push_back(Piece.str() + "__clangd_rename_placeholder");
+    }
+    NewSymbolName = SymbolName(NewNamePieces);
+  }
   if (OldSymbolName == NewSymbolName)
     return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, NewSymbolName);
@@ -858,6 +871,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   }
   RenameResult Result;
   Result.Target = CurrentIdentifier;
+  Result.OldName = RenameDecl.getNameAsString();
   Edit MainFileEdits = Edit(MainFileCode, std::move(*MainFileRenameEdit));
   for (const TextEdit &TE : MainFileEdits.asTextEdits())
     Result.LocalChanges.push_back(TE.range);
