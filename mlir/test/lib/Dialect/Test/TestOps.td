@@ -1363,13 +1363,6 @@ def TestOpFoldWithFoldAdaptor
   let hasFolder = 1;
 }
 
-// An op that always fold itself.
-def TestPassthroughFold : TEST_Op<"passthrough_fold"> {
-  let arguments = (ins AnyType:$op);
-  let results = (outs AnyType);
-  let hasFolder = 1;
-}
-
 def TestDialectCanonicalizerOp : TEST_Op<"dialect_canonicalizable"> {
   let arguments = (ins);
   let results = (outs I32);

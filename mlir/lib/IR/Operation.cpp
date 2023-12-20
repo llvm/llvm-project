@@ -606,13 +606,30 @@ void Operation::setSuccessor(Block *block, unsigned index) {
   getBlockOperands()[index].set(block);
 }
 
+#ifndef NDEBUG
+/// Assert that the folded results (in case of values) have the same type as
+/// the results of the given op.
+static void checkFoldResultTypes(Operation *op,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (!results.empty())
+    for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults()))
+      if (auto value = ofr.dyn_cast<Value>())
+        assert(value.getType() == opResult.getType() &&
+               "folder produced value of incorrect type");
+}
+#endif // NDEBUG
+
 /// Attempt to fold this operation using the Op's registered foldHook.
 LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  if (succeeded(name.foldHook(this, operands, results)))
+  if (succeeded(name.foldHook(this, operands, results))) {
+#ifndef NDEBUG
+    checkFoldResultTypes(this, results);
+#endif // NDEBUG
     return success();
+  }
 
   // Otherwise, fall back on the dialect hook to handle it.
   Dialect *dialect = getDialect();
@@ -623,7 +640,12 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   if (!interface)
     return failure();
 
-  return interface->fold(this, operands, results);
+  LogicalResult status = interface->fold(this, operands, results);
+#ifndef NDEBUG
+  if (succeeded(status))
+    checkFoldResultTypes(this, results);
+#endif // NDEBUG
+  return status;
 }
 
 LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {

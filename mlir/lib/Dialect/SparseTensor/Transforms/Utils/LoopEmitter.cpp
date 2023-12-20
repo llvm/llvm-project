@@ -1371,7 +1371,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       rewriter.setInsertionPointAfter(redExp);
       auto redOp = rewriter.create<scf::ReduceOp>(loc, curVal);
       // Attach to the reduction op.
-      Block *redBlock = &redOp.getRegion().getBlocks().front();
+      Block *redBlock = &redOp.getReductions().front().front();
       rewriter.setInsertionPointToEnd(redBlock);
       Operation *newRed = rewriter.clone(*redExp);
       // Replaces arguments of the reduction expression by using the block

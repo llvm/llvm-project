@@ -13,6 +13,17 @@
 // - Generate ThinLTO summary file with LLVM bitcodes, and run `function-import` pass.
 // - Run `pgo-icall-prom` pass for the IR module which needs to import callees.
 
+// REQUIRES: windows || linux || darwin
+
+// The test failed on ppc when building the instrumented binary.
+// ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
+// UNSUPPORTED: ppc
+
+// This test and IR test llvm/test/Transforms/PGOProfile/thinlto_indirect_call_promotion.ll
+// are complementary to each other; a compiler-rt test has better test coverage
+// on different platforms, and the IR test is less restrictive in terms of
+// running environment and could be executed more widely.
+
 // Use lld as linker for more robust test. We need to REQUIRE LLVMgold.so for
 // LTO if default linker is GNU ld or gold anyway.
 // REQUIRES: lld-available
@@ -40,12 +51,9 @@
 // RUN: env LLVM_PROFILE_FILE=main.profraw %run ./main
 // RUN: llvm-profdata merge main.profraw -o main.profdata
 
-// Use profile on lib and get bitcode, test that local function callee0 has
-// expected !PGOFuncName metadata and external function callee1 doesn't have
-// !PGOFuncName metadata. Explicitly skip ICP pass to test ICP happens as
+// Use profile on lib and get bitcode. Explicitly skip ICP pass to test ICP happens as
 // expected in the IR module that imports functions from lib.
 // RUN: %clang -mllvm -disable-icp -fprofile-use=main.profdata -flto=thin -O2 -c lib.cpp -o lib.bc
-// RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=PGOName
 
 // Use profile on main and get bitcode.
 // RUN: %clang -fprofile-use=main.profdata -flto=thin -O2 -c main.cpp -o main.bc
@@ -58,35 +66,20 @@
 // block with a function-entry-count of one, so they are actually hot functions
 // per default profile summary hotness cutoff.
 // RUN: opt -passes=function-import -import-instr-limit=100 -import-cold-multiplier=1 -summary-file summary.thinlto.bc main.bc -o main.import.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
-// Test that '_Z11global_funcv' has indirect calls annotated with value profiles.
-// RUN: llvm-dis main.import.bc -o - | FileCheck %s --check-prefix=IR
 
 // Test that both candidates are ICP'ed and there is no `!VP` in the IR.
 // RUN: opt main.import.bc -icp-lto -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom 2>&1 | FileCheck %s --check-prefixes=ICP-IR,ICP-REMARK --implicit-check-not="!VP"
 
-// IMPORTS: main.cpp: Import _Z7callee1v
-// IMPORTS: main.cpp: Import _ZL7callee0v.llvm.[[#]]
-// IMPORTS: main.cpp: Import _Z11global_funcv
+// IMPORTS-DAG: main.cpp: Import {{.*}}callee1{{.*}}
+// IMPORTS-DAG: main.cpp: Import {{.*}}callee0{{.*}}llvm.[[#]]
+// IMPORTS-DAG: main.cpp: Import {{.*}}global_func{{.*}}
 
-// PGOName: define {{(dso_local )?}}void @_Z7callee1v() #[[#]] !prof ![[#]] {
-// PGOName: define internal void @_ZL7callee0v() #[[#]] !prof ![[#]] !PGOFuncName ![[#MD:]] {
-// PGOName: ![[#MD]] = !{!"{{.*}}lib.cpp;_ZL7callee0v"}
+// PGOName-DAG: define {{.*}}callee1{{.*}} !prof ![[#]] {
+// PGOName-DAG: define internal {{.*}}callee0{{.*}} !prof ![[#]] !PGOFuncName ![[#MD:]] {
+// PGOName-DAG: ![[#MD]] = !{!"{{.*}}lib.cpp;{{.*}}callee0{{.*}}"}
 
-// IR-LABEL: define available_externally {{.*}} void @_Z11global_funcv() {{.*}} !prof ![[#]] {
-// IR-NEXT: entry:
-// IR-NEXT:  %0 = load ptr, ptr @calleeAddrs
-// IR-NEXT:  tail call void %0(), !prof ![[#PROF1:]]
-// IR-NEXT:  %1 = load ptr, ptr getelementptr inbounds ([2 x ptr], ptr @calleeAddrs,
-// IR-NEXT:  tail call void %1(), !prof ![[#PROF2:]]
-
-// The GUID of indirect callee is the MD5 hash of `/path/to/lib.cpp;_ZL7callee0v`
-// that depends on the directory. Use [[#]] for its MD5 hash.
-// Use {{.*}} for integer types so the test works on 32-bit and 64-bit systems.
-// IR: ![[#PROF1]] = !{!"VP", i32 0, {{.*}} 1, {{.*}} [[#]], {{.*}} 1}
-// IR: ![[#PROF2]] = !{!"VP", i32 0, {{.*}} 1, {{.*}} -3993653843325621743, {{.*}} 1}
-
-// ICP-REMARK: Promote indirect call to _ZL7callee0v.llvm.[[#]] with count 1 out of 1
-// ICP-REMARK: Promote indirect call to _Z7callee1v with count 1 out of 1
+// ICP-REMARK: Promote indirect call to {{.*}}callee0{{.*}}llvm.[[#]] with count 1 out of 1
+// ICP-REMARK: Promote indirect call to {{.*}}callee1{{.*}} with count 1 out of 1
 
 // ICP-IR: br i1 %[[#]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof ![[#BRANCH_WEIGHT1:]]
 // ICP-IR: br i1 %[[#]], label %if.true.direct_targ1, label %if.false.orig_indirect2, !prof ![[#BRANCH_WEIGHT1]]

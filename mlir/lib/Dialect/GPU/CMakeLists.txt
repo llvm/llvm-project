@@ -105,6 +105,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   )
 
 add_subdirectory(TransformOps)
+add_subdirectory(Pipelines)
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   if(NOT MLIR_ENABLE_CUDA_CONVERSIONS)

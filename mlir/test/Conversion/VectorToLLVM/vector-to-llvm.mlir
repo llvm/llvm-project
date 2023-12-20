@@ -443,7 +443,7 @@ func.func @masked_float_mul_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: v
 // -----
 
 func.func @masked_float_max_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: vector<2xf32>, %m: vector<2xi1>) -> vector<2xf32> {
-  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<maxf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
+  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<maxnumf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
@@ -456,7 +456,7 @@ func.func @masked_float_max_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: v
 // -----
 
 func.func @masked_float_min_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: vector<2xf32>, %m: vector<2xi1>) -> vector<2xf32> {
-  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<minf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
+  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<minnumf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
@@ -1379,7 +1379,7 @@ func.func @reduce_fminimum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 // -----
 
 func.func @reduce_fmax_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  %0 = vector.reduction <maxf>, %arg0, %arg1 : vector<16xf32> into f32
+  %0 = vector.reduction <maxnumf>, %arg0, %arg1 : vector<16xf32> into f32
   return %0 : f32
 }
 // CHECK-LABEL: @reduce_fmax_f32(
@@ -1391,7 +1391,7 @@ func.func @reduce_fmax_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 // -----
 
 func.func @reduce_fmin_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  %0 = vector.reduction <minf>, %arg0, %arg1 : vector<16xf32> into f32
+  %0 = vector.reduction <minnumf>, %arg0, %arg1 : vector<16xf32> into f32
   return %0 : f32
 }
 // CHECK-LABEL: @reduce_fmin_f32(

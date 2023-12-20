@@ -9,6 +9,9 @@
 ; The raw profiles storesd compressed function names, so profile reader should
 ; be built with zlib support to decompress them.
 ; REQUIRES: zlib
+; REQUIRES: host-byteorder-little-endian
+; Raw profiles are generate on 64-bit systems.
+; REQUIRES: llvm-64-bits
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -23,17 +26,17 @@
 
 ; Test that callee with local linkage has `PGOFuncName` metadata while callee with external doesn't have it.
 ; RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=PGOName
-; PGOName: define void @_Z7callee1v() {{.*}} !prof ![[#]] {
-; PGOName: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !PGOFuncName ![[#MD:]] {
+; PGOName-DAG: define void @_Z7callee1v() {{.*}} !prof ![[#]] {
+; PGOName-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !PGOFuncName ![[#MD:]] {
 ; The source filename of `lib.ll` is specified as "lib.cc" (i.e., the name does
 ; not change with the directory), so match the full name here.
 ; PGOName: ![[#MD]] = !{!"lib.cc;_ZL7callee0v"}
 
 ; Tests that both external and internal callees are correctly imported.
 ; RUN: opt -passes=function-import -summary-file summary.thinlto.bc main.bc -o main.import.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
-; IMPORTS: Import _Z7callee1v
-; IMPORTS: Import _ZL7callee0v.llvm.[[#]]
-; IMPORTS: Import _Z11global_funcv
+; IMPORTS-DAG: Import _Z7callee1v
+; IMPORTS-DAG: Import _ZL7callee0v.llvm.[[#]]
+; IMPORTS-DAG: Import _Z11global_funcv
 
 ; Tests that ICP transformations happen.
 ; Both candidates are ICP'ed, check there is no `!VP` in the IR.
