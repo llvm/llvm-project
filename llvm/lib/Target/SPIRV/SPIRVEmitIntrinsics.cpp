@@ -410,10 +410,10 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
   Constant *EltTyConst;
   unsigned AddressSpace = 0;
   if (auto *AI = dyn_cast<AllocaInst>(I)) {
-    EltTyConst = Constant::getNullValue(AI->getAllocatedType());
+    EltTyConst = UndefValue::get(AI->getAllocatedType());
     AddressSpace = AI->getAddressSpace();
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-    EltTyConst = Constant::getNullValue(GEP->getResultElementType());
+    EltTyConst = UndefValue::get(GEP->getResultElementType());
     AddressSpace = GEP->getPointerAddressSpace();
   } else {
     llvm_unreachable("Unexpected instruction!");
@@ -436,7 +436,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
         TypeToAssign = t->second->getType();
       }
     }
-    Constant *Const = Constant::getNullValue(TypeToAssign);
+    Constant *Const = UndefValue::get(TypeToAssign);
     buildIntrWithMD(Intrinsic::spv_assign_type, {Ty}, Const, I, {});
   }
   for (const auto &Op : I->operands()) {

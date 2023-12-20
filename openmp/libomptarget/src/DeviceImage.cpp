@@ -50,5 +50,4 @@ DeviceImageTy::DeviceImageTy(__tgt_bin_desc &BinaryDesc,
       static_cast<const void *>(Binary->getImage().bytes_end()));
 
   Image = __tgt_device_image{Begin, End, Image.EntriesBegin, Image.EntriesEnd};
-  ImageInfo = __tgt_image_info{Binary->getArch().data()};
 }
