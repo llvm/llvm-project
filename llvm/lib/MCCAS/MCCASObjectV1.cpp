@@ -3119,27 +3119,6 @@ struct DIEVisitor {
     SmallVector<AbbrevContent> AbbrevContents;
   };
 
-  DIEVisitor() = delete;
-
-  DIEVisitor(ArrayRef<StringRef> AbbrevEntries,
-             BinaryStreamReader DistinctReader, StringRef DistinctData,
-             std::function<void(StringRef)> HeaderCallback,
-             std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
-             std::function<void(dwarf::Attribute, dwarf::Form, StringRef, bool)>
-                 AttrCallback,
-             std::function<void(bool)> EndTagCallback,
-             std::function<void(StringRef)> NewBlockCallback)
-      : AbbrevEntries(AbbrevEntries), DistinctReader(DistinctReader),
-        DistinctData(DistinctData), HeaderCallback(HeaderCallback),
-        StartTagCallback(StartTagCallback), AttrCallback(AttrCallback),
-        EndTagCallback(EndTagCallback), NewBlockCallback(NewBlockCallback) {
-    AbbrevEntryCache.reserve(AbbrevEntries.size());
-    for (unsigned I = 0; I < AbbrevEntries.size(); I++) {
-      if (Error E = materializeAbbrevDIE(encodeAbbrevIndex(I)))
-        report_fatal_error(std::move(E));
-    }
-  }
-
   Error visitDIERef(DIEDedupeTopLevelRef Ref);
   Error visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack);
   Error visitDIEAttrs(BinaryStreamReader &DataReader, StringRef DIEData,
@@ -3324,6 +3303,10 @@ static void popStack(BinaryStreamReader &Reader, StringRef &Data,
 // Visit DIERef CAS objects and materialize them.
 Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
 
+  for (unsigned I = 0; I < AbbrevEntries.size(); I++)
+    if (Error E = materializeAbbrevDIE(encodeAbbrevIndex(I)))
+      return E;
+
   std::stack<std::pair<StringRef, unsigned>> StackOfNodes;
   auto Data = DIEChildrenStack.empty() ? StringRef()
                                        : DIEChildrenStack.front().getData();
@@ -3451,8 +3434,14 @@ Error mccasformats::v1::visitDebugInfo(
   HeaderCallback(toStringRef(HeaderData));
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{TotAbbrevEntries, DistinctReader,   UncompressedDistinctData,
-                     HeaderCallback,   StartTagCallback, AttrCallback,
-                     EndTagCallback,   NewBlockCallback};
+  DIEVisitor Visitor{{},
+                     TotAbbrevEntries,
+                     DistinctReader,
+                     UncompressedDistinctData,
+                     HeaderCallback,
+                     StartTagCallback,
+                     AttrCallback,
+                     EndTagCallback,
+                     NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
 }
