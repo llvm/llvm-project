@@ -27,7 +27,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <optional>
 
 using namespace llvm;
 
@@ -46,7 +45,8 @@ STATISTIC(NumFuncUsedAdded,
 /// ScalarFunc is not null, it copies its attributes to the newly created
 /// Function.
 Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
-                         Function *ScalarFunc, const StringRef TLIName) {
+                         const StringRef TLIName,
+                         Function *ScalarFunc = nullptr) {
   Function *TLIFunc = M->getFunction(TLIName);
   if (!TLIFunc) {
     TLIFunc =
@@ -139,8 +139,9 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // Try to find the mapping for the scalar version of this intrinsic and the
   // exact vector width of the call operands in the TargetLibraryInfo. First,
   // check with a non-masked variant, and if that fails try with a masked one.
-  const VecDesc *VD = TLI.getVectorMappingInfo(ScalarName, VF, false);
-  if (!VD && !(VD = TLI.getVectorMappingInfo(ScalarName, VF, true)))
+  const VecDesc *VD =
+      TLI.getVectorMappingInfo(ScalarName, VF, /*Masked*/ false);
+  if (!VD && !(VD = TLI.getVectorMappingInfo(ScalarName, VF, /*Masked*/ true)))
     return false;
 
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Found TLI mapping from: `" << ScalarName
@@ -163,7 +164,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   Function *FuncToReplace = CallToReplace.getCalledFunction();
   Function *TLIFunc = getTLIFunction(CallToReplace.getModule(), VectorFTy,
-                                     FuncToReplace, VD->getVectorFnName());
+                                     VD->getVectorFnName(), FuncToReplace);
   replaceWithTLIFunction(CallToReplace, *OptInfo, TLIFunc);
 
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `"
