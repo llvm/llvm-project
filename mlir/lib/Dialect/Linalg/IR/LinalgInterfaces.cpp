@@ -679,7 +679,7 @@ mlir::linalg::detail::depthwise_convolution_impl::createCommonIndexingMaps(
     MLIRContext *ctx, int64_t numSpatial, int64_t channelPos,
     const SmallVectorImpl<int64_t> &strides,
     const SmallVectorImpl<int64_t> &dilations) {
-  // Domain: (n, w, c, m, kw)
+  // Domain: `(n, s, c, m, ks)` where `s` represents all spatial dims
   AffineExpr n = getAffineDimExpr(0, ctx);
   SmallVector<AffineExpr> s(
       llvm::map_range(llvm::seq<int64_t>(1, numSpatial + 1),
@@ -689,9 +689,8 @@ mlir::linalg::detail::depthwise_convolution_impl::createCommonIndexingMaps(
   SmallVector<AffineExpr> ks(llvm::map_range(
       llvm::seq<int64_t>(numSpatial + 3, 2 * (numSpatial + 1) + 1),
       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
-  // Temp subsitute for channel position attr
 
-  // Initialze operand accesses in nw order and insert c according to channel
+  // Initialze operand accesses in ns order and insert c according to channel
   // position
   SmallVector<AffineExpr> inExprs = {n}, outExprs = {n};
   SmallVector<AffineExpr> cm = {c, m};
