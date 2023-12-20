@@ -1172,7 +1172,9 @@ Status CommandInterpreter::AddUserCommand(llvm::StringRef name,
 
   if (UserCommandExists(name)) {
     if (!can_replace) {
-      result.SetErrorString("user command exists and force replace not set");
+      result.SetErrorString(
+          "user command exists and force replace not set by --overwrite or "
+          "'settings set interpreter.require-overwrite false'");
       return result;
     }
     if (cmd_sp->IsMultiwordObject()) {
