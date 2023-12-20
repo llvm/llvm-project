@@ -30,7 +30,7 @@ entry:
   %4 = extractvalue { <vscale x 8 x i1>, <vscale x 8 x i1> } %0, 1
   %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %4)
   %6 = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> %3, <vscale x 16 x i1> %5, i64 16)
-  tail call void @g() #4
+  tail call void @g()
   ret <vscale x 32 x i1> %6
 }
 ; CHECK-LABEL: f0:
@@ -47,7 +47,7 @@ entry:
   %2 = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> poison, <vscale x 16 x i1> %1, i64 0)
   %3 = extractvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } %0, 1
   %4 = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> %2, <vscale x 16 x i1> %3, i64 16)
-  tail call void @g() #4
+  tail call void @g()
   ret <vscale x 32 x i1> %4
 }
 
