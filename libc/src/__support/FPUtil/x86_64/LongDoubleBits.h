@@ -26,20 +26,26 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-template <> struct FPBits<long double> : private FloatProperties<long double> {
-  using typename FloatProperties<long double>::StorageType;
-  using FloatProperties<long double>::TOTAL_LEN;
-  using FloatProperties<long double>::EXP_MASK;
-  using FloatProperties<long double>::EXP_BIAS;
-  using FloatProperties<long double>::EXP_LEN;
-  using FloatProperties<long double>::FRACTION_MASK;
-  using FloatProperties<long double>::FRACTION_LEN;
+template <>
+struct FPBits<long double>
+    : public internal::FPBitsCommon<FPType::X86_Binary80> {
+  using UP = internal::FPBitsCommon<FPType::X86_Binary80>;
+  using StorageType = typename UP::StorageType;
+  using UP::bits;
 
 private:
-  using FloatProperties<long double>::QUIET_NAN_MASK;
+  using UP::EXP_SIG_MASK;
+  using UP::QUIET_NAN_MASK;
 
 public:
-  using FloatProperties<long double>::SIGN_MASK;
+  using UP::EXP_BIAS;
+  using UP::EXP_LEN;
+  using UP::EXP_MASK;
+  using UP::FP_MASK;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::SIGN_MASK;
+  using UP::TOTAL_LEN;
 
   static constexpr int MAX_BIASED_EXPONENT = 0x7FFF;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
@@ -50,18 +56,6 @@ public:
   static constexpr StorageType MAX_NORMAL =
       (StorageType(MAX_BIASED_EXPONENT - 1) << (FRACTION_LEN + 1)) |
       (StorageType(1) << FRACTION_LEN) | MAX_SUBNORMAL;
-
-  StorageType bits;
-
-  LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
-    mantVal &= FRACTION_MASK;
-    bits &= ~FRACTION_MASK;
-    bits |= mantVal;
-  }
-
-  LIBC_INLINE constexpr StorageType get_mantissa() const {
-    return bits & FRACTION_MASK;
-  }
 
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
     // The x86 80 bit float represents the leading digit of the mantissa
@@ -99,12 +93,12 @@ public:
     return bool((bits & SIGN_MASK) >> (TOTAL_LEN - 1));
   }
 
-  LIBC_INLINE constexpr FPBits() : bits(0) {}
+  LIBC_INLINE constexpr FPBits() : UP() {}
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
   LIBC_INLINE constexpr explicit FPBits(XType x)
-      : bits(cpp::bit_cast<StorageType>(x)) {
+      : UP(cpp::bit_cast<StorageType>(x)) {
     // bits starts uninitialized, and setting it to a long double only
     // overwrites the first 80 bits. This clears those upper bits.
     bits = bits & ((StorageType(1) << 80) - 1);
@@ -112,7 +106,7 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x) : bits(x) {}
+  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
 
   LIBC_INLINE constexpr operator long double() {
     return cpp::bit_cast<long double>(bits);
