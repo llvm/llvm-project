@@ -71,9 +71,32 @@ LIBC_INLINE bool is_disjoint(const void *p1, const void *p2, size_t size) {
   return sdiff >= 0 ? size <= udiff : size <= neg_udiff;
 }
 
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
+#endif
+
 #if LIBC_HAS_BUILTIN(__builtin_memset_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
 #endif
+
+// Performs a constant count copy.
+template <size_t Size>
+LIBC_INLINE void memcpy_inline(void *__restrict dst,
+                               const void *__restrict src) {
+#ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
+  __builtin_memcpy_inline(dst, src, Size);
+#else
+  // In memory functions `memcpy_inline` is instantiated several times with
+  // different value of the Size parameter. This doesn't play well with GCC's
+  // Value Range Analysis that wrongly detects out of bounds accesses. We
+  // disable the 'array-bounds' warning for the purpose of this function.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  for (size_t i = 0; i < Size; ++i)
+    static_cast<char *>(dst)[i] = static_cast<const char *>(src)[i];
+#pragma GCC diagnostic pop
+#endif
+}
 
 using Ptr = cpp::byte *;        // Pointer to raw data.
 using CPtr = const cpp::byte *; // Const pointer to raw data.
@@ -181,13 +204,13 @@ LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
 // type.
 template <typename T> LIBC_INLINE T load(CPtr ptr) {
   T Out;
-  cpp::memcpy_inline<sizeof(T)>(&Out, ptr);
+  memcpy_inline<sizeof(T)>(&Out, ptr);
   return Out;
 }
 
 // Stores a value of type T in memory (possibly unaligned).
 template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
-  cpp::memcpy_inline<sizeof(T)>(ptr, &value);
+  memcpy_inline<sizeof(T)>(ptr, &value);
 }
 
 // On architectures that do not allow for unaligned access we perform several

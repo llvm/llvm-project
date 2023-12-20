@@ -25,27 +25,6 @@ namespace LIBC_NAMESPACE::cpp {
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-// Performs a copy from 'src' to 'dst' of 'size' bytes.
-// The semantics are valid if 'src' and 'dst' are equal but undefined if the
-// regions defined by [src, src + size] and [dst, dst + size] overlap.
-template <size_t size, typename DstT, typename SrcT>
-LIBC_INLINE constexpr void memcpy_inline(DstT *__restrict dst,
-                                         const SrcT *__restrict src) {
-#ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-  __builtin_memcpy(dst, src, size);
-#else
-  // `memcpy_inline` is instantiated several times with different value of the
-  // size parameter. This doesn't play well with GCC's Value Range Analysis that
-  // wrongly detects out of bounds accesses. We disable the 'array-bounds'
-  // warning for the purpose of this function.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-  for (size_t i = 0; i < size; ++i)
-    static_cast<char *>(dst)[i] = static_cast<const char *>(src)[i];
-#pragma GCC diagnostic pop
-#endif
-}
-
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
 template <
@@ -60,7 +39,14 @@ LIBC_INLINE constexpr To bit_cast(const From &from) {
   return __builtin_bit_cast(To, from);
 #else
   To to;
-  memcpy_inline<sizeof(To)>(&to, &from);
+  char *dst = reinterpret_cast<char *>(&to);
+  const char *src = reinterpret_cast<const char *>(&from);
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+  __builtin_memcpy_inline(dst, src, sizeof(To));
+#else
+  for (unsigned i = 0; i < sizeof(To); ++i)
+    dst[i] = src[i];
+#endif // LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
   return to;
 #endif // LIBC_HAS_BUILTIN(__builtin_bit_cast)
 }
