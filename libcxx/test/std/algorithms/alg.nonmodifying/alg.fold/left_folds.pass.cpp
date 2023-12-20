@@ -37,13 +37,14 @@
 #include <string>
 #include <vector>
 
-#if !defined(TEST_HAS_NO_LOCALIZATION)
-#  include <sstream>
-#endif
-
+#include "test_macros.h"
 #include "test_range.h"
 #include "invocable_with_telemetry.h"
 #include "maths.h"
+
+#if !defined(TEST_HAS_NO_LOCALIZATION)
+#  include <sstream>
+#endif
 
 using std::ranges::fold_left;
 using std::ranges::fold_left_with_iter;
