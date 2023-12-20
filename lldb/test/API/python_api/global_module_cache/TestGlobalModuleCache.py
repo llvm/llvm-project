@@ -34,10 +34,6 @@ class GlobalModuleCacheTestCase(TestBase):
     # The rerun tests indicate rerunning on Windows doesn't really work, so
     # this one won't either.
     @skipIfWindows
-    # On Arm and AArch64 Linux, this test attempts to pop a thread plan when
-    # we only have the base plan remaining. Skip it until we can figure out
-    # the bug this is exposing.
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
