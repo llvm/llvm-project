@@ -58,6 +58,7 @@ intermediate LLVM representation.
    NVPTXUsage
    Phabricator
    Passes
+   PGOProfileFormat
    ReportingGuide
    ResponseGuide
    Remarks
@@ -176,6 +177,9 @@ Optimizations
    This document explains how LLVM uses value tracking, or instruction
    referencing, to determine variable locations for debug info in the final
    stages of compilation.
+
+:doc:`PGOProfileFormat`
+   This document explains two binary formats of IRPGO profiles.
 
 Code Generation
 ---------------
