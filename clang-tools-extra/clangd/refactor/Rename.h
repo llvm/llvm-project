@@ -35,8 +35,12 @@ struct RenameOptions {
 };
 
 struct RenameInputs {
-  Position Pos; // the position triggering the rename
-  llvm::StringRef NewName;
+  /// The position triggering the rename
+  Position Pos;
+
+  /// The new name to give to the symbol or `nullopt` to perform a fake rename
+  /// that checks if rename is possible.
+  std::optional<llvm::StringRef> NewName;
 
   ParsedAST &AST;
   llvm::StringRef MainFilePath;
@@ -52,12 +56,14 @@ struct RenameInputs {
 };
 
 struct RenameResult {
-  // The range of the symbol that the user can attempt to rename.
+  /// The range of the symbol that the user can attempt to rename.
   Range Target;
-  // Rename occurrences for the current main file.
+  /// The current name of the declaration at the cursor.
+  std::string OldName;
+  /// Rename occurrences for the current main file.
   std::vector<Range> LocalChanges;
-  // Complete edits for the rename, including LocalChanges.
-  // If the full set of changes is unknown, this field is empty.
+  /// Complete edits for the rename, including LocalChanges.
+  /// If the full set of changes is unknown, this field is empty.
   FileEdits GlobalChanges;
 };
 

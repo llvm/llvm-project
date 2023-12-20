@@ -1476,6 +1476,7 @@ TEST(RenameTest, PrepareRename) {
                                   /*NewName=*/std::nullopt, {});
   // Verify that for multi-file rename, we only return main-file occurrences.
   ASSERT_TRUE(bool(Results)) << Results.takeError();
+  ASSERT_EQ(Results->OldName, "func");
   // We don't know the result is complete in prepareRename (passing a nullptr
   // index internally), so GlobalChanges should be empty.
   EXPECT_TRUE(Results->GlobalChanges.empty());
@@ -1504,6 +1505,39 @@ TEST(RenameTest, PrepareRename) {
     Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
                                /*NewName=*/GoodIdent, {});
     EXPECT_TRUE(bool(Results));
+  }
+}
+
+TEST(RenameTest, PrepareRenameObjC) {
+  Annotations Input(R"cpp(
+    @interface Foo
+    - (int)performA^ction:(int)action w^ith:(int)value;
+    @end
+    @implementation Foo
+    - (int)performA^ction:(int)action w^ith:(int)value {
+      return [self ^performAction^:action ^w^ith^:value];
+    }
+    @end
+  )cpp");
+  std::string Path = testPath("foo.m");
+  MockFS FS;
+  FS.Files[Path] = std::string(Input.code());
+
+  auto ServerOpts = ClangdServer::optsForTest();
+  ServerOpts.BuildDynamicSymbolIndex = true;
+
+  trace::TestTracer Tracer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xobjective-c"};
+  ClangdServer Server(CDB, FS, ServerOpts);
+  runAddDocument(Server, Path, Input.code());
+
+  for (Position Point : Input.points()) {
+    auto Results = runPrepareRename(Server, Path, Point,
+                                    /*NewName=*/std::nullopt, {});
+    // Verify that for multi-file rename, we only return main-file occurrences.
+    ASSERT_TRUE(bool(Results)) << Results.takeError();
+    ASSERT_EQ(Results->OldName, "performAction:with:");
   }
 }
 
