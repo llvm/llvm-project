@@ -207,9 +207,10 @@ Value OperationFolder::getOrCreateConstant(Block *block, Dialect *dialect,
   rewriter.setInsertionPoint(&entry, entry.begin());
 
   // Get the constant map for the insertion region of this operation.
+  // Use erased location since the op is being built at the front of block.
   auto &uniquedConstants = foldScopes[insertRegion];
-  Operation *constOp =
-      tryGetOrCreateConstant(uniquedConstants, dialect, value, type);
+  Operation *constOp = tryGetOrCreateConstant(uniquedConstants, dialect, value,
+                                              type, erasedFoldedLocation);
   return constOp ? constOp->getResult(0) : Value();
 }
 
@@ -264,8 +265,9 @@ OperationFolder::processFoldResults(Operation *op,
     // Check to see if there is a canonicalized version of this constant.
     auto res = op->getResult(i);
     Attribute attrRepl = foldResults[i].get<Attribute>();
-    if (auto *constOp = tryGetOrCreateConstant(uniquedConstants, dialect,
-                                               attrRepl, res.getType())) {
+    if (auto *constOp =
+            tryGetOrCreateConstant(uniquedConstants, dialect, attrRepl,
+                                   res.getType(), erasedFoldedLocation)) {
       // Ensure that this constant dominates the operation we are replacing it
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
@@ -296,12 +298,13 @@ OperationFolder::processFoldResults(Operation *op,
 Operation *
 OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
                                         Dialect *dialect, Attribute value,
-                                        Type type) {
+                                        Type type, Location loc) {
   // Check if an existing mapping already exists.
   auto constKey = std::make_tuple(dialect, value, type);
   Operation *&constOp = uniquedConstants[constKey];
   if (constOp) {
-    constOp->setLoc(erasedFoldedLocation);
+    if (loc != constOp->getLoc())
+      constOp->setLoc(erasedFoldedLocation);
     return constOp;
   }
 
@@ -327,7 +330,8 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
     notifyRemoval(constOp);
     rewriter.eraseOp(constOp);
     referencedDialects[existingOp].push_back(dialect);
-    existingOp->setLoc(erasedFoldedLocation);
+    if (loc != existingOp->getLoc())
+      existingOp->setLoc(erasedFoldedLocation);
     return constOp = existingOp;
   }
 
