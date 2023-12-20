@@ -1143,6 +1143,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0080: All DS instructions may be scheduled across sched_barrier.
                                                    - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
+                                                   - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
   llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
