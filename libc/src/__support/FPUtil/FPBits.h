@@ -176,8 +176,7 @@ public:
   }
 
   LIBC_INLINE constexpr bool is_zero() const {
-    // Remove sign bit by shift
-    return (bits << 1) == 0;
+    return (bits & EXP_SIG_MASK) == 0;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {

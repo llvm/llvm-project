@@ -115,8 +115,7 @@ public:
   }
 
   LIBC_INLINE constexpr bool is_zero() const {
-    return get_biased_exponent() == 0 && get_mantissa() == 0 &&
-           get_implicit_bit() == 0;
+    return (bits & EXP_SIG_MASK) == 0;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
