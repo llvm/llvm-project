@@ -727,20 +727,9 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
 
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
-/// It is not defined whether the field values remain the same or not.
-///
-/// This function is primarily intended for use by checks that set custom
-/// properties on `RecordValue`s to model the state of these values. Such checks
-/// should avoid modifying the properties of an existing `RecordValue` because
-/// these changes would be visible to other `Environment`s that share the same
-/// `RecordValue`. Instead, call `refreshRecordValue()`, then set the properties
-/// on the new `RecordValue` that it returns. Typical usage:
-///
-///   refreshRecordValue(Loc, Env).setProperty("my_prop", MyPropValue);
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 
 /// Associates a new `RecordValue` with `Expr` and returns the new value.
-/// See also documentation for the overload above.
 RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow
