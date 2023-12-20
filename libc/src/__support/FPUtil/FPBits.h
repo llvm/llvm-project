@@ -97,12 +97,12 @@ public:
   static_assert(sizeof(T) == sizeof(StorageType),
                 "Data type and integral representation have different sizes.");
 
-  static constexpr int MAX_EXPONENT = (1 << EXP_LEN) - 1;
+  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
   static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
   static constexpr StorageType MAX_NORMAL =
-      ((StorageType(MAX_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
+      ((StorageType(MAX_BIASED_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
 
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
