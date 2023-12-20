@@ -625,16 +625,16 @@ llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
   return Identifiers;
 }
 
-std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
-                                           llvm::StringRef Content,
-                                           const LangOptions &LangOpts) {
+std::vector<Range>
+collectIdentifierRanges(llvm::StringRef Identifier,
+                        const syntax::UnexpandedTokenBuffer &Tokens) {
   std::vector<Range> Ranges;
-  lex(Content, LangOpts,
-      [&](const syntax::Token &Tok, const SourceManager &SM) {
-        if (Tok.kind() != tok::identifier || Tok.text(SM) != Identifier)
-          return;
-        Ranges.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
-      });
+  const SourceManager &SM = Tokens.sourceManager();
+  for (const syntax::Token &Tok : Tokens.tokens()) {
+    if (Tok.kind() != tok::identifier || Tok.text(SM) != Identifier)
+      continue;
+    Ranges.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+  }
   return Ranges;
 }
 
