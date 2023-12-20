@@ -1101,6 +1101,9 @@ bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getNumIncomingValues() != 2 || RHS->getNumIncomingValues() != 2)
     return false;
 
+  if (LHS->getParent() != RHS->getParent())
+    return false;
+
   BasicBlock *B0 = LHS->getIncomingBlock(0);
   BasicBlock *B1 = LHS->getIncomingBlock(1);
 
