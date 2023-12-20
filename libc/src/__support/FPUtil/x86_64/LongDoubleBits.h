@@ -97,10 +97,6 @@ public:
     return cpp::bit_cast<long double>(bits);
   }
 
-  LIBC_INLINE constexpr int get_exponent() const {
-    return int(get_biased_exponent()) - EXP_BIAS;
-  }
-
   // If the number is subnormal, the exponent is treated as if it were the
   // minimum exponent for a normal number. This is to keep continuity between
   // the normal and subnormal ranges, but it causes problems for functions where

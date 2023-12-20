@@ -81,6 +81,10 @@ public:
     return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
   }
 
+  LIBC_INLINE constexpr int get_exponent() const {
+    return int(get_biased_exponent()) - EXP_BIAS;
+  }
+
   LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
 };
 
@@ -153,10 +157,6 @@ public:
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
   LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
-
-  LIBC_INLINE constexpr int get_exponent() const {
-    return int(get_biased_exponent()) - EXP_BIAS;
-  }
 
   // If the number is subnormal, the exponent is treated as if it were the
   // minimum exponent for a normal number. This is to keep continuity between
