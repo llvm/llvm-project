@@ -298,8 +298,8 @@ void RTNAME(System)(const Descriptor &command, const Descriptor *exitstat,
     int exitstatVal{WEXITSTATUS(status)};
     StoreLengthToDescriptor(exitstat, exitstatVal, terminator);
 #endif
-    FreeMemory((void *)newCmd);
   }
+  FreeMemory((void *)newCmd);
 }
 
 } // namespace Fortran::runtime
