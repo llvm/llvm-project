@@ -418,8 +418,6 @@ void BackendConsumer::anchor() { }
 } // namespace clang
 
 bool ClangDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
-  if (DI.getSeverity() == DS_Error)
-    HasErrors = true;
   BackendCon->DiagnosticHandlerImpl(DI);
   return true;
 }
