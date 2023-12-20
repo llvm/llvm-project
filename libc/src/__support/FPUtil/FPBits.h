@@ -70,6 +70,17 @@ public:
     return (bits & SIGN_MASK) != 0;
   }
 
+  LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
+    // clear exponent bits
+    bits &= ~EXP_MASK;
+    // set exponent bits
+    bits |= (biased << EXP_MASK_SHIFT) & EXP_MASK;
+  }
+
+  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
+    return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
+  }
+
   LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
 };
 
@@ -105,16 +116,7 @@ public:
   using UP::SIGN_MASK;
   using UP::TOTAL_LEN;
 
-  LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    // clear exponent bits
-    bits &= ~EXP_MASK;
-    // set exponent bits
-    bits |= (biased << EXP_MASK_SHIFT) & EXP_MASK;
-  }
-
-  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
-  }
+  using UP::get_biased_exponent;
 
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.

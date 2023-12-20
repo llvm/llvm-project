@@ -65,17 +65,6 @@ public:
     return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
   }
 
-  LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    // clear exponent bits
-    bits &= ~EXP_MASK;
-    // set exponent bits
-    bits |= (biased << EXP_MASK_SHIFT) & EXP_MASK;
-  }
-
-  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
-  }
-
   LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
     bits &= ~(StorageType(1) << FRACTION_LEN);
     bits |= (StorageType(implicitVal) << FRACTION_LEN);
