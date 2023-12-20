@@ -1,10 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -Wno-unused-value %s -disable-llvm-passes -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
-
-// FIXME: Unfortunately there is no good way to validate that our values are
-// correct since Vector types don't have operator [] implemented for constexpr.
-// Instead, we need to use filecheck to ensure the emitted IR is correct. Once
-// someone implements array subscript operator for these types as constexpr,
-// this test should modified to jsut use static asserts.
+// RUN: %clang_cc1 -std=c++14 -Wno-unused-value %s -triple x86_64-linux-gnu -emit-llvm -o /dev/null
 
 using FourCharsVecSize __attribute__((vector_size(4))) = char;
 using FourIntsVecSize __attribute__((vector_size(16))) = int;
@@ -155,306 +149,711 @@ constexpr auto CmpBinOr(T t, U u) {
 void CharUsage() {
   constexpr auto a = FourCharsVecSize{6, 3, 2, 1} +
                      FourCharsVecSize{12, 15, 5, 7};
-  // CHECK: store <4 x i8> <i8 18, i8 18, i8 7, i8 8>
+  static_assert(a[0] == 18 , "");
+  static_assert(a[1] == 18 , "");
+  static_assert(a[2] == 7 , "");
+  static_assert(a[3] == 8 , "");
+
   constexpr auto b = FourCharsVecSize{19, 15, 13, 12} -
                      FourCharsVecSize{13, 14, 5, 3};
-  // CHECK: store <4 x i8> <i8 6, i8 1, i8 8, i8 9>
+  static_assert(b[0] == 6 , "");
+  static_assert(b[1] == 1 , "");
+  static_assert(b[2] == 8 , "");
+  static_assert(b[3] == 9 , "");
+
   constexpr auto c = FourCharsVecSize{8, 4, 2, 1} *
                      FourCharsVecSize{3, 4, 5, 6};
-  // CHECK: store <4 x i8> <i8 24, i8 16, i8 10, i8 6>
+  static_assert(c[0] == 24 , "");
+  static_assert(c[1] == 16 , "");
+  static_assert(c[2] == 10 , "");
+  static_assert(c[3] == 6 , "");
+
   constexpr auto d = FourCharsVecSize{12, 12, 10, 10} /
                      FourCharsVecSize{6, 4, 5, 2};
-  // CHECK: store <4 x i8> <i8 2, i8 3, i8 2, i8 5>
+  static_assert(d[0] == 2 , "");
+  static_assert(d[1] == 3 , "");
+  static_assert(d[2] == 2 , "");
+  static_assert(d[3] == 5 , "");
+  
   constexpr auto e = FourCharsVecSize{12, 12, 10, 10} %
                      FourCharsVecSize{6, 4, 4, 3};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 2, i8 1>
+  static_assert(e[0] == 0 , "");
+  static_assert(e[1] == 0 , "");
+  static_assert(e[2] == 2 , "");
+  static_assert(e[3] == 1 , "");
 
   constexpr auto f = FourCharsVecSize{6, 3, 2, 1} + 3;
-  // CHECK: store <4 x i8> <i8 9, i8 6, i8 5, i8 4>
+  static_assert(f[0] == 9 , "");
+  static_assert(f[1] == 6 , "");
+  static_assert(f[2] == 5 , "");
+  static_assert(f[3] == 4 , "");
+
   constexpr auto g = FourCharsVecSize{19, 15, 12, 10} - 3;
-  // CHECK: store <4 x i8> <i8 16, i8 12, i8 9, i8 7>
+  static_assert(g[0] == 16 , "");
+  static_assert(g[1] == 12 , "");
+  static_assert(g[2] == 9 , "");
+  static_assert(g[3] == 7 , "");
+
   constexpr auto h = FourCharsVecSize{8, 4, 2, 1} * 3;
-  // CHECK: store <4 x i8> <i8 24, i8 12, i8 6, i8 3>
+  static_assert(h[0] == 24 , "");
+  static_assert(h[1] == 12 , "");
+  static_assert(h[2] == 6 , "");
+  static_assert(h[3] == 3 , "");
+
   constexpr auto j = FourCharsVecSize{12, 15, 18, 21} / 3;
-  // CHECK: store <4 x i8> <i8 4, i8 5, i8 6, i8 7>
+  static_assert(j[0] == 4 , "");
+  static_assert(j[1] == 5 , "");
+  static_assert(j[2] == 6 , "");
+  static_assert(j[3] == 7 , "");
+  
   constexpr auto k = FourCharsVecSize{12, 17, 19, 22} % 3;
-  // CHECK: store <4 x i8> <i8 0, i8 2, i8 1, i8 1>
+  static_assert(k[0] == 0 , "");
+  static_assert(k[1] == 2 , "");
+  static_assert(k[2] == 1 , "");
+  static_assert(k[3] == 1 , "");
 
   constexpr auto l = 3 + FourCharsVecSize{6, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 9, i8 6, i8 5, i8 4>
+  static_assert(f[0] == 9 , "");
+  static_assert(f[1] == 6 , "");
+  static_assert(f[2] == 5 , "");
+  static_assert(f[3] == 4 , "");
+
   constexpr auto m = 20 - FourCharsVecSize{19, 15, 12, 10};
-  // CHECK: store <4 x i8> <i8 1, i8 5, i8 8, i8 10>
+  static_assert(m[0] == 1 , "");
+  static_assert(m[1] == 5 , "");
+  static_assert(m[2] == 8 , "");
+  static_assert(m[3] == 10 , "");
+
   constexpr auto n = 3 * FourCharsVecSize{8, 4, 2, 1};
-  // CHECK: store <4 x i8> <i8 24, i8 12, i8 6, i8 3>
+  static_assert(n[0] == 24 , "");
+  static_assert(n[1] == 12 , "");
+  static_assert(n[2] == 6 , "");
+  static_assert(n[3] == 3 , "");
+
   constexpr auto o = 100 / FourCharsVecSize{12, 15, 18, 21};
-  // CHECK: store <4 x i8> <i8 8, i8 6, i8 5, i8 4>
+  static_assert(o[0] == 8 , "");
+  static_assert(o[1] == 6 , "");
+  static_assert(o[2] == 5 , "");
+  static_assert(o[3] == 4 , "");
+
   constexpr auto p = 100 % FourCharsVecSize{12, 15, 18, 21};
-  // CHECK: store <4 x i8> <i8 4, i8 10, i8 10, i8 16>
+  static_assert(p[0] == 4 , "");
+  static_assert(p[1] == 10 , "");
+  static_assert(p[2] == 10 , "");
+  static_assert(p[3] == 16 , "");
 
   constexpr auto q = FourCharsVecSize{6, 3, 2, 1} << FourCharsVecSize{1, 1, 2, 2};
-  // CHECK: store <4 x i8> <i8 12, i8 6, i8 8, i8 4>
+  static_assert(q[0] == 12 , "");
+  static_assert(q[1] == 6 , "");
+  static_assert(q[2] == 8 , "");
+  static_assert(q[3] == 4 , "");
+
   constexpr auto r = FourCharsVecSize{19, 15, 12, 10} >>
                      FourCharsVecSize{1, 1, 2, 2};
-  // CHECK: store <4 x i8> <i8 9, i8 7, i8 3, i8 2>
+  static_assert(r[0] == 9 , "");
+  static_assert(r[1] == 7 , "");
+  static_assert(r[2] == 3 , "");
+  static_assert(r[3] == 2 , "");
+
   constexpr auto s = FourCharsVecSize{6, 3, 5, 10} << 1;
-  // CHECK: store <4 x i8> <i8 12, i8 6, i8 10, i8 20>
+  static_assert(s[0] == 12 , "");
+  static_assert(s[1] == 6 , "");
+  static_assert(s[2] == 10 , "");
+  static_assert(s[3] == 20 , "");
+
   constexpr auto t = FourCharsVecSize{19, 15, 10, 20} >> 1;
-  // CHECK: store <4 x i8> <i8 9, i8 7, i8 5, i8 10>
+  static_assert(t[0] == 9 , "");
+  static_assert(t[1] == 7 , "");
+  static_assert(t[2] == 5 , "");
+  static_assert(t[3] == 10 , "");
+
   constexpr auto u = 12 << FourCharsVecSize{1, 2, 3, 3};
-  // CHECK: store <4 x i8> <i8 24, i8 48, i8 96, i8 96>
+  static_assert(u[0] == 24 , "");
+  static_assert(u[1] == 48 , "");
+  static_assert(u[2] == 96 , "");
+  static_assert(u[3] == 96 , "");
+
   constexpr auto v = 12 >> FourCharsVecSize{1, 2, 2, 1};
-  // CHECK: store <4 x i8> <i8 6, i8 3, i8 3, i8 6>
+  static_assert(v[0] == 6 , "");
+  static_assert(v[1] == 3 , "");
+  static_assert(v[2] == 3 , "");
+  static_assert(v[3] == 6 , "");
 
   constexpr auto w = FourCharsVecSize{1, 2, 3, 4} <
                      FourCharsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
+  static_assert(w[0] == -1 , "");
+  static_assert(w[1] == -1 , "");
+  static_assert(w[2] == 0 , "");
+  static_assert(w[3] == 0 , "");
+
   constexpr auto x = FourCharsVecSize{1, 2, 3, 4} >
                      FourCharsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
+  static_assert(x[0] == 0 , "");
+  static_assert(x[1] == 0 , "");
+  static_assert(x[2] == -1 , "");
+  static_assert(x[3] == -1 , "");
+
   constexpr auto y = FourCharsVecSize{1, 2, 3, 4} <=
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
+  static_assert(y[0] == -1 , "");
+  static_assert(y[1] == -1 , "");
+  static_assert(y[2] == -1 , "");
+  static_assert(y[3] == 0 , "");
+
   constexpr auto z = FourCharsVecSize{1, 2, 3, 4} >=
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
+  static_assert(z[0] == 0 , "");
+  static_assert(z[1] == 0 , "");
+  static_assert(z[2] == -1 , "");
+  static_assert(z[3] == -1 , "");
+
   constexpr auto A = FourCharsVecSize{1, 2, 3, 4} ==
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
+  static_assert(A[0] == 0 , "");
+  static_assert(A[1] == 0 , "");
+  static_assert(A[2] == -1 , "");
+  static_assert(A[3] == 0 , "");
+
   constexpr auto B = FourCharsVecSize{1, 2, 3, 4} !=
                      FourCharsVecSize{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
+  static_assert(B[0] == -1 , "");
+  static_assert(B[1] == -1 , "");
+  static_assert(B[2] == 0 , "");
+  static_assert(B[3] == -1 , "");
 
   constexpr auto C = FourCharsVecSize{1, 2, 3, 4} < 3;
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
+  static_assert(C[0] == -1 , "");
+  static_assert(C[1] == -1 , "");
+  static_assert(C[2] == 0 , "");
+  static_assert(C[3] == 0 , "");
+
   constexpr auto D = FourCharsVecSize{1, 2, 3, 4} > 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 0, i8 -1>
+  static_assert(D[0] == 0 , "");
+  static_assert(D[1] == 0 , "");
+  static_assert(D[2] == 0 , "");
+  static_assert(D[3] == -1 , "");
+
   constexpr auto E = FourCharsVecSize{1, 2, 3, 4} <= 3;
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
+  static_assert(E[0] == -1 , "");
+  static_assert(E[1] == -1 , "");
+  static_assert(E[2] == -1 , "");
+  static_assert(E[3] == 0 , "");
+
   constexpr auto F = FourCharsVecSize{1, 2, 3, 4} >= 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
+  static_assert(F[0] == 0 , "");
+  static_assert(F[1] == 0 , "");
+  static_assert(F[2] == -1 , "");
+  static_assert(F[3] == -1 , "");
+
   constexpr auto G = FourCharsVecSize{1, 2, 3, 4} == 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
+  static_assert(G[0] == 0 , "");
+  static_assert(G[1] == 0 , "");
+  static_assert(G[2] == -1 , "");
+  static_assert(G[3] == 0 , "");
+
   constexpr auto H = FourCharsVecSize{1, 2, 3, 4} != 3;
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
+  static_assert(H[0] == -1 , "");
+  static_assert(H[1] == -1 , "");
+  static_assert(H[2] == 0 , "");
+  static_assert(H[3] == -1 , "");
 
   constexpr auto I = FourCharsVecSize{1, 2, 3, 4} &
                      FourCharsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 2, i8 2, i8 0>
+  static_assert(I[0] == 0 , "");
+  static_assert(I[1] == 2 , "");
+  static_assert(I[2] == 2 , "");
+  static_assert(I[3] == 0 , "");
+
   constexpr auto J = FourCharsVecSize{1, 2, 3, 4} ^
                      FourCharsVecSize { 4, 3, 2, 1 };
-  // CHECK: store <4 x i8> <i8 5, i8 1, i8 1, i8 5>
+  static_assert(J[0] == 5 , "");
+  static_assert(J[1] == 1 , "");
+  static_assert(J[2] == 1 , "");
+  static_assert(J[3] == 5 , "");
+
   constexpr auto K = FourCharsVecSize{1, 2, 3, 4} |
                      FourCharsVecSize{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 5, i8 3, i8 3, i8 5>
+  static_assert(K[0] == 5 , "");
+  static_assert(K[1] == 3 , "");
+  static_assert(K[2] == 3 , "");
+  static_assert(K[3] == 5 , "");
+
   constexpr auto L = FourCharsVecSize{1, 2, 3, 4} & 3;
-  // CHECK: store <4 x i8> <i8 1, i8 2, i8 3, i8 0>
+  static_assert(L[0] == 1 , "");
+  static_assert(L[1] == 2 , "");
+  static_assert(L[2] == 3 , "");
+  static_assert(L[3] == 0 , "");
+
   constexpr auto M = FourCharsVecSize{1, 2, 3, 4} ^ 3;
-  // CHECK: store <4 x i8> <i8 2, i8 1, i8 0, i8 7>
+  static_assert(M[0] == 2 , "");
+  static_assert(M[1] == 1 , "");
+  static_assert(M[2] == 0 , "");
+  static_assert(M[3] == 7 , "");
+
   constexpr auto N = FourCharsVecSize{1, 2, 3, 4} | 3;
-  // CHECK: store <4 x i8> <i8 3, i8 3, i8 3, i8 7>
+  static_assert(N[0] == 3 , "");
+  static_assert(N[1] == 3 , "");
+  static_assert(N[2] == 3 , "");
+  static_assert(N[3] == 7 , "");
 
   constexpr auto O = FourCharsVecSize{5, 0, 6, 0} &&
                      FourCharsVecSize{5, 5, 0, 0};
-  // CHECK: store <4 x i8> <i8 1, i8 0, i8 0, i8 0>
+  static_assert(O[0] == 1 , "");
+  static_assert(O[1] == 0 , "");
+  static_assert(O[2] == 0 , "");
+  static_assert(O[3] == 0 , "");
+
   constexpr auto P = FourCharsVecSize{5, 0, 6, 0} ||
                      FourCharsVecSize{5, 5, 0, 0};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 0>
+  static_assert(P[0] == 1 , "");
+  static_assert(P[1] == 1 , "");
+  static_assert(P[2] == 1 , "");
+  static_assert(P[3] == 0 , "");
 
   constexpr auto Q = FourCharsVecSize{5, 0, 6, 0} && 3;
-  // CHECK: store <4 x i8> <i8 1, i8 0, i8 1, i8 0>
+  static_assert(Q[0] == 1 , "");
+  static_assert(Q[1] == 0 , "");
+  static_assert(Q[2] == 1 , "");
+  static_assert(Q[3] == 0 , "");
+
   constexpr auto R = FourCharsVecSize{5, 0, 6, 0} || 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+  static_assert(R[0] == 1 , "");
+  static_assert(R[1] == 1 , "");
+  static_assert(R[2] == 1 , "");
+  static_assert(R[3] == 1 , "");
 
   constexpr auto T = CmpMul(a, b);
-  // CHECK: store <4 x i8> <i8 108, i8 18, i8 56, i8 72>
+  static_assert(T[0] == 108 , "");
+  static_assert(T[1] == 18 , "");
+  static_assert(T[2] == 56 , "");
+  static_assert(T[3] == 72 , "");
 
   constexpr auto U = CmpDiv(a, b);
-  // CHECK: store <4 x i8> <i8 3, i8 18, i8 0, i8 0>
+  static_assert(U[0] == 3 , "");
+  static_assert(U[1] == 18 , "");
+  static_assert(U[2] == 0 , "");
+  static_assert(U[3] == 0 , "");
 
   constexpr auto V = CmpRem(a, b);
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 7, i8 8>
+  static_assert(V[0] == 0 , "");
+  static_assert(V[1] == 0 , "");
+  static_assert(V[2] == 7 , "");
+  static_assert(V[3] == 8 , "");
 
   constexpr auto X = CmpAdd(a, b);
-  // CHECK: store <4 x i8> <i8 24, i8 19, i8 15, i8 17>
+  static_assert(X[0] == 24 , "");
+  static_assert(X[1] == 19 , "");
+  static_assert(X[2] == 15 , "");
+  static_assert(X[3] == 17 , "");
 
   constexpr auto Y = CmpSub(a, b);
-  // CHECK: store <4 x i8> <i8 12, i8 17, i8 -1, i8 -1>
+  static_assert(Y[0] == 12 , "");
+  static_assert(Y[1] == 17 , "");
+  static_assert(Y[2] == -1 , "");
+  static_assert(Y[3] == -1 , "");
 
   constexpr auto InvH = -H;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  static_assert(InvH[0] == 1 , "");
+  static_assert(InvH[1] == 1 , "");
+  static_assert(InvH[2] == 0 , "");
+  static_assert(InvH[3] == 1 , "");
+
   constexpr auto Z = CmpLSH(a, InvH);
-  // CHECK: store <4 x i8> <i8 36, i8 36, i8 7, i8 16>
+  static_assert(Z[0] == 36 , "");
+  static_assert(Z[1] == 36 , "");
+  static_assert(Z[2] == 7 , "");
+  static_assert(Z[3] == 16 , "");
 
   constexpr auto aa = CmpRSH(a, InvH);
-  // CHECK: store <4 x i8> <i8 9, i8 9, i8 7, i8 4>
+  static_assert(aa[0] == 9 , "");
+  static_assert(aa[1] == 9 , "");
+  static_assert(aa[2] == 7 , "");
+  static_assert(aa[3] == 4 , "");
 
   constexpr auto ab = CmpBinAnd(a, b);
-  // CHECK: store <4 x i8> <i8 2, i8 0, i8 0, i8 8>
+  static_assert(ab[0] == 2 , "");
+  static_assert(ab[1] == 0 , "");
+  static_assert(ab[2] == 0 , "");
+  static_assert(ab[3] == 8 , "");
 
   constexpr auto ac = CmpBinXOr(a, b);
-  // CHECK: store <4 x i8> <i8 20, i8 19, i8 15, i8 1>
+  static_assert(ac[0] == 20 , "");
+  static_assert(ac[1] == 19 , "");
+  static_assert(ac[2] == 15 , "");
+  static_assert(ac[3] == 1 , "");
 
   constexpr auto ad = CmpBinOr(a, b);
-  // CHECK: store <4 x i8> <i8 22, i8 19, i8 15, i8 9>
+  static_assert(ad[0] == 22 , "");
+  static_assert(ad[1] == 19 , "");
+  static_assert(ad[2] == 15 , "");
+  static_assert(ad[3] == 9 , "");
 
   constexpr auto ae = ~FourCharsVecSize{1, 2, 10, 20};
-  // CHECK: store <4 x i8> <i8 -2, i8 -3, i8 -11, i8 -21>
+  static_assert(ae[0] == -2 , "");
+  static_assert(ae[1] == -3 , "");
+  static_assert(ae[2] == -11 , "");
+  static_assert(ae[3] == -21 , "");
 
   constexpr auto af = !FourCharsVecSize{0, 1, 8, -1};
-  // CHECK: store <4 x i8> <i8 -1, i8 0, i8 0, i8 0>
+  static_assert(af[0] == -1 , "");
+  static_assert(af[1] == 0 , "");
+  static_assert(af[2] == 0 , "");
+  static_assert(af[3] == 0 , "");
 }
 
 void CharExtVecUsage() {
   constexpr auto a = FourCharsExtVec{6, 3, 2, 1} +
                      FourCharsExtVec{12, 15, 5, 7};
-  // CHECK: store <4 x i8> <i8 18, i8 18, i8 7, i8 8>
+  static_assert(a[0] == 18 , "");
+  static_assert(a[1] == 18 , "");
+  static_assert(a[2] == 7 , "");
+  static_assert(a[3] == 8 , "");
+
   constexpr auto b = FourCharsExtVec{19, 15, 13, 12} -
                      FourCharsExtVec{13, 14, 5, 3};
-  // CHECK: store <4 x i8> <i8 6, i8 1, i8 8, i8 9>
+  static_assert(b[0] == 6 , "");
+  static_assert(b[1] == 1 , "");
+  static_assert(b[2] == 8 , "");
+  static_assert(b[3] == 9 , "");
+
   constexpr auto c = FourCharsExtVec{8, 4, 2, 1} *
                      FourCharsExtVec{3, 4, 5, 6};
-  // CHECK: store <4 x i8> <i8 24, i8 16, i8 10, i8 6>
+  static_assert(c[0] == 24 , "");
+  static_assert(c[1] == 16 , "");
+  static_assert(c[2] == 10 , "");
+  static_assert(c[3] == 6 , "");
+
   constexpr auto d = FourCharsExtVec{12, 12, 10, 10} /
                      FourCharsExtVec{6, 4, 5, 2};
-  // CHECK: store <4 x i8> <i8 2, i8 3, i8 2, i8 5>
+  static_assert(d[0] == 2 , "");
+  static_assert(d[1] == 3 , "");
+  static_assert(d[2] == 2 , "");
+  static_assert(d[3] == 5 , "");
+
   constexpr auto e = FourCharsExtVec{12, 12, 10, 10} %
                      FourCharsExtVec{6, 4, 4, 3};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 2, i8 1>
+  static_assert(e[0] == 0 , "");
+  static_assert(e[1] == 0 , "");
+  static_assert(e[2] == 2 , "");
+  static_assert(e[3] == 1 , "");
 
   constexpr auto f = FourCharsExtVec{6, 3, 2, 1} + 3;
-  // CHECK: store <4 x i8> <i8 9, i8 6, i8 5, i8 4>
+  static_assert(f[0] == 9 , "");
+  static_assert(f[1] == 6 , "");
+  static_assert(f[2] == 5 , "");
+  static_assert(f[3] == 4 , "");
+
   constexpr auto g = FourCharsExtVec{19, 15, 12, 10} - 3;
-  // CHECK: store <4 x i8> <i8 16, i8 12, i8 9, i8 7>
+  static_assert(g[0] == 16 , "");
+  static_assert(g[1] == 12 , "");
+  static_assert(g[2] == 9 , "");
+  static_assert(g[3] == 7 , "");
+
   constexpr auto h = FourCharsExtVec{8, 4, 2, 1} * 3;
-  // CHECK: store <4 x i8> <i8 24, i8 12, i8 6, i8 3>
+  static_assert(h[0] == 24 , "");
+  static_assert(h[1] == 12 , "");
+  static_assert(h[2] == 6 , "");
+  static_assert(h[3] == 3 , "");
+
   constexpr auto j = FourCharsExtVec{12, 15, 18, 21} / 3;
-  // CHECK: store <4 x i8> <i8 4, i8 5, i8 6, i8 7>
+  static_assert(j[0] == 4 , "");
+  static_assert(j[1] == 5 , "");
+  static_assert(j[2] == 6 , "");
+  static_assert(j[3] == 7 , "");
+
   constexpr auto k = FourCharsExtVec{12, 17, 19, 22} % 3;
-  // CHECK: store <4 x i8> <i8 0, i8 2, i8 1, i8 1>
+  static_assert(k[0] == 0 , "");
+  static_assert(k[1] == 2 , "");
+  static_assert(k[2] == 1 , "");
+  static_assert(k[3] == 1 , "");
 
   constexpr auto l = 3 + FourCharsExtVec{6, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 9, i8 6, i8 5, i8 4>
+  static_assert(l[0] == 9 , "");
+  static_assert(l[1] == 6 , "");
+  static_assert(l[2] == 5 , "");
+  static_assert(l[3] == 4 , "");
+
   constexpr auto m = 20 - FourCharsExtVec{19, 15, 12, 10};
-  // CHECK: store <4 x i8> <i8 1, i8 5, i8 8, i8 10>
+  static_assert(m[0] == 1 , "");
+  static_assert(m[1] == 5 , "");
+  static_assert(m[2] == 8 , "");
+  static_assert(m[3] == 10 , "");
+
   constexpr auto n = 3 * FourCharsExtVec{8, 4, 2, 1};
-  // CHECK: store <4 x i8> <i8 24, i8 12, i8 6, i8 3>
+  static_assert(n[0] == 24 , "");
+  static_assert(n[1] == 12 , "");
+  static_assert(n[2] == 6 , "");
+  static_assert(n[3] == 3 , "");
+
   constexpr auto o = 100 / FourCharsExtVec{12, 15, 18, 21};
-  // CHECK: store <4 x i8> <i8 8, i8 6, i8 5, i8 4>
+  static_assert(o[0] == 8 , "");
+  static_assert(o[1] == 6 , "");
+  static_assert(o[2] == 5 , "");
+  static_assert(o[3] == 4 , "");
+
   constexpr auto p = 100 % FourCharsExtVec{12, 15, 18, 21};
-  // CHECK: store <4 x i8> <i8 4, i8 10, i8 10, i8 16>
+  static_assert(p[0] == 4 , "");
+  static_assert(p[1] == 10 , "");
+  static_assert(p[2] == 10 , "");
+  static_assert(p[3] == 16 , "");
 
   constexpr auto q = FourCharsExtVec{6, 3, 2, 1} << FourCharsVecSize{1, 1, 2, 2};
-  // CHECK: store <4 x i8> <i8 12, i8 6, i8 8, i8 4>
+  static_assert(q[0] == 12 , "");
+  static_assert(q[1] == 6 , "");
+  static_assert(q[2] == 8 , "");
+  static_assert(q[3] == 4 , "");
+
   constexpr auto r = FourCharsExtVec{19, 15, 12, 10} >>
                      FourCharsExtVec{1, 1, 2, 2};
-  // CHECK: store <4 x i8> <i8 9, i8 7, i8 3, i8 2>
+  static_assert(r[0] == 9 , "");
+  static_assert(r[1] == 7 , "");
+  static_assert(r[2] == 3 , "");
+  static_assert(r[3] == 2 , "");
+
   constexpr auto s = FourCharsExtVec{6, 3, 5, 10} << 1;
-  // CHECK: store <4 x i8> <i8 12, i8 6, i8 10, i8 20>
+  static_assert(s[0] == 12 , "");
+  static_assert(s[1] == 6 , "");
+  static_assert(s[2] == 10 , "");
+  static_assert(s[3] == 20 , "");
+
   constexpr auto t = FourCharsExtVec{19, 15, 10, 20} >> 1;
-  // CHECK: store <4 x i8> <i8 9, i8 7, i8 5, i8 10>
+  static_assert(t[0] == 9 , "");
+  static_assert(t[1] == 7 , "");
+  static_assert(t[2] == 5 , "");
+  static_assert(t[3] == 10 , "");
+
   constexpr auto u = 12 << FourCharsExtVec{1, 2, 3, 3};
-  // CHECK: store <4 x i8> <i8 24, i8 48, i8 96, i8 96>
+  static_assert(u[0] == 24 , "");
+  static_assert(u[1] == 48 , "");
+  static_assert(u[2] == 96 , "");
+  static_assert(u[3] == 96 , "");
+
   constexpr auto v = 12 >> FourCharsExtVec{1, 2, 2, 1};
-  // CHECK: store <4 x i8> <i8 6, i8 3, i8 3, i8 6>
+  static_assert(v[0] == 6 , "");
+  static_assert(v[1] == 3 , "");
+  static_assert(v[2] == 3 , "");
+  static_assert(v[3] == 6 , "");
 
   constexpr auto w = FourCharsExtVec{1, 2, 3, 4} <
                      FourCharsExtVec{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
+  static_assert(w[0] == -1 , "");
+  static_assert(w[1] == -1 , "");
+  static_assert(w[2] == 0 , "");
+  static_assert(w[3] == 0 , "");
+
   constexpr auto x = FourCharsExtVec{1, 2, 3, 4} >
                      FourCharsExtVec{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
+  static_assert(x[0] == 0 , "");
+  static_assert(x[1] == 0 , "");
+  static_assert(x[2] == -1 , "");
+  static_assert(x[3] == -1 , "");
+
   constexpr auto y = FourCharsExtVec{1, 2, 3, 4} <=
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
+  static_assert(y[0] == -1 , "");
+  static_assert(y[1] == -1 , "");
+  static_assert(y[2] == -1 , "");
+  static_assert(y[3] == 0 , "");
+
   constexpr auto z = FourCharsExtVec{1, 2, 3, 4} >=
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
+  static_assert(z[0] == 0 , "");
+  static_assert(z[1] == 0 , "");
+  static_assert(z[2] == -1 , "");
+  static_assert(z[3] == -1 , "");
+
   constexpr auto A = FourCharsExtVec{1, 2, 3, 4} ==
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
+  static_assert(A[0] == 0 , "");
+  static_assert(A[1] == 0 , "");
+  static_assert(A[2] == -1 , "");
+  static_assert(A[3] == 0 , "");
+
   constexpr auto B = FourCharsExtVec{1, 2, 3, 4} !=
                      FourCharsExtVec{4, 3, 3, 1};
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
+  static_assert(B[0] == -1 , "");
+  static_assert(B[1] == -1 , "");
+  static_assert(B[2] == 0 , "");
+  static_assert(B[3] == -1 , "");
 
   constexpr auto C = FourCharsExtVec{1, 2, 3, 4} < 3;
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 0>
+  static_assert(C[0] == -1 , "");
+  static_assert(C[1] == -1 , "");
+  static_assert(C[2] == 0 , "");
+  static_assert(C[3] == 0 , "");
+
   constexpr auto D = FourCharsExtVec{1, 2, 3, 4} > 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 0, i8 -1>
+  static_assert(D[0] == 0 , "");
+  static_assert(D[1] == 0 , "");
+  static_assert(D[2] == 0 , "");
+  static_assert(D[3] == -1 , "");
+
   constexpr auto E = FourCharsExtVec{1, 2, 3, 4} <= 3;
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 0>
+  static_assert(E[0] == -1 , "");
+  static_assert(E[1] == -1 , "");
+  static_assert(E[2] == -1 , "");
+  static_assert(E[3] == 0 , "");
+
   constexpr auto F = FourCharsExtVec{1, 2, 3, 4} >= 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 -1>
+  static_assert(F[0] == 0 , "");
+  static_assert(F[1] == 0 , "");
+  static_assert(F[2] == -1 , "");
+  static_assert(F[3] == -1 , "");
+
   constexpr auto G = FourCharsExtVec{1, 2, 3, 4} == 3;
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 -1, i8 0>
+  static_assert(G[0] == 0 , "");
+  static_assert(G[1] == 0 , "");
+  static_assert(G[2] == -1 , "");
+  static_assert(G[3] == 0 , "");
+
   constexpr auto H = FourCharsExtVec{1, 2, 3, 4} != 3;
-  // CHECK: store <4 x i8> <i8 -1, i8 -1, i8 0, i8 -1>
+  static_assert(H[0] == -1 , "");
+  static_assert(H[1] == -1 , "");
+  static_assert(H[2] == 0 , "");
+  static_assert(H[3] == -1 , "");
 
   constexpr auto I = FourCharsExtVec{1, 2, 3, 4} &
                      FourCharsExtVec{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 0, i8 2, i8 2, i8 0>
+  static_assert(I[0] == 0 , "");
+  static_assert(I[1] == 2 , "");
+  static_assert(I[2] == 2 , "");
+  static_assert(I[3] == 0 , "");
+
   constexpr auto J = FourCharsExtVec{1, 2, 3, 4} ^
                      FourCharsExtVec { 4, 3, 2, 1 };
-  // CHECK: store <4 x i8> <i8 5, i8 1, i8 1, i8 5>
+  static_assert(J[0] == 5 , "");
+  static_assert(J[1] == 1 , "");
+  static_assert(J[2] == 1 , "");
+  static_assert(J[3] == 5 , "");
+
   constexpr auto K = FourCharsExtVec{1, 2, 3, 4} |
                      FourCharsExtVec{4, 3, 2, 1};
-  // CHECK: store <4 x i8> <i8 5, i8 3, i8 3, i8 5>
+  static_assert(K[0] == 5 , "");
+  static_assert(K[1] == 3 , "");
+  static_assert(K[2] == 3 , "");
+  static_assert(K[3] == 5 , "");
+
   constexpr auto L = FourCharsExtVec{1, 2, 3, 4} & 3;
-  // CHECK: store <4 x i8> <i8 1, i8 2, i8 3, i8 0>
+  static_assert(L[0] == 1 , "");
+  static_assert(L[1] == 2 , "");
+  static_assert(L[2] == 3 , "");
+  static_assert(L[3] == 0 , "");
+
   constexpr auto M = FourCharsExtVec{1, 2, 3, 4} ^ 3;
-  // CHECK: store <4 x i8> <i8 2, i8 1, i8 0, i8 7>
+  static_assert(M[0] == 2 , "");
+  static_assert(M[1] == 1 , "");
+  static_assert(M[2] == 0 , "");
+  static_assert(M[3] == 7 , "");
+
   constexpr auto N = FourCharsExtVec{1, 2, 3, 4} | 3;
-  // CHECK: store <4 x i8> <i8 3, i8 3, i8 3, i8 7>
+  static_assert(N[0] == 3 , "");
+  static_assert(N[1] == 3 , "");
+  static_assert(N[2] == 3 , "");
+  static_assert(N[3] == 7 , "");
 
   constexpr auto O = FourCharsExtVec{5, 0, 6, 0} &&
                      FourCharsExtVec{5, 5, 0, 0};
-  // CHECK: store <4 x i8> <i8 1, i8 0, i8 0, i8 0>
+  static_assert(O[0] == 1 , "");
+  static_assert(O[1] == 0 , "");
+  static_assert(O[2] == 0 , "");
+  static_assert(O[3] == 0 , "");
+
   constexpr auto P = FourCharsExtVec{5, 0, 6, 0} ||
                      FourCharsExtVec{5, 5, 0, 0};
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 0>
+  static_assert(P[0] == 1 , "");
+  static_assert(P[1] == 1 , "");
+  static_assert(P[2] == 1 , "");
+  static_assert(P[3] == 0 , "");
 
   constexpr auto Q = FourCharsExtVec{5, 0, 6, 0} && 3;
-  // CHECK: store <4 x i8> <i8 1, i8 0, i8 1, i8 0>
+  static_assert(Q[0] == 1 , "");
+  static_assert(Q[1] == 0 , "");
+  static_assert(Q[2] == 1 , "");
+  static_assert(Q[3] == 0 , "");
+
   constexpr auto R = FourCharsExtVec{5, 0, 6, 0} || 3;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+  static_assert(R[0] == 1 , "");
+  static_assert(R[1] == 1 , "");
+  static_assert(R[2] == 1 , "");
+  static_assert(R[3] == 1 , "");
 
   constexpr auto T = CmpMul(a, b);
-  // CHECK: store <4 x i8> <i8 108, i8 18, i8 56, i8 72>
+  static_assert(T[0] == 108 , "");
+  static_assert(T[1] == 18 , "");
+  static_assert(T[2] == 56 , "");
+  static_assert(T[3] == 72 , "");
 
   constexpr auto U = CmpDiv(a, b);
-  // CHECK: store <4 x i8> <i8 3, i8 18, i8 0, i8 0>
+  static_assert(U[0] == 3 , "");
+  static_assert(U[1] == 18 , "");
+  static_assert(U[2] == 0 , "");
+  static_assert(U[3] == 0 , "");
 
   constexpr auto V = CmpRem(a, b);
-  // CHECK: store <4 x i8> <i8 0, i8 0, i8 7, i8 8>
+  static_assert(V[0] == 0 , "");
+  static_assert(V[1] == 0 , "");
+  static_assert(V[2] == 7 , "");
+  static_assert(V[3] == 8 , "");
 
   constexpr auto X = CmpAdd(a, b);
-  // CHECK: store <4 x i8> <i8 24, i8 19, i8 15, i8 17>
+  static_assert(X[0] == 24 , "");
+  static_assert(X[1] == 19 , "");
+  static_assert(X[2] == 15 , "");
+  static_assert(X[3] == 17 , "");
 
   constexpr auto Y = CmpSub(a, b);
-  // CHECK: store <4 x i8> <i8 12, i8 17, i8 -1, i8 -1>
+  static_assert(Y[0] == 12 , "");
+  static_assert(Y[1] == 17 , "");
+  static_assert(Y[2] == -1 , "");
+  static_assert(Y[3] == -1 , "");
 
   constexpr auto InvH = -H;
-  // CHECK: store <4 x i8> <i8 1, i8 1, i8 0, i8 1>
+  static_assert(InvH[0] == 1 , "");
+  static_assert(InvH[1] == 1 , "");
+  static_assert(InvH[2] == 0 , "");
+  static_assert(InvH[3] == 1 , "");
 
   constexpr auto Z = CmpLSH(a, InvH);
-  // CHECK: store <4 x i8> <i8 36, i8 36, i8 7, i8 16>
+  static_assert(Z[0] == 36 , "");
+  static_assert(Z[1] == 36 , "");
+  static_assert(Z[2] == 7 , "");
+  static_assert(Z[3] == 16 , "");
 
   constexpr auto aa = CmpRSH(a, InvH);
-  // CHECK: store <4 x i8> <i8 9, i8 9, i8 7, i8 4>
+  static_assert(aa[0] == 9 , "");
+  static_assert(aa[1] == 9 , "");
+  static_assert(aa[2] == 7 , "");
+  static_assert(aa[3] == 4 , "");
 
   constexpr auto ab = CmpBinAnd(a, b);
-  // CHECK: store <4 x i8> <i8 2, i8 0, i8 0, i8 8>
+  static_assert(ab[0] == 2 , "");
+  static_assert(ab[1] == 0 , "");
+  static_assert(ab[2] == 0 , "");
+  static_assert(ab[3] == 8 , "");
 
   constexpr auto ac = CmpBinXOr(a, b);
-  // CHECK: store <4 x i8> <i8 20, i8 19, i8 15, i8 1>
+  static_assert(ac[0] == 20 , "");
+  static_assert(ac[1] == 19 , "");
+  static_assert(ac[2] == 15 , "");
+  static_assert(ac[3] == 1 , "");
 
   constexpr auto ad = CmpBinOr(a, b);
-  // CHECK: store <4 x i8> <i8 22, i8 19, i8 15, i8 9>
+  static_assert(ad[0] == 22 , "");
+  static_assert(ad[1] == 19 , "");
+  static_assert(ad[2] == 15 , "");
+  static_assert(ad[3] == 9 , "");
 
   constexpr auto ae = ~FourCharsExtVec{1, 2, 10, 20};
-  // CHECK: store <4 x i8> <i8 -2, i8 -3, i8 -11, i8 -21>
+  static_assert(ae[0] == -2 , "");
+  static_assert(ae[1] == -3 , "");
+  static_assert(ae[2] == -11 , "");
+  static_assert(ae[3] == -21 , "");
 
   constexpr auto af = !FourCharsExtVec{0, 1, 8, -1};
-  // CHECK: store <4 x i8> <i8 -1, i8 0, i8 0, i8 0>
+  static_assert(af[0] == -1 , "");
+  static_assert(af[1] == 0 , "");
+  static_assert(af[2] == 0 , "");
+  static_assert(af[3] == 0 , "");
 }
 
 void FloatUsage() {
@@ -651,63 +1050,132 @@ void FloatVecUsage() {
 
 void I128Usage() {
   constexpr auto a = FourI128VecSize{1, 2, 3, 4};
-  // CHECK: store <4 x i128> <i128 1, i128 2, i128 3, i128 4>
+  static_assert(a[0] == 1 , "");
+  static_assert(a[1] == 2 , "");
+  static_assert(a[2] == 3 , "");
+  static_assert(a[3] == 4 , "");
+
   constexpr auto b = a < 3;
-  // CHECK: store <4 x i128> <i128 -1, i128 -1, i128 0, i128 0>
+  static_assert(b[0] == -1 , "");
+  static_assert(b[1] == -1 , "");
+  static_assert(b[2] == 0 , "");
+  static_assert(b[3] == 0 , "");
 
   // Operator ~ is illegal on floats, so no test for that.
   constexpr auto c = ~FourI128VecSize{1, 2, 10, 20};
-  // CHECK: store <4 x i128> <i128 -2, i128 -3, i128 -11, i128 -21>
+  static_assert(c[0] == -2 , "");
+  static_assert(c[1] == -3 , "");
+  static_assert(c[2] == -11 , "");
+  static_assert(c[3] == -21 , "");
 
   constexpr auto d = !FourI128VecSize{0, 1, 8, -1};
-  // CHECK: store <4 x i128> <i128 -1, i128 0, i128 0, i128 0>
+  static_assert(d[0] == -1 , "");
+  static_assert(d[1] == 0 , "");
+  static_assert(d[2] == 0 , "");
+  static_assert(d[3] == 0 , "");
 }
 
 void I128VecUsage() {
   constexpr auto a = FourI128ExtVec{1, 2, 3, 4};
-  // CHECK: store <4 x i128> <i128 1, i128 2, i128 3, i128 4>
+  static_assert(a[0] == 1 , "");
+  static_assert(a[1] == 2 , "");
+  static_assert(a[2] == 3 , "");
+  static_assert(a[3] == 4 , "");
+
   constexpr auto b = a < 3;
-  // CHECK: store <4 x i128> <i128 -1, i128 -1, i128 0, i128 0>
+  static_assert(b[0] == -1 , "");
+  static_assert(b[1] == -1 , "");
+  static_assert(b[2] == 0 , "");
+  static_assert(b[3] == 0 , "");
 
   // Operator ~ is illegal on floats, so no test for that.
   constexpr auto c = ~FourI128ExtVec{1, 2, 10, 20};
-  // CHECK: store <4 x i128>  <i128 -2, i128 -3, i128 -11, i128 -21>
+  static_assert(c[0] == -2 , "");
+  static_assert(c[1] == -3 , "");
+  static_assert(c[2] == -11 , "");
+  static_assert(c[3] == -21 , "");
 
   constexpr auto d = !FourI128ExtVec{0, 1, 8, -1};
-  // CHECK: store <4 x i128>  <i128 -1, i128 0, i128 0, i128 0>
+  static_assert(d[0] == -1 , "");
+  static_assert(d[1] == 0 , "");
+  static_assert(d[2] == 0 , "");
+  static_assert(d[3] == 0 , "");
 }
 
 using FourBoolsExtVec __attribute__((ext_vector_type(4))) = bool;
 void BoolVecUsage() {
   constexpr auto a = FourBoolsExtVec{true, false, true, false} <
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %a, align 1
+  static_assert(a[0] == false , "");
+  static_assert(a[1] == false , "");
+  static_assert(a[2] == false , "");
+  static_assert(a[3] == true , "");
+
   constexpr auto b = FourBoolsExtVec{true, false, true, false} <=
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %b, align 1
+  static_assert(b[0] == false , "");
+  static_assert(b[1] == true , "");
+  static_assert(b[2] == true , "");
+  static_assert(b[3] == true , "");
+
   constexpr auto c = FourBoolsExtVec{true, false, true, false} ==
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %c, align 1
+  static_assert(c[0] == false , "");
+  static_assert(c[1] == true , "");
+  static_assert(c[2] == true , "");
+  static_assert(c[3] == false , "");
+
   constexpr auto d = FourBoolsExtVec{true, false, true, false} !=
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %d, align 1
+  static_assert(d[0] == true , "");
+  static_assert(d[1] == false , "");
+  static_assert(d[2] == false , "");
+  static_assert(d[3] == true , "");
+
   constexpr auto e = FourBoolsExtVec{true, false, true, false} >=
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %e, align 1
+  static_assert(e[0] == true , "");
+  static_assert(e[1] == true , "");
+  static_assert(e[2] == true , "");
+  static_assert(e[3] == false , "");
+
   constexpr auto f = FourBoolsExtVec{true, false, true, false} >
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %f, align 1
+  static_assert(f[0] == true , "");
+  static_assert(f[1] == false , "");
+  static_assert(f[2] == false , "");
+  static_assert(f[3] == false , "");
+
   constexpr auto g = FourBoolsExtVec{true, false, true, false} &
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %g, align 1
+  static_assert(g[0] == false , "");
+  static_assert(g[1] == false , "");
+  static_assert(g[2] == true , "");
+  static_assert(g[3] == false , "");
+
   constexpr auto h = FourBoolsExtVec{true, false, true, false} |
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %h, align 1
+  static_assert(h[0] == true , "");
+  static_assert(h[1] == false , "");
+  static_assert(h[2] == true , "");
+  static_assert(h[3] == true , "");
+
   constexpr auto i = FourBoolsExtVec{true, false, true, false} ^
                      FourBoolsExtVec { false, false, true, true };
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %i, align 1
+  static_assert(i[0] == true , "");
+  static_assert(i[1] == false , "");
+  static_assert(i[2] == false , "");
+  static_assert(i[3] == true , "");
+
   constexpr auto j = !FourBoolsExtVec{true, false, true, false};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %j, align 1
+  static_assert(j[0] == false , "");
+  static_assert(j[1] == true , "");
+  static_assert(j[2] == false , "");
+  static_assert(j[3] == true , "");
+
   constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %k, align 1
+  static_assert(k[0] == false , "");
+  static_assert(k[1] == true , "");
+  static_assert(k[2] == false , "");
+  static_assert(k[3] == true , "");
 }

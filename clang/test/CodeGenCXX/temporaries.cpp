@@ -673,16 +673,12 @@ namespace Vector {
     vi4a v;
     vi4b w;
   };
-  // CHECK: alloca
-  // CHECK: extractelement
-  // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1rE_
-  // CHECK: store ptr @_ZGRN6Vector1rE_, ptr @_ZN6Vector1rE,
+  // @_ZGRN6Vector1rE_ = internal global i32 0, align 4
+  // @_ZN6Vector1rE = constant ptr @_ZGRN6Vector1rE_, align 8
   int &&r = S().v[1];
 
-  // CHECK: alloca
-  // CHECK: extractelement
-  // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1sE_
-  // CHECK: store ptr @_ZGRN6Vector1sE_, ptr @_ZN6Vector1sE,
+  // @_ZGRN6Vector1sE_ = internal global i32 0, align 4
+  // @_ZN6Vector1sE = constant ptr @_ZGRN6Vector1sE_, align 8
   int &&s = S().w[1];
   // FIXME PR16204: The following code leads to an assertion in Sema.
   //int &&s = S().w.y;
