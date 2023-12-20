@@ -66,8 +66,8 @@ void clang::dataflow::copyRecord(RecordStorageLocation &Src,
     }
   }
 
-  RecordValue *SrcVal = cast_or_null<RecordValue>(Env.getValue(Src));
-  RecordValue *DstVal = cast_or_null<RecordValue>(Env.getValue(Dst));
+  RecordValue *SrcVal = Env.get<RecordValue>(Src);
+  RecordValue *DstVal = Env.get<RecordValue>(Dst);
 
   DstVal = &Env.create<RecordValue>(Dst);
   Env.setValue(Dst, *DstVal);
@@ -127,10 +127,10 @@ bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
 
   llvm::StringMap<Value *> Props1, Props2;
 
-  if (RecordValue *Val1 = cast_or_null<RecordValue>(Env1.getValue(Loc1)))
+  if (RecordValue *Val1 = Env1.get<RecordValue>(Loc1))
     for (const auto &[Name, Value] : Val1->properties())
       Props1[Name] = Value;
-  if (RecordValue *Val2 = cast_or_null<RecordValue>(Env2.getValue(Loc2)))
+  if (RecordValue *Val2 = Env2.get<RecordValue>(Loc2))
     for (const auto &[Name, Value] : Val2->properties())
       Props2[Name] = Value;
 

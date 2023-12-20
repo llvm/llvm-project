@@ -289,6 +289,22 @@ public:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   StorageLocation *getStorageLocation(const Expr &E) const;
 
+  /// Returns the result of casting `getStorageLocation(...)` to a subclass of
+  /// `StorageLocation` (using `cast_or_null<T>`).
+  /// This assert-fails if the result of `getStorageLocation(...)` is not of
+  /// type `T *`; if the storage location is not guaranteed to have type `T *`,
+  /// consider using `dyn_cast_or_null<T>(getStorageLocation(...))` instead.
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T *>
+  get(const ValueDecl &D) const {
+    return cast_or_null<T>(getStorageLocation(D));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T *>
+  get(const Expr &E) const {
+    return cast_or_null<T>(getStorageLocation(E));
+  }
+
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
@@ -456,6 +472,26 @@ public:
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
   /// storage location in the environment, otherwise returns null.
   Value *getValue(const Expr &E) const;
+
+  /// Returns the result of casting `getValue(...)` to a subclass of `Value`
+  /// (using `cast_or_null<T>`).
+  /// This assert-fails if the result of `getValue(...)` is not of type `T *`;
+  /// if the value is not guaranteed to have type `T *`, consider using
+  /// `dyn_cast_or_null<T>(getValue(...))` instead.
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *>
+  get(const StorageLocation &Loc) const {
+    return cast_or_null<T>(getValue(Loc));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *>
+  get(const ValueDecl &D) const {
+    return cast_or_null<T>(getValue(D));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *> get(const Expr &E) const {
+    return cast_or_null<T>(getValue(E));
+  }
 
   // FIXME: should we deprecate the following & call arena().create() directly?
 
