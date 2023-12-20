@@ -1365,16 +1365,27 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
     ReproducerCondStack.pop_back();
 }
 
-/// Check if the first condition for an AND implies the second.
-static bool checkAndSecondOpImpliedByFirst(
-    FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
-    SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
-    SmallVectorImpl<StackEntry> &DFSInStack) {
+/// Check if either the first condition of an AND is implied by the second or
+/// vice versa.
+static bool
+checkAndOpImpliedByOther(FactOrCheck &CB, ConstraintInfo &Info,
+                         Module *ReproducerModule,
+                         SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+                         SmallVectorImpl<StackEntry> &DFSInStack) {
 
   CmpInst::Predicate Pred;
   Value *A, *B;
   Instruction *And = CB.getContextInst();
-  if (!match(And->getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+  CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
+  unsigned OtherOpIdx = And->getOperand(0) == CmpToCheck ? 1 : 0;
+
+  // Don't try to simplify the first condition of a select by the second, as
+  // this may make the select more poisonous than the original one.
+  // TODO: check if the first operand may be poison.
+  if (OtherOpIdx != 0 && isa<SelectInst>(And))
+    return false;
+
+  if (!match(And->getOperand(OtherOpIdx), m_ICmp(Pred, m_Value(A), m_Value(B))))
     return false;
 
   // Optimistically add fact from first condition.
@@ -1385,11 +1396,12 @@ static bool checkAndSecondOpImpliedByFirst(
 
   bool Changed = false;
   // Check if the second condition can be simplified now.
-  ICmpInst *Cmp = cast<ICmpInst>(And->getOperand(1));
-  if (auto ImpliedCondition = checkCondition(
-          Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1), Cmp,
-          Info, CB.NumIn, CB.NumOut, CB.getContextInst())) {
-    And->setOperand(1, ConstantInt::getBool(And->getType(), *ImpliedCondition));
+  if (auto ImpliedCondition =
+          checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
+                         CmpToCheck->getOperand(1), CmpToCheck, Info, CB.NumIn,
+                         CB.NumOut, CB.getContextInst())) {
+    And->setOperand(1 - OtherOpIdx,
+                    ConstantInt::getBool(And->getType(), *ImpliedCondition));
     Changed = true;
   }
 
@@ -1609,11 +1621,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         bool Simplified = checkAndReplaceCondition(
             Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
             ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
-        if (!Simplified && match(CB.getContextInst(),
-                                 m_LogicalAnd(m_Value(), m_Specific(Inst)))) {
+        if (!Simplified &&
+            match(CB.getContextInst(), m_LogicalAnd(m_Value(), m_Value()))) {
           Simplified =
-              checkAndSecondOpImpliedByFirst(CB, Info, ReproducerModule.get(),
-                                             ReproducerCondStack, DFSInStack);
+              checkAndOpImpliedByOther(CB, Info, ReproducerModule.get(),
+                                       ReproducerCondStack, DFSInStack);
         }
         Changed |= Simplified;
       }
