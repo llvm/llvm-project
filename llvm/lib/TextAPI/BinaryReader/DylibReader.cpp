@@ -417,3 +417,13 @@ Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
     return make_error<TextAPIError>(TextAPIErrorCode::EmptyResults);
   return Results;
 }
+
+Expected<std::unique_ptr<InterfaceFile>>
+DylibReader::get(MemoryBufferRef Buffer) {
+  ParseOption Options;
+  auto SlicesOrErr = readFile(Buffer, Options);
+  if (!SlicesOrErr)
+    return SlicesOrErr.takeError();
+
+  return convertToInterfaceFile(*SlicesOrErr);
+}
