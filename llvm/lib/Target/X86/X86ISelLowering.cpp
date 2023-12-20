@@ -40857,7 +40857,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
   SDValue BC = peekThroughOneUseBitcasts(Mask);
   EVT BCVT = BC.getValueType();
   auto *Load = dyn_cast<LoadSDNode>(BC);
-  if (!Load)
+  if (!Load || !Load->getBasePtr().hasOneUse())
     return false;
 
   const Constant *C = getTargetConstantFromNode(Load);

@@ -145,6 +145,7 @@ cxx_sources = [
   "iostream.cpp",
   "legacy_pointer_safety.cpp",
   "locale.cpp",
+  "ostream.cpp",
   "memory.cpp",
   "memory_resource.cpp",
   "mutex.cpp",
