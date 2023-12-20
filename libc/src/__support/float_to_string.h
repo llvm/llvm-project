@@ -640,8 +640,8 @@ template <> class FloatToString<long double> {
 
   // static constexpr size_t FLOAT_AS_INT_WIDTH = 16384;
   static constexpr size_t FLOAT_AS_INT_WIDTH =
-      internal::div_ceil(fputil::FPBits<long double>::MAX_EXPONENT -
-                             fputil::FPBits<long double>::EXPONENT_BIAS,
+      internal::div_ceil(fputil::FPBits<long double>::MAX_BIASED_EXPONENT -
+                             FloatProp::EXP_BIAS,
                          64) *
       64;
   // static constexpr size_t EXTRA_INT_WIDTH = 128;
@@ -748,7 +748,8 @@ public:
           exponent < 0
               ? 0
               : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-      const uint32_t len = internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
+      const uint32_t len =
+          internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
       return len;
     } else {
       return 0;
