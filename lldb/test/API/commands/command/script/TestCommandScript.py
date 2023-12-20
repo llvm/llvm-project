@@ -165,9 +165,11 @@ class CmdPythonTestCase(TestBase):
         self.expect(
             "command script add my_command --class welcome.TargetnameCommand",
             substrs=[
-                "cannot add command: user command exists and force replace not set",
-                "--overwrite",
-                "settings set interpreter.require-overwrite false",
+                (
+                    'user command "my_command" already exists and force replace was'
+                    " not set by --overwrite or 'settings set"
+                    " interpreter.require-overwrite false'"
+                ),
             ],
             error=True,
         )
