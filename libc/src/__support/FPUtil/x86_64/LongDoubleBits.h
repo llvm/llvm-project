@@ -29,23 +29,26 @@ namespace fputil {
 template <> struct FPBits<long double> : private FloatProperties<long double> {
   using typename FloatProperties<long double>::StorageType;
   using FloatProperties<long double>::TOTAL_LEN;
-  using FloatProperties<long double>::EXP_MANT_MASK;
   using FloatProperties<long double>::EXP_MASK;
   using FloatProperties<long double>::EXP_BIAS;
   using FloatProperties<long double>::EXP_LEN;
   using FloatProperties<long double>::FRACTION_MASK;
   using FloatProperties<long double>::FRACTION_LEN;
+
+private:
   using FloatProperties<long double>::QUIET_NAN_MASK;
+
+public:
   using FloatProperties<long double>::SIGN_MASK;
 
-  static constexpr int MAX_EXPONENT = 0x7FFF;
+  static constexpr int MAX_BIASED_EXPONENT = 0x7FFF;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
   static constexpr StorageType MAX_SUBNORMAL =
       (StorageType(1) << FRACTION_LEN) - 1;
   static constexpr StorageType MIN_NORMAL = (StorageType(3) << FRACTION_LEN);
   static constexpr StorageType MAX_NORMAL =
-      (StorageType(MAX_EXPONENT - 1) << (FRACTION_LEN + 1)) |
+      (StorageType(MAX_BIASED_EXPONENT - 1) << (FRACTION_LEN + 1)) |
       (StorageType(1) << FRACTION_LEN) | MAX_SUBNORMAL;
 
   StorageType bits;
@@ -151,12 +154,12 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
-    return get_biased_exponent() == MAX_EXPONENT && get_mantissa() == 0 &&
-           get_implicit_bit() == 1;
+    return get_biased_exponent() == MAX_BIASED_EXPONENT &&
+           get_mantissa() == 0 && get_implicit_bit() == 1;
   }
 
   LIBC_INLINE constexpr bool is_nan() const {
-    if (get_biased_exponent() == MAX_EXPONENT) {
+    if (get_biased_exponent() == MAX_BIASED_EXPONENT) {
       return (get_implicit_bit() == 0) || get_mantissa() != 0;
     } else if (get_biased_exponent() != 0) {
       return get_implicit_bit() == 0;
@@ -165,7 +168,7 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
-    return (get_biased_exponent() == MAX_EXPONENT) ||
+    return (get_biased_exponent() == MAX_BIASED_EXPONENT) ||
            (get_biased_exponent() != 0 && get_implicit_bit() == 0);
   }
 
@@ -177,7 +180,7 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
 
   LIBC_INLINE static constexpr long double inf(bool sign = false) {
     FPBits<long double> bits(0.0l);
-    bits.set_biased_exponent(MAX_EXPONENT);
+    bits.set_biased_exponent(MAX_BIASED_EXPONENT);
     bits.set_implicit_bit(1);
     if (sign) {
       bits.set_sign(true);
@@ -189,7 +192,7 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
 
   LIBC_INLINE static constexpr long double build_nan(StorageType v) {
     FPBits<long double> bits(0.0l);
-    bits.set_biased_exponent(MAX_EXPONENT);
+    bits.set_biased_exponent(MAX_BIASED_EXPONENT);
     bits.set_implicit_bit(1);
     bits.set_mantissa(v);
     return bits;

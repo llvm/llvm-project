@@ -1606,7 +1606,7 @@ short test_mm_cvtsi128_si16(__m128i A) {
 
 __m128i test_mm_cvtsi16_si128(short A) {
   // CHECK-LABEL: test_mm_cvtsi16_si128
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 1
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 2
   // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 3

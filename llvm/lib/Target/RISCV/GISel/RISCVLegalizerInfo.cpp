@@ -85,13 +85,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
-    unsigned BigTyIdx = (Op == G_MERGE_VALUES) ? 0 : 1;
-    unsigned LitTyIdx = (Op == G_MERGE_VALUES) ? 1 : 0;
     auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
+    unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
+    unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
     if (XLen == 32 && ST.hasStdExtD()) {
-      LLT IdxZeroTy = (Op == G_MERGE_VALUES) ? s64 : s32;
-      LLT IdxOneTy = (Op == G_MERGE_VALUES) ? s32 : s64;
-      MergeUnmergeActions.legalFor({{IdxZeroTy, IdxOneTy}});
+      MergeUnmergeActions.legalIf(
+          all(typeIs(BigTyIdx, s64), typeIs(LitTyIdx, s32)));
     }
     MergeUnmergeActions.widenScalarToNextPow2(LitTyIdx, XLen)
         .widenScalarToNextPow2(BigTyIdx, XLen)

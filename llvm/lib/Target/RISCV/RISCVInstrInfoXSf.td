@@ -351,11 +351,13 @@ multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
 
 multiclass VPseudoSiFiveVQMACC<string Constraint = ""> {
   foreach m = MxListVF8 in
+    let VLMul = m.value in
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
 }
 
 multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
   foreach m = MxListFW in
+    let VLMul = m.value in
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
 }
 

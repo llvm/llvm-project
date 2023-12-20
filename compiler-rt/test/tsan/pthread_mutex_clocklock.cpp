@@ -1,5 +1,5 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: darwin
+// REQUIRES: glibc-2.30
 #include <pthread.h>
 #include <stdio.h>
 

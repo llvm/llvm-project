@@ -529,14 +529,6 @@ class RISCVVPseudo {
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
   bit NeedBeInPseudoTable = 1;
-  // TargetOverlapConstraintType indicates that these instructions can 
-  // overlap between source operands and destination operands. 
-  // 1 -> default value, remain current constraint
-  // 2 -> narrow case
-  // 3 -> widen case
-  // TODO: Add TargetOverlapConstraintType into PseudosTable for further
-  // query.
-  bits<2> TargetOverlapConstraintType = 1;
 }
 
 // The actual table.

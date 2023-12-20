@@ -959,40 +959,19 @@ class VRS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
 
 // MMX Instruction templates
 //
-
 // MMXI   - MMX instructions with TB prefix.
-// MMXI32 - MMX instructions with TB prefix valid only in 32 bit mode.
-// MMXI64 - MMX instructions with TB prefix valid only in 64 bit mode.
-// MMX2I  - MMX / SSE2 instructions with PD prefix.
+// MMXRI  - MMX instructions with TB prefix and REX.W.
 // MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
-// MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
-// MMXID  - MMX instructions with XD prefix.
-// MMXIS  - MMX instructions with XS prefix.
 class MMXI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX]>;
-class MMXI32<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,Not64BitMode]>;
-class MMXI64<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,In64BitMode]>;
 class MMXRI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PS, REX_W,
         Requires<[HasMMX,In64BitMode]>;
-class MMX2I<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PD, Requires<[HasMMX]>;
 class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
              list<dag> pattern>
       : Ii8<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX]>;
-class MMXID<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XD, Requires<[HasMMX]>;
-class MMXIS<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XS, Requires<[HasMMX]>;
 
 /// ITy - This instruction base class takes the type info for the instruction.
 /// Using this, it:

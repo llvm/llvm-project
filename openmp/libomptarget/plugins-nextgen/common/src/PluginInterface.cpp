@@ -1632,6 +1632,26 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
   return Plugin::success();
 }
 
+Expected<bool> GenericPluginTy::checkELFImage(__tgt_device_image &Image) const {
+  StringRef Buffer(reinterpret_cast<const char *>(Image.ImageStart),
+                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+
+  // First check if this image is a regular ELF file.
+  if (!utils::elf::isELF(Buffer))
+    return false;
+
+  // Check if this image is an ELF with a matching machine value.
+  auto MachineOrErr = utils::elf::checkMachine(Buffer, getMagicElfBits());
+  if (!MachineOrErr)
+    return MachineOrErr.takeError();
+
+  if (!*MachineOrErr)
+    return false;
+
+  // Perform plugin-dependent checks for the specific architecture if needed.
+  return isELFCompatible(Buffer);
+}
+
 const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
   return true;
@@ -1659,44 +1679,26 @@ int32_t __tgt_rtl_init_plugin() {
 }
 
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
+  // TODO: We should be able to perform a trivial ELF machine check without
+  // initializing the plugin first to save time if the plugin is not needed.
   if (!Plugin::isActive())
     return false;
 
-  if (utils::elf::checkMachine(TgtImage, Plugin::get().getMagicElfBits()))
+  // Check if this is a valid ELF with a matching machine and processor.
+  auto MatchOrErr = Plugin::get().checkELFImage(*TgtImage);
+  if (Error Err = MatchOrErr.takeError()) {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure to check validity of image %p: %s", TgtImage, ErrStr.c_str());
+    return false;
+  } else if (*MatchOrErr) {
     return true;
-
-  return Plugin::get().getJIT().checkBitcodeImage(*TgtImage);
-}
-
-int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
-                                       __tgt_image_info *Info) {
-  if (!Plugin::isActive())
-    return false;
-
-  if (!__tgt_rtl_is_valid_binary(TgtImage))
-    return false;
-
-  // A subarchitecture was not specified. Assume it is compatible.
-  if (!Info->Arch)
-    return true;
-
-  // Check the compatibility with all the available devices. Notice the
-  // devices may not be initialized yet.
-  auto CompatibleOrErr = Plugin::get().isImageCompatible(Info);
-  if (!CompatibleOrErr) {
-    // This error should not abort the execution, so we just inform the user
-    // through the debug system.
-    std::string ErrString = toString(CompatibleOrErr.takeError());
-    DP("Failure to check whether image %p is valid: %s\n", TgtImage,
-       ErrString.data());
-    return false;
   }
 
-  bool Compatible = *CompatibleOrErr;
-  DP("Image is %scompatible with current environment: %s\n",
-     (Compatible) ? "" : "not", Info->Arch);
+  // Check if this is a valid LLVM-IR file with matching triple.
+  if (Plugin::get().getJIT().checkBitcodeImage(*TgtImage))
+    return true;
 
-  return Compatible;
+  return false;
 }
 
 int32_t __tgt_rtl_supports_empty_images() {

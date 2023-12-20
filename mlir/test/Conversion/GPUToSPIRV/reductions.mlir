@@ -331,7 +331,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupFMin <Workgroup> <Reduce> %[[ARG]] : f32
-    %reduced = gpu.all_reduce minf %arg uniform {} : (f32) -> (f32)
+    %reduced = gpu.all_reduce minnumf %arg uniform {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -351,7 +351,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupNonUniformFMin "Workgroup" "Reduce" %[[ARG]] : f32
-    %reduced = gpu.all_reduce minf %arg {} : (f32) -> (f32)
+    %reduced = gpu.all_reduce minnumf %arg {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -414,7 +414,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupFMin <Subgroup> <Reduce> %[[ARG]] : f32
-    %reduced = gpu.subgroup_reduce minf %arg uniform : (f32) -> (f32)
+    %reduced = gpu.subgroup_reduce minnumf %arg uniform : (f32) -> (f32)
     gpu.return
   }
 }
@@ -434,7 +434,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupNonUniformFMin "Subgroup" "Reduce" %[[ARG]] : f32
-    %reduced = gpu.subgroup_reduce minf %arg : (f32) -> (f32)
+    %reduced = gpu.subgroup_reduce minnumf %arg : (f32) -> (f32)
     gpu.return
   }
 }
@@ -498,7 +498,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupFMax <Workgroup> <Reduce> %[[ARG]] : f32
-    %reduced = gpu.all_reduce maxf %arg uniform {} : (f32) -> (f32)
+    %reduced = gpu.all_reduce maxnumf %arg uniform {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -518,7 +518,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupNonUniformFMax "Workgroup" "Reduce" %[[ARG]] : f32
-    %reduced = gpu.all_reduce maxf %arg {} : (f32) -> (f32)
+    %reduced = gpu.all_reduce maxnumf %arg {} : (f32) -> (f32)
     gpu.return
   }
 }
@@ -582,7 +582,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupFMax <Subgroup> <Reduce> %[[ARG]] : f32
-    %reduced = gpu.subgroup_reduce maxf %arg uniform : (f32) -> (f32)
+    %reduced = gpu.subgroup_reduce maxnumf %arg uniform : (f32) -> (f32)
     gpu.return
   }
 }
@@ -602,7 +602,7 @@ gpu.module @kernels {
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupNonUniformFMax "Subgroup" "Reduce" %[[ARG]] : f32
-    %reduced = gpu.subgroup_reduce maxf %arg : (f32) -> (f32)
+    %reduced = gpu.subgroup_reduce maxnumf %arg : (f32) -> (f32)
     gpu.return
   }
 }
