@@ -6579,14 +6579,14 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   if (KindsEncountered.contains(OMPC_compare) &&
       KindsEncountered.contains(OMPC_fail)) {
     Kind = OMPC_compare;
-    const OMPFailClause *fC = S.getSingleClause<OMPFailClause>();
-    if (fC) {
-      OpenMPClauseKind fP = fC->getFailParameter();
-      if (fP == llvm::omp::OMPC_relaxed)
+    const auto *FailClause = S.getSingleClause<OMPFailClause>();
+    if (FailClause) {
+      OpenMPClauseKind FailParameter = FailClause->getFailParameter();
+      if (FailParameter == llvm::omp::OMPC_relaxed)
         FailAO = llvm::AtomicOrdering::Monotonic;
-      else if (fP == llvm::omp::OMPC_acquire)
+      else if (FailParameter == llvm::omp::OMPC_acquire)
         FailAO = llvm::AtomicOrdering::Acquire;
-      else if (fP == llvm::omp::OMPC_seq_cst)
+      else if (FailParameter == llvm::omp::OMPC_seq_cst)
         FailAO = llvm::AtomicOrdering::SequentiallyConsistent;
     }
   }
