@@ -8383,14 +8383,14 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // First, implement comparison not propagating NaN. If no native fmin or fmax
   // available, use plain select with setcc instead.
   SDValue MinMax;
-  if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE,
-                               VT)) {
-    MinMax = DAG.getNode(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE, DL, VT,
-                         LHS, RHS);
-  } else if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM : ISD::FMINNUM,
-                                      VT)) {
-    MinMax = DAG.getNode(IsMax ? ISD::FMAXNUM : ISD::FMINNUM, DL, VT, LHS, RHS);
+  unsigned CompOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned CompOpc = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
+  if (isOperationLegalOrCustom(CompOpcIeee, VT)) {
+    MinMax = DAG.getNode(CompOpcIeee, DL, VT, LHS, RHS);
+  } else if (isOperationLegalOrCustom(CompOpc, VT)) {
+    MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS);
   } else {
+    // NaN (if exists) will be propagated later, so orderness doesn't matter.
     SDValue Compare =
         DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
     MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS);
