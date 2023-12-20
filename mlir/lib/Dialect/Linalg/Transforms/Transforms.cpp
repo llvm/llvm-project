@@ -372,8 +372,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     Value shapeTensor = shapeInitTensor;
     for (const auto &[i, size] : llvm::enumerate(sizes)) {
       auto maybeConstInt = getConstantIntValue(size);
-      assert(maybeConstInt.has_value() ||
-             expandDestType.isDynamicDim(i) && "expected dynamic dim");
+      assert((maybeConstInt.has_value() || expandDestType.isDynamicDim(i)) &&
+             "expected dynamic dim");
       Value dim =
           (maybeConstInt.has_value())
               ? rewriter
@@ -397,7 +397,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       loc, reshapeOp->getResult(0), packOp.getDest(), transpPerm);
 
   LLVM_DEBUG(DBGSNL(); DBGSNL(); DBGSNL();
-             DBGS() << "reshape op: " << &reshapeOp; DBGSNL();
+             DBGS() << "reshape op: " << reshapeOp; DBGSNL();
              llvm::interleaveComma(transpPerm, DBGS() << "transpPerm: ");
              DBGSNL(); DBGS() << "transpose op: " << transposeOp; DBGSNL(););
 
