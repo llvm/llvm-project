@@ -32,8 +32,10 @@ struct ManualMapEntry {
 };
 
 // List of instructions requiring explicitly aligned memory.
-const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
-                               "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
+const char *ExplicitAlign[] = {
+    "MOVDQA",    "MOVAPS",     "MOVAPD",     "MOVNTPS",    "MOVNTPD",
+    "MOVNTDQ",   "MOVNTDQA",   "SHA1MSG1",   "SHA1MSG2",   "SHA1NEXTE",
+    "SHA1RNDS4", "SHA256MSG1", "SHA256MSG2", "SHA256RNDS2"};
 
 // List of instructions NOT requiring explicit memory alignment.
 const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
