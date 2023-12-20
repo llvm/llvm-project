@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/attributes.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "startup/linux/do_start.h"
 
@@ -109,8 +110,8 @@ extern "C" [[noreturn]] void _start() {
   // compilers can generate code assuming the alignment as required by the ABI.
   // If the stack pointers as setup by the OS are already aligned, then the
   // following code is a NOP.
-  __asm__ __volatile__("andq $0xfffffffffffffff0, %rsp\n\t");
-  __asm__ __volatile__("andq $0xfffffffffffffff0, %rbp\n\t");
+  LIBC_INLINE_ASM("andq $0xfffffffffffffff0, %rsp\n\t");
+  LIBC_INLINE_ASM("andq $0xfffffffffffffff0, %rbp\n\t");
 
   do_start();
 }
