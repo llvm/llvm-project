@@ -150,7 +150,7 @@ void objdump::dumpTracebackTable(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                  const MCSubtargetInfo &STI,
                                  const XCOFFObjectFile *Obj) {
   uint64_t Index = 0;
-  unsigned TabStop = getInstStartColumn(STI) - 1;
+  unsigned TabStop = GetColumnIndent(STI, DisassemblyColumn::Assembly) - 1;
   // Print traceback table boundary.
   printRawData(Bytes.slice(Index, 4), Address, OS, STI);
   OS << "\t# Traceback table start\n";

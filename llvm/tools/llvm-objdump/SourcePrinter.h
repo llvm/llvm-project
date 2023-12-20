@@ -22,6 +22,8 @@
 namespace llvm {
 namespace objdump {
 
+class ControlFlowPrinter;
+
 /// Stores a single expression representing the location of a source-level
 /// variable, along with the PC range for which that expression is valid.
 struct LiveVariable {
@@ -121,7 +123,8 @@ public:
   /// true, we have to print at least one line (with the continuation of any
   /// already-active live ranges) because something has already been printed
   /// earlier on this line.
-  void printBetweenInsts(formatted_raw_ostream &OS, bool MustPrint);
+  void printBetweenInsts(formatted_raw_ostream &OS, bool MustPrint,
+                         uint64_t Addr = 0, ControlFlowPrinter *CFP = nullptr);
 
   /// Print the live variable ranges to the right of a disassembled instruction.
   void printAfterInst(formatted_raw_ostream &OS);
@@ -164,6 +167,115 @@ public:
                                StringRef ObjectFilename,
                                LiveVariablePrinter &LVP,
                                StringRef Delimiter = "; ");
+};
+
+struct VisualizeJumpsMode {
+  enum Chars_t { Off, ASCII, Unicode };
+  enum Colors_t { BlackAndWhite, ThreeBit, Auto };
+
+  Chars_t Chars;
+  Colors_t Colors;
+
+  VisualizeJumpsMode() : Chars(Off), Colors(BlackAndWhite) {}
+  VisualizeJumpsMode(Chars_t Chars, Colors_t Colors)
+      : Chars(Chars), Colors(Colors) {}
+
+  static VisualizeJumpsMode GetDefault() {
+    return VisualizeJumpsMode(Unicode, Auto);
+  }
+
+  bool enabled() const { return Chars != Off; }
+  bool color_enabled() const { return enabled() && Colors != BlackAndWhite; }
+  bool unicode_enabled() const { return Chars == Unicode; }
+
+  void ResolveAutoColor(raw_ostream &OS) {
+    if (Colors == Auto)
+      Colors = OS.has_colors() ? ThreeBit : BlackAndWhite;
+  }
+};
+
+class ControlFlowPrinter {
+  struct ControlFlowTarget {
+    uint64_t Target;
+    SmallVector<uint64_t, 4> Sources;
+    int Column;
+    raw_ostream::Colors Color;
+
+    ControlFlowTarget(uint64_t Target, raw_ostream::Colors Color)
+        : Target(Target), Column(~0U), Color(Color), High(Target), Low(Target) {
+    }
+    ControlFlowTarget(const ControlFlowTarget &) = delete;
+    ControlFlowTarget(ControlFlowTarget &&) = default;
+
+    void addSource(uint64_t Source) {
+      Sources.push_back(Source);
+      Low = std::min(Low, Source);
+      High = std::max(High, Source);
+    }
+
+    uint64_t Length() const { return High - Low; }
+
+    bool Overlaps(ControlFlowTarget &Other) const {
+      return !(Other.Low > High || Other.High < Low);
+    }
+
+    bool ActiveAt(uint64_t Addr, bool BeforeInst = false,
+                  bool AfterInst = false) const {
+      if (BeforeInst)
+        return Addr > Low && Addr <= High;
+      else if (AfterInst)
+        return Addr >= Low && Addr < High;
+      else
+        return Addr >= Low && Addr <= High;
+    }
+
+    bool StartsAt(uint64_t Addr) const { return Addr == Low; }
+    bool EndsAt(uint64_t Addr) const { return Addr == High; }
+    bool TargetAt(uint64_t Addr) const { return Addr == Target; }
+
+    bool HorizontalAt(uint64_t Addr) const {
+      return Addr == Target ||
+             std::any_of(Sources.begin(), Sources.end(),
+                         [Addr](uint64_t Src) { return Src == Addr; });
+    }
+
+  private:
+    uint64_t High, Low;
+  };
+
+  VisualizeJumpsMode OutputMode;
+  DenseMap<uint64_t, ControlFlowTarget> Targets;
+  int MaxColumn;
+  const MCSubtargetInfo &STI;
+
+  int NextColorIdx;
+  raw_ostream::Colors PickColor();
+
+  int getIndentLevel() const { return 10; }
+
+  enum class LineChar {
+    Horiz,
+    Vert,
+    TopCorner,
+    BottomCorner,
+    Tee,
+    Arrow,
+  };
+  const char *getLineChar(LineChar C) const;
+
+public:
+  ControlFlowPrinter(VisualizeJumpsMode OutputMode, const MCSubtargetInfo &STI)
+      : OutputMode(OutputMode), MaxColumn(0), STI(STI), NextColorIdx(0) {}
+
+  // Add a control-flow edge from the instruction at address From to the
+  // instruction at address To.
+  void addEdge(uint64_t From, uint64_t To);
+
+  void finalise();
+
+  void printInst(formatted_raw_ostream &OS, uint64_t Addr) const;
+  void printOther(formatted_raw_ostream &OS, uint64_t Addr,
+                  bool BeforeInst = false, bool AfterInst = false) const;
 };
 
 } // namespace objdump

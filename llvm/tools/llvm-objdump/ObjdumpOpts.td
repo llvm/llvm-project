@@ -92,6 +92,13 @@ def disassembler_color_EQ : Joined<["--"], "disassembler-color=">,
   HelpText<"Enable or disable disassembler color output. "
            "Valid options are \"on\", \"off\" and \"terminal\" (default)">;
 
+def visualize_jumps : Flag<["--"], "visualize-jumps">;
+def visualize_jumps_EQ : Joined<["--"], "visualize-jumps=">,
+  MetaVarName<"mode,...">,
+  HelpText<"Print a control flow graph along side disassembly. "
+           "Color modes: auto (default), nocolor, color. "
+           "Character modes: unicode (default), ascii.">;
+
 def dynamic_reloc : Flag<["--"], "dynamic-reloc">,
   HelpText<"Display the dynamic relocation entries in the file">;
 def : Flag<["-"], "R">, Alias<dynamic_reloc>,

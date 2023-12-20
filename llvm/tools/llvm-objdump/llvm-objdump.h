@@ -144,6 +144,19 @@ void printRawData(llvm::ArrayRef<uint8_t> Bytes, uint64_t Address,
                   llvm::formatted_raw_ostream &OS,
                   llvm::MCSubtargetInfo const &STI);
 
+enum class DisassemblyColumn {
+  Address,
+  ControlFlow,
+  Encoding,
+  Assembly,
+  Variables,
+};
+
+void setControlFlowColumnWidth(int Width);
+unsigned GetColumnIndent(MCSubtargetInfo const &STI, DisassemblyColumn Col);
+void IndentToColumn(MCSubtargetInfo const &STI, formatted_raw_ostream &OS,
+                    DisassemblyColumn Col);
+
 } // namespace objdump
 } // end namespace llvm
 

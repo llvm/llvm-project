@@ -295,6 +295,36 @@ OPTIONS
 
   Target triple to disassemble for, see ``--version`` for available targets.
 
+.. option:: --visualize-jumps=<modes>
+
+  Display a control-flow graph which shows the targets of branch instructions to the left of disasembly. ``modes`` is a comma-separated list of options, which configure the character set and used to print the graph.
+
+  If ``modes`` is omitted, the default is ``unicode,auto``
+
+   .. option:: off
+
+    Disable control-flow graph
+
+   .. option:: ascii
+
+    Render control-flow graph using ASCII characters
+
+   .. option:: unicode
+
+    Render control-flow graph using unicode box-drawing characters
+
+   .. option:: nocolor
+
+    Render control-flow graph without using colors
+
+   .. option:: auto
+
+    Render control-flow graph using colors if supported by the terminal
+
+   .. option:: color
+
+    Render control-flow graph using colors
+
 .. option:: -w, --wide
 
   Ignored for compatibility with GNU objdump.
