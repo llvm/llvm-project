@@ -1159,8 +1159,8 @@ struct AnalysisGetter {
 
   /// Invalidates the analyses. Valid only when using the new pass manager.
   void invalidateAnalyses() {
-    if (FAM)
-      FAM->clear();
+    assert(FAM && "Can only be used from the new PM!");
+    FAM->clear();
   }
 
   AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
