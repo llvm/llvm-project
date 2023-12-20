@@ -31,7 +31,7 @@ define i1 @test_first_and_condition_implied_by_second_ops(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -105,7 +105,7 @@ define i1 @test_same_cond_for_and(i8 %x) {
 ; CHECK-LABEL: @test_same_cond_for_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -128,7 +128,7 @@ define i1 @test_same_cond_for_and_select_form(i8 %x) {
 ; CHECK-LABEL: @test_same_cond_for_and_select_form(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 true, i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_1]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -152,7 +152,7 @@ define i1 @test_second_and_condition_not_implied_by_first(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
