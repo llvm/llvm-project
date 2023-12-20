@@ -1,20 +1,22 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
-// NOTE - tests in this file are duplicated so that there's a version for
-//    * _fixed width_ and for _scalable_ vectors.
-// In order for the "vector.contract -> vector.outerproduct" patterns to work,
-// only the non-reduction dimension can be scalable (*). For Matmul operations
-// that is set to be the N dimension (i.e. rows of the output matrix), which
-// matches how matrix multiplication are normally implemented for e.g. 
-// Arm SVE. However, making the M dimension scalable (i.e. columns of the
-// output matrix) should work as well.
-//
-// (*) The conversion tested in this file unrolls along the reduction
-// dimension, which is not supported for scalable vectors.
+/// Tests for `vector.contract` -> `vector.outerproduct` transformations for
+/// Matmul operations:
+///   C += A * B.
+/// (A, B and C are 2-d matrices). ATM three different variants / are tested:
+///   * plain (no mask, fixed-wdith vectors),
+///   * masked (fixed-width vectors,
+///   * scalable (mask + scalable vectors).
+/// In order for the "vector.contract -> vector.outerproduct" patterns to work,
+/// only the non-reduction dimension can be scalable (*). For Matmul operations
+/// that is set to be the N dimension (i.e. rows of the output matrix), which
+/// matches how matrix multiplication are normally implemented for e.g.
+/// Arm SVE. However, making the M dimension scalable (i.e. columns of the
+/// output matrix) should work as well.
+///
+/// (*) The conversion tested in this file unrolls along the reduction
+/// dimension, which is not supported for scalable vectors.
 
-// ============================================================================
-//  Matmul 0 (plain + masked + mixed types)
-// ============================================================================
 #matmat_accesses_0 = [
   affine_map<(m, n, k) -> (m, k)>,
   affine_map<(m, n, k) -> (k, n)>,
@@ -65,7 +67,9 @@
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
-
+// ============================================================================
+//  Matmul 0 (plain + masked + mixed types)
+// ============================================================================
 // CHECK-LABEL: func @matmul
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x4xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x3xf32>,
@@ -231,7 +235,7 @@ func.func @matmul_mixed_scalable(%A: vector<2x1xf16>,
 }
 
 // ============================================================================
-//  Matmul 1 (plain)
+//  Matmul 1 (plain + scalable)
 // ============================================================================
 // CHECK-LABEL: func @matmul_1
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
@@ -272,7 +276,7 @@ func.func @matmul_1_scalable(%A: vector<2x1xf32>,
 }
 
 // ============================================================================
-//  Matmul 2 (plain)
+//  Matmul 2 (plain + scalable)
 // ============================================================================
 // CHECK-LABEL: func @matmul_2
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x2xf32>,
@@ -309,7 +313,7 @@ func.func @matmul_2_scalable(%A: vector<1x2xf32>,
 }
 
 // ============================================================================
-//  Matmul 3 (plain)
+//  Matmul 3 (plain + scalable)
 // ============================================================================
 // CHECK-LABEL: func @matmul_3
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x2xf32>,
@@ -348,7 +352,7 @@ func.func @matmul_3_scalable(%A: vector<1x2xf32>,
 }
 
 // ============================================================================
-//  Matmul 4 (plain)
+//  Matmul 4 (plain + scalable)
 // ============================================================================
 // CHECK-LABEL: func @matmul_4
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
