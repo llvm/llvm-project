@@ -1246,7 +1246,7 @@ public:
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
       return Err;
-    for (auto Signal : OutputSignals) {
+    for (auto *Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
@@ -1312,7 +1312,7 @@ public:
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
       return Err;
-    for (auto Signal : OutputSignals) {
+    for (auto *Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
