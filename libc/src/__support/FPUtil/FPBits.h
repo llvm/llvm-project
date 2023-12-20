@@ -33,13 +33,21 @@ template <typename T> struct FPBits : private FloatProperties<T> {
                 "FPBits instantiated with invalid type.");
   using typename FloatProperties<T>::StorageType;
   using FloatProperties<T>::TOTAL_LEN;
-  using FloatProperties<T>::EXP_MANT_MASK;
+
+private:
+  using FloatProperties<T>::EXP_SIG_MASK;
+
+public:
   using FloatProperties<T>::EXP_MASK;
   using FloatProperties<T>::EXP_BIAS;
   using FloatProperties<T>::EXP_LEN;
   using FloatProperties<T>::FRACTION_MASK;
   using FloatProperties<T>::FRACTION_LEN;
+
+private:
   using FloatProperties<T>::QUIET_NAN_MASK;
+
+public:
   using FloatProperties<T>::SIGN_MASK;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
@@ -89,13 +97,12 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   static_assert(sizeof(T) == sizeof(StorageType),
                 "Data type and integral representation have different sizes.");
 
-  static constexpr int MAX_EXPONENT = (1 << EXP_LEN) - 1;
-
+  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
   static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
   static constexpr StorageType MAX_NORMAL =
-      ((StorageType(MAX_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
+      ((StorageType(MAX_BIASED_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
 
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
@@ -146,19 +153,23 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
-    return (bits & EXP_MANT_MASK) == EXP_MASK;
+    return (bits & EXP_SIG_MASK) == EXP_MASK;
   }
 
   LIBC_INLINE constexpr bool is_nan() const {
-    return (bits & EXP_MANT_MASK) > EXP_MASK;
+    return (bits & EXP_SIG_MASK) > EXP_MASK;
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_MANT_MASK) == (EXP_MASK | QUIET_NAN_MASK);
+    return (bits & EXP_SIG_MASK) == (EXP_MASK | QUIET_NAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
     return (bits & EXP_MASK) == EXP_MASK;
+  }
+
+  LIBC_INLINE constexpr FPBits abs() const {
+    return FPBits(bits & EXP_SIG_MASK);
   }
 
   LIBC_INLINE static constexpr T zero(bool sign = false) {

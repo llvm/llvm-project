@@ -301,17 +301,17 @@ func.func @reduce_invalid_op_type_xor(%arg0 : f32) {
 
 // -----
 
-func.func @reduce_invalid_op_type_minf(%arg0 : i32) {
-  // expected-error@+1 {{`minf` reduction operation is not compatible with type 'i32'}}
-  %res = gpu.all_reduce minf %arg0 {} : (i32) -> (i32)
+func.func @reduce_invalid_op_type_minnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minnumf %arg0 {} : (i32) -> (i32)
   return
 }
 
 // -----
 
-func.func @reduce_invalid_op_type_maxf(%arg0 : i32) {
-  // expected-error@+1 {{`maxf` reduction operation is not compatible with type 'i32'}}
-  %res = gpu.all_reduce maxf %arg0 {} : (i32) -> (i32)
+func.func @reduce_invalid_op_type_maxnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maxnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maxnumf %arg0 {} : (i32) -> (i32)
   return
 }
 
@@ -349,9 +349,9 @@ func.func @subgroup_reduce_invalid_op_type_and(%arg0 : f32) {
 
 // -----
 
-func.func @subgroup_reduce_invalid_op_type_maxf(%arg0 : i32) {
-  // expected-error@+1 {{`maxf` reduction operation is not compatible with type 'i32'}}
-  %res = gpu.subgroup_reduce maxf %arg0 : (i32) -> (i32)
+func.func @subgroup_reduce_invalid_op_type_maxnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maxnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.subgroup_reduce maxnumf %arg0 : (i32) -> (i32)
   return
 }
 
