@@ -268,8 +268,8 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
   BuilderState.reset(new State());
   // Allocating enough for current batch being processed.
   // In real use cases we either processing a batch of CUs with no cross
-  // references, or if they do have them it is due to LTO. With clang they will share the
-  // same abbrev table. In either case this vector will not grow.
+  // references, or if they do have them it is due to LTO. With clang they will
+  // share the same abbrev table. In either case this vector will not grow.
   getState().CloneUnitCtxMap.resize(CUs.size());
   getState().Type = ProcessingType::CUs;
   for (DWARFUnit *CU : CUs)
