@@ -35,6 +35,7 @@ struct IdiomRecognizerPass : public IdiomRecognizerBase<IdiomRecognizerPass> {
   void runOnOperation() override;
   void recognizeCall(CallOp call);
   void raiseStdFind(CallOp call);
+  void raiseIteratorBeginEnd(CallOp call);
 
   // Handle pass options
   struct Options {
@@ -108,7 +109,43 @@ void IdiomRecognizerPass::raiseStdFind(CallOp call) {
   call.erase();
 }
 
-void IdiomRecognizerPass::recognizeCall(CallOp call) { raiseStdFind(call); }
+void IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
+  // FIXME: tablegen all of this function.
+  if (call.getNumOperands() != 1)
+    return;
+
+  auto callExprAttr = call.getAstAttr();
+  if (!callExprAttr)
+    return;
+
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(call.getOperation());
+
+  mlir::Operation *iterOp;
+  if (callExprAttr.isIteratorBeginCall()) {
+    if (opts.emitRemarkFoundCalls())
+      emitRemark(call.getLoc()) << "found call to begin() iterator";
+    iterOp = builder.create<mlir::cir::IterBeginOp>(
+        call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
+        call.getOperand(0));
+  } else if (callExprAttr.isIteratorEndCall()) {
+    if (opts.emitRemarkFoundCalls())
+      emitRemark(call.getLoc()) << "found call to end() iterator";
+    iterOp = builder.create<mlir::cir::IterEndOp>(
+        call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
+        call.getOperand(0));
+  } else {
+    return;
+  }
+
+  call.replaceAllUsesWith(iterOp);
+  call.erase();
+}
+
+void IdiomRecognizerPass::recognizeCall(CallOp call) {
+  raiseIteratorBeginEnd(call);
+  raiseStdFind(call);
+}
 
 void IdiomRecognizerPass::runOnOperation() {
   assert(astCtx && "Missing ASTContext, please construct with the right ctor");
