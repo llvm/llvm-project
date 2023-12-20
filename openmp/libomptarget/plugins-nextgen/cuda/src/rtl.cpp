@@ -1063,15 +1063,13 @@ private:
     // automatically so we must create it ourselves. The backend will emit
     // several globals that contain function pointers we can call. These are
     // prefixed with a known name due to Nvidia's lack of section support.
-    const ELF64LEObjectFile *ELFObj =
-        Handler.getOrCreateELFObjectFile(*this, Image);
-    if (!ELFObj)
-      return Plugin::error("Unable to create ELF object for image %p",
-                           Image.getStart());
+    auto ELFObjOrErr = Handler.getELFObjectFile(Image);
+    if (!ELFObjOrErr)
+      return ELFObjOrErr.takeError();
 
     // Search for all symbols that contain a constructor or destructor.
     SmallVector<std::pair<StringRef, uint16_t>> Funcs;
-    for (ELFSymbolRef Sym : ELFObj->symbols()) {
+    for (ELFSymbolRef Sym : ELFObjOrErr->symbols()) {
       auto NameOrErr = Sym.getName();
       if (!NameOrErr)
         return NameOrErr.takeError();

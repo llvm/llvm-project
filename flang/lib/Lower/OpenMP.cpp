@@ -2489,38 +2489,38 @@ static void genBodyOfTargetOp(
   // Bind the symbols to their corresponding block arguments.
   for (auto [argIndex, argSymbol] : llvm::enumerate(mapSymbols)) {
     const mlir::BlockArgument &arg = region.getArgument(argIndex);
-    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*argSymbol);
+    // Avoid capture of reference to a structured binding.
+    const Fortran::semantics::Symbol *sym = argSymbol;
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
     extVal.match(
         [&](const fir::BoxValue &v) {
-          converter.bindSymbol(*argSymbol,
+          converter.bindSymbol(*sym,
                                fir::BoxValue(arg, cloneBounds(v.getLBounds()),
                                              v.getExplicitParameters(),
                                              v.getExplicitExtents()));
         },
         [&](const fir::MutableBoxValue &v) {
           converter.bindSymbol(
-              *argSymbol, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
-                                               v.getMutableProperties()));
+              *sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                                         v.getMutableProperties()));
         },
         [&](const fir::ArrayBoxValue &v) {
           converter.bindSymbol(
-              *argSymbol, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
-                                             cloneBounds(v.getLBounds()),
-                                             v.getSourceBox()));
+              *sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
+                                       cloneBounds(v.getLBounds()),
+                                       v.getSourceBox()));
         },
         [&](const fir::CharArrayBoxValue &v) {
           converter.bindSymbol(
-              *argSymbol, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
-                                                 cloneBounds(v.getExtents()),
-                                                 cloneBounds(v.getLBounds())));
+              *sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
+                                           cloneBounds(v.getExtents()),
+                                           cloneBounds(v.getLBounds())));
         },
         [&](const fir::CharBoxValue &v) {
-          converter.bindSymbol(*argSymbol,
+          converter.bindSymbol(*sym,
                                fir::CharBoxValue(arg, cloneBound(v.getLen())));
         },
-        [&](const fir::UnboxedValue &v) {
-          converter.bindSymbol(*argSymbol, arg);
-        },
+        [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
         [&](const auto &) {
           TODO(converter.getCurrentLocation(),
                "target map clause operand unsupported type");
