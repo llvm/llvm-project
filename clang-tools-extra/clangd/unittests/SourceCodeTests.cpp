@@ -772,8 +772,8 @@ o foo2;
   )cpp");
   LangOptions LangOpts;
   LangOpts.CPlusPlus = true;
-  EXPECT_EQ(Code.ranges(),
-            collectIdentifierRanges("Foo", Code.code(), LangOpts));
+  syntax::UnexpandedTokenBuffer Tokens(Code.code(), LangOpts);
+  EXPECT_EQ(Code.ranges(), collectIdentifierRanges("Foo", Tokens));
 }
 
 TEST(SourceCodeTests, isHeaderFile) {
