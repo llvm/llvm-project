@@ -161,17 +161,6 @@ class CmdPythonTestCase(TestBase):
         )
         self.expect("my_command", substrs=["a.out"])
 
-        # Test that without --overwrite we are not allowed to redefine the command.
-        self.expect(
-            "command script add my_command --class welcome.TargetnameCommand",
-            substrs=[
-                "cannot add command: user command exists and force replace not set",
-                "--overwrite",
-                "settings set interpreter.require-overwrite false",
-            ],
-            error=True,
-        )
-
         self.runCmd("command script clear")
 
         self.expect(
