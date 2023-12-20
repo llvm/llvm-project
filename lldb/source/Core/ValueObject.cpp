@@ -393,46 +393,6 @@ ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
 }
 
 lldb::ValueObjectSP
-ValueObject::GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
-                                 size_t *index_of_error) {
-  if (idxs.size() == 0)
-    return GetSP();
-  ValueObjectSP root(GetSP());
-
-  size_t current_index = 0;
-  for (size_t idx : idxs) {
-    root = root->GetChildAtIndex(idx);
-    if (!root) {
-      if (index_of_error)
-        *index_of_error = current_index;
-      return root;
-    }
-    current_index += 1;
-  }
-  return root;
-}
-
-lldb::ValueObjectSP ValueObject::GetChildAtIndexPath(
-  llvm::ArrayRef<std::pair<size_t, bool>> idxs, size_t *index_of_error) {
-  if (idxs.size() == 0)
-    return GetSP();
-  ValueObjectSP root(GetSP());
-
-  size_t current_index = 0;
-  for (std::pair<size_t, bool> idx : idxs) {
-    root = root->GetChildAtIndex(idx.first, idx.second);
-    if (!root) {
-      if (index_of_error)
-        *index_of_error = current_index;
-      return root;
-    }
-
-    current_index += 1;
-  }
-  return root;
-}
-
-lldb::ValueObjectSP
 ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   if (names.size() == 0)
     return GetSP();
