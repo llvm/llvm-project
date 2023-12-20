@@ -2,7 +2,7 @@
 
 from typing import Callable
 from mlir import ir
-from mlir.dialects import scf, pdl, func, arith, linalg
+from mlir.dialects import scf, pdl
 from mlir.dialects.transform import (
     structured,
     get_parent_op,
@@ -123,23 +123,8 @@ def test_match_ops_mixed(op: OpHandle):
 # CHECK-LABEL: TEST: test_sequence_region
 @construct_and_print_in_module
 def test_sequence_region():
-    # CHECK-LABEL:   func.func @loop_unroll_op() {
-    # CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
-    # CHECK:           %[[VAL_1:.*]] = arith.constant 42 : index
-    # CHECK:           %[[VAL_2:.*]] = arith.constant 5 : index
-    # CHECK:           scf.for %[[VAL_3:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
-    # CHECK:           }
-    # CHECK:           return
-    # CHECK:         }
-    @func.func()
-    def loop_unroll_op():
-        for i in scf.for_(0, 42, 5):
-            v = arith.addi(i, i)
-            scf.yield_([])
-
     # CHECK:   transform.sequence  failures(propagate) {
-    # CHECK:   ^bb0(%[[VAL_0:.*]]: !transform.any_op):
+    # CHECK:   ^{{.*}}(%[[VAL_0:.*]]: !transform.any_op):
     # CHECK:     %[[VAL_1:.*]] = transform.structured.match ops{["arith.addi"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
     # CHECK:     %[[VAL_2:.*]] = get_parent_op %[[VAL_1]] {op_name = "scf.for"} : (!transform.any_op) -> !pdl.operation
     # CHECK:     transform.loop.unroll %[[VAL_2]] {factor = 4 : i64} : !pdl.operation
@@ -154,21 +139,8 @@ def test_sequence_region():
 # CHECK-LABEL: TEST: test_apply_patterns
 @construct_and_print_in_module
 def test_apply_patterns():
-    M, N, K = 3, 5, 3
-
-    # CHECK-LABEL:   func.func @matmul(
-    # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<3x5xf32>, %[[VAL_1:.*]]: tensor<5x3xf32>, %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
-    # CHECK:           %[[VAL_3:.*]] = linalg.matmul {cast = #linalg.type_fn<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
-    # CHECK:           return %[[VAL_3]] : tensor<3x3xf32>
-    # CHECK:         }
-    @func.func(
-        T.tensor(M, N, T.f32()), T.tensor(N, K, T.f32()), T.tensor(M, K, T.f32())
-    )
-    def matmul(A, B, C):
-        return linalg.matmul(A, B, outs=[C])
-
     # CHECK:   transform.sequence  failures(propagate) {
-    # CHECK:   ^bb0(%[[VAL_0:.*]]: !transform.any_op):
+    # CHECK:   ^{{.*}}(%[[VAL_0:.*]]: !transform.any_op):
     # CHECK:     %[[VAL_1:.*]] = transform.structured.match ops{["linalg.matmul"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
     # CHECK:     %[[VAL_2:.*]] = get_parent_op %[[VAL_1]] {op_name = "func.func"} : (!transform.any_op) -> !pdl.operation
     # CHECK:     apply_patterns to %[[VAL_2]] {

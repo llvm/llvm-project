@@ -158,4 +158,5 @@ def insert_transform_script(
 
 
 sequence = region_op(SequenceOp.__base__, terminator=YieldOp)
+named_sequence = region_op(NamedSequenceOp, terminator=YieldOp)
 apply_patterns = region_op(ApplyPatternsOp)
