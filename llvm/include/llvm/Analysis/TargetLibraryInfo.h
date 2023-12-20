@@ -156,9 +156,9 @@ public:
   /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
 
-  /// Searches for a function name using the opcode of \p I. Currently, only the
-  /// frem instruction is supported.
-  bool getLibFunc(const Instruction &I, LibFunc &F) const;
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *ScalarTy, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -364,10 +364,10 @@ public:
            getLibFunc(*(CB.getCalledFunction()), F);
   }
 
-  /// Searches for a function name using the opcode of \p I. Currently, only the
-  /// frem instruction is supported.
-  bool getLibFunc(const Instruction &I, LibFunc &F) const {
-    return Impl->getLibFunc(I, F);
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *ScalarTy, LibFunc &F) const {
+    return Impl->getLibFunc(Opcode, ScalarTy, F);
   }
 
   /// Disables all builtins.

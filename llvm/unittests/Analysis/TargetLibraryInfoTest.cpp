@@ -639,8 +639,6 @@ protected:
   TLITestAarch64() : TargetTriple(Triple("aarch64-unknown-linux-gnu")) {
     TLII = std::make_unique<TargetLibraryInfoImpl>(
         TargetLibraryInfoImpl(TargetTriple));
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::NoLibrary,
-                                             TargetTriple);
     TLI = std::make_unique<TargetLibraryInfo>(TargetLibraryInfo(*TLII));
   }
 
@@ -650,7 +648,7 @@ protected:
     Value *V = Constant::getNullValue(Ty);
     Instruction *FRem = BinaryOperator::Create(Instruction::FRem, V, V);
     LibFunc Func;
-    if (!TLI->getLibFunc(*FRem, Func))
+    if (!TLI->getLibFunc(FRem->getOpcode(), FRem->getType(), Func))
       return "";
     FRem->deleteValue();
     return TLI->getName(Func);

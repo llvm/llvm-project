@@ -1149,12 +1149,11 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   return isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(const Instruction &I, LibFunc &F) const {
-  if (I.getOpcode() != Instruction::FRem)
-    return false;
-
-  Type *ScalarTy = I.getType()->getScalarType();
-  if (!ScalarTy->isDoubleTy() && !ScalarTy->isFloatTy())
+bool TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *ScalarTy,
+                                       LibFunc &F) const {
+  // Must be a double or a float frem instruction.
+  if (Opcode != Instruction::FRem ||
+      (!ScalarTy->isDoubleTy() && !ScalarTy->isFloatTy()))
     return false;
 
   F = ScalarTy->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
