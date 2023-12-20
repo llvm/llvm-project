@@ -14,6 +14,7 @@
 #include "flags.h"
 #include "flags_parser.h"
 #include "local_cache.h"
+#include "mem_map.h"
 #include "memtag.h"
 #include "options.h"
 #include "quarantine.h"
@@ -935,21 +936,7 @@ public:
 
   uptr getRingBufferSize() {
     initThreadMaybe();
-    auto *RingBuffer = getRingBuffer();
-    return RingBuffer ? ringBufferSizeInBytes(RingBuffer->Size) : 0;
-  }
-
-  static bool setRingBufferSizeForBuffer(char *Buffer, size_t Size) {
-    // Need at least one entry.
-    if (Size < sizeof(AllocationRingBuffer) +
-                   sizeof(typename AllocationRingBuffer::Entry)) {
-      return false;
-    }
-    AllocationRingBuffer *RingBuffer =
-        reinterpret_cast<AllocationRingBuffer *>(Buffer);
-    RingBuffer->Size = (Size - sizeof(AllocationRingBuffer)) /
-                       sizeof(typename AllocationRingBuffer::Entry);
-    return true;
+    return RingBufferElements ? ringBufferSizeInBytes(RingBufferElements) : 0;
   }
 
   static const uptr MaxTraceSize = 64;
@@ -966,8 +953,9 @@ public:
   static void getErrorInfo(struct scudo_error_info *ErrorInfo,
                            uintptr_t FaultAddr, const char *DepotPtr,
                            const char *RegionInfoPtr, const char *RingBufferPtr,
-                           const char *Memory, const char *MemoryTags,
-                           uintptr_t MemoryAddr, size_t MemorySize) {
+                           size_t RingBufferSize, const char *Memory,
+                           const char *MemoryTags, uintptr_t MemoryAddr,
+                           size_t MemorySize) {
     *ErrorInfo = {};
     if (!allocatorSupportsMemoryTagging<Config>() ||
         MemoryAddr + MemorySize < MemoryAddr)
@@ -986,7 +974,7 @@ public:
     // Check the ring buffer. For primary allocations this will only find UAF;
     // for secondary allocations we can find either UAF or OOB.
     getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
-                           RingBufferPtr);
+                           RingBufferPtr, RingBufferSize);
 
     // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
     // Beyond that we are likely to hit false positives.
@@ -1051,15 +1039,15 @@ private:
       atomic_u32 DeallocationTid;
     };
 
-    MemMapT MemMap;
     atomic_uptr Pos;
-    u32 Size;
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
   };
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
   char *RawRingBuffer = {};
+  u32 RingBufferElements = 0;
+  MemMapT RawRingBufferMap;
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {
@@ -1267,7 +1255,7 @@ private:
                             u32 DeallocationTid) {
     uptr Pos = atomic_fetch_add(&getRingBuffer()->Pos, 1, memory_order_relaxed);
     typename AllocationRingBuffer::Entry *Entry =
-        getRingBufferEntry(RawRingBuffer, Pos % getRingBuffer()->Size);
+        getRingBufferEntry(RawRingBuffer, Pos % RingBufferElements);
 
     // First invalidate our entry so that we don't attempt to interpret a
     // partially written state in getSecondaryErrorInfo(). The fences below
@@ -1408,17 +1396,19 @@ private:
                                      size_t &NextErrorReport,
                                      uintptr_t FaultAddr,
                                      const StackDepot *Depot,
-                                     const char *RingBufferPtr) {
+                                     const char *RingBufferPtr,
+                                     size_t RingBufferSize) {
     auto *RingBuffer =
         reinterpret_cast<const AllocationRingBuffer *>(RingBufferPtr);
-    if (!RingBuffer || RingBuffer->Size == 0)
+    size_t RingBufferElements = ringBufferElementsFromBytes(RingBufferSize);
+    if (!RingBuffer || RingBufferElements == 0)
       return;
     uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
 
-    for (uptr I = Pos - 1;
-         I != Pos - 1 - RingBuffer->Size && NextErrorReport != NumErrorReports;
+    for (uptr I = Pos - 1; I != Pos - 1 - RingBufferElements &&
+                           NextErrorReport != NumErrorReports;
          --I) {
-      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBuffer->Size);
+      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBufferElements);
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
       if (!EntryPtr)
         continue;
@@ -1508,9 +1498,8 @@ private:
                 getPageSizeCached()),
         "scudo:ring_buffer");
     RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
-    auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
-    RingBuffer->MemMap = MemMap;
-    RingBuffer->Size = AllocationRingBufferSize;
+    RawRingBufferMap = MemMap;
+    RingBufferElements = AllocationRingBufferSize;
     static_assert(sizeof(AllocationRingBuffer) %
                           alignof(typename AllocationRingBuffer::Entry) ==
                       0,
@@ -1520,16 +1509,23 @@ private:
   void unmapRingBuffer() {
     auto *RingBuffer = getRingBuffer();
     if (RingBuffer != nullptr) {
-      MemMapT MemMap = RingBuffer->MemMap;
-      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
+                             RawRingBufferMap.getCapacity());
     }
     RawRingBuffer = nullptr;
   }
 
-  static constexpr size_t ringBufferSizeInBytes(u32 AllocationRingBufferSize) {
+  static constexpr size_t ringBufferSizeInBytes(u32 RingBufferElements) {
     return sizeof(AllocationRingBuffer) +
-           AllocationRingBufferSize *
-               sizeof(typename AllocationRingBuffer::Entry);
+           RingBufferElements * sizeof(typename AllocationRingBuffer::Entry);
+  }
+
+  static constexpr size_t ringBufferElementsFromBytes(size_t Bytes) {
+    if (Bytes < sizeof(AllocationRingBuffer)) {
+      return 0;
+    }
+    return (Bytes - sizeof(AllocationRingBuffer)) /
+           sizeof(typename AllocationRingBuffer::Entry);
   }
 
   inline AllocationRingBuffer *getRingBuffer() {

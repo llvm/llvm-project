@@ -32,3 +32,32 @@ entry:
   store <2 x double> %v2, ptr %res
   ret void
 }
+
+;; 1.0 / vec
+define void @one_fdiv_v4f32(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: one_fdiv_v4f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vfrecip.s $vr0, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %v0 = load <4 x float>, ptr %a0
+  %div = fdiv <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %v0
+  store <4 x float> %div, ptr %res
+  ret void
+}
+
+define void @one_fdiv_v2f64(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: one_fdiv_v2f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vfrecip.d $vr0, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %v0 = load <2 x double>, ptr %a0
+  %div = fdiv <2 x double> <double 1.0, double 1.0>, %v0
+  store <2 x double> %div, ptr %res
+  ret void
+}

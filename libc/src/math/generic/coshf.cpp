@@ -35,7 +35,7 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
 
     int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-      return FPBits(FPBits::MAX_NORMAL).get_val();
+      return FPBits::max_normal();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);

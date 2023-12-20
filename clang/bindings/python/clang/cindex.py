@@ -535,7 +535,7 @@ class Diagnostic(object):
 class FixIt(object):
     """
     A FixIt represents a transformation to be applied to the source to
-    "fix-it". The fix-it shouldbe applied by replacing the given source range
+    "fix-it". The fix-it should be applied by replacing the given source range
     with the given value.
     """
 

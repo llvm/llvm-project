@@ -290,20 +290,19 @@ static const Value *getPointerOperand(const Instruction *I,
   return nullptr;
 }
 
-/// Helper function to create a pointer of type \p ResTy, based on \p Ptr, and
-/// advanced by \p Offset bytes. To aid later analysis the method tries to build
+/// Helper function to create a pointer based on \p Ptr, and advanced by \p
+/// Offset bytes. To aid later analysis the method tries to build
 /// getelement pointer instructions that traverse the natural type of \p Ptr if
 /// possible. If that fails, the remaining offset is adjusted byte-wise, hence
 /// through a cast to i8*.
 ///
 /// TODO: This could probably live somewhere more prominantly if it doesn't
 ///       already exist.
-static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
-                               int64_t Offset, IRBuilder<NoFolder> &IRB,
-                               const DataLayout &DL) {
+static Value *constructPointer(Type *PtrElemTy, Value *Ptr, int64_t Offset,
+                               IRBuilder<NoFolder> &IRB, const DataLayout &DL) {
   assert(Offset >= 0 && "Negative offset not supported yet!");
   LLVM_DEBUG(dbgs() << "Construct pointer: " << *Ptr << " + " << Offset
-                    << "-bytes as " << *ResTy << "\n");
+                    << "-bytes\n");
 
   if (Offset) {
     Type *Ty = PtrElemTy;
@@ -326,10 +325,6 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
                           GEPName + ".b" + Twine(IntOffset.getZExtValue()));
     }
   }
-
-  // Ensure the result has the requested type.
-  Ptr = IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, ResTy,
-                                                Ptr->getName() + ".cast");
 
   LLVM_DEBUG(dbgs() << "Constructed pointer: " << *Ptr << "\n");
   return Ptr;
@@ -7492,19 +7487,16 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
-        Type *PointeeTy = PrivStructType->getElementType(u)->getPointerTo();
-        Value *Ptr =
-            constructPointer(PointeeTy, PrivType, &Base,
-                             PrivStructLayout->getElementOffset(u), IRB, DL);
+        Value *Ptr = constructPointer(
+            PrivType, &Base, PrivStructLayout->getElementOffset(u), IRB, DL);
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
-      Type *PointeePtrTy = PointeeTy->getPointerTo();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(PointeePtrTy, PrivType, &Base,
-                                      u * PointeeTySize, IRB, DL);
+        Value *Ptr =
+            constructPointer(PrivType, &Base, u * PointeeTySize, IRB, DL);
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else {
@@ -7524,19 +7516,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = IP->getModule()->getDataLayout();
 
-    Type *PrivPtrType = PrivType->getPointerTo();
-    if (Base->getType() != PrivPtrType)
-      Base = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-          Base, PrivPtrType, "", ACS.getInstruction());
-
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Type *PointeeTy = PrivStructType->getElementType(u);
-        Value *Ptr =
-            constructPointer(PointeeTy->getPointerTo(), PrivType, Base,
-                             PrivStructLayout->getElementOffset(u), IRB, DL);
+        Value *Ptr = constructPointer(
+            PrivType, Base, PrivStructLayout->getElementOffset(u), IRB, DL);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
@@ -7544,10 +7530,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
-      Type *PointeePtrTy = PointeeTy->getPointerTo();
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(PointeePtrTy, PrivType, Base,
-                                      u * PointeeTySize, IRB, DL);
+        Value *Ptr =
+            constructPointer(PrivType, Base, u * PointeeTySize, IRB, DL);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
@@ -9066,7 +9051,8 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     if (!LVI || !CtxI)
       return getWorstState(getBitWidth());
     return LVI->getConstantRange(&getAssociatedValue(),
-                                 const_cast<Instruction *>(CtxI));
+                                 const_cast<Instruction *>(CtxI),
+                                 /*UndefAllowed*/ false);
   }
 
   /// Return true if \p CtxI is valid for querying outside analyses.

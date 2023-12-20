@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-17,since-cxx11, -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr1413 { // dr1413: 12
   template<int> struct Check {
@@ -15,24 +17,41 @@ namespace dr1413 { // dr1413: 12
     void d();
 
     void f() {
-      Check<true ? 0 : A::unknown_spec>::type *var1; // expected-error {{undeclared identifier 'var1'}}
-      Check<true ? 0 : a>::type *var2; // ok, variable declaration  expected-note 0+{{here}}
-      Check<true ? 0 : b>::type *var3; // expected-error {{undeclared identifier 'var3'}}
-      Check<true ? 0 : ((void)c, 0)>::type *var4; // expected-error {{undeclared identifier 'var4'}}
+      Check<true ? 0 : A::unknown_spec>::type *var1;
+      // expected-error@-1 {{use of undeclared identifier 'var1'}}
+
+      // ok, variable declaration
+      Check<true ? 0 : a>::type *var2; // #dr1413-var2
+      Check<true ? 0 : b>::type *var3;
+      // expected-error@-1 {{use of undeclared identifier 'var3'}}
+      //   expected-note@#dr1413-var2 {{'var2' declared here}}
+      Check<true ? 0 : ((void)c, 0)>::type *var4;
+      // expected-error@-1 {{use of undeclared identifier 'var4'}}
+      //   expected-note@#dr1413-var2 {{'var2' declared here}}
+
       // value-dependent because of the implied type-dependent 'this->', not because of 'd'
-      Check<true ? 0 : (d(), 0)>::type *var5; // expected-error {{undeclared identifier 'var5'}}
+      Check<true ? 0 : (d(), 0)>::type *var5;
+      // expected-error@-1 {{use of undeclared identifier 'var5'}}
+      //   expected-note@#dr1413-var2 {{'var2' declared here}}
+
       // value-dependent because of the value-dependent '&' operator, not because of 'A::d'
-      Check<true ? 0 : (&A::d(), 0)>::type *var5; // expected-error {{undeclared identifier 'var5'}}
+      Check<true ? 0 : (&A::d(), 0)>::type *var5;
+      // expected-error@-1 {{use of undeclared identifier 'var5'}}
+      //   expected-note@#dr1413-var2 {{'var2' declared here}}
     }
   };
 }
 
 namespace dr1423 { // dr1423: 11
 #if __cplusplus >= 201103L
-  bool b1 = nullptr; // expected-error {{cannot initialize}}
-  bool b2(nullptr); // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
-  bool b3 = {nullptr}; // expected-error {{cannot initialize}}
-  bool b4{nullptr}; // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  bool b1 = nullptr;
+  // since-cxx11-error@-1 {{cannot initialize a variable of type 'bool' with an rvalue of type 'std::nullptr_t'}}
+  bool b2(nullptr);
+  // since-cxx11-warning@-1 {{implicit conversion of nullptr constant to 'bool'}}
+  bool b3 = {nullptr};
+  // since-cxx11-error@-1 {{cannot initialize a variable of type 'bool' with an rvalue of type 'std::nullptr_t'}}
+  bool b4{nullptr};
+  // since-cxx11-warning@-1 {{implicit conversion of nullptr constant to 'bool'}}
 #endif
 }
 
@@ -62,7 +81,8 @@ namespace dr1432 { // dr1432: 16
 namespace dr1443 { // dr1443: yes
 struct A {
   int i;
-  A() { void foo(int=i); } // expected-error {{default argument references 'this'}}
+  A() { void foo(int=i); }
+  // expected-error@-1 {{default argument references 'this'}}
 };
 }
 
@@ -70,49 +90,54 @@ namespace dr1460 { // dr1460: 3.5
 #if __cplusplus >= 201103L
   namespace DRExample {
     union A {
-      union {}; // expected-error {{does not declare anything}}
-      union {}; // expected-error {{does not declare anything}}
+      union {};
+      // expected-error@-1 {{declaration does not declare anything}}
+      union {};
+      // expected-error@-1 {{declaration does not declare anything}}
       constexpr A() {}
     };
     constexpr A a = A();
 
     union B {
-      union {}; // expected-error {{does not declare anything}}
-      union {}; // expected-error {{does not declare anything}}
+      union {};
+      // expected-error@-1 {{declaration does not declare anything}}
+      union {};
+      // expected-error@-1 {{declaration does not declare anything}}
       constexpr B() = default;
     };
     constexpr B b = B();
 
     union C {
-      union {}; // expected-error {{does not declare anything}}
-      union {}; // expected-error {{does not declare anything}}
+      union {};
+      // expected-error@-1 {{declaration does not declare anything}}
+      union {};
+      // expected-error@-1 {{declaration does not declare anything}}
     };
     constexpr C c = C();
-#if __cplusplus > 201103L
+#if __cplusplus >= 201403L
     constexpr void f() { C c; }
     static_assert((f(), true), "");
 #endif
   }
 
   union A {};
-  union B { int n; }; // expected-note 0+{{here}}
+  union B { int n; }; // #dr1460-B
   union C { int n = 0; };
-  struct D { union {}; }; // expected-error {{does not declare anything}}
-  struct E { union { int n; }; }; // expected-note 0+{{here}}
+  struct D { union {}; };
+  // expected-error@-1 {{declaration does not declare anything}}
+  struct E { union { int n; }; }; // #dr1460-E
   struct F { union { int n = 0; }; };
 
   struct X {
     friend constexpr A::A() noexcept;
     friend constexpr B::B() noexcept;
-#if __cplusplus <= 201703L
-    // expected-error@-2 {{follows non-constexpr declaration}}
-#endif
+    // cxx11-17-error@-1 {{constexpr declaration of 'B' follows non-constexpr declaration}}
+    //   cxx11-17-note@#dr1460-B {{previous declaration is here}}
     friend constexpr C::C() noexcept;
     friend constexpr D::D() noexcept;
     friend constexpr E::E() noexcept;
-#if __cplusplus <= 201703L
-    // expected-error@-2 {{follows non-constexpr declaration}}
-#endif
+    // cxx11-17-error@-1 {{constexpr declaration of 'E' follows non-constexpr declaration}}
+    //   cxx11-17-note@#dr1460-E {{previous declaration is here}}
     friend constexpr F::F() noexcept;
   };
 
@@ -128,79 +153,77 @@ namespace dr1460 { // dr1460: 3.5
   namespace Defaulted {
     union A { constexpr A() = default; };
     union B { int n; constexpr B() = default; };
-#if __cplusplus <= 201703L
-    // expected-error@-2 {{not constexpr}}
-#endif
+    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
     union C { int n = 0; constexpr C() = default; };
-    struct D { union {}; constexpr D() = default; }; // expected-error {{does not declare anything}}
+    struct D { union {}; constexpr D() = default; };
+    // expected-error@-1 {{declaration does not declare anything}}
     struct E { union { int n; }; constexpr E() = default; };
-#if __cplusplus <= 201703L
-    // expected-error@-2 {{not constexpr}}
-#endif
+    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
     struct F { union { int n = 0; }; constexpr F() = default; };
 
     struct G { union { int n = 0; }; union { int m; }; constexpr G() = default; };
-#if __cplusplus <= 201703L
-    // expected-error@-2 {{not constexpr}}
-#endif
+    // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
     struct H {
       union {
         int n = 0;
       };
-      union { // expected-note 0-2{{member not initialized}}
+      union { // #dr1460-H-union
         int m;
       };
       constexpr H() {}
-#if __cplusplus <= 201703L
-      // expected-error@-2 {{initialize all members}}
-#endif
+      // cxx11-17-error@-1 {{constexpr constructor that does not initialize all members is a C++20 extension}}
+      //   cxx11-17-note@#dr1460-H-union {{member not initialized by constructor}}
       constexpr H(bool) : m(1) {}
       constexpr H(char) : n(1) {}
-#if __cplusplus <= 201703L
-      // expected-error@-2 {{initialize all members}}
-#endif
+      // cxx11-17-error@-1 {{constexpr constructor that does not initialize all members is a C++20 extension}}
+      //   cxx11-17-note@#dr1460-H-union {{member not initialized by constructor}}
       constexpr H(double) : m(1), n(1) {}
     };
   }
 
-#if __cplusplus > 201103L
+#if __cplusplus >= 201403L
   template<typename T> constexpr bool check() {
-    T t;
-#if __cplusplus <= 201703L
-    // expected-note-re@-2 2{{non-constexpr constructor '{{[BE]}}'}}
-#endif
+    T t; // #dr1460-t
     return true;
   }
   static_assert(check<A>(), "");
-  static_assert(check<B>(), "");
-#if __cplusplus <= 201703L
-  // expected-error@-2 {{constant}} expected-note@-2 {{in call}}
-#endif
+  static_assert(check<B>(), ""); // #dr1460-check-B
+  // cxx14-17-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   cxx14-17-note@#dr1460-t {{non-constexpr constructor 'B' cannot be used in a constant expression}}
+  //   cxx14-17-note@#dr1460-check-B {{in call to 'check<dr1460::B>()'}}
+  //   cxx14-17-note@#dr1460-B {{declared here}}
   static_assert(check<C>(), "");
   static_assert(check<D>(), "");
-  static_assert(check<E>(), "");
-#if __cplusplus <= 201703L
-  // expected-error@-2 {{constant}} expected-note@-2 {{in call}}
-#endif
+  static_assert(check<E>(), ""); // #dr1460-check-E
+  // cxx14-17-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   cxx14-17-note@#dr1460-t {{non-constexpr constructor 'E' cannot be used in a constant expression}}
+  //   cxx14-17-note@#dr1460-check-E {{in call to 'check<dr1460::E>()'}}
+  //   cxx14-17-note@#dr1460-E {{declared here}}
   static_assert(check<F>(), "");
 #endif
 
   union G {
-    int a = 0; // expected-note {{previous initialization is here}}
-    int b = 0; // expected-error {{initializing multiple members of union}}
+    int a = 0; // #dr1460-G-a
+    int b = 0;
+    // expected-error@-1 {{initializing multiple members of union}}
+    //   expected-note@#dr1460-G-a {{previous initialization is here}}
   };
   union H {
     union {
-      int a = 0; // expected-note {{previous initialization is here}}
+      int a = 0; // #dr1460-H-a
     };
     union {
-      int b = 0; // expected-error {{initializing multiple members of union}}
+      int b = 0;
+      // expected-error@-1 {{initializing multiple members of union}}
+      //   expected-note@#dr1460-H-a {{previous initialization is here}}
     };
   };
   struct I {
     union {
-      int a = 0; // expected-note {{previous initialization is here}}
-      int b = 0; // expected-error {{initializing multiple members of union}}
+      int a = 0; // #dr1460-I-a
+      int b = 0;
+      // expected-error@-1 {{initializing multiple members of union}}
+      //   expected-note@#dr1460-I-a {{previous initialization is here}}
     };
   };
   struct J {
@@ -223,14 +246,24 @@ namespace dr1460 { // dr1460: 3.5
       constexpr B(const char*) {}
     };
     static_assert(B().a == 1, "");
-    static_assert(B().b == 2, ""); // expected-error {{constant}} expected-note {{read of}}
-    static_assert(B('x').a == 0, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(B().b == 2, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+    static_assert(B('x').a == 0, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(B('x').b == 4, "");
-    static_assert(B(123).b == 2, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(B(123).b == 2, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
     static_assert(B(123).c == 3, "");
-    static_assert(B("").a == 1, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(B("").a == 1, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(B("").b == 2, "");
-    static_assert(B("").c == 3, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(B("").c == 3, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
 
     struct C {
       union { int a, b = 2, c; };
@@ -243,31 +276,55 @@ namespace dr1460 { // dr1460: 3.5
     };
 
     static_assert(C().a == 1, "");
-    static_assert(C().b == 2, ""); // expected-error {{constant}} expected-note {{read of}}
-    static_assert(C().d == 4, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C().b == 2, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'b' of union with active member 'a' is not allowed in a constant expression}}
+    static_assert(C().d == 4, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
     static_assert(C().e == 5, "");
 
-    static_assert(C('x').b == 2, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C('x').b == 2, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'b' of union with active member 'c' is not allowed in a constant expression}}
     static_assert(C('x').c == 3, "");
-    static_assert(C('x').d == 4, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C('x').d == 4, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
     static_assert(C('x').e == 5, "");
 
     static_assert(C(1).b == 2, "");
-    static_assert(C(1).c == 3, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C(1).c == 3, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(C(1).d == 4, "");
-    static_assert(C(1).e == 5, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C(1).e == 5, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'e' of union with active member 'd' is not allowed in a constant expression}}
 
     static_assert(C(1.f).b == 2, "");
-    static_assert(C(1.f).c == 3, ""); // expected-error {{constant}} expected-note {{read of}}
-    static_assert(C(1.f).e == 5, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C(1.f).c == 3, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    static_assert(C(1.f).e == 5, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'e' of union with active member 'f' is not allowed in a constant expression}}
     static_assert(C(1.f).f == 6, "");
 
-    static_assert(C("").a == 1, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C("").a == 1, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'a' of union with active member 'b' is not allowed in a constant expression}}
     static_assert(C("").b == 2, "");
-    static_assert(C("").c == 3, ""); // expected-error {{constant}} expected-note {{read of}}
-    static_assert(C("").d == 4, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C("").c == 3, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'c' of union with active member 'b' is not allowed in a constant expression}}
+    static_assert(C("").d == 4, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'd' of union with active member 'e' is not allowed in a constant expression}}
     static_assert(C("").e == 5, "");
-    static_assert(C("").f == 6, ""); // expected-error {{constant}} expected-note {{read of}}
+    static_assert(C("").f == 6, "");
+    // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of member 'f' of union with active member 'e' is not allowed in a constant expression}}
 
     struct D;
     extern const D d;
@@ -315,8 +372,10 @@ namespace std {
     const _E* end()   const {return __begin_ + __size_;}
   };
 } // std
+#endif
 
 namespace dr1467 {  // dr1467: 3.7 c++11
+#if __cplusplus >= 201103L
   // Note that the change to [over.best.ics] was partially undone by DR2076;
   // the resulting rule is tested with the tests for that change.
 
@@ -382,9 +441,12 @@ namespace dr1467 {  // dr1467: 3.7 c++11
     X x;
     X x2{x};
 
-    void f1(int);                                  // expected-note {{candidate function}}
-    void f1(std::initializer_list<long>) = delete; // expected-note {{candidate function has been explicitly deleted}}
-    void g1() { f1({42}); }                        // expected-error {{call to deleted function 'f1'}}
+    void f1(int); // #dr1467-f1
+    void f1(std::initializer_list<long>) = delete; // #dr1467-f1-deleted
+    void g1() { f1({42}); }
+    // since-cxx11-error@-1 {{call to deleted function 'f1'}}
+    //   since-cxx11-note@#dr1467-f1 {{candidate function}}
+    //   since-cxx11-note@#dr1467-f1-deleted {{candidate function has been explicitly deleted}}
 
     template <class T, class U>
     struct Pair {
@@ -394,9 +456,12 @@ namespace dr1467 {  // dr1467: 3.7 c++11
       String(const char *);
     };
 
-    void f2(Pair<const char *, const char *>);       // expected-note {{candidate function}}
-    void f2(std::initializer_list<String>) = delete; // expected-note {{candidate function has been explicitly deleted}}
-    void g2() { f2({"foo", "bar"}); }                // expected-error {{call to deleted function 'f2'}}
+    void f2(Pair<const char *, const char *>); // #dr1467-f2
+    void f2(std::initializer_list<String>) = delete; // #dr1467-f2-deleted
+    void g2() { f2({"foo", "bar"}); }
+    // since-cxx11-error@-1 {{call to deleted function 'f2'}}
+    //   since-cxx11-note@#dr1467-f2 {{candidate function}}
+    //   since-cxx11-note@#dr1467-f2-deleted {{candidate function has been explicitly deleted}}
   } // dr_example
 
   namespace nonaggregate {
@@ -453,84 +518,151 @@ namespace dr1467 {  // dr1467: 3.7 c++11
   }
   } // namespace NonAmbiguous
 
-#if __cplusplus >= 201103L
   namespace StringLiterals {
   // When the array size is 4 the call will attempt to bind an lvalue to an
   // rvalue and fail. Therefore #2 will be called. (rsmith will bring this
   // issue to CWG)
-  void f(const char(&&)[4]);              // expected-note 2 {{expects an rvalue}} expected-note 3 {{no known conversion}}
-  void f(const char(&&)[5]) = delete;     // expected-note 2 {{candidate function has been explicitly deleted}} expected-note 3 {{no known conversion}}
-  void f(const wchar_t(&&)[4]);           // expected-note {{expects an rvalue}} expected-note 4 {{no known conversion}}
-  void f(const wchar_t(&&)[5]) = delete;  // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
+  void f(const char(&&)[4]);              // #dr1467-f-char-4
+  void f(const char(&&)[5]) = delete;     // #dr1467-f-char-5
+  void f(const wchar_t(&&)[4]);           // #dr1467-f-wchar-4
+  void f(const wchar_t(&&)[5]) = delete;  // #dr1467-f-wchar-5
 #if __cplusplus >= 202002L
-  void f2(const char8_t(&&)[4]);          // expected-note {{expects an rvalue}}
-  void f2(const char8_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}}
+  void f2(const char8_t(&&)[4]);          // #dr1467-f2-char8-4
+  void f2(const char8_t(&&)[5]) = delete; // #dr1467-f2-char8-5
 #endif
-  void f(const char16_t(&&)[4]);          // expected-note {{expects an rvalue}} expected-note 4 {{no known conversion}}
-  void f(const char16_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
-  void f(const char32_t(&&)[4]);          // expected-note {{expects an rvalue}} expected-note 4 {{no known conversion}}
-  void f(const char32_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
+  void f(const char16_t(&&)[4]);          // #dr1467-f-char16-4
+  void f(const char16_t(&&)[5]) = delete; // #dr1467-f-char16-5
+  void f(const char32_t(&&)[4]);          // #dr1467-f-char32-4
+  void f(const char32_t(&&)[5]) = delete; // #dr1467-f-char32-5
   void g() {
-    f({"abc"});       // expected-error {{call to deleted function 'f'}}
-    f({((("abc")))}); // expected-error {{call to deleted function 'f'}}
-    f({L"abc"});      // expected-error {{call to deleted function 'f'}}
+    f({"abc"});
+    // since-cxx11-error@-1 {{call to deleted function 'f'}}
+    //   since-cxx11-note@#dr1467-f-char-5 {{candidate function has been explicitly deleted}}
+    //   since-cxx11-note@#dr1467-f-char-4 {{candidate function not viable: expects an rvalue for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-4 {{candidate function not viable: no known conversion from 'const char[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-5 {{candidate function not viable: no known conversion from 'const char[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-4 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-5 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-4 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char32_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-5 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char32_t' for 1st argument}}
+    f({((("abc")))});
+    // since-cxx11-error@-1 {{call to deleted function 'f'}}
+    //   since-cxx11-note@#dr1467-f-char-5 {{candidate function has been explicitly deleted}}
+    //   since-cxx11-note@#dr1467-f-char-4 {{candidate function not viable: expects an rvalue for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-4 {{candidate function not viable: no known conversion from 'const char[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-5 {{candidate function not viable: no known conversion from 'const char[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-4 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-5 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-4 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char32_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-5 {{candidate function not viable: no known conversion from 'const char[4]' to 'const char32_t' for 1st argument}}
+    f({L"abc"});
+    // since-cxx11-error@-1 {{call to deleted function 'f'}}
+    //   since-cxx11-note@#dr1467-f-wchar-5 {{candidate function has been explicitly deleted}}
+    //   since-cxx11-note@#dr1467-f-char-4 {{candidate function not viable: no known conversion from 'const wchar_t[4]' to 'const char' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char-5 {{candidate function not viable: no known conversion from 'const wchar_t[4]' to 'const char' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-4 {{candidate function not viable: expects an rvalue for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-4 {{candidate function not viable: no known conversion from 'const wchar_t[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-5 {{candidate function not viable: no known conversion from 'const wchar_t[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-4 {{candidate function not viable: no known conversion from 'const wchar_t[4]' to 'const char32_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-5 {{candidate function not viable: no known conversion from 'const wchar_t[4]' to 'const char32_t' for 1st argument}}
 #if __cplusplus >= 202002L
-    f2({u8"abc"});    // expected-error {{call to deleted function 'f2'}}
+    f2({u8"abc"});
+    // since-cxx20-error@-1 {{call to deleted function 'f2'}}
+    //   since-cxx20-note@#dr1467-f2-char8-5 {{candidate function has been explicitly deleted}}
+    //   since-cxx20-note@#dr1467-f2-char8-4 {{candidate function not viable: expects an rvalue for 1st argument}}
 #endif
-    f({uR"(abc)"});   // expected-error {{call to deleted function 'f'}}
-    f({(UR"(abc)")}); // expected-error {{call to deleted function 'f'}}
+    f({uR"(abc)"});
+    // since-cxx11-error@-1 {{call to deleted function 'f'}}
+    //   since-cxx11-note@#dr1467-f-char16-5 {{candidate function has been explicitly deleted}}
+    //   since-cxx11-note@#dr1467-f-char-4 {{candidate function not viable: no known conversion from 'const char16_t[4]' to 'const char' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char-5 {{candidate function not viable: no known conversion from 'const char16_t[4]' to 'const char' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-4 {{candidate function not viable: no known conversion from 'const char16_t[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-5 {{candidate function not viable: no known conversion from 'const char16_t[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-4 {{candidate function not viable: expects an rvalue for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-4 {{candidate function not viable: no known conversion from 'const char16_t[4]' to 'const char32_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-5 {{candidate function not viable: no known conversion from 'const char16_t[4]' to 'const char32_t' for 1st argument}}
+    f({(UR"(abc)")});
+    // since-cxx11-error@-1 {{call to deleted function 'f'}}
+    //   since-cxx11-note@#dr1467-f-char32-5 {{candidate function has been explicitly deleted}}
+    //   since-cxx11-note@#dr1467-f-char-4 {{candidate function not viable: no known conversion from 'const char32_t[4]' to 'const char' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char-5 {{candidate function not viable: no known conversion from 'const char32_t[4]' to 'const char' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-4 {{candidate function not viable: no known conversion from 'const char32_t[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-wchar-5 {{candidate function not viable: no known conversion from 'const char32_t[4]' to 'const wchar_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-4 {{candidate function not viable: no known conversion from 'const char32_t[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char16-5 {{candidate function not viable: no known conversion from 'const char32_t[4]' to 'const char16_t' for 1st argument}}
+    //   since-cxx11-note@#dr1467-f-char32-4 {{candidate function not viable: expects an rvalue for 1st argument}}
   }
   } // namespace StringLiterals
 #endif
 } // dr1467
 
-namespace dr1479 { // dr1479: yes
-  int operator"" _a(const char*, std::size_t = 0); // expected-error {{literal operator cannot have a default argument}}
+namespace dr1479 { // dr1479: 3.1
+#if __cplusplus >= 201103L
+  int operator"" _a(const char*, std::size_t = 0);
+  // since-cxx11-error@-1 {{literal operator cannot have a default argument}}
+#endif
 }
 
-namespace dr1482 { // dr1482: yes
+namespace dr1482 { // dr1482: 3.0
                    // NB: sup 2516, test reused there
 #if __cplusplus >= 201103L
 template <typename T> struct S {
   typedef char I;
 };
 enum E2 : S<E2>::I { e };
-// expected-error@-1 {{use of undeclared identifier 'E2'}}
+// since-cxx11-error@-1 {{use of undeclared identifier 'E2'}}
 #endif
 } // namespace dr1482
 
 namespace dr1490 {  // dr1490: 3.7 c++11
+#if __cplusplus >= 201103L
   // List-initialization from a string literal
 
-  char s[4]{"abc"};                   // Ok
-  std::initializer_list<char>{"abc"}; // expected-error {{expected unqualified-id}}}
+  char s[4]{"abc"}; // Ok
+  std::initializer_list<char>{"abc"};
+  // since-cxx11-error@-1 {{expected unqualified-id}}}
+#endif
 } // dr1490
 
 namespace dr1495 { // dr1495: 4
+#if __cplusplus >= 201103L
   // Deduction succeeds in both directions.
-  template<typename T, typename U> struct A {}; // expected-note {{template is declared here}}
-  template<typename T, typename U> struct A<U, T> {}; // expected-error {{class template partial specialization is not more specialized}}
+  template<typename T, typename U> struct A {}; // #dr1495-A
+  template<typename T, typename U> struct A<U, T> {};
+  // since-cxx11-error@-1 {{class template partial specialization is not more specialized than the primary template}}
+  //   since-cxx11-note@#dr1495-A {{template is declared here}}
 
   // Primary template is more specialized.
-  template<typename, typename...> struct B {}; // expected-note {{template is declared here}}
-  template<typename ...Ts> struct B<Ts...> {}; // expected-error {{not more specialized}}
+  template<typename, typename...> struct B {}; // #dr1495-B
+  template<typename ...Ts> struct B<Ts...> {};
+  // since-cxx11-error@-1 {{class template partial specialization is not more specialized than the primary template}}
+  //   since-cxx11-note@#dr1495-B {{template is declared here}}
 
   // Deduction fails in both directions.
-  template<int, typename, typename ...> struct C {}; // expected-note {{template is declared here}}
-  template<typename ...Ts> struct C<0, Ts...> {}; // expected-error {{not more specialized}}
+  template<int, typename, typename ...> struct C {}; // #dr1495-C
+  template<typename ...Ts> struct C<0, Ts...> {};
+  // since-cxx11-error@-1 {{class template partial specialization is not more specialized than the primary template}}
+  //   since-cxx11-note@#dr1495-C {{template is declared here}}
 
 #if __cplusplus >= 201402L
   // Deduction succeeds in both directions.
-  template<typename T, typename U> int a; // expected-note {{template is declared here}}
-  template<typename T, typename U> int a<U, T>; // expected-error {{variable template partial specialization is not more specialized}}
+  template<typename T, typename U> int a; // #dr1495-a
+  template<typename T, typename U> int a<U, T>;
+  // since-cxx14-error@-1 {{variable template partial specialization is not more specialized than the primary template}}
+  //   since-cxx14-note@#dr1495-a {{template is declared here}}
 
   // Primary template is more specialized.
-  template<typename, typename...> int b; // expected-note {{template is declared here}}
-  template<typename ...Ts> int b<Ts...>; // expected-error {{not more specialized}}
+  template<typename, typename...> int b; // #dr1495-b
+  template<typename ...Ts> int b<Ts...>;
+  // since-cxx14-error@-1 {{variable template partial specialization is not more specialized than the primary template}}
+  //   since-cxx14-note@#dr1495-b {{template is declared here}}
 
   // Deduction fails in both directions.
-  template<int, typename, typename ...> int c; // expected-note {{template is declared here}}
-  template<typename ...Ts> int c<0, Ts...>; // expected-error {{not more specialized}}
+  template<int, typename, typename ...> int c; // #dr1495-c
+  template<typename ...Ts> int c<0, Ts...>;
+  // since-cxx14-error@-1 {{variable template partial specialization is not more specialized than the primary template}}
+  //   since-cxx14-note@#dr1495-c {{template is declared here}}
+#endif
 #endif
 }
 
@@ -544,5 +676,3 @@ struct A {
 static_assert(__is_trivial(A), "");
 #endif
 }
-
-#endif

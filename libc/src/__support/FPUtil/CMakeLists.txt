@@ -30,6 +30,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.macros.properties.float
     libc.src.__support.uint128
+    libc.src.__support.math_extras
 )
 
 add_header_library(

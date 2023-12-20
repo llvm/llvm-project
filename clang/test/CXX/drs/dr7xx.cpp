@@ -1,37 +1,53 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify=expected,cxx98-14,cxx98-11,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2a %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr705 { // dr705: yes
   namespace N {
     struct S {};
-    void f(S); // expected-note {{declared here}}
+    void f(S); // #dr705-f
   }
 
   void g() {
     N::S s;
     f(s);      // ok
-    (f)(s);    // expected-error {{use of undeclared}}
+    (f)(s);
+    // expected-error@-1 {{use of undeclared identifier 'f'}}
+    //   expected-note@#dr705-f {{'N::f' declared here}}
   }
 }
 
 namespace dr712 { // dr712: partial
   void use(int);
   void f() {
-    const int a = 0; // expected-note 5{{here}}
+    const int a = 0; // #dr712-f-a
     struct X {
       void g(bool cond) {
         use(a);
         use((a));
         use(cond ? a : a);
-        use((cond, a)); // expected-warning 2{{left operand of comma operator has no effect}} FIXME: should only warn once
+        // FIXME: should only warn once
+        use((cond, a));
+        // expected-warning@-1 {{left operand of comma operator has no effect}}
+        // expected-warning@-2 {{left operand of comma operator has no effect}}
 
-        (void)a; // FIXME: expected-error {{declared in enclosing}}
-        (void)(a); // FIXME: expected-error {{declared in enclosing}}
-        (void)(cond ? a : a); // FIXME: expected-error 2{{declared in enclosing}}
-        (void)(cond, a); // FIXME: expected-error {{declared in enclosing}} expected-warning {{left operand of comma operator has no effect}}
+        (void)a;
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr712::f'}} FIXME
+        //   expected-note@#dr712-f-a {{'a' declared here}}
+        (void)(a);
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr712::f'}} FIXME
+        //   expected-note@#dr712-f-a {{'a' declared here}}
+        (void)(cond ? a : a); // #dr712-ternary
+        // expected-error@#dr712-ternary {{reference to local variable 'a' declared in enclosing function 'dr712::f'}} FIXME
+        //   expected-note@#dr712-f-a {{'a' declared here}}
+        // expected-error@#dr712-ternary {{reference to local variable 'a' declared in enclosing function 'dr712::f'}} FIXME
+        //   expected-note@#dr712-f-a {{'a' declared here}}
+        (void)(cond, a); // #dr712-comma
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr712::f'}} FIXME
+        //   expected-note@#dr712-f-a {{'a' declared here}}
+        // expected-warning@#dr712-comma {{left operand of comma operator has no effect}}
       }
     };
   }
@@ -39,14 +55,18 @@ namespace dr712 { // dr712: partial
 #if __cplusplus >= 201103L
   void g() {
     struct A { int n; };
-    constexpr A a = {0}; // expected-note 2{{here}}
+    constexpr A a = {0};  // #dr712-g-a
     struct X {
       void g(bool cond) {
         use(a.n);
         use(a.*&A::n);
 
-        (void)a.n; // FIXME: expected-error {{declared in enclosing}}
-        (void)(a.*&A::n); // FIXME: expected-error {{declared in enclosing}}
+        (void)a.n;
+        // since-cxx11-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr712::g'}} FIXME
+        //   since-cxx11-note@#dr712-g-a {{'a' declared here}}
+        (void)(a.*&A::n);
+        // since-cxx11-error@-1 {{reference to local variable 'a' declared in enclosing function 'dr712::g'}} FIXME
+        //   since-cxx11-note@#dr712-g-a {{'a' declared here}}
       }
     };
   }
@@ -55,9 +75,10 @@ namespace dr712 { // dr712: partial
 
 namespace dr727 { // dr727: partial
   struct A {
-    template<typename T> struct C; // expected-note 6{{here}}
-    template<typename T> void f(); // expected-note {{here}}
-    template<typename T> static int N; // expected-error 0-1{{C++14}} expected-note 6{{here}}
+    template<typename T> struct C; // #dr727-C
+    template<typename T> void f(); // #dr727-f
+    template<typename T> static int N; // #dr727-N
+    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
 
     template<> struct C<int>;
     template<> void f<int>();
@@ -67,19 +88,40 @@ namespace dr727 { // dr727: partial
     template<typename T> static int N<T*>;
 
     struct B {
-      template<> struct C<float>; // expected-error {{not in class 'A' or an enclosing namespace}}
-      template<> void f<float>(); // expected-error {{no function template matches}}
-      template<> static int N<float>; // expected-error {{not in class 'A' or an enclosing namespace}}
+      template<> struct C<float>;
+      // expected-error@-1 {{class template specialization of 'C' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
+      template<> void f<float>();
+      // expected-error@-1 {{no function template matches function template specialization 'f'}}
+      template<> static int N<float>;
+      // expected-error@-1 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
 
-      template<typename T> struct C<T**>; // expected-error {{not in class 'A' or an enclosing namespace}}
-      template<typename T> static int N<T**>; // expected-error {{not in class 'A' or an enclosing namespace}}
+      template<typename T> struct C<T**>;
+      // expected-error@-1 {{class template partial specialization of 'C' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
+      template<typename T> static int N<T**>;
+      // expected-error@-1 {{variable template partial specialization of 'N' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
 
-      template<> struct A::C<double>; // expected-error {{not in class 'A' or an enclosing namespace}}
-      template<> void A::f<double>(); // expected-error {{no function template matches}} expected-error {{cannot have a qualified name}}
-      template<> static int A::N<double>; // expected-error {{not in class 'A' or an enclosing namespace}} expected-error {{cannot have a qualified name}}
+      template<> struct A::C<double>;
+      // expected-error@-1 {{class template specialization of 'C' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
+      template<> void A::f<double>();
+      // expected-error@-1 {{o function template matches function template specialization 'f'}}
+      // expected-error@-2 {{non-friend class member 'f' cannot have a qualified name}}
+      template<> static int A::N<double>;
+      // expected-error@-1 {{non-friend class member 'N' cannot have a qualified name}}
+      // expected-error@-2 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
 
-      template<typename T> struct A::C<T***>; // expected-error {{not in class 'A' or an enclosing namespace}}
-      template<typename T> static int A::N<T***>; // expected-error {{not in class 'A' or an enclosing namespace}} expected-error {{cannot have a qualified name}}
+      template<typename T> struct A::C<T***>;
+      // expected-error@-1 {{class template partial specialization of 'C' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
+      template<typename T> static int A::N<T***>;
+      // expected-error@-1 {{non-friend class member 'N' cannot have a qualified name}}
+      // expected-error@-2 {{variable template partial specialization of 'N' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
     };
   };
 
@@ -91,19 +133,36 @@ namespace dr727 { // dr727: partial
   template<typename T> int A::N<T****>;
 
   namespace C {
-    template<> struct A::C<long>; // expected-error {{not in class 'A' or an enclosing namespace}}
-    template<> void A::f<long>(); // expected-error {{not in class 'A' or an enclosing namespace}}
-    template<> int A::N<long>; // expected-error {{not in class 'A' or an enclosing namespace}}
+    template<> struct A::C<long>;
+    // expected-error@-1 {{class template specialization of 'C' not in class 'A' or an enclosing namespace}}
+    //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
+    template<> void A::f<long>();
+    // expected-error@-1 {{function template specialization of 'f' not in class 'A' or an enclosing namespace}}
+    //   expected-note@#dr727-f {{explicitly specialized declaration is here}}
+    template<> int A::N<long>;
+    // expected-error@-1 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
+    //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
 
-    template<typename T> struct A::C<T*****>; // expected-error {{not in class 'A' or an enclosing namespace}}
-    template<typename T> int A::N<T*****>; // expected-error {{not in class 'A' or an enclosing namespace}}
+    template<typename T> struct A::C<T*****>;
+    // expected-error@-1 {{class template partial specialization of 'C' not in class 'A' or an enclosing namespace}}
+    //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
+    template<typename T> int A::N<T*****>;
+    // expected-error@-1 {{variable template partial specialization of 'N' not in class 'A' or an enclosing namespace}}
+    //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
   }
 
   template<typename>
   struct D {
-    template<typename T> struct C { typename T::error e; }; // expected-error {{no members}}
-    template<typename T> void f() { T::error; } // expected-error {{no members}}
-    template<typename T> static const int N = T::error; // expected-error {{no members}} expected-error 0-1{{C++14}}
+    template<typename T> struct C { typename T::error e; };
+    // expected-error@-1 {{type 'float' cannot be used prior to '::' because it has no members}}
+    //   expected-note@#dr727-C-float {{in instantiation of template class 'dr727::D<int>::C<float>' requested here}}
+    template<typename T> void f() { T::error; }
+    // expected-error@-1 {{type 'float' cannot be used prior to '::' because it has no members}}
+    //   expected-note@#dr727-f-float {{in instantiation of function template specialization 'dr727::D<int>::f<float>' requested here}}
+    template<typename T> static const int N = T::error;
+    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
+    // expected-error@-2 {{type 'float' cannot be used prior to '::' because it has no members}}
+    //   expected-note@#dr727-N-float {{in instantiation of static data member 'dr727::D<int>::N<float>' requested here}}
 
     template<> struct C<int> {};
     template<> void f<int>() {}
@@ -114,7 +173,8 @@ namespace dr727 { // dr727: partial
 
     template<typename>
     struct E {
-      template<> void f<void>() {} // expected-error {{no candidate function template}}
+      template<> void f<void>() {}
+      // expected-error@-1 {{no candidate function template was found for dependent member function template specialization}}
     };
   };
 
@@ -126,9 +186,9 @@ namespace dr727 { // dr727: partial
     D<int>::C<int*>();
     int b = D<int>::N<int*>;
 
-    D<int>::C<float>(); // expected-note {{instantiation of}}
-    di.f<float>(); // expected-note {{instantiation of}}
-    int c = D<int>::N<float>; // expected-note {{instantiation of}}
+    D<int>::C<float>(); // #dr727-C-float
+    di.f<float>(); // #dr727-f-float
+    int c = D<int>::N<float>; // #dr727-N-float
   }
 
   namespace mixed_inner_outer_specialization {
@@ -148,28 +208,30 @@ namespace dr727 { // dr727: partial
 #if __cplusplus >= 201402L
     template<int> struct B {
       template<int> static const int u = 1;
-      template<> static const int u<0> = 2; // expected-note {{here}}
+      template<> static const int u<0> = 2; // #dr727-u0
 
       // Note that in C++17 onwards, these are implicitly inline, and so the
       // initializer of v<0> is not instantiated with the declaration. In
       // C++14, v<0> is a non-defining declaration and its initializer is
       // instantiated with the class.
       template<int> static constexpr int v = 1;
-      template<> static constexpr int v<0> = 2; // #v0
+      template<> static constexpr int v<0> = 2; // #dr727-v0
 
-      template<int> static const inline int w = 1; // expected-error 0-1{{C++17 extension}}
-      template<> static const inline int w<0> = 2; // expected-error 0-1{{C++17 extension}}
+      template<int> static const inline int w = 1;
+      // cxx14-error@-1 {{inline variables are a C++17 extension}}
+      template<> static const inline int w<0> = 2;
+      // cxx14-error@-1 {{inline variables are a C++17 extension}}
     };
 
     template<> template<int> constexpr int B<0>::u = 3;
-    template<> template<> constexpr int B<0>::u<0> = 4; // expected-error {{already has an initializer}}
+    template<> template<> constexpr int B<0>::u<0> = 4;
+    // since-cxx14-error@-1 {{static data member 'u' already has an initializer}}
+    //   since-cxx14-note@#dr727-u0 {{previous initialization is here}}
 
     template<> template<int> constexpr int B<0>::v = 3;
     template<> template<> constexpr int B<0>::v<0> = 4;
-#if __cplusplus < 201702L
-    // expected-error@-2 {{already has an initializer}}
-    // expected-note@#v0 {{here}}
-#endif
+    // cxx14-error@-1 {{static data member 'v' already has an initializer}}
+    //   cxx14-note@#dr727-v0 {{previous initialization is here}}
 
     template<> template<int> constexpr int B<0>::w = 3;
     template<> template<> constexpr int B<0>::w<0> = 4;
@@ -182,10 +244,8 @@ namespace dr727 { // dr727: partial
     static_assert(B<1>().v<0> == 2, "");
     static_assert(B<0>().v<1> == 3, "");
     static_assert(B<0>().v<0> == 4, "");
-#if __cplusplus < 201702L
-    // expected-error@-2 {{failed}} \
-    // expected-note@-2 {{evaluates to '2 == 4'}}
-#endif
+    // cxx14-error@-1 {{static assertion failed due to requirement 'dr727::mixed_inner_outer_specialization::B<0>().v<0> == 4'}}
+    //   cxx14-note@-2 {{expression evaluates to '2 == 4'}}
 
     static_assert(B<1>().w<1> == 1, "");
     static_assert(B<1>().w<0> == 2, "");
@@ -205,13 +265,23 @@ namespace dr727 { // dr727: partial
     template<> int f2<T>() {}
     template<> int f2<U>() {}
 
-    template<typename> static int v1; // expected-error 0-1{{C++14 extension}}
-    template<> static int v1<T>; // expected-note {{previous}}
-    template<> static int v1<U>; // expected-error {{duplicate member}}
+    template<typename> static int v1;
+    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
+    template<> static int v1<T>; // #dr727-v1-T
+    template<> static int v1<U>;
+    // expected-error@-1 {{duplicate member 'v1'}}
+    //   expected-note@#dr727-Collision-int-int {{in instantiation of template class 'dr727::Collision<int, int>' requested here}}
+    //   expected-note@#dr727-v1-T {{previous}}
 
-    template<typename> static inline int v2; // expected-error 0-1{{C++17 extension}} expected-error 0-1{{C++14 extension}}
-    template<> static inline int v2<T>;      // expected-error 0-1{{C++17 extension}} expected-note {{previous}}
-    template<> static inline int v2<U>;      // expected-error 0-1{{C++17 extension}} expected-error {{duplicate member}}
+    template<typename> static inline int v2;
+    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
+    // cxx98-14-error@-2 {{inline variables are a C++17 extension}}
+    template<> static inline int v2<T>; // #dr727-v2-T
+    // cxx98-14-error@-1 {{inline variables are a C++17 extension}} 
+    template<> static inline int v2<U>;
+    // cxx98-14-error@-1 {{inline variables are a C++17 extension}}
+    // expected-error@-2 {{duplicate member 'v2'}}
+    //   expected-note@#dr727-v2-T {{previous declaration is here}}
 
     // FIXME: Missing diagnostic for duplicate class explicit specialization.
     template<typename> struct S1;
@@ -219,10 +289,12 @@ namespace dr727 { // dr727: partial
     template<> struct S1<U>;
 
     template<typename> struct S2;
-    template<> struct S2<T> {}; // expected-note {{previous}}
-    template<> struct S2<U> {}; // expected-error {{redefinition}}
+    template<> struct S2<T> {}; // #dr727-S2-T
+    template<> struct S2<U> {};
+    // expected-error@-1 {{redefinition of 'S2<int>'}}
+    //   expected-note@#dr727-S2-T {{previous}}
   };
-  Collision<int, int> c; // expected-note {{in instantiation of}}
+  Collision<int, int> c; // #dr727-Collision-int-int
 }
 
 namespace dr777 { // dr777: 3.7

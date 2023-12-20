@@ -75,6 +75,78 @@ bool __kmpc_omp_has_task_team(int32_t gtid) __attribute__((weak));
 void **__kmpc_omp_get_target_async_handle_ptr(int32_t gtid)
     __attribute__((weak));
 
+/**
+ * The argument set that is passed from asynchronous memory copy to block
+ * version of memory copy invoked in helper task
+ */
+struct TargetMemcpyArgsTy {
+  /**
+   * Common attribuutes
+   */
+  void *Dst;
+  const void *Src;
+  int DstDevice;
+  int SrcDevice;
+
+  /**
+   * The flag that denotes single dimensional or rectangle dimensional copy
+   */
+  bool IsRectMemcpy;
+
+  /**
+   * Arguments for single dimensional copy
+   */
+  size_t Length;
+  size_t DstOffset;
+  size_t SrcOffset;
+
+  /**
+   * Arguments for rectangle dimensional copy
+   */
+  size_t ElementSize;
+  int NumDims;
+  const size_t *Volume;
+  const size_t *DstOffsets;
+  const size_t *SrcOffsets;
+  const size_t *DstDimensions;
+  const size_t *SrcDimensions;
+
+  /**
+   * Constructor for single dimensional copy
+   */
+  TargetMemcpyArgsTy(void *Dst, const void *Src, size_t Length,
+                     size_t DstOffset, size_t SrcOffset, int DstDevice,
+                     int SrcDevice)
+      : Dst(Dst), Src(Src), DstDevice(DstDevice), SrcDevice(SrcDevice),
+        IsRectMemcpy(false), Length(Length), DstOffset(DstOffset),
+        SrcOffset(SrcOffset), ElementSize(0), NumDims(0), Volume(0),
+        DstOffsets(0), SrcOffsets(0), DstDimensions(0), SrcDimensions(0){};
+
+  /**
+   * Constructor for rectangle dimensional copy
+   */
+  TargetMemcpyArgsTy(void *Dst, const void *Src, size_t ElementSize,
+                     int NumDims, const size_t *Volume,
+                     const size_t *DstOffsets, const size_t *SrcOffsets,
+                     const size_t *DstDimensions, const size_t *SrcDimensions,
+                     int DstDevice, int SrcDevice)
+      : Dst(Dst), Src(Src), DstDevice(DstDevice), SrcDevice(SrcDevice),
+        IsRectMemcpy(true), Length(0), DstOffset(0), SrcOffset(0),
+        ElementSize(ElementSize), NumDims(NumDims), Volume(Volume),
+        DstOffsets(DstOffsets), SrcOffsets(SrcOffsets),
+        DstDimensions(DstDimensions), SrcDimensions(SrcDimensions){};
+};
+
+struct TargetMemsetArgsTy {
+  // Common attributes of a memset operation
+  void *Ptr;
+  int C;
+  size_t N;
+  int DeviceNum;
+
+  // no constructors defined, because this is a PoD
+};
+
 } // extern "C"
 
 #endif // OMPTARGET_OPENMP_INTERNAL_TYPES_H

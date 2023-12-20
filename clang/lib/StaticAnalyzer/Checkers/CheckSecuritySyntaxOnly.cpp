@@ -140,7 +140,7 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
   if (!II)   // if no identifier, not a simple C function
     return;
   StringRef Name = II->getName();
-  if (Name.startswith("__builtin_"))
+  if (Name.starts_with("__builtin_"))
     Name = Name.substr(10);
 
   // Set the evaluation function by switching on the callee name.
@@ -763,7 +763,7 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   enum { DEPR_ONLY = -1, UNKNOWN_CALL = -2 };
 
   StringRef Name = FD->getIdentifier()->getName();
-  if (Name.startswith("__builtin_"))
+  if (Name.starts_with("__builtin_"))
     Name = Name.substr(10);
 
   int ArgIndex =

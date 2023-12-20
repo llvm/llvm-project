@@ -14,12 +14,10 @@ namespace llvm {
 struct Align;
 class AAResults;
 class DataLayout;
-class Function;
 class GlobalVariable;
 class LoadInst;
 class MemoryDef;
 class MemorySSA;
-class Module;
 class Value;
 
 namespace AMDGPU {

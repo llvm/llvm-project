@@ -92,6 +92,15 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
+
+* Neoverse-N2 was incorrectly marked as an Armv8.5a core. This has been
+  changed to an Armv9.0a core. However, crypto options are not enabled
+  by default for Armv9 cores, so `-mcpu=neoverse-n2+crypto` is now required
+  to enable crypto for this core. As far as the compiler is concerned,
+  Armv9.0a has the same features enabled as Armv8.5a, with the exception
+  of crypto.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -102,10 +111,10 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
-* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
-
 Changes to the ARM Backend
 --------------------------
+
+* Added support for Cortex-M52 CPUs.
 
 Changes to the AVR Backend
 --------------------------
@@ -131,6 +140,12 @@ Changes to the RISC-V Backend
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 * Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
+* Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f for RV64.
+* The Zvbb, Zvbc, Zvkb, Zvkg, Zvkn, Zvknc, Zvkned, Zvkng, Zvknha, Zvknhb, Zvks,
+  Zvksc, Zvksed, Zvksg, Zvksh, and Zvkt extension version was upgraded to 1.0
+  and is no longer experimental.  However, the C intrinsics for these extensions
+  are still experimental.  To use the C intrinsics for these extensions,
+  ``-menable-experimental-extensions`` needs to be passed to Clang.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -204,6 +219,23 @@ Changes to the C API
   on zext instructions, and ``LLVMGetIsDisjoint`` and ``LLVMSetIsDisjoint``
   for getting/setting the new disjoint flag on or instructions.
 
+* Added the following functions for manipulating operand bundles, as well as
+  building ``call`` and ``invoke`` instructions that use operand bundles:
+
+  * ``LLVMBuildCallWithOperandBundles``
+  * ``LLVMBuildInvokeWithOperandBundles``
+  * ``LLVMCreateOperandBundle``
+  * ``LLVMDisposeOperandBundle``
+  * ``LLVMGetNumOperandBundles``
+  * ``LLVMGetOperandBundleAtIndex``
+  * ``LLVMGetNumOperandBundleArgs``
+  * ``LLVMGetOperandBundleArgAtIndex``
+  * ``LLVMGetOperandBundleTag``
+
+* Added ``LLVMGetFastMathFlags`` and ``LLVMSetFastMathFlags`` for getting/setting
+  the fast-math flags of an instruction, as well as ``LLVMCanValueUseFastMathFlags``
+  for checking if an instruction can use such flags
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -243,6 +275,9 @@ Changes to the LLVM tools
   debugging information to print symbols' filenames and line numbers.
 
 * llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
+
+* llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
+  ELF input and binary output files only.
 
 Changes to LLDB
 ---------------------------------

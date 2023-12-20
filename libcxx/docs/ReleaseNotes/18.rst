@@ -41,6 +41,8 @@ What's New in Libc++ 18.0.0?
 
 Implemented Papers
 ------------------
+- P2093R14 Formatted output
+- P2539R4  Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
 
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
@@ -50,6 +52,7 @@ Implemented Papers
 - P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
 - P2467R1 - Support exclusive mode for fstreams
 - P0020R6 - Floating Point Atomic
+- P2905R2 - Runtime format strings
 - P2918R2 - Runtime format strings II
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()

@@ -2144,6 +2144,9 @@ ModuleAddressSanitizer::CreateMetadataGlobal(Module &M, Constant *Initializer,
       M, Initializer->getType(), false, Linkage, Initializer,
       Twine("__asan_global_") + GlobalValue::dropLLVMManglingEscape(OriginalName));
   Metadata->setSection(getGlobalMetadataSection());
+  // Place metadata in a large section for x86-64 ELF binaries to mitigate
+  // relocation pressure.
+  setGlobalVariableLargeSection(TargetTriple, *Metadata);
   return Metadata;
 }
 
@@ -3502,7 +3505,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
       IRBuilder<> IRBPoison(ThenTerm);
-      if (StackMallocIdx <= 4) {
+      if (ASan.MaxInlinePoisoningSize != 0 && StackMallocIdx <= 4) {
         int ClassSize = kMinStackMallocSize << StackMallocIdx;
         ShadowAfterReturn.resize(ClassSize / L.Granularity,
                                  kAsanStackUseAfterReturnMagic);

@@ -151,7 +151,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   if (Name[0] == '\1')
     Name = Name.substr(1);
 
-  SmallString<64> GlobalName;
+  std::string GlobalName;
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
     // For local symbols, prepend the main file name to distinguish them.
     // Do not include the full path in the file name since there's no guarantee
@@ -165,7 +165,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     GlobalName += kGlobalIdentifierDelimiter;
   }
   GlobalName += Name;
-  return GlobalName.str().str();
+  return GlobalName;
 }
 
 std::string GlobalValue::getGlobalIdentifier() const {

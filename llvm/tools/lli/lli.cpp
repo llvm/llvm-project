@@ -622,7 +622,7 @@ int main(int argc, char **argv, char * const *envp) {
   } else {
     // Otherwise, if there is a .bc suffix on the executable strip it off, it
     // might confuse the program.
-    if (StringRef(InputFile).endswith(".bc"))
+    if (StringRef(InputFile).ends_with(".bc"))
       InputFile.erase(InputFile.length() - 3);
   }
 

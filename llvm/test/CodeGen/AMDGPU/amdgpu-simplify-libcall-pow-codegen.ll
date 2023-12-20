@@ -146,13 +146,13 @@ define double @test_pow_fast_f64__integral_y(double %x, i32 %y.i) {
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v42, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -163,9 +163,9 @@ define double @test_pow_fast_f64__integral_y(double %x, i32 %y.i) {
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
@@ -285,13 +285,13 @@ define double @test_powr_fast_f64(double %x, double %y) {
 ; CHECK-NEXT:    buffer_store_dword v43, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v43, v31
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v42, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -302,9 +302,9 @@ define double @test_powr_fast_f64(double %x, double %y) {
 ; CHECK-NEXT:    s_addc_u32 s5, s5, _Z4exp2d@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
@@ -430,13 +430,13 @@ define double @test_pown_fast_f64(double %x, i32 %y) {
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v42, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -447,9 +447,9 @@ define double @test_pown_fast_f64(double %x, i32 %y) {
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
@@ -571,13 +571,13 @@ define double @test_pown_fast_f64_known_even(double %x, i32 %y.arg) {
 ; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v42, 1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -588,9 +588,9 @@ define double @test_pown_fast_f64_known_even(double %x, i32 %y.arg) {
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
@@ -715,13 +715,13 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) {
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    v_or_b32_e32 v43, 1, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -732,9 +732,9 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) {
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
@@ -773,3 +773,6 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) {
   %call = tail call fast double @_Z4powndi(double %x, i32 %y)
   ret double %call
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

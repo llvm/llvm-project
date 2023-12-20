@@ -131,7 +131,7 @@ static unsigned getVersionValue(unsigned MajorVersion, unsigned MinorVersion) {
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__riscv");
-  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  bool Is64Bit = getTriple().isRISCV64();
   Builder.defineMacro("__riscv_xlen", Is64Bit ? "64" : "32");
   StringRef CodeModel = getTargetOpts().CodeModel;
   unsigned FLen = ISAInfo->getFLen();
@@ -281,7 +281,7 @@ bool RISCVTargetInfo::initFeatureMap(
 
   unsigned XLen = 32;
 
-  if (getTriple().getArch() == llvm::Triple::riscv64) {
+  if (getTriple().isRISCV64()) {
     Features["64bit"] = true;
     XLen = 64;
   } else {
@@ -304,11 +304,18 @@ bool RISCVTargetInfo::initFeatureMap(
 
   // RISCVISAInfo makes implications for ISA features
   std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-  // Add non-ISA features like `relax` and `save-restore` back
-  for (const std::string &Feature : NewFeaturesVec)
-    if (!llvm::is_contained(ImpliedFeatures, Feature))
-      ImpliedFeatures.push_back(Feature);
 
+  // parseFeatures normalizes the feature set by dropping any explicit
+  // negatives, and non-extension features.  We need to preserve the later
+  // for correctness and want to preserve the former for consistency.
+  for (auto &Feature : NewFeaturesVec) {
+     StringRef ExtName = Feature;
+     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
+     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
+     if (!llvm::is_contained(ImpliedFeatures, ("+" + ExtName).str()) &&
+         !llvm::is_contained(ImpliedFeatures, ("-" + ExtName).str()))
+       ImpliedFeatures.push_back(Feature);
+  }
   return TargetInfo::initFeatureMap(Features, Diags, CPU, ImpliedFeatures);
 }
 
@@ -336,21 +343,19 @@ RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.
 bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
-  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  bool Is64Bit = getTriple().isRISCV64();
   auto Result = llvm::StringSwitch<std::optional<bool>>(Feature)
                     .Case("riscv", true)
                     .Case("riscv32", !Is64Bit)
                     .Case("riscv64", Is64Bit)
                     .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
+                    .Case("experimental", HasExperimental)
                     .Default(std::nullopt);
   if (Result)
     return *Result;
 
-  if (ISAInfo->isSupportedExtensionFeature(Feature))
-    return ISAInfo->hasExtension(Feature);
-
-  return false;
+  return ISAInfo->hasExtension(Feature);
 }
 
 /// Perform initialization based on the user configured set of features.
@@ -377,6 +382,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     HasLegalHalfType = true;
 
   FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
+
+  if (llvm::is_contained(Features, "+experimental"))
+    HasExperimental = true;
 
   return true;
 }
@@ -430,14 +438,14 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
     Feature = Feature.trim();
     StringRef AttrString = Feature.split("=").second.trim();
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       // Override last features
       Ret.Features.clear();
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
 
-      if (AttrString.startswith("+")) {
+      if (AttrString.starts_with("+")) {
         // EXTENSION like arch=+v,+zbb
         SmallVector<StringRef, 1> Exts;
         AttrString.split(Exts, ",");
@@ -457,7 +465,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
         // full-arch-string like arch=rv64gcv
         handleFullArchString(AttrString, Ret.Features);
       }
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
 
@@ -471,7 +479,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
           handleFullArchString(MarchFromCPU, Ret.Features);
         }
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
 

@@ -19,11 +19,12 @@ define double @foo() nounwind {
 ;
 ; CHECK-32-LABEL: foo:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    pushl $0
-; CHECK-32-NEXT:    pushl $0
-; CHECK-32-NEXT:    calll bar@PLT
-; CHECK-32-NEXT:    addl $8, %esp
+; CHECK-32-NEXT:    subl $8, %esp
 ; CHECK-32-NEXT:    fldz
+; CHECK-32-NEXT:    fstpl (%esp)
+; CHECK-32-NEXT:    calll bar@PLT
+; CHECK-32-NEXT:    fldz
+; CHECK-32-NEXT:    addl $8, %esp
 ; CHECK-32-NEXT:    retl
   call void @bar(double 0.0)
   ret double 0.0

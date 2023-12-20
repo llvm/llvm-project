@@ -36,6 +36,10 @@
 #include "perfmon/perf_event.h"
 #endif // HAVE_LIBPFM
 
+#ifdef __linux__
+#include <unistd.h>
+#endif
+
 namespace llvm {
 namespace exegesis {
 
@@ -53,6 +57,13 @@ static bool generateSnippetSetupCode(
   if (GenerateMemoryInstructions) {
     BBF.addInstructions(ET.generateMemoryInitialSetup());
     for (const MemoryMapping &MM : Key.MemoryMappings) {
+#ifdef __linux__
+      // The frontend that generates that parses the memory mapping information
+      // from the user should validate that the requested address is a multiple
+      // of the page size. Assert that this is true here.
+      assert(MM.Address % getpagesize() == 0 &&
+             "Memory mappings need to be aligned to page boundaries.");
+#endif
       BBF.addInstructions(ET.generateMmap(
           MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
           ET.getAuxiliaryMemoryStartAddress() +

@@ -197,7 +197,7 @@ void Target::DeleteCurrentProcess() {
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
-    m_process_sp->Finalize();
+    m_process_sp->Finalize(false /* not destructing */);
 
     CleanupProcess();
 

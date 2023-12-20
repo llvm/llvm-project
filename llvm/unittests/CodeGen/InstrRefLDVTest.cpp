@@ -497,15 +497,8 @@ body:  |
 
   std::pair<FuncValueTable, FuncValueTable>
   allocValueTables(unsigned Blocks, unsigned Locs) {
-    FuncValueTable MOutLocs = std::make_unique<ValueTable[]>(Blocks);
-    FuncValueTable MInLocs = std::make_unique<ValueTable[]>(Blocks);
-
-    for (unsigned int I = 0; I < Blocks; ++I) {
-      MOutLocs[I] = std::make_unique<ValueIDNum[]>(Locs);
-      MInLocs[I] = std::make_unique<ValueIDNum[]>(Locs);
-    }
-
-    return std::make_pair(std::move(MOutLocs), std::move(MInLocs));
+    return {FuncValueTable(Blocks, ValueTable(Locs)),
+            FuncValueTable(Blocks, ValueTable(Locs))};
   }
 };
 

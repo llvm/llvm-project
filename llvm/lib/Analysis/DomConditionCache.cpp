@@ -36,8 +36,7 @@ static void findAffectedValues(Value *Cond,
 
   ICmpInst::Predicate Pred;
   Value *A;
-  Constant *C;
-  if (match(Cond, m_ICmp(Pred, m_Value(A), m_Constant(C)))) {
+  if (match(Cond, m_ICmp(Pred, m_Value(A), m_Constant()))) {
     AddAffected(A);
 
     if (ICmpInst::isEquality(Pred)) {

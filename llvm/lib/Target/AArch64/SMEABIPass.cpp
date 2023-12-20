@@ -15,7 +15,6 @@
 #include "AArch64.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "Utils/AArch64SMEAttributes.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"

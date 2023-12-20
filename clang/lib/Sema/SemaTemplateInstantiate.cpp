@@ -810,6 +810,10 @@ void Sema::PrintInstantiationStack() {
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_template_nsdmi_here)
             << FD << Active->InstantiationRange;
+      } else if (ClassTemplateDecl *CTD = dyn_cast<ClassTemplateDecl>(D)) {
+        Diags.Report(Active->PointOfInstantiation,
+                     diag::note_template_class_instantiation_here)
+            << CTD << Active->InstantiationRange;
       } else {
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_template_type_alias_instantiation_here)

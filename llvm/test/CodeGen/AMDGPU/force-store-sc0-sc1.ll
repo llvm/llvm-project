@@ -106,7 +106,7 @@ define amdgpu_kernel void @store_global_atomic(ptr addrspace(1) %ptr) {
 ; FORCESC0SC1-NEXT:    v_mov_b32_e32 v0, 0
 ; FORCESC0SC1-NEXT:    v_mov_b32_e32 v1, 1.0
 ; FORCESC0SC1-NEXT:    buffer_wbl2 sc1
-; FORCESC0SC1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FORCESC0SC1-NEXT:    s_waitcnt lgkmcnt(0)
 ; FORCESC0SC1-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
 ; FORCESC0SC1-NEXT:    s_endpgm
 ;
@@ -116,7 +116,7 @@ define amdgpu_kernel void @store_global_atomic(ptr addrspace(1) %ptr) {
 ; NOSC0SC1-NEXT:    v_mov_b32_e32 v0, 0
 ; NOSC0SC1-NEXT:    v_mov_b32_e32 v1, 1.0
 ; NOSC0SC1-NEXT:    buffer_wbl2 sc1
-; NOSC0SC1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; NOSC0SC1-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOSC0SC1-NEXT:    global_store_dword v0, v1, s[0:1] sc1
 ; NOSC0SC1-NEXT:    s_endpgm
 entry:

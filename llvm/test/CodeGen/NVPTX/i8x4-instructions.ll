@@ -790,9 +790,10 @@ define void @test_ldst_v8i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd2, [test_ldst_v8i8_param_1];
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldst_v8i8_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1+4];
-; CHECK-NEXT:    ld.u32 %r2, [%rd1];
-; CHECK-NEXT:    st.v2.u32 [%rd2], {%r2, %r1};
+; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.u32 %r2, [%rd1+4];
+; CHECK-NEXT:    st.u32 [%rd2+4], %r2;
+; CHECK-NEXT:    st.u32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
   %t1 = load <8 x i8>, ptr %a
   store <8 x i8> %t1, ptr %b, align 16

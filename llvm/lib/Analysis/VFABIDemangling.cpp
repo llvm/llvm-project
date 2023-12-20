@@ -32,7 +32,7 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
   if (MangledName.empty())
     return ParseRet::Error;
 
-  if (MangledName.startswith(VFABI::_LLVM_)) {
+  if (MangledName.starts_with(VFABI::_LLVM_)) {
     MangledName = MangledName.drop_front(strlen(VFABI::_LLVM_));
     ISA = VFISAKind::LLVM;
   } else {
@@ -376,7 +376,7 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // _ZGV<isa><mask><vlen><parameters>_<scalarname>.
   StringRef VectorName = MangledName;
 
-  // Parse the fixed size part of the manled name
+  // Parse the fixed size part of the mangled name
   if (!MangledName.consume_front("_ZGV"))
     return std::nullopt;
 

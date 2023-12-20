@@ -418,7 +418,8 @@ class HighlightingsBuilder {
 public:
   HighlightingsBuilder(const ParsedAST &AST, const HighlightingFilter &Filter)
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
-        LangOpts(AST.getLangOpts()), Filter(Filter) {}
+        LangOpts(AST.getLangOpts()), Filter(Filter),
+        Resolver(AST.getHeuristicResolver()) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     auto Range = getRangeForSourceLocation(Loc);
@@ -589,7 +590,7 @@ private:
   HighlightingFilter Filter;
   std::vector<HighlightingToken> Tokens;
   std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
-  const HeuristicResolver *Resolver = nullptr;
+  const HeuristicResolver *Resolver;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
 };

@@ -38,7 +38,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <utility>
 
 using namespace llvm;

@@ -44,10 +44,9 @@ INTERFACE void __scudo_get_error_info(
     const char *ring_buffer, size_t ring_buffer_size, const char *memory,
     const char *memory_tags, uintptr_t memory_addr, size_t memory_size) {
   (void)(stack_depot_size);
-  (void)(ring_buffer_size);
   Allocator.getErrorInfo(error_info, fault_addr, stack_depot, region_info,
-                         ring_buffer, memory, memory_tags, memory_addr,
-                         memory_size);
+                         ring_buffer, ring_buffer_size, memory, memory_tags,
+                         memory_addr, memory_size);
 }
 
 INTERFACE const char *__scudo_get_stack_depot_addr() {

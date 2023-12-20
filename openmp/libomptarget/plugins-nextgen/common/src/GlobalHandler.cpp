@@ -16,6 +16,8 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/Support/Error.h"
+
 #include <cstring>
 
 using namespace llvm;
@@ -46,21 +48,6 @@ GenericGlobalHandlerTy::getOrCreateELFObjectFile(const GenericDeviceTy &Device,
   assert(Result.first != ELFObjectFiles.end() && "Map insertion failed");
 
   return &Result.first->second;
-}
-
-Error GenericGlobalHandlerTy::getGlobalMetadataFromELF(
-    const DeviceImageTy &Image, const ELF64LE::Sym &Symbol,
-    const ELF64LE::Shdr &Section, GlobalTy &ImageGlobal) {
-
-  // The global's address is computed as the image begin + the ELF section
-  // offset + the ELF symbol value.
-  ImageGlobal.setPtr(advanceVoidPtr(
-      Image.getStart(), Section.sh_offset - Section.sh_addr + Symbol.st_value));
-
-  // Set the global's size.
-  ImageGlobal.setSize(Symbol.st_size);
-
-  return Plugin::success();
 }
 
 Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
@@ -146,15 +133,18 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     return Plugin::error("Failed to find global symbol '%s' in the ELF image",
                          ImageGlobal.getName().data());
 
+  auto AddrOrErr = utils::elf::getSymbolAddress(*ELFObj, **SymOrErr);
   // Get the section to which the symbol belongs.
-  auto SecOrErr = ELFObj->getELFFile().getSection((*SymOrErr)->st_shndx);
-  if (!SecOrErr)
-    return Plugin::error("Failed to get ELF section from global '%s': %s",
+  if (!AddrOrErr)
+    return Plugin::error("Failed to get ELF symbol from global '%s': %s",
                          ImageGlobal.getName().data(),
-                         toString(SecOrErr.takeError()).data());
+                         toString(AddrOrErr.takeError()).data());
 
   // Setup the global symbol's address and size.
-  return getGlobalMetadataFromELF(Image, **SymOrErr, **SecOrErr, ImageGlobal);
+  ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
+  ImageGlobal.setSize((*SymOrErr)->st_size);
+
+  return Plugin::success();
 }
 
 Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
@@ -175,6 +165,11 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
      "from %p to %p.\n",
      HostGlobal.getName().data(), HostGlobal.getSize(), ImageGlobal.getPtr(),
      HostGlobal.getPtr());
+
+  assert(Image.getStart() <= ImageGlobal.getPtr() &&
+         advanceVoidPtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
+             advanceVoidPtr(Image.getStart(), Image.getSize()) &&
+         "Attempting to read outside the image!");
 
   // Perform the copy from the image to the host memory.
   std::memcpy(HostGlobal.getPtr(), ImageGlobal.getPtr(), HostGlobal.getSize());

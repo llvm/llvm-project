@@ -174,6 +174,12 @@ New checks
   Flags coroutines that suspend while a lock guard is in scope at the
   suspension point.
 
+- New :doc:`hicpp-ignored-remove-result
+  <clang-tidy/checks/hicpp/ignored-remove-result>` check.
+
+  Ensure that the result of ``std::remove``, ``std::remove_if`` and
+  ``std::unique`` are not ignored according to rule 17.5.1.
+
 - New :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
 

@@ -120,8 +120,8 @@ PreservedAnalyses WinEHPreparePass::run(Function &F,
 }
 
 char WinEHPrepare::ID = 0;
-INITIALIZE_PASS(WinEHPrepare, "winehprepare", "Prepare Windows exceptions",
-                false, false)
+INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions", false,
+                false)
 
 FunctionPass *llvm::createWinEHPass(bool DemoteCatchSwitchPHIOnly) {
   return new WinEHPrepare(DemoteCatchSwitchPHIOnly);
@@ -324,7 +324,7 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
       const Constant *FilterOrNull = cast<Constant>(
           cast<CatchPadInst>(I)->getArgOperand(0)->stripPointerCasts());
       const Function *Filter = dyn_cast<Function>(FilterOrNull);
-      if (!Filter || !Filter->getName().startswith("__IsLocalUnwind"))
+      if (!Filter || !Filter->getName().starts_with("__IsLocalUnwind"))
         State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State
     } else if ((isa<CleanupReturnInst>(TI) || isa<CatchReturnInst>(TI)) &&
                State > 0) {

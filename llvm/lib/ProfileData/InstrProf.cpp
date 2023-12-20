@@ -113,11 +113,11 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::malformed:
     OS << "malformed instrumentation profile data";
     break;
-  case instrprof_error::missing_debug_info_for_correlation:
-    OS << "debug info for correlation is required";
+  case instrprof_error::missing_correlation_info:
+    OS << "debug info/binary for correlation is required";
     break;
-  case instrprof_error::unexpected_debug_info_for_correlation:
-    OS << "debug info for correlation is not necessary";
+  case instrprof_error::unexpected_correlation_info:
+    OS << "debug info/binary for correlation is not necessary";
     break;
   case instrprof_error::unable_to_correlate_profile:
     OS << "unable to correlate profile";
@@ -366,8 +366,9 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
-// DEPRECATED. Use `getIRPGOFuncName`for new code. See that function for
-// details. The implementation is kept for profile matching from older profiles.
+// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// for front-end (Clang, etc) instrumentation.
+// The implementation is kept for profile matching from older profiles.
 // This is similar to `getIRPGOFuncName` except that this function calls
 // 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
@@ -402,7 +403,7 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
     return PGOFuncName;
   // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
   // well.
-  if (PGOFuncName.startswith(FileName))
+  if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;
 }

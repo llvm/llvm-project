@@ -95,7 +95,7 @@ static void basic_tests()
         PutEnv(TC.name, dne);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        LIBCPP_ONLY(assert(ErrorIs(ec, expect_errc)));
+        LIBCPP_ASSERT(ErrorIs(ec, expect_errc));
         assert(ec != GetTestEC());
         assert(ec);
         assert(ret == "");
@@ -104,7 +104,7 @@ static void basic_tests()
         PutEnv(TC.name, file);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        LIBCPP_ONLY(assert(ErrorIs(ec, expect_errc)));
+        LIBCPP_ASSERT(ErrorIs(ec, expect_errc));
         assert(ec != GetTestEC());
         assert(ec);
         assert(ret == "");

@@ -744,7 +744,13 @@ public:
     // The following equations have been reordered to prevent loss of precision
     // when calculating fractional LMUL.
     return ((VectorBits / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
-  };
+  }
+
+  // Return inclusive (low, high) bounds on the value of VLMAX for the
+  // given scalable container type given known bounds on VLEN.
+  static std::pair<unsigned, unsigned>
+  computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
+
   static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);

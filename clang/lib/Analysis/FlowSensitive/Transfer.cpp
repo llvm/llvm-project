@@ -489,7 +489,6 @@ public:
     if (S->getType()->isRecordType()) {
       auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
       Env.setValue(*S, InitialVal);
-      copyRecord(InitialVal.getLoc(), Env.getResultObjectLocation(*S), Env);
     }
 
     transferInlineCall(S, ConstructorDecl);
@@ -582,6 +581,14 @@ public:
       Env.setValue(*S, *ArgVal);
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
       transferInlineCall(S, F);
+
+      // If this call produces a prvalue of record type, make sure that we have
+      // a `RecordValue` for it. This is required so that
+      // `Environment::getResultObjectLocation()` is able to return a location
+      // for this `CallExpr`.
+      if (S->getType()->isRecordType() && S->isPRValue())
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
     }
   }
 

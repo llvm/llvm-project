@@ -486,14 +486,11 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
-  for (auto it : llvm::zip(foldResults, opResults.getTypes())) {
+  for (auto it : llvm::zip_equal(foldResults, opResults.getTypes())) {
     Type expectedType = std::get<1>(it);
 
     // Normal values get pushed back directly.
     if (auto value = llvm::dyn_cast_if_present<Value>(std::get<0>(it))) {
-      if (value.getType() != expectedType)
-        return cleanupFailure();
-
       results.push_back(value);
       continue;
     }

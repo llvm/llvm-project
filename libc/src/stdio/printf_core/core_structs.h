@@ -46,7 +46,7 @@ struct FormatSection {
   int precision = -1;
 
   // Needs to be large enough to hold a long double.
-  fputil::FPBits<long double>::UIntType conv_val_raw;
+  fputil::FPBits<long double>::StorageType conv_val_raw;
   void *conv_val_ptr;
 
   char conv_name;

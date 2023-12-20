@@ -32,6 +32,9 @@ public:
 
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
+  bool legalizeIntrinsic(LegalizerHelper &Helper,
+                         MachineInstr &MI) const override;
+
 private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;

@@ -1624,19 +1624,19 @@ multiclass avx512_perm_i_sizes<bits<8> opc, string OpcodeStr,
                                X86FoldableSchedWrite sched,
                                AVX512VLVectorVTInfo VTInfo,
                                AVX512VLVectorVTInfo ShuffleMask> {
-  defm NAME: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info512,
-                           ShuffleMask.info512>,
-            avx512_perm_i_mb<opc, OpcodeStr, sched, VTInfo.info512,
-                             ShuffleMask.info512>, EVEX_V512;
+  defm NAME#Z: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info512,
+                             ShuffleMask.info512>,
+               avx512_perm_i_mb<opc, OpcodeStr, sched, VTInfo.info512,
+                                ShuffleMask.info512>, EVEX_V512;
   let Predicates = [HasVLX] in {
-  defm NAME#128: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info128,
-                               ShuffleMask.info128>,
-                 avx512_perm_i_mb<opc, OpcodeStr, sched, VTInfo.info128,
-                                  ShuffleMask.info128>, EVEX_V128;
-  defm NAME#256: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info256,
-                               ShuffleMask.info256>,
-                 avx512_perm_i_mb<opc, OpcodeStr, sched, VTInfo.info256,
-                                  ShuffleMask.info256>, EVEX_V256;
+  defm NAME#Z128: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info128,
+                                ShuffleMask.info128>,
+                  avx512_perm_i_mb<opc, OpcodeStr, sched, VTInfo.info128,
+                                   ShuffleMask.info128>, EVEX_V128;
+  defm NAME#Z256: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info256,
+                                ShuffleMask.info256>,
+                  avx512_perm_i_mb<opc, OpcodeStr, sched, VTInfo.info256,
+                                   ShuffleMask.info256>, EVEX_V256;
   }
 }
 
@@ -1646,13 +1646,13 @@ multiclass avx512_perm_i_sizes_bw<bits<8> opc, string OpcodeStr,
                                   AVX512VLVectorVTInfo Idx,
                                   Predicate Prd> {
   let Predicates = [Prd] in
-  defm NAME: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info512,
-                           Idx.info512>, EVEX_V512;
+  defm NAME#Z: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info512,
+                             Idx.info512>, EVEX_V512;
   let Predicates = [Prd, HasVLX] in {
-  defm NAME#128: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info128,
-                               Idx.info128>, EVEX_V128;
-  defm NAME#256: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info256,
-                               Idx.info256>,  EVEX_V256;
+  defm NAME#Z128: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info128,
+                                Idx.info128>, EVEX_V128;
+  defm NAME#Z256: avx512_perm_i<opc, OpcodeStr, sched, VTInfo.info256,
+                                Idx.info256>,  EVEX_V256;
   }
 }
 
@@ -1702,9 +1702,9 @@ multiclass avx512_perm_i_lowering<string InstrStr, X86VectorVTInfo _,
 }
 
 // TODO: Should we add more casts? The vXi64 case is common due to ABI.
-defm : avx512_perm_i_lowering<"VPERMI2PS", v16f32_info, v16i32_info, v8i64_info>;
-defm : avx512_perm_i_lowering<"VPERMI2PS256", v8f32x_info, v8i32x_info, v4i64x_info>;
-defm : avx512_perm_i_lowering<"VPERMI2PS128", v4f32x_info, v4i32x_info, v2i64x_info>;
+defm : avx512_perm_i_lowering<"VPERMI2PSZ", v16f32_info, v16i32_info, v8i64_info>;
+defm : avx512_perm_i_lowering<"VPERMI2PSZ256", v8f32x_info, v8i32x_info, v4i64x_info>;
+defm : avx512_perm_i_lowering<"VPERMI2PSZ128", v4f32x_info, v4i32x_info, v2i64x_info>;
 
 // VPERMT2
 multiclass avx512_perm_t<bits<8> opc, string OpcodeStr,
@@ -1743,19 +1743,19 @@ multiclass avx512_perm_t_sizes<bits<8> opc, string OpcodeStr,
                                X86FoldableSchedWrite sched,
                                AVX512VLVectorVTInfo VTInfo,
                                AVX512VLVectorVTInfo ShuffleMask> {
-  defm NAME: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info512,
-                              ShuffleMask.info512>,
-            avx512_perm_t_mb<opc, OpcodeStr, sched, VTInfo.info512,
-                              ShuffleMask.info512>, EVEX_V512;
+  defm NAME#Z: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info512,
+                             ShuffleMask.info512>,
+               avx512_perm_t_mb<opc, OpcodeStr, sched, VTInfo.info512,
+                                ShuffleMask.info512>, EVEX_V512;
   let Predicates = [HasVLX] in {
-  defm NAME#128: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info128,
-                              ShuffleMask.info128>,
-                 avx512_perm_t_mb<opc, OpcodeStr, sched, VTInfo.info128,
-                              ShuffleMask.info128>, EVEX_V128;
-  defm NAME#256: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info256,
-                              ShuffleMask.info256>,
-                 avx512_perm_t_mb<opc, OpcodeStr, sched, VTInfo.info256,
-                              ShuffleMask.info256>, EVEX_V256;
+  defm NAME#Z128: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info128,
+                                ShuffleMask.info128>,
+                  avx512_perm_t_mb<opc, OpcodeStr, sched, VTInfo.info128,
+                                   ShuffleMask.info128>, EVEX_V128;
+  defm NAME#Z256: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info256,
+                                ShuffleMask.info256>,
+                   avx512_perm_t_mb<opc, OpcodeStr, sched, VTInfo.info256,
+                                    ShuffleMask.info256>, EVEX_V256;
   }
 }
 
@@ -1764,13 +1764,13 @@ multiclass avx512_perm_t_sizes_bw<bits<8> opc, string OpcodeStr,
                                   AVX512VLVectorVTInfo VTInfo,
                                   AVX512VLVectorVTInfo Idx, Predicate Prd> {
   let Predicates = [Prd] in
-  defm NAME: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info512,
-                           Idx.info512>, EVEX_V512;
+  defm NAME#Z: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info512,
+                             Idx.info512>, EVEX_V512;
   let Predicates = [Prd, HasVLX] in {
-  defm NAME#128: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info128,
-                               Idx.info128>, EVEX_V128;
-  defm NAME#256: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info256,
-                               Idx.info256>, EVEX_V256;
+  defm NAME#Z128: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info128,
+                                Idx.info128>, EVEX_V128;
+  defm NAME#Z256: avx512_perm_t<opc, OpcodeStr, sched, VTInfo.info256,
+                                Idx.info256>, EVEX_V256;
   }
 }
 

@@ -2659,8 +2659,9 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes;
-  - The AMDGPU target backend is unable to create machine code that can meet the
-    request.
+
+The AMDGPU target backend will emit a warning whenever it is unable to
+create machine code that meets the request.
   }];
 }
 
@@ -3654,6 +3655,21 @@ an error:
   int S::*i;
   struct S {};
 }];
+}
+
+def MSConstexprDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[msvc::constexpr]]`` attribute can be applied only to a function
+definition or a ``return`` statement. It does not impact function declarations.
+A ``[[msvc::constexpr]]`` function cannot be ``constexpr`` or ``consteval``.
+A ``[[msvc::constexpr]]`` function is treated as if it were a ``constexpr`` function
+when it is evaluated in a constant context of ``[[msvc::constexpr]] return`` statement.
+Otherwise, it is treated as a regular function.
+
+Semantics of this attribute are enabled only under MSVC compatibility
+(``-fms-compatibility-version``) 19.33 and later.
+  }];
 }
 
 def MSNoVTableDocs : Documentation {
@@ -5251,7 +5267,74 @@ the ``int`` parameter is the one that represents the error.
 def SuppressDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
-The ``[[gsl::suppress]]`` attribute suppresses specific
+The ``suppress`` attribute suppresses unwanted warnings coming from static
+analysis tools such as the Clang Static Analyzer. The tool will not report
+any issues in source code annotated with the attribute.
+
+The attribute cannot be used to suppress traditional Clang warnings, because
+many such warnings are emitted before the attribute is fully parsed.
+Consider using ``#pragma clang diagnostic`` to control such diagnostics,
+as described in `Controlling Diagnostics via Pragmas
+<https://clang.llvm.org/docs/UsersManual.html#controlling-diagnostics-via-pragmas>`_.
+
+The ``suppress`` attribute can be placed on an individual statement in order to
+suppress warnings about undesirable behavior occurring at that statement:
+
+.. code-block:: c++
+
+  int foo() {
+    int *x = nullptr;
+    ...
+    [[clang::suppress]]
+    return *x;  // null pointer dereference warning suppressed here
+  }
+
+Putting the attribute on a compound statement suppresses all warnings in scope:
+
+.. code-block:: c++
+
+  int foo() {
+    [[clang::suppress]] {
+      int *x = nullptr;
+      ...
+      return *x;  // warnings suppressed in the entire scope
+    }
+  }
+
+Some static analysis warnings are accompanied by one or more notes, and the
+line of code against which the warning is emitted isn't necessarily the best
+for suppression purposes. In such cases the tools are allowed to implement
+additional ways to suppress specific warnings based on the attribute attached
+to a note location.
+
+For example, the Clang Static Analyzer suppresses memory leak warnings when
+the suppression attribute is placed at the allocation site (highlited by
+a "note: memory is allocated"), which may be different from the line of code
+at which the program "loses track" of the pointer (where the warning
+is ultimately emitted):
+
+.. code-block:: c
+
+  int bar1(bool coin_flip) {
+    __attribute__((suppress))
+    int *result = (int *)malloc(sizeof(int));
+    if (coin_flip)
+      return 1;  // warning about this leak path is suppressed
+
+    return *result;  // warning about this leak path is also suppressed
+  }
+
+  int bar2(bool coin_flip) {
+    int *result = (int *)malloc(sizeof(int));
+    if (coin_flip)
+      return 1;  // leak warning on this path NOT suppressed
+
+    __attribute__((suppress))
+    return *result;  // leak warning is suppressed only on this path
+  }
+
+
+When written as ``[[gsl::suppress]]``, this attribute suppresses specific
 clang-tidy diagnostics for rules of the `C++ Core Guidelines`_ in a portable
 way. The attribute can be attached to declarations, statements, and at
 namespace scope.
@@ -5452,7 +5535,9 @@ considered inline.
 Not all targets support this attribute. ELF target support depends on both the
 linker and runtime linker, and is available in at least lld 4.0 and later,
 binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later.
-Non-ELF targets currently do not support this attribute.
+Mach-O targets support it, but with slightly different semantics: the resolver
+is run at first call, instead of at load time by the runtime linker. Targets
+other than ELF and Mach-O currently do not support this attribute.
   }];
 }
 
@@ -7413,72 +7498,6 @@ relative ordering of values is important. For example:
 ``main()``. If no argument is given to the ``constructor`` or ``destructor``
 attribute, they default to the value ``65535``.
 }];
-}
-
-def CountedByDocs : Documentation {
-  let Category = DocCatField;
-  let Content = [{
-Clang supports the ``counted_by`` attribute on the flexible array member of a
-structure in C. The argument for the attribute is the name of a field member in
-the same structure holding the count of elements in the flexible array. This
-information can be used to improve the results of the array bound sanitizer and
-the ``__builtin_dynamic_object_size`` builtin.
-
-For example, the following code:
-
-.. code-block:: c
-
-  struct bar;
-
-  struct foo {
-    size_t count;
-    char other;
-    struct bar *array[] __attribute__((counted_by(count)));
-  };
-
-specifies that the flexible array member ``array`` has the number of elements
-allocated for it stored in ``count``. This establishes a relationship between
-``array`` and ``count``. Specifically, ``p->array`` must have at least
-``p->count`` number of elements available. It's the user's responsibility to
-ensure that this relationship is maintained through changes to the structure.
-
-In the following example, the allocated array erroneously has fewer elements
-than what's specified by ``p->count``. This would result in an out-of-bounds
-access not being detected.
-
-.. code-block:: c
-
-  #define SIZE_INCR 42
-
-  struct foo *p;
-
-  void foo_alloc(size_t count) {
-    p = malloc(MAX(sizeof(struct foo),
-                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
-    p->count = count + SIZE_INCR;
-  }
-
-The next example updates ``p->count``, breaking the relationship requirement
-that ``p->array`` must have at least ``p->count`` number of elements available:
-
-.. code-block:: c
-
-  #define SIZE_INCR 42
-
-  struct foo *p;
-
-  void foo_alloc(size_t count) {
-    p = malloc(MAX(sizeof(struct foo),
-                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
-    p->count = count;
-  }
-
-  void use_foo(int index) {
-    p->count += SIZE_INCR + 1; /* 'count' is now larger than the number of elements of 'array'. */
-    p->array[index] = 0;       /* the sanitizer can't properly check if this is an out-of-bounds access. */
-  }
-
-  }];
 }
 
 def CoroOnlyDestroyWhenCompleteDocs : Documentation {

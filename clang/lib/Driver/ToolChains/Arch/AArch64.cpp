@@ -228,7 +228,7 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
   if (MtuneLowerCase == "native")
     MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
   if (MtuneLowerCase == "cyclone" ||
-      StringRef(MtuneLowerCase).startswith("apple")) {
+      StringRef(MtuneLowerCase).starts_with("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
@@ -262,7 +262,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     for (const auto *A :
          Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler))
       for (StringRef Value : A->getValues())
-        if (Value.startswith("-march="))
+        if (Value.starts_with("-march="))
           WaMArch = Value.substr(7);
   // Call getAArch64ArchFeaturesFromMarch only if "-Wa,-march=" or
   // "-Xassembler -march" is detected. Otherwise it may return false

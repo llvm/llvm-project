@@ -1270,6 +1270,14 @@ inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
   return DisjointOr_match<LHS, RHS, true>(L, R);
 }
 
+/// Match either "and" or "or disjoint".
+template <typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
+                        DisjointOr_match<LHS, RHS>>
+m_AddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Add(L, R), m_DisjointOr(L, R));
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //

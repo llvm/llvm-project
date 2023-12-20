@@ -43,7 +43,7 @@ Getting the Source Code and Building LLVM
    * You are likely only interested in the main branch moving forward, if
      you don't want `git fetch` (or `git pull`) to download user branches, use:
 
-     ``sed 's#fetch = +refs/heads/\*:refs/remotes/origin/\*#fetch = +refs/heads/main:refs/remotes/origin/main# -i llvm-project/.git/config``
+     ``sed 's#fetch = +refs/heads/\*:refs/remotes/origin/\*#fetch = +refs/heads/main:refs/remotes/origin/main#' -i llvm-project/.git/config``
 
 #. Configure and build LLVM and Clang:
 

@@ -1449,6 +1449,11 @@ filegroup(
     srcs = glob(["mlir/dialects/transform/*.py"]),
 )
 
+filegroup(
+    name = "TransformExtrasPackagePyFiles",
+    srcs = glob(["mlir/extras/dialects/transform/*.py"]),
+)
+
 ##---------------------------------------------------------------------------##
 # Vector dialect.
 ##---------------------------------------------------------------------------##

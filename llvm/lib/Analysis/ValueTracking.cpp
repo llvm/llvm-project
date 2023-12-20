@@ -616,11 +616,11 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
 
 static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
                                     Value *LHS, Value *RHS, KnownBits &Known,
-                                    unsigned Depth, const SimplifyQuery &Q) {
+                                    const SimplifyQuery &Q) {
   if (RHS->getType()->isPointerTy()) {
     // Handle comparison of pointer to null explicitly, as it will not be
     // covered by the m_APInt() logic below.
-    if (match(RHS, m_Zero())) {
+    if (LHS == V && match(RHS, m_Zero())) {
       switch (Pred) {
       case ICmpInst::ICMP_EQ:
         Known.setAllZero();
@@ -720,13 +720,13 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
         computeKnownBitsFromCmp(V, Cmp->getPredicate(), Cmp->getOperand(0),
-                                Cmp->getOperand(1), Known, Depth, Q);
+                                Cmp->getOperand(1), Known, Q);
 
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (Q.DT->dominates(Edge1, Q.CxtI->getParent()))
         computeKnownBitsFromCmp(V, Cmp->getInversePredicate(),
                                 Cmp->getOperand(0), Cmp->getOperand(1), Known,
-                                Depth, Q);
+                                Q);
     }
 
     if (Known.hasConflict())
@@ -794,7 +794,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       continue;
 
     computeKnownBitsFromCmp(V, Cmp->getPredicate(), Cmp->getOperand(0),
-                            Cmp->getOperand(1), Known, Depth, Q);
+                            Cmp->getOperand(1), Known, Q);
   }
 
   // Conflicting assumption: Undefined behavior will occur on this execution
@@ -1465,8 +1465,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
             Q.IIQ.getMetadata(cast<Instruction>(I), LLVMContext::MD_range))
       computeKnownBitsFromRangeMetadata(*MD, Known);
     if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
-      computeKnownBits(RV, Known2, Depth + 1, Q);
-      Known = Known.unionWith(Known2);
+      if (RV->getType() == I->getType()) {
+        computeKnownBits(RV, Known2, Depth + 1, Q);
+        Known = Known.unionWith(Known2);
+      }
     }
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -2366,19 +2368,12 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
+  // TODO: Move this case into isKnownNonEqual().
   if (auto *C = dyn_cast<Constant>(X))
     if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Depth, Q))
       return true;
 
-  KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
-  if (XKnown.isUnknown())
-    return false;
-  KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
-  // If X != Y then X - Y is non zero.
-  std::optional<bool> ne = KnownBits::ne(XKnown, YKnown);
-  // If we are unable to compute if X != Y, we won't be able to do anything
-  // computing the knownbits of the sub expression so just return here.
-  return ne && *ne;
+  return ::isKnownNonEqual(X, Y, Depth, Q);
 }
 
 static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,
@@ -2712,7 +2707,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
         return isKnownNonZero(RP, Depth, Q);
     } else if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
-      if (isKnownNonZero(RV, Depth, Q))
+      if (RV->getType() == I->getType() && isKnownNonZero(RV, Depth, Q))
         return true;
     }
 
@@ -3094,6 +3089,58 @@ static bool isNonEqualSelect(const Value *V1, const Value *V2, unsigned Depth,
          isKnownNonEqual(SI1->getFalseValue(), V2, Depth + 1, Q);
 }
 
+// Check to see if A is both a GEP and is the incoming value for a PHI in the
+// loop, and B is either a ptr or another GEP. If the PHI has 2 incoming values,
+// one of them being the recursive GEP A and the other a ptr at same base and at
+// the same/higher offset than B we are only incrementing the pointer further in
+// loop if offset of recursive GEP is greater than 0.
+static bool isNonEqualPointersWithRecursiveGEP(const Value *A, const Value *B,
+                                               const SimplifyQuery &Q) {
+  if (!A->getType()->isPointerTy() || !B->getType()->isPointerTy())
+    return false;
+
+  auto *GEPA = dyn_cast<GEPOperator>(A);
+  if (!GEPA || GEPA->getNumIndices() != 1 || !isa<Constant>(GEPA->idx_begin()))
+    return false;
+
+  // Handle 2 incoming PHI values with one being a recursive GEP.
+  auto *PN = dyn_cast<PHINode>(GEPA->getPointerOperand());
+  if (!PN || PN->getNumIncomingValues() != 2)
+    return false;
+
+  // Search for the recursive GEP as an incoming operand, and record that as
+  // Step.
+  Value *Start = nullptr;
+  Value *Step = const_cast<Value *>(A);
+  if (PN->getIncomingValue(0) == Step)
+    Start = PN->getIncomingValue(1);
+  else if (PN->getIncomingValue(1) == Step)
+    Start = PN->getIncomingValue(0);
+  else
+    return false;
+
+  // Other incoming node base should match the B base.
+  // StartOffset >= OffsetB && StepOffset > 0?
+  // StartOffset <= OffsetB && StepOffset < 0?
+  // Is non-equal if above are true.
+  // We use stripAndAccumulateInBoundsConstantOffsets to restrict the
+  // optimisation to inbounds GEPs only.
+  unsigned IndexWidth = Q.DL.getIndexTypeSizeInBits(Start->getType());
+  APInt StartOffset(IndexWidth, 0);
+  Start = Start->stripAndAccumulateInBoundsConstantOffsets(Q.DL, StartOffset);
+  APInt StepOffset(IndexWidth, 0);
+  Step = Step->stripAndAccumulateInBoundsConstantOffsets(Q.DL, StepOffset);
+
+  // Check if Base Pointer of Step matches the PHI.
+  if (Step != PN)
+    return false;
+  APInt OffsetB(IndexWidth, 0);
+  B = B->stripAndAccumulateInBoundsConstantOffsets(Q.DL, OffsetB);
+  return Start == B &&
+         ((StartOffset.sge(OffsetB) && StepOffset.isStrictlyPositive()) ||
+          (StartOffset.sle(OffsetB) && StepOffset.isNegative()));
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                             const SimplifyQuery &Q) {
@@ -3137,15 +3184,27 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     // Are any known bits in V1 contradictory to known bits in V2? If V1
     // has a known zero where V2 has a known one, they must not be equal.
     KnownBits Known1 = computeKnownBits(V1, Depth, Q);
-    KnownBits Known2 = computeKnownBits(V2, Depth, Q);
-
-    if (Known1.Zero.intersects(Known2.One) ||
-        Known2.Zero.intersects(Known1.One))
-      return true;
+    if (!Known1.isUnknown()) {
+      KnownBits Known2 = computeKnownBits(V2, Depth, Q);
+      if (Known1.Zero.intersects(Known2.One) ||
+          Known2.Zero.intersects(Known1.One))
+        return true;
+    }
   }
 
   if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
     return true;
+
+  if (isNonEqualPointersWithRecursiveGEP(V1, V2, Q) ||
+      isNonEqualPointersWithRecursiveGEP(V2, V1, Q))
+    return true;
+
+  Value *A, *B;
+  // PtrToInts are NonEqual if their Ptrs are NonEqual.
+  // Check PtrToInt type matches the pointer size.
+  if (match(V1, m_PtrToIntSameSize(Q.DL, m_Value(A))) &&
+      match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
+    return isKnownNonEqual(A, B, Depth + 1, Q);
 
   return false;
 }
@@ -8024,7 +8083,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
   for (unsigned i = 0; i != 2; ++i) {
     Value *L = P->getIncomingValue(i);
     Value *R = P->getIncomingValue(!i);
-    Operator *LU = dyn_cast<Operator>(L);
+    auto *LU = dyn_cast<BinaryOperator>(L);
     if (!LU)
       continue;
     unsigned Opcode = LU->getOpcode();
@@ -8062,7 +8121,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     // OR
     //   %iv = [R, %entry], [%iv.next, %backedge]
     //   %iv.next = binop L, %iv
-    BO = cast<BinaryOperator>(LU);
+    BO = LU;
     Start = R;
     Step = L;
     return true;
@@ -8100,10 +8159,9 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
   }
 
   case CmpInst::ICMP_ULE: {
-    const APInt *C;
-
-    // LHS u<= LHS +_{nuw} C   for any C
-    if (match(RHS, m_NUWAdd(m_Specific(LHS), m_APInt(C))))
+    // LHS u<= LHS +_{nuw} V for any V
+    if (match(RHS, m_c_Add(m_Specific(LHS), m_Value())) &&
+        cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
       return true;
 
     // RHS >> V u<= RHS for any V

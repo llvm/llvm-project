@@ -9,7 +9,7 @@ define i32 @test_01(i32 %A, i64 %Len, ptr %array) {
 ; CHECK-NEXT:    br i1 [[TRIPCHECK]], label [[LOOP_PREHEADER:%.*]], label [[ZERO:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[LEN]], i64 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[LEN]], [[SMIN]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP1]])

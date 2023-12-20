@@ -4571,6 +4571,13 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
                "}",
                Style);
 
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("extern \"C\"\n"
+               "{\n"
+               "int i;\n"
+               "}",
+               Style);
+
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterExternBlock = true;
   Style.IndentExternBlock = FormatStyle::IEBS_Indent;
@@ -13950,6 +13957,19 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
                "  void f() { int i; } \\\n"
                "  int j;",
                getLLVMStyleWithColumns(23));
+
+  verifyFormat(
+      "void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+      "    aaaaaaaaaaaaaaaaaa,\n"
+      "    aaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {}");
+
+  constexpr StringRef Code{"void foo() { /* Empty */ }"};
+  verifyFormat(Code);
+  verifyFormat(Code, "void foo() { /* Empty */\n"
+                     "}");
+  verifyFormat(Code, "void foo() {\n"
+                     "/* Empty */\n"
+                     "}");
 }
 
 TEST_F(FormatTest, PullEmptyFunctionDefinitionsIntoSingleLine) {

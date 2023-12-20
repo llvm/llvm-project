@@ -328,3 +328,32 @@ define <2 x i8> @shl_or_non_splat_out_of_range(<2 x i8> %x) {
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }
+
+define i8 @shl_or_with_or_disjoint_instead_of_add(i8 %x) {
+; CHECK-LABEL: define i8 @shl_or_with_or_disjoint_instead_of_add
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 22, [[X]]
+; CHECK-NEXT:    ret i8 [[BINOP]]
+;
+  %shift = shl i8 16, %x
+  %add = or disjoint i8 %x, 1
+  %shift2 = shl i8 3, %add
+  %binop = or i8 %shift, %shift2
+  ret i8 %binop
+}
+
+define i8 @shl_or_with_or_instead_of_add(i8 %x) {
+; CHECK-LABEL: define i8 @shl_or_with_or_instead_of_add
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[X]], 1
+; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 3, [[ADD]]
+; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    ret i8 [[BINOP]]
+;
+  %shift = shl i8 16, %x
+  %add = or i8 %x, 1
+  %shift2 = shl i8 3, %add
+  %binop = or i8 %shift, %shift2
+  ret i8 %binop
+}

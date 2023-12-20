@@ -391,8 +391,10 @@ static SmallBitVector isUndefVector(const Value *V,
         if (isa<T>(II->getOperand(1)))
           continue;
         std::optional<unsigned> Idx = getInsertIndex(II);
-        if (!Idx)
-          continue;
+        if (!Idx) {
+          Res.reset();
+          return Res;
+        }
         if (*Idx < UseMask.size() && !UseMask.test(*Idx))
           Res.reset(*Idx);
       }
@@ -2883,6 +2885,10 @@ private:
       assert(!BundleMember && "Bundle and VL out of sync");
     } else {
       MustGather.insert(VL.begin(), VL.end());
+      // Build a map for gathered scalars to the nodes where they are used.
+      for (Value *V : VL)
+        if (!isConstant(V))
+          ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
     }
 
     if (UserTreeIdx.UserTE)
@@ -5597,6 +5603,18 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   InstructionsState S = getSameOpcode(VL, *TLI);
 
+  // Don't vectorize ephemeral values.
+  if (!EphValues.empty()) {
+    for (Value *V : VL) {
+      if (EphValues.count(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
+                          << ") is ephemeral.\n");
+        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+        return;
+      }
+    }
+  }
+
   // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
   // a load), in which case peek through to include it in the tree, without
   // ballooning over-budget.
@@ -5734,18 +5752,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // We now know that this is a vector of instructions of the same type from
   // the same block.
-
-  // Don't vectorize ephemeral values.
-  if (!EphValues.empty()) {
-    for (Value *V : VL) {
-      if (EphValues.count(V)) {
-        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
-                          << ") is ephemeral.\n");
-        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
-        return;
-      }
-    }
-  }
 
   // Check if this is a duplicate of another entry.
   if (TreeEntry *E = getTreeEntry(S.OpValue)) {
@@ -8865,16 +8871,6 @@ static T *performExtractsShuffleAction(
 }
 
 InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
-  // Build a map for gathered scalars to the nodes where they are used.
-  ValueToGatherNodes.clear();
-  for (const std::unique_ptr<TreeEntry> &EntryPtr : VectorizableTree) {
-    if (EntryPtr->State != TreeEntry::NeedToGather)
-      continue;
-    for (Value *V : EntryPtr->Scalars)
-      if (!isConstant(V))
-        ValueToGatherNodes.try_emplace(V).first->getSecond().insert(
-            EntryPtr.get());
-  }
   InstructionCost Cost = 0;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
@@ -11476,7 +11472,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0);
+      propagateIRFlags(V, E->Scalars, VL0, !MinBWs.contains(E));
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
@@ -13660,8 +13656,10 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     // constant index, or a pointer operand that doesn't point to a scalar
     // type.
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      if (GEP->getNumIndices() != 1)
+        continue;
       Value *Idx = GEP->idx_begin()->get();
-      if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
+      if (isa<Constant>(Idx))
         continue;
       if (!isValidElementType(Idx->getType()))
         continue;
@@ -15706,6 +15704,8 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   assert(isValidElementType(V->getType()) &&
          isValidElementType(V2->getType()) &&
          "Expected valid element types only.");
+  if (V == V2)
+    return IsCompatibility;
   auto *CI1 = cast<CmpInst>(V);
   auto *CI2 = cast<CmpInst>(V2);
   if (CI1->getOperand(0)->getType()->getTypeID() <
@@ -15730,6 +15730,8 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   for (int I = 0, E = CI1->getNumOperands(); I < E; ++I) {
     auto *Op1 = CI1->getOperand(CI1Preds ? I : E - I - 1);
     auto *Op2 = CI2->getOperand(CI2Preds ? I : E - I - 1);
+    if (Op1 == Op2)
+      continue;
     if (Op1->getValueID() < Op2->getValueID())
       return !IsCompatibility;
     if (Op1->getValueID() > Op2->getValueID())
@@ -15756,7 +15758,10 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
         InstructionsState S = getSameOpcode({I1, I2}, TLI);
         if (S.getOpcode() && (IsCompatibility || !S.isAltShuffle()))
           continue;
-        return !IsCompatibility && I1->getOpcode() < I2->getOpcode();
+        if (IsCompatibility)
+          return false;
+        if (I1->getOpcode() != I2->getOpcode())
+          return I1->getOpcode() < I2->getOpcode();
       }
   }
   return IsCompatibility;

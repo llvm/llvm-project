@@ -8,8 +8,6 @@
 
 // Make sure that the executor pipes standard input to the test-executable being run.
 
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
 // RUN: %{build}
 // RUN: echo "abc" | %{exec} %t.exe
 

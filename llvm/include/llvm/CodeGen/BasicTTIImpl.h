@@ -545,6 +545,25 @@ public:
     return TargetTransformInfo::TCC_Expensive;
   }
 
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const {
+    switch (Inst.getOpcode()) {
+    default:
+      break;
+    case Instruction::SDiv:
+    case Instruction::SRem:
+    case Instruction::UDiv:
+    case Instruction::URem: {
+      if (!isa<ConstantInt>(Inst.getOperand(1)))
+        return false;
+      EVT VT = getTLI()->getValueType(DL, Inst.getType());
+      return !getTLI()->isIntDivCheap(VT, Fn.getAttributes());
+    }
+    };
+
+    return false;
+  }
+
   unsigned getInliningThresholdMultiplier() const { return 1; }
   unsigned adjustInliningThreshold(const CallBase *CB) { return 0; }
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {

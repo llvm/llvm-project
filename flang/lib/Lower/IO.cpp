@@ -641,7 +641,8 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   makeNextConditionalOn(builder, loc, checkResult, ok);
   mlir::Type argType = funcOp.getFunctionType().getInput(1);
-  mlir::Value groupAddr = getNamelistGroup(converter, symbol, stmtCtx);
+  mlir::Value groupAddr =
+      getNamelistGroup(converter, symbol.GetUltimate(), stmtCtx);
   groupAddr = builder.createConvert(loc, argType, groupAddr);
   llvm::SmallVector<mlir::Value> args = {cookie, groupAddr};
   ok = builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);

@@ -23,7 +23,6 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -812,8 +811,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     // Only lower this if the icmp is the only user of the GEP or if we expect
     // the result to fold to a constant!
     if ((GEPsInBounds || CmpInst::isEquality(Cond)) &&
-        (isa<ConstantExpr>(GEPLHS) || GEPLHS->hasOneUse()) &&
-        (isa<ConstantExpr>(GEPRHS) || GEPRHS->hasOneUse())) {
+        (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
+        (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse())) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       Value *L = EmitGEPOffset(GEPLHS);
       Value *R = EmitGEPOffset(GEPRHS);
@@ -1324,34 +1323,21 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
 
 /// Canonicalize icmp instructions based on dominating conditions.
 Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
-  // This is a cheap/incomplete check for dominance - just match a single
-  // predecessor with a conditional branch.
-  BasicBlock *CmpBB = Cmp.getParent();
-  BasicBlock *DomBB = CmpBB->getSinglePredecessor();
-  if (!DomBB)
-    return nullptr;
-
-  Value *DomCond;
-  BasicBlock *TrueBB, *FalseBB;
-  if (!match(DomBB->getTerminator(), m_Br(m_Value(DomCond), TrueBB, FalseBB)))
-    return nullptr;
-
-  assert((TrueBB == CmpBB || FalseBB == CmpBB) &&
-         "Predecessor block does not point to successor?");
-
-  // The branch should get simplified. Don't bother simplifying this condition.
-  if (TrueBB == FalseBB)
-    return nullptr;
-
   // We already checked simple implication in InstSimplify, only handle complex
   // cases here.
-
-  CmpInst::Predicate Pred = Cmp.getPredicate();
   Value *X = Cmp.getOperand(0), *Y = Cmp.getOperand(1);
   ICmpInst::Predicate DomPred;
-  const APInt *C, *DomC;
-  if (match(DomCond, m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))) &&
-      match(Y, m_APInt(C))) {
+  const APInt *C;
+  if (!match(Y, m_APInt(C)))
+    return nullptr;
+
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+
+  auto handleDomCond = [&](Value *DomCond, bool CondIsTrue) -> Instruction * {
+    const APInt *DomC;
+    if (!match(DomCond, m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))))
+      return nullptr;
     // We have 2 compares of a variable with constants. Calculate the constant
     // ranges of those compares to see if we can transform the 2nd compare:
     // DomBB:
@@ -1359,11 +1345,10 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     //   br DomCond, CmpBB, FalseBB
     // CmpBB:
     //   Cmp = icmp Pred X, C
-    ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+    if (!CondIsTrue)
+      DomPred = CmpInst::getInversePredicate(DomPred);
     ConstantRange DominatingCR =
-        (CmpBB == TrueBB) ? ConstantRange::makeExactICmpRegion(DomPred, *DomC)
-                          : ConstantRange::makeExactICmpRegion(
-                                CmpInst::getInversePredicate(DomPred), *DomC);
+        ConstantRange::makeExactICmpRegion(DomPred, *DomC);
     ConstantRange Intersection = DominatingCR.intersectWith(CR);
     ConstantRange Difference = DominatingCR.difference(CR);
     if (Intersection.isEmptySet())
@@ -1391,6 +1376,21 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
       return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder.getInt(*EqC));
     if (const APInt *NeC = Difference.getSingleElement())
       return new ICmpInst(ICmpInst::ICMP_NE, X, Builder.getInt(*NeC));
+    return nullptr;
+  };
+
+  for (BranchInst *BI : DC.conditionsFor(X)) {
+    auto *Cond = BI->getCondition();
+    BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+    if (DT.dominates(Edge0, Cmp.getParent())) {
+      if (auto *V = handleDomCond(Cond, true))
+        return V;
+    } else {
+      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+      if (DT.dominates(Edge1, Cmp.getParent()))
+        if (auto *V = handleDomCond(Cond, false))
+          return V;
+    }
   }
 
   return nullptr;
@@ -4624,27 +4624,35 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   }
 
   bool NoOp0WrapProblem = false, NoOp1WrapProblem = false;
-  if (BO0 && isa<OverflowingBinaryOperator>(BO0))
-    NoOp0WrapProblem =
-        ICmpInst::isEquality(Pred) ||
-        (CmpInst::isUnsigned(Pred) && BO0->hasNoUnsignedWrap()) ||
-        (CmpInst::isSigned(Pred) && BO0->hasNoSignedWrap());
-  if (BO1 && isa<OverflowingBinaryOperator>(BO1))
-    NoOp1WrapProblem =
-        ICmpInst::isEquality(Pred) ||
-        (CmpInst::isUnsigned(Pred) && BO1->hasNoUnsignedWrap()) ||
-        (CmpInst::isSigned(Pred) && BO1->hasNoSignedWrap());
-
+  bool Op0HasNUW = false, Op1HasNUW = false;
+  bool Op0HasNSW = false, Op1HasNSW = false;
   // Analyze the case when either Op0 or Op1 is an add instruction.
   // Op0 = A + B (or A and B are null); Op1 = C + D (or C and D are null).
+  auto hasNoWrapProblem = [](const BinaryOperator &BO, CmpInst::Predicate Pred,
+                             bool &HasNSW, bool &HasNUW) -> bool {
+    if (isa<OverflowingBinaryOperator>(BO)) {
+      HasNUW = BO.hasNoUnsignedWrap();
+      HasNSW = BO.hasNoSignedWrap();
+      return ICmpInst::isEquality(Pred) ||
+             (CmpInst::isUnsigned(Pred) && HasNUW) ||
+             (CmpInst::isSigned(Pred) && HasNSW);
+    } else if (BO.getOpcode() == Instruction::Or) {
+      HasNUW = true;
+      HasNSW = true;
+      return true;
+    } else {
+      return false;
+    }
+  };
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
-  if (BO0 && BO0->getOpcode() == Instruction::Add) {
-    A = BO0->getOperand(0);
-    B = BO0->getOperand(1);
+
+  if (BO0) {
+    match(BO0, m_AddLike(m_Value(A), m_Value(B)));
+    NoOp0WrapProblem = hasNoWrapProblem(*BO0, Pred, Op0HasNSW, Op0HasNUW);
   }
-  if (BO1 && BO1->getOpcode() == Instruction::Add) {
-    C = BO1->getOperand(0);
-    D = BO1->getOperand(1);
+  if (BO1) {
+    match(BO1, m_AddLike(m_Value(C), m_Value(D)));
+    NoOp1WrapProblem = hasNoWrapProblem(*BO1, Pred, Op1HasNSW, Op1HasNUW);
   }
 
   // icmp (A+B), A -> icmp B, 0 for equalities or if there is no overflow.
@@ -4764,17 +4772,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       APInt AP2Abs = AP2->abs();
       if (AP1Abs.uge(AP2Abs)) {
         APInt Diff = *AP1 - *AP2;
-        bool HasNUW = BO0->hasNoUnsignedWrap() && Diff.ule(*AP1);
-        bool HasNSW = BO0->hasNoSignedWrap();
         Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
-        Value *NewAdd = Builder.CreateAdd(A, C3, "", HasNUW, HasNSW);
+        Value *NewAdd = Builder.CreateAdd(
+            A, C3, "", Op0HasNUW && Diff.ule(*AP1), Op0HasNSW);
         return new ICmpInst(Pred, NewAdd, C);
       } else {
         APInt Diff = *AP2 - *AP1;
-        bool HasNUW = BO1->hasNoUnsignedWrap() && Diff.ule(*AP2);
-        bool HasNSW = BO1->hasNoSignedWrap();
         Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
-        Value *NewAdd = Builder.CreateAdd(C, C3, "", HasNUW, HasNSW);
+        Value *NewAdd = Builder.CreateAdd(
+            C, C3, "", Op1HasNUW && Diff.ule(*AP1), Op1HasNSW);
         return new ICmpInst(Pred, A, NewAdd);
       }
     }
@@ -4868,16 +4874,14 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
                   isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
         // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
         //    X * Z eq/ne Y * Z -> X eq/ne Y
-        if (NonZero && BO0 && BO1 && BO0->hasNoSignedWrap() &&
-            BO1->hasNoSignedWrap())
+        if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
           return new ICmpInst(Pred, X, Y);
       } else
         NonZero = isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
 
       // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
       //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
-      if (NonZero && BO0 && BO1 && BO0->hasNoUnsignedWrap() &&
-          BO1->hasNoUnsignedWrap())
+      if (NonZero && BO0 && BO1 && Op0HasNUW && Op1HasNUW)
         return new ICmpInst(Pred, X, Y);
     }
   }
@@ -4976,8 +4980,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
 
     case Instruction::Shl: {
-      bool NUW = BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap();
-      bool NSW = BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap();
+      bool NUW = Op0HasNUW && Op1HasNUW;
+      bool NSW = Op0HasNSW && Op1HasNSW;
       if (!NUW && !NSW)
         break;
       if (!NSW && I.isSigned())
@@ -7034,7 +7038,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   {
-    Value *X, *Y, *Z;
+    Value *X, *Y;
     // Transform (X & ~Y) == 0 --> (X & Y) != 0
     // and       (X & ~Y) != 0 --> (X & Y) == 0
     // if A is a power of 2.
@@ -7044,32 +7048,18 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
 
-    // Transform (~X ^ Y) s< ~Z  --> (X ^ Y) s> Z,
-    //           (~X ^ Y) s> ~Z  --> (X ^ Y) s< Z,
-    //           (~X ^ Y) s<= ~Z --> (X ^ Y) s>= Z,
-    //           (~X ^ Y) s>= ~Z --> (X ^ Y) s<= Z,
-    //           (~X ^ Y) u< ~Z  --> (X ^ Y) u< Z,
-    //           (~X ^ Y) u> ~Z  --> (X ^ Y) u< Z,
-    //           (~X ^ Y) u<= ~Z --> (X ^ Y) u>= Z,
-    //           (~X ^ Y) u>= ~Z --> (X ^ Y) u<= Z,
-    //           (~X ^ Y) == ~Z  --> (X ^ Y) == Z,
-    // and       (~X ^ Y) != ~Z  --> (X ^ Y) != Z,
-    if (match(&I, m_c_ICmp(Pred, m_c_Xor(m_Not(m_Value(X)), m_Value(Y)),
-                           m_Not(m_Value(Z)))) &&
-        (I.getOperand(0)->hasOneUse() || I.getOperand(1)->hasOneUse()))
-      return new ICmpInst(I.getSwappedPredicate(Pred), Builder.CreateXor(X, Y),
-                          Z);
-
-    // ~X < ~Y --> Y < X
-    // ~X < C -->  X > ~C
-    if (match(Op0, m_Not(m_Value(X)))) {
-      if (match(Op1, m_Not(m_Value(Y))))
-        return new ICmpInst(I.getPredicate(), Y, X);
-
-      const APInt *C;
-      if (match(Op1, m_APInt(C)))
-        return new ICmpInst(I.getSwappedPredicate(), X,
-                            ConstantInt::get(Op1->getType(), ~(*C)));
+    // Op0 pred Op1 -> ~Op1 pred ~Op0, if this allows us to drop an instruction.
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      bool ConsumesOp0, ConsumesOp1;
+      if (isFreeToInvert(Op0, Op0->hasOneUse(), ConsumesOp0) &&
+          isFreeToInvert(Op1, Op1->hasOneUse(), ConsumesOp1) &&
+          (ConsumesOp0 || ConsumesOp1)) {
+        Value *InvOp0 = getFreelyInverted(Op0, Op0->hasOneUse(), &Builder);
+        Value *InvOp1 = getFreelyInverted(Op1, Op1->hasOneUse(), &Builder);
+        assert(InvOp0 && InvOp1 &&
+               "Mismatch between isFreeToInvert and getFreelyInverted");
+        return new ICmpInst(I.getSwappedPredicate(), InvOp0, InvOp1);
+      }
     }
 
     Instruction *AddI = nullptr;

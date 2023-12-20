@@ -48,7 +48,7 @@ TEST(TAPIRecord, SimpleObjC) {
 TEST(TAPIRecord, SimpleSlice) {
   Triple T("arm64-apple-macosx13.3");
   RecordsSlice Slice(T);
-  EXPECT_TRUE(Slice.isEmpty());
+  EXPECT_TRUE(Slice.empty());
   Slice.addRecord("_OBJC_CLASS_$_NSObject", SymbolFlags::None,
                   GlobalRecord::Kind::Unknown, RecordLinkage::Rexported);
   Slice.addRecord("_OBJC_METACLASS_$_NSObject", SymbolFlags::None,
@@ -59,7 +59,7 @@ TEST(TAPIRecord, SimpleSlice) {
                   GlobalRecord::Kind::Unknown, RecordLinkage::Exported);
   Slice.addRecord("_foo", SymbolFlags::WeakDefined | SymbolFlags::Rexported,
                   GlobalRecord::Kind::Variable, RecordLinkage::Rexported);
-  EXPECT_FALSE(Slice.isEmpty());
+  EXPECT_FALSE(Slice.empty());
 
   // Check global.
   EXPECT_FALSE(Slice.findGlobal("_foo", GlobalRecord::Kind::Function));
@@ -108,7 +108,7 @@ TEST(TAPIRecord, SimpleSlice) {
 TEST(TAPIRecord, LibraryAttrs) {
   Triple T("arm64-apple-ios15.1");
   RecordsSlice Slice(T);
-  EXPECT_TRUE(Slice.isEmpty());
+  EXPECT_TRUE(Slice.empty());
 
   auto BA = Slice.getBinaryAttrs();
   EXPECT_TRUE(Slice.hasBinaryAttrs());
