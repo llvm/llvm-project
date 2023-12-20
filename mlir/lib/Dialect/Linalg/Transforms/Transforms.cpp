@@ -222,7 +222,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(packOp);
 
-  // 1. Compute the permutation vector to shuffle packed shape into the shape.
+  // 1. Compute the permutation vector to shuffle packed shape into the shape
   // before any outer or inner permutations have been applied. The permutation
   // can be obtained from two permutations:
   //   a) Compute the permutation vector to move the last `numPackedDims` into
@@ -251,7 +251,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   SmallVector<int64_t> packedToStripMinedShapePerm = innerPositionsPerm;
   applyPermutationToVector(packedToStripMinedShapePerm, outerPositionPerm);
 
-  // 2. Compute the stripMinedShape: this is the packed shape before any outer.
+  // 2. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
   SmallVector<int64_t> stripMinedShape(packedTensorType.getShape());
   applyPermutationToVector(stripMinedShape, packedToStripMinedShapePerm);
