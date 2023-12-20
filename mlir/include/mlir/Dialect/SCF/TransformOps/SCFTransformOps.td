@@ -139,8 +139,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
   let arguments =
       (ins Transform_ScfForOp:$target,
-           DefaultValuedAttr<BoolAttr, "false">:$peel_front,
-           DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
+           DefaultValuedAttr<BoolAttr, "false">:$peel_front);
   let results = (outs TransformHandleTypeInterface:$peeled_loop,
                       TransformHandleTypeInterface:$remainder_loop);
 
