@@ -7,11 +7,6 @@
 ;.
 ; CHECK: @g1 = external unnamed_addr global i8
 ; CHECK: @g2 = external unnamed_addr global i8
-; CHECK: @f2 = unnamed_addr alias i1 (), ptr @f1
-; CHECK: @f4 = unnamed_addr alias ptr (), ptr @f3
-; CHECK: @f5 = unnamed_addr alias ptr (), ptr @f3
-; CHECK: @f7 = unnamed_addr alias i64 (), ptr @f6
-; CHECK: @f8 = unnamed_addr alias i64 (), ptr @f6
 ;.
 define i1 @f1() unnamed_addr {
 ; CHECK-LABEL: define i1 @f1() unnamed_addr {
@@ -21,6 +16,9 @@ define i1 @f1() unnamed_addr {
 }
 
 define i1 @f2() unnamed_addr {
+; CHECK-LABEL: define i1 @f2() unnamed_addr {
+; CHECK-NEXT:    ret i1 icmp ne (ptr @g1, ptr @g2)
+;
   ret i1 icmp ne (ptr @g1, ptr @g2)
 }
 
@@ -32,10 +30,16 @@ define ptr @f3() unnamed_addr {
 }
 
 define ptr @f4() unnamed_addr {
+; CHECK-LABEL: define ptr @f4() unnamed_addr {
+; CHECK-NEXT:    ret ptr getelementptr (i16, ptr @g1, i64 2)
+;
   ret ptr getelementptr (i16, ptr @g1, i64 2)
 }
 
 define ptr @f5() unnamed_addr {
+; CHECK-LABEL: define ptr @f5() unnamed_addr {
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g1, i64 2)
+;
   ret ptr getelementptr (i8, ptr @g1, i64 2)
 }
 
@@ -47,9 +51,36 @@ define i64 @f6() unnamed_addr {
 }
 
 define i64 @f7() unnamed_addr {
+; CHECK-LABEL: define i64 @f7() unnamed_addr {
+; CHECK-NEXT:    ret i64 add (i64 ptrtoint (ptr @g1 to i64), i64 1)
+;
   ret i64 add (i64 ptrtoint (ptr @g1 to i64), i64 1)
 }
 
 define i64 @f8() unnamed_addr {
+; CHECK-LABEL: define i64 @f8() unnamed_addr {
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (ptr @g1 to i64), i64 1)
+;
   ret i64 sub (i64 ptrtoint (ptr @g1 to i64), i64 1)
+}
+
+define ptr @f10() unnamed_addr {
+; CHECK-LABEL: define ptr @f10() unnamed_addr {
+; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, inrange i64 1)
+;
+  ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, inrange i64 1)
+}
+
+define ptr @f11() unnamed_addr {
+; CHECK-LABEL: define ptr @f11() unnamed_addr {
+; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, i64 1)
+;
+  ret ptr getelementptr ([4 x i32], ptr @g1, i64 0, i64 1)
+}
+
+define ptr @f12() unnamed_addr {
+; CHECK-LABEL: define ptr @f12() unnamed_addr {
+; CHECK-NEXT:    ret ptr getelementptr ([4 x i32], ptr @g1, inrange i64 0, i64 1)
+;
+  ret ptr getelementptr ([4 x i32], ptr @g1, inrange i64 0, i64 1)
 }
