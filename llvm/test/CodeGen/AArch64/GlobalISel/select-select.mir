@@ -88,6 +88,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc, 0, 1 -> CSINC zreg, zreg, cc
 name:            csinc_t_0_f_1
 legalized:       true
 regBankSelected: true
@@ -115,6 +116,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc 0, -1 -> CSINV zreg, zreg cc
 name:            csinv_t_0_f_neg_1
 legalized:       true
 regBankSelected: true
@@ -142,6 +144,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
 name:            csinc_t_1
 legalized:       true
 regBankSelected: true
@@ -198,6 +201,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc, t, 1 -> CSINC t, zreg, cc
 name:            csinc_f_1
 legalized:       true
 regBankSelected: true
@@ -226,6 +230,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc, t, -1 -> CSINC t, zreg, cc
 name:            csinc_f_neg_1
 legalized:       true
 regBankSelected: true
@@ -254,6 +259,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
 name:            csinc_t_1_no_cmp
 legalized:       true
 regBankSelected: true
@@ -280,6 +286,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, t, 1 -> CSINC t, zreg, cc
 name:            csinc_f_1_no_cmp
 legalized:       true
 regBankSelected: true
@@ -306,6 +313,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
 name:            csinc_t_1_no_cmp_s64
 legalized:       true
 regBankSelected: true
@@ -334,6 +342,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, true, (G_SUB 0, x) -> CSNEG true, x, cc
 name:            csneg_s32
 legalized:       true
 regBankSelected: true
@@ -363,6 +372,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, (G_SUB 0, %x), %false -> CSNEG %x, %false, inv_cc
 name:            csneg_inverted_cc
 legalized:       true
 regBankSelected: true
@@ -392,6 +402,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, true, (G_SUB 0, x) -> CSNEG true, x, cc
 name:            csneg_s64
 legalized:       true
 regBankSelected: true
@@ -422,6 +433,8 @@ body:             |
     RET_ReallyLR implicit $x0
 ...
 ---
+# We should prefer eliminating the G_SUB over eliminating the constant true
+#  value.
 name:            csneg_with_true_cst
 legalized:       true
 regBankSelected: true
@@ -451,6 +464,7 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# G_SELECT cc, true, (G_XOR x, -1) -> CSINV true, x, cc
 name:            csinv_s32
 legalized:       true
 regBankSelected: true
@@ -480,6 +494,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, (G_XOR x, -1), %false -> CSINV %x, %false, inv_cc
 name:            csinv_inverted_cc
 legalized:       true
 regBankSelected: true
@@ -509,6 +524,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, true, (G_XOR x, -1) -> CSINV true, x, cc
 name:            csinv_s64
 legalized:       true
 regBankSelected: true
@@ -540,6 +556,7 @@ body:             |
 
 ...
 ---
+# zext(s32 -1) != s64 -1, so we can't fold it away.
 name:            xor_not_negative_one
 legalized:       true
 regBankSelected: true
@@ -576,6 +593,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, %true, (G_ADD %x, 1) -> CSINC %true, %x, cc
 name:            csinc_s32
 legalized:       true
 regBankSelected: true
@@ -604,6 +622,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, (G_ADD %x, 1), %false -> CSINC %x, %false, inv_cc
 name:            csinc_s32_inverted_cc
 legalized:       true
 regBankSelected: true
@@ -632,6 +651,7 @@ body:             |
 
 ...
 ---
+# G_SELECT cc, %true, (G_PTR_ADD %x, 1) -> CSINC %true, %x, cc
 name:            csinc_ptr_add
 legalized:       true
 regBankSelected: true
