@@ -55,6 +55,7 @@
 #include "llvm/Transforms/Yk/SplitBlocksAfterCalls.h"
 #include "llvm/Transforms/Yk/Stackmaps.h"
 #include "llvm/Transforms/Yk/NoCallsInEntryBlocks.h"
+#include "llvm/Transforms/Yk/BasicBlockTracer.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -291,6 +292,11 @@ static cl::opt<bool>
 static cl::opt<bool>
     YkSplitBlocksAfterCalls("yk-split-blocks-after-calls", cl::init(false), cl::NotHidden,
                       cl::desc("Split blocks after function calls."));
+
+static cl::opt<bool>
+    YkBasicBlockTracer("yk-basicblock-tracer", cl::init(false), cl::NotHidden,
+                      cl::desc("Enables YK Software Tracer capability"));
+
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -1179,6 +1185,10 @@ bool TargetPassConfig::addISelPasses() {
 
   if (YkInsertStackMaps) {
     addPass(createYkStackmapsPass());
+  }
+
+  if (YkBasicBlockTracer) {
+    addPass(createYkBasicBlockTracerPass());
   }
 
   addISelPrepare();

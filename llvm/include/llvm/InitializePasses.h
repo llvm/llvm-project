@@ -342,7 +342,7 @@ void initializeWinEHPreparePass(PassRegistry&);
 void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
 void initializeYkSplitBlocksAfterCallsPass(PassRegistry&);
-
+void initializeYkBasicBlockTracerPass(PassRegistry&);
 } // end namespace llvm
 
 #endif // LLVM_INITIALIZEPASSES_H
