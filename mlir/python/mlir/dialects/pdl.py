@@ -5,6 +5,7 @@
 from ._pdl_ops_gen import *
 from ._pdl_ops_gen import _Dialect
 from .._mlir_libs._mlirDialectsPDL import *
+from .._mlir_libs._mlirDialectsPDL import OperationType
 
 
 try:
@@ -13,7 +14,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Union, Optional, Sequence, Mapping
+from typing import Union, Optional, Sequence, Mapping, NewType
 from ._ods_common import (
     get_op_result_or_value as _get_value,
     get_op_results_or_values as _get_values,
@@ -222,5 +223,8 @@ class TypesOp(TypesOp):
         super().__init__(result, constantTypes=constantTypes, loc=loc, ip=ip)
 
 
-def op_t():
-    return OperationType.get()
+OperationTypeT = NewType("OperationType", OperationType)
+
+
+def op_t() -> OperationTypeT:
+    return OperationTypeT(OperationType.get())
