@@ -79,6 +79,10 @@ void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
 /// loop bounds and loop steps are canonicalized.
 void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
+/// Populate patterns to uplift `scf.while` ops to `scf.for`.
+void populateUpliftWhileToForPatterns(RewritePatternSet &patterns,
+                                      unsigned indexBitwidth);
+
 } // namespace scf
 } // namespace mlir
 
