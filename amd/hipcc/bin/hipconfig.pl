@@ -69,6 +69,7 @@ if ($HIP_COMPILER eq "clang") {
         $HIP_CLANG_INCLUDE = `\"$HIP_CLANG_PATH/clang++\" --print-resource-dir`;
     } else {
         $HIP_CLANG_INCLUDE = `$HIP_CLANG_PATH/clang++ --print-resource-dir`;
+        chomp($HIP_CLANG_INCLUDE)
     }
 
     $CPP_CONFIG = " -D__HIP_PLATFORM_HCC__= -D__HIP_PLATFORM_AMD__=";

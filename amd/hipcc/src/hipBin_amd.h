@@ -228,7 +228,7 @@ void HipBinAmd::printCompilerInfo() const {
   const string& hipClangPath = getCompilerPath();
   const string& hipPath = getHipPath();
   if (os == windows) {
-    string cmd = hipClangPath + "/clang++ --version";
+    string cmd = hipClangPath + "/clang++ --print-resource-dir";
     system(cmd.c_str());  // hipclang version
     cout << "llc-version :" << endl;
     cmd = hipClangPath + "/llc --version";
@@ -241,7 +241,7 @@ void HipBinAmd::printCompilerInfo() const {
     system(cmd.c_str());  // ld flags
     cout << endl;
   } else {
-    string cmd = hipClangPath + "/clang++ --version";
+    string cmd = hipClangPath + "/clang++ --print-resource-dir";
     system(cmd.c_str());  // hipclang version
     cmd = hipClangPath + "/llc --version";
     system(cmd.c_str());  // llc version
