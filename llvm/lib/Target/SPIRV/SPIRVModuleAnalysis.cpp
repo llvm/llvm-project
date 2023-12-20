@@ -300,7 +300,7 @@ using InstrTraces = std::set<InstrSignature>;
 // that MachineOperand::isIdenticalTo uses for comparison.
 static InstrSignature instrToSignature(MachineInstr &MI,
                                        SPIRV::ModuleAnalysisInfo &MAI) {
-  InstrSignature ret;
+  InstrSignature Signature;
   for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
     const MachineOperand &MO = MI.getOperand(i);
     size_t h;
@@ -309,11 +309,12 @@ static InstrSignature instrToSignature(MachineInstr &MI,
       // mimic llvm::hash_value(const MachineOperand &MO)
       h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
                        MO.isDef());
-    } else
+    } else {
       h = hash_value(MO);
-    ret.push_back(h);
+    }
+    Signature.push_back(h);
   }
-  return ret;
+  return Signature;
 }
 
 // Collect the given instruction in the specified MS. We assume global register
