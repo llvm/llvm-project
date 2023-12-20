@@ -26,11 +26,13 @@ QuasiPolynomial::QuasiPolynomial(
   for (const std::vector<SmallVector<Fraction>> &term : affine) {
     if (term.size() == 0)
       continue;
-    // The number of elements in the affine function is
+    // The number of elements in each affine function is
     // one more than the number of parameters.
-    assert(term[0].size() - 1 == numParam &&
-           "dimensionality of affine functions does not match number of "
-           "parameters!");
+    for (const SmallVector<Fraction> &aff : term) {
+      assert(aff.size() - 1 == numParam &&
+             "dimensionality of affine functions does not match number of "
+             "parameters!");
+    }
   }
 }
 
