@@ -174,6 +174,10 @@ public:
   ~PCHContainerGenerator() override = default;
 
   void Initialize(ASTContext &Context) override {
+    Initialize(Context, Context.getTargetInfo());
+  }
+
+  void Initialize(ASTContext &Context, const TargetInfo &CodeGenTargetInfo) override {
     assert(!Ctx && "initialized multiple times");
 
     Ctx = &Context;
@@ -181,7 +185,8 @@ public:
     M.reset(new llvm::Module(MainFileName, *VMContext));
     M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
     Builder.reset(new CodeGen::CodeGenModule(
-        *Ctx, FS, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts, *M, Diags));
+        *Ctx, FS, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts,
+        CodeGenTargetInfo, *M, Diags));
 
     // Prepare CGDebugInfo to emit debug info for a clang module.
     auto *DI = Builder->getModuleDebugInfo();
