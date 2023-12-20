@@ -1,3 +1,5 @@
+# RUN: %PYTHON %s 2>&1 | FileCheck %s
+
 from mlir.passmanager import PassManager
 from mlir.ir import Context, Location, Module, InsertionPoint, UnitAttr
 from mlir.dialects import scf, pdl, func, arith, linalg
@@ -68,13 +70,13 @@ def test_named_sequence(module_):
     pm.run(module_.operation)
 
     # CHECK-LABEL: func.func @loop_unroll_op() {
-    # CHECK:         %[[VAL_0]] = arith.constant 0 : index
-    # CHECK:         %[[VAL_1]] = arith.constant 42 : index
-    # CHECK:         %[[VAL_2]] = arith.constant 5 : index
+    # CHECK:         %[[VAL_0:.*]] = arith.constant 0 : index
+    # CHECK:         %[[VAL_1:.*]] = arith.constant 42 : index
+    # CHECK:         %[[VAL_2:.*]] = arith.constant 5 : index
     # CHECK:         %[[VAL_6:.*]] = arith.constant 40 : index
     # CHECK:         %[[VAL_7:.*]] = arith.constant 20 : index
-    # CHECK:         scf.for %[[VAL_3]] = %[[VAL_0]] to %[[VAL_6]] step %[[VAL_7]] {
-    # CHECK:           %[[VAL_5]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:         scf.for %[[VAL_3:.*]] = %[[VAL_0]] to %[[VAL_6]] step %[[VAL_7]] {
+    # CHECK:           %[[VAL_5:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
     # CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
     # CHECK:           %[[VAL_9:.*]] = arith.muli %[[VAL_2]], %[[VAL_8]] : index
     # CHECK:           %[[VAL_10:.*]] = arith.addi %[[VAL_3]], %[[VAL_9]] : index
@@ -88,7 +90,7 @@ def test_named_sequence(module_):
     # CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_3]], %[[VAL_17]] : index
     # CHECK:           %[[VAL_19:.*]] = arith.addi %[[VAL_18]], %[[VAL_18]] : index
     # CHECK:         }
-    # CHECK:         %[[VAL_4]] = arith.addi %[[VAL_6]], %[[VAL_6]] : index
+    # CHECK:         %[[VAL_4:.*]] = arith.addi %[[VAL_6]], %[[VAL_6]] : index
     # CHECK:         return
     # CHECK:       }
     print(module_)
@@ -103,7 +105,7 @@ def test_apply_patterns(module_):
     # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<3x5xf32>, %[[VAL_1:.*]]: tensor<5x3xf32>, %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
     # CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
     # CHECK:           %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : i32
-    # CHECK:           %[[VAL_5:.*]] = linalg.matmul {cast = #[[?]]<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
+    # CHECK:           %[[VAL_5:.*]] = linalg.matmul {cast = #linalg.type_fn<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
     # CHECK:           return %[[VAL_5]] : tensor<3x3xf32>
     # CHECK:         }
     @func.func(
@@ -147,7 +149,7 @@ def test_apply_patterns(module_):
 
     # CHECK-LABEL:   func.func @matmul(
     # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<3x5xf32>, %[[VAL_1:.*]]: tensor<5x3xf32>, %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
-    # CHECK:           %[[VAL_3:.*]] = linalg.matmul {cast = #[[?]]<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
+    # CHECK:           %[[VAL_3:.*]] = linalg.matmul {cast = #linalg.type_fn<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
     # CHECK:           return %[[VAL_3]] : tensor<3x3xf32>
     # CHECK:         }
     print(module_)
