@@ -429,8 +429,9 @@ static ParallelComputeFunction createParallelComputeFunction(
       mapping.map(op.getInductionVars(), computeBlockInductionVars);
       mapping.map(computeFuncType.captures, captures);
 
-      for (auto &bodyOp : op.getRegion().getOps())
+      for (auto &bodyOp : op.getRegion().front().without_terminator())
         b.clone(bodyOp, mapping);
+      b.create<scf::YieldOp>(loc);
     };
   };
 
