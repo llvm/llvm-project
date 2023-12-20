@@ -192,18 +192,38 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
       secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
 
   Block *newBlock = newSecondPloop.getBody();
-  newBlock->getTerminator()->erase();
+  auto term1 = cast<ReduceOp>(block1->getTerminator());
+  auto term2 = cast<ReduceOp>(block2->getTerminator());
 
-  block1->getTerminator()->erase();
-
-  b.inlineBlockBefore(block1, newBlock, newBlock->end(),
+  b.inlineBlockBefore(block2, newBlock, newBlock->begin(),
                       newBlock->getArguments());
-  b.inlineBlockBefore(block2, newBlock, newBlock->end(),
+  b.inlineBlockBefore(block1, newBlock, newBlock->begin(),
                       newBlock->getArguments());
 
   ValueRange results = newSecondPloop.getResults();
-  firstPloop.replaceAllUsesWith(results.take_front(inits1.size()));
-  secondPloop.replaceAllUsesWith(results.take_back(inits2.size()));
+  if (!results.empty()) {
+    b.setInsertionPointToEnd(newBlock);
+
+    ValueRange reduceArgs1 = term1.getOperands();
+    ValueRange reduceArgs2 = term2.getOperands();
+    SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
+    newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
+
+    auto newReduceOp = b.create<scf::ReduceOp>(term2.getLoc(), newReduceArgs);
+
+    for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
+             term1.getReductions(), term2.getReductions()))) {
+      Block &oldRedBlock = reg.front();
+      Block &newRedBlock = newReduceOp.getReductions()[i].front();
+      b.inlineBlockBefore(&oldRedBlock, &newRedBlock, newRedBlock.begin(),
+                          newRedBlock.getArguments());
+    }
+
+    firstPloop.replaceAllUsesWith(results.take_front(inits1.size()));
+    secondPloop.replaceAllUsesWith(results.take_back(inits2.size()));
+  }
+  term1->erase();
+  term2->erase();
   firstPloop.erase();
   secondPloop.erase();
   secondPloop = newSecondPloop;
