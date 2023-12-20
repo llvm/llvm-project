@@ -174,7 +174,7 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
       /*defaultImplementation=*/[{
         return $_op.getOperation()->getOperand(1);
       }]
-    >
+    >,
   ];
 }
 
