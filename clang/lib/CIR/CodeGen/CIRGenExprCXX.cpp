@@ -92,7 +92,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorCall(
   assert((CE || currSrcLoc) && "expected source location");
   mlir::Location loc = CE ? getLoc(CE->getExprLoc()) : *currSrcLoc;
   return buildCall(FnInfo, Callee, ReturnValue, Args, nullptr,
-                   CE && CE == MustTailCall, loc);
+                   CE && CE == MustTailCall, loc, CE);
 }
 
 // TODO(cir): this can be shared with LLVM codegen

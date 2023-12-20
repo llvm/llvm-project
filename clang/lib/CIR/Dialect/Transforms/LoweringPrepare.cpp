@@ -69,6 +69,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerGetBitfieldOp(GetBitfieldOp op);
   void lowerSetBitfieldOp(SetBitfieldOp op);
   void lowerStdFindOp(StdFindOp op);
+  void lowerIterBeginOp(IterBeginOp op);
+  void lowerIterEndOp(IterEndOp op);
 
   /// Build the function that initializes the specified global
   FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
@@ -418,6 +420,28 @@ void LoweringPreparePass::lowerStdFindOp(StdFindOp op) {
   op.erase();
 }
 
+void LoweringPreparePass::lowerIterBeginOp(IterBeginOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+  auto call = builder.create<mlir::cir::CallOp>(
+      op.getLoc(), op.getOriginalFnAttr(), op.getResult().getType(),
+      mlir::ValueRange{op.getOperand()});
+
+  op.replaceAllUsesWith(call);
+  op.erase();
+}
+
+void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+  auto call = builder.create<mlir::cir::CallOp>(
+      op.getLoc(), op.getOriginalFnAttr(), op.getResult().getType(),
+      mlir::ValueRange{op.getOperand()});
+
+  op.replaceAllUsesWith(call);
+  op.erase();
+}
+
 void LoweringPreparePass::runOnOp(Operation *op) {
   if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
     lowerGlobalOp(getGlobal);
@@ -427,6 +451,10 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerSetBitfieldOp(setBitfield);
   } else if (auto stdFind = dyn_cast<StdFindOp>(op)) {
     lowerStdFindOp(stdFind);
+  } else if (auto iterBegin = dyn_cast<IterBeginOp>(op)) {
+    lowerIterBeginOp(iterBegin);
+  } else if (auto iterEnd = dyn_cast<IterEndOp>(op)) {
+    lowerIterEndOp(iterEnd);
   }
 }
 
@@ -439,7 +467,8 @@ void LoweringPreparePass::runOnOperation() {
 
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
-    if (isa<GlobalOp, GetBitfieldOp, SetBitfieldOp, StdFindOp>(op))
+    if (isa<GlobalOp, GetBitfieldOp, SetBitfieldOp, StdFindOp, IterBeginOp,
+            IterEndOp>(op))
       opsToTransform.push_back(op);
   });
 

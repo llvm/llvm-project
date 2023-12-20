@@ -31,6 +31,7 @@
 // ClangIR holds back AST references when available.
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 
 static void printStructMembers(mlir::AsmPrinter &p, mlir::ArrayAttr members);
 static mlir::ParseResult parseStructMembers(::mlir::AsmParser &parser,
