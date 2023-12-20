@@ -322,12 +322,6 @@ void __tgt_register_lib(__tgt_bin_desc *Desc);
 
 /// Initialize all RTLs at once
 void __tgt_init_all_rtls();
-/// adds an image information struct, called for each image
-void __tgt_register_image_info(__tgt_image_info *imageInfo);
-
-/// gets pointer to image information for specified image number
-/// Returns nullptr for apps built with old version of compiler
-__tgt_image_info *__tgt_get_image_info(uint32_t image_num);
 
 /// removes a target shared library from the target execution image
 void __tgt_unregister_lib(__tgt_bin_desc *Desc);

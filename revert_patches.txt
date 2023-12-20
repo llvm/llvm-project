@@ -5,3 +5,10 @@ revert: breaks MIOpen composableKernel build
 [clang][Sema] Add -Wswitch-default warning option (#73077)  
    https://ontrack-internal.amd.com/browse/SWDEV-436625
 
+revert: conflicts with upstream #75720, needs to be reimplemented
+[OpenMP][libomptarget] Restored code from patch "suprress unnecessary warnings"
+commit 53859b6f2a262cdacc57fe45add049226fc16687
+
+revert: conflicts with upstream #75720, needs to be reimplemented
+[OpenMP][libomptarget] Fixed bug that caused  unnecessary warnings
+commit b7e137ccb4c035b555b0adccddca7008af789016

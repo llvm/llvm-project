@@ -202,36 +202,25 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
-  llvm::SmallVector<
-      std::tuple<__tgt_device_image *, __tgt_image_info *, DeviceImageTy *>>
-      RemainingImages;
-
   // Extract the exectuable image and extra information if availible.
-  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
+  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
-  }
 
-  for (auto &DI : PM->deviceImages()) {
-    RemainingImages.emplace_back(&DI.getExecutableImage(), &DI.getImageInfo(),
-                                 &DI);
-  }
+  // Register the images with the RTLs that understand them, if any.
+  for (DeviceImageTy &DI : PM->deviceImages()) {
+    // Obtain the image and information that was previously extracted.
+    __tgt_device_image *Img = &DI.getExecutableImage();
 
-  // Scan the RTLs that have associated images until we find one that supports
-  // the current image.
-  for (auto &R : PM->pluginAdaptors()) {
+    PluginAdaptorTy *FoundRTL = nullptr;
 
-    llvm::SmallVector<
-        std::tuple<__tgt_device_image *, __tgt_image_info *, DeviceImageTy *>>
-        ValidImages;
-
-    R.exists_valid_binary_for_RTL(&RemainingImages, &ValidImages);
-
-    for (auto &VI : ValidImages) {
-
-      // Register the images with the RTLs that understand them, if any.
-      // Obtain the image and information that was previously extracted.
-      __tgt_device_image *Img = std::get<0>(VI);
-      __tgt_image_info *Info = std::get<1>(VI);
+    // Scan the RTLs that have associated images until we find one that supports
+    // the current image.
+    for (auto &R : PM->pluginAdaptors()) {
+      if (!R.is_valid_binary(Img)) {
+        DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
+           DPxPTR(Img->ImageStart), R.Name.c_str());
+        continue;
+      }
 
       DP("Image " DPxMOD " is compatible with RTL %s!\n",
          DPxPTR(Img->ImageStart), R.Name.c_str());
@@ -258,24 +247,19 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       R.UsedImages.insert(Img);
 
       PM->TrlTblMtx.unlock();
+      FoundRTL = &R;
 
       // Register all offload entries with the devices handled by the plugin.
-      R.addOffloadEntries(*std::get<2>(VI));
+      R.addOffloadEntries(DI);
+
+      // if an RTL was found we are done - proceed to register the next image
+      break;
     }
 
-#ifdef OMPTARGET_DEBUG
-    for (auto Img : RemainingImages)
-      DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-         DPxPTR(std::get<0>(Img)->ImageStart), R.Name.c_str());
-#endif
+    if (!FoundRTL) {
+      DP("No RTL found for image " DPxMOD "!\n", DPxPTR(Img->ImageStart));
+    }
   }
-
-#ifdef OMPTARGET_DEBUG
-  for (auto RI : RemainingImages)
-    DP("No RTL found for image " DPxMOD "!\n",
-       DPxPTR((std::get<0>(RI))->ImageStart));
-#endif
-
   PM->RTLsMtx.unlock();
 
   DP("Done registering entries!\n");

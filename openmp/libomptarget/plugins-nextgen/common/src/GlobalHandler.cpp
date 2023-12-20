@@ -12,7 +12,7 @@
 
 #include "GlobalHandler.h"
 #include "PluginInterface.h"
-#include "ELF.h"
+#include "Utils/ELF.h"
 
 #include "Shared/Utils.h"
 

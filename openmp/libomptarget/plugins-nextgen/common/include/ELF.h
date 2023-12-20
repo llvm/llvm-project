@@ -21,9 +21,17 @@
 namespace utils {
 namespace elf {
 
+<<<<<<< HEAD:openmp/libomptarget/plugins-nextgen/common/include/ELF.h
 /// Return non-zero, if the given \p image is an ELF object, which
 /// e_machine matches \p target_id; return zero otherwise.
 extern "C" int32_t checkMachine(__tgt_device_image *Image, uint16_t TargetId);
+=======
+/// Returns true or false if the \p Buffer is an ELF file.
+bool isELF(llvm::StringRef Buffer);
+
+/// Checks if the given \p Object is a valid ELF matching the e_machine value.
+llvm::Expected<bool> checkMachine(llvm::StringRef Object, uint16_t EMachine);
+>>>>>>> ac029e02a92c... [Libomptarget] Remove __tgt_image_info and use the ELF directly (#75720):openmp/libomptarget/plugins-nextgen/common/include/Utils/ELF.h
 
 /// Returns a pointer to the given \p Symbol inside of an ELF object.
 llvm::Expected<const void *> getSymbolAddress(
@@ -39,7 +47,7 @@ getSymbol(const llvm::object::ELFObjectFile<llvm::object::ELF64LE> &ELFObj,
           llvm::StringRef Name);
 
 /// Return eflags
-extern "C" u_int16_t elf_get_eflags(const __tgt_device_image *Image);
+// extern "C" u_int16_t elf_get_eflags(const __tgt_device_image *Image);
 
 
 } // namespace elf

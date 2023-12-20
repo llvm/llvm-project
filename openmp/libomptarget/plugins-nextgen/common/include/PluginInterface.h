@@ -1157,18 +1157,11 @@ struct GenericPluginTy {
     return isValidDeviceId(SrcDeviceId) && isValidDeviceId(DstDeviceId);
   }
 
-  /// Indicate if an image is compatible with the plugin devices. Notice that
-  /// this function may be called before actually initializing the devices. So
-  /// we could not move this function into GenericDeviceTy.
-  virtual Expected<bool>
-  isImageCompatible(__tgt_image_info *Info,
-                    __tgt_device_image *TgtImage) const = 0;
+  /// Top level interface to verify if a given ELF image can be executed on a
+  /// given target. Returns true if the \p Image is compatible with the plugin.
+  Expected<bool> checkELFImage(__tgt_device_image &Image) const;
 
-  /// Method allows to check why the method isImageCompatibelCheck returned
-  /// 'false' for a specific target image. The method is called from inside
-  /// __tgt_rtl_exists_valid_binary_for_RTL.
-  virtual void checkInvalidImage(__tgt_image_info *Info,
-                                 __tgt_device_image *TgtImage) {}
+  virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
 
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }

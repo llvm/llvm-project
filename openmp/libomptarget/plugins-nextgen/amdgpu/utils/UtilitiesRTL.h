@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include "Shared/Debug.h"
+#include "Utils/ELF.h"
 
 #include "omptarget.h"
 
@@ -27,8 +28,6 @@
 #include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm::ELF;
-
-#include "ELF.h"
 
 namespace llvm {
 namespace omp {
@@ -73,91 +72,60 @@ inline uint32_t getImplicitArgsSize(uint16_t Version) {
              : sizeof(AMDGPUImplicitArgsTy);
 }
 
-/// Parse a TargetID to get processor arch and feature map.
-/// Returns processor subarch.
-/// Returns TargetID features in \p FeatureMap argument.
-/// If the \p TargetID contains feature+, FeatureMap it to true.
-/// If the \p TargetID contains feature-, FeatureMap it to false.
-/// If the \p TargetID does not contain a feature (default), do not map it.
-StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
-  if (TargetID.empty())
-    return llvm::StringRef();
+/// Check if an image is compatible with current system's environment. The
+/// system environment is given as a 'target-id' which has the form:
+///
+/// <target-id> := <processor> ( ":" <target-feature> ( "+" | "-" ) )*
+///
+/// If a feature is not specific as '+' or '-' it is assumed to be in an 'any'
+/// and is compatible with either '+' or '-'. The HSA runtime returns this
+/// information using the target-id, while we use the ELF header to determine
+/// these features.
+inline bool isImageCompatibleWithEnv(StringRef ImageArch, uint32_t ImageFlags,
+                                     StringRef EnvTargetID) {
+  StringRef EnvArch = EnvTargetID.split(":").first;
 
-  auto ArchFeature = TargetID.split(":");
-  auto Arch = ArchFeature.first;
-  auto Features = ArchFeature.second;
-  if (Features.empty())
-    return Arch;
-
-  if (Features.contains("sramecc+")) {
-    FeatureMap.insert(std::pair<StringRef, bool>("sramecc", true));
-  } else if (Features.contains("sramecc-")) {
-    FeatureMap.insert(std::pair<StringRef, bool>("sramecc", false));
-  }
-  if (Features.contains("xnack+")) {
-    FeatureMap.insert(std::pair<StringRef, bool>("xnack", true));
-  } else if (Features.contains("xnack-")) {
-    FeatureMap.insert(std::pair<StringRef, bool>("xnack", false));
-  }
-
-  return Arch;
-}
-
-/// Check if an image is compatible with current system's environment.
-bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
-                              StringRef EnvTargetID) {
-  llvm::StringRef ImageTargetID(Info->Arch);
-  // Compatible in case of exact match.
-  if (ImageTargetID == EnvTargetID) {
-    DP("Compatible: Exact match \t[Image: %s]\t:\t[Env: %s]\n",
-       ImageTargetID.data(), EnvTargetID.data());
-    return true;
-  }
-
-  // Incompatible if Archs mismatch.
-  StringMap<bool> ImgMap, EnvMap;
-  StringRef ImgArch = utils::parseTargetID(ImageTargetID, ImgMap);
-  StringRef EnvArch = utils::parseTargetID(EnvTargetID, EnvMap);
-
-  // Both EnvArch and ImgArch can't be empty here.
-  if (EnvArch.empty() || ImgArch.empty() || !ImgArch.contains(EnvArch)) {
-    DP("Incompatible: Processor mismatch \t[Image: %s]\t:\t[Env: %s]\n",
-       ImageTargetID.data(), EnvTargetID.data());
+  // Trivial check if the base processors match.
+  if (EnvArch != ImageArch)
     return false;
-  }
 
-  // Incompatible if image has more features than the environment,
-  // irrespective of type or sign of features.
-  if (ImgMap.size() > EnvMap.size()) {
-    DP("Incompatible: Image has more features than the Environment \t[Image: "
-       "%s]\t:\t[Env: %s]\n",
-       ImageTargetID.data(), EnvTargetID.data());
-    return false;
-  }
-
-  // Compatible if each target feature specified by the environment is
-  // compatible with target feature of the image. The target feature is
-  // compatible if the iamge does not specify it (meaning Any), or if it
-  // specifies it with the same value (meaning On or Off).
-  for (const auto &ImgFeature : ImgMap) {
-    auto EnvFeature = EnvMap.find(ImgFeature.first());
-    if (EnvFeature == EnvMap.end() ||
-        (EnvFeature->first() == ImgFeature.first() &&
-         EnvFeature->second != ImgFeature.second)) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment's non-ANY feature \t[Image: %s]\t:\t[Env: %s]\n",
-         ImageTargetID.data(), EnvTargetID.data());
+  // Check if the image is requesting xnack on or off.
+  switch (ImageFlags & EF_AMDGPU_FEATURE_XNACK_V4) {
+  case EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+    // The image is 'xnack-' so the environment must be 'xnack-'.
+    if (!EnvTargetID.contains("xnack-"))
       return false;
-    }
+    break;
+  case EF_AMDGPU_FEATURE_XNACK_ON_V4:
+    // The image is 'xnack+' so the environment must be 'xnack+'.
+    if (!EnvTargetID.contains("xnack+"))
+      return false;
+    break;
+  case EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+  case EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+  default:
+    break;
   }
 
-  // Image is compatible if all features of Environment are:
-  //   - either, present in the Image's features map with the same sign,
-  //   - or, the feature is missing from Image's features map i.e. it is
-  //   set to ANY
-  DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Env: %s]\n",
-     ImageTargetID.data(), EnvTargetID.data());
+  // Check if the image is requesting sramecc on or off.
+  switch (ImageFlags & EF_AMDGPU_FEATURE_SRAMECC_V4) {
+  case EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+    // The image is 'sramecc-' so the environment must be 'sramecc-'.
+    if (!EnvTargetID.contains("sramecc-"))
+      return false;
+    break;
+  case EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+    // The image is 'sramecc+' so the environment must be 'sramecc+'.
+    if (!EnvTargetID.contains("sramecc+"))
+      return false;
+    break;
+  case EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+  case EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+    break;
+  }
 
+DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Env: %s]\n",
+     ImageArch, EnvTargetID);
   return true;
 }
 
@@ -165,8 +133,15 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
 [[nodiscard]] XnackBuildMode
 extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   assert((TgtImage != nullptr) && "TgtImage is nullptr.");
-  u_int16_t EFlags = ::utils::elf::elf_get_eflags(TgtImage);
 
+  StringRef Buffer(reinterpret_cast<const char *>(TgtImage->ImageStart),
+                   target::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
+
+  Expected<ELF64LEObjectFile> ElfOrErr =
+      ELF64LEObjectFile::create(MemoryBufferRef(Buffer, /*Identifier=*/""),
+                                /*InitContent=*/false);
+
+  u_int16_t EFlags = ElfOrErr->getELFFile().getHeader().e_flags;
   unsigned XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
 
   switch (XnackFlags) {
@@ -176,31 +151,55 @@ extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
     return XnackBuildMode::XNACK_ANY;
   case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
     return XnackBuildMode::XNACK_MINUS;
+  case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+    return XnackBuildMode::XNACK_UNSUPPORTED;
   default:
-    DP("XNACK is unsupported or unknown XNACK flag. Found XNACK flag %u!\n",
-       XnackFlags);
+    FAILURE_MESSAGE("Unknown XNACK flag!\n");
   }
-  return XnackBuildMode::XNACK_UNSUPPORTED;
+  return XNACK_MINUS;
 }
 
-void checkImageCompatibilityWithSystemXnackMode(__tgt_device_image *TgtImage,
-                                                bool IsXnackEnabled) {
-  XnackBuildMode ImageXnackMode = utils::extractXnackModeFromBinary(TgtImage);
+bool IsXnackEnabledViaKernelParam() {
 
-  if (ImageXnackMode == XnackBuildMode::XNACK_UNSUPPORTED)
-    return;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrError =
+      MemoryBuffer::getFileAsStream("/proc/cmdline");
 
-  if (IsXnackEnabled && (ImageXnackMode == XnackBuildMode::XNACK_MINUS)) {
-    FAILURE_MESSAGE(
-        "Image is not compatible with current XNACK mode! XNACK is enabled "
-        "on the system but image was compiled with xnack-.\n");
-  } else if (!IsXnackEnabled &&
-             (ImageXnackMode == XnackBuildMode::XNACK_PLUS)) {
-    FAILURE_MESSAGE("Image is not compatible with current XNACK mode! "
-                    "XNACK is disabled on the system. However, the image "
-                    "requires xnack+.\n");
+  if (std::error_code ErrorCode = FileOrError.getError()) {
+    FAILURE_MESSAGE("Cannot open /proc/cmdline : %s\n",
+                    ErrorCode.message().c_str());
+    return false;
   }
+
+  StringRef FileContent = (FileOrError.get())->getBuffer();
+
+  StringRef RefString("amdgpu.noretry=");
+  int SizeOfRefString = RefString.size();
+
+  size_t Pos = FileContent.find_insensitive(RefString);
+  // Is noretry defined?
+  if (Pos != StringRef::npos) {
+    bool NoRetryValue = FileContent[Pos + SizeOfRefString] - '0';
+    // is noretry set to 0
+    if (!NoRetryValue)
+      return true;
+  }
+
+  return false;
 }
+
+// void checkImageCompatibilityWithSystemXnackMode(__tgt_device_image *TgtImage,
+//                                                 bool IsXnackEnabled) {
+//   XnackBuildMode ImageXnackMode = utils::extractXnackModeFromBinary(TgtImage);
+//   if ((IsXnackEnabled && !ImageXnackMode)) {
+//     FAILURE_MESSAGE(
+//         "Image is not compatible with current XNACK mode! XNACK is enabled "
+//         "on the system but image was compiled with xnack-.\n");
+//   } else if (!IsXnackEnabled && (ImageXnackMode == 1)) {
+//     FAILURE_MESSAGE("Image is not compatible with current XNACK mode! "
+//                     "XNACK is disabled on the system. However, the image "
+//                     "requires xnack+.\n");
+//   }
+// }
 
 struct KernelMetaDataTy {
   uint64_t KernelObject;
