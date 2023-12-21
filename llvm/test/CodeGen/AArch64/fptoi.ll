@@ -5846,11 +5846,9 @@ define <3 x i8> @fptos_v3f16_v3i8(<3 x half> %a) {
 ; CHECK-GI-FP16-LABEL: fptos_v3f16_v3i8:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtzs v0.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    fmov w0, s0
-; CHECK-GI-FP16-NEXT:    fmov w1, s1
-; CHECK-GI-FP16-NEXT:    fmov w2, s2
+; CHECK-GI-FP16-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-FP16-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    umov w2, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = fptosi <3 x half> %a to <3 x i8>
@@ -5890,11 +5888,9 @@ define <3 x i8> @fptou_v3f16_v3i8(<3 x half> %a) {
 ; CHECK-GI-FP16-LABEL: fptou_v3f16_v3i8:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcvtzu v0.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    fmov w0, s0
-; CHECK-GI-FP16-NEXT:    fmov w1, s1
-; CHECK-GI-FP16-NEXT:    fmov w2, s2
+; CHECK-GI-FP16-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-FP16-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    umov w2, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = fptoui <3 x half> %a to <3 x i8>
