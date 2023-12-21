@@ -24,19 +24,14 @@ class BlockAddress;
 class GlobalValue;
 class LLVMContext;
 
-namespace RISCVCP {
-
-enum RISCVCPKind { ExtSymbol, GlobalValue, BlockAddress };
-} // end namespace RISCVCP
-
 /// A RISCV-specific constant pool value.
 class RISCVConstantPoolValue : public MachineConstantPoolValue {
-  RISCVCP::RISCVCPKind Kind;
-
 protected:
-  RISCVConstantPoolValue(LLVMContext &C, RISCVCP::RISCVCPKind Kind);
+  enum class RISCVCPKind { ExtSymbol, GlobalValue, BlockAddress };
 
-  RISCVConstantPoolValue(Type *Ty, RISCVCP::RISCVCPKind Kind);
+  RISCVConstantPoolValue(LLVMContext &C, RISCVCPKind Kind);
+
+  RISCVConstantPoolValue(Type *Ty, RISCVCPKind Kind);
 
   template <typename Derived>
   int getExistingMachineCPValueImpl(MachineConstantPool *CP, Align Alignment) {
@@ -55,12 +50,15 @@ protected:
     return -1;
   }
 
+private:
+  RISCVCPKind Kind;
+
 public:
   ~RISCVConstantPoolValue() = default;
 
-  bool isExtSymbol() const { return Kind == RISCVCP::ExtSymbol; }
-  bool isGlobalValue() const { return Kind == RISCVCP::GlobalValue; }
-  bool isBlockAddress() const { return Kind == RISCVCP::BlockAddress; }
+  bool isExtSymbol() const { return Kind == RISCVCPKind::ExtSymbol; }
+  bool isGlobalValue() const { return Kind == RISCVCPKind::GlobalValue; }
+  bool isBlockAddress() const { return Kind == RISCVCPKind::BlockAddress; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -72,7 +70,7 @@ class RISCVConstantPoolConstant : public RISCVConstantPoolValue {
   const Constant *CVal;
 
   RISCVConstantPoolConstant(Type *Ty, const Constant *GV,
-                            RISCVCP::RISCVCPKind Kind);
+                            RISCVCPKind Kind);
 
 public:
   static RISCVConstantPoolConstant *Create(const GlobalValue *GV);

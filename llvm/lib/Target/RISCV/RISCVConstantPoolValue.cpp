@@ -22,11 +22,11 @@
 using namespace llvm;
 
 RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C,
-                                               RISCVCP::RISCVCPKind Kind)
+                                               RISCVCPKind Kind)
     : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), Kind(Kind) {}
 
 RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty,
-                                               RISCVCP::RISCVCPKind Kind)
+                                               RISCVCPKind Kind)
     : MachineConstantPoolValue(Ty), Kind(Kind) {}
 
 int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
@@ -36,18 +36,18 @@ int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
 
 RISCVConstantPoolConstant::RISCVConstantPoolConstant(Type *Ty,
                                                      const Constant *GV,
-                                                     RISCVCP::RISCVCPKind Kind)
+                                                     RISCVCPKind Kind)
     : RISCVConstantPoolValue(Ty, Kind), CVal(GV) {}
 
 RISCVConstantPoolConstant *
 RISCVConstantPoolConstant::Create(const GlobalValue *GV) {
-  return new RISCVConstantPoolConstant(GV->getType(), GV, RISCVCP::GlobalValue);
+  return new RISCVConstantPoolConstant(GV->getType(), GV, RISCVCPKind::GlobalValue);
 }
 
 RISCVConstantPoolConstant *
 RISCVConstantPoolConstant::Create(const BlockAddress *BA) {
   return new RISCVConstantPoolConstant(BA->getType(), BA,
-                                       RISCVCP::BlockAddress);
+                                       RISCVCPKind::BlockAddress);
 }
 
 int RISCVConstantPoolConstant::getExistingMachineCPValue(
@@ -73,7 +73,7 @@ const BlockAddress *RISCVConstantPoolConstant::getBlockAddress() const {
 }
 
 RISCVConstantPoolSymbol::RISCVConstantPoolSymbol(LLVMContext &C, StringRef s)
-    : RISCVConstantPoolValue(C, RISCVCP::ExtSymbol), S(s) {}
+    : RISCVConstantPoolValue(C, RISCVCPKind::ExtSymbol), S(s) {}
 
 RISCVConstantPoolSymbol *RISCVConstantPoolSymbol::Create(LLVMContext &C,
                                                          StringRef s) {
