@@ -28,10 +28,10 @@ class GlobalModuleCacheTestCase(TestBase):
         try:
             # Make sure dst is writeable before trying to write to it.
             subprocess.run(
-                ['chmod', '777', dst],
+                ["chmod", "777", dst],
                 stdin=None,
                 capture_output=False,
-                encoding='utf-8'
+                encoding="utf-8"
             )
             shutil.copy(src, dst)
         except:
