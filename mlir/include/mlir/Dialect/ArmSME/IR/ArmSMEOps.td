@@ -101,8 +101,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
     InterfaceMethod<
       "Returns the VectorType of the tile used by this operation.",
       /*returnType=*/"VectorType",
-      /*methodName=*/"getTileType",
-      /*arguments=*/(ins)
+      /*methodName=*/"getTileType"
     >
   ];
 

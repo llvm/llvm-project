@@ -63,7 +63,7 @@ namespace {
 
 static constexpr StringLiteral kTilesInUseAttr("arm_sme.tiles_in_use");
 static constexpr StringLiteral
-    kNextTileMemoryIndex("arm_sme.next_in_memory_tile_id");
+    kNextInMemoryTileIdAttr("arm_sme.next_in_memory_tile_id");
 
 enum class TileMask : unsigned {
   // clang-format off
@@ -207,17 +207,16 @@ struct AssignTileIDsPattern
   using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
   LogicalResult matchAndRewrite(ArmSMETileOpInterface tileOp,
                                 PatternRewriter &rewriter) const override {
-    auto func = tileOp->getParentOfType<FunctionOpInterface>();
     if (tileOp.getTileId())
       return failure();
 
+    auto func = tileOp->getParentOfType<FunctionOpInterface>();
     auto getDiscardableIntAttr = [&](StringRef name, unsigned defaultVal = 0) {
       if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
               func->getDiscardableAttr(name)))
         return unsigned(attr.getInt());
       return defaultVal;
     };
-
     auto setDiscardableIntAttr = [&](StringRef name, auto value) {
       rewriter.updateRootInPlace(tileOp, [&] {
         func->setDiscardableAttr(name,
@@ -238,8 +237,9 @@ struct AssignTileIDsPattern
     else {
       // If we could not find a real tile, set use a virtual tile ID (ID >= 16).
       // A later pass will insert the necessary spills and reloads.
-      tileId = getDiscardableIntAttr(kNextTileMemoryIndex, kInMemoryTileIdBase);
-      setDiscardableIntAttr(kNextTileMemoryIndex, *tileId + 1);
+      tileId =
+          getDiscardableIntAttr(kNextInMemoryTileIdAttr, kInMemoryTileIdBase);
+      setDiscardableIntAttr(kNextInMemoryTileIdAttr, *tileId + 1);
       tileOp->emitWarning(
           "failed to allocate SME virtual tile to operation, all tile "
           "operations will go through memory, expect degraded performance");

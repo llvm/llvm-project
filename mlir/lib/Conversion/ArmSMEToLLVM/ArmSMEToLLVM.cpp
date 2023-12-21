@@ -195,15 +195,15 @@ static memref::AllocaOp getOrCreateAllocaForTile(
 ///
 ///     // Around op:
 ///     scf.for %slice_idx {
-///       %current_slice = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
+///       %slice_to_save = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
 ///       "arm_sme.intr.ld1h.horiz"(%spill, %slice_idx)  <{tile_id = 0 : i32}>
-///       vector.store %current_slice, %spill[%slice_idx, %c0]
+///       vector.store %slice_to_save, %spill[%slice_idx, %c0]
 ///     }
 ///     arm_sme.tile_op { tile_id = 0 }
 ///     scf.for %slice_idx {
-///       %current_slice = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
+///       %slice_to_save = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
 ///       "arm_sme.intr.ld1h.horiz"(%spill, %slice_idx)  <{tile_id = 0 : i32}>
-///       vector.store %current_slice, %spill[%slice_idx, %c0]
+///       vector.store %slice_to_save, %spill[%slice_idx, %c0]
 ///     }
 ///
 /// Note that these spills/fills are not inserted earlier as concept of a
@@ -307,15 +307,14 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     auto predicateType = sliceType.clone(rewriter.getI1Type());
     auto allTruePredicate = rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(predicateType, true));
-    // Create zero padding vector (never used due to all-true predicate).
-    auto zeroVector = rewriter.create<arith::ConstantOp>(
-        loc, sliceType, rewriter.getZeroAttr(sliceType));
+    // Create padding vector (never used due to all-true predicate).
+    auto padVector = rewriter.create<LLVM::UndefOp>(loc, sliceType);
     // Get a pointer to the current slice.
     auto slicePtr =
         getInMemoryTileSlicePtr(rewriter, loc, tileAlloca, sliceIndex);
     // Read the value of the current slice from ZA.
     auto currentTileSlice = rewriter.create<arm_sme::aarch64_sme_read_horiz>(
-        loc, sliceType, zeroVector, allTruePredicate, tileId, sliceIndexI32);
+        loc, sliceType, padVector, allTruePredicate, tileId, sliceIndexI32);
     // Load the new tile slice back from memory into ZA.
     createLoadTileSliceIntrinsic(
         rewriter, loc, tileType, arm_sme::TileSliceLayout::Horizontal,

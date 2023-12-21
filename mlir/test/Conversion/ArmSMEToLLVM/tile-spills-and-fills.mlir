@@ -23,7 +23,7 @@
 ///
 ///   arm_sme.zero { tile_id = 16 } : vector<[8]x[8]xi16>
 ///
-/// This works like normal till the final lowering to LLVM, where spills and
+/// This works like normal until the final lowering to LLVM, where spills and
 /// reloads will be inserted around uses of in-memory tiles.
 ///
 /// So the above example becomes:
