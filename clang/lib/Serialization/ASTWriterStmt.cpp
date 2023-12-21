@@ -138,10 +138,8 @@ void ASTStmtWriter::VisitNullStmt(NullStmt *S) {
 void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
 
-  CurrentPackingBits.updateBits();
-  // 20 bits should be enough to store the size of stmts.
-  CurrentPackingBits.addBits(S->size(), /*Width=*/20);
-  CurrentPackingBits.addBit(S->hasStoredFPFeatures());
+  Record.push_back(S->size());
+  Record.push_back(S->hasStoredFPFeatures());
 
   for (auto *CS : S->body())
     Record.AddStmt(CS);
@@ -675,25 +673,26 @@ void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
 void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   VisitExpr(E);
 
-  CurrentPackingBits.addBit(E->hasQualifier());
-  CurrentPackingBits.addBit(E->getDecl() != E->getFoundDecl());
-  CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
+  CurrentPackingBits.updateBits();
+
   CurrentPackingBits.addBit(E->hadMultipleCandidates());
   CurrentPackingBits.addBit(E->refersToEnclosingVariableOrCapture());
   CurrentPackingBits.addBits(E->isNonOdrUse(), /*Width=*/2);
   CurrentPackingBits.addBit(E->isImmediateEscalating());
+  CurrentPackingBits.addBit(E->getDecl() != E->getFoundDecl());
+  CurrentPackingBits.addBit(E->hasQualifier());
+  CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
 
   if (E->hasTemplateKWAndArgsInfo()) {
     unsigned NumTemplateArgs = E->getNumTemplateArgs();
-    // 12 bits should be sufficient to store the number of template args.
-    CurrentPackingBits.addBits(NumTemplateArgs, /*Width=*/12);
+    Record.push_back(NumTemplateArgs);
   }
 
   DeclarationName::NameKind nk = (E->getDecl()->getDeclName().getNameKind());
 
   if ((!E->hasTemplateKWAndArgsInfo()) && (!E->hasQualifier()) &&
       (E->getDecl() == E->getFoundDecl()) &&
-      nk == DeclarationName::Identifier) {
+      nk == DeclarationName::Identifier && E->getObjectKind() == OK_Ordinary) {
     AbbrevToUse = Writer.getDeclRefExprAbbrev();
   }
 
@@ -936,10 +935,10 @@ void ASTStmtWriter::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
 void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
 
-  // 13 bits should be sufficient to store the number args;
-  CurrentPackingBits.addBits(E->getNumArgs(), /*BitsWidth=*/13);
-  CurrentPackingBits.addBit(E->hasStoredFPFeatures());
+  Record.push_back(E->getNumArgs());
+  CurrentPackingBits.updateBits();
   CurrentPackingBits.addBit(static_cast<bool>(E->getADLCallKind()));
+  CurrentPackingBits.addBit(E->hasStoredFPFeatures());
 
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddStmt(E->getCallee());
@@ -950,7 +949,8 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
 
-  if (!E->hasStoredFPFeatures() && E->getStmtClass() == Stmt::CallExprClass)
+  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
+      E->getStmtClass() == Stmt::CallExprClass)
     AbbrevToUse = Writer.getCallExprAbbrev();
 
   Code = serialization::EXPR_CALL;
@@ -979,12 +979,11 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
 
   // Write these first for easy access when deserializing, as they affect the
   // size of the MemberExpr.
-
+  CurrentPackingBits.updateBits();
   CurrentPackingBits.addBit(HasQualifier);
   CurrentPackingBits.addBit(HasFoundDecl);
   CurrentPackingBits.addBit(HasTemplateInfo);
-  // 12 bits should be enough to store the number of args
-  CurrentPackingBits.addBits(NumTemplateArgs, /*Width=*/12);
+  Record.push_back(NumTemplateArgs);
 
   Record.AddStmt(E->getBase());
   Record.AddDeclRef(E->getMemberDecl());
@@ -1041,9 +1040,10 @@ void ASTStmtWriter::VisitCastExpr(CastExpr *E) {
   VisitExpr(E);
 
   Record.push_back(E->path_size());
-  CurrentPackingBits.addBit(E->hasStoredFPFeatures());
+  CurrentPackingBits.updateBits();
   // 7 bits should be enough to store the casting kinds.
   CurrentPackingBits.addBits(E->getCastKind(), /*Width=*/7);
+  CurrentPackingBits.addBit(E->hasStoredFPFeatures());
   Record.AddStmt(E->getSubExpr());
 
   for (CastExpr::path_iterator
@@ -1056,18 +1056,21 @@ void ASTStmtWriter::VisitCastExpr(CastExpr *E) {
 
 void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
   VisitExpr(E);
-  bool HasFPFeatures = E->hasStoredFPFeatures();
+
   // Write this first for easy access when deserializing, as they affect the
   // size of the UnaryOperator.
-  CurrentPackingBits.addBit(HasFPFeatures);
+  CurrentPackingBits.updateBits();
   CurrentPackingBits.addBits(E->getOpcode(), /*Width=*/6);
+  bool HasFPFeatures = E->hasStoredFPFeatures();
+  CurrentPackingBits.addBit(HasFPFeatures);
   Record.AddStmt(E->getLHS());
   Record.AddStmt(E->getRHS());
   Record.AddSourceLocation(E->getOperatorLoc());
   if (HasFPFeatures)
     Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 
-  if (!HasFPFeatures)
+  if (!HasFPFeatures && E->getValueKind() == VK_PRValue &&
+      E->getObjectKind() == OK_Ordinary)
     AbbrevToUse = Writer.getBinaryOperatorAbbrev();
 
   Code = serialization::EXPR_BINARY_OPERATOR;
@@ -1078,7 +1081,8 @@ void ASTStmtWriter::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
   Record.AddTypeRef(E->getComputationLHSType());
   Record.AddTypeRef(E->getComputationResultType());
 
-  if (!E->hasStoredFPFeatures())
+  if (!E->hasStoredFPFeatures() && E->getValueKind() == VK_PRValue &&
+      E->getObjectKind() == OK_Ordinary)
     AbbrevToUse = Writer.getCompoundAssignOperatorAbbrev();
 
   Code = serialization::EXPR_COMPOUND_ASSIGN_OPERATOR;
@@ -1664,10 +1668,10 @@ void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 
 void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
-  CurrentPackingBits.addBits(E->getOperator(), /*Width=*/6);
+  Record.push_back(E->getOperator());
   Record.AddSourceRange(E->Range);
 
-  if (!E->hasStoredFPFeatures())
+  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
     AbbrevToUse = Writer.getCXXOperatorCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_OPERATOR_CALL;
@@ -1676,7 +1680,7 @@ void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
 void ASTStmtWriter::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
   VisitCallExpr(E);
 
-  if (!E->hasStoredFPFeatures())
+  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
     AbbrevToUse = Writer.getCXXMemberCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_MEMBER_CALL;
@@ -1838,6 +1842,7 @@ void ASTStmtWriter::VisitCXXThisExpr(CXXThisExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isImplicit());
+
   Code = serialization::EXPR_CXX_THIS;
 }
 
@@ -1971,10 +1976,9 @@ void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
 
   // Don't emit anything here (or if you do you will have to update
   // the corresponding deserialization function).
-
+  Record.push_back(E->getNumTemplateArgs());
+  CurrentPackingBits.updateBits();
   CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
-  // 16 bits should be enough to store the number of template args.
-  CurrentPackingBits.addBits(E->getNumTemplateArgs(), /*Width=*/16);
   CurrentPackingBits.addBit(E->hasFirstQualifierFoundInScope());
 
   if (E->hasTemplateKWAndArgsInfo()) {
@@ -2041,15 +2045,14 @@ ASTStmtWriter::VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E) {
 void ASTStmtWriter::VisitOverloadExpr(OverloadExpr *E) {
   VisitExpr(E);
 
+  Record.push_back(E->getNumDecls());
+
   CurrentPackingBits.updateBits();
-  // 12 Bits should enough to store the number of decls.
-  CurrentPackingBits.addBits(E->getNumDecls(), /*BitWidth=*/12);
   CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
   if (E->hasTemplateKWAndArgsInfo()) {
     const ASTTemplateKWAndArgsInfo &ArgInfo =
         *E->getTrailingASTTemplateKWAndArgsInfo();
-    // 12 Bits should enough to store the number of template args.
-    CurrentPackingBits.addBits(ArgInfo.NumTemplateArgs, /*BitWidth=*/12);
+    Record.push_back(ArgInfo.NumTemplateArgs);
     AddTemplateKWAndArgsInfo(ArgInfo, E->getTrailingTemplateArgumentLoc());
   }
 
