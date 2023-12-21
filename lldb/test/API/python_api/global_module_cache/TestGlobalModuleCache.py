@@ -31,7 +31,7 @@ class GlobalModuleCacheTestCase(TestBase):
                 ["chmod", "777", dst],
                 stdin=None,
                 capture_output=False,
-                encoding="utf-8"
+                encoding="utf-8",
             )
             shutil.copy(src, dst)
         except:
