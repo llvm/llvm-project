@@ -21,40 +21,36 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-// A generic class to represent single precision, double precision, and quad
-// precision IEEE 754 floating point formats.
-// On most platforms, the 'float' type corresponds to single precision floating
-// point numbers, the 'double' type corresponds to double precision floating
-// point numers, and the 'long double' type corresponds to the quad precision
-// floating numbers. On x86 platforms however, the 'long double' type maps to
-// an x87 floating point format. This format is an IEEE 754 extension format.
-// It is handled as an explicit specialization of this class.
-template <typename T> struct FPBits : private FloatProperties<T> {
-  static_assert(cpp::is_floating_point_v<T>,
-                "FPBits instantiated with invalid type.");
-  using typename FloatProperties<T>::StorageType;
-  using FloatProperties<T>::TOTAL_LEN;
+namespace internal {
 
-private:
-  using FloatProperties<T>::EXP_SIG_MASK;
+// This is a temporary class to unify common methods and properties between
+// FPBits and FPBits<long double>.
+template <FPType fp_type> struct FPBitsCommon : private FPProperties<fp_type> {
+  using UP = FPProperties<fp_type>;
+  using typename UP::StorageType;
+  using UP::TOTAL_LEN;
+
+protected:
+  using UP::EXP_SIG_MASK;
+  using UP::QUIET_NAN_MASK;
 
 public:
-  using FloatProperties<T>::EXP_MASK;
-  using FloatProperties<T>::EXP_BIAS;
-  using FloatProperties<T>::EXP_LEN;
-  using FloatProperties<T>::FRACTION_MASK;
-  using FloatProperties<T>::FRACTION_LEN;
-
-private:
-  using FloatProperties<T>::QUIET_NAN_MASK;
-
-public:
-  using FloatProperties<T>::SIGN_MASK;
+  using UP::EXP_BIAS;
+  using UP::EXP_LEN;
+  using UP::EXP_MASK;
+  using UP::EXP_MASK_SHIFT;
+  using UP::FP_MASK;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::SIGN_MASK;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
   StorageType bits;
+
+  LIBC_INLINE constexpr FPBitsCommon() : bits(0) {}
+  LIBC_INLINE explicit constexpr FPBitsCommon(StorageType bits) : bits(bits) {}
 
   LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
     mantVal &= FRACTION_MASK;
@@ -66,66 +62,25 @@ public:
     return bits & FRACTION_MASK;
   }
 
-  LIBC_INLINE constexpr void set_biased_exponent(StorageType expVal) {
-    expVal = (expVal << FRACTION_LEN) & EXP_MASK;
-    bits &= ~EXP_MASK;
-    bits |= expVal;
-  }
-
-  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXP_MASK) >> FRACTION_LEN);
-  }
-
-  // The function return mantissa with the implicit bit set iff the current
-  // value is a valid normal number.
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
-    return ((get_biased_exponent() > 0 && !is_inf_or_nan())
-                ? (FRACTION_MASK + 1)
-                : 0) |
-           (FRACTION_MASK & bits);
-  }
-
   LIBC_INLINE constexpr void set_sign(bool signVal) {
-    bits |= SIGN_MASK;
-    if (!signVal)
-      bits -= SIGN_MASK;
+    if (get_sign() != signVal)
+      bits ^= SIGN_MASK;
   }
 
   LIBC_INLINE constexpr bool get_sign() const {
     return (bits & SIGN_MASK) != 0;
   }
 
-  static_assert(sizeof(T) == sizeof(StorageType),
-                "Data type and integral representation have different sizes.");
-
-  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
-  static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
-  static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
-  static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
-  static constexpr StorageType MAX_NORMAL =
-      ((StorageType(MAX_BIASED_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
-
-  // We don't want accidental type promotions/conversions, so we require exact
-  // type match.
-  template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x)
-      : bits(cpp::bit_cast<StorageType>(x)) {}
-
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x) : bits(x) {}
-
-  LIBC_INLINE constexpr FPBits() : bits(0) {}
-
-  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
-
-  LIBC_INLINE constexpr void set_val(T value) {
-    bits = cpp::bit_cast<StorageType>(value);
+  LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
+    // clear exponent bits
+    bits &= ~EXP_MASK;
+    // set exponent bits
+    bits |= (biased << EXP_MASK_SHIFT) & EXP_MASK;
   }
 
-  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
-
-  LIBC_INLINE constexpr StorageType uintval() const { return bits; }
+  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
+    return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
+  }
 
   LIBC_INLINE constexpr int get_exponent() const {
     return int(get_biased_exponent()) - EXP_BIAS;
@@ -148,10 +103,83 @@ public:
     }
   }
 
+  LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
+
   LIBC_INLINE constexpr bool is_zero() const {
-    // Remove sign bit by shift
-    return (bits << 1) == 0;
+    return (bits & EXP_SIG_MASK) == 0;
   }
+};
+
+} // namespace internal
+
+// A generic class to represent single precision, double precision, and quad
+// precision IEEE 754 floating point formats.
+// On most platforms, the 'float' type corresponds to single precision floating
+// point numbers, the 'double' type corresponds to double precision floating
+// point numers, and the 'long double' type corresponds to the quad precision
+// floating numbers. On x86 platforms however, the 'long double' type maps to
+// an x87 floating point format. This format is an IEEE 754 extension format.
+// It is handled as an explicit specialization of this class.
+template <typename T>
+struct FPBits : public internal::FPBitsCommon<get_fp_type<T>()> {
+  static_assert(cpp::is_floating_point_v<T>,
+                "FPBits instantiated with invalid type.");
+  using UP = internal::FPBitsCommon<get_fp_type<T>()>;
+  using StorageType = typename UP::StorageType;
+  using UP::bits;
+
+private:
+  using UP::EXP_SIG_MASK;
+  using UP::QUIET_NAN_MASK;
+
+public:
+  using UP::EXP_BIAS;
+  using UP::EXP_LEN;
+  using UP::EXP_MASK;
+  using UP::EXP_MASK_SHIFT;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::SIGN_MASK;
+  using UP::TOTAL_LEN;
+
+  using UP::get_biased_exponent;
+  using UP::is_zero;
+
+  // The function return mantissa with the implicit bit set iff the current
+  // value is a valid normal number.
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
+    return ((get_biased_exponent() > 0 && !is_inf_or_nan())
+                ? (FRACTION_MASK + 1)
+                : 0) |
+           (FRACTION_MASK & bits);
+  }
+
+  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
+  static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
+  static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
+  static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
+  static constexpr StorageType MAX_NORMAL =
+      ((StorageType(MAX_BIASED_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
+
+  // We don't want accidental type promotions/conversions, so we require exact
+  // type match.
+  template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
+  LIBC_INLINE constexpr explicit FPBits(XType x)
+      : UP(cpp::bit_cast<StorageType>(x)) {}
+
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
+  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
+
+  LIBC_INLINE constexpr FPBits() : UP() {}
+
+  LIBC_INLINE constexpr void set_val(T value) {
+    bits = cpp::bit_cast<StorageType>(value);
+  }
+
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
+
+  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
   LIBC_INLINE constexpr bool is_inf() const {
     return (bits & EXP_SIG_MASK) == EXP_MASK;
