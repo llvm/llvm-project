@@ -41,8 +41,9 @@ splitStringByGroupSize(const std::basic_string<char> &String,
   return Result;
 }
 
-std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString,
-                                     const llvm::APInt IntegerValue) {
+std::string
+getFormatedIntegerString(const llvm::StringRef OriginalLiteralString,
+                         const llvm::APInt IntegerValue) {
   // Configure formatting
   unsigned int Radix;
   size_t GroupSize;
@@ -81,8 +82,8 @@ std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString
   const std::string FormatedLiteralString =
       Prefix +
       std::accumulate(SplittedIntegerLiteral.begin(),
-                      SplittedIntegerLiteral.end(),std::string(""),
-          [](std::basic_string<char> S1,
+                      SplittedIntegerLiteral.end(), std::string(""),
+                      [](std::basic_string<char> S1,
                          std::basic_string<char> S2) { return S1 + "\'" + S2; })
           .erase(0, 1) +
       Postfix;
