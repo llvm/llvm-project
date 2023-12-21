@@ -263,8 +263,7 @@ struct LoadTileSliceConversion
     arm_sme::ArmSMETileType tileType = *arm_sme::getSMETileType(tileVectorType);
     arm_sme::TileSliceLayout layout = loadTileSliceOp.getLayout();
 
-    // Create 'arm_sme.intr.ld1*.(horiz|vert)' intrinsic to load ZA tile
-    // slice.
+    // Create 'arm_sme.intr.ld1*.(horiz|vert)' intrinsic to load ZA tile slice.
     createLoadTileSliceIntrinsic(rewriter, loc, tileType, layout, maskOp, ptr,
                                  tileId, tileSliceI32);
 
