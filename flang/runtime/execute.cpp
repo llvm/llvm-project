@@ -43,7 +43,7 @@ enum CMD_STAT {
   SIGNAL_ERR = 4
 };
 
-// Override CopyCharsToDescriptor in tools.h
+// Override CopyCharsToDescriptor in tools.h, pass string directly
 void CopyCharsToDescriptor(const Descriptor &value, const char *rawValue){
   CopyCharsToDescriptor(value, rawValue, std::strlen(rawValue));
 }
@@ -71,7 +71,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("Execution error with system status code: %d", status);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "Execution error", 16);
+      CopyCharsToDescriptor(*cmdmsg, "Execution error");
     }
   }
 #ifdef _WIN32
