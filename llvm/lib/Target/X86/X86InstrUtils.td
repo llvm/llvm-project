@@ -86,7 +86,7 @@ class EVEX_CD8<int esize, CD8VForm form> {
   int CD8_EltSize = !srl(esize, 3);
   bits<3> CD8_Form = form.Value;
 }
-class EVEX_NoCD8 : EVEX { bits<7> CD8_Scale = 0; }
+class NoCD8 { bits<7> CD8_Scale = 0; }
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 class EVEX2VEXOverride<string VEXInstrName> {
