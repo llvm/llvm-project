@@ -33,3 +33,18 @@ int test_find(unsigned char n = 3)
         num_found++;
     return num_found;
 }
+
+namespace yolo {
+template<typename T, unsigned N> struct array {
+  T arr[N];
+  typedef T value_type;
+  typedef value_type* iterator;
+  constexpr iterator begin() { return iterator(arr); }
+};
+}
+
+int iter_test()
+{
+  yolo::array<unsigned char, 3> v = {1, 2, 3};
+  (void)v.begin(); // no remark should be produced.
+}
