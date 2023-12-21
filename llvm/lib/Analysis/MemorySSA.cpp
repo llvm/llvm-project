@@ -1732,12 +1732,6 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     }
   }
 
-  // Using a nonstandard AA pipelines might leave us with unexpected modref
-  // results for I, so add a check to not model instructions that may not read
-  // from or write to memory. This is necessary for correctness.
-  if (!I->mayReadFromMemory() && !I->mayWriteToMemory())
-    return nullptr;
-
   bool Def, Use;
   if (Template) {
     Def = isa<MemoryDef>(Template);
@@ -1757,6 +1751,12 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     }
 #endif
   } else {
+    // Using a nonstandard AA pipelines might leave us with unexpected modref
+    // results for I, so add a check to not model instructions that may not read
+    // from or write to memory. This is necessary for correctness.
+    if (!I->mayReadFromMemory() && !I->mayWriteToMemory())
+      return nullptr;
+
     // Find out what affect this instruction has on memory.
     ModRefInfo ModRef = AAP->getModRefInfo(I, std::nullopt);
     // The isOrdered check is used to ensure that volatiles end up as defs
