@@ -1012,7 +1012,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
 #ifndef _LIBCPP_HAS_NO_ASAN
     // The default allocator does not require unpoisoning before returning memory.
-    if _LIBCPP_CONSTEXPR (is_same<allocator_type, allocator<_Tp> >::value)
+    if _LIBCPP_CONSTEXPR_SINCE_CXX17 (is_same<allocator_type, allocator<_Tp> >::value)
       return;
     if (empty()) {
       for (size_t __i = 0; __i < __map_.size(); ++__i) {

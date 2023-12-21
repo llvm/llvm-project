@@ -1913,7 +1913,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     // The default allocator does not require unpoisoning before returning memory.
-    if _LIBCPP_CONSTEXPR (!is_same<allocator_type, allocator<__default_allocator_type> >::value)
+    if _LIBCPP_CONSTEXPR_SINCE_CXX17 (!is_same<allocator_type, allocator<__default_allocator_type> >::value)
       if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
         __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
 #endif
