@@ -1010,6 +1010,17 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       AsanUseAfterReturn = parsedAsanUseAfterReturn;
     }
 
+    if (const auto *Arg = Args.getLastArg(options::OPT_sanitize_targets_EQ)) {
+      auto parsedAsanTargetsToEnable =
+          AsanTargetsToEnableFromString(Arg->getValue());
+      if (parsedAsanTargetsToEnable == llvm::AsanTargetsToEnable::Invalid &&
+          DiagnoseErrors) {
+        TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
+            << Arg->getSpelling() << Arg->getValue();
+      }
+      AsanTargetsToEnable = parsedAsanTargetsToEnable;
+    }
+
   } else {
     AsanUseAfterScope = false;
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
@@ -1136,6 +1147,29 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                       true))
       return;
     GPUSanitize = true;
+  }
+
+  // In offloading scenario, the whole compiling process consists of device and
+  // host compilation phase, device and host code will be bundled together.
+  // Address sanitizer can be enabled in either one or both compilation phases
+  // via fsanitize-target=host|device|both. This flag must be passed to both
+  // device and host compilation to indicate whether to enable ASanPass in
+  // current phase. In SYCL, when SYCL compiler's target triple is SPIR, we are
+  // in device compilation phase, if target triple is not SPIR and '-fsycl' is
+  // used, we are in host compilation phase.
+  if (TC.getTriple().isSPIR()) {
+    if (Sanitizers.has(SanitizerKind::Address)) {
+      CmdArgs.push_back(
+          Args.MakeArgString("-fsanitize-target=" +
+                             AsanTargetsToEnableToString(AsanTargetsToEnable)));
+    }
+  } else {
+    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
+        Sanitizers.has(SanitizerKind::Address)) {
+      CmdArgs.push_back(
+          Args.MakeArgString("-fsanitize-target=" +
+                             AsanTargetsToEnableToString(AsanTargetsToEnable)));
+    }
   }
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.

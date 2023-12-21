@@ -34,6 +34,14 @@ enum class AsanDetectStackUseAfterReturnMode {
   Invalid, ///< Not a valid detect mode.
 };
 
+/// Targets to enable address sanitizer pass in offloading scenario.
+enum class AsanTargetsToEnable {
+  Host,   ///< Only enable AddressSanitizerPass for host compilation.
+  Device, ///< Only enable AddressSanitizerPass for device compilation.
+  Both,   ///< Enable AddressSanitizerPass for both host and device compilation.
+  Invalid ///< Not a valid detect mode.
+};
+
 } // namespace llvm
 
 #endif

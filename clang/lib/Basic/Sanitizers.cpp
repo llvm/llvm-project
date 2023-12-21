@@ -112,4 +112,27 @@ AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr) {
       .Default(llvm::AsanDetectStackUseAfterReturnMode::Invalid);
 }
 
+llvm::AsanTargetsToEnable
+AsanTargetsToEnableFromString(StringRef asanTargetsStr) {
+  return llvm::StringSwitch<llvm::AsanTargetsToEnable>(asanTargetsStr)
+      .Case("host", llvm::AsanTargetsToEnable::Host)
+      .Case("device", llvm::AsanTargetsToEnable::Device)
+      .Case("both", llvm::AsanTargetsToEnable::Both)
+      .Default(llvm::AsanTargetsToEnable::Invalid);
+}
+
+StringRef AsanTargetsToEnableToString(llvm::AsanTargetsToEnable target) {
+  switch (target) {
+  case llvm::AsanTargetsToEnable::Host:
+    return "host";
+  case llvm::AsanTargetsToEnable::Device:
+    return "device";
+  case llvm::AsanTargetsToEnable::Both:
+    return "both";
+  case llvm::AsanTargetsToEnable::Invalid:
+    return "invalid";
+  }
+  return "invalid";
+}
+
 } // namespace clang

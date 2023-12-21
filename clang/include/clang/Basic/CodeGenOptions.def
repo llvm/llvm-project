@@ -224,6 +224,10 @@ ENUM_CODEGENOPT(SanitizeAddressUseAfterReturn,
                 llvm::AsanDetectStackUseAfterReturnMode, 2,
                 llvm::AsanDetectStackUseAfterReturnMode::Runtime
                 ) ///< Set detection mode for stack-use-after-return.
+ENUM_CODEGENOPT(
+    SanitizeTargetsToEnable, llvm::AsanTargetsToEnable, 2,
+    llvm::AsanTargetsToEnable::Both) ///< Set targets to enable sanitizer
+                                     /// passes in offloading scenario.
 CODEGENOPT(SanitizeAddressPoisonCustomArrayCookie, 1,
            0) ///< Enable poisoning operator new[] which is not a replaceable
               ///< global allocation function in AddressSanitizer

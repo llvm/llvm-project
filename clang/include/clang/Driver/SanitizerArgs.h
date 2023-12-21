@@ -67,6 +67,8 @@ class SanitizerArgs {
   bool HwasanUseAliases = false;
   llvm::AsanDetectStackUseAfterReturnMode AsanUseAfterReturn =
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
+  llvm::AsanTargetsToEnable AsanTargetsToEnable =
+      llvm::AsanTargetsToEnable::Both;
 
   std::string MemtagMode;
 
@@ -79,7 +81,10 @@ public:
   bool needsStableAbi() const { return StableABI; }
 
   bool needsMemProfRt() const { return NeedsMemProfRt; }
-  bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
+  bool needsAsanRt() const {
+    bool AsanIsNotDeviceOnly =
+        !(AsanTargetsToEnable == llvm::AsanTargetsToEnable::Device);
+    return Sanitizers.has(SanitizerKind::Address) && AsanIsNotDeviceOnly; }
   bool needsHwasanRt() const {
     return Sanitizers.has(SanitizerKind::HWAddress);
   }

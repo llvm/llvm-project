@@ -211,6 +211,10 @@ StringRef AsanDetectStackUseAfterReturnModeToString(
 llvm::AsanDetectStackUseAfterReturnMode
 AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr);
 
+llvm::AsanTargetsToEnable
+AsanTargetsToEnableFromString(StringRef asanTargetsStr);
+
+StringRef AsanTargetsToEnableToString(llvm::AsanTargetsToEnable target);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_SANITIZERS_H

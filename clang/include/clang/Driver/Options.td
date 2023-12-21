@@ -2462,6 +2462,18 @@ def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-unde
            "when emitting check metadata.">,
   MarshallingInfoInt<CodeGenOpts<"EmitCheckPathComponentsToStrip">, "0", "int">;
 
+def sanitize_targets_EQ
+      : Joined<["-"], "fsanitize-target=">,
+        MetaVarName<"<target>">,
+        Visibility<[ClangOption, CC1Option]>,
+        HelpText<"Select target to enable sanitizer in offloading scenario, "
+                 "valid targets are host, device, both(both host and device "
+                 "enabled).">,
+        Group<f_clang_Group>,
+        Values<"host,device,both">,
+        NormalizedValuesScope<"llvm::AsanTargetsToEnable">,
+        NormalizedValues<["Host", "Device", "Both"]>,
+        MarshallingInfoEnum<CodeGenOpts<"SanitizeTargetsToEnable">, "Both">;
 } // end -f[no-]sanitize* flags
 
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
