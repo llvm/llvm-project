@@ -241,9 +241,8 @@ struct AssignTileIDsPattern
       tileId = getDiscardableIntAttr(kNextTileMemoryIndex, kInMemoryTileIdBase);
       setDiscardableIntAttr(kNextTileMemoryIndex, *tileId + 1);
       tileOp->emitWarning(
-          "failed to allocate physical tile to operation, all tile "
-          "operations will go through memory, expect "
-          "performance degradation");
+          "failed to allocate SME virtual tile to operation, all tile "
+          "operations will go through memory, expect degraded performance");
     }
 
     // Set all operations dependent on `tileOp` to use the same tile ID.

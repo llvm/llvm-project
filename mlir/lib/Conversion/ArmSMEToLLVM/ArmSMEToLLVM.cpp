@@ -33,7 +33,7 @@ using namespace mlir;
 
 namespace {
 
-static constexpr StringLiteral kInMemoryTileId("arm_sme.in_memory_tile_id");
+static constexpr StringLiteral kInMemoryTileIdAttr("arm_sme.in_memory_tile_id");
 
 /// Helper to create an arm_sme.intr.ld1*.(horiz|vert)' intrinsic.
 static Operation *createLoadTileSliceIntrinsic(
@@ -132,7 +132,7 @@ IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
   return tileId;
 }
 
-/// Creates a alloca matching the size of tile used by `tileOp`. The alloca is
+/// Creates an alloca matching the size of tile used by `tileOp`. The alloca is
 /// placed in the first block of the function.
 static memref::AllocaOp
 createAllocaForTile(RewriterBase &rewriter, Location loc,
@@ -140,14 +140,13 @@ createAllocaForTile(RewriterBase &rewriter, Location loc,
                     arm_sme::ArmSMETileOpInterface tileOp) {
   RewriterBase::InsertionGuard g(rewriter);
   // Move to the first operation in the function.
-  rewriter.setInsertionPoint(&func.getBlocks().front().front());
+  rewriter.setInsertionPointToStart(&func.getBlocks().front());
   // Create an alloca matching the tile size of the `tileOp`.
   auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
-  auto tileElementType =
-      llvm::cast<VectorType>(tileOp.getTileType()).getElementType();
+  auto tileElementType = tileOp.getTileType().getElementType();
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamic, ShapedType::kDynamic}, tileElementType);
-  auto minElements = arm_sme::getSMETileSliceMinNumElts(tileElementType);
+  unsigned minElements = arm_sme::getSMETileSliceMinNumElts(tileElementType);
   auto minElementsOp =
       rewriter.create<arith::ConstantIndexOp>(loc, minElements);
   auto vectorLen = rewriter.create<arith::MulIOp>(loc, vscale, minElementsOp);
@@ -157,10 +156,9 @@ createAllocaForTile(RewriterBase &rewriter, Location loc,
 }
 
 /// Finds or creates an alloca for a spill of a tile.
-static memref::AllocaOp
-getOrCreateTileMemory(RewriterBase &rewriter, Location loc,
-                      FunctionOpInterface func,
-                      arm_sme::ArmSMETileOpInterface tileOp, unsigned tileId) {
+static memref::AllocaOp getOrCreateAllocaForTile(
+    RewriterBase &rewriter, Location loc, FunctionOpInterface func,
+    arm_sme::ArmSMETileOpInterface tileOp, unsigned tileId) {
   // Find an alloca at the top of the function tagged with a
   // 'arm_sme.in_memory_tile_id' that matches `tileId`.
   for (auto &op : func.getBlocks().front()) {
@@ -168,7 +166,7 @@ getOrCreateTileMemory(RewriterBase &rewriter, Location loc,
     if (!alloca)
       continue;
     auto inMemoryTileId = llvm::dyn_cast_or_null<IntegerAttr>(
-        alloca->getDiscardableAttr(kInMemoryTileId));
+        alloca->getDiscardableAttr(kInMemoryTileIdAttr));
     if (!inMemoryTileId)
       continue;
     if (inMemoryTileId.getInt() == tileId)
@@ -176,7 +174,7 @@ getOrCreateTileMemory(RewriterBase &rewriter, Location loc,
   }
   // Otherwise, create a new alloca:
   auto alloca = createAllocaForTile(rewriter, loc, func, tileOp);
-  alloca->setDiscardableAttr(kInMemoryTileId,
+  alloca->setDiscardableAttr(kInMemoryTileIdAttr,
                              rewriter.getI32IntegerAttr(tileId));
   return alloca;
 }
@@ -188,23 +186,24 @@ getOrCreateTileMemory(RewriterBase &rewriter, Location loc,
 ///
 /// Example:
 ///
+///    // Note: <IN MEMORY TILE> = tile ID >= 16.
 ///    arm_sme.tile_op { tile_id = <IN MEMORY TILE> }
 ///
 /// is converted to:
 ///     // At function entry:
-///     %alloca = memref.alloca ... : memref<?x?xty>
+///     %spill = memref.alloca ... : memref<?x?xty>
 ///
 ///     // Around op:
 ///     scf.for %slice_idx {
 ///       %current_slice = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
-///       "arm_sme.intr.ld1h.horiz"(%alloca, %slice_idx)  <{tile_id = 0 : i32}>
-///       vector.store %current_slice, %alloca[%slice_idx, %c0]
+///       "arm_sme.intr.ld1h.horiz"(%spill, %slice_idx)  <{tile_id = 0 : i32}>
+///       vector.store %current_slice, %spill[%slice_idx, %c0]
 ///     }
 ///     arm_sme.tile_op { tile_id = 0 }
 ///     scf.for %slice_idx {
 ///       %current_slice = "arm_sme.intr.read.horiz" ... <{tile_id = 0 : i32}>
-///       "arm_sme.intr.ld1h.horiz"(%alloca, %slice_idx)  <{tile_id = 0 : i32}>
-///       vector.store %current_slice, %alloca[%slice_idx, %c0]
+///       "arm_sme.intr.ld1h.horiz"(%spill, %slice_idx)  <{tile_id = 0 : i32}>
+///       vector.store %current_slice, %spill[%slice_idx, %c0]
 ///     }
 ///
 /// Note that these spills/fills are not inserted earlier as concept of a
@@ -232,20 +231,16 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     // does not already exist).
     auto loc = tileOp.getLoc();
     auto func = tileOp->getParentOfType<FunctionOpInterface>();
-    auto tileAlloca = getOrCreateTileMemory(rewriter, loc, func, tileOp,
-                                            tileOp.getTileId().getInt());
+    auto tileAlloca = getOrCreateAllocaForTile(rewriter, loc, func, tileOp,
+                                               tileOp.getTileId().getInt());
 
     // Step 2. Assign the op a real tile ID.
-    // For simplicity, we always use tile 0.
+    // For simplicity, we always use tile 0 (which always exists).
     auto zeroTileId = rewriter.getI32IntegerAttr(0);
-    {
-      rewriter.startRootUpdate(tileOp);
-      tileOp.setTileId(zeroTileId);
-      rewriter.finalizeRootUpdate(tileOp);
-    }
+    rewriter.updateRootInPlace(tileOp, [&] { tileOp.setTileId(zeroTileId); });
 
     VectorType tileVectorType = tileOp.getTileType();
-    auto sliceType = VectorType::Builder(tileOp.getTileType()).dropDim(0);
+    auto sliceType = VectorType::Builder(tileVectorType).dropDim(0);
     auto emitTileSwap = [&] {
       emitFullTileSwap(rewriter, loc, tileAlloca,
                        *arm_sme::getSMETileType(tileVectorType), sliceType,

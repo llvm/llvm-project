@@ -21,11 +21,11 @@ func.func @use_too_many_tiles(%a: memref<?x?xi16>, %b:  memref<?x?xi16>, %c: mem
   %c0 = arith.constant 0 : index
   %tile_a = arith.constant dense<0> : vector<[8]x[8]xi16>
   %tile_b = arith.constant dense<1> : vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate physical tile to operation, all tile operations will go through memory, expect performance degradation}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile_c = arm_sme.tile_load %a[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate physical tile to operation, all tile operations will go through memory, expect performance degradation}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile_d = arm_sme.tile_load %b[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate physical tile to operation, all tile operations will go through memory, expect performance degradation}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile_e = arm_sme.tile_load %c[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
 
   // CHECK-LABEL: tile_a:
@@ -61,17 +61,17 @@ func.func @main() {
   %svl = call @get_svl() : () -> index
   %svl_h = arith.muli %c16, %svl : index
 
-  %two = arith.constant 2 : i16
-  %three = arith.constant 3 : i16
-  %four = arith.constant 4 : i16
+  %c2 = arith.constant 2 : i16
+  %c3 = arith.constant 3 : i16
+  %c4 = arith.constant 4 : i16
 
   %memA = memref.alloca(%svl_h, %svl_h) : memref<?x?xi16>
   %memB = memref.alloca(%svl_h, %svl_h) : memref<?x?xi16>
   %memC = memref.alloca(%svl_h, %svl_h) : memref<?x?xi16>
 
-  linalg.fill ins(%two : i16) outs(%memA : memref<?x?xi16>)
-  linalg.fill ins(%three : i16) outs(%memB : memref<?x?xi16>)
-  linalg.fill ins(%four : i16) outs(%memC : memref<?x?xi16>)
+  linalg.fill ins(%c2 : i16) outs(%memA : memref<?x?xi16>)
+  linalg.fill ins(%c3 : i16) outs(%memB : memref<?x?xi16>)
+  linalg.fill ins(%c4 : i16) outs(%memC : memref<?x?xi16>)
 
   func.call @use_too_many_tiles(%memA, %memB, %memC) : (memref<?x?xi16>, memref<?x?xi16>, memref<?x?xi16>) -> ()
   return
