@@ -7439,7 +7439,7 @@ TEST_P(ImportAttributes, ImportAligned) {
       ToAST->getASTContext().getTranslationUnitDecl(),
       cxxRecordDecl(hasName("A"), unless(isImplicit())));
   // Ensure that 'struct A' was imported (through reference from attribute of
-  // 'S').
+  // struct 'test').
   EXPECT_TRUE(ToA);
 }
 
