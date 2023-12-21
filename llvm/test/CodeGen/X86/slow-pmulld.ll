@@ -13,8 +13,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq | FileCheck %s --check-prefixes=AVX2,AVX-64,AVX512-64,AVX512DQ-64
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX2,AVX-32,AVX512-32,AVX512BW-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX2,AVX-64,AVX512-64,AVX512BW-64
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s --check-prefixes=AVX2,AVX-32,AVX512-32,KNL-32
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s --check-prefixes=AVX2,AVX-64,AVX512-64,KNL-64
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper,+slow-pmaddwd | FileCheck %s --check-prefixes=AVX2,AVX-32,AVX512-32,KNL-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper,+slow-pmaddwd | FileCheck %s --check-prefixes=AVX2,AVX-64,AVX512-64,KNL-64
 
 ; Make sure that the slow-pmulld feature can be used without SSE4.1.
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=silvermont -mattr=-sse4.1

@@ -1,7 +1,7 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 
 define <8 x double> @loadwidth_insert_extract(ptr %ptr) {
     %b = getelementptr <2 x double>, ptr %ptr, i32 1

@@ -10,7 +10,6 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=ivybridge -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,IVB %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,HSW %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,BDW %s
-# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,KNL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SKX %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake-avx512 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SKX-AVX512 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-client -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ICX %s
@@ -67,12 +66,6 @@ xor %eax, %ebx
 # IVB-NEXT:        [2] Average number of used buffer entries.
 # IVB-NEXT:        [3] Maximum number of used buffer entries.
 # IVB-NEXT:        [4] Total number of buffer entries.
-
-# KNL:             Scheduler's queue usage:
-# KNL-NEXT:        [1] Resource name.
-# KNL-NEXT:        [2] Average number of used buffer entries.
-# KNL-NEXT:        [3] Maximum number of used buffer entries.
-# KNL-NEXT:        [4] Total number of buffer entries.
 
 # SKX:             Scheduler's queue usage:
 # SKX-NEXT:        [1] Resource name.
@@ -144,9 +137,6 @@ xor %eax, %ebx
 
 # IVB:              [1]            [2]        [3]        [4]
 # IVB-NEXT:        SBPortAny        0          1          54
-
-# KNL:              [1]            [2]        [3]        [4]
-# KNL-NEXT:        HWPortAny        0          1          60
 
 # SKX:              [1]            [2]        [3]        [4]
 # SKX-NEXT:        SKLPortAny       0          1          60

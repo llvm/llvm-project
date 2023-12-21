@@ -27,8 +27,6 @@
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=broadwell %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP15 %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=skylake %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP15 %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=skx %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP15 %s
-# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
-# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=knm %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
 
 # Ensure alignment directives also emit sequences of 10, 11 and 15-byte NOPs on processors
 # capable of using long NOPs.
