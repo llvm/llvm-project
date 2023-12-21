@@ -1827,8 +1827,8 @@ public:
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB, bool IsNowait,
                              llvm::Value *DidIt,
-                             const SmallVector<llvm::Value *> &CPVars = {},
-                             const SmallVector<llvm::Function *> &CPFuncs = {});
+                             ArrayRef<llvm::Value *> CPVars = {},
+                             ArrayRef<llvm::Function *> CPFuncs = {});
 
   /// Generator for '#omp master'
   ///
