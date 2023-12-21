@@ -353,6 +353,219 @@ let TargetGuard = "sme2" in {
   def SVBMOPS : Inst<"svbmops_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmops_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
 }
 
+// FMLA/FMLS
+let TargetGuard = "sme2" in {
+  def SVMLA_MULTI_VG1x2_F32 : Inst<"svmla_za32[_{d}]_vg1x2", "vm22", "f", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLA_MULTI_VG1x4_F32 : Inst<"svmla_za32[_{d}]_vg1x4", "vm44", "f", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_MULTI_VG1x2_F32 : Inst<"svmls_za32[_{d}]_vg1x2", "vm22", "f", MergeNone, "aarch64_sme_fmls_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_MULTI_VG1x4_F32 : Inst<"svmls_za32[_{d}]_vg1x4", "vm44", "f", MergeNone, "aarch64_sme_fmls_vg1x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLA_SINGLE_VG1x2_F32 : Inst<"svmla[_single]_za32[_{d}]_vg1x2", "vm2d", "f", MergeNone, "aarch64_sme_fmla_single_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLA_SINGLE_VG1x4_F32 : Inst<"svmla[_single]_za32[_{d}]_vg1x4", "vm4d", "f", MergeNone, "aarch64_sme_fmla_single_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_SINGLE_VG1x2_F32 : Inst<"svmls[_single]_za32[_{d}]_vg1x2", "vm2d", "f", MergeNone, "aarch64_sme_fmls_single_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_SINGLE_VG1x4_F32 : Inst<"svmls[_single]_za32[_{d}]_vg1x4", "vm4d", "f", MergeNone, "aarch64_sme_fmls_single_vg1x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLA_LANE_VG1x2_F32 : Inst<"svmla_lane_za32[_{d}]_vg1x2", "vm2di", "f", MergeNone, "aarch64_sme_fmla_lane_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVMLA_LANE_VG1x4_F32 : Inst<"svmla_lane_za32[_{d}]_vg1x4", "vm4di", "f", MergeNone, "aarch64_sme_fmla_lane_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVMLS_LANE_VG1x2_F32 : Inst<"svmls_lane_za32[_{d}]_vg1x2", "vm2di", "f", MergeNone, "aarch64_sme_fmls_lane_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVMLS_LANE_VG1x4_F32 : Inst<"svmls_lane_za32[_{d}]_vg1x4", "vm4di", "f", MergeNone, "aarch64_sme_fmls_lane_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+}
+
+let TargetGuard = "sme2,sme-f64f64" in {
+  def SVMLA_MULTI_VG1x2_F64 : Inst<"svmla_za64[_{d}]_vg1x2", "vm22", "d", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLA_MULTI_VG1x4_F64 : Inst<"svmla_za64[_{d}]_vg1x4", "vm44", "d", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_MULTI_VG1x2_F64 : Inst<"svmls_za64[_{d}]_vg1x2", "vm22", "d", MergeNone, "aarch64_sme_fmls_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_MULTI_VG1x4_F64 : Inst<"svmls_za64[_{d}]_vg1x4", "vm44", "d", MergeNone, "aarch64_sme_fmls_vg1x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLA_SINGLE_VG1x2_F64 : Inst<"svmla[_single]_za64[_{d}]_vg1x2", "vm2d", "d", MergeNone, "aarch64_sme_fmla_single_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLA_SINGLE_VG1x4_F64 : Inst<"svmla[_single]_za64[_{d}]_vg1x4", "vm4d", "d", MergeNone, "aarch64_sme_fmla_single_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_SINGLE_VG1x2_F64 : Inst<"svmls[_single]_za64[_{d}]_vg1x2", "vm2d", "d", MergeNone, "aarch64_sme_fmls_single_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLS_SINGLE_VG1x4_F64 : Inst<"svmls[_single]_za64[_{d}]_vg1x4", "vm4d", "d", MergeNone, "aarch64_sme_fmls_single_vg1x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLA_LANE_VG1x2_F64 : Inst<"svmla_lane_za64[_{d}]_vg1x2", "vm2di", "d", MergeNone, "aarch64_sme_fmla_lane_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVMLA_LANE_VG1x4_F64 : Inst<"svmla_lane_za64[_{d}]_vg1x4", "vm4di", "d", MergeNone, "aarch64_sme_fmla_lane_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVMLS_LANE_VG1x2_F64 : Inst<"svmls_lane_za64[_{d}]_vg1x2", "vm2di", "d", MergeNone, "aarch64_sme_fmls_lane_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVMLS_LANE_VG1x4_F64 : Inst<"svmls_lane_za64[_{d}]_vg1x4", "vm4di", "d", MergeNone, "aarch64_sme_fmls_lane_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+}
+
+// FMLAL/FMLSL/UMLAL/SMLAL
+// SMLALL/UMLALL/USMLALL/SUMLALL
+let TargetGuard = "sme2" in {
+  // MULTI MLAL
+  def SVMLAL_MULTI_VG2x2_F16 : Inst<"svmla_za32[_{d}]_vg2x2", "vm22", "bh", MergeNone, "aarch64_sme_fmlal_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG2x4_F16 : Inst<"svmla_za32[_{d}]_vg2x4", "vm44", "bh", MergeNone, "aarch64_sme_fmlal_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG2x2_S16 : Inst<"svmla_za32[_{d}]_vg2x2", "vm22", "s", MergeNone, "aarch64_sme_smlal_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG2x4_S16 : Inst<"svmla_za32[_{d}]_vg2x4", "vm44", "s", MergeNone, "aarch64_sme_smlal_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG2x2_U16 : Inst<"svmla_za32[_{d}]_vg2x2", "vm22", "Us", MergeNone, "aarch64_sme_umlal_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG2x4_U16 : Inst<"svmla_za32[_{d}]_vg2x4", "vm44", "Us", MergeNone, "aarch64_sme_umlal_vg2x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLAL_MULTI_VG4x2_S8 : Inst<"svmla_za32[_{d}]_vg4x2", "vm22", "c", MergeNone, "aarch64_sme_smla_za32_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG4x2_U8 : Inst<"svmla_za32[_{d}]_vg4x2", "vm22", "Uc", MergeNone, "aarch64_sme_umla_za32_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG4x4_S8 : Inst<"svmla_za32[_{d}]_vg4x4", "vm44", "c", MergeNone, "aarch64_sme_smla_za32_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG4x4_U8 : Inst<"svmla_za32[_{d}]_vg4x4", "vm44", "Uc", MergeNone, "aarch64_sme_umla_za32_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // MULTI MLSL
+  def SVMLSL_MULTI_VG2x2_F16 : Inst<"svmls_za32[_{d}]_vg2x2", "vm22", "bh", MergeNone, "aarch64_sme_fmlsl_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG2x4_F16 : Inst<"svmls_za32[_{d}]_vg2x4", "vm44", "bh", MergeNone, "aarch64_sme_fmlsl_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG2x2_S16 : Inst<"svmls_za32[_{d}]_vg2x2", "vm22", "s", MergeNone, "aarch64_sme_smlsl_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG2x4_S16 : Inst<"svmls_za32[_{d}]_vg2x4", "vm44", "s", MergeNone, "aarch64_sme_smlsl_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG2x2_U16 : Inst<"svmls_za32[_{d}]_vg2x2", "vm22", "Us", MergeNone, "aarch64_sme_umlsl_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG2x4_U16 : Inst<"svmls_za32[_{d}]_vg2x4", "vm44", "Us", MergeNone, "aarch64_sme_umlsl_vg2x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLSL_MULTI_VG4x2_S8 : Inst<"svmls_za32[_{d}]_vg4x2", "vm22", "c", MergeNone, "aarch64_sme_smls_za32_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG4x2_U8 : Inst<"svmls_za32[_{d}]_vg4x2", "vm22", "Uc", MergeNone, "aarch64_sme_umls_za32_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG4x4_S8 : Inst<"svmls_za32[_{d}]_vg4x4", "vm44", "c", MergeNone, "aarch64_sme_smls_za32_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG4x4_U8 : Inst<"svmls_za32[_{d}]_vg4x4", "vm44", "Uc", MergeNone, "aarch64_sme_umls_za32_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // SINGLE MLAL
+  def SVMLAL_SINGLE_VG2x1_F16 : Inst<"svmla_za32[_{d}]_vg2x1",          "vmdd", "bh", MergeNone, "aarch64_sme_fmlal_single_vg2x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x2_F16 : Inst<"svmla[_single]_za32[_{d}]_vg2x2", "vm2d", "bh", MergeNone, "aarch64_sme_fmlal_single_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x4_F16 : Inst<"svmla[_single]_za32[_{d}]_vg2x4", "vm4d", "bh", MergeNone, "aarch64_sme_fmlal_single_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x1_S16 : Inst<"svmla_za32[_{d}]_vg2x1",          "vmdd", "s", MergeNone, "aarch64_sme_smlal_single_vg2x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x2_S16 : Inst<"svmla[_single]_za32[_{d}]_vg2x2", "vm2d", "s", MergeNone, "aarch64_sme_smlal_single_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x4_S16 : Inst<"svmla[_single]_za32[_{d}]_vg2x4", "vm4d", "s", MergeNone, "aarch64_sme_smlal_single_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x1_U16 : Inst<"svmla_za32[_{d}]_vg2x1",          "vmdd", "Us", MergeNone, "aarch64_sme_umlal_single_vg2x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x2_U16 : Inst<"svmla[_single]_za32[_{d}]_vg2x2", "vm2d", "Us", MergeNone, "aarch64_sme_umlal_single_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG2x4_U16 : Inst<"svmla[_single]_za32[_{d}]_vg2x4", "vm4d", "Us", MergeNone, "aarch64_sme_umlal_single_vg2x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLAL_SINGLE_VG4x1_S8  : Inst<"svmla_za32[_{d}]_vg4x1",          "vmdd", "c", MergeNone, "aarch64_sme_smla_za32_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x1_U8  : Inst<"svmla_za32[_{d}]_vg4x1",          "vmdd", "Uc", MergeNone, "aarch64_sme_umla_za32_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x2_S8  : Inst<"svmla[_single]_za32[_{d}]_vg4x2", "vm2d", "c", MergeNone, "aarch64_sme_smla_za32_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x2_U8  : Inst<"svmla[_single]_za32[_{d}]_vg4x2", "vm2d", "Uc", MergeNone, "aarch64_sme_umla_za32_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x4_S8  : Inst<"svmla[_single]_za32[_{d}]_vg4x4", "vm4d", "c", MergeNone, "aarch64_sme_smla_za32_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x4_U8  : Inst<"svmla[_single]_za32[_{d}]_vg4x4", "vm4d", "Uc", MergeNone, "aarch64_sme_umla_za32_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // SINGLE MLSL
+  def SVMLSL_SINGLE_VG2x1_F16 : Inst<"svmls_za32[_{d}]_vg2x1",          "vmdd", "bh", MergeNone, "aarch64_sme_fmlsl_single_vg2x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x2_F16 : Inst<"svmls[_single]_za32[_{d}]_vg2x2", "vm2d", "bh", MergeNone, "aarch64_sme_fmlsl_single_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x4_F16 : Inst<"svmls[_single]_za32[_{d}]_vg2x4", "vm4d", "bh", MergeNone, "aarch64_sme_fmlsl_single_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x1_S16 : Inst<"svmls_za32[_{d}]_vg2x1",          "vmdd", "s", MergeNone, "aarch64_sme_smlsl_single_vg2x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x2_S16 : Inst<"svmls[_single]_za32[_{d}]_vg2x2", "vm2d", "s", MergeNone, "aarch64_sme_smlsl_single_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x4_S16 : Inst<"svmls[_single]_za32[_{d}]_vg2x4", "vm4d", "s", MergeNone, "aarch64_sme_smlsl_single_vg2x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x1_U16 : Inst<"svmls_za32[_{d}]_vg2x1",          "vmdd", "Us", MergeNone, "aarch64_sme_umlsl_single_vg2x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x2_U16 : Inst<"svmls[_single]_za32[_{d}]_vg2x2", "vm2d", "Us", MergeNone, "aarch64_sme_umlsl_single_vg2x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG2x4_U16 : Inst<"svmls[_single]_za32[_{d}]_vg2x4", "vm4d", "Us", MergeNone, "aarch64_sme_umlsl_single_vg2x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVMLSL_SINGLE_VG4x1_S8  : Inst<"svmls_za32[_{d}]_vg4x1",          "vmdd", "c", MergeNone, "aarch64_sme_smls_za32_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x1_U8  : Inst<"svmls_za32[_{d}]_vg4x1",          "vmdd", "Uc", MergeNone, "aarch64_sme_umls_za32_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x2_S8  : Inst<"svmls[_single]_za32[_{d}]_vg4x2", "vm2d", "c", MergeNone, "aarch64_sme_smls_za32_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x2_U8  : Inst<"svmls[_single]_za32[_{d}]_vg4x2", "vm2d", "Uc", MergeNone, "aarch64_sme_umls_za32_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x4_S8  : Inst<"svmls[_single]_za32[_{d}]_vg4x4", "vm4d", "c", MergeNone, "aarch64_sme_smls_za32_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x4_U8  : Inst<"svmls[_single]_za32[_{d}]_vg4x4", "vm4d", "Uc", MergeNone, "aarch64_sme_umls_za32_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // INDEXED MLAL
+  def SVMLAL_LANE_VG2x1_F16 : Inst<"svmla_lane_za32[_{d}]_vg2x1", "vmddi", "bh", MergeNone, "aarch64_sme_fmlal_lane_vg2x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x2_F16 : Inst<"svmla_lane_za32[_{d}]_vg2x2", "vm2di", "bh", MergeNone, "aarch64_sme_fmlal_lane_vg2x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x4_F16 : Inst<"svmla_lane_za32[_{d}]_vg2x4", "vm4di", "bh", MergeNone, "aarch64_sme_fmlal_lane_vg2x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x1_S16 : Inst<"svmla_lane_za32[_{d}]_vg2x1", "vmddi", "s", MergeNone, "aarch64_sme_smlal_lane_vg2x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x2_S16 : Inst<"svmla_lane_za32[_{d}]_vg2x2", "vm2di", "s", MergeNone, "aarch64_sme_smlal_lane_vg2x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x4_S16 : Inst<"svmla_lane_za32[_{d}]_vg2x4", "vm4di", "s", MergeNone, "aarch64_sme_smlal_lane_vg2x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x1_U16 : Inst<"svmla_lane_za32[_{d}]_vg2x1", "vmddi", "Us", MergeNone, "aarch64_sme_umlal_lane_vg2x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x2_U16 : Inst<"svmla_lane_za32[_{d}]_vg2x2", "vm2di", "Us", MergeNone, "aarch64_sme_umlal_lane_vg2x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG2x4_U16 : Inst<"svmla_lane_za32[_{d}]_vg2x4", "vm4di", "Us", MergeNone, "aarch64_sme_umlal_lane_vg2x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+
+  def SVMLAL_LANE_VG4x1_S8 : Inst<"svmla_lane_za32[_{d}]_vg4x1", "vmddi", "c", MergeNone, "aarch64_sme_smla_za32_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLAL_LANE_VG4x1_U8 : Inst<"svmla_lane_za32[_{d}]_vg4x1", "vmddi", "Uc", MergeNone, "aarch64_sme_umla_za32_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLAL_LANE_VG4x2_S8 : Inst<"svmla_lane_za32[_{d}]_vg4x2", "vm2di", "c", MergeNone, "aarch64_sme_smla_za32_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLAL_LANE_VG4x2_U8 : Inst<"svmla_lane_za32[_{d}]_vg4x2", "vm2di", "Uc", MergeNone, "aarch64_sme_umla_za32_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLAL_LANE_VG4x4_S8 : Inst<"svmla_lane_za32[_{d}]_vg4x4", "vm4di", "c", MergeNone, "aarch64_sme_smla_za32_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLAL_LANE_VG4x4_U8 : Inst<"svmla_lane_za32[_{d}]_vg4x4", "vm4di", "Uc", MergeNone, "aarch64_sme_umla_za32_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+
+  // INDEXED MLSL
+  def SVMLSL_LANE_VG2x1_F16 : Inst<"svmls_lane_za32[_{d}]_vg2x1", "vmddi", "bh", MergeNone, "aarch64_sme_fmlsl_lane_vg2x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x2_F16 : Inst<"svmls_lane_za32[_{d}]_vg2x2", "vm2di", "bh", MergeNone, "aarch64_sme_fmlsl_lane_vg2x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x4_F16 : Inst<"svmls_lane_za32[_{d}]_vg2x4", "vm4di", "bh", MergeNone, "aarch64_sme_fmlsl_lane_vg2x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x1_S16 : Inst<"svmls_lane_za32[_{d}]_vg2x1", "vmddi", "s", MergeNone, "aarch64_sme_smlsl_lane_vg2x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x2_S16 : Inst<"svmls_lane_za32[_{d}]_vg2x2", "vm2di", "s", MergeNone, "aarch64_sme_smlsl_lane_vg2x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x4_S16 : Inst<"svmls_lane_za32[_{d}]_vg2x4", "vm4di", "s", MergeNone, "aarch64_sme_smlsl_lane_vg2x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x1_U16 : Inst<"svmls_lane_za32[_{d}]_vg2x1", "vmddi", "Us", MergeNone, "aarch64_sme_umlsl_lane_vg2x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x2_U16 : Inst<"svmls_lane_za32[_{d}]_vg2x2", "vm2di", "Us", MergeNone, "aarch64_sme_umlsl_lane_vg2x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG2x4_U16 : Inst<"svmls_lane_za32[_{d}]_vg2x4", "vm4di", "Us", MergeNone, "aarch64_sme_umlsl_lane_vg2x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+
+  def SVMLSL_LANE_VG4x1_S8 : Inst<"svmls_lane_za32[_{d}]_vg4x1", "vmddi", "c", MergeNone, "aarch64_sme_smls_za32_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLSL_LANE_VG4x1_U8 : Inst<"svmls_lane_za32[_{d}]_vg4x1", "vmddi", "Uc", MergeNone, "aarch64_sme_umls_za32_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLSL_LANE_VG4x2_S8 : Inst<"svmls_lane_za32[_{d}]_vg4x2", "vm2di", "c", MergeNone, "aarch64_sme_smls_za32_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLSL_LANE_VG4x2_U8 : Inst<"svmls_lane_za32[_{d}]_vg4x2", "vm2di", "Uc", MergeNone, "aarch64_sme_umls_za32_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLSL_LANE_VG4x4_S8 : Inst<"svmls_lane_za32[_{d}]_vg4x4", "vm4di", "c", MergeNone, "aarch64_sme_smls_za32_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLSL_LANE_VG4x4_U8 : Inst<"svmls_lane_za32[_{d}]_vg4x4", "vm4di", "Uc", MergeNone, "aarch64_sme_umls_za32_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+
+  // SINGLE SUMLALL
+  // Single sumla maps to usmla, with zn & zm operands swapped
+  def SVSUMLALL_SINGLE_VG4x1 : Inst<"svsumla_za32[_{d}]_vg4x1",          "vmdu",   "c", MergeNone, "aarch64_sme_usmla_za32_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+
+  def SVSUMLALL_SINGLE_VG4x2 : Inst<"svsumla[_single]_za32[_{d}]_vg4x2", "vm2.du", "c", MergeNone, "aarch64_sme_sumla_za32_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVSUMLALL_SINGLE_VG4x4 : Inst<"svsumla[_single]_za32[_{d}]_vg4x4", "vm4.du", "c", MergeNone, "aarch64_sme_sumla_za32_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // Multi-multi sumla builtins are mapped to usmla, with zn & zm operands swapped
+  def SVSUMLALL_MULTI_VG4x2 : Inst<"svsumla_za32[_{d}]_vg4x2", "vm2.d2.u", "c", MergeNone, "aarch64_sme_usmla_za32_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVSUMLALL_MULTI_VG4x4 : Inst<"svsumla_za32[_{d}]_vg4x4", "vm4.d4.u", "c", MergeNone, "aarch64_sme_usmla_za32_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // INDEXED SUMLALL
+  def SVSUMLALL_LANE_VG4x1 : Inst<"svsumla_lane_za32[_{d}]_vg4x1", "vmdui", "c", MergeNone, "aarch64_sme_sumla_za32_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVSUMLALL_LANE_VG4x2 : Inst<"svsumla_lane_za32[_{d}]_vg4x2", "vm2ui", "c", MergeNone, "aarch64_sme_sumla_za32_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVSUMLALL_LANE_VG4x4 : Inst<"svsumla_lane_za32[_{d}]_vg4x4", "vm4ui", "c", MergeNone, "aarch64_sme_sumla_za32_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+
+  // SINGLE USMLALL
+  def SVUSMLALL_SINGLE_VG4x1 : Inst<"svusmla_za32[_{d}]_vg4x1",          "vmdx",   "Uc", MergeNone, "aarch64_sme_usmla_za32_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVUSMLALL_SINGLE_VG4x2 : Inst<"svusmla[_single]_za32[_{d}]_vg4x2", "vm2.dx", "Uc", MergeNone, "aarch64_sme_usmla_za32_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVUSMLALL_SINGLE_VG4x4 : Inst<"svusmla[_single]_za32[_{d}]_vg4x4", "vm4.dx", "Uc", MergeNone, "aarch64_sme_usmla_za32_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // MULTI USMLALL
+  def SVUSMLALL_MULTI_VG4x2 : Inst<"svusmla_za32[_{d}]_vg4x2", "vm2.d2.x", "Uc", MergeNone, "aarch64_sme_usmla_za32_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVUSMLALL_MULTI_VG4x4 : Inst<"svusmla_za32[_{d}]_vg4x4", "vm4.d4.x", "Uc", MergeNone, "aarch64_sme_usmla_za32_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // INDEXED USMLALL
+  def SVUSMLALL_LANE_VG4x1 : Inst<"svusmla_lane_za32[_{d}]_vg4x1", "vmdxi", "Uc", MergeNone, "aarch64_sme_usmla_za32_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVUSMLALL_LANE_VG4x2 : Inst<"svusmla_lane_za32[_{d}]_vg4x2", "vm2xi", "Uc", MergeNone, "aarch64_sme_usmla_za32_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVUSMLALL_LANE_VG4x4 : Inst<"svusmla_lane_za32[_{d}]_vg4x4", "vm4xi", "Uc", MergeNone, "aarch64_sme_usmla_za32_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_15>]>;
+}
+
+let TargetGuard = "sme2,sme-i16i64" in {
+  // MULTI MLAL
+  def SVMLAL_MULTI_VG4x2_S16 : Inst<"svmla_za64[_{d}]_vg4x2", "vm22", "s", MergeNone, "aarch64_sme_smla_za64_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG4x2_U16 : Inst<"svmla_za64[_{d}]_vg4x2", "vm22", "Us", MergeNone, "aarch64_sme_umla_za64_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG4x4_S16 : Inst<"svmla_za64[_{d}]_vg4x4", "vm44", "s", MergeNone, "aarch64_sme_smla_za64_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_MULTI_VG4x4_U16 : Inst<"svmla_za64[_{d}]_vg4x4", "vm44", "Us", MergeNone, "aarch64_sme_umla_za64_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // MULTI MLSL
+  def SVMLSL_MULTI_VG4x2_S16 : Inst<"svmls_za64[_{d}]_vg4x2", "vm22", "s", MergeNone, "aarch64_sme_smls_za64_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG4x2_U16 : Inst<"svmls_za64[_{d}]_vg4x2", "vm22", "Us", MergeNone, "aarch64_sme_umls_za64_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG4x4_S16 : Inst<"svmls_za64[_{d}]_vg4x4", "vm44", "s", MergeNone, "aarch64_sme_smls_za64_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_MULTI_VG4x4_U16 : Inst<"svmls_za64[_{d}]_vg4x4", "vm44", "Us", MergeNone, "aarch64_sme_umls_za64_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // SINGLE MLAL
+  def SVMLAL_SINGLE_VG4x1_S16 : Inst<"svmla_za64[_{d}]_vg4x1",          "vmdd", "s", MergeNone, "aarch64_sme_smla_za64_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x1_U16 : Inst<"svmla_za64[_{d}]_vg4x1",          "vmdd", "Us", MergeNone, "aarch64_sme_umla_za64_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x2_S16 : Inst<"svmla[_single]_za64[_{d}]_vg4x2", "vm2d", "s", MergeNone, "aarch64_sme_smla_za64_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x2_U16 : Inst<"svmla[_single]_za64[_{d}]_vg4x2", "vm2d", "Us", MergeNone, "aarch64_sme_umla_za64_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x4_S16 : Inst<"svmla[_single]_za64[_{d}]_vg4x4", "vm4d", "s", MergeNone, "aarch64_sme_smla_za64_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLAL_SINGLE_VG4x4_U16 : Inst<"svmla[_single]_za64[_{d}]_vg4x4", "vm4d", "Us", MergeNone, "aarch64_sme_umla_za64_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // SINGLE MLSL
+  def SVMLSL_SINGLE_VG4x1_S16 : Inst<"svmls_za64[_{d}]_vg4x1",          "vmdd", "s", MergeNone, "aarch64_sme_smls_za64_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x1_U16 : Inst<"svmls_za64[_{d}]_vg4x1",          "vmdd", "Us", MergeNone, "aarch64_sme_umls_za64_single_vg4x1", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x2_S16 : Inst<"svmls[_single]_za64[_{d}]_vg4x2", "vm2d", "s", MergeNone, "aarch64_sme_smls_za64_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x2_U16 : Inst<"svmls[_single]_za64[_{d}]_vg4x2", "vm2d", "Us", MergeNone, "aarch64_sme_umls_za64_single_vg4x2", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x4_S16 : Inst<"svmls[_single]_za64[_{d}]_vg4x4", "vm4d", "s", MergeNone, "aarch64_sme_smls_za64_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+  def SVMLSL_SINGLE_VG4x4_U16 : Inst<"svmls[_single]_za64[_{d}]_vg4x4", "vm4d", "Us", MergeNone, "aarch64_sme_umls_za64_single_vg4x4", [IsStreaming, IsSharedZA], []>;
+
+  // INDEXED MLAL
+  def SVMLAL_LANE_VG4x1_S16 : Inst<"svmla_lane_za64[_{d}]_vg4x1", "vmddi", "s", MergeNone, "aarch64_sme_smla_za64_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG4x1_U16 : Inst<"svmla_lane_za64[_{d}]_vg4x1", "vmddi", "Us", MergeNone, "aarch64_sme_umla_za64_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG4x2_S16 : Inst<"svmla_lane_za64[_{d}]_vg4x2", "vm2di", "s", MergeNone, "aarch64_sme_smla_za64_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG4x2_U16 : Inst<"svmla_lane_za64[_{d}]_vg4x2", "vm2di", "Us", MergeNone, "aarch64_sme_umla_za64_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG4x4_S16 : Inst<"svmla_lane_za64[_{d}]_vg4x4", "vm4di", "s", MergeNone, "aarch64_sme_smla_za64_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLAL_LANE_VG4x4_U16 : Inst<"svmla_lane_za64[_{d}]_vg4x4", "vm4di", "Us", MergeNone, "aarch64_sme_umla_za64_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+
+  // INDEXED MLSL
+  def SVMLSL_LANE_VG4x1_S16 : Inst<"svmls_lane_za64[_{d}]_vg4x1", "vmddi", "s", MergeNone, "aarch64_sme_smls_za64_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG4x1_U16 : Inst<"svmls_lane_za64[_{d}]_vg4x1", "vmddi", "Us", MergeNone, "aarch64_sme_umls_za64_lane_vg4x1", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG4x2_S16 : Inst<"svmls_lane_za64[_{d}]_vg4x2", "vm2di", "s", MergeNone, "aarch64_sme_smls_za64_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG4x2_U16 : Inst<"svmls_lane_za64[_{d}]_vg4x2", "vm2di", "Us", MergeNone, "aarch64_sme_umls_za64_lane_vg4x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG4x4_S16 : Inst<"svmls_lane_za64[_{d}]_vg4x4", "vm4di", "s", MergeNone, "aarch64_sme_smls_za64_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLSL_LANE_VG4x4_U16 : Inst<"svmls_lane_za64[_{d}]_vg4x4", "vm4di", "Us", MergeNone, "aarch64_sme_umls_za64_lane_vg4x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_7>]>;
+}
+
 //
 // Spill and fill of ZT0
 //
