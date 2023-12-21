@@ -124,4 +124,10 @@
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #define LLVM_ENABLE_DIA_SDK 0
 
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#define HAVE_DLFCN_H 1
+
+/* Define if dladdr() is available on this platform. */
+#define HAVE_DLADDR 1
+
 #endif

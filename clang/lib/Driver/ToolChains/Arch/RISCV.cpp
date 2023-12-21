@@ -45,6 +45,10 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   (*ISAInfo)->toFeatures(
       Features, [&Args](const Twine &Str) { return Args.MakeArgString(Str); },
       /*AddAllExtensions=*/true);
+
+  if (EnableExperimentalExtensions)
+    Features.push_back(Args.MakeArgString("+experimental"));
+
   return true;
 }
 

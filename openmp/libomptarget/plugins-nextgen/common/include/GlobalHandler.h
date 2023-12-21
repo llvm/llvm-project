@@ -89,9 +89,6 @@ public:
 /// global metadata (size, addr) from the device.
 /// \see getGlobalMetadataFromDevice
 class GenericGlobalHandlerTy {
-  /// Map to store the ELF object files that have been loaded.
-  llvm::DenseMap<int32_t, ELF64LEObjectFile> ELFObjectFiles;
-
   /// Actually move memory between host and device. See readGlobalFromDevice and
   /// writeGlobalToDevice for the interface description.
   Error moveGlobalBetweenDeviceAndHost(GenericDeviceTy &Device,
@@ -109,10 +106,8 @@ class GenericGlobalHandlerTy {
 public:
   virtual ~GenericGlobalHandlerTy() {}
 
-  /// Get the cached ELF64LEObjectFile previosuly created for a specific
-  /// device image or create it if did not exist.
-  const ELF64LEObjectFile *
-  getOrCreateELFObjectFile(const GenericDeviceTy &Device, DeviceImageTy &Image);
+  /// Helper function for getting an ELF from a device image.
+  Expected<ELF64LEObjectFile> getELFObjectFile(DeviceImageTy &Image);
 
   /// Returns whether the symbol named \p SymName is present in the given \p
   /// Image.

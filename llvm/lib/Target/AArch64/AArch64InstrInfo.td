@@ -289,6 +289,8 @@ def HasCHK           : Predicate<"Subtarget->hasCHK()">,
                        AssemblerPredicateWithAll<(all_of FeatureCHK), "chk">;
 def HasGCS           : Predicate<"Subtarget->hasGCS()">,
                        AssemblerPredicateWithAll<(all_of FeatureGCS), "gcs">;
+def HasCPA           : Predicate<"Subtarget->hasCPA()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -6480,23 +6482,23 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 // f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, 0)))),
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, 0)))),
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if
 // the lane number is anything other than zero.
-def : Pat<(vector_extract (v2f64 V128:$Rn), 0),
+def : Pat<(f64 (vector_extract (v2f64 V128:$Rn), (i64 0))),
           (f64 (EXTRACT_SUBREG V128:$Rn, dsub))>;
-def : Pat<(vector_extract (v4f32 V128:$Rn), 0),
+def : Pat<(f32 (vector_extract (v4f32 V128:$Rn), (i64 0))),
           (f32 (EXTRACT_SUBREG V128:$Rn, ssub))>;
-def : Pat<(vector_extract (v8f16 V128:$Rn), 0),
+def : Pat<(f16 (vector_extract (v8f16 V128:$Rn), (i64 0))),
           (f16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
-def : Pat<(vector_extract (v8bf16 V128:$Rn), 0),
+def : Pat<(bf16 (vector_extract (v8bf16 V128:$Rn), (i64 0))),
           (bf16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
 
 
@@ -9402,6 +9404,10 @@ let Predicates = [HasD128] in {
   }
 }
 
+//===----------------------------===//
+// 2023 Architecture Extensions:
+//===----------------------------===//
+
 let Predicates = [HasFP8] in {
   defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
   defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
@@ -9442,6 +9448,19 @@ let Predicates = [HasFP8DOT4] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
 } // End let Predicates = [HasFP8DOT4]
+
+//===----------------------------------------------------------------------===//
+// Checked Pointer Arithmetic (FEAT_CPA)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasCPA] in {
+  // Scalar add/subtract
+  defm ADDPT : AddSubCPA<0, "addpt">;
+  defm SUBPT : AddSubCPA<1, "subpt">;
+
+  // Scalar multiply-add/subtract
+  def MADDPT : MulAccumCPA<0, "maddpt">;
+  def MSUBPT : MulAccumCPA<1, "msubpt">;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

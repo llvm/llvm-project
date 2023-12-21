@@ -695,6 +695,11 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC
 ```
 
+### Library subroutine 
+```
+CALL GETLOG(USRNAME)
+```
+
 ## Intrinsic Procedure Name Resolution
 
 When the name of a procedure in a program is the same as the one of an intrinsic
@@ -754,6 +759,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
+| Library subroutines | GETLOG|
 
 
 ### Intrinsic Function Folding

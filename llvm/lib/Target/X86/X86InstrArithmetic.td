@@ -121,19 +121,6 @@ class BinOpRM<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
         mnemonic, "{$src2, $src1|$src1, $src2}", pattern>,
     Sched<[sched.Folded, sched.ReadAfterFold]>;
 
-// BinOpRM_ImplicitUse - Binary instructions with inputs "reg, [mem]".
-// There is an implicit register read at the end of the operand sequence.
-class BinOpRM_ImplicitUse<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                          dag outlist, X86FoldableSchedWrite sched, list<dag> pattern>
-  : ITy<opcode, MRMSrcMem, typeinfo, outlist,
-        (ins typeinfo.RegClass:$src1, typeinfo.MemOperand:$src2),
-        mnemonic, "{$src2, $src1|$src1, $src2}", pattern>,
-    Sched<[sched.Folded, sched.ReadAfterFold,
-           // base, scale, index, offset, segment.
-           ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-           // implicit register read.
-           sched.ReadAfterFold]>;
-
 // BinOpRM_F - Binary instructions with inputs "reg, [mem]", where the pattern
 // has just a EFLAGS as a result.
 class BinOpRM_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -154,11 +141,16 @@ class BinOpRM_RF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 // has both a regclass and EFLAGS as a result, and has EFLAGS as input.
 class BinOpRM_RFF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                   SDNode opnode>
-  : BinOpRM_ImplicitUse<opcode, mnemonic, typeinfo,
-                        (outs typeinfo.RegClass:$dst), WriteADC,
-                        [(set typeinfo.RegClass:$dst, EFLAGS,
-                         (opnode typeinfo.RegClass:$src1,
-                         (typeinfo.LoadNode addr:$src2), EFLAGS))]>;
+  : BinOpRM<opcode, mnemonic, typeinfo, (outs typeinfo.RegClass:$dst), WriteADC,
+            [(set typeinfo.RegClass:$dst, EFLAGS,
+             (opnode typeinfo.RegClass:$src1, (typeinfo.LoadNode addr:$src2),
+             EFLAGS))]> {
+  let SchedRW = [WriteADC.Folded, WriteADC.ReadAfterFold,
+                 // base, scale, index, offset, segment.
+                 ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                 // implicit register read.
+                 WriteADC.ReadAfterFold];
+}
 
 // BinOpRI - Binary instructions with inputs "reg, imm".
 class BinOpRI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,

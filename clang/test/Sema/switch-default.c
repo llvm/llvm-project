@@ -15,3 +15,14 @@ int f2(int a) {
   }
   return a;
 }
+
+// Warn even completely covered Enum cases(GCC compatibility).
+enum E { A, B };
+enum E check_enum(enum E e) {
+  switch (e) {                // expected-warning {{'switch' missing 'default' label}}
+    case A: break;
+    case B: break;
+  }
+  return e;
+}
+
