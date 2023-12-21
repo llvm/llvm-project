@@ -128,10 +128,10 @@ bool SparcRegisterInfo::isReservedReg(const MachineFunction &MF,
 
 bool SparcRegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
   bool Outgoing =
-      llvm::any_of(*SP::GPROutgoingArgRegClass.MC,
+      llvm::any_of(SP::GPROutgoingArgRegClass,
                    [this, &MF](MCPhysReg r) { return isReservedReg(MF, r); });
   bool Incoming =
-      llvm::any_of(*SP::GPRIncomingArgRegClass.MC,
+      llvm::any_of(SP::GPRIncomingArgRegClass,
                    [this, &MF](MCPhysReg r) { return isReservedReg(MF, r); });
   return Outgoing || Incoming;
 }

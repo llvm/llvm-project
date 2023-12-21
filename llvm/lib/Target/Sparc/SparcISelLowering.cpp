@@ -1130,18 +1130,9 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
     .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
     .Default(0);
 
-  const SparcRegisterInfo *MRI = Subtarget->getRegisterInfo();
-  unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-  if (!MRI->isReservedReg(MF, Reg)) {
-    bool IsG = DwarfRegNum < 8, IsO = DwarfRegNum >= 8 && DwarfRegNum < 16,
-         IsL = DwarfRegNum >= 16 && DwarfRegNum < 24, IsI = DwarfRegNum >= 24;
-    unsigned NumInBank = DwarfRegNum % 8;
-    if ((IsG && !Subtarget->isGRegisterReserved(NumInBank)) ||
-        (IsO && !Subtarget->isORegisterReserved(NumInBank)) ||
-        (IsL && !Subtarget->isLRegisterReserved(NumInBank)) ||
-        (IsI && !Subtarget->isIRegisterReserved(NumInBank)))
-      Reg = 0;
-  }
+  const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  if (!TRI->isReservedReg(MF, Reg))
+    Reg = 0;
 
   if (Reg)
     return Reg;
