@@ -147,7 +147,7 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
                   Operand immoperand, SDPatternOperator immoperator,
                   SDPatternOperator immnosuoperator, Operand imm8operand,
                   SDPatternOperator imm8operator, SDPatternOperator imm8nosuoperator,
-                  bit hasOddOpcode, OperandSize opSize,
+                  bit hasEvenOpcode, OperandSize opSize,
                   bit hasREX_W> {
   /// VT - This is the value type itself.
   ValueType VT = vt;
@@ -197,10 +197,10 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
 
   SDPatternOperator Imm8NoSuOperator = imm8nosuoperator;
 
-  /// HasOddOpcode - This bit is true if the instruction should have an odd (as
-  /// opposed to even) opcode.  Operations on i8 are usually even, operations on
-  /// other datatypes are odd.
-  bit HasOddOpcode = hasOddOpcode;
+  /// HasEvenOpcode - This bit is true if the instruction should have an even (as
+  /// opposed to odd) opcode.  Operations on i8 are even, operations on
+  /// other datatypes are usually odd.
+  bit HasEvenOpcode = hasEvenOpcode;
 
   /// OpSize - Selects whether the instruction needs a 0x66 prefix based on
   /// 16-bit vs 32-bit mode. i8/i64 set this to OpSizeFixed. i16 sets this
@@ -216,16 +216,16 @@ def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
 
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem, Imm8, i8imm,
                        imm_su, imm, i8imm, invalid_node, invalid_node,
-                       0, OpSizeFixed, 0>;
+                       1, OpSizeFixed, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem, Imm16, i16imm,
                        imm_su, imm, i16i8imm, i16immSExt8_su, i16immSExt8,
-                       1, OpSize16, 0>;
+                       0, OpSize16, 0>;
 def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem, Imm32, i32imm,
                        imm_su, imm, i32i8imm, i32immSExt8_su, i32immSExt8,
-                       1, OpSize32, 0>;
+                       0, OpSize32, 0>;
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem, Imm32S, i64i32imm,
                       i64immSExt32_su, i64immSExt32, i64i8imm, i64immSExt8_su,
-                      i64immSExt8, 1, OpSizeFixed, 1>;
+                      i64immSExt8, 0, OpSizeFixed, 1>;
 
 // Group template arguments that can be derived from the vector type (EltNum x
 // EltVT).  These are things like the register class for the writemask, etc.
@@ -992,8 +992,8 @@ class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
           string mnemonic, string args, list<dag> pattern>
   : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
-       opcode{3}, opcode{2}, opcode{1}, typeinfo.HasOddOpcode },
-      f, outs, ins,
+       opcode{3}, opcode{2}, opcode{1},
+       !if(!eq(typeinfo.HasEvenOpcode, 1), 0, opcode{0})}, f, outs, ins,
       !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
 
   let hasSideEffects = 0;

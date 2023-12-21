@@ -1096,6 +1096,54 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
+std::optional<std::pair<Value *, Value *>>
+InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
+  if (LHS->getParent() != RHS->getParent())
+    return std::nullopt;
+
+  if (LHS->getNumIncomingValues() < 2)
+    return std::nullopt;
+
+  if (!equal(LHS->blocks(), RHS->blocks()))
+    return std::nullopt;
+
+  Value *L0 = LHS->getIncomingValue(0);
+  Value *R0 = RHS->getIncomingValue(0);
+
+  for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
+    Value *L1 = LHS->getIncomingValue(I);
+    Value *R1 = RHS->getIncomingValue(I);
+
+    if ((L0 == L1 && R0 == R1) || (L0 == R1 && R0 == L1))
+      continue;
+
+    return std::nullopt;
+  }
+
+  return std::optional(std::pair(L0, R0));
+}
+
+Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
+                                                        Value *Op0,
+                                                        Value *Op1) {
+  assert(I.isCommutative() && "Instruction should be commutative");
+
+  PHINode *LHS = dyn_cast<PHINode>(Op0);
+  PHINode *RHS = dyn_cast<PHINode>(Op1);
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
+    Value *BI = Builder.CreateBinOp(I.getOpcode(), P->first, P->second);
+    if (auto *BO = dyn_cast<BinaryOperator>(BI))
+      BO->copyIRFlags(&I);
+    return BI;
+  }
+
+  return nullptr;
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1528,6 +1576,11 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   if (BO.getParent() != Phi0->getParent() ||
       BO.getParent() != Phi1->getParent())
     return nullptr;
+
+  if (BO.isCommutative()) {
+    if (Value *V = SimplifyPhiCommutativeBinaryOp(BO, Phi0, Phi1))
+      return replaceInstUsesWith(BO, V);
+  }
 
   // Fold if there is at least one specific constant value in phi0 or phi1's
   // incoming values that comes from the same block and this specific constant
