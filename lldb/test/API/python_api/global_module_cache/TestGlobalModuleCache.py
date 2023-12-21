@@ -27,8 +27,12 @@ class GlobalModuleCacheTestCase(TestBase):
         time.sleep(2)
         try:
             # Make sure dst is writeable before trying to write to it.
-            subprocess.run(['chmod', '777', dst], stdin=None,
-                           capture_output=False, encoding='utf-8')
+            subprocess.run(
+                ['chmod', '777', dst],
+                stdin=None,
+                capture_output=False,
+                encoding='utf-8'
+            )
             shutil.copy(src, dst)
         except:
             self.fail(f"Could not copy {src} to {dst}")
