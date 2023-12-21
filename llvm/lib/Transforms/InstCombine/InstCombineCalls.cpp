@@ -4251,9 +4251,9 @@ InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
   if (!LHS || !RHS)
     return nullptr;
 
-  if (matchSymmetricPhiNodesPair(LHS, RHS)) {
-    replaceOperand(II, 0, LHS->getIncomingValue(0));
-    replaceOperand(II, 1, LHS->getIncomingValue(1));
+  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
+    replaceOperand(II, 0, P->first);
+    replaceOperand(II, 1, P->second);
     return &II;
   }
 

@@ -1096,39 +1096,30 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
-bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
+std::optional<std::pair<Value *, Value *>>
+InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
 
   if (LHS->getParent() != RHS->getParent())
-    return false;
-
-  if (LHS->getNumIncomingValues() != RHS->getNumIncomingValues())
-    return false;
+    return std::nullopt;
 
   if (LHS->getNumIncomingValues() < 2)
-    return false;
+    return std::nullopt;
 
   BasicBlock *B0 = LHS->getIncomingBlock(0);
-  if (RHS->getBasicBlockIndex(B0) == -1)
-    return false;
-
   Value *N1 = LHS->getIncomingValueForBlock(B0);
   Value *N2 = RHS->getIncomingValueForBlock(B0);
 
   for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
     BasicBlock *B1 = LHS->getIncomingBlock(I);
-
-    if (RHS->getBasicBlockIndex(B1) == -1)
-      return false;
-
     Value *N3 = LHS->getIncomingValueForBlock(B1);
     Value *N4 = RHS->getIncomingValueForBlock(B1);
     if ((N1 == N3 && N2 == N4) || (N1 == N4 && N2 == N3))
       continue;
 
-    return false;
+    return std::nullopt;
   }
 
-  return true;
+  return std::optional(std::pair(N1, N2));
 }
 
 Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
@@ -1142,9 +1133,8 @@ Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
   if (!LHS || !RHS)
     return nullptr;
 
-  if (matchSymmetricPhiNodesPair(LHS, RHS)) {
-    Value *BI = Builder.CreateBinOp(I.getOpcode(), LHS->getIncomingValue(0),
-                                    LHS->getIncomingValue(1));
+  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
+    Value *BI = Builder.CreateBinOp(I.getOpcode(), P->first, P->second);
     if (auto *BO = dyn_cast<BinaryOperator>(BI))
       BO->copyIRFlags(&I);
     return BI;
