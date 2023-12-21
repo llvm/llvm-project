@@ -22,6 +22,7 @@
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
+#include "Utils/ELF.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -1284,7 +1285,16 @@ struct CUDAPluginTy final : public GenericPluginTy {
   }
 
   /// Check whether the image is compatible with the available CUDA devices.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool> isELFCompatible(StringRef Image) const override {
+    auto ElfOrErr =
+        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
+                                  /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+
+    // Get the numeric value for the image's `sm_` value.
+    auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
+
     for (int32_t DevId = 0; DevId < getNumDevices(); ++DevId) {
       CUdevice Device;
       CUresult Res = cuDeviceGet(&Device, DevId);
@@ -1302,16 +1312,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
       if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
         return std::move(Err);
 
-      StringRef ArchStr(Info->Arch);
-      StringRef PrefixStr("sm_");
-      if (!ArchStr.starts_with(PrefixStr))
-        return Plugin::error("Unrecognized image arch %s", ArchStr.data());
+      int32_t ImageMajor = SM / 10;
+      int32_t ImageMinor = SM % 10;
 
-      int32_t ImageMajor = ArchStr[PrefixStr.size() + 0] - '0';
-      int32_t ImageMinor = ArchStr[PrefixStr.size() + 1] - '0';
-
-      // A cubin generated for a certain compute capability is supported to run
-      // on any GPU with the same major revision and same or higher minor
+      // A cubin generated for a certain compute capability is supported to
+      // run on any GPU with the same major revision and same or higher minor
       // revision.
       if (Major != ImageMajor || Minor < ImageMinor)
         return false;

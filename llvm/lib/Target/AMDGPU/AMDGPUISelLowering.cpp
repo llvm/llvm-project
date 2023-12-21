@@ -506,9 +506,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT, MVT::v12f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v12f32, MVT::v12i32);
 
-  // There are no libcalls of any kind.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
-    setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  // Disable most libcalls.
+  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
+    if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
+      setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  }
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
@@ -556,6 +558,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                        ISD::FSUB,       ISD::FNEG,
                        ISD::FABS,       ISD::AssertZext,
                        ISD::AssertSext, ISD::INTRINSIC_WO_CHAIN});
+
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {

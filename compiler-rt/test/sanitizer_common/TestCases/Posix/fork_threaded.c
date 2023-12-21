@@ -15,6 +15,7 @@
 // FIXME: Requires `FutexWait` implementation. See __asan::InstallAtForkHandler.
 // UNSUPPORTED: target={{.*solaris.*}}
 // UNSUPPORTED: target={{.*netbsd.*}}
+// UNSUPPORTED: target={{.*apple.*}}
 
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.

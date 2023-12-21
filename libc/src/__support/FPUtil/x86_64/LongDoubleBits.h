@@ -29,13 +29,16 @@ namespace fputil {
 template <> struct FPBits<long double> : private FloatProperties<long double> {
   using typename FloatProperties<long double>::StorageType;
   using FloatProperties<long double>::TOTAL_LEN;
-  using FloatProperties<long double>::EXP_MANT_MASK;
   using FloatProperties<long double>::EXP_MASK;
   using FloatProperties<long double>::EXP_BIAS;
   using FloatProperties<long double>::EXP_LEN;
   using FloatProperties<long double>::FRACTION_MASK;
   using FloatProperties<long double>::FRACTION_LEN;
+
+private:
   using FloatProperties<long double>::QUIET_NAN_MASK;
+
+public:
   using FloatProperties<long double>::SIGN_MASK;
 
   static constexpr int MAX_EXPONENT = 0x7FFF;

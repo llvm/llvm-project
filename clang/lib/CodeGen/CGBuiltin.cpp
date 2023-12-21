@@ -25,7 +25,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -819,165 +818,6 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
   return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
 }
 
-llvm::Value *
-CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
-                                             llvm::IntegerType *ResType) {
-  // The code generated here calculates the size of a struct with a flexible
-  // array member that uses the counted_by attribute. There are two instances
-  // we handle:
-  //
-  //       struct s {
-  //         unsigned long flags;
-  //         int count;
-  //         int array[] __attribute__((counted_by(count)));
-  //       }
-  //
-  //   1) bdos of the flexible array itself:
-  //
-  //     __builtin_dynamic_object_size(p->array, 1) ==
-  //         p->count * sizeof(*p->array)
-  //
-  //   2) bdos of a pointer into the flexible array:
-  //
-  //     __builtin_dynamic_object_size(&p->array[42], 1) ==
-  //         (p->count - 42) * sizeof(*p->array)
-  //
-  //   2) bdos of the whole struct, including the flexible array:
-  //
-  //     __builtin_dynamic_object_size(p, 1) ==
-  //        max(sizeof(struct s),
-  //            offsetof(struct s, array) + p->count * sizeof(*p->array))
-  //
-  ASTContext &Ctx = getContext();
-  const Expr *Base = E->IgnoreParenImpCasts();
-  const Expr *Idx = nullptr;
-
-  if (const auto *UO = dyn_cast<UnaryOperator>(Base);
-      UO && UO->getOpcode() == UO_AddrOf) {
-    Expr *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
-    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(SubExpr)) {
-      Base = ASE->getBase()->IgnoreParenImpCasts();
-      Idx = ASE->getIdx()->IgnoreParenImpCasts();
-
-      if (const auto *IL = dyn_cast<IntegerLiteral>(Idx)) {
-        int64_t Val = IL->getValue().getSExtValue();
-        if (Val < 0)
-          // __bdos returns 0 for negative indexes into an array in a struct.
-          return getDefaultBuiltinObjectSizeResult(Type, ResType);
-
-        if (Val == 0)
-          // The index is 0, so we don't need to take it into account.
-          Idx = nullptr;
-      }
-    } else {
-      // Potential pointer to another element in the struct.
-      Base = SubExpr;
-    }
-  }
-
-  // Get the flexible array member Decl.
-  const ValueDecl *FAMDecl = nullptr;
-  if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-    // Check if \p Base is referencing the FAM itself.
-    if (const ValueDecl *MD = ME->getMemberDecl()) {
-      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          getLangOpts().getStrictFlexArraysLevel();
-      if (!Decl::isFlexibleArrayMemberLike(
-              Ctx, MD, MD->getType(), StrictFlexArraysLevel,
-              /*IgnoreTemplateOrMacroSubstitution=*/true))
-        return nullptr;
-
-      FAMDecl = MD;
-    }
-  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-    // Check if we're pointing to the whole struct.
-    QualType Ty = DRE->getDecl()->getType();
-    if (Ty->isPointerType())
-      Ty = Ty->getPointeeType();
-
-    if (const auto *RD = Ty->getAsRecordDecl())
-      // Don't use the outer lexical record because the FAM might be in a
-      // different RecordDecl.
-      FAMDecl = FindFlexibleArrayMemberField(Ctx, RD);
-  }
-
-  if (!FAMDecl || !FAMDecl->hasAttr<CountedByAttr>())
-    // No flexible array member found or it doesn't have the "counted_by"
-    // attribute.
-    return nullptr;
-
-  const ValueDecl *CountedByFD = FindCountedByField(Base);
-  if (!CountedByFD)
-    // Can't find the field referenced by the "counted_by" attribute.
-    return nullptr;
-
-  // Build a load of the counted_by field.
-  bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
-  const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
-  Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
-  llvm::Type *CountedByTy = CountedByInst->getType();
-
-  // Build a load of the index and subtract it from the count.
-  Value *IdxInst = nullptr;
-  if (Idx) {
-    bool IdxSigned = Idx->getType()->isSignedIntegerType();
-    IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
-    IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
-                        : Builder.CreateZExtOrTrunc(IdxInst, CountedByTy);
-
-    // We go ahead with the calculation here. If the index turns out to be
-    // negative, we'll catch it at the end.
-    CountedByInst =
-        Builder.CreateSub(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
-  }
-
-  // Calculate how large the flexible array member is in bytes.
-  const ArrayType *ArrayTy = Ctx.getAsArrayType(FAMDecl->getType());
-  CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-  llvm::Constant *ElemSize =
-      llvm::ConstantInt::get(CountedByTy, Size.getQuantity(), IsSigned);
-  Value *FAMSize =
-      Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
-  FAMSize = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
-                     : Builder.CreateZExtOrTrunc(FAMSize, ResType);
-  Value *Res = FAMSize;
-
-  if (isa<DeclRefExpr>(Base)) {
-    // The whole struct is specificed in the __bdos.
-    const RecordDecl *OuterRD =
-        CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
-    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
-
-    // Get the offset of the FAM.
-    CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
-    llvm::Constant *FAMOffset =
-        ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
-    Value *OffsetAndFAMSize =
-        Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
-
-    // Get the full size of the struct.
-    llvm::Constant *SizeofStruct =
-        ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
-
-    // max(sizeof(struct s),
-    //     offsetof(struct s, array) + p->count * sizeof(*p->array))
-    Res = IsSigned
-              ? Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
-                                              OffsetAndFAMSize, SizeofStruct)
-              : Builder.CreateBinaryIntrinsic(llvm::Intrinsic::umax,
-                                              OffsetAndFAMSize, SizeofStruct);
-  }
-
-  // A negative \p IdxInst or \p CountedByInst means that the index lands
-  // outside of the flexible array member. If that's the case, we want to
-  // return 0.
-  Value *Cmp = Builder.CreateIsNotNeg(CountedByInst);
-  if (IdxInst)
-    Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(IdxInst), Cmp);
-
-  return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
-}
-
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///   - A llvm::Argument (if E is a param with the pass_object_size attribute on
@@ -1008,13 +848,6 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
       return EmitLoadOfScalar(DIter->second, /*Volatile=*/false,
                               getContext().getSizeType(), E->getBeginLoc());
     }
-  }
-
-  if (IsDynamic) {
-    // Emit special code for a flexible array member with the "counted_by"
-    // attribute.
-    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
-      return V;
   }
 
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't

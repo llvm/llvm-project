@@ -92,6 +92,7 @@ enum ActionType {
   GenArmSmeBuiltinCG,
   GenArmSmeRangeChecks,
   GenArmSmeStreamingAttrs,
+  GenArmSmeBuiltinZAState,
   GenArmCdeHeader,
   GenArmCdeBuiltinDef,
   GenArmCdeBuiltinSema,
@@ -260,6 +261,8 @@ cl::opt<ActionType> Action(
                    "Generate arm_sme_sema_rangechecks.inc for clang"),
         clEnumValN(GenArmSmeStreamingAttrs, "gen-arm-sme-streaming-attrs",
                    "Generate arm_sme_streaming_attrs.inc for clang"),
+        clEnumValN(GenArmSmeBuiltinZAState, "gen-arm-sme-builtin-za-state",
+                   "Generate arm_sme_builtins_za_state.inc for clang"),
         clEnumValN(GenArmMveHeader, "gen-arm-mve-header",
                    "Generate arm_mve.h for clang"),
         clEnumValN(GenArmMveBuiltinDef, "gen-arm-mve-builtin-def",
@@ -517,6 +520,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenArmSmeStreamingAttrs:
     EmitSmeStreamingAttrs(Records, OS);
+    break;
+  case GenArmSmeBuiltinZAState:
+    EmitSmeBuiltinZAState(Records, OS);
     break;
   case GenArmCdeHeader:
     EmitCdeHeader(Records, OS);

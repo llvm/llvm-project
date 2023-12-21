@@ -632,7 +632,8 @@ static void AttemptToFoldSymbolOffsetDifference(
   // instructions and InSet is false (not expressions in directive like
   // .size/.fill), disable the fast path.
   if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !Asm->getContext().getTargetTriple().isRISCV())) {
+                 !(Asm->getContext().getTargetTriple().isRISCV() ||
+                   Asm->getContext().getTargetTriple().isLoongArch()))) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {

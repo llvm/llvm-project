@@ -1167,7 +1167,6 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           index = left_paren;
         }
       }
-      nan_mantissa |= fputil::FloatProperties<T>::QUIET_NAN_MASK;
       if (result.get_sign()) {
         result = FPBits(result.build_quiet_nan(nan_mantissa));
         result.set_sign(true);

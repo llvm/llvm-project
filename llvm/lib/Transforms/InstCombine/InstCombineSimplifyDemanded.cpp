@@ -1345,8 +1345,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   APInt EltMask(APInt::getAllOnes(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 
-  if (match(V, m_Undef())) {
-    // If the entire vector is undef or poison, just return this info.
+  if (match(V, m_Poison())) {
+    // If the entire vector is poison, just return this info.
     PoisonElts = EltMask;
     return nullptr;
   }
@@ -1520,7 +1520,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
         DemandedElts.isAllOnes()) {
-      if (!match(I->getOperand(1), m_Undef())) {
+      if (!isa<PoisonValue>(I->getOperand(1))) {
         I->setOperand(1, PoisonValue::get(I->getOperand(1)->getType()));
         MadeChange = true;
       }
@@ -1867,10 +1867,10 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     PoisonElts &= PoisonElts2;
   }
 
-  // If we've proven all of the lanes undef, return an undef value.
+  // If we've proven all of the lanes poison, return a poison value.
   // TODO: Intersect w/demanded lanes
   if (PoisonElts.isAllOnes())
-    return UndefValue::get(I->getType());
+    return PoisonValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
 }

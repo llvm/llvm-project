@@ -199,11 +199,6 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
-- Clang now supports the C-only attribute ``counted_by``. When applied to a
-  struct's flexible array member, it points to the struct field that holds the
-  number of elements in the flexible array member. This information can improve
-  the results of the array bound sanitizer and the
-  ``__builtin_dynamic_object_size`` builtin.
 - Enums will now be represented in TBAA metadata using their actual underlying
   integer type. Previously they were treated as chars, which meant they could
   alias with all other types.
@@ -691,6 +686,9 @@ Bug Fixes in This Version
 - Fix an issue where clang doesn't respect detault template arguments that
   are added in a later redeclaration for CTAD.
   Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
+- Fix an issue where CTAD fails for explicit type conversion.
+  Fixes (#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -46,11 +46,6 @@ struct __tgt_device_info {
   void *Device = nullptr;
 };
 
-/// This struct contains information about a given image.
-struct __tgt_image_info {
-  const char *Arch;
-};
-
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {

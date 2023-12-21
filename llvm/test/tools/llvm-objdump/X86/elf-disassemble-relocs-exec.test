@@ -22,11 +22,8 @@
 # CHECK-NEXT:		000000000040000d:  R_X86_64_32	.rodata
 # CHECK-NOT: {{.}}
 
-## FIXME: --disassemble-symbols: remove inline relocs from skipped functions
 #     CHECK2:000000000040000c <text1>:
 #CHECK2-NEXT:  40000c: bf 10 00 40 00               	movl	$4194320, %edi          # imm = 0x400010
-#CHECK2-NEXT:		0000000000400002:  R_X86_64_32	.rodata
-#CHECK2-NEXT:		0000000000400007:  R_X86_64_PLT32	puts-0x4
 #CHECK2-NEXT:		000000000040000d:  R_X86_64_32	.rodata
 #CHECK2-NOT: {{.}}
 

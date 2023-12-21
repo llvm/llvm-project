@@ -366,13 +366,13 @@ func.func @contraction_extra_attrs(%arg0: vector<10xf32>, %arg1: vector<10xf32>)
 #contraction_to_scalar_max_trait = {
   indexing_maps = #contraction_to_scalar_max_accesses,
   iterator_types = ["reduction"],
-  kind = #vector.kind<maxf>
+  kind = #vector.kind<maxnumf>
 }
 // CHECK-LABEL: @contraction_to_scalar_with_max
 func.func @contraction_to_scalar_with_max(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
   // CHECK:      %[[C0:.*]] = arith.constant 0.000000e+00 : f32
   %f0 = arith.constant 0.0: f32
-  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<maxf>} %{{.*}}, %{{.*}}, %[[C0]] : vector<10xf32>, vector<10xf32> into f32
+  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<maxnumf>} %{{.*}}, %{{.*}}, %[[C0]] : vector<10xf32>, vector<10xf32> into f32
   %0 = vector.contract #contraction_to_scalar_max_trait %arg0, %arg1, %f0
     : vector<10xf32>, vector<10xf32> into f32
   // CHECK:      return %[[X]] : f32
@@ -404,7 +404,7 @@ func.func @contraction_to_scalar_with_max(%arg0: vector<10xf32>, %arg1: vector<1
 #contraction_trait2 = {
   indexing_maps = #contraction_accesses1,
   iterator_types = #iterator_types1,
-  kind = #vector.kind<maxf>
+  kind = #vector.kind<maxnumf>
 }
 // CHECK-LABEL: @contraction
 func.func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
@@ -425,7 +425,7 @@ func.func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf3
   %3 = vector.contract #contraction_trait1 %arg4, %arg5, %arg3
       : vector<7x8x16x15xf16>, vector<8x16x7x5xf16> into vector<8x8x15x5xf32>
   // Test contraction with "max" instead of "add".
-  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<maxf>} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
+  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<maxnumf>} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   %4 = vector.contract #contraction_trait2 %arg0, %arg1, %arg3
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   return
@@ -606,10 +606,10 @@ func.func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   vector.reduction <mul>, %arg0 : vector<16xf32> into f32
   // CHECK:    vector.reduction <mul>, %{{.*}}, %{{.*}} : vector<16xf32> into f32
   vector.reduction <mul>, %arg0, %arg1 : vector<16xf32> into f32
-  // CHECK:    vector.reduction <minf>, %{{.*}} : vector<16xf32> into f32
-  vector.reduction <minf>, %arg0 : vector<16xf32> into f32
-  // CHECK:    %[[X0:.*]] = vector.reduction <maxf>, %{{.*}} : vector<16xf32> into f32
-  %0 = vector.reduction <maxf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <minnumf>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <minnumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X0:.*]] = vector.reduction <maxnumf>, %{{.*}} : vector<16xf32> into f32
+  %0 = vector.reduction <maxnumf>, %arg0 : vector<16xf32> into f32
   // CHECK:    vector.reduction <minimumf>, %{{.*}} : vector<16xf32> into f32
   vector.reduction <minimumf>, %arg0 : vector<16xf32> into f32
   // CHECK:    %[[X1:.*]] = vector.reduction <maximumf>, %{{.*}} : vector<16xf32> into f32
@@ -1042,7 +1042,7 @@ func.func @contraction_masked_scalable(%A: vector<3x4xf32>,
 
 // CHECK-LABEL:   func.func @fastmath(
 func.func @fastmath(%x: vector<42xf32>) -> f32 {
-  // CHECK: vector.reduction <minf>, %{{.*}} fastmath<reassoc,nnan,ninf>
-  %min = vector.reduction <minf>, %x fastmath<reassoc,nnan,ninf> : vector<42xf32> into f32
+  // CHECK: vector.reduction <minnumf>, %{{.*}} fastmath<reassoc,nnan,ninf>
+  %min = vector.reduction <minnumf>, %x fastmath<reassoc,nnan,ninf> : vector<42xf32> into f32
   return %min: f32
 }

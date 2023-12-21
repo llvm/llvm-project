@@ -37,16 +37,14 @@ public:
     EXPECT_FP_EQ(func(inf, neg_inf, nan), nan);
 
     // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), T(FPBits(FPBits::MIN_SUBNORMAL)),
-                      T(FPBits(FPBits::MIN_SUBNORMAL))),
+    EXPECT_FP_EQ(func(T(0.5), FPBits::min_denormal(), FPBits::min_denormal()),
                  T(FPBits(StorageType(2))));
     // Test underflow rounding down.
     T v = T(FPBits(FPBits::MIN_NORMAL + StorageType(1)));
-    EXPECT_FP_EQ(func(T(1) / T(FPBits::MIN_NORMAL << 1), v,
-                      T(FPBits(FPBits::MIN_NORMAL))),
-                 v);
+    EXPECT_FP_EQ(
+        func(T(1) / T(FPBits::MIN_NORMAL << 1), v, FPBits::min_normal()), v);
     // Test overflow.
-    T z = T(FPBits(FPBits::MAX_NORMAL));
+    T z = FPBits::max_normal();
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
     // Exact cancellation.
     EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));

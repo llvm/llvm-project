@@ -246,11 +246,27 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
-std::string getPGOFuncName(StringRef RawFuncName,
-                           GlobalValue::LinkageTypes Linkage,
+std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
                            uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
-  return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
+  // Value names may be prefixed with a binary '1' to indicate
+  // that the backend should not modify the symbols due to any platform
+  // naming convention. Do not include that '1' in the PGO profile name.
+  if (Name[0] == '\1')
+    Name = Name.substr(1);
+
+  std::string NewName = std::string(Name);
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    // For local symbols, prepend the main file name to distinguish them.
+    // Do not include the full path in the file name since there's no guarantee
+    // that it will stay the same, e.g., if the files are checked out from
+    // version control in different locations.
+    if (FileName.empty())
+      NewName = NewName.insert(0, "<unknown>:");
+    else
+      NewName = NewName.insert(0, FileName.str() + ":");
+  }
+  return NewName;
 }
 
 // Strip NumPrefix level of directory name from PathNameStr. If the number of
@@ -300,12 +316,10 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
   SmallString<64> Name;
-  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
-    Name.append(FileName.empty() ? "<unknown>" : FileName);
-    Name.append(";");
-  }
+  // FIXME: Mangler's handling is kept outside of `getGlobalIdentifier` for now.
+  // For more details please check issue #74565.
   Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
-  return Name.str().str();
+  return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
@@ -352,6 +366,9 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
+// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// for front-end (Clang, etc) instrumentation.
+// The implementation is kept for profile matching from older profiles.
 // This is similar to `getIRPGOFuncName` except that this function calls
 // 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
@@ -384,7 +401,8 @@ getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
     return PGOFuncName;
-  // Drop the file name including ':'. See also getPGOFuncName.
+  // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
+  // well.
   if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;
