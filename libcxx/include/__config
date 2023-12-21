@@ -1490,15 +1490,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif
 
-// ASan related macros
-// _LIBCPP_IF_ASAN is used to removed ASan related code, whenever compiled without ASan.
-#ifndef _LIBCPP_IF_ASAN
-#  ifndef _LIBCPP_HAS_NO_ASAN
-#    define _LIBCPP_IF_ASAN() if _LIBCPP_CONSTEXPR (true)
-#  else
-#    define _LIBCPP_IF_ASAN() if _LIBCPP_CONSTEXPR (false)
-#  endif
-#endif
 
 #endif // __cplusplus
 
