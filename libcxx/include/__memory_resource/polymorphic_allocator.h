@@ -68,7 +68,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void deallocate(_ValueType* __p, size_t __n) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__n <= __max_size(), "deallocate called for size which exceeds max_size()");
+    // This would cause an integer overflow, resulting in too few objects being deleted.
+    _LIBCPP_ASSERT_VALID_DEALLOCATION(__n <= __max_size(), "deallocate called for size which exceeds max_size()");
     __res_->deallocate(__p, __n * sizeof(_ValueType), alignof(_ValueType));
   }
 
