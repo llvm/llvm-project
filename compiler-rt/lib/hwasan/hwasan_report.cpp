@@ -238,7 +238,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
           found_local = true;
         }
         StackTracePrinter::GetOrInit()->RenderSourceLocation(
-            &location, local.decl_file, local.decl_line, 0,
+            &location, local.decl_file, local.decl_line, /* column= */ 0,
             common_flags()->symbolize_vs_style,
             common_flags()->strip_path_prefix);
         Printf("  %s in %s %s\n", local.name, local.function_name,
