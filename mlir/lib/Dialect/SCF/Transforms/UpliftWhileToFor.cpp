@@ -60,7 +60,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       });
 
     BlockArgument indVar;
-    Value end;
+    Value ub;
     DominanceInfo dom;
 
     // Check if cmp has a suitable form. One of the arguments must be a `before`
@@ -82,7 +82,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
         continue;
 
       indVar = blockArg;
-      end = arg2;
+      ub = arg2;
       break;
     }
 
@@ -131,57 +131,66 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       return rewriter.notifyMatchFailure(loop,
                                          "Didn't found suitable 'addi' op");
 
-    auto begin = loop.getInits()[argNumber];
+    auto lb = loop.getInits()[argNumber];
 
-    assert(begin.getType().isIntOrIndex());
-    assert(begin.getType() == end.getType());
-    assert(begin.getType() == step.getType());
+    assert(lb.getType().isIntOrIndex());
+    assert(lb.getType() == ub.getType());
+    assert(lb.getType() == step.getType());
 
-    llvm::SmallVector<Value> mapping;
-    mapping.reserve(loop.getInits().size());
+    llvm::SmallVector<Value> newArgs;
+
+    // Populate inits for new `scf.for`
+    newArgs.reserve(loop.getInits().size());
     for (auto &&[i, init] : llvm::enumerate(loop.getInits())) {
       if (i == argNumber)
         continue;
 
-      mapping.emplace_back(init);
+      newArgs.emplace_back(init);
     }
 
     auto loc = loop.getLoc();
+
+    // With `builder == nullptr`, ForOp::build will try to insert terminator at
+    // the end of newly created block and we don't want it. Provide empty
+    // dummy builder instead.
     auto emptyBuilder = [](OpBuilder &, Location, Value, ValueRange) {};
-    auto newLoop = rewriter.create<scf::ForOp>(loc, begin, end, step, mapping,
-                                               emptyBuilder);
+    auto newLoop =
+        rewriter.create<scf::ForOp>(loc, lb, ub, step, newArgs, emptyBuilder);
 
     Block *newBody = newLoop.getBody();
 
-    mapping.clear();
-    auto newArgs = newBody->getArguments();
-    for (auto i : llvm::seq<size_t>(0, newArgs.size())) {
+    // Populate block args for `scf.for` body, move induction var to the front.
+    newArgs.clear();
+    ValueRange newBodyArgs = newBody->getArguments();
+    for (auto i : llvm::seq<size_t>(0, newBodyArgs.size())) {
       if (i < argNumber) {
-        mapping.emplace_back(newArgs[i + 1]);
+        newArgs.emplace_back(newBodyArgs[i + 1]);
       } else if (i == argNumber) {
-        mapping.emplace_back(newArgs.front());
+        newArgs.emplace_back(newBodyArgs.front());
       } else {
-        mapping.emplace_back(newArgs[i]);
+        newArgs.emplace_back(newBodyArgs[i]);
       }
     }
 
     rewriter.inlineBlockBefore(loop.getAfterBody(), newBody, newBody->end(),
-                               mapping);
+                               newArgs);
 
     auto term = cast<scf::YieldOp>(newBody->getTerminator());
 
-    mapping.clear();
+    // Populate new yield args, skipping the induction var.
+    newArgs.clear();
     for (auto &&[i, arg] : llvm::enumerate(term.getResults())) {
       if (i == argNumber)
         continue;
 
-      mapping.emplace_back(arg);
+      newArgs.emplace_back(arg);
     }
 
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(term);
-    rewriter.replaceOpWithNewOp<scf::YieldOp>(term, mapping);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(term, newArgs);
 
+    // Compute induction var value after loop execution.
     rewriter.setInsertionPointAfter(newLoop);
     Value one;
     if (isa<IndexType>(step.getType())) {
@@ -191,17 +200,19 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     }
 
     Value stepDec = rewriter.create<arith::SubIOp>(loc, step, one);
-    Value len = rewriter.create<arith::SubIOp>(loc, end, begin);
+    Value len = rewriter.create<arith::SubIOp>(loc, ub, lb);
     len = rewriter.create<arith::AddIOp>(loc, len, stepDec);
     len = rewriter.create<arith::DivSIOp>(loc, len, step);
     len = rewriter.create<arith::SubIOp>(loc, len, one);
     Value res = rewriter.create<arith::MulIOp>(loc, len, step);
-    res = rewriter.create<arith::AddIOp>(loc, begin, res);
+    res = rewriter.create<arith::AddIOp>(loc, lb, res);
 
-    mapping.clear();
-    llvm::append_range(mapping, newLoop.getResults());
-    mapping.insert(mapping.begin() + argNumber, res);
-    rewriter.replaceOp(loop, mapping);
+    // Reconstruct `scf.while` results, inserting final induction var value
+    // into proper place.
+    newArgs.clear();
+    llvm::append_range(newArgs, newLoop.getResults());
+    newArgs.insert(newArgs.begin() + argNumber, res);
+    rewriter.replaceOp(loop, newArgs);
     return success();
   }
 };
