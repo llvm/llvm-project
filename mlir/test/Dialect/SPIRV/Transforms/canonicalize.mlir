@@ -1020,6 +1020,18 @@ func.func @snegate_twice(%arg0 : i32) -> i32 {
   return %1 : i32
 }
 
+// CHECK-LABEL: @snegate_min
+func.func @snegate_min() -> (i8, i8) {
+  // CHECK: %[[MIN:.*]] = spirv.Constant -128 : i8
+  %cmin = spirv.Constant -128 : i8
+
+  %0 = spirv.SNegate %cmin : i8
+  %1 = spirv.SNegate %0 : i8
+
+  // CHECK: return %[[MIN]], %[[MIN]]
+  return %0, %1 : i8, i8
+}
+
 // CHECK-LABEL: @const_fold_scalar_snegate
 func.func @const_fold_scalar_snegate() -> (i32, i32, i32) {
   %c0 = spirv.Constant 0 : i32
