@@ -102,7 +102,7 @@ class BinOpRM_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
              (t.LoadNode addr:$src2)))]>, DefEFLAGS;
 // BinOpRMF_RF - Instructions that read "reg, [mem]", write "reg" and read/write
 // EFLAGS.
-class BinOpRMF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node>
+class BinOpRMF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
   : BinOpRM<o, m, t, (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS,
              (node t.RegClass:$src1, (t.LoadNode addr:$src2), EFLAGS))]>,
@@ -1189,34 +1189,24 @@ let Uses = [RDX] in
 // We don't have patterns for these as there is no advantage over ADC for
 // most code.
 class ADCOXOpRR <string m, X86TypeInfo t>
-  : BinOpRR_RF<0xF6, m, t, null_frag> {
-  let OpSize = OpSizeFixed;
+  : BinOpRRF_RF<0xF6, m, t, null_frag> {
   let Form = MRMSrcReg;
   let isCommutable = 1;
 }
 
 class ADCOXOpRM <string m, X86TypeInfo t>
-  : BinOpRM_RF<0xF6, m, t, null_frag> {
-  let OpSize = OpSizeFixed;
+  : BinOpRMF_RF<0xF6, m, t, null_frag> {
   let Form = MRMSrcMem;
 }
 
-let Predicates = [HasADX], Constraints = "$src1 = $dst" in {
-  let SchedRW = [WriteADC] in {
-  def ADCX32rr : ADCOXOpRR<"adcx", Xi32>, T8PD;
-  def ADCX64rr : ADCOXOpRR<"adcx", Xi64>, T8PD;
-  def ADOX32rr : ADCOXOpRR<"adox", Xi32>, T8XS;
-  def ADOX64rr : ADCOXOpRR<"adox", Xi64>, T8XS;
-  }
-
-  let SchedRW = [WriteADC.Folded, WriteADC.ReadAfterFold,
-                 // Memory operand.
-                 ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                 // Implicit read of EFLAGS
-                 WriteADC.ReadAfterFold] in {
-  def ADCX32rm : ADCOXOpRM<"adcx", Xi32>, T8PD;
-  def ADCX64rm : ADCOXOpRM<"adcx", Xi64>, T8PD;
-  def ADOX32rm : ADCOXOpRM<"adox", Xi32>, T8XS;
-  def ADOX64rm : ADCOXOpRM<"adox", Xi64>, T8XS;
-  }
+let OpSize = OpSizeFixed, Constraints = "$src1 = $dst",
+    Predicates = [HasADX] in {
+def ADCX32rr : ADCOXOpRR<"adcx", Xi32>, T8PD;
+def ADCX64rr : ADCOXOpRR<"adcx", Xi64>, T8PD;
+def ADOX32rr : ADCOXOpRR<"adox", Xi32>, T8XS;
+def ADOX64rr : ADCOXOpRR<"adox", Xi64>, T8XS;
+def ADCX32rm : ADCOXOpRM<"adcx", Xi32>, T8PD;
+def ADCX64rm : ADCOXOpRM<"adcx", Xi64>, T8PD;
+def ADOX32rm : ADCOXOpRM<"adox", Xi32>, T8XS;
+def ADOX64rm : ADCOXOpRM<"adox", Xi64>, T8XS;
 }
