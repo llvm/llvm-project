@@ -41,26 +41,31 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       return rewriter.notifyMatchFailure(loop,
                                          "Loop body must have single cmp op");
 
-    auto beforeTerm = cast<scf::ConditionOp>(beforeBody->getTerminator());
-    if (!llvm::hasSingleElement(cmp->getUses()) &&
-        beforeTerm.getCondition() == cmp.getResult())
+    scf::ConditionOp beforeTerm = loop.getConditionOp();
+    if (!cmp->hasOneUse() && beforeTerm.getCondition() == cmp.getResult())
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
         diag << "Expected single condiditon use: " << *cmp;
       });
 
+    // All `before` block args must be directly forwarded to ConditionOp.
+    // They will be converted to `scf.for` `iter_vars` except induction var.
     if (ValueRange(beforeBody->getArguments()) != beforeTerm.getArgs())
       return rewriter.notifyMatchFailure(loop, "Invalid args order");
 
     using Pred = arith::CmpIPredicate;
-    auto predicate = cmp.getPredicate();
+    Pred predicate = cmp.getPredicate();
     if (predicate != Pred::slt && predicate != Pred::sgt)
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
         diag << "Expected 'slt' or 'sgt' predicate: " << *cmp;
       });
 
-    BlockArgument iterVar;
+    BlockArgument indVar;
     Value end;
     DominanceInfo dom;
+
+    // Check if cmp has a suitable form. One of the arguments must be a `before`
+    // block arg, other must be defined outside `scf.while` and will be treated
+    // as upper bound.
     for (bool reverse : {false, true}) {
       auto expectedPred = reverse ? Pred::sgt : Pred::slt;
       if (cmp.getPredicate() != expectedPred)
@@ -76,36 +81,42 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       if (!dom.properlyDominates(arg2, loop))
         continue;
 
-      iterVar = blockArg;
+      indVar = blockArg;
       end = arg2;
       break;
     }
 
-    if (!iterVar)
+    if (!indVar)
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
         diag << "Unrecognized cmp form: " << *cmp;
       });
 
-    if (!llvm::hasNItems(iterVar.getUses(), 2))
+    // indVar must have 2 uses: one is in `cmp` and other is `condition` arg.
+    if (!llvm::hasNItems(indVar.getUses(), 2))
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
-        diag << "Unrecognized iter var: " << iterVar;
+        diag << "Unrecognized induction var: " << indVar;
       });
 
     Block *afterBody = loop.getAfterBody();
-    auto afterTerm = cast<scf::YieldOp>(afterBody->getTerminator());
-    auto argNumber = iterVar.getArgNumber();
+    scf::YieldOp afterTerm = loop.getYieldOp();
+    auto argNumber = indVar.getArgNumber();
     auto afterTermIterArg = afterTerm.getResults()[argNumber];
 
-    auto iterVarAfter = afterBody->getArgument(argNumber);
+    auto indVarAfter = afterBody->getArgument(argNumber);
 
     Value step;
-    for (auto &use : iterVarAfter.getUses()) {
+
+    // Find suitable `addi` op inside `after` block, one of the args must be an
+    // Induction var passed from `before` block and second arg must be defined
+    // outside of the loop and will be considered step value.
+    // TODO: Add `subi` support?
+    for (auto &use : indVarAfter.getUses()) {
       auto owner = dyn_cast<arith::AddIOp>(use.getOwner());
       if (!owner)
         continue;
 
       auto other =
-          (iterVarAfter == owner.getLhs() ? owner.getRhs() : owner.getLhs());
+          (indVarAfter == owner.getLhs() ? owner.getRhs() : owner.getLhs());
       if (!dom.properlyDominates(other, loop))
         continue;
 
@@ -118,7 +129,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
 
     if (!step)
       return rewriter.notifyMatchFailure(loop,
-                                         "Didn't found suitable 'add' op");
+                                         "Didn't found suitable 'addi' op");
 
     auto begin = loop.getInits()[argNumber];
 
@@ -136,15 +147,11 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     }
 
     auto loc = loop.getLoc();
-    auto emptyBuidler = [](OpBuilder &, Location, Value, ValueRange) {};
+    auto emptyBuilder = [](OpBuilder &, Location, Value, ValueRange) {};
     auto newLoop = rewriter.create<scf::ForOp>(loc, begin, end, step, mapping,
-                                               emptyBuidler);
+                                               emptyBuilder);
 
     Block *newBody = newLoop.getBody();
-
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPointToStart(newBody);
-    Value newIterVar = newBody->getArgument(0);
 
     mapping.clear();
     auto newArgs = newBody->getArguments();
@@ -171,6 +178,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       mapping.emplace_back(arg);
     }
 
+    OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(term);
     rewriter.replaceOpWithNewOp<scf::YieldOp>(term, mapping);
 

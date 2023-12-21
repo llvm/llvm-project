@@ -160,6 +160,10 @@ def SCFUpliftWhileToFor : Pass<"scf-uplift-while-to-for"> {
     This pass tries to uplift `scf.while` ops to `scf.for` if they have a
     compatible form. `scf.while` are left unchanged if uplifting is not
     possible.
+
+    This pass expects a specific ops pattern:
+    * `before` block consisting of single arith.cmp op
+    * `after` block containing arith.addi
   }];
  }
 
