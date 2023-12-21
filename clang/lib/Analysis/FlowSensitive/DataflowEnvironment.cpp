@@ -489,7 +489,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-        Env.ThisPointeeLoc = get<RecordStorageLocation>(*Arg);
+        Env.ThisPointeeLoc =
+            cast<RecordStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
