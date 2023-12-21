@@ -251,7 +251,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         } else {
           offset = local_beg - untagged_addr;
           whence = "before";
-          cause = "stack-buffer-overflow";
+          cause = "stack-buffer-underflow";
         }
         Decorator d;
         Printf("%s", d.Error());
