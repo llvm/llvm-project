@@ -191,9 +191,48 @@ float PostfixScientificShortFloat1 = 1.23e10f;
 float PostfixScientificShortFloat2 = 1.23E+10f;
 float PostfixScientificShortFloat3 = 1.23e-10F;
 
-// FIXME:
+
+// Formatted literals
+
+// FIXME: clang-diagnostic-error like this for the following tests
+// clang-18 and clang-tidy don't produce such error
 // error: expected ';' after top level declarator [clang-diagnostic-error]
-//   80 | int FormattedInteger = 1'234'567;
-//      |                         ^
-//      |                         ;
+//   203 | int FormattedInteger = 1'234'567;
+//       |                         ^
+//       |                         ;
 //int FormattedInteger = 1'234'567;
+//int MinusFormattedInteger = -1'234'567;
+//int BinaryFormattedInteger = 0b1110'1101;
+//int MinusBinaryFormattedInteger = -0b1110'1101;
+//int OctFormattedInteger = 037'512;
+//int MinusOctFormattedInteger = -037'512;
+//int HexFormattedInteger = 0x4'f356;
+//int MinusHexFormattedInteger = -0x4'f356;
+//unsigned int UnsignedFormattedInteger = 10'004U;
+//unsigned int MinusUnsignedFormattedInteger = -10'004U;
+//unsigned int UnsignedFormattedInteger1 = 100'045u;
+//unsigned int MinusUnsignedFormattedInteger1 = -100'045u;
+//long LongFormattedInteger = 123'456'789'101'112L;
+//long MinusLongFormattedInteger = -123'456'789'101'112L;
+//long LongFormattedInteger1 = 12'345'678'910'111'213l;
+//long MinusLongFormattedInteger1 = -12'345'678'910'111'213l;
+//unsigned long UnsignedLongFormattedInteger1 = 12'345'678'910'111'213Ul;
+//unsigned long MinusUnsignedLongFormattedInteger1 = -12'345'678'910'111'213Ul;
+//float FormattedFloat = 1'234.567'89;
+//float MinusFormattedFloat = -1'234.567'89;
+//double PostfixFormattedFloat = 1'234.569F;
+//double MinusPostfixFormattedFloat = -1'234.569F;
+//double PostfixFormattedFloat1 = 1'234.569f;
+//double MinusPostfixFormattedFloat1 = -1'234.569f;
+//double ScientificFormattedFloat = 1.234'567'8E10;
+//double MinusScientificFormattedFloat = -1.234'567'8E10;
+//double ScientificFormattedFloat1 = 1.234'567'8e10;
+//double MinusScientificFormattedFloat1 = -1.234'567'8e10;
+//double ScientificFormattedFloat2 = 1.234'567'8E+10;
+//double MinusScientificFormattedFloat2 = -1.234'567'8E+10;
+//double ScientificFormattedFloat3 = 1.234'567'8e+10;
+//double MinusScientificFormattedFloat3 = -1.234'567'8e+10;
+//double PostfixScientificFormattedFloat = 1.234'567'8E10F;
+//double PostfixScientificFormattedFloat1 = 1.234'567'8e10f;
+//double PostfixScientificFormattedFloat2 = -1.234'567'8E+10f;
+//double PostfixScientificFormattedFloat4 = -1.234'567'8e-10F;
