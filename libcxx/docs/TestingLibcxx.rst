@@ -325,7 +325,7 @@ This macro is in a different header as ``assert_macros.h`` since it pulls in
 additional headers.
 
  .. note: This macro can only be used in test using C++20 or newer. The macro
-          was added at a time where most of lib++'s C++17 support was complete.
+          was added at a time where most of libc++'s C++17 support was complete.
           Since it is not expected to add this to existing tests no effort was
           taken to make it work in earlier language versions.
 
@@ -333,14 +333,13 @@ additional headers.
 Test names
 ----------
 
-The names of test files have meaning for the libcxx-specific configuration of 
+The names of test files have meaning for the libc++-specific configuration of
 Lit. Based on the pattern that matches the name of a test file, Lit will test
-the code contained therein in different ways. Refer to the `Lit Meaning of libcxx
-Test Filenames`_ when
-determining the names for new test files.
+the code contained therein in different ways. Refer to the `Lit Meaning of libc++
+Test Filenames`_ when determining the names for new test files.
 
-.. _Lit Meaning of libcxx Test Filenames:
-.. list-table:: Lit Meaning of libcxx Test Filenames
+.. _Lit Meaning of libc++ Test Filenames:
+.. list-table:: Lit Meaning of libc++ Test Filenames
    :widths: 25 75
    :header-rows: 1
 
@@ -385,7 +384,7 @@ libc++-Specific Lit Features
 Custom Directives
 ~~~~~~~~~~~~~~~~~
 
-Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libcxx adds two additional libc++-specific directives that makes
+Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
 writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES`` and ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific directives.
 
 .. _libc++-specific Lit Directives:
@@ -398,15 +397,17 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
      - Usage
    * - ``FILE_DEPENDENCIES``
      - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
-     - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. Copies of the files individually specified and
-       *all* the files in any specified directories will be placed in the *current working directory* of the test when it executes. All dependency directories and files
-       specified using relative paths will be anchored to the directory specified by the ``%S`` substitution (i.e., the source directory of the test being executed.).
+     - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. For example, a test that requires some test
+       input stored in a data file would use this libc++-specific Lit directive. When a test file contains the ``FILE_DEPENDENCIES`` directive, Lit will collect the named files and copy
+       them to the directory represented by the ``%T`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
+       (i.e. the source directory of the test being executed) which makes it possible to use relative paths to specify the location of dependency files. After Lit copies
+       all the dependent files to the directory specified by the ``%T`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
+       it should be possible to copy the contents of the directory specified by the ``%T`` substitution to a remote host where the execution of the test will actually occur.
    * - ``ADDITIONAL_COMPILE_FLAGS``
-     - ``// ADDITIONAL_COMPILE_FLAGS: flag1, flag2, ...``
-     - The additional compiler flags specified using the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the invocation of ``clang`` used to build
-       the test executables. ``ADDITIONAL_COMPILE_FLAGS`` are only used with tests that must be built from source using clang. In other words, ``FOO.sh.<anything>`` tests will not use
-       the value of this directive. The clang compiler flags specified in the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive are added *after* the compiler flags
-       specified in the ``%{compile_flags}`` substitution.
+     - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
+     - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
+       substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
+       `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
 
 Benchmarks
 ==========

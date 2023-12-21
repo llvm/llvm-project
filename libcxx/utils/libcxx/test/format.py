@@ -173,30 +173,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     in the same command line. In other words, the test format doesn't perform
     separate compilation and linking steps in this case.
 
-
-    Additional supported directives
-    ===============================
-    In addition to everything that's supported in Lit ShTests, this test format
-    also understands the following directives inside test files:
-
-        // FILE_DEPENDENCIES: file, directory, /path/to/file
-
-            This directive expresses that the test requires the provided files
-            or directories in order to run. An example is a test that requires
-            some test input stored in a data file. When a test file contains
-            such a directive, this test format will collect them and copy them
-            to the directory represented by %T. The intent is that %T contains
-            all the inputs necessary to run the test, such that e.g. execution
-            on a remote host can be done by simply copying %T to the host.
-
-        // ADDITIONAL_COMPILE_FLAGS: flag1 flag2 flag3
-
-            This directive will cause the provided flags to be added to the
-            %{compile_flags} substitution for the test that contains it. This
-            allows adding special compilation flags without having to use a
-            .sh.cpp test, which would be more powerful but perhaps overkill.
-
-
     Additional provided substitutions and features
     ==============================================
     The test format will define the following substitutions for use inside tests:
