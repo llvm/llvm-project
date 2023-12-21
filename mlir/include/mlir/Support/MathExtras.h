@@ -15,19 +15,8 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APInt.h"
-#include <type_traits>
 
 namespace mlir {
-
-// ceilDiv for unsigned integral.
-template <typename T, std::enable_if_t<std::is_integral_v<T> &&
-                                       !std::is_unsigned_v<T>> = true>
-T ceilDiv(T lhs, T rhs) {
-  assert(rhs != static_cast<T>(0));
-  T q = lhs / rhs;
-  T r = lhs % rhs;
-  return r == static_cast<T>(0) ? q : q + static_cast<T>(1);
-}
 
 /// Returns the result of MLIR's ceildiv operation on constants. The RHS is
 /// expected to be non-zero.
