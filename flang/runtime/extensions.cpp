@@ -68,7 +68,7 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
 
 // CALL FDATE(DATE)
 void FORTRAN_PROCEDURE_NAME(fdate)(std::byte *arg, std::int64_t length) {
-  std::array<char, 26> str;
+  char str[26];
   // If the length is too short to fit completely, blank return.
   if (length < 24) {
     std::memset(reinterpret_cast<char *>(arg), ' ', length);
@@ -81,8 +81,8 @@ void FORTRAN_PROCEDURE_NAME(fdate)(std::byte *arg, std::int64_t length) {
   // Day Mon dd hh:mm:ss yyyy\n\0 is 26 characters, e.g.
   // Tue May 26 21:51:03 2015\n\0
 
-  ctime_alloc(str.data(), str.size(), current_time, terminator);
-  CopyAndPad(reinterpret_cast<char *>(arg), str.data(), length, 24);
+  ctime_alloc(str, sizeof(str), current_time, terminator);
+  CopyAndPad(reinterpret_cast<char *>(arg), str, length, 24);
 }
 
 // RESULT = IARGC()
