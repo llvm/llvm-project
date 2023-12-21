@@ -36,6 +36,7 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       return failure();
     }
 
+    SymbolTableCollection symbolTable;
     mesh::ClusterOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
         op, op.getShard().getCluster());
 
@@ -85,9 +86,6 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
 
     return success();
   }
-
-private:
-  mutable SymbolTableCollection symbolTable;
 };
 
 struct TestMeshReshardingPass
