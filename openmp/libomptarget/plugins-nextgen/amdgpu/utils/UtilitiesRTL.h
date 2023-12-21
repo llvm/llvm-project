@@ -140,6 +140,10 @@ extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   Expected<ELF64LEObjectFile> ElfOrErr =
       ELF64LEObjectFile::create(MemoryBufferRef(Buffer, /*Identifier=*/""),
                                 /*InitContent=*/false);
+  if (!ElfOrErr) {
+    consumeError(ElfOrErr.takeError());
+    return XNACK_UNSUPPORTED;
+  }
 
   u_int16_t EFlags = ElfOrErr->getELFFile().getHeader().e_flags;
   unsigned XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
