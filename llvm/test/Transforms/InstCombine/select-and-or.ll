@@ -613,9 +613,9 @@ define i1 @and_or2_wrong_operand(i1 %a, i1 %b, i1 %c, i1 %d) {
 
 define i1 @and_or3(i1 %a, i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @and_or3(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp eq i32 %x, %y
@@ -626,9 +626,9 @@ define i1 @and_or3(i1 %a, i1 %b, i32 %x, i32 %y) {
 
 define i1 @and_or3_commuted(i1 %a, i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @and_or3_commuted(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp eq i32 %x, %y
@@ -665,9 +665,9 @@ define i1 @and_or3_multiuse(i1 %a, i1 %b, i32 %x, i32 %y) {
 
 define <2 x i1> @and_or3_vec(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @and_or3_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[C]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i1> [[TMP1]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i1> [[TMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %c = icmp eq <2 x i32> %x, %y
@@ -678,9 +678,9 @@ define <2 x i1> @and_or3_vec(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %
 
 define <2 x i1> @and_or3_vec_commuted(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @and_or3_vec_commuted(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[C]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i1> [[TMP1]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i1> [[TMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %c = icmp eq <2 x i32> %x, %y
@@ -877,9 +877,9 @@ entry:
 
 define i1 @or_and3(i1 %a, i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_and3(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp eq i32 %x, %y
@@ -890,9 +890,9 @@ define i1 @or_and3(i1 %a, i1 %b, i32 %x, i32 %y) {
 
 define i1 @or_and3_commuted(i1 %a, i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_and3_commuted(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp eq i32 %x, %y
@@ -929,9 +929,9 @@ define i1 @or_and3_multiuse(i1 %a, i1 %b, i32 %x, i32 %y) {
 
 define <2 x i1> @or_and3_vec(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @or_and3_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[C]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %c = icmp eq <2 x i32> %x, %y
@@ -942,9 +942,9 @@ define <2 x i1> @or_and3_vec(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %
 
 define <2 x i1> @or_and3_vec_commuted(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @or_and3_vec_commuted(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[C]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %c = icmp eq <2 x i32> %x, %y
@@ -964,4 +964,204 @@ define i1 @or_and3_wrong_operand(i1 %a, i1 %b, i32 %x, i32 %y, i1 %d) {
   %cond = or i1 %a, %c
   %r = select i1 %cond, i1 %d, i1 %b
   ret i1 %r
+}
+
+define i32 @or_eq_a_b(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @or_eq_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @and_ne_a_b(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @and_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp ne i32 %a, %b
+  %cond = and i1 %other_cond, %cmp
+  %select = select i1 %cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @or_eq_a_b_commuted(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @or_eq_a_b_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i32 %b, i32 %a
+  ret i32 %select
+}
+
+define i32 @and_ne_a_b_commuted(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @and_ne_a_b_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp ne i32 %a, %b
+  %cond = and i1 %other_cond, %cmp
+  %select = select i1 %cond, i32 %b, i32 %a
+  ret i32 %select
+}
+
+define i32 @or_eq_different_operands(i32 %a, i32 %b, i32 %c)  {
+; CHECK-LABEL: @or_eq_different_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[B:%.*]], [[A]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+entry:
+  %cmp = icmp eq i32 %a, %c
+  %cmp1 = icmp eq i32 %b, %a
+  %cond = or i1 %cmp, %cmp1
+  %select = select i1 %cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @or_eq_a_b_multi_use(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @or_eq_a_b_multi_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    call void @use(i1 [[COND]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  call void @use(i1 %cmp)
+  call void @use(i1 %cond)
+  %select = select i1 %cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define <2 x i32> @or_eq_a_b_vec(<2 x i1> %other_cond ,<2 x i32> %a, <2 x i32> %b)  {
+; CHECK-LABEL: @or_eq_a_b_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or <2 x i1> [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[A]], <2 x i32> [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[SELECT]]
+;
+entry:
+  %cmp = icmp eq <2 x i32> %a, %b
+  %cond = or <2 x i1> %other_cond, %cmp
+  %select = select <2 x i1> %cond, <2 x i32> %a, <2 x i32> %b
+  ret <2 x i32> %select
+}
+
+define i32 @or_slt_a_b_fail(i1 %other_cond ,i32 %a, i32 %b)  {
+; CHECK-LABEL: @or_slt_a_b_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+; CHECK:       0:
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+entry:
+  %cmp = icmp slt i32 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i32 %a, i32 %b
+  ret i32 %select  ret i32 %select
+}
+
+define i32 @or_ne_a_b_fail(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @or_ne_a_b_fail(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp ne i32 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @and_ne_different_operands_fail(i32 %a, i32 %b, i32 %c)  {
+; CHECK-LABEL: @and_ne_different_operands_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+entry:
+  %cmp = icmp ne i32 %a, %c
+  %cmp1 = icmp ne i32 %b, %c
+  %cond = and i1 %cmp, %cmp1
+  %select = select i1 %cond, i32 %b, i32 %a
+  ret i32 %select
+}
+
+define i32 @logical_or_eq_a_b(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @logical_or_eq_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[OTHER_COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %or.cond = select i1 %other_cond, i1 true, i1 %cmp
+  %select = select i1 %or.cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @logical_commuted_or_eq_a_b(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @logical_commuted_or_eq_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %or.cond = select i1 %cmp, i1 true, i1 %other_cond
+  %select = select i1 %or.cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @logical_and_ne_a_b(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @logical_and_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[OTHER_COND:%.*]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp ne i32 %a, %b
+  %or.cond = select i1 %other_cond, i1 %cmp, i1 false
+  %select = select i1 %or.cond, i32 %a, i32 %b
+  ret i32 %select
+}
+
+define i32 @logical_commuted_and_ne_a_b(i1 %other_cond, i32 %a, i32 %b)  {
+; CHECK-LABEL: @logical_commuted_and_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[OTHER_COND:%.*]], i1 false
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %cmp = icmp ne i32 %a, %b
+  %or.cond = select i1 %cmp, i1 %other_cond, i1 false
+  %select = select i1 %or.cond, i32 %a, i32 %b
+  ret i32 %select
 }
