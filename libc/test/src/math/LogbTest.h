@@ -20,7 +20,7 @@ template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
+      UIntType(1) << LIBC_NAMESPACE::fputil::FloatProperties<T>::MANTISSA_WIDTH;
 
 public:
   typedef T (*LogbFunc)(T);

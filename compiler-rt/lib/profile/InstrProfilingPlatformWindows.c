@@ -13,13 +13,14 @@
 
 #if defined(_MSC_VER)
 /* Merge read-write sections into .data. */
-#pragma comment(linker, "/MERGE:.lprfc=.data")
 #pragma comment(linker, "/MERGE:.lprfb=.data")
 #pragma comment(linker, "/MERGE:.lprfd=.data")
 #pragma comment(linker, "/MERGE:.lprfv=.data")
 #pragma comment(linker, "/MERGE:.lprfnd=.data")
 /* Do *NOT* merge .lprfn and .lcovmap into .rdata. llvm-cov must be able to find
  * after the fact.
+ * Do *NOT* merge .lprfc .rdata. When binary profile correlation is enabled,
+ * llvm-cov must be able to find after the fact.
  */
 
 /* Allocate read-only section bounds. */

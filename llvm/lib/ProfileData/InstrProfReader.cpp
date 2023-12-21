@@ -556,10 +556,6 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-  if (useCorrelate() && !Correlator)
-    return error(instrprof_error::missing_debug_info_for_correlation);
-  if (!useCorrelate() && Correlator)
-    return error(instrprof_error::unexpected_debug_info_for_correlation);
 
   uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
   // Binary id start just after the header if exists.
@@ -607,8 +603,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (Correlator) {
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
-    assert(DataSize == 0 && NamesSize == 0);
-    assert(CountersDelta == 0 && NamesDelta == 0);
+    if (!(DataSize == 0 && NamesSize == 0 && CountersDelta == 0 &&
+          NamesDelta == 0))
+      return error(instrprof_error::unexpected_correlation_info);
     Data = Correlator->getDataPointer();
     DataEnd = Data + Correlator->getDataSize();
     NamesStart = Correlator->getNamesPointer();

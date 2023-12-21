@@ -23,7 +23,7 @@ namespace x86 {
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
       cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
-      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE));
+      (8 * sizeof(uint64_t) - 1 - FPBits<long double>::MANTISSA_WIDTH));
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -36,16 +36,16 @@ LIBC_INLINE long double sqrt(long double x);
 // Shift-and-add algorithm.
 #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 LIBC_INLINE long double sqrt(long double x) {
-  using UIntType = typename FPBits<long double>::UIntType;
-  constexpr UIntType ONE = UIntType(1)
-                           << int(MantissaWidth<long double>::VALUE);
+  using LDBits = FPBits<long double>;
+  using UIntType = typename LDBits::UIntType;
+  constexpr UIntType ONE = UIntType(1) << int(LDBits::MANTISSA_WIDTH);
 
   FPBits<long double> bits(x);
 
   if (bits.is_inf_or_nan()) {
     if (bits.get_sign() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return FPBits<long double>::build_quiet_nan(ONE >> 1);
+      return LDBits::build_quiet_nan(ONE >> 1);
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
@@ -57,7 +57,7 @@ LIBC_INLINE long double sqrt(long double x) {
     return x;
   } else if (bits.get_sign()) {
     // sqrt( negative numbers ) = NaN
-    return FPBits<long double>::build_quiet_nan(ONE >> 1);
+    return LDBits::build_quiet_nan(ONE >> 1);
   } else {
     int x_exp = bits.get_explicit_exponent();
     UIntType x_mant = bits.get_mantissa();
@@ -110,9 +110,8 @@ LIBC_INLINE long double sqrt(long double x) {
     }
 
     // Append the exponent field.
-    x_exp = ((x_exp >> 1) + FPBits<long double>::EXPONENT_BIAS);
-    y |= (static_cast<UIntType>(x_exp)
-          << (MantissaWidth<long double>::VALUE + 1));
+    x_exp = ((x_exp >> 1) + LDBits::EXPONENT_BIAS);
+    y |= (static_cast<UIntType>(x_exp) << (LDBits::MANTISSA_WIDTH + 1));
 
     switch (quick_get_round()) {
     case FE_TONEAREST:

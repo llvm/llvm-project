@@ -85,7 +85,7 @@ namespace llvm {
     }                                                                          \
   };
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     Error run(Module &, MachineFunctionAnalysisManager &) {                    \
       return Error::success();                                                 \
@@ -94,18 +94,29 @@ namespace llvm {
                           MachineFunctionAnalysisManager &) {                  \
       llvm_unreachable("this api is to make new PM api happy");                \
     }                                                                          \
-    static AnalysisKey Key;                                                    \
+    static MachinePassKey Key;                                                 \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(MachineFunction &,                                   \
                           MachineFunctionAnalysisManager &) {                  \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
+    static MachinePassKey Key;                                                 \
+  };
+#define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)          \
+  struct PASS_NAME : public AnalysisInfoMixin<PASS_NAME> {                     \
+    template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
+    using Result = struct {};                                                  \
+    template <typename IRUnitT, typename AnalysisManagerT,                     \
+              typename... ExtraArgTs>                                          \
+    Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {              \
+      return {};                                                               \
+    }                                                                          \
     static AnalysisKey Key;                                                    \
   };
-#include "MachinePassRegistry.def"
+#include "llvm/CodeGen/MachinePassRegistry.def"
 
 /// This class provides access to building LLVM's passes.
 ///

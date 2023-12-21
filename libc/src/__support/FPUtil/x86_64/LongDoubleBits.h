@@ -41,13 +41,11 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   static constexpr int MAX_EXPONENT = 0x7FFF;
   static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
-  static constexpr UIntType MAX_SUBNORMAL =
-      (UIntType(1) << (MantissaWidth<long double>::VALUE)) - 1;
-  static constexpr UIntType MIN_NORMAL =
-      (UIntType(3) << MantissaWidth<long double>::VALUE);
+  static constexpr UIntType MAX_SUBNORMAL = (UIntType(1) << MANTISSA_WIDTH) - 1;
+  static constexpr UIntType MIN_NORMAL = (UIntType(3) << MANTISSA_WIDTH);
   static constexpr UIntType MAX_NORMAL =
-      (UIntType(MAX_EXPONENT - 1) << (MantissaWidth<long double>::VALUE + 1)) |
-      (UIntType(1) << MantissaWidth<long double>::VALUE) | MAX_SUBNORMAL;
+      (UIntType(MAX_EXPONENT - 1) << (MANTISSA_WIDTH + 1)) |
+      (UIntType(1) << MANTISSA_WIDTH) | MAX_SUBNORMAL;
 
   UIntType bits;
 

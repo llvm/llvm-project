@@ -530,26 +530,17 @@ void X86FoldTablesEmitter::addBroadcastEntry(
   StringRef MemInstName = MemInst->TheDef->getName();
   Record *Domain = RegRec->getValueAsDef("ExeDomain");
   bool IsSSEPackedInt = Domain->getName() == "SSEPackedInt";
-  // TODO: Rename AVX512 instructions to simplify conditions, e.g.
-  //         D128 -> DZ128
-  //         D256 -> DZ256
-  //         VPERMI2Drr -> VPERMI2DZrr
-  //         VPERMI2Drmb -> VPERMI2DZrmb
   if ((RegInstName.contains("DZ") || RegInstName.contains("DWZ") ||
-       RegInstName.contains("D128") || RegInstName.contains("D256") ||
        RegInstName.contains("Dr") || RegInstName.contains("I32")) &&
       IsSSEPackedInt) {
     assert((MemInstName.contains("DZ") || RegInstName.contains("DWZ") ||
-            MemInstName.contains("D128") || MemInstName.contains("D256") ||
             MemInstName.contains("Dr") || MemInstName.contains("I32")) &&
            "Unmatched names for broadcast");
     Result.BroadcastKind = X86FoldTableEntry::BCAST_D;
   } else if ((RegInstName.contains("QZ") || RegInstName.contains("QBZ") ||
-              RegInstName.contains("Q128") || RegInstName.contains("Q256") ||
               RegInstName.contains("Qr") || RegInstName.contains("I64")) &&
              IsSSEPackedInt) {
     assert((MemInstName.contains("QZ") || MemInstName.contains("QBZ") ||
-            MemInstName.contains("Q128") || MemInstName.contains("Q256") ||
             MemInstName.contains("Qr") || MemInstName.contains("I64")) &&
            "Unmatched names for broadcast");
     Result.BroadcastKind = X86FoldTableEntry::BCAST_Q;

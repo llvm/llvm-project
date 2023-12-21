@@ -577,6 +577,16 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant
+// CHECK-SAME: %[[P:.*]]: !llvm.ptr
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: %[[START:.*]] = llvm.intr.invariant.start 1, %[[P]] : !llvm.ptr
+  %1 = llvm.intr.invariant.start 1, %p : !llvm.ptr
+  // CHECK: llvm.intr.invariant.end %[[START]], 1, %[[P]] : !llvm.ptr
+  llvm.intr.invariant.end %1, 1, %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @vararg_func
 llvm.func @vararg_func(%arg0: i32, ...) {
   // CHECK: %[[C:.*]] = llvm.mlir.constant(1 : i32)

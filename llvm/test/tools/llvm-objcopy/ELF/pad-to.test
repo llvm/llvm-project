@@ -1,0 +1,90 @@
+# RUN: yaml2obj %s -o %t
+
+# RUN: not llvm-objcopy --pad-to=1 %t 2>&1 | FileCheck %s --check-prefix=NOT-BINARY
+# NOT-BINARY: error: '--pad-to' is only supported for binary output
+
+# RUN: not llvm-objcopy -O binary --pad-to= %t 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+# BAD-FORMAT: error: --pad-to: bad number:
+
+# RUN: not llvm-objcopy -O binary --pad-to=x %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT
+# BAD-INPUT: error: --pad-to: bad number: x
+
+# RUN: not llvm-objcopy -O binary --pad-to=0x1G %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT2
+# BAD-INPUT2: error: --pad-to: bad number: 0x1G
+
+# RUN: not llvm-objcopy -O binary --pad-to=ff %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT3
+# BAD-INPUT3: error: --pad-to: bad number: ff
+
+# RUN: not llvm-objcopy -O binary --pad-to=0x112233445566778899 %t 2>&1 | FileCheck %s --check-prefix=BAD-NUMBER
+# BAD-NUMBER: error: --pad-to: bad number: 0x112233445566778899
+
+## Save the baseline, not padded output.
+# RUN: llvm-objcopy -O binary %t %t.bin
+
+## Pad to an address smaller than the binary size.
+# RUN: llvm-objcopy -O binary --pad-to=0x20 %t %t-p1
+# RUN: cmp %t.bin %t-p1
+# RUN: llvm-objcopy -O binary --pad-to=0x200 %t %t-p2
+# RUN: cmp %t.bin %t-p2
+
+## Pad all allocatable sections to a valid address.
+# RUN: llvm-objcopy -O binary --pad-to=0x218 %t %t-pad-default
+# RUN: od -v -Ax -t x1 %t-pad-default | FileCheck %s --check-prefix=DEFAULT --match-full-lines
+# DEFAULT:      000000 11 22 33 44 55 66 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: 000010 77 88 99 aa 00 00 00 00
+# DEFAULT-NEXT: 000018
+
+## Use a decimal number for the padding address and verify it is not misunderstood.
+# RUN: llvm-objcopy -O binary --pad-to=536 %t %t-pad-decimal
+# RUN: od -v -Ax -t x1 %t-pad-decimal | FileCheck %s --check-prefix=DECIMAL --match-full-lines
+# DECIMAL:      000000 11 22 33 44 55 66 00 00 00 00 00 00 00 00 00 00
+# DECIMAL-NEXT: 000010 77 88 99 aa 00 00 00 00
+# DECIMAL-NEXT: 000018
+
+## Pad all allocatable sections to a valid address, using --gap-fill.
+# RUN: llvm-objcopy -O binary --pad-to=0x218 --gap-fill=0xe9 %t %t-pad-fill
+# RUN: od -v -Ax -t x1 %t-pad-fill | FileCheck %s --check-prefix=FILL --match-full-lines
+# FILL:      000000 11 22 33 44 55 66 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FILL-NEXT: 000010 77 88 99 aa e9 e9 e9 e9
+# FILL-NEXT: 000018
+
+## Remove the last section containing data and test that the padded space is gap filled.
+# RUN: llvm-objcopy -O binary --pad-to=0x218 --gap-fill=0xe9 --remove-section=.section2 %t %t-filled
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-SECTION --match-full-lines
+# REMOVE-SECTION: 000000 11 22 33 44 55 66 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-SECTION-NEXT: 000010 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-SECTION-NEXT: 000018
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .section1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0200
+    Size:            0x6
+    Content:         '112233445566'
+  - Name:            .space
+    Type:            Fill
+    Pattern:         '01234567'
+    Size:            0x4
+  - Name:            .section2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0210
+    Content:         '778899aa'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0220
+    Size:            0x0008
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    EntSize:         0x0001
+    Content:         ''
+...

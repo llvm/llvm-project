@@ -2382,6 +2382,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addAbsolute(mangle("__CTOR_LIST__"), 0);
     ctx.symtab.addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
+  if (config->debug || config->buildIDHash != BuildIDHash::None)
+    if (ctx.symtab.findUnderscore("__buildid"))
+      ctx.symtab.addUndefined(mangle("__buildid"));
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we

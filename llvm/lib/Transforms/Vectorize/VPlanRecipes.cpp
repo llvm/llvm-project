@@ -44,6 +44,8 @@ extern cl::opt<bool> EnableVPlanNativePath;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
+  case VPInterleaveSC:
+    return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenMemoryInstructionSC: {
     return cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
   }
@@ -146,6 +148,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
            "underlying instruction has side-effects");
     return false;
   }
+  case VPInterleaveSC:
+    return mayWriteToMemory();
   case VPWidenMemoryInstructionSC:
     assert(cast<VPWidenMemoryInstructionRecipe>(this)
                    ->getIngredient()

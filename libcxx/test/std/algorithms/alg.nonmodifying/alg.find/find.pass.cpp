@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// MSVC warning C4389: '==': signed/unsigned mismatch
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4389
 
 // <algorithm>
 

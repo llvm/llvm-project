@@ -9185,16 +9185,29 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // and zero immediate operands used as an alias for mov instruction.
   if (MI.getOpcode() == AArch64::ORRWrs &&
       MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0) {
+      MI.getOperand(3).getImm() == 0x0 &&
+      // Check that the w->w move is not a zero-extending w->x mov.
+      (!MI.getOperand(0).getReg().isVirtual() ||
+       MI.getOperand(0).getSubReg() == 0) &&
+      (!MI.getOperand(0).getReg().isPhysical() ||
+       MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
+                                    AArch64::X0) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
-      MI.getOperand(3).getImm() == 0x0) {
+      MI.getOperand(3).getImm() == 0x0)
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-  }
 
+  return std::nullopt;
+}
+
+std::optional<DestSourcePair>
+AArch64InstrInfo::isCopyLikeInstrImpl(const MachineInstr &MI) const {
+  if (MI.getOpcode() == AArch64::ORRWrs &&
+      MI.getOperand(1).getReg() == AArch64::WZR &&
+      MI.getOperand(3).getImm() == 0x0)
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   return std::nullopt;
 }
 
@@ -9241,7 +9254,7 @@ static std::optional<ParamLoadedValue>
 describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
                        const TargetInstrInfo *TII,
                        const TargetRegisterInfo *TRI) {
-  auto DestSrc = TII->isCopyInstr(MI);
+  auto DestSrc = TII->isCopyLikeInstr(MI);
   if (!DestSrc)
     return std::nullopt;
 

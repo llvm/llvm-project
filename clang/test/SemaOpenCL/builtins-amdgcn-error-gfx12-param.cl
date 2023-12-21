@@ -1,3 +1,4 @@
+// REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1200 -verify -S -o - %s
 
 typedef unsigned int uint;

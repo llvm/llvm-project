@@ -14,13 +14,11 @@ define i128 @atomicrmw_xchg(ptr %src, i128 %b) {
 ; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
 ; CHECK-NEXT:    .cfi_offset %r12, -64
 ; CHECK-NEXT:    .cfi_offset %r13, -56
-; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    lg %r14, 8(%r4)
+; CHECK-NEXT:    lg %r1, 8(%r4)
 ; CHECK-NEXT:    lg %r0, 0(%r4)
 ; CHECK-NEXT:    lg %r4, 8(%r3)
 ; CHECK-NEXT:    lg %r5, 0(%r3)
-; CHECK-NEXT:    lgr %r1, %r14
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r12, %r5

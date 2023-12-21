@@ -46,7 +46,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType SIGN_VAL = (UIntType(1) << 79);
   constexpr UIntType MANTISSA_MASK =
-      (UIntType(1) << MantissaWidth<long double>::VALUE) - 1;
+      (UIntType(1) << FPBits::MANTISSA_WIDTH) - 1;
   UIntType int_val = from_bits.uintval();
   if (from < 0.0l) {
     if (from > to) {
@@ -117,8 +117,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     }
   }
 
-  UIntType implicit_bit =
-      int_val & (UIntType(1) << MantissaWidth<long double>::VALUE);
+  UIntType implicit_bit = int_val & (UIntType(1) << FPBits::MANTISSA_WIDTH);
   if (implicit_bit == UIntType(0))
     raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 

@@ -266,10 +266,11 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-        Fortran::parser::AccObject, mlir::acc::DataBoundsType,
-        mlir::acc::DataBoundsOp>(converter, builder, semanticsContext, stmtCtx,
-                                 accObject, operandLocation, asFortran, bounds,
-                                 /*treatIndexAsSection=*/true);
+        Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
+        mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
+                                   stmtCtx, accObject, operandLocation,
+                                   asFortran, bounds,
+                                   /*treatIndexAsSection=*/true);
     Op op = createDataEntryOp<Op>(builder, operandLocation, baseAddr, asFortran,
                                   bounds, structured, implicit, dataClause,
                                   baseAddr.getType());
@@ -291,9 +292,10 @@ static void genDeclareDataOperandOperations(
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-        Fortran::parser::AccObject, mlir::acc::DataBoundsType,
-        mlir::acc::DataBoundsOp>(converter, builder, semanticsContext, stmtCtx,
-                                 accObject, operandLocation, asFortran, bounds);
+        Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
+        mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
+                                   stmtCtx, accObject, operandLocation,
+                                   asFortran, bounds);
     EntryOp op = createDataEntryOp<EntryOp>(
         builder, operandLocation, baseAddr, asFortran, bounds, structured,
         implicit, dataClause, baseAddr.getType());
@@ -748,9 +750,10 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-        Fortran::parser::AccObject, mlir::acc::DataBoundsType,
-        mlir::acc::DataBoundsOp>(converter, builder, semanticsContext, stmtCtx,
-                                 accObject, operandLocation, asFortran, bounds);
+        Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
+        mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
+                                   stmtCtx, accObject, operandLocation,
+                                   asFortran, bounds);
 
     RecipeOp recipe;
     mlir::Type retTy = getTypeFromBounds(bounds, baseAddr.getType());
@@ -1324,9 +1327,10 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-        Fortran::parser::AccObject, mlir::acc::DataBoundsType,
-        mlir::acc::DataBoundsOp>(converter, builder, semanticsContext, stmtCtx,
-                                 accObject, operandLocation, asFortran, bounds);
+        Fortran::parser::AccObject, mlir::acc::DataBoundsOp,
+        mlir::acc::DataBoundsType>(converter, builder, semanticsContext,
+                                   stmtCtx, accObject, operandLocation,
+                                   asFortran, bounds);
 
     mlir::Type reductionTy = fir::unwrapRefType(baseAddr.getType());
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))

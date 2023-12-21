@@ -181,20 +181,6 @@ gentbl(
 )
 
 gentbl(
-    name = "basic_arm_sve_streaming_attrs_gen",
-    tbl_outs = [(
-        "-gen-arm-sve-streaming-attrs",
-        "include/clang/Basic/arm_sve_streaming_attrs.inc",
-    )],
-    tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/arm_sve.td",
-    td_srcs = [
-        "include/clang/Basic/arm_sve.td",
-        "include/clang/Basic/arm_sve_sme_incl.td",
-    ],
-)
-
-gentbl(
     name = "basic_arm_sme_builtins_gen",
     tbl_outs = [(
         "-gen-arm-sme-builtins",
@@ -227,20 +213,6 @@ gentbl(
     tbl_outs = [(
         "-gen-arm-sme-sema-rangechecks",
         "include/clang/Basic/arm_sme_sema_rangechecks.inc",
-    )],
-    tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/arm_sme.td",
-    td_srcs = [
-        "include/clang/Basic/arm_sme.td",
-        "include/clang/Basic/arm_sve_sme_incl.td",
-    ],
-)
-
-gentbl(
-    name = "basic_arm_sme_streaming_attrs_gen",
-    tbl_outs = [(
-        "-gen-arm-sme-streaming-attrs",
-        "include/clang/Basic/arm_sme_streaming_attrs.inc",
     )],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/arm_sme.td",
@@ -1068,10 +1040,8 @@ cc_library(
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sme_builtins_gen",
         ":basic_arm_sme_sema_rangechecks_gen",
-        ":basic_arm_sme_streaming_attrs_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
-        ":basic_arm_sve_streaming_attrs_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",

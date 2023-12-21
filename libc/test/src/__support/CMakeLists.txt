@@ -50,6 +50,8 @@ add_libc_test(
     libc-support-tests
   SRCS
     str_to_float_test.cpp
+    str_to_double_test.cpp
+    str_to_long_double_test.cpp
   DEPENDS
     libc.src.__support.str_to_float
     libc.src.__support.uint128

@@ -23,8 +23,7 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
   using UIntType = typename FPBits::UIntType;
-  static constexpr UIntType MANTISSA_WIDTH =
-      LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
+  static constexpr UIntType MANTISSA_WIDTH = FPBits::MANTISSA_WIDTH;
   // A normalized mantissa to be used with tests.
   static constexpr UIntType MANTISSA = NormalFloat::ONE + 0x1234;
 

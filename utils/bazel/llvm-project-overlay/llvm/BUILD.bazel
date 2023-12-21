@@ -266,7 +266,9 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [],
+        "@platforms//os:windows": [
+            "ws2_32.lib",
+        ],
         "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",

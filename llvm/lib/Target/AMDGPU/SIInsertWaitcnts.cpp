@@ -372,6 +372,11 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
+  void setNonKernelFunctionInitialState() {
+    setScoreUB(STORE_CNT, getWaitCountMax(STORE_CNT));
+    PendingEvents |= WaitEventMaskForInst[STORE_CNT];
+  }
+
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
 
@@ -2669,6 +2674,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     } else {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
     }
+
+    auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
+        ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
+        SmemAccessCounter);
+    NonKernelInitialState->setNonKernelFunctionInitialState();
+    BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
   } else if (isExpertMode(MaxCounter)) {
