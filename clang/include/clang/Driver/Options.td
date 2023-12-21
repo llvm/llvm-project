@@ -7000,8 +7000,6 @@ def msign_return_address_key_EQ : Joined<["-"], "msign-return-address-key=">,
     Values<"a_key,b_key">;
 def mbranch_target_enforce : Flag<["-"], "mbranch-target-enforce">,
   MarshallingInfoFlag<LangOpts<"BranchTargetEnforcement">>;
-def mbranch_protection_pauth_lr : Flag<["-"], "mbranch-protection-pauth-lr">,
-  MarshallingInfoFlag<LangOpts<"BranchProtectionPAuthLR">>;
 def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">,
   MarshallingInfoNegativeFlag<LangOpts<"DllExportInlines">>;
 def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,

@@ -10318,6 +10318,28 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
+static void swapCommutativeSMEOperands(unsigned BuiltinID,
+                                       SmallVectorImpl<Value *> &Ops) {
+  unsigned MultiVec;
+  switch (BuiltinID) {
+  default:
+    return;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x1:
+    MultiVec = 1;
+    break;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x2:
+    MultiVec = 2;
+    break;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x4:
+    MultiVec = 4;
+    break;
+  }
+
+  if (MultiVec > 0)
+    for (unsigned I = 0; I < MultiVec; ++I)
+      std::swap(Ops[I + 1], Ops[I + 1 + MultiVec]);
+}
+
 Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
   auto *Builtin = findARMVectorIntrinsicInMap(AArch64SMEIntrinsicMap, BuiltinID,
@@ -10339,6 +10361,9 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
            BuiltinID == SME::BI__builtin_sme_svldr_za ||
            BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+
+  // Handle builtins which require their multi-vector operands to be swapped
+  swapCommutativeSMEOperands(BuiltinID, Ops);
 
   // Should not happen!
   if (Builtin->LLVMIntrinsic == 0)
