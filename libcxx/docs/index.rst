@@ -186,7 +186,7 @@ Design Documents
    DesignDocs/AtomicDesign
    DesignDocs/CapturingConfigInfo
    DesignDocs/ExperimentalFeatures
-   DesignDocs/ExtendedCXX03Support
+   DesignDocs/ExtendedCXXSupport
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy

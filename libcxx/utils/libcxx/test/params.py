@@ -57,6 +57,8 @@ _warningFlags = [
     # Disable warnings for extensions used in C++03
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
+    # Allow the use of C++17 `if constexpr` as an extension after C++03
+    "-Wno-c++17-extensions",
 
     # TODO(philnik) This fails with the PSTL.
     "-Wno-unknown-pragmas",

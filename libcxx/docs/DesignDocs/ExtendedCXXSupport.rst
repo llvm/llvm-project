@@ -1,6 +1,6 @@
-=======================
-Extended C++03 Support
-=======================
+===================================
+Language and Library C++ Extensions
+===================================
 
 .. contents::
    :local:
@@ -10,11 +10,14 @@ Overview
 
 libc++ is an implementation of the C++ standard library targeting C++11 or later.
 
-In C++03, the library implements the C++11 standard using C++11 language extensions provided
+In C++03, the library provides the C++11 standard using C++11 language extensions provided
 by Clang.
 
-This document tracks the C++11 extensions libc++ requires, the C++11 extensions it provides,
-and how to write minimal C++11 inside libc++.
+In other dialects, the library may depend on language extensions provided by the compiler.
+
+This document tracks the C++ extensions libc++ requires from the compiler, and in what dialect.
+Additionally this documents the C++11 extensions libc++ provides, and how to write
+minimal C++11 inside libc++.
 
 Required C++11 Compiler Extensions
 ==================================
@@ -36,6 +39,15 @@ mode. These include:
 *  Trailing return types.
 * ``>>`` without a space.
 
+Required C++17 Compiler Extensions
+==================================
+
+Clang and GCC provide some language extensions in C++11 and later.
+The features libc++ expects Clang & GCC to provide are:
+
+* `if constexpr`
+
+This extension is not available in C++03.
 
 Provided C++11 Library Extensions
 =================================
