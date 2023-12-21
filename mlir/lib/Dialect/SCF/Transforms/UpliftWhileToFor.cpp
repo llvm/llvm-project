@@ -59,7 +59,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
         diag << "Expected 'slt' or 'sgt' predicate: " << *cmp;
       });
 
-    BlockArgument indVar;
+    BlockArgument inductionVar;
     Value ub;
     DominanceInfo dom;
 
@@ -81,28 +81,29 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       if (!dom.properlyDominates(arg2, loop))
         continue;
 
-      indVar = blockArg;
+      inductionVar = blockArg;
       ub = arg2;
       break;
     }
 
-    if (!indVar)
+    if (!inductionVar)
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
         diag << "Unrecognized cmp form: " << *cmp;
       });
 
-    // indVar must have 2 uses: one is in `cmp` and other is `condition` arg.
-    if (!llvm::hasNItems(indVar.getUses(), 2))
+    // inductionVar must have 2 uses: one is in `cmp` and other is `condition`
+    // arg.
+    if (!llvm::hasNItems(inductionVar.getUses(), 2))
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
-        diag << "Unrecognized induction var: " << indVar;
+        diag << "Unrecognized induction var: " << inductionVar;
       });
 
     Block *afterBody = loop.getAfterBody();
     scf::YieldOp afterTerm = loop.getYieldOp();
-    auto argNumber = indVar.getArgNumber();
-    auto afterTermIterArg = afterTerm.getResults()[argNumber];
+    auto argNumber = inductionVar.getArgNumber();
+    auto afterTermIndArg = afterTerm.getResults()[argNumber];
 
-    auto indVarAfter = afterBody->getArgument(argNumber);
+    auto inductionVarAfter = afterBody->getArgument(argNumber);
 
     Value step;
 
@@ -110,17 +111,17 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     // Induction var passed from `before` block and second arg must be defined
     // outside of the loop and will be considered step value.
     // TODO: Add `subi` support?
-    for (auto &use : indVarAfter.getUses()) {
+    for (auto &use : inductionVarAfter.getUses()) {
       auto owner = dyn_cast<arith::AddIOp>(use.getOwner());
       if (!owner)
         continue;
 
-      auto other =
-          (indVarAfter == owner.getLhs() ? owner.getRhs() : owner.getLhs());
+      auto other = (inductionVarAfter == owner.getLhs() ? owner.getRhs()
+                                                        : owner.getLhs());
       if (!dom.properlyDominates(other, loop))
         continue;
 
-      if (afterTermIterArg != owner.getResult())
+      if (afterTermIndArg != owner.getResult())
         continue;
 
       step = other;
@@ -139,7 +140,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
 
     llvm::SmallVector<Value> newArgs;
 
-    // Populate inits for new `scf.for`
+    // Populate inits for new `scf.for`, skip induction var.
     newArgs.reserve(loop.getInits().size());
     for (auto &&[i, init] : llvm::enumerate(loop.getInits())) {
       if (i == argNumber)
