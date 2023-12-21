@@ -210,7 +210,26 @@ static memref::AllocaOp getOrCreateAllocaForTile(
 /// register, and the need to swap the contents, can't really be represented
 /// correctly at a high level in MLIR.
 ///
-/// TODO: Reduce the spills/reloads to single slices where possible.
+/// TODO: Reduce the spills/reloads to single slices where possible (and omit
+/// redundant reloads). This could be done via a method on the
+/// `ArmSMETileOpInterface` which returns how the operation uses ZA. E.g.:
+///
+/// `tileOp.getZaUsage()` could return:
+///
+/// struct ArmSMEOpZAUsage {
+///   enum class Kind {
+///     TileRead,        // Omit store after tile operation.
+///     TileWrite,       // Omit load before tile operation.
+///     TileReadWrite,   // Needs both tile load and store.
+///     SliceRead,       // Spill single slice and omit store after operation.
+///     SliceWrite,      // Spill single slice and omit load before operation.
+///     SliceReadWrite   // Spill single slice.
+///   };
+///   Value sliceIndex {};
+///   TileSliceLayout sliceLayout { TileSliceLayout::Horizontal };
+/// };
+///
+}
 struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
 
   ConvertArmSMESpillsAndFillsToLLVM(StringRef rootOpName,
