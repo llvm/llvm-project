@@ -24,7 +24,8 @@ std::string
 getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString);
 
 std::vector<std::basic_string<char>>
-splitStringByGroupSize(const std::basic_string<char> &String, size_t GroupSize) {
+splitStringByGroupSize(const std::basic_string<char> &String,
+                       size_t GroupSize) {
   std::vector<std::basic_string<char>> Result;
   std::basic_string<char> ReversedString(String.rbegin(), String.rend());
 
@@ -33,12 +34,15 @@ splitStringByGroupSize(const std::basic_string<char> &String, size_t GroupSize) 
   }
 
   std::reverse(Result.begin(), Result.end());
-  std::for_each(Result.begin(), Result.end(), [](std::basic_string<char> &Str) {return std::reverse(Str.begin(), Str.end());});
+  std::for_each(Result.begin(), Result.end(), [](std::basic_string<char> &Str) {
+    return std::reverse(Str.begin(), Str.end());
+  });
 
   return Result;
 }
 
-std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString, const llvm::APInt IntegerValue) {
+std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString,
+                                     const llvm::APInt IntegerValue) {
   // Configure formatting
   unsigned int Radix;
   size_t GroupSize;
@@ -76,19 +80,20 @@ std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString
       splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
   const std::string FormatedLiteralString =
       Prefix +
-      std::accumulate(
-          SplittedIntegerLiteral.begin(), SplittedIntegerLiteral.end(),
-          std::string(""),
-          [](std::basic_string<char> S1, std::basic_string<char> S2) {
-            return S1 + "\'" + S2;
-          })
-          .erase(0, 1) + Postfix;
+      std::accumulate(SplittedIntegerLiteral.begin(),
+                      SplittedIntegerLiteral.end(),std::string(""),
+          [](std::basic_string<char> S1,
+                         std::basic_string<char> S2) { return S1 + "\'" + S2; })
+          .erase(0, 1) +
+      Postfix;
 
   return FormatedLiteralString;
 }
 
-std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, const llvm::APFloat FloatValue) {
-  if (OriginalLiteralString.contains('E') || OriginalLiteralString.contains('e')) {
+std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString,
+                                   const llvm::APFloat FloatValue) {
+  if (OriginalLiteralString.contains('E') ||
+      OriginalLiteralString.contains('e')) {
     return getFormatedScientificFloatString(OriginalLiteralString);
   }
 
@@ -177,8 +182,10 @@ void UseDigitSeparatorCheck::registerMatchers(MatchFinder *Finder) {
 void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
-  const IntegerLiteral *MatchedInteger = Result.Nodes.getNodeAs<IntegerLiteral>("integerLiteral");
-  const FloatingLiteral *MatchedFloat = Result.Nodes.getNodeAs<FloatingLiteral>("floatLiteral");
+  const IntegerLiteral *MatchedInteger =
+      Result.Nodes.getNodeAs<IntegerLiteral>("integerLiteral");
+  const FloatingLiteral *MatchedFloat =
+      Result.Nodes.getNodeAs<FloatingLiteral>("floatLiteral");
 
   if (MatchedInteger != nullptr) {
     // Get original literal source text
@@ -188,7 +195,8 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Get formatting literal text
     const llvm::APInt IntegerValue = MatchedInteger->getValue();
-    const std::string FormatedLiteralString = getFormatedIntegerString(OriginalLiteralString, IntegerValue);
+    const std::string FormatedLiteralString =
+        getFormatedIntegerString(OriginalLiteralString, IntegerValue);
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
@@ -206,7 +214,8 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Get formatting literal text
     const llvm::APFloat FloatValue = MatchedFloat->getValue();
-    const std::string FormatedLiteralString = getFormatedFloatString(OriginalLiteralString, FloatValue);
+    const std::string FormatedLiteralString =
+        getFormatedFloatString(OriginalLiteralString, FloatValue);
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
