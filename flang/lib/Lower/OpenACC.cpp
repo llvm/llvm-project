@@ -1480,7 +1480,7 @@ getDeviceType(Fortran::parser::AccDeviceTypeExpr::Device device) {
   case Fortran::parser::AccDeviceTypeExpr::Device::Multicore:
     return mlir::acc::DeviceType::Multicore;
   }
-  return mlir::acc::DeviceType::None;
+  return mlir::acc::DeviceType::Default;
 }
 
 static void gatherDeviceTypeAttrs(
@@ -1781,36 +1781,32 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
                 bool outerCombined = false) {
 
   // Parallel operation operands
+  mlir::Value async;
+  mlir::Value numWorkers;
+  mlir::Value vectorLength;
   mlir::Value ifCond;
   mlir::Value selfCond;
   mlir::Value waitDevnum;
   llvm::SmallVector<mlir::Value> waitOperands, attachEntryOperands,
       copyEntryOperands, copyoutEntryOperands, createEntryOperands,
-      dataClauseOperands, numGangs, numWorkers, vectorLength, async;
-  llvm::SmallVector<mlir::Attribute> numGangsDeviceTypes, numWorkersDeviceTypes,
-      vectorLengthDeviceTypes, asyncDeviceTypes, asyncOnlyDeviceTypes,
-      waitOperandsDeviceTypes, waitOnlyDeviceTypes;
-  llvm::SmallVector<int32_t> numGangsSegments, waitOperandsSegments;
+      dataClauseOperands, numGangs;
 
   llvm::SmallVector<mlir::Value> reductionOperands, privateOperands,
       firstprivateOperands;
   llvm::SmallVector<mlir::Attribute> privatizations, firstPrivatizations,
       reductionRecipes;
 
-  // Self clause has optional values but can be present with
+  // Async, wait and self clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
   // represent the clause.
+  bool addAsyncAttr = false;
+  bool addWaitAttr = false;
   bool addSelfAttr = false;
 
   bool hasDefaultNone = false;
   bool hasDefaultPresent = false;
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-
-  // device_type attribute is set to `none` until a device_type clause is
-  // encountered.
-  auto crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
-      builder.getContext(), mlir::acc::DeviceType::None);
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separatly as clauses can appear
@@ -1819,52 +1815,27 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *asyncClause =
             std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
-      const auto &asyncClauseValue = asyncClause->v;
-      if (asyncClauseValue) { // async has a value.
-        async.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*asyncClauseValue), stmtCtx)));
-        asyncDeviceTypes.push_back(crtDeviceTypeAttr);
-      } else {
-        asyncOnlyDeviceTypes.push_back(crtDeviceTypeAttr);
-      }
+      genAsyncClause(converter, asyncClause, async, addAsyncAttr, stmtCtx);
     } else if (const auto *waitClause =
                    std::get_if<Fortran::parser::AccClause::Wait>(&clause.u)) {
-      const auto &waitClauseValue = waitClause->v;
-      if (waitClauseValue) { // wait has a value.
-        const Fortran::parser::AccWaitArgument &waitArg = *waitClauseValue;
-        const auto &waitList =
-            std::get<std::list<Fortran::parser::ScalarIntExpr>>(waitArg.t);
-        auto crtWaitOperands = waitOperands.size();
-        for (const Fortran::parser::ScalarIntExpr &value : waitList) {
-          waitOperands.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(value), stmtCtx)));
-        }
-        waitOperandsDeviceTypes.push_back(crtDeviceTypeAttr);
-        waitOperandsSegments.push_back(waitOperands.size() - crtWaitOperands);
-      } else {
-        waitOnlyDeviceTypes.push_back(crtDeviceTypeAttr);
-      }
+      genWaitClause(converter, waitClause, waitOperands, waitDevnum,
+                    addWaitAttr, stmtCtx);
     } else if (const auto *numGangsClause =
                    std::get_if<Fortran::parser::AccClause::NumGangs>(
                        &clause.u)) {
-      auto crtNumGangs = numGangs.size();
       for (const Fortran::parser::ScalarIntExpr &expr : numGangsClause->v)
         numGangs.push_back(fir::getBase(converter.genExprValue(
             *Fortran::semantics::GetExpr(expr), stmtCtx)));
-      numGangsDeviceTypes.push_back(crtDeviceTypeAttr);
-      numGangsSegments.push_back(numGangs.size() - crtNumGangs);
     } else if (const auto *numWorkersClause =
                    std::get_if<Fortran::parser::AccClause::NumWorkers>(
                        &clause.u)) {
-      numWorkers.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(numWorkersClause->v), stmtCtx)));
-      numWorkersDeviceTypes.push_back(crtDeviceTypeAttr);
+      numWorkers = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(numWorkersClause->v), stmtCtx));
     } else if (const auto *vectorLengthClause =
                    std::get_if<Fortran::parser::AccClause::VectorLength>(
                        &clause.u)) {
-      vectorLength.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(vectorLengthClause->v), stmtCtx)));
-      vectorLengthDeviceTypes.push_back(crtDeviceTypeAttr);
+      vectorLength = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(vectorLengthClause->v), stmtCtx));
     } else if (const auto *ifClause =
                    std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
@@ -2015,27 +1986,18 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       else if ((defaultClause->v).v ==
                llvm::acc::DefaultValue::ACC_Default_present)
         hasDefaultPresent = true;
-    } else if (const auto *deviceTypeClause =
-                   std::get_if<Fortran::parser::AccClause::DeviceType>(
-                       &clause.u)) {
-      const Fortran::parser::AccDeviceTypeExprList &deviceTypeExprList =
-          deviceTypeClause->v;
-      assert(deviceTypeExprList.v.size() == 1 &&
-             "expect only one device_type expr");
-      crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
-          builder.getContext(), getDeviceType(deviceTypeExprList.v.front().v));
     }
   }
 
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
-  addOperands(operands, operandSegments, async);
+  addOperand(operands, operandSegments, async);
   addOperands(operands, operandSegments, waitOperands);
   if constexpr (!std::is_same_v<Op, mlir::acc::SerialOp>) {
     addOperands(operands, operandSegments, numGangs);
-    addOperands(operands, operandSegments, numWorkers);
-    addOperands(operands, operandSegments, vectorLength);
+    addOperand(operands, operandSegments, numWorkers);
+    addOperand(operands, operandSegments, vectorLength);
   }
   addOperand(operands, operandSegments, ifCond);
   addOperand(operands, operandSegments, selfCond);
@@ -2056,6 +2018,10 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
         builder, currentLocation, eval, operands, operandSegments,
         outerCombined);
 
+  if (addAsyncAttr)
+    computeOp.setAsyncAttrAttr(builder.getUnitAttr());
+  if (addWaitAttr)
+    computeOp.setWaitAttrAttr(builder.getUnitAttr());
   if (addSelfAttr)
     computeOp.setSelfAttrAttr(builder.getUnitAttr());
 
@@ -2063,34 +2029,6 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     computeOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::None);
   if (hasDefaultPresent)
     computeOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::Present);
-
-  if constexpr (!std::is_same_v<Op, mlir::acc::SerialOp>) {
-    if (!numWorkersDeviceTypes.empty())
-      computeOp.setNumWorkersDeviceTypeAttr(
-          mlir::ArrayAttr::get(builder.getContext(), numWorkersDeviceTypes));
-    if (!vectorLengthDeviceTypes.empty())
-      computeOp.setVectorLengthDeviceTypeAttr(
-          mlir::ArrayAttr::get(builder.getContext(), vectorLengthDeviceTypes));
-    if (!numGangsDeviceTypes.empty())
-      computeOp.setNumGangsDeviceTypeAttr(
-          mlir::ArrayAttr::get(builder.getContext(), numGangsDeviceTypes));
-    if (!numGangsSegments.empty())
-      computeOp.setNumGangsSegmentsAttr(
-          builder.getDenseI32ArrayAttr(numGangsSegments));
-  }
-  if (!asyncDeviceTypes.empty())
-    computeOp.setAsyncDeviceTypeAttr(builder.getArrayAttr(asyncDeviceTypes));
-  if (!asyncOnlyDeviceTypes.empty())
-    computeOp.setAsyncOnlyAttr(builder.getArrayAttr(asyncOnlyDeviceTypes));
-
-  if (!waitOperandsDeviceTypes.empty())
-    computeOp.setWaitOperandsDeviceTypeAttr(
-        builder.getArrayAttr(waitOperandsDeviceTypes));
-  if (!waitOperandsSegments.empty())
-    computeOp.setWaitOperandsSegmentsAttr(
-        builder.getDenseI32ArrayAttr(waitOperandsSegments));
-  if (!waitOnlyDeviceTypes.empty())
-    computeOp.setWaitOnlyAttr(builder.getArrayAttr(waitOnlyDeviceTypes));
 
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
     if (!privatizations.empty())
