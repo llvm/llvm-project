@@ -4566,7 +4566,7 @@ Instruction *InstCombinerImpl::foldICmpWithCommonFactors(ICmpInst &Cmp,
         replaceInstUsesWith(*BO, A);
         eraseInstFromFunction(*BO);
       }
-      return new ICmpInst(Pred, A, Zero);
+      return new ICmpInst(Pred, LBO, Zero);
     }
 
     unsigned Opc = BO->getOpcode();
