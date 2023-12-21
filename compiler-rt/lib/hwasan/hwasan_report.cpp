@@ -233,7 +233,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         if (obj_offset >= local.size)
           continue;
         if (!found_local) {
-          Printf("Potentially referenced stack objects:\n");
+          Printf("\nPotentially referenced stack objects:\n");
           found_local = true;
         }
         Printf("  %s in %s %s:%d\n", local.name, local.function_name,
@@ -363,7 +363,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
   InternalScopedString s;
   addr = MemToShadow(addr);
   s.AppendF(
-      "Memory tags around the buggy address (one tag corresponds to %zd "
+      "\nMemory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
   PrintTagInfoAroundAddr(addr, kShadowLines, s,
@@ -648,19 +648,23 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
   if (candidate.heap.is_allocated) {
     uptr offset;
     const char *whence;
+    const char *cause;
     if (candidate.heap.begin <= untagged_addr &&
         untagged_addr < candidate.heap.end) {
       offset = untagged_addr - candidate.heap.begin;
       whence = "inside";
+      cause = "heap-use-after-free";
     } else if (candidate.after) {
       offset = untagged_addr - candidate.heap.end;
       whence = "after";
+      cause = "heap-buffer-overflow";
     } else {
       offset = candidate.heap.begin - untagged_addr;
       whence = "before";
+      cause = "heap-buffer-underflow";
     }
     Printf("%s", d.Error());
-    Printf("\nCause: heap-buffer-overflow\n");
+    Printf("\nCause: %s\n", cause);
     Printf("%s", d.Default());
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
@@ -803,8 +807,10 @@ void BaseReport::PrintAddressDescription() const {
   }
 
   // Print the remaining threads, as an extra information, 1 line per thread.
-  if (flags()->print_live_threads_info)
+  if (flags()->print_live_threads_info) {
+    Printf("\n");
     hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
+  }
 
   if (!num_descriptions_printed)
     // We exhausted our possibilities. Bail out.
@@ -1020,7 +1026,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_{aarch64,riscv64}.S).
 void ReportRegisters(const uptr *frame, uptr pc) {
-  Printf("Registers where the failure occurred (pc %p):\n", pc);
+  Printf("\nRegisters where the failure occurred (pc %p):\n", pc);
 
   // We explicitly print a single line (4 registers/line) each iteration to
   // reduce the amount of logcat error messages printed. Each Printf() will
