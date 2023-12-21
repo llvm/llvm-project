@@ -776,6 +776,15 @@ public:
     assert(SubType);
     computeGlobalViewIndicesFromFlatOffset(Offset, SubType, Layout, Indices);
   }
+
+  mlir::cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
+    return create<mlir::cir::StackSaveOp>(loc, ty);
+  }
+
+  mlir::cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
+    return create<mlir::cir::StackRestoreOp>(loc, v);
+  }
+
 };
 
 } // namespace cir
