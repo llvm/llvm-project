@@ -121,7 +121,7 @@ inline RT_API_ATTRS bool SetInteger(INT &x, int kind, std::int64_t value) {
 template <template <TypeCategory, int> class FUNC, typename RESULT,
     typename... A>
 inline RT_API_ATTRS RESULT ApplyType(
-    TypeCategory cat, int kind, Terminator &terminator, A &&... x) {
+    TypeCategory cat, int kind, Terminator &terminator, A &&...x) {
   switch (cat) {
   case TypeCategory::Integer:
     switch (kind) {
@@ -222,7 +222,7 @@ inline RT_API_ATTRS RESULT ApplyType(
 // a function object template and calls it with the supplied arguments.
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyIntegerKind(
-    int kind, Terminator &terminator, A &&... x) {
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -243,7 +243,7 @@ inline RT_API_ATTRS RESULT ApplyIntegerKind(
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyFloatingPointKind(
-    int kind, Terminator &terminator, A &&... x) {
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
 #if 0 // TODO: REAL/COMPLEX (2 & 3)
   case 2:
@@ -271,7 +271,7 @@ inline RT_API_ATTRS RESULT ApplyFloatingPointKind(
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyCharacterKind(
-    int kind, Terminator &terminator, A &&... x) {
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -286,7 +286,7 @@ inline RT_API_ATTRS RESULT ApplyCharacterKind(
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyLogicalKind(
-    int kind, Terminator &terminator, A &&... x) {
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
