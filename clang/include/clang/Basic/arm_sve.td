@@ -2142,6 +2142,21 @@ let TargetGuard = "sme2" in {
 }
 
 let TargetGuard = "sme2" in {
+  // FRINTA / FRINTM / FRINTN / FRINTP
+  def SVRINTA_X2 : SInst<"svrinta[_{d}_x2]", "22", "f", MergeNone, "aarch64_sve_frinta_x2", [IsStreaming], []>;
+  def SVRINTA_X4 : SInst<"svrinta[_{d}_x4]", "44", "f", MergeNone, "aarch64_sve_frinta_x4", [IsStreaming], []>;
+
+  def SVRINTM_X2 : SInst<"svrintm[_{d}_x2]", "22", "f", MergeNone, "aarch64_sve_frintm_x2", [IsStreaming], []>;
+  def SVRINTM_X4 : SInst<"svrintm[_{d}_x4]", "44", "f", MergeNone, "aarch64_sve_frintm_x4", [IsStreaming], []>;
+
+  def SVRINTN_X2 : SInst<"svrintn[_{d}_x2]", "22", "f", MergeNone, "aarch64_sve_frintn_x2", [IsStreaming], []>;
+  def SVRINTN_X4 : SInst<"svrintn[_{d}_x4]", "44", "f", MergeNone, "aarch64_sve_frintn_x4", [IsStreaming], []>;
+
+  def SVRINTP_X2 : SInst<"svrintp[_{d}_x2]", "22", "f", MergeNone, "aarch64_sve_frintp_x2", [IsStreaming], []>;
+  def SVRINTP_X4 : SInst<"svrintp[_{d}_x4]", "44", "f", MergeNone, "aarch64_sve_frintp_x4", [IsStreaming], []>;
+}
+
+let TargetGuard = "sme2" in {
   def SVSCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "csil",     MergeNone, "aarch64_sve_sclamp_single_x2",  [IsStreaming], []>;
   def SVUCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "UcUsUiUl", MergeNone, "aarch64_sve_uclamp_single_x2",  [IsStreaming], []>;
   def SVFCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x2",  [IsStreaming], []>;
