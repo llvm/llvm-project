@@ -8802,23 +8802,12 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
   // Don't outline anything used for return address signing. The outlined
   // function will get signed later if needed
   switch (MI.getOpcode()) {
-  case AArch64::PACM:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
-  case AArch64::PACIASPPC:
-  case AArch64::PACIBSPPC:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
-  case AArch64::AUTIASPPCi:
-  case AArch64::AUTIASPPCr:
-  case AArch64::AUTIBSPPCi:
-  case AArch64::AUTIBSPPCr:
   case AArch64::RETAA:
   case AArch64::RETAB:
-  case AArch64::RETAASPPCi:
-  case AArch64::RETAASPPCr:
-  case AArch64::RETABSPPCi:
-  case AArch64::RETABSPPCr:
   case AArch64::EMITBKEY:
   case AArch64::PAUTH_PROLOGUE:
   case AArch64::PAUTH_EPILOGUE:
