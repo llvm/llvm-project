@@ -18,14 +18,6 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
-
-// TODO: this symbol will be moved to config.linux.app
-AppProperties app;
-
-using InitCallback = void(int, char **, char **);
-using FiniCallback = void(void);
-
 extern "C" int main(int argc, char **argv, char **envp);
 
 extern "C" {
@@ -38,6 +30,13 @@ extern uintptr_t __init_array_end[];
 extern uintptr_t __fini_array_start[];
 extern uintptr_t __fini_array_end[];
 }
+
+namespace LIBC_NAMESPACE {
+// TODO: this symbol will be moved to config.linux.app
+AppProperties app;
+
+using InitCallback = void(int, char **, char **);
+using FiniCallback = void(void);
 
 static void call_init_array_callbacks(int argc, char **argv, char **env) {
   size_t preinit_array_size = __preinit_array_end - __preinit_array_start;
@@ -65,8 +64,8 @@ static ThreadAttributes main_thread_attrib;
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
   // value. We step over it (the "+ 1" below) to get to the env values.
-  uint64_t *env_ptr = app.args->argv + app.args->argc + 1;
-  uint64_t *env_end_marker = env_ptr;
+  ArgVEntryType *env_ptr = app.args->argv + app.args->argc + 1;
+  ArgVEntryType *env_end_marker = env_ptr;
   app.env_ptr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;

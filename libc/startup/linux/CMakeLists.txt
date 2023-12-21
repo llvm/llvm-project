@@ -109,6 +109,7 @@ add_object_library(
 merge_relocatable_object(
   crt1
   .${LIBC_TARGET_ARCHITECTURE}.start
+  .${LIBC_TARGET_ARCHITECTURE}.tls
   .do_start
 )
 
