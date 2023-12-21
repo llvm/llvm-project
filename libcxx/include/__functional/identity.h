@@ -38,13 +38,12 @@ struct __is_identity<__identity> : true_type {};
 #if _LIBCPP_STD_VER >= 20
 
 struct identity {
-    template<class _Tp>
-    _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator()(_Tp&& __t) const noexcept
-    {
-        return std::forward<_Tp>(__t);
-    }
+  template <class _Tp>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator()(_Tp&& __t) const noexcept {
+    return std::forward<_Tp>(__t);
+  }
 
-    using is_transparent = void;
+  using is_transparent = void;
 };
 
 template <>

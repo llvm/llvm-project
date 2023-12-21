@@ -541,15 +541,15 @@ private:
   /// The transformation is only valid for forward branch targets at the same
   /// construct nesting level as the IfConstruct. The result must not violate
   /// construct nesting requirements or contain an EntryStmt. The result
-  /// is subject to normal un/structured code classification analysis. The
-  /// result is allowed to violate the F18 Clause 11.1.2.1 prohibition on
-  /// transfer of control into the interior of a construct block, as that does
-  /// not compromise correct code generation. When two transformation
-  /// candidates overlap, at least one must be disallowed. In such cases,
-  /// the current heuristic favors simple code generation, which happens to
-  /// favor later candidates over earlier candidates. That choice is probably
-  /// not significant, but could be changed.
-  ///
+  /// is subject to normal un/structured code classification analysis. Except
+  /// for a branch to the EndIfStmt, the result is allowed to violate the F18
+  /// Clause 11.1.2.1 prohibition on transfer of control into the interior of
+  /// a construct block, as that does not compromise correct code generation.
+  /// When two transformation candidates overlap, at least one must be
+  /// disallowed. In such cases, the current heuristic favors simple code
+  /// generation, which happens to favor later candidates over earlier
+  /// candidates. That choice is probably not significant, but could be
+  /// changed.
   void rewriteIfGotos() {
     auto &evaluationList = *evaluationListStack.back();
     if (!evaluationList.size())
@@ -616,7 +616,8 @@ private:
       if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
         const auto bodyEval = std::next(eval.evaluationList->begin());
         if (const auto *gotoStmt = bodyEval->getIf<parser::GotoStmt>()) {
-          ifCandidateStack.push_back({it, gotoStmt->v});
+          if (!bodyEval->lexicalSuccessor->label)
+            ifCandidateStack.push_back({it, gotoStmt->v});
         } else if (doStmt) {
           if (const auto *cycleStmt = bodyEval->getIf<parser::CycleStmt>()) {
             std::string cycleName = getConstructName(*cycleStmt);

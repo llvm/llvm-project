@@ -964,19 +964,45 @@ cc_library(
 
 cc_library(
     name = "TextAPI",
-    srcs = glob([
-        "lib/TextAPI/**/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/TextAPI/**/*.h",
-        "include/llvm/TextAPI/**/*.def",
-        "lib/TextAPI/**/*.h",
-    ]),
+    srcs = glob(
+        [
+            "lib/TextAPI/**/*.cpp",
+        ],
+        exclude = ["lib/TextAPI/BinaryReader/**"],
+    ),
+    hdrs = glob(
+        [
+            "include/llvm/TextAPI/**/*.h",
+            "include/llvm/TextAPI/**/*.def",
+            "lib/TextAPI/**/*.h",
+        ],
+        exclude = [
+            "lib/TextAPI/BinaryReader/**",
+            "include/llvm/TextAPI/DylibReader.h",
+        ],
+    ),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "TextAPIBinaryReader",
+    srcs = glob([
+        "lib/TextAPI/BinaryReader/**/*.cpp",
+    ]),
+    hdrs = ["include/llvm/TextAPI/DylibReader.h"] + glob(
+        ["lib/TextAPI/BinaryReader/**/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Object",
+        ":Support",
+        ":TargetParser",
+        ":TextAPI",
     ],
 )
 
@@ -5204,6 +5230,7 @@ cc_binary(
         ":ReadTAPIOptsTableGen",
         ":Support",
         ":TextAPI",
+        ":TextAPIBinaryReader",
     ],
 )
 

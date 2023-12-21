@@ -32,7 +32,7 @@ void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out, v8s a, v8s b, v8f c
 //
 void test_amdgcn_wmma_f16_16x16x16_f16_w32(global v8h* out, v8h a, v8h b, v8h c)
 {
-  *out = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(a, b, c, false);
+  *out = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(a, b, c);
 }
 
 
@@ -40,7 +40,7 @@ void test_amdgcn_wmma_f16_16x16x16_f16_w32(global v8h* out, v8h a, v8h b, v8h c)
 // CHECK-GFX1200: v_wmma_bf16_16x16x16_bf16 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
 void test_amdgcn_wmma_bf16_16x16x16_bf16_w32(global v8s* out, v8s a, v8s b, v8s c)
 {
-  *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(a, b, c, false);
+  *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(a, b, c);
 }
 
 

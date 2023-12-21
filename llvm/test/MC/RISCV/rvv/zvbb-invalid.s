@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=riscv64 --mattr=+zve64x --mattr=+experimental-zvbb %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv64 --mattr=+zve64x --mattr=+zvbb %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vwsll.vv v2, v2, v4

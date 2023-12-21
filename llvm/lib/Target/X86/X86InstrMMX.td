@@ -548,13 +548,13 @@ def MMX_PMOVMSKBrr : MMXI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
 // Misc.
 let SchedRW = [SchedWriteShuffle.MMX] in {
 let Uses = [EDI], Predicates = [HasMMX, HasSSE1,Not64BitMode] in
-def MMX_MASKMOVQ : MMXI32<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
-                          "maskmovq\t{$mask, $src|$src, $mask}",
-                          [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, EDI)]>;
+def MMX_MASKMOVQ : MMXI<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
+                        "maskmovq\t{$mask, $src|$src, $mask}",
+                        [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, EDI)]>;
 let Uses = [RDI], Predicates = [HasMMX, HasSSE1,In64BitMode] in
-def MMX_MASKMOVQ64: MMXI64<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
-                           "maskmovq\t{$mask, $src|$src, $mask}",
-                           [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, RDI)]>;
+def MMX_MASKMOVQ64: MMXI<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
+                         "maskmovq\t{$mask, $src|$src, $mask}",
+                         [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, RDI)]>;
 }
 
 // 64-bit bit convert.

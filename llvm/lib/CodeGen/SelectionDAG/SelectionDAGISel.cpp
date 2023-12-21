@@ -2786,7 +2786,7 @@ CheckInteger(const unsigned char *MatcherTable, unsigned &MatcherIndex,
   Val = decodeSignRotatedValue(Val);
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(N);
-  return C && C->getSExtValue() == Val;
+  return C && C->getAPIntValue().trySExtValue() == Val;
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -3612,12 +3612,24 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           CurDAG->getTargetConstant(Val, SDLoc(NodeToMatch), VT), nullptr));
       continue;
     }
-    case OPC_EmitRegister: {
-      MVT::SimpleValueType VT =
-          static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+    case OPC_EmitRegister:
+    case OPC_EmitRegisterI32:
+    case OPC_EmitRegisterI64: {
+      MVT::SimpleValueType VT;
+      switch (Opcode) {
+      case OPC_EmitRegisterI32:
+        VT = MVT::i32;
+        break;
+      case OPC_EmitRegisterI64:
+        VT = MVT::i64;
+        break;
+      default:
+        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        break;
+      }
       unsigned RegNo = MatcherTable[MatcherIndex++];
-      RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
-                              CurDAG->getRegister(RegNo, VT), nullptr));
+      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
+          CurDAG->getRegister(RegNo, VT), nullptr));
       continue;
     }
     case OPC_EmitRegister2: {

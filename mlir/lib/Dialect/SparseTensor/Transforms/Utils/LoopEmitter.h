@@ -11,6 +11,8 @@
 
 #include <vector>
 
+#include "SparseTensorLevel.h"
+
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
@@ -241,12 +243,6 @@ public:
   const std::vector<std::vector<Value>> &getPosits() const { return posits; };
   const std::vector<std::vector<Value>> &getCoords() const { return coords; };
   const std::vector<std::vector<Value>> &getHighs() const { return highs; };
-  const std::vector<std::vector<Value>> &getPositionBuffers() const {
-    return positionsBuffers;
-  };
-  const std::vector<std::vector<Value>> &getCoordinateBuffers() const {
-    return coordinatesBuffers;
-  };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
   constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
@@ -648,8 +644,7 @@ private:
   std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  std::vector<std::vector<Value>> positionsBuffers;   // to_positions
-  std::vector<std::vector<Value>> coordinatesBuffers; // to_coordinates
+  std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
   std::vector<Value> valBuffer;                       // to_value
 
   //

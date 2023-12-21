@@ -1,4 +1,4 @@
-//===- TestLowerToNVVM.cpp - Test lowering to NVVM as a sink pass ---------===//
+//===- GPUToNVVMPipeline.cpp - Test lowering to NVVM as a sink pass -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,6 +27,7 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -39,8 +40,8 @@ using namespace mlir;
 
 #if MLIR_CUDA_CONVERSIONS_ENABLED
 namespace {
-struct TestLowerToNVVMOptions
-    : public PassPipelineOptions<TestLowerToNVVMOptions> {
+struct GPUToNVVMPipelineOptions
+    : public PassPipelineOptions<GPUToNVVMPipelineOptions> {
   PassOptions::Option<int64_t> indexBitWidth{
       *this, "index-bitwidth",
       llvm::cl::desc("Bitwidth of the index type for the host (warning this "
@@ -83,16 +84,14 @@ struct TestLowerToNVVMOptions
 // Common pipeline
 //===----------------------------------------------------------------------===//
 void buildCommonPassPipeline(OpPassManager &pm,
-                             const TestLowerToNVVMOptions &options) {
+                             const GPUToNVVMPipelineOptions &options) {
   pm.addPass(createConvertNVGPUToNVVMPass());
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(createConvertLinalgToLoopsPass());
   pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createConvertNVVMToLLVMPass());
-  pm.addPass(createConvertVectorToLLVMPass());
   pm.addPass(createConvertMathToLLVMPass());
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
 
@@ -115,7 +114,7 @@ void buildCommonPassPipeline(OpPassManager &pm,
 // GPUModule-specific stuff.
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
-                          const TestLowerToNVVMOptions &options) {
+                          const GPUToNVVMPipelineOptions &options) {
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   ConvertGpuOpsToNVVMOpsOptions opt;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
@@ -130,7 +129,7 @@ void buildGpuPassPipeline(OpPassManager &pm,
 // Host Post-GPU pipeline
 //===----------------------------------------------------------------------===//
 void buildHostPostPipeline(OpPassManager &pm,
-                           const TestLowerToNVVMOptions &options) {
+                           const GPUToNVVMPipelineOptions &options) {
   GpuToLLVMConversionPassOptions opt;
   opt.hostBarePtrCallConv = options.hostUseBarePtrCallConv;
   opt.kernelBarePtrCallConv = options.kernelUseBarePtrCallConv;
@@ -145,7 +144,7 @@ void buildHostPostPipeline(OpPassManager &pm,
 }
 
 void buildLowerToNVVMPassPipeline(OpPassManager &pm,
-                                  const TestLowerToNVVMOptions &options) {
+                                  const GPUToNVVMPipelineOptions &options) {
   //===----------------------------------------------------------------------===//
   // Common pipeline
   //===----------------------------------------------------------------------===//
@@ -164,14 +163,16 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
 } // namespace
 
 namespace mlir {
-namespace test {
-void registerTestLowerToNVVM() {
-  PassPipelineRegistration<TestLowerToNVVMOptions>(
-      "test-lower-to-nvvm",
-      "An example of pipeline to lower the main dialects (arith, linalg, "
-      "memref, scf, vector) down to NVVM.",
+namespace gpu {
+void registerGPUToNVVMPipeline() {
+  PassPipelineRegistration<GPUToNVVMPipelineOptions>(
+      "gpu-lower-to-nvvm",
+      "The default pipeline lowers main dialects (arith, linalg, memref, scf, "
+      "vector, gpu, and nvgpu) to NVVM. It starts by lowering GPU code to the "
+      "specified compilation target (default is fatbin) then lowers the host "
+      "code.",
       buildLowerToNVVMPassPipeline);
 }
-} // namespace test
+} // namespace gpu
 } // namespace mlir
 #endif // MLIR_CUDA_CONVERSIONS_ENABLED

@@ -962,35 +962,35 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   if (TypeStr.starts_with("atomic_"))
     TypeStr = TypeStr.substr(strlen("atomic_"));
 
-  if (TypeStr.startswith("void")) {
+  if (TypeStr.starts_with("void")) {
     Ty = Type::getVoidTy(Ctx);
     TypeStr = TypeStr.substr(strlen("void"));
-  } else if (TypeStr.startswith("bool")) {
+  } else if (TypeStr.starts_with("bool")) {
     Ty = Type::getIntNTy(Ctx, 1);
     TypeStr = TypeStr.substr(strlen("bool"));
-  } else if (TypeStr.startswith("char") || TypeStr.startswith("uchar")) {
+  } else if (TypeStr.starts_with("char") || TypeStr.starts_with("uchar")) {
     Ty = Type::getInt8Ty(Ctx);
-    TypeStr = TypeStr.startswith("char") ? TypeStr.substr(strlen("char"))
-                                         : TypeStr.substr(strlen("uchar"));
-  } else if (TypeStr.startswith("short") || TypeStr.startswith("ushort")) {
+    TypeStr = TypeStr.starts_with("char") ? TypeStr.substr(strlen("char"))
+                                          : TypeStr.substr(strlen("uchar"));
+  } else if (TypeStr.starts_with("short") || TypeStr.starts_with("ushort")) {
     Ty = Type::getInt16Ty(Ctx);
-    TypeStr = TypeStr.startswith("short") ? TypeStr.substr(strlen("short"))
-                                          : TypeStr.substr(strlen("ushort"));
-  } else if (TypeStr.startswith("int") || TypeStr.startswith("uint")) {
+    TypeStr = TypeStr.starts_with("short") ? TypeStr.substr(strlen("short"))
+                                           : TypeStr.substr(strlen("ushort"));
+  } else if (TypeStr.starts_with("int") || TypeStr.starts_with("uint")) {
     Ty = Type::getInt32Ty(Ctx);
-    TypeStr = TypeStr.startswith("int") ? TypeStr.substr(strlen("int"))
-                                        : TypeStr.substr(strlen("uint"));
+    TypeStr = TypeStr.starts_with("int") ? TypeStr.substr(strlen("int"))
+                                         : TypeStr.substr(strlen("uint"));
   } else if (TypeStr.starts_with("long") || TypeStr.starts_with("ulong")) {
     Ty = Type::getInt64Ty(Ctx);
-    TypeStr = TypeStr.startswith("long") ? TypeStr.substr(strlen("long"))
-                                         : TypeStr.substr(strlen("ulong"));
-  } else if (TypeStr.startswith("half")) {
+    TypeStr = TypeStr.starts_with("long") ? TypeStr.substr(strlen("long"))
+                                          : TypeStr.substr(strlen("ulong"));
+  } else if (TypeStr.starts_with("half")) {
     Ty = Type::getHalfTy(Ctx);
     TypeStr = TypeStr.substr(strlen("half"));
-  } else if (TypeStr.startswith("float")) {
+  } else if (TypeStr.starts_with("float")) {
     Ty = Type::getFloatTy(Ctx);
     TypeStr = TypeStr.substr(strlen("float"));
-  } else if (TypeStr.startswith("double")) {
+  } else if (TypeStr.starts_with("double")) {
     Ty = Type::getDoubleTy(Ctx);
     TypeStr = TypeStr.substr(strlen("double"));
   } else
@@ -1007,7 +1007,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // Handle "typeN*" or  "type vector[N]*".
   bool IsPtrToVec = TypeStr.consume_back("*");
 
-  if (TypeStr.startswith(" vector[")) {
+  if (TypeStr.starts_with(" vector[")) {
     TypeStr = TypeStr.substr(strlen(" vector["));
     TypeStr = TypeStr.substr(0, TypeStr.find(']'));
   }

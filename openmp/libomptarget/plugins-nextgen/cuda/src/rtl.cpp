@@ -1304,7 +1304,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
       StringRef ArchStr(Info->Arch);
       StringRef PrefixStr("sm_");
-      if (!ArchStr.startswith(PrefixStr))
+      if (!ArchStr.starts_with(PrefixStr))
         return Plugin::error("Unrecognized image arch %s", ArchStr.data());
 
       int32_t ImageMajor = ArchStr[PrefixStr.size() + 0] - '0';

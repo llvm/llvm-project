@@ -465,7 +465,8 @@ bool SystemZDAGToDAGISel::expandAddress(SystemZAddressingMode &AM,
                                         bool IsBase) const {
   SDValue N = IsBase ? AM.Base : AM.Index;
   unsigned Opcode = N.getOpcode();
-  if (Opcode == ISD::TRUNCATE) {
+  // Look through no-op truncations.
+  if (Opcode == ISD::TRUNCATE && N.getOperand(0).getValueSizeInBits() <= 64) {
     N = N.getOperand(0);
     Opcode = N.getOpcode();
   }

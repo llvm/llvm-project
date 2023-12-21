@@ -31,7 +31,7 @@ void test_amdgcn_wmma_f32_16x16x16_bf16_w64(global v4f* out, v4s a, v4s b, v4f c
 //
 void test_amdgcn_wmma_f16_16x16x16_f16_w64(global v4h* out, v4h a, v4h b, v4h c)
 {
-  *out = __builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12(a, b, c, false);
+  *out = __builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12(a, b, c);
 }
 
 
@@ -40,7 +40,7 @@ void test_amdgcn_wmma_f16_16x16x16_f16_w64(global v4h* out, v4h a, v4h b, v4h c)
 //
 void test_amdgcn_wmma_bf16_16x16x16_bf16_w64(global v4s* out, v4s a, v4s b, v4s c)
 {
-  *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12(a, b, c, false);
+  *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12(a, b, c);
 }
 
 

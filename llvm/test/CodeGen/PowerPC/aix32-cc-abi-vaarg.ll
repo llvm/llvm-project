@@ -347,6 +347,7 @@ entry:
 
 ; 32BIT-LABEL:   stack:
 ; 32BIT-DAG:     - { id: 0, name: arg1, type: default, offset: 0, size: 4, alignment: 4,
+; 32BIT-DAG:     - { id: 1, name: arg2, type: default, offset: 0, size: 4, alignment: 4,
 ; 32BIT-DAG:     - { id: 2, name: '', type: default, offset: 0, size: 8, alignment: 8,
 ; 32BIT-DAG:     - { id: 3, name: '', type: default, offset: 0, size: 8, alignment: 8,
 
