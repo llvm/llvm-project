@@ -14,7 +14,7 @@ define i1 @icmp_common_add_sub(i32 %a, i32 %b, i32 %c){
   ret i1 %cmp
 }
 
-; A + B - C == B
+; A + B - C !=  B
 define i1 @icmp_common_add_sub_ne(i32 %a, i32 %b, i32 %c){
 ; CHECK-LABEL: define i1 @icmp_common_add_sub_ne(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {

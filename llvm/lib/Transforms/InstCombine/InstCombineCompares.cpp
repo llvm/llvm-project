@@ -4555,27 +4555,32 @@ Instruction *InstCombinerImpl::foldICmpWithCommonFactors(ICmpInst &Cmp,
   if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
-  SmallVector<BinaryOperator *, 16> worklist(1, LBO);
-  Constant *Zero = Constant::getNullValue(LBO->getType());
+  if (LBO->getOpcode() != Instruction::Add &&
+      LBO->getOpcode() != Instruction::Sub)
+    return nullptr;
+
+  SmallVector<BinaryOperator *, 16> worklist;
+
+  auto AddNextBO = [&](Value *Op) {
+    if (BinaryOperator *Next = dyn_cast<BinaryOperator>(Op))
+      worklist.push_back(Next);
+  };
+
+  AddNextBO(LBO->getOperand(0));
+  AddNextBO(LBO->getOperand(1));
 
   while (!worklist.empty()) {
     BinaryOperator *BO = worklist.pop_back_val();
 
     if (Value * A; match(BO, m_OneUse(m_c_Add(m_Value(A), m_Specific(RHS))))) {
-      if (BO != LBO) {
-        replaceInstUsesWith(*BO, A);
-        eraseInstFromFunction(*BO);
-      }
+      replaceInstUsesWith(*BO, A);
+      eraseInstFromFunction(*BO);
+      Constant *Zero = Constant::getNullValue(LBO->getType());
       return new ICmpInst(Pred, LBO, Zero);
     }
 
     unsigned Opc = BO->getOpcode();
     if (Opc == Instruction::Add || Opc == Instruction::Sub) {
-      auto AddNextBO = [&](Value *Op) {
-        if (BinaryOperator *Next = dyn_cast<BinaryOperator>(Op))
-          worklist.push_back(Next);
-      };
-
       AddNextBO(BO->getOperand(0));
       AddNextBO(BO->getOperand(1));
     }
