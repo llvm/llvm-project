@@ -32,7 +32,7 @@ using namespace mlir;
 
 namespace {
 
-/// Helper to create a arm_sme.intr.ld1*.(horiz|vert)' intrinsic.
+/// Helper to create an arm_sme.intr.ld1*.(horiz|vert)' intrinsic.
 static Operation *createLoadTileSliceIntrinsic(
     RewriterBase &rewriter, Location loc, arm_sme::ArmSMETileType type,
     arm_sme::TileSliceLayout layout, Value maskOp, Value ptr,
@@ -77,7 +77,7 @@ static Operation *createLoadTileSliceIntrinsic(
   }
 }
 
-/// Helper to create a arm_sme.intr.st1*.(horiz|vert)' intrinsic.
+/// Helper to create an arm_sme.intr.st1*.(horiz|vert)' intrinsic.
 static Operation *createStoreTileSliceIntrinsic(
     RewriterBase &rewriter, Location loc, arm_sme::ArmSMETileType type,
     arm_sme::TileSliceLayout layout, Value maskOp, Value ptr,
