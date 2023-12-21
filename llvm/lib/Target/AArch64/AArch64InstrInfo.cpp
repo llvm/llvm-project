@@ -3776,7 +3776,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     Scale = TypeSize::getScalable(2);
     Width = TypeSize::getScalable(2 * 2);
     MinOffset = -256;
-    MaxOffset = 255;
+    MaxOffset = 254;
     break;
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
