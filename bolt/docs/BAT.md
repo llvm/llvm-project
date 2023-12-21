@@ -59,24 +59,24 @@ Fragment linkage header
 
 ### Functions table
 Header:
-| Entry  | Width | Description |
+| Entry  | Encoding | Description |
 | ------ | ----- | ----------- |
-| `NumFuncs` | 4B | Number of functions in the functions table |
+| `NumFuncs` | ULEB128 | Number of functions in the functions table |
 
 The header is followed by Functions table with `NumFuncs` entries.
-| Entry  | Width | Description |
+| Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `Address` | 8B | Function address in the output binary |
-| `NumEntries` | 4B | Number of address translation entries for a function |
+| `Address` | ULEB128 | Function address in the output binary |
+| `NumEntries` | ULEB128 | Number of address translation entries for a function |
 
 Function header is followed by `NumEntries` pairs of offsets for current
 function.
 
 ### Address translation table
-| Entry  | Width | Description |
+| Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `OutputAddr` | 4B | Function offset in output binary |
-| `InputAddr` | 4B | Function offset in input binary with `BRANCHENTRY` top bit |
+| `OutputAddr` | ULEB128 | Function offset in output binary |
+| `InputAddr` | ULEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
@@ -86,12 +86,12 @@ function.
 Following Functions table, fragment linkage table is encoded to link split
 cold fragments with main (hot) fragment.
 Header:
-| Entry  | Width | Description |
+| Entry  | Encoding | Description |
 | ------ | ------------ | ----------- |
-| `NumColdEntries` | 4B | Number of split functions in the functions table |
+| `NumColdEntries` | ULEB128 | Number of split functions in the functions table |
 
 `NumColdEntries` pairs of addresses follow:
-| Entry  | Width | Description |
+| Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `ColdAddress` | 8B | Cold fragment address in output binary |
-| `HotAddress` | 8B | Hot fragment address in output binary |
+| `ColdAddress` | ULEB128 | Cold fragment address in output binary |
+| `HotAddress` | ULEB128 | Hot fragment address in output binary |
