@@ -919,10 +919,16 @@ public:
 #  else
       _NOEXCEPT
 #  endif
+#ifndef _LIBCPP_HAS_NO_ASAN
       // Turning off ASan instrumentation for variable initialization with _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
       // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
       // __str's memory needs to be unpoisoned only in the case where it's a short string.
       : __r_(((__str.__is_long() ? 0 : (__str.__annotate_delete(), 0)), std::move(__str.__r_))) {
+    // ASan TODO: ^ This line results in stack frame growth and isn't correctly optimized by the compiler.
+    //              It should be refactored to improve performance.
+#else
+      : __r_(std::move(__str.__r_)) {
+#endif
     __str.__r_.first() = __rep();
     __str.__annotate_new(0);
     if (!__is_long())
