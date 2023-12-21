@@ -4547,6 +4547,45 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   return nullptr;
 }
 
+// extract common factors like ((A + B) - C == B) -> (A - C == 0)
+Value *InstCombinerImpl::foldICmpWithCommonFactors(ICmpInst &Cmp,
+                                                   BinaryOperator *LBO,
+                                                   Value *RHS) {
+  const CmpInst::Predicate Pred = Cmp.getPredicate();
+  if (!ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  SmallVector<BinaryOperator *, 16> WorkList(1, LBO);
+
+  while (!WorkList.empty()) {
+    BinaryOperator *BO = WorkList.pop_back_val();
+
+    Value *A;
+    if (match(BO, m_OneUse(m_c_Add(m_Value(A), m_Specific(RHS))))) {
+      if (BO == LBO)
+        return Builder.CreateICmp(Pred, A,
+                                  Constant::getNullValue(LBO->getType()));
+      replaceInstUsesWith(*BO, A);
+      eraseInstFromFunction(*BO);
+      return Builder.CreateICmp(Pred, LBO,
+                                Constant::getNullValue(LBO->getType()));
+    }
+
+    unsigned Opc = BO->getOpcode();
+    if (Opc == Instruction::Add || Opc == Instruction::Sub) {
+      auto AddNextBO = [&](Value *Op) {
+        if (BinaryOperator *Next = dyn_cast<BinaryOperator>(Op))
+          WorkList.push_back(Next);
+      };
+
+      AddNextBO(BO->getOperand(0));
+      AddNextBO(BO->getOperand(1));
+    }
+  }
+
+  return nullptr;
+}
+
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -4564,6 +4603,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   if (Instruction *NewICmp = foldICmpXNegX(I, Builder))
     return NewICmp;
+
+  if (BO0) {
+    if (Value *V = foldICmpWithCommonFactors(I, BO0, Op1))
+      return replaceInstUsesWith(I, V);
+  }
 
   const CmpInst::Predicate Pred = I.getPredicate();
   Value *X;
