@@ -21,12 +21,10 @@
 
 using namespace llvm;
 
-RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C,
-                                               RISCVCPKind Kind)
+RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C, RISCVCPKind Kind)
     : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), Kind(Kind) {}
 
-RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty,
-                                               RISCVCPKind Kind)
+RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty, RISCVCPKind Kind)
     : MachineConstantPoolValue(Ty), Kind(Kind) {}
 
 int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
@@ -41,7 +39,8 @@ RISCVConstantPoolConstant::RISCVConstantPoolConstant(Type *Ty,
 
 RISCVConstantPoolConstant *
 RISCVConstantPoolConstant::Create(const GlobalValue *GV) {
-  return new RISCVConstantPoolConstant(GV->getType(), GV, RISCVCPKind::GlobalValue);
+  return new RISCVConstantPoolConstant(GV->getType(), GV,
+                                       RISCVCPKind::GlobalValue);
 }
 
 RISCVConstantPoolConstant *

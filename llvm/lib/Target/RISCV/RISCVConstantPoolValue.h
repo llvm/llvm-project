@@ -69,8 +69,7 @@ public:
 class RISCVConstantPoolConstant : public RISCVConstantPoolValue {
   const Constant *CVal;
 
-  RISCVConstantPoolConstant(Type *Ty, const Constant *GV,
-                            RISCVCPKind Kind);
+  RISCVConstantPoolConstant(Type *Ty, const Constant *GV, RISCVCPKind Kind);
 
 public:
   static RISCVConstantPoolConstant *Create(const GlobalValue *GV);
