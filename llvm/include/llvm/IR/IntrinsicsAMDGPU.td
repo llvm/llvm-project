@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+def flat_ptr_ty : LLVMQualPointerType<0>;
+def global_ptr_ty : LLVMQualPointerType<1>;
+def local_ptr_ty : LLVMQualPointerType<3>;
+
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
@@ -1243,6 +1247,7 @@ def int_amdgcn_raw_buffer_atomic_or : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_xor : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_inc : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_dec : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_cond_sub_u32 : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1279,6 +1284,7 @@ def int_amdgcn_raw_ptr_buffer_atomic_or : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_xor : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_inc : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_dec : AMDGPURawPtrBufferAtomic;
+def int_amdgcn_raw_ptr_buffer_atomic_cond_sub_u32 : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1317,6 +1323,7 @@ def int_amdgcn_struct_buffer_atomic_or : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_xor : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_inc : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_dec : AMDGPUStructBufferAtomic;
+def int_amdgcn_struct_buffer_atomic_cond_sub_u32 : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1352,6 +1359,7 @@ def int_amdgcn_struct_ptr_buffer_atomic_or : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_xor : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_inc : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_dec : AMDGPUStructPtrBufferAtomic;
+def int_amdgcn_struct_ptr_buffer_atomic_cond_sub_u32 : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -2353,10 +2361,10 @@ def int_amdgcn_s_get_waveid_in_workgroup :
   Intrinsic<[llvm_i32_ty], [],
     [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-class AMDGPUAtomicRtn<LLVMType vt> : Intrinsic <
+class AMDGPUAtomicRtn<LLVMType vt, LLVMType pt = llvm_anyptr_ty> : Intrinsic <
   [vt],
-  [llvm_anyptr_ty,    // vaddr
-   vt],               // vdata(VGPR)
+  [pt,  // vaddr
+   vt], // vdata(VGPR)
   [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree], "",
   [SDNPMemOperand]>;
 
@@ -2490,6 +2498,11 @@ def int_amdgcn_flat_atomic_fmin_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmax_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmin_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+
+def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty, flat_ptr_ty>;
+def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty, global_ptr_ty>;
+
+def int_amdgcn_ds_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty, local_ptr_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

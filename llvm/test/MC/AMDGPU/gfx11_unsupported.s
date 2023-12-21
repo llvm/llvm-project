@@ -2008,8 +2008,20 @@ flat_atomic_csub_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
 flat_atomic_sub_clamp_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+ds_cond_sub_rtn_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cond_sub_u32 v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ds_sub_clamp_rtn_u32 v5, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_sub_clamp_u32 v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_cond_sub_u32 v[0:1], v2 offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_cond_sub_u32 v0, v2, s[0:1] offset:64
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
