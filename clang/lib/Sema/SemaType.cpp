@@ -7438,6 +7438,21 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
   return false;
 }
 
+static void HandleSwiftAttr(TypeProcessingState &State, QualType &QT,
+                            ParsedAttr &PAttr) {
+  Sema &S = State.getSema();
+
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(PAttr, 0, Str)) {
+    PAttr.setInvalid();
+    return;
+  }
+
+  auto *A = ::new (S.Context) SwiftAttrAttr(S.Context, PAttr, Str);
+  QT = State.getAttributedType(A, QT, QT);
+  PAttr.setUsedAsTypeAttr();
+}
+
 /// Rebuild an attributed type without the nullability attribute on it.
 static QualType rebuildAttributedTypeWithoutNullability(ASTContext &ctx,
                                                         QualType type) {
@@ -8816,6 +8831,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_WebAssemblyFuncref: {
       if (!HandleWebAssemblyFuncrefAttr(state, type, attr))
         attr.setUsedAsTypeAttr();
+      break;
+    }
+
+    case ParsedAttr::AT_SwiftAttr: {
+      HandleSwiftAttr(state, type, attr);
       break;
     }
 

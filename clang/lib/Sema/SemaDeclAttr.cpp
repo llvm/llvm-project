@@ -6347,11 +6347,16 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
 }
 
 static void handleSwiftAttrAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.isInvalid() || AL.isUsedAsTypeAttr())
+    return;
+
   // Make sure that there is a string literal as the annotation's single
   // argument.
   StringRef Str;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str)) {
+    AL.setInvalid();
     return;
+  }
 
   D->addAttr(::new (S.Context) SwiftAttrAttr(S.Context, AL, Str));
 }
