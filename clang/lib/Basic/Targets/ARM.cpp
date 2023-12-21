@@ -419,6 +419,7 @@ bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
   BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   return true;
 }
 
