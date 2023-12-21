@@ -20,9 +20,10 @@ TEST(ResourceSegmentsDeath, FullOverwrite) {
   EXPECT_DEATH(X.add({15, 18}), "A resource is being overwritten");
 }
 
-TEST(ResourceSegmentsDeath, ZeroSizeIntervalsNotAllowed) {
+TEST(ResourceSegmentsDeath, ZeroSizeCuttoffAllowed) {
   auto X = ResourceSegments({{10, 20}});
-  EXPECT_DEATH(X.add({20, 30}, 0), "0-size interval history has no use.");
+  X.add({20, 30}, 0);
+  EXPECT_EQ(X, ResourceSegments({{10, 20}}));
 }
 #endif // NDEBUG
 
@@ -85,7 +86,8 @@ TEST(ResourceSegments, add_02) {
 #ifndef NDEBUG
 TEST(ResourceSegmentsDeath, add_empty) {
   auto X = ResourceSegments({{10, 20}, {30, 40}});
-  EXPECT_DEATH(X.add({22, 22}), "Cannot add empty resource usage");
+  X.add({22, 22});
+  EXPECT_EQ(X, ResourceSegments({{10, 20}, {30, 40}}));
 }
 #endif
 
