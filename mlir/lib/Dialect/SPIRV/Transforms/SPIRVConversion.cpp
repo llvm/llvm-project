@@ -713,6 +713,9 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   });
 
   addConversion([this](FloatType floatType) -> std::optional<Type> {
+    if (floatType.isBF16())
+      return convertType(IntegerType::get(floatType.getContext(), 16));
+
     if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
       return convertScalarType(this->targetEnv, this->options, scalarType);
     return Type();
