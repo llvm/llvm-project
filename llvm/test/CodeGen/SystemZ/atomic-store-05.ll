@@ -24,3 +24,10 @@ define void @f2(i128 %val, ptr %src) {
   store atomic i128 %val, ptr %src monotonic, align 16
   ret void
 }
+
+define void @f3(i128 %val, ptr %src) {
+; CHECK-LABEL: f3:
+; CHECK: brasl %r14, __atomic_store@PLT
+  store atomic i128 %val, ptr %src seq_cst, align 8
+  ret void
+}

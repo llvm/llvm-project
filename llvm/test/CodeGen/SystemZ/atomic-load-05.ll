@@ -5,10 +5,18 @@
 
 define i128 @f1(ptr %src) {
 ; CHECK-LABEL: f1:
-; CHECK: lpq %r0, 0(%r3)
-; CHECK-DAG: stg %r1, 8(%r2)
-; CHECK-DAG: stg %r0, 0(%r2)
-; CHECK: br %r14
+; CHECK: # %bb.0:
+; CHECK-NEXT: lpq %r0, 0(%r3)
+; CHECK-NEXT: stg %r1, 8(%r2)
+; CHECK-NEXT: stg %r0, 0(%r2)
+; CHECK-NEXT: br %r14
   %val = load atomic i128, ptr %src seq_cst, align 16
+  ret i128 %val
+}
+
+define i128 @f2(ptr %src) {
+; CHECK-LABEL: f2:
+; CHECK: brasl %r14, __atomic_load@PLT
+  %val = load atomic i128, ptr %src seq_cst, align 8
   ret i128 %val
 }
