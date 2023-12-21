@@ -5005,6 +5005,7 @@ cc_binary(
         "utils/count/*.h",
     ]),
     stamp = 0,
+    deps = [":Support"],
 )
 
 cc_binary(

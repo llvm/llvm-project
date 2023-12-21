@@ -156,6 +156,11 @@ steps:
     <<: *mac_agent_any_arch
     <<: *common
 
+  - label: MacOS with C++03
+    command: libcxx/utils/ci/run-buildbot generic-cxx03
+    <<: *mac_agent_any_arch
+    <<: *common
+
     # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: Apple system
     command: libcxx/utils/ci/run-buildbot apple-system

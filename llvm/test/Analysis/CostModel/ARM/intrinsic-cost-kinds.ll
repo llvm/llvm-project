@@ -341,27 +341,27 @@ define void @memcpy(ptr %a, ptr %b, i32 %c) {
 define void @ssa_copy() {
   ; CHECK: %{{.*}} = llvm.intr.ssa.copy %{{.*}} : f32
 ; THRU-LABEL: 'ssa_copy'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'ssa_copy'
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'ssa_copy'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'ssa_copy'
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %i = call i32 @llvm.ssa.copy.i32(i32 undef)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = call float @llvm.ssa.copy.f32(float undef)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p = call ptr @llvm.ssa.copy.p0(ptr undef)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %i = call i32 @llvm.ssa.copy.i32(i32 undef)

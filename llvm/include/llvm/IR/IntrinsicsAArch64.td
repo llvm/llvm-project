@@ -1401,6 +1401,13 @@ class AdvSIMD_SVE_Reduce_Intrinsic
                llvm_anyvector_ty],
               [IntrNoMem]>;
 
+class AdvSIMD_SVE_V128_Reduce_Intrinsic
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+              [LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+               llvm_anyvector_ty],
+               [IntrNoMem]>;
+
+
 class AdvSIMD_SVE_SADDV_Reduce_Intrinsic
   : DefaultAttrsIntrinsic<[llvm_i64_ty],
               [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1723,6 +1730,15 @@ def int_aarch64_sve_sqsub_x   : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_uqadd_x   : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_uqsub_x   : AdvSIMD_2VectorArg_Intrinsic;
 
+def int_aarch64_sve_orqv      : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_eorqv     : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_andqv     : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_smaxqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_umaxqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_sminqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_uminqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+
+
 // Shifts
 
 def int_aarch64_sve_asr      : AdvSIMD_Pred2VectorArg_Intrinsic;
@@ -2033,6 +2049,11 @@ def int_aarch64_sve_fmaxv   : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_fmaxnmv : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_fminv   : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_fminnmv : AdvSIMD_SVE_Reduce_Intrinsic;
+def int_aarch64_sve_addqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_fmaxnmqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_fminnmqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_fmaxqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_fminqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 
 //
 // Floating-point conversions

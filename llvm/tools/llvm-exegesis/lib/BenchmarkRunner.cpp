@@ -25,6 +25,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM

@@ -1291,9 +1291,20 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       if (RISCVII::hasVLOp(TSFlags)) {
         MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
         if (VLOp.isReg()) {
+          Register Reg = VLOp.getReg();
+          MachineInstr *VLOpDef = MRI->getVRegDef(Reg);
+
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);
           VLOp.setIsKill(false);
+
+          // If the AVL was an immediate > 31, then it would have been emitted
+          // as an ADDI. However, the ADDI might not have been used in the
+          // vsetvli, or a vsetvli might not have been emitted, so it may be
+          // dead now.
+          if (VLOpDef && TII->isAddImmediate(*VLOpDef, Reg) &&
+              MRI->use_nodbg_empty(Reg))
+            VLOpDef->eraseFromParent();
         }
         MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
                                                 /*isImp*/ true));

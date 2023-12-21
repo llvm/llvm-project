@@ -4227,12 +4227,9 @@ InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
   assert(II.isCommutative());
 
   Value *A, *B, *C;
-  bool LHSIsSelect =
-      match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C)));
-  bool RHSIsSymmetricalSelect = match(
-      II.getOperand(1), m_Select(m_Specific(A), m_Specific(C), m_Specific(B)));
-
-  if (LHSIsSelect && RHSIsSymmetricalSelect) {
+  if (match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
+      match(II.getOperand(1),
+            m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
     replaceOperand(II, 0, B);
     replaceOperand(II, 1, C);
     return &II;

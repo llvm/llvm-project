@@ -71,7 +71,7 @@ LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 eisel_lemire(ExpandedFloat<T> init_num,
              RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename FPBits::FloatProp;
+  using FloatProp = typename fputil::FloatProperties<T>;
   using UIntType = typename FPBits::UIntType;
 
   UIntType mantissa = init_num.mantissa;
@@ -184,7 +184,7 @@ LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
                           RoundDirection round) {
   using FPBits = typename fputil::FPBits<long double>;
-  using FloatProp = typename FPBits::FloatProp;
+  using FloatProp = typename fputil::FloatProperties<long double>;
   using UIntType = typename FPBits::UIntType;
 
   UIntType mantissa = init_num.mantissa;
@@ -322,7 +322,7 @@ LIBC_INLINE FloatConvertReturn<T>
 simple_decimal_conversion(const char *__restrict numStart,
                           RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename FPBits::FloatProp;
+  using FloatProp = typename fputil::FloatProperties<T>;
   using UIntType = typename FPBits::UIntType;
 
   int32_t exp2 = 0;
@@ -516,7 +516,7 @@ LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 clinger_fast_path(ExpandedFloat<T> init_num,
                   RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename FPBits::FloatProp;
+  using FloatProp = typename fputil::FloatProperties<T>;
   using UIntType = typename FPBits::UIntType;
 
   UIntType mantissa = init_num.mantissa;
@@ -724,7 +724,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
                                                       bool truncated,
                                                       RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename FPBits::FloatProp;
+  using FloatProp = typename fputil::FloatProperties<T>;
   using UIntType = typename FPBits::UIntType;
 
   UIntType mantissa = init_num.mantissa;

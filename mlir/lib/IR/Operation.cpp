@@ -751,7 +751,7 @@ void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
-  if (name.startswith((defaultDialect + ".").str()) && name.count('.') == 1)
+  if (name.starts_with((defaultDialect + ".").str()) && name.count('.') == 1)
     name = name.drop_front(defaultDialect.size() + 1);
   p.getStream() << name;
 }

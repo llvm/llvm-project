@@ -852,11 +852,15 @@ private:
     // the documentation for __sanitizer_annotate_contiguous_container.
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-    void __annotate_contiguous_container([[__maybe_unused__]] const void *__beg,
-                                         [[__maybe_unused__]] const void *__end,
-                                         [[__maybe_unused__]] const void *__old_mid,
-                                         [[__maybe_unused__]] const void *__new_mid) const
+    void __annotate_contiguous_container(const void *__beg,
+                                         const void *__end,
+                                         const void *__old_mid,
+                                         const void *__new_mid) const
     {
+      (void)__beg;
+      (void)__end;
+      (void)__old_mid;
+      (void)__new_mid;
 #ifndef _LIBCPP_HAS_NO_ASAN
       if (!__libcpp_is_constant_evaluated() && __beg != nullptr && __asan_annotate_container_with_allocator<_Allocator>::value)
         __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);

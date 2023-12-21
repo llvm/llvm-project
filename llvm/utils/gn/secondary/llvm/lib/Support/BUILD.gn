@@ -185,6 +185,8 @@ static_library("Support") {
   if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]
   } else if (current_os == "win") {
+    libs = [ "ws2_32.lib" ]
+
     # Delay load shell32.dll if possible to speed up process startup.
     libs += [ "delayimp.lib" ]
     ldflags = [

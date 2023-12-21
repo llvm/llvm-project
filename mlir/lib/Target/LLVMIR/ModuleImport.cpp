@@ -1637,6 +1637,7 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
 static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("aarch64_pstate_sm_body"),
+    StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_za_new"),
     StringLiteral("vscale_range"),
     StringLiteral("frame-pointer"),
@@ -1709,6 +1710,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmStreaming(true);
   else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
     funcOp.setArmLocallyStreaming(true);
+  else if (func->hasFnAttribute("aarch64_pstate_sm_compatible"))
+    funcOp.setArmStreamingCompatible(true);
 
   if (func->hasFnAttribute("aarch64_pstate_za_new"))
     funcOp.setArmNewZa(true);

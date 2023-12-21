@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
-#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
+#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_
+#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_
 
 #include <vector>
 
@@ -22,7 +22,7 @@ namespace sparse_tensor {
 // A compressed <tensor id, level> pair.
 using TensorLevel = unsigned;
 
-//===----------------------------------------------------------------------===//
+//
 // SparseTensorLoopEmiter class, manages sparse tensors and helps to
 // generate loop structure to (co)-iterate sparse tensors.
 //
@@ -48,8 +48,7 @@ using TensorLevel = unsigned;
 // loopEmiter.exitCurrentLoop(); // exit k
 // loopEmiter.exitCurrentLoop(); // exit j
 // loopEmiter.exitCurrentLoop(); // exit i
-//===----------------------------------------------------------------------===//
-
+//
 class LoopEmitter {
 public:
   /// Optional callback function to setup dense output tensors when
@@ -705,4 +704,4 @@ private:
 } // namespace sparse_tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
+#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_

@@ -161,7 +161,7 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
 // string.  For example, the delimiter of R"deli(cont)deli" is deli.
 static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
-      || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
+      || !TokenText.starts_with("R\"") || !TokenText.ends_with("\"")) {
     return std::nullopt;
   }
 
@@ -177,7 +177,7 @@ static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   size_t RParenPos = TokenText.size() - Delimiter.size() - 2;
   if (TokenText[RParenPos] != ')')
     return std::nullopt;
-  if (!TokenText.substr(RParenPos + 1).startswith(Delimiter))
+  if (!TokenText.substr(RParenPos + 1).starts_with(Delimiter))
     return std::nullopt;
   return Delimiter;
 }
@@ -608,7 +608,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   if (Current.is(tok::lessless) &&
       ((Previous.is(tok::identifier) && Previous.TokenText == "endl") ||
-       (Previous.Tok.isLiteral() && (Previous.TokenText.endswith("\\n\"") ||
+       (Previous.Tok.isLiteral() && (Previous.TokenText.ends_with("\\n\"") ||
                                      Previous.TokenText == "\'\\n\'")))) {
     return true;
   }
@@ -2293,12 +2293,13 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     if (Style.isVerilog() || Style.Language == FormatStyle::LK_Java ||
         Style.isJavaScript() || Style.isCSharp()) {
       BreakableStringLiteralUsingOperators::QuoteStyleType QuoteStyle;
-      if (Style.isJavaScript() && Text.startswith("'") && Text.endswith("'")) {
+      if (Style.isJavaScript() && Text.starts_with("'") &&
+          Text.ends_with("'")) {
         QuoteStyle = BreakableStringLiteralUsingOperators::SingleQuotes;
-      } else if (Style.isCSharp() && Text.startswith("@\"") &&
-                 Text.endswith("\"")) {
+      } else if (Style.isCSharp() && Text.starts_with("@\"") &&
+                 Text.ends_with("\"")) {
         QuoteStyle = BreakableStringLiteralUsingOperators::AtDoubleQuotes;
-      } else if (Text.startswith("\"") && Text.endswith("\"")) {
+      } else if (Text.starts_with("\"") && Text.ends_with("\"")) {
         QuoteStyle = BreakableStringLiteralUsingOperators::DoubleQuotes;
       } else {
         return nullptr;
@@ -2315,12 +2316,14 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     // FIXME: Store Prefix and Suffix (or PrefixLength and SuffixLength to
     // reduce the overhead) for each FormatToken, which is a string, so that we
     // don't run multiple checks here on the hot path.
-    if ((Text.endswith(Postfix = "\"") &&
-         (Text.startswith(Prefix = "@\"") || Text.startswith(Prefix = "\"") ||
-          Text.startswith(Prefix = "u\"") || Text.startswith(Prefix = "U\"") ||
-          Text.startswith(Prefix = "u8\"") ||
-          Text.startswith(Prefix = "L\""))) ||
-        (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
+    if ((Text.ends_with(Postfix = "\"") &&
+         (Text.starts_with(Prefix = "@\"") || Text.starts_with(Prefix = "\"") ||
+          Text.starts_with(Prefix = "u\"") ||
+          Text.starts_with(Prefix = "U\"") ||
+          Text.starts_with(Prefix = "u8\"") ||
+          Text.starts_with(Prefix = "L\""))) ||
+        (Text.starts_with(Prefix = "_T(\"") &&
+         Text.ends_with(Postfix = "\")"))) {
       return std::make_unique<BreakableStringLiteral>(
           Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
           State.Line->InPPDirective, Encoding, Style);
@@ -2342,7 +2345,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     bool RegularComments = [&]() {
       for (const FormatToken *T = &Current; T && T->is(TT_LineComment);
            T = T->Next) {
-        if (!(T->TokenText.startswith("//") || T->TokenText.startswith("#")))
+        if (!(T->TokenText.starts_with("//") || T->TokenText.starts_with("#")))
           return false;
       }
       return true;
@@ -2754,7 +2757,7 @@ bool ContinuationIndenter::nextIsMultilineString(const LineState &State) {
   // We never consider raw string literals "multiline" for the purpose of
   // AlwaysBreakBeforeMultilineStrings implementation as they are special-cased
   // (see TokenAnnotator::mustBreakBefore().
-  if (Current.TokenText.startswith("R\""))
+  if (Current.TokenText.starts_with("R\""))
     return false;
   if (Current.IsMultiline)
     return true;

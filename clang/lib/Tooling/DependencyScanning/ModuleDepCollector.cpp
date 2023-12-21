@@ -530,7 +530,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // this file in the proper directory and relies on the rest of Clang to
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
           MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
@@ -548,7 +548,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (StringRef(IFI.FilenameAsRequested)
-                .endswith("__inferred_module.map"))
+                .ends_with("__inferred_module.map"))
           return;
         MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });

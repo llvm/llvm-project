@@ -2306,6 +2306,20 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 // -----
 
 //
+// arm_streaming_compatible attribute.
+//
+
+// CHECK-LABEL: @streaming_compatible_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" }
+
+// -----
+
+//
 // Zero-initialize operation.
 //
 

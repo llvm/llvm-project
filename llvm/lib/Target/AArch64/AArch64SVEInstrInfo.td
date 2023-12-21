@@ -4063,11 +4063,11 @@ defm BFCLAMP_ZZZ : sve2p1_bfclamp<"bfclamp", int_aarch64_sve_fclamp>;
 // SME2.1 or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p1_or_HasSME2p1] in {
-defm FADDQV   : sve2p1_fp_reduction_q<0b000, "faddqv">;
-defm FMAXNMQV : sve2p1_fp_reduction_q<0b100, "fmaxnmqv">;
-defm FMINNMQV : sve2p1_fp_reduction_q<0b101, "fminnmqv">;
-defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv">;
-defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv">;
+defm FADDQV   : sve2p1_fp_reduction_q<0b000, "faddqv", int_aarch64_sve_addqv>;
+defm FMAXNMQV : sve2p1_fp_reduction_q<0b100, "fmaxnmqv", int_aarch64_sve_fmaxnmqv>;
+defm FMINNMQV : sve2p1_fp_reduction_q<0b101, "fminnmqv", int_aarch64_sve_fminnmqv>;
+defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv", int_aarch64_sve_fmaxqv>;
+defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv", int_aarch64_sve_fminqv>;
 
 defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
 defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq_lane>;
@@ -4075,14 +4075,14 @@ defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq_lane>;
 defm PMOV_PZI : sve2p1_vector_to_pred<"pmov", int_aarch64_sve_pmov_to_pred_lane, int_aarch64_sve_pmov_to_pred_lane_zero>;
 defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov", int_aarch64_sve_pmov_to_vector_lane_merging, int_aarch64_sve_pmov_to_vector_lane_zeroing>;
 
-defm ORQV_VPZ   : sve2p1_int_reduce_q<0b1100, "orqv">;
-defm EORQV_VPZ  : sve2p1_int_reduce_q<0b1101, "eorqv">;
-defm ANDQV_VPZ  : sve2p1_int_reduce_q<0b1110, "andqv">;
-defm ADDQV_VPZ  : sve2p1_int_reduce_q<0b0001, "addqv">;
-defm SMAXQV_VPZ : sve2p1_int_reduce_q<0b0100, "smaxqv">;
-defm UMAXQV_VPZ : sve2p1_int_reduce_q<0b0101, "umaxqv">;
-defm SMINQV_VPZ : sve2p1_int_reduce_q<0b0110, "sminqv">;
-defm UMINQV_VPZ : sve2p1_int_reduce_q<0b0111, "uminqv">;
+defm ORQV_VPZ   : sve2p1_int_reduce_q<0b1100, "orqv", int_aarch64_sve_orqv>;
+defm EORQV_VPZ  : sve2p1_int_reduce_q<0b1101, "eorqv", int_aarch64_sve_eorqv>;
+defm ANDQV_VPZ  : sve2p1_int_reduce_q<0b1110, "andqv", int_aarch64_sve_andqv>;
+defm ADDQV_VPZ  : sve2p1_int_reduce_q<0b0001, "addqv", int_aarch64_sve_addqv>;
+defm SMAXQV_VPZ : sve2p1_int_reduce_q<0b0100, "smaxqv", int_aarch64_sve_smaxqv>;
+defm UMAXQV_VPZ : sve2p1_int_reduce_q<0b0101, "umaxqv", int_aarch64_sve_umaxqv>;
+defm SMINQV_VPZ : sve2p1_int_reduce_q<0b0110, "sminqv", int_aarch64_sve_sminqv>;
+defm UMINQV_VPZ : sve2p1_int_reduce_q<0b0111, "uminqv", int_aarch64_sve_uminqv>;
 
 defm ZIPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b000, "zipq1", int_aarch64_sve_zipq1>;
 defm ZIPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b001, "zipq2", int_aarch64_sve_zipq2>;

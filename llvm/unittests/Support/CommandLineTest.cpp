@@ -2244,4 +2244,34 @@ TEST(CommandLineTest, HelpWithSubcommands) {
   cl::ResetCommandLineParser();
 }
 
+TEST(CommandLineTest, UnknownCommands) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("foo", "Foo subcommand");
+  StackSubCommand SC2("bar", "Bar subcommand");
+  StackOption<bool> SC1Opt("put", cl::sub(SC1));
+  StackOption<bool> SC2Opt("get", cl::sub(SC2));
+  StackOption<bool> TopOpt1("peek");
+  StackOption<bool> TopOpt2("set");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *Args1[] = {"prog", "baz", "--get"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args1), Args1, StringRef(), &OS));
+  EXPECT_EQ(Errs,
+            "prog: Unknown subcommand 'baz'.  Try: 'prog --help'\n"
+            "prog: Did you mean 'bar'?\n"
+            "prog: Unknown command line argument '--get'.  Try: 'prog --help'\n"
+            "prog: Did you mean '--set'?\n");
+
+  // Do not show a suggestion if the subcommand is not similar to any known.
+  Errs.clear();
+  const char *Args2[] = {"prog", "faz"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args2), Args2, StringRef(), &OS));
+  EXPECT_EQ(Errs, "prog: Unknown subcommand 'faz'.  Try: 'prog --help'\n");
+}
+
 } // anonymous namespace

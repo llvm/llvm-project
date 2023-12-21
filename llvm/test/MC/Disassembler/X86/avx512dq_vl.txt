@@ -192,3 +192,7 @@
 # ATT:   vfpclassps	$123, (%rcx){1to8}, %k2 {%k7}
 # INTEL: vfpclassps	k2 {k7}, dword ptr [rcx]{1to8}, 123
 0x62,0xf3,0x7d,0x3f,0x66,0x11,0x7b
+
+# ATT: vcvttps2uqq     128(%ecx), %xmm1 {%k2}
+# INTEL: vcvttps2uqq     xmm1 {k2}, qword ptr [ecx + 128]
+0x67,0x62,0xf1,0x7d,0x0a,0x78,0x49,0x10

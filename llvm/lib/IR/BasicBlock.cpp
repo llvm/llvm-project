@@ -1091,6 +1091,8 @@ void BasicBlock::insertDPValueBefore(DPValue *DPV,
   // shouldn't be generated at times when there's no terminator.
   assert(Where != end());
   assert(Where->getParent() == this);
+  if (!Where->DbgMarker)
+    createMarker(Where);
   bool InsertAtHead = Where.getHeadBit();
   Where->DbgMarker->insertDPValue(DPV, InsertAtHead);
 }

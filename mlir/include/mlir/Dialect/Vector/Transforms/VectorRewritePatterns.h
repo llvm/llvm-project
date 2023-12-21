@@ -294,6 +294,15 @@ void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns,
 void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
                                                 PatternBenefit benefit = 1);
 
+/// Collect a set of patterns that use vector.shape_cast to help fold unit dims.
+///
+/// These patterns use vector.shape_cast to remove unit dims from e.g.
+/// arithmetic operations on Vectors. The newly inserted shape_casts will either
+/// cancel each other out or will be folded away when combined with other
+/// patterns.
+void populateDropUnitDimWithShapeCastPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to flatten n-D vector transfers on contiguous
 /// memref.
 ///

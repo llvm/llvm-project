@@ -145,6 +145,24 @@ OpFoldResult math::CosOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CoshOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CoshOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(cosh(a.convertToDouble()));
+        case 32:
+          return APFloat(coshf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // SinOp folder
 //===----------------------------------------------------------------------===//
 

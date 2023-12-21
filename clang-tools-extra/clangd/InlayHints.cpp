@@ -1040,7 +1040,7 @@ private:
     if (!SourcePrefix.consume_back(ParamName))
       return false;
     SourcePrefix = SourcePrefix.rtrim(IgnoreChars);
-    return SourcePrefix.endswith("/*");
+    return SourcePrefix.ends_with("/*");
   }
 
   // If "E" spells a single unqualified identifier, return that name.

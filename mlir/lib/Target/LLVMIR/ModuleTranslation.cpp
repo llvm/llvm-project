@@ -161,7 +161,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
   }
   layoutStream.flush();
   StringRef layoutSpec(llvmDataLayout);
-  if (layoutSpec.startswith("-"))
+  if (layoutSpec.starts_with("-"))
     layoutSpec = layoutSpec.drop_front();
 
   return llvm::DataLayout(layoutSpec);
@@ -965,6 +965,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
   else if (func.getArmLocallyStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_body");
+  else if (func.getArmStreamingCompatible())
+    llvmFunc->addFnAttr("aarch64_pstate_sm_compatible");
 
   if (func.getArmNewZa())
     llvmFunc->addFnAttr("aarch64_pstate_za_new");

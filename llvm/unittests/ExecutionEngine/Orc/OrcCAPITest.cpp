@@ -124,7 +124,7 @@ protected:
     // TODO: Print error messages in failure logs, use them to audit this list.
     // Some architectures may be unsupportable or missing key components, but
     // some may just be failing due to bugs in this testcase.
-    if (Triple.startswith("armv7") || Triple.startswith("armv8l"))
+    if (Triple.starts_with("armv7") || Triple.starts_with("armv8l"))
       return false;
     return true;
   }
