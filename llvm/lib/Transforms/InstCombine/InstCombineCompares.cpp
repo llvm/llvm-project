@@ -4548,34 +4548,32 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
 }
 
 // extract common factors like ((A + B) - C == B) -> (A - C == 0)
-Value *InstCombinerImpl::foldICmpWithCommonFactors(ICmpInst &Cmp,
-                                                   BinaryOperator *LBO,
-                                                   Value *RHS) {
+Instruction *InstCombinerImpl::foldICmpWithCommonFactors(ICmpInst &Cmp,
+                                                         BinaryOperator *LBO,
+                                                         Value *RHS) {
   const CmpInst::Predicate Pred = Cmp.getPredicate();
   if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
-  SmallVector<BinaryOperator *, 16> WorkList(1, LBO);
+  SmallVector<BinaryOperator *, 16> worklist(1, LBO);
+  Constant *Zero = Constant::getNullValue(LBO->getType());
 
-  while (!WorkList.empty()) {
-    BinaryOperator *BO = WorkList.pop_back_val();
+  while (!worklist.empty()) {
+    BinaryOperator *BO = worklist.pop_back_val();
 
-    Value *A;
-    if (match(BO, m_OneUse(m_c_Add(m_Value(A), m_Specific(RHS))))) {
-      if (BO == LBO)
-        return Builder.CreateICmp(Pred, A,
-                                  Constant::getNullValue(LBO->getType()));
-      replaceInstUsesWith(*BO, A);
-      eraseInstFromFunction(*BO);
-      return Builder.CreateICmp(Pred, LBO,
-                                Constant::getNullValue(LBO->getType()));
+    if (Value * A; match(BO, m_OneUse(m_c_Add(m_Value(A), m_Specific(RHS))))) {
+      if (BO != LBO) {
+        replaceInstUsesWith(*BO, A);
+        eraseInstFromFunction(*BO);
+      }
+      return new ICmpInst(Pred, A, Zero);
     }
 
     unsigned Opc = BO->getOpcode();
     if (Opc == Instruction::Add || Opc == Instruction::Sub) {
       auto AddNextBO = [&](Value *Op) {
         if (BinaryOperator *Next = dyn_cast<BinaryOperator>(Op))
-          WorkList.push_back(Next);
+          worklist.push_back(Next);
       };
 
       AddNextBO(BO->getOperand(0));
@@ -4605,8 +4603,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return NewICmp;
 
   if (BO0) {
-    if (Value *V = foldICmpWithCommonFactors(I, BO0, Op1))
-      return replaceInstUsesWith(I, V);
+    if (Instruction *NewICmp = foldICmpWithCommonFactors(I, BO0, Op1))
+      return NewICmp;
   }
 
   const CmpInst::Predicate Pred = I.getPredicate();
