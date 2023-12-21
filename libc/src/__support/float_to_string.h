@@ -31,9 +31,9 @@
 //  multiplying/dividing the written-out number by 10^9 to get blocks. It's
 //  significantly faster than INT_CALC, only about 10x slower than MEGA_TABLE,
 //  and is small in binary size. Its downside is that it always calculates all
-//  of the digits above the decimal point, making it ineffecient for %e calls
-//  with large exponents. If this flag is not set, no other flags will change
-//  the long double behavior.
+//  of the digits above the decimal point, making it inefficient for %e calls
+//  with large exponents. This specialization overrides other flags, so this
+//  flag must be set for other flags to effect the long double behavior.
 
 // LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 //  The Mega Table is ~5 megabytes when compiled. It lists the constants needed
@@ -607,12 +607,12 @@ public:
 
   LIBC_INLINE constexpr size_t zero_blocks_after_point() {
 #ifdef LIBC_COPT_FLOAT_TO_STR_NO_TABLE
-    if (exponent < -MANT_WIDTH) {
+    if (exponent < -FRACTION_LEN) {
       const int pos_exp = -exponent - 1;
       const uint32_t pos_idx =
           static_cast<uint32_t>(pos_exp + (IDX_SIZE - 1)) / IDX_SIZE;
       const int32_t pos_len = ((internal::ceil_log10_pow2(pos_idx * IDX_SIZE) -
-                                internal::ceil_log10_pow2(MANT_WIDTH + 1)) /
+                                internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
                                BLOCK_SIZE) -
                               1;
       const uint32_t len = static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
@@ -638,17 +638,15 @@ template <> class FloatToString<long double> {
   static constexpr int FRACTION_LEN = fputil::FPBits<long double>::FRACTION_LEN;
   static constexpr int EXP_BIAS = fputil::FPBits<long double>::EXP_BIAS;
 
-  // static constexpr size_t FLOAT_AS_INT_WIDTH = 16384;
   static constexpr size_t FLOAT_AS_INT_WIDTH =
       internal::div_ceil(fputil::FPBits<long double>::MAX_BIASED_EXPONENT -
                              FloatProp::EXP_BIAS,
                          64) *
       64;
-  // static constexpr size_t EXTRA_INT_WIDTH = 128;
   static constexpr size_t EXTRA_INT_WIDTH =
       internal::div_ceil(sizeof(long double) * 8, 64) * 64;
 
-  cpp::BigInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH, false> float_as_int = 0;
+  cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> float_as_int = 0;
   int int_block_index = 0;
 
   static constexpr size_t BLOCK_BUFFER_LEN =
@@ -657,8 +655,7 @@ template <> class FloatToString<long double> {
   size_t block_buffer_valid = 0;
 
   template <size_t Bits>
-  LIBC_INLINE static constexpr BlockInt
-  grab_digits(cpp::BigInt<Bits, false> &int_num) {
+  LIBC_INLINE static constexpr BlockInt grab_digits(cpp::UInt<Bits> &int_num) {
     BlockInt cur_block = 0;
     auto wide_result = int_num.div_uint32_times_pow_2(1953125, 9);
     // the optional only comes into effect when dividing by 0, which will
@@ -669,8 +666,8 @@ template <> class FloatToString<long double> {
   }
 
   LIBC_INLINE static constexpr void zero_leading_digits(
-      cpp::BigInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH, false> &int_num) {
-    // 64 is the width of the numbers used to internally represent the BigInt
+      cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> &int_num) {
+    // 64 is the width of the numbers used to internally represent the UInt
     for (size_t i = 0; i < EXTRA_INT_WIDTH / 64; ++i) {
       int_num[i + (FLOAT_AS_INT_WIDTH / 64)] = 0;
     }
@@ -701,7 +698,7 @@ template <> class FloatToString<long double> {
       block_buffer_valid = int_block_index;
 
     } else {
-      // if the exponent not positive, then the number is at least partially
+      // if the exponent is not positive, then the number is at least partially
       // below the decimal point. Shift left to make the int a fixed point
       // representation with the decimal point after the top EXTRA_INT_WIDTH
       // bits.
@@ -711,7 +708,7 @@ template <> class FloatToString<long double> {
 
       // If there are still digits above the decimal point, handle those.
       if (float_as_int.clz() < EXTRA_INT_WIDTH) {
-        cpp::BigInt<EXTRA_INT_WIDTH, false> above_decimal_point =
+        cpp::UInt<EXTRA_INT_WIDTH> above_decimal_point =
             float_as_int >> FLOAT_AS_INT_WIDTH;
 
         size_t positive_int_block_index = 0;
@@ -808,7 +805,7 @@ public:
     int block_index = -1 - negative_block_index;
 
     // If we're currently after the requested block (remember these are
-    // negative indices) the reset the number to the start. This is only
+    // negative indices) we reset the number to the start. This is only
     // likely to happen in %g calls. This will also reset int_block_index.
     if (block_index > int_block_index) {
       init_convert();

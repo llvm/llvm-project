@@ -94,9 +94,10 @@ not based on the Ryu algorithm, instead generating the digits by
 multiplying/dividing the written-out number by 10^9 to get blocks. It's
 significantly faster than INT_CALC, only about 10x slower than MEGA_TABLE,
 and is small in binary size. Its downside is that it always calculates all
-of the digits above the decimal point, making it slightly ineffecient for %e
-calls with large exponents. This is the default. If this flag is not set, no 
-other flags will change the long double behavior.
+of the digits above the decimal point, making it slightly inefficient for %e
+calls with large exponents. This is the default. This specialization overrides
+other flags, so this flag must be set for other flags to effect the long double
+behavior.
 
 LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
