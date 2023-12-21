@@ -49,8 +49,9 @@ struct CIRGenTypeCache {
   union {
     mlir::Type UIntPtrTy;
     mlir::Type SizeTy;
-    mlir::Type PtrDiffTy;
   };
+
+  mlir::Type PtrDiffTy;
 
   /// void* in address space 0
   mlir::cir::PointerType VoidPtrTy;
