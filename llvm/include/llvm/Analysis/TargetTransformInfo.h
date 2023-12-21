@@ -560,6 +560,10 @@ public:
     // (set to UINT_MAX to disable). This does not apply in cases where the
     // loop is being fully unrolled.
     unsigned MaxCount;
+    /// Set the maximum upper bound of trip count. Allowing the MaxUpperBound
+    /// to be overrided by a target gives more flexiblity on certain cases.
+    /// By default, MaxUpperBound uses UnrollMaxUpperBound which value is 8.
+    unsigned MaxUpperBound;
     /// Set the maximum unrolling factor for full unrolling. Like MaxCount, but
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.

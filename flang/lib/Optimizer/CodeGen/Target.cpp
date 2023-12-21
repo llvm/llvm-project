@@ -589,6 +589,21 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       Hi = SSE;
   }
 
+  /// When \p recTy is a one field record type that can be passed
+  /// like the field on its own, returns the field type. Returns
+  /// a null type otherwise.
+  mlir::Type passAsFieldIfOneFieldStruct(fir::RecordType recTy) const {
+    auto typeList = recTy.getTypeList();
+    if (typeList.size() != 1)
+      return {};
+    mlir::Type fieldType = typeList[0].second;
+    if (mlir::isa<mlir::FloatType, mlir::IntegerType, fir::RealType,
+                  fir::CharacterType, fir::LogicalType>(fieldType))
+      return fieldType;
+    // Complex field that needs to be split, or array.
+    return {};
+  }
+
   /// Marshal a derived type passed by value like a C struct.
   CodeGenSpecifics::Marshalling
   structArgumentType(mlir::Location loc, fir::RecordType recTy,
@@ -617,7 +632,14 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     if (!hasEnoughRegisters(loc, neededIntRegisters, neededSSERegisters,
                             previousArguments))
       return passOnTheStack(loc, recTy);
-    // TODO, marshal the struct into registers.
+
+    if (auto fieldType = passAsFieldIfOneFieldStruct(recTy)) {
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(fieldType, AT{});
+      return marshal;
+    }
+    // TODO, marshal the struct with several components, or with a single
+    // complex, array, or derived type component into registers.
     TODO(loc, "passing BIND(C), VALUE derived type in registers on X86-64");
   }
 

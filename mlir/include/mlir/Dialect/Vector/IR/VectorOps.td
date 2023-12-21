@@ -87,8 +87,8 @@ def Vector_ContractionOp :
     An optional kind attribute may be used to specify the combining function
     between the intermediate result and accumulator argument of rank K. This
     attribute can take the values `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
-    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
-    /`maximumf` for floats. The default is `add`.
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minnumf`/`maxnumf`
+    /`minimumf`/`maximumf` for floats. The default is `add`.
 
     Example:
 
@@ -150,7 +150,7 @@ def Vector_ContractionOp :
     #contraction_trait = {
       indexing_maps = #contraction_accesses,
       iterator_types = ["reduction"],
-      kind = #vector.kind<maxf>
+      kind = #vector.kind<maxnumf>
     }
     %6 = vector.contract #contraction_trait %0, %1, %2
       : vector<10xf32>, vector<10xf32> into f32
@@ -234,8 +234,8 @@ def Vector_ReductionOp :
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
     operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
-    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats.
-    Reductions also allow an optional fused accumulator.
+    integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`/`maximumf` for
+    floats. Reductions also allow an optional fused accumulator.
 
     Note that these operations are restricted to 1-D vectors to remain
     close to the corresponding LLVM intrinsics:
@@ -292,7 +292,7 @@ def Vector_MultiDimReductionOp :
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
     using the given operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
-    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
@@ -942,7 +942,8 @@ def Vector_OuterProductOp :
 
     An optional kind attribute may be specified to be: `add`/`mul`/`minsi`
     /`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for integers, and `add`/`mul`
-    /`minf`/`maxf`/`minimumf`/`maximumf` for floats. The default is `add`.
+    /`minnumf`/`maxnumf`/`minimumf`/`maximumf` for floats. The default is
+    `add`.
 
     Example:
 
@@ -954,7 +955,7 @@ def Vector_OuterProductOp :
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
-    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxf>}:
+    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxnumf>}:
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
@@ -2769,9 +2770,9 @@ def Vector_ScanOp :
     Performs an inclusive/exclusive scan on an n-D vector along a single
     dimension returning an n-D result vector using the given
     operation (`add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
-    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats),
-    and a specified value for the initial value. The operator returns the
-    result of scan as well as the result of the last reduction in the scan.
+    integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`/`maximumf` for
+    floats), and a specified value for the initial value. The operator returns
+    the result of scan as well as the result of the last reduction in the scan.
 
     Example:
 

@@ -1806,16 +1806,16 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
       // Check the XLEN explicitly.
       if (MLConfigISAInfo->getXLen() == 32) {
         NewMultilib.flag("-m32");
-        NewMultilib.flag("!m64");
+        NewMultilib.flag("-m64", /*Disallow*/ true);
       } else {
-        NewMultilib.flag("!m32");
+        NewMultilib.flag("-m32", /*Disallow*/ true);
         NewMultilib.flag("-m64");
       }
 
       // Atomic extension must be explicitly checked, soft and hard atomic
       // operation never co-work correctly.
       if (!MLConfigISAInfo->hasExtension("a"))
-        NewMultilib.flag("!a");
+        NewMultilib.flag("-a", /*Disallow*/ true);
     }
 
     if (Skip)

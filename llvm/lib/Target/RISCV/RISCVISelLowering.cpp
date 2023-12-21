@@ -122,7 +122,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit() && RV64LegalI32)
     addRegisterClass(MVT::i32, &RISCV::GPRRegClass);
 
-  if (Subtarget.hasStdExtZfhOrZfhmin())
+  if (Subtarget.hasStdExtZfhmin())
     addRegisterClass(MVT::f16, &RISCV::FPR16RegClass);
   if (Subtarget.hasStdExtZfbfmin())
     addRegisterClass(MVT::bf16, &RISCV::FPR16RegClass);
@@ -130,7 +130,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
   if (Subtarget.hasStdExtD())
     addRegisterClass(MVT::f64, &RISCV::FPR64RegClass);
-  if (Subtarget.hasStdExtZhinxOrZhinxmin())
+  if (Subtarget.hasStdExtZhinxmin())
     addRegisterClass(MVT::f16, &RISCV::GPRF16RegClass);
   if (Subtarget.hasStdExtZfinx())
     addRegisterClass(MVT::f32, &RISCV::GPRF32RegClass);
@@ -439,7 +439,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FRINT, ISD::FROUND,
       ISD::FROUNDEVEN};
 
-  if (Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin())
+  if (Subtarget.hasStdExtZfhminOrZhinxmin())
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   static const unsigned ZfhminZfbfminPromoteOps[] = {
@@ -469,7 +469,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
   }
 
-  if (Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin()) {
+  if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
     if (Subtarget.hasStdExtZfhOrZhinx()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
       setOperationAction(FPRndMode, MVT::f16,
@@ -1322,7 +1322,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
       setOperationAction(ISD::BITCAST, {MVT::i8, MVT::i16, MVT::i32, MVT::i64},
                          Custom);
-      if (Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin())
+      if (Subtarget.hasStdExtZfhminOrZhinxmin())
         setOperationAction(ISD::BITCAST, MVT::f16, Custom);
       if (Subtarget.hasStdExtFOrZfinx())
         setOperationAction(ISD::BITCAST, MVT::f32, Custom);
@@ -1388,7 +1388,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtZbkb())
     setTargetDAGCombine(ISD::BITREVERSE);
-  if (Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin())
+  if (Subtarget.hasStdExtZfhminOrZhinxmin())
     setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
@@ -2099,7 +2099,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
   bool IsLegalVT = false;
   if (VT == MVT::f16)
-    IsLegalVT = Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin();
+    IsLegalVT = Subtarget.hasStdExtZfhminOrZhinxmin();
   else if (VT == MVT::f32)
     IsLegalVT = Subtarget.hasStdExtFOrZfinx();
   else if (VT == MVT::f64)
@@ -2171,7 +2171,7 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   // Use f32 to pass f16 if it is legal and Zfh/Zfhmin is not enabled.
   // We might still end up using a GPR but that will be decided based on ABI.
   if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
-      !Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin())
+      !Subtarget.hasStdExtZfhminOrZhinxmin())
     return MVT::f32;
 
   MVT PartVT = TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
@@ -2188,7 +2188,7 @@ unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context
   // Use f32 to pass f16 if it is legal and Zfh/Zfhmin is not enabled.
   // We might still end up using a GPR but that will be decided based on ABI.
   if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
-      !Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin())
+      !Subtarget.hasStdExtZfhminOrZhinxmin())
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
@@ -5761,7 +5761,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
     if (VT == MVT::f16 && Op0VT == MVT::i16 &&
-        Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin()) {
+        Subtarget.hasStdExtZfhminOrZhinxmin()) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
       return FPConv;
@@ -11527,11 +11527,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
     if (VT == MVT::i16 && Op0VT == MVT::f16 &&
-        Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin()) {
+        Subtarget.hasStdExtZfhminOrZhinxmin()) {
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
     } else if (VT == MVT::i16 && Op0VT == MVT::bf16 &&
-        Subtarget.hasStdExtZfbfmin()) {
+               Subtarget.hasStdExtZfbfmin()) {
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
     } else if (VT == MVT::i32 && Op0VT == MVT::f32 && Subtarget.is64Bit() &&
@@ -13493,6 +13493,7 @@ static SDValue performMemPairCombine(SDNode *N,
 //   (fp_to_int (ffloor X))     -> fcvt X, rdn
 //   (fp_to_int (fceil X))      -> fcvt X, rup
 //   (fp_to_int (fround X))     -> fcvt X, rmm
+//   (fp_to_int (frint X))      -> fcvt X
 static SDValue performFP_TO_INTCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const RISCVSubtarget &Subtarget) {
@@ -13516,10 +13517,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
 
   RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Src.getOpcode());
   // If the result is invalid, we didn't find a foldable instruction.
-  // If the result is dynamic, then we found an frint which we don't yet
-  // support. It will cause 7 to be written to the FRM CSR for vector.
-  // FIXME: We could support this by using VFCVT_X_F_VL/VFCVT_XU_F_VL below.
-  if (FRM == RISCVFPRndMode::Invalid || FRM == RISCVFPRndMode::DYN)
+  if (FRM == RISCVFPRndMode::Invalid)
     return SDValue();
 
   SDLoc DL(N);
@@ -13558,6 +13556,10 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
       unsigned Opc =
           IsSigned ? RISCVISD::VFCVT_RTZ_X_F_VL : RISCVISD::VFCVT_RTZ_XU_F_VL;
       FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
+    } else if (FRM == RISCVFPRndMode::DYN) {
+      unsigned Opc =
+          IsSigned ? RISCVISD::VFCVT_X_F_VL : RISCVISD::VFCVT_XU_F_VL;
+      FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
     } else {
       unsigned Opc =
           IsSigned ? RISCVISD::VFCVT_RM_X_F_VL : RISCVISD::VFCVT_RM_XU_F_VL;
@@ -13594,6 +13596,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
 //   (fp_to_int_sat (ffloor X))     -> (select X == nan, 0, (fcvt X, rdn))
 //   (fp_to_int_sat (fceil X))      -> (select X == nan, 0, (fcvt X, rup))
 //   (fp_to_int_sat (fround X))     -> (select X == nan, 0, (fcvt X, rmm))
+//   (fp_to_int_sat (frint X))      -> (select X == nan, 0, (fcvt X, dyn))
 static SDValue performFP_TO_INT_SATCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const RISCVSubtarget &Subtarget) {
@@ -18632,7 +18635,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // TODO: Support fixed vectors up to XLen for P extension?
       if (VT.isVector())
         break;
-      if (VT == MVT::f16 && Subtarget.hasStdExtZhinxOrZhinxmin())
+      if (VT == MVT::f16 && Subtarget.hasStdExtZhinxmin())
         return std::make_pair(0U, &RISCV::GPRF16RegClass);
       if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
         return std::make_pair(0U, &RISCV::GPRF32RegClass);
@@ -18640,7 +18643,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::GPRPF64RegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
-      if (Subtarget.hasStdExtZfhOrZfhmin() && VT == MVT::f16)
+      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
         return std::make_pair(0U, &RISCV::FPR16RegClass);
       if (Subtarget.hasStdExtF() && VT == MVT::f32)
         return std::make_pair(0U, &RISCV::FPR32RegClass);
@@ -18753,7 +18756,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       if (VT == MVT::f32 || VT == MVT::Other)
         return std::make_pair(FReg, &RISCV::FPR32RegClass);
-      if (Subtarget.hasStdExtZfhOrZfhmin() && VT == MVT::f16) {
+      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16) {
         unsigned RegNo = FReg - RISCV::F0_F;
         unsigned HReg = RISCV::F0_H + RegNo;
         return std::make_pair(HReg, &RISCV::FPR16RegClass);
@@ -19100,7 +19103,7 @@ bool RISCVTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
 
   switch (FPVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
-    return Subtarget.hasStdExtZfhOrZfhmin();
+    return Subtarget.hasStdExtZfhmin();
   case MVT::f32:
     return Subtarget.hasStdExtF();
   case MVT::f64:
