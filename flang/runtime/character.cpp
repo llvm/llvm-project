@@ -11,6 +11,7 @@
 #include "tools.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/character.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
@@ -461,27 +462,6 @@ static void GeneralCharFuncKind(Descriptor &result, const Descriptor &string,
     terminator.Crash("not yet implemented: CHARACTER(KIND=%d) in "
                      "INDEX/SCAN/VERIFY intrinsic",
         kind);
-  }
-}
-
-template <typename TO, typename FROM>
-static void CopyAndPad(
-    TO *to, const FROM *from, std::size_t toChars, std::size_t fromChars) {
-  if constexpr (sizeof(TO) != sizeof(FROM)) {
-    std::size_t copyChars{std::min(toChars, fromChars)};
-    for (std::size_t j{0}; j < copyChars; ++j) {
-      to[j] = from[j];
-    }
-    for (std::size_t j{copyChars}; j < toChars; ++j) {
-      to[j] = static_cast<TO>(' ');
-    }
-  } else if (toChars <= fromChars) {
-    std::memcpy(to, from, toChars * sizeof(TO));
-  } else {
-    std::memcpy(to, from, fromChars * sizeof(TO));
-    for (std::size_t j{fromChars}; j < toChars; ++j) {
-      to[j] = static_cast<TO>(' ');
-    }
   }
 }
 
