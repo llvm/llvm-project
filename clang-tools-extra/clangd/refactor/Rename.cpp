@@ -702,40 +702,9 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
                                                   Index, MaxLimitFiles);
   if (!AffectedFiles)
     return AffectedFiles.takeError();
-  FileEdits Results;
-  for (auto &FileAndOccurrences : *AffectedFiles) {
-    llvm::StringRef FilePath = FileAndOccurrences.first();
 
-    auto ExpBuffer = FS.getBufferForFile(FilePath);
-    if (!ExpBuffer) {
-      elog("Fail to read file content: Fail to open file {0}: {1}", FilePath,
-           ExpBuffer.getError().message());
-      continue;
-    }
-
-    auto AffectedFileCode = (*ExpBuffer)->getBuffer();
-    syntax::UnexpandedTokenBuffer Tokens(
-        AffectedFileCode, RenameDecl.getASTContext().getLangOpts());
-    std::optional<std::vector<Range>> RenameRanges =
-        adjustRenameRanges(Tokens, OldName.getNamePieces().front(),
-                           std::move(FileAndOccurrences.second));
-    if (!RenameRanges) {
-      // Our heuristics fails to adjust rename ranges to the current state of
-      // the file, it is most likely the index is stale, so we give up the
-      // entire rename.
-      return error("Index results don't match the content of file {0} "
-                   "(the index may be stale)",
-                   FilePath);
-    }
-    auto RenameEdit = buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges,
-                                      OldName, NewName, Tokens);
-    if (!RenameEdit)
-      return error("failed to rename in file {0}: {1}", FilePath,
-                   RenameEdit.takeError());
-    if (!RenameEdit->Replacements.empty())
-      Results.insert({FilePath, std::move(*RenameEdit)});
-  }
-  return Results;
+  return editsForLocations(*AffectedFiles, OldName, NewName, FS,
+                           RenameDecl.getASTContext().getLangOpts());
 }
 
 // A simple edit is either changing line or column, but not both.
@@ -777,6 +746,46 @@ void findNearMiss(
 }
 
 } // namespace
+
+llvm::Expected<FileEdits>
+editsForLocations(const llvm::StringMap<std::vector<Range>> &Ranges,
+                  const SymbolName &OldName, const SymbolName &NewName,
+                  llvm::vfs::FileSystem &FS, const LangOptions &LangOpts) {
+  FileEdits Results;
+  for (auto &FileAndOccurrences : Ranges) {
+    llvm::StringRef FilePath = FileAndOccurrences.first();
+
+    auto ExpBuffer = FS.getBufferForFile(FilePath);
+    if (!ExpBuffer) {
+      elog("Fail to read file content: Fail to open file {0}: {1}", FilePath,
+           ExpBuffer.getError().message());
+      continue;
+    }
+
+    auto AffectedFileCode = (*ExpBuffer)->getBuffer();
+    syntax::UnexpandedTokenBuffer Tokens(AffectedFileCode, LangOpts);
+    std::optional<std::vector<Range>> RenameRanges =
+        adjustRenameRanges(Tokens, OldName.getNamePieces().front(),
+                           std::move(FileAndOccurrences.second));
+    if (!RenameRanges) {
+      // Our heuristics fails to adjust rename ranges to the current state of
+      // the file, it is most likely the index is stale, so we give up the
+      // entire rename.
+      elog("Index results don't match the content of file {0} (the index may "
+           "be stale)",
+           FilePath);
+      continue;
+    }
+    auto RenameEdit = buildRenameEdit(FilePath, AffectedFileCode, *RenameRanges,
+                                      OldName, NewName, Tokens);
+    if (!RenameEdit)
+      return error("failed to rename in file {0}: {1}", FilePath,
+                   RenameEdit.takeError());
+    if (!RenameEdit->Replacements.empty())
+      Results.insert({FilePath, std::move(*RenameEdit)});
+  }
+  return Results;
+}
 
 llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   assert(!RInputs.Index == !RInputs.FS &&

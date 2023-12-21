@@ -47,6 +47,10 @@ llvm::Expected<RenameResult> runRename(ClangdServer &Server, PathRef File,
                                        Position Pos, StringRef NewName,
                                        const clangd::RenameOptions &RenameOpts);
 
+llvm::Expected<FileEdits> runIndexedRename(
+    ClangdServer &Server, std::map<URIForFile, std::vector<Position>> Positions,
+    PathRef PrimaryFile, llvm::StringRef OldName, llvm::StringRef NewName);
+
 llvm::Expected<RenameResult>
 runPrepareRename(ClangdServer &Server, PathRef File, Position Pos,
                  std::optional<std::string> NewName,
