@@ -1259,7 +1259,8 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
       if (SS) {
         assert(SS->isOpened() && "Stream is expected to be opened");
         ClearErrorInNotFailed(StreamSym, SS);
-      }
+      } else
+        return;
     }
   } else {
     // Clear error states for all streams.
