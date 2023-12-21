@@ -1,14 +1,14 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 /// Tests for `vector.contract` -> `vector.outerproduct` transformations for
-/// Matmul operations:
+/// matmul operations:
 ///   C += A * B.
 /// (A, B and C are 2-d matrices). ATM three different variants / are tested:
 ///   * plain (no mask, fixed-wdith vectors),
 ///   * masked (fixed-width vectors,
 ///   * scalable (mask + scalable vectors).
 /// In order for the "vector.contract -> vector.outerproduct" patterns to work,
-/// only the non-reduction dimension can be scalable (*). For Matmul operations
+/// only the non-reduction dimension can be scalable (*). For matmul operations
 /// that is set to be the N dimension (i.e. rows of the output matrix), which
 /// matches how matrix multiplication are normally implemented for e.g.
 /// Arm SVE. However, making the M dimension scalable (i.e. columns of the
