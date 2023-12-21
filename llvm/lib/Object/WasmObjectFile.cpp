@@ -265,7 +265,6 @@ static wasm::WasmTableType readTableType(WasmObjectFile::ReadContext &Ctx) {
 
 static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
                          WasmSectionOrderChecker &Checker) {
-  Section.Offset = Ctx.Ptr - Ctx.Start;
   Section.Type = readUint8(Ctx);
   LLVM_DEBUG(dbgs() << "readSection type=" << Section.Type << "\n");
   // When reading the section's size, store the size of the LEB used to encode
@@ -273,6 +272,7 @@ static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
   const uint8_t *PreSizePtr = Ctx.Ptr;
   uint32_t Size = readVaruint32(Ctx);
   Section.HeaderSecSizeEncodingLen = Ctx.Ptr - PreSizePtr;
+  Section.Offset = Ctx.Ptr - Ctx.Start;
   if (Size == 0)
     return make_error<StringError>("zero length section",
                                    object_error::parse_failed);
