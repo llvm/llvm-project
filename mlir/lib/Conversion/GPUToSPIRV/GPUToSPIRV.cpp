@@ -598,7 +598,7 @@ public:
 
     auto result = createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(),
                                       adaptor.getOp(),
-                                      /*isGroup*/ false, adaptor.getUniform());
+                                      /*isGroup=*/false, adaptor.getUniform());
     if (!result)
       return failure();
 
