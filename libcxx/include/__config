@@ -1490,7 +1490,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif
 
-
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG
