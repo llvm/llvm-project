@@ -121,7 +121,7 @@ inline RT_API_ATTRS bool SetInteger(INT &x, int kind, std::int64_t value) {
 template <template <TypeCategory, int> class FUNC, typename RESULT,
     typename... A>
 inline RT_API_ATTRS RESULT ApplyType(
-    TypeCategory cat, int kind, Terminator &terminator, A &&...x) {
+    TypeCategory cat, int kind, Terminator &terminator, A &&... x) {
   switch (cat) {
   case TypeCategory::Integer:
     switch (kind) {
@@ -222,7 +222,7 @@ inline RT_API_ATTRS RESULT ApplyType(
 // a function object template and calls it with the supplied arguments.
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyIntegerKind(
-    int kind, Terminator &terminator, A &&...x) {
+    int kind, Terminator &terminator, A &&... x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -243,7 +243,7 @@ inline RT_API_ATTRS RESULT ApplyIntegerKind(
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyFloatingPointKind(
-    int kind, Terminator &terminator, A &&...x) {
+    int kind, Terminator &terminator, A &&... x) {
   switch (kind) {
 #if 0 // TODO: REAL/COMPLEX (2 & 3)
   case 2:
@@ -271,7 +271,7 @@ inline RT_API_ATTRS RESULT ApplyFloatingPointKind(
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyCharacterKind(
-    int kind, Terminator &terminator, A &&...x) {
+    int kind, Terminator &terminator, A &&... x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -286,7 +286,7 @@ inline RT_API_ATTRS RESULT ApplyCharacterKind(
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
 inline RT_API_ATTRS RESULT ApplyLogicalKind(
-    int kind, Terminator &terminator, A &&...x) {
+    int kind, Terminator &terminator, A &&... x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -415,43 +415,19 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 RT_API_ATTRS const char *EnsureNullTerminated(
     const char *str, size_t length, Terminator &terminator);
 
-RT_API_ATTRS std::size_t LengthWithoutTrailingSpaces(const Descriptor &d);
-
-// Returns the length of the \p string. Assumes \p string is valid.
-RT_API_ATTRS std::int64_t StringLength(const char *string);
-
-// Assumes Descriptor \p value is not nullptr.
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
 
-// Assumes Descriptor \p intVal is not nullptr.
 RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal);
 
-// Assume Descriptor \p value is valid: pass IsValidCharDescriptor check.
-RT_API_ATTRS void FillWithSpaces(
-    const Descriptor &value, std::size_t offset = 0);
-
-RT_API_ATTRS std::int32_t CopyToDescriptor(const Descriptor &value,
-    const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
-    std::size_t offset = 0);
-
-void CopyCharToDescriptor(
-    const Descriptor &value, const char *rawValue, std::size_t offset = 0);
-
-RT_API_ATTRS std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
-    const char *rawValue, const Descriptor *errmsg, std::size_t &offset);
-
-RT_API_ATTRS void CheckAndCopyCharToDescriptor(
-    const Descriptor *value, const char *rawValue, std::size_t offset = 0);
+// Copy a null-terminated character array \p rawValue to descriptor \p value.
+// The copy starts at the given \p offset, if not present then start at 0.
+// If descriptor `errmsg` is provided, error messages will be stored to it.
+// Returns stats specified in standard.
+RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
+    const char *rawValue, std::int64_t rawValueLength,
+    const Descriptor *errmsg = nullptr, std::size_t offset = 0);
 
 RT_API_ATTRS void StoreIntToDescriptor(
-    const Descriptor *length, std::int64_t value, Terminator &terminator);
-
-RT_API_ATTRS void CheckAndStoreIntToDescriptor(
-    const Descriptor *intVal, std::int64_t value, Terminator &terminator);
-
-template <int KIND> struct FitsInIntegerKind;
-
-RT_API_ATTRS bool FitsInDescriptor(
     const Descriptor *length, std::int64_t value, Terminator &terminator);
 
 // Defines a utility function for copying and padding characters

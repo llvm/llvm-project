@@ -43,6 +43,25 @@ enum CMD_STAT {
   SIGNAL_ERR = 4
 };
 
+// Override CopyCharsToDescriptor in tools.h
+void CopyCharsToDescriptor(const Descriptor &value, const char *rawValue){
+  CopyCharsToDescriptor(value, rawValue, std::strlen(rawValue));
+}
+
+void CheckAndCopyCharsToDescriptor(
+    const Descriptor *value, const char *rawValue) {
+  if (value) {
+    CopyCharsToDescriptor(*value, rawValue);
+  }
+}
+
+void CheckAndStoreIntToDescriptor(
+    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
+  if (intVal) {
+    StoreIntToDescriptor(intVal, value, terminator);
+  }
+}
+
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
 int TerminationCheck(int status, const Descriptor *cmdstat,
@@ -52,7 +71,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("Execution error with system status code: %d", status);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CopyCharToDescriptor(*cmdmsg, "Execution error");
+      CopyCharsToDescriptor(*cmdmsg, "Execution error", 16);
     }
   }
 #ifdef _WIN32
@@ -68,7 +87,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
           "Invalid command quit with exit status code: %d", exitStatusVal);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CopyCharToDescriptor(*cmdmsg, "Invalid command line");
+      CopyCharsToDescriptor(*cmdmsg, "Invalid command line");
     }
   }
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
@@ -77,7 +96,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("killed by signal: %d", WTERMSIG(status));
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyCharToDescriptor(*cmdmsg, "killed by signal");
+      CopyCharsToDescriptor(*cmdmsg, "killed by signal");
     }
   }
 #endif
@@ -87,7 +106,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyCharToDescriptor(*cmdmsg, "stopped by signal");
+      CopyCharsToDescriptor(*cmdmsg, "stopped by signal");
     }
   }
 #endif
@@ -156,7 +175,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
         StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
-        CheckAndCopyCharToDescriptor(cmdmsg, "CreateProcess failed.");
+        CheckAndCopyCharsToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
     FreeMemory((void *)wcmd);
@@ -169,7 +188,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         terminator.Crash("Fork failed with pid: %d.", pid);
       } else {
         StoreIntToDescriptor(cmdstat, FORK_ERR, terminator);
-        CheckAndCopyCharToDescriptor(cmdmsg, "Fork failed");
+        CheckAndCopyCharsToDescriptor(cmdmsg, "Fork failed");
       }
     } else if (pid == 0) {
       int status{std::system(newCmd)};

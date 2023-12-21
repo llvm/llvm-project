@@ -185,44 +185,21 @@ RT_API_ATTRS const char *EnsureNullTerminated(
   }
 }
 
-RT_API_ATTRS std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
-  std::size_t s{d.ElementBytes() - 1};
-  while (*d.OffsetElement(s) == ' ') {
-    --s;
-  }
-  return s + 1;
-}
-
-// Returns the length of the \p string. Assumes \p string is valid.
-RT_API_ATTRS std::int64_t StringLength(const char *string) {
-  return static_cast<std::int64_t>(std::strlen(string));
-}
-
-// Assumes Descriptor \p value is not nullptr.
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value) {
   return value && value->IsAllocated() &&
       value->type() == TypeCode(TypeCategory::Character, 1) &&
       value->rank() == 0;
 }
 
-// Assumes Descriptor \p intVal is not nullptr.
 RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal) {
-  auto typeCode{intVal->type().GetCategoryAndKind()};
   // Check that our descriptor is allocated and is a scalar integer with
   // kind != 1 (i.e. with a large enough decimal exponent range).
-  return intVal->IsAllocated() && intVal->rank() == 0 &&
-      intVal->type().IsInteger() && typeCode && typeCode->second != 1;
+  return intVal && intVal->IsAllocated() && intVal->rank() == 0 &&
+      intVal->type().IsInteger() && intVal->type().GetCategoryAndKind() &&
+      intVal->type().GetCategoryAndKind()->second != 1;
 }
 
-// Assume Descriptor \p value is valid: pass IsValidCharDescriptor check.
-RT_API_ATTRS void FillWithSpaces(const Descriptor &value, std::size_t offset) {
-  if (offset < value.ElementBytes()) {
-    std::memset(
-        value.OffsetElement(offset), ' ', value.ElementBytes() - offset);
-  }
-}
-
-RT_API_ATTRS std::int32_t CopyToDescriptor(const Descriptor &value,
+RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
     const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
     std::size_t offset) {
 
@@ -241,53 +218,12 @@ RT_API_ATTRS std::int32_t CopyToDescriptor(const Descriptor &value,
   return StatOk;
 }
 
-RT_API_ATTRS void CopyCharToDescriptor(
-    const Descriptor &value, const char *rawValue, std::size_t offset) {
-  auto toCopy{std::min(std::strlen(rawValue), value.ElementBytes() - offset)};
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
-}
-
-RT_API_ATTRS std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
-    const char *rawValue, const Descriptor *errmsg, std::size_t &offset) {
-  bool haveValue{IsValidCharDescriptor(value)};
-
-  std::int64_t len{StringLength(rawValue)};
-  if (len <= 0) {
-    if (haveValue) {
-      FillWithSpaces(*value);
-    }
-    return ToErrmsg(errmsg, StatMissingArgument);
-  }
-
-  std::int32_t stat{StatOk};
-  if (haveValue) {
-    stat = CopyToDescriptor(*value, rawValue, len, errmsg, offset);
-  }
-
-  offset += len;
-  return stat;
-}
-
-RT_API_ATTRS void CheckAndCopyCharToDescriptor(
-    const Descriptor *value, const char *rawValue, std::size_t offset) {
-  if (value) {
-    CopyCharToDescriptor(*value, rawValue, offset);
-  }
-}
-
 RT_API_ATTRS void StoreIntToDescriptor(
     const Descriptor *length, std::int64_t value, Terminator &terminator) {
   auto typeCode{length->type().GetCategoryAndKind()};
   int kind{typeCode->second};
   ApplyIntegerKind<StoreIntegerAt, void>(
       kind, terminator, *length, /* atIndex = */ 0, value);
-}
-
-RT_API_ATTRS void CheckAndStoreIntToDescriptor(
-    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
-  if (intVal) {
-    StoreIntToDescriptor(intVal, value, terminator);
-  }
 }
 
 template <int KIND> struct FitsInIntegerKind {
@@ -301,13 +237,6 @@ template <int KIND> struct FitsInIntegerKind {
     }
   }
 };
-
-RT_API_ATTRS bool FitsInDescriptor(
-    const Descriptor *length, std::int64_t value, Terminator &terminator) {
-  auto typeCode{length->type().GetCategoryAndKind()};
-  int kind{typeCode->second};
-  return ApplyIntegerKind<FitsInIntegerKind, bool>(kind, terminator, value);
-}
 
 RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime
