@@ -237,17 +237,3 @@ float PostfixScientificShortFloat3 = 1.23e-10F;
 //double PostfixScientificFormattedFloat1 = 1.234'567'8e10f;
 //double PostfixScientificFormattedFloat2 = -1.234'567'8E+10f;
 //double PostfixScientificFormattedFloat4 = -1.234'567'8e-10F;
-
-
-// Long wrong formatted literals
-
-// FIXME: clang-diagnostic-error like this for the following tests
-// clang-18 and clang-tidy don't produce such error
-//error: expected ';' after top level declarator [clang-diagnostic-error]
-//  249 | int WrongFormattedInteger = 1234'56'7;
-//      |                                 ^
-//      |                                 ;
-
-//int WrongFormattedInteger = 1234'56'7;
-//// CHECK-MESSAGES: :[[@LINE-1]]:29: warning: unformatted representation of integer literal '1234'56'7' [modernize-use-digit-separator]
-//// CHECK-FIXES: 1'234'567
