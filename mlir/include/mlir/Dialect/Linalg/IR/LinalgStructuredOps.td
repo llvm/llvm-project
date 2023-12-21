@@ -429,39 +429,54 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
     let skipDefaultBuilders = 1;
     let builders = [
       OpBuilder<
-      (ins "Value":$input, "Value":$filter, "Value":$init, "bool":$channel_first,
+      (ins "Value":$input, "Value":$filter, "Value":$init, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
         buildStructuredOp($_builder, $_state, std::nullopt, {input, filter}, init,
           attributes, DepthwiseConvNDOp::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
-            "Value":$init, "bool":$channel_first,
+            "Value":$init, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
         buildStructuredOp($_builder, $_state, resultTensorTypes,
           {input, filter}, init, attributes, DepthwiseConvNDOp::getRegionBuilder());
-      }]>,
-      OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        $_state.addOperands(operands);
-        $_state.addAttributes(attributes);
-        $_state.addTypes(resultTensorTypes);
-        (void)$_state.addRegion();
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
       "Value":$init, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        $_state.addAttribute("channel_first", channel_first);
-        $_state.addAttribute("strides", strides);
-        $_state.addAttribute("dilations", dilations);
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), channel_first);
+        $_state.addAttribute(getStridesAttrName($_state.name), strides);
+        $_state.addAttribute(getDilationsAttrName($_state.name), dilations);
         buildStructuredOp($_builder, $_state, resultTensorTypes, {input, filter}, init,
           attributes, DepthwiseConvNDOp::getRegionBuilder());
       }]>
@@ -536,43 +551,58 @@ def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
     let skipDefaultBuilders = 1;
     let builders = [
       OpBuilder<
-      (ins "Value":$input, "Value":$filter, "ValueRange":$zero_points, "Value":$init, "bool":$channel_first,
+      (ins "Value":$input, "Value":$filter, "Value":$init, "ValueRange":$zero_points, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
         SmallVector<Value> inputs({input, filter});
         inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
         buildStructuredOp($_builder, $_state, std::nullopt, inputs, init,
           attributes, DepthwiseConvNDQOp::getRegionBuilder());
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter,
-          "ValueRange":$zero_points, "Value":$init, "bool":$channel_first,
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+            "ValueRange":$zero_points, "Value":$init, CArg<"bool", "true">:$channel_first,
+            CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 2;
+        if (strides.empty())
+          strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        if (dilations.empty())
+          dilations = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
+        $_state.addAttribute(getStridesAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), strides));
+        $_state.addAttribute(getDilationsAttrName($_state.name),
+          ::mlir::DenseElementsAttr::get(
+            ::mlir::RankedTensorType::get(numSpatialDims, $_builder.getI64Type()), dilations));
         SmallVector<Value> inputs({input, filter});
         inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
         buildStructuredOp($_builder, $_state, resultTensorTypes,
           inputs, init, attributes, DepthwiseConvNDQOp::getRegionBuilder());
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
-      [{
-        $_state.addOperands(operands);
-        $_state.addAttributes(attributes);
-        $_state.addTypes(resultTensorTypes);
-        (void)$_state.addRegion();
-      }]>,
-      OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, "ValueRange":$zero_points,
       "Value":$init, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        $_state.addAttribute("channel_first", channel_first);
-        $_state.addAttribute("strides", strides);
-        $_state.addAttribute("dilations", dilations);
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), channel_first);
+        $_state.addAttribute(getStridesAttrName($_state.name), strides);
+        $_state.addAttribute(getDilationsAttrName($_state.name), dilations);
         SmallVector<Value> inputs({input, filter});
         inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
         buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, init,
