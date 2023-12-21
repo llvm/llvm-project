@@ -356,14 +356,15 @@ multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
 }
 
 multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
-  foreach m = MxListVF8 in
-    let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.f2vrclass, Constraint>;
+  foreach i = [0, 1, 2, 3] in
+    let VLMul = MxListVF4[i].value in
+    defm NAME : VPseudoSiFiveVMACC<MxListVF8[i].MX, MxListVF8[i].vrclass,
+                                   MxListVF4[i].vrclass, Constraint>;
 }
 
 multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
   foreach i = [0, 1, 2, 3, 4] in
-    let VLMul = MxListVF4[i].value in
+    let VLMul = MxListVF2[i].value in
     defm NAME : VPseudoSiFiveVMACC<MxListVF4[i].MX, MxListFW[i].wvrclass,
                                    MxListFW[i].vrclass, Constraint>;
 }
