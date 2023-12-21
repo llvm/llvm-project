@@ -30,6 +30,7 @@ executable("llvm-readtapi") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
+    "//llvm/lib/TextAPI/BinaryReader",
   ]
   sources = [
     "DiffEngine.cpp",
