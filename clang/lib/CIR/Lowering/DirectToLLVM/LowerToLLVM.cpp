@@ -324,6 +324,35 @@ mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
   };
 }
 
+static void lowerNestedYield(mlir::cir::YieldOpKind targetKind,
+                             mlir::ConversionPatternRewriter &rewriter,
+                             mlir::Region &body,
+                             mlir::Block *dst) {
+  // top-level yields are lowered in matchAndRewrite of the parent operations
+  auto isNested = [&](mlir::Operation *op) {
+    return op->getParentRegion() != &body;
+  };
+
+  body.walk<mlir::WalkOrder::PreOrder>(
+    [&](mlir::Operation *op) {
+      if (!isNested(op))
+        return mlir::WalkResult::advance();
+      
+      // don't process breaks/continues in nested loops and switches
+      if (isa<mlir::cir::LoopOp, mlir::cir::SwitchOp>(*op))
+        return mlir::WalkResult::skip();
+
+      auto yield = dyn_cast<mlir::cir::YieldOp>(*op);
+      if (yield && yield.getKind() == targetKind) {
+        rewriter.setInsertionPoint(op);
+        rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(op, yield.getArgs(), dst); 
+      }
+
+      return mlir::WalkResult::advance();
+    });
+}
+
+
 class CIRCopyOpLowering : public mlir::OpConversionPattern<mlir::cir::CopyOp> {
 public:
   using mlir::OpConversionPattern<mlir::cir::CopyOp>::OpConversionPattern;
@@ -398,57 +427,6 @@ public:
     return mlir::success();
   }
 
-  void makeYieldIf(mlir::cir::YieldOpKind kind, mlir::cir::YieldOp &op,
-                   mlir::Block *to,
-                   mlir::ConversionPatternRewriter &rewriter) const {
-    if (op.getKind() == kind) {
-      rewriter.setInsertionPoint(op);
-      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(op, op.getArgs(), to);
-    }
-  }
-
-  void
-  lowerNestedBreakContinue(mlir::Region &loopBody, mlir::Block *exitBlock,
-                           mlir::Block *continueBlock,
-                           mlir::ConversionPatternRewriter &rewriter) const {
-    // top-level yields are lowered in matchAndRewrite
-    auto isNested = [&](mlir::Operation *op) {
-      return op->getParentRegion() != &loopBody;
-    };
-
-    auto processBreak = [&](mlir::Operation *op) {
-      if (!isNested(op))
-        return mlir::WalkResult::advance();
-
-      if (isa<mlir::cir::LoopOp, mlir::cir::SwitchOp>(
-              *op)) // don't process breaks in nested loops and switches
-        return mlir::WalkResult::skip();
-
-      if (auto yield = dyn_cast<mlir::cir::YieldOp>(*op))
-        makeYieldIf(mlir::cir::YieldOpKind::Break, yield, exitBlock, rewriter);
-
-      return mlir::WalkResult::advance();
-    };
-
-    auto processContinue = [&](mlir::Operation *op) {
-      if (!isNested(op))
-        return mlir::WalkResult::advance();
-
-      if (isa<mlir::cir::LoopOp>(
-              *op)) // don't process continues in nested loops
-        return mlir::WalkResult::skip();
-
-      if (auto yield = dyn_cast<mlir::cir::YieldOp>(*op))
-        makeYieldIf(mlir::cir::YieldOpKind::Continue, yield, continueBlock,
-                    rewriter);
-
-      return mlir::WalkResult::advance();
-    };
-
-    loopBody.walk<mlir::WalkOrder::PreOrder>(processBreak);
-    loopBody.walk<mlir::WalkOrder::PreOrder>(processContinue);
-  }
-
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -478,7 +456,10 @@ public:
         dyn_cast<mlir::cir::YieldOp>(stepRegion.back().getTerminator());
     auto &stepBlock = (kind == LoopKind::For ? stepFrontBlock : condFrontBlock);
 
-    lowerNestedBreakContinue(bodyRegion, continueBlock, &stepBlock, rewriter);
+    lowerNestedYield(mlir::cir::YieldOpKind::Break,
+                     rewriter, bodyRegion, continueBlock);
+    lowerNestedYield(mlir::cir::YieldOpKind::Continue,
+                     rewriter, bodyRegion, &stepBlock);
 
     // Move loop op region contents to current CFG.
     rewriter.inlineRegionBefore(condRegion, continueBlock);
@@ -713,7 +694,7 @@ public:
   }
 };
 
-static bool isLoopYield(mlir::cir::YieldOp &op) {
+static bool isBreakOrContinue(mlir::cir::YieldOp &op) {
   return op.getKind() == mlir::cir::YieldOpKind::Break ||
          op.getKind() == mlir::cir::YieldOpKind::Continue;
 }
@@ -746,8 +727,8 @@ public:
     rewriter.setInsertionPointToEnd(thenAfterBody);
     if (auto thenYieldOp =
             dyn_cast<mlir::cir::YieldOp>(thenAfterBody->getTerminator())) {
-      if (!isLoopYield(thenYieldOp)) // lowering of parent loop yields is
-                                     // deferred to loop lowering
+      if (!isBreakOrContinue(thenYieldOp)) // lowering of parent loop yields is
+                                           // deferred to loop lowering
         rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
             thenYieldOp, thenYieldOp.getArgs(), continueBlock);
     } else if (!dyn_cast<mlir::cir::ReturnOp>(thenAfterBody->getTerminator())) {
@@ -777,8 +758,8 @@ public:
       rewriter.setInsertionPointToEnd(elseAfterBody);
       if (auto elseYieldOp =
               dyn_cast<mlir::cir::YieldOp>(elseAfterBody->getTerminator())) {
-        if (!isLoopYield(elseYieldOp)) // lowering of parent loop yields is
-                                       // deferred to loop lowering
+        if (!isBreakOrContinue(elseYieldOp)) // lowering of parent loop yields is
+                                             // deferred to loop lowering
           rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
               elseYieldOp, elseYieldOp.getArgs(), continueBlock);
       } else if (!dyn_cast<mlir::cir::ReturnOp>(
@@ -839,7 +820,7 @@ public:
     rewriter.setInsertionPointToEnd(afterBody);
     auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
 
-    if (!isLoopYield(yieldOp)) {
+    if (!isBreakOrContinue(yieldOp)) {
       auto branchOp = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
           yieldOp, yieldOp.getArgs(), continueBlock);
 
@@ -1410,6 +1391,9 @@ public:
           }
         }
       }
+
+      lowerNestedYield(mlir::cir::YieldOpKind::Break, 
+                       rewriter, region, exitBlock);
 
       // Extract region contents before erasing the switch op.
       rewriter.inlineRegionBefore(region, exitBlock);
