@@ -1980,9 +1980,16 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFile())
-      if (auto ModuleFile = FileMgr->getFile(ModuleFilename))
+      if (auto ModuleFile = FileMgr->getOptionalFileRef(ModuleFilename)) {
         if (*ModuleFile == M->getASTFile())
           return M;
+#if !defined(__APPLE__)
+        // Workaround for ext4 file system. Also check bypass file if exists.
+        if (auto Bypass = FileMgr->getBypassFile(*ModuleFile))
+          if (*Bypass == M->getASTFile())
+            return M;
+#endif
+      }
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
         << ModuleName;

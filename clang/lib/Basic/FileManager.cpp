@@ -483,7 +483,7 @@ OptionalFileEntryRef FileManager::getBypassFile(FileEntryRef VF) {
 
   // If we've already bypassed just use the existing one.
   auto Insertion = SeenBypassFileEntries->insert(
-      {VF.getName(), std::errc::no_such_file_or_directory});
+      {VF.getNameAsRequested(), std::errc::no_such_file_or_directory});
   if (!Insertion.second)
     return FileEntryRef(*Insertion.first);
 
