@@ -150,6 +150,12 @@ public:
   bool hasHalfFPLoadStoreMove() const {
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
+
+  bool canUseCMOVBranchOpt() const {
+    // Can only predicate c.mv so requires the C or Zca extensions.
+    return HasCMOVBranchOpt && hasStdExtCOrZca();
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;

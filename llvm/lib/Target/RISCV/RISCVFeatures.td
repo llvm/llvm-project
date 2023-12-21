@@ -996,6 +996,12 @@ def TuneShortForwardBranchOpt
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
 
+def TuneCMOVBranchOpt
+    : SubtargetFeature<"cmov-branch-opt", "HasCMOVBranchOpt",
+                       "true", "Enable branch+c.mv optimization">;
+def CanUseCMOVBranchOpt : Predicate<"Subtarget->canUseCMOVBranchOpt()">;
+def NoCMOVBranchOpt : Predicate<"!Subtarget->canUseCMOVBranchOpt()">;
+
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors",
                                    [TuneNoDefaultUnroll,

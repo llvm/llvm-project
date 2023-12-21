@@ -112,6 +112,10 @@ def WriteFST16        : SchedWrite;    // Floating point sp store
 def WriteFST32        : SchedWrite;    // Floating point sp store
 def WriteFST64        : SchedWrite;    // Floating point dp store
 
+// CMOV for sifive-p450.
+def WriteCMOV       : SchedWrite;
+def ReadCMOV        : SchedRead;
+
 // short forward branch for Bullet
 def WriteSFB        : SchedWrite;
 def ReadSFBJmp      : SchedRead;
@@ -253,6 +257,14 @@ def : WriteRes<WriteSFB, []>;
 
 def : ReadAdvance<ReadSFBJmp, 0>;
 def : ReadAdvance<ReadSFBALU, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedCMOV {
+let Unsupported = true in {
+def : WriteRes<WriteCMOV, []>;
+
+def : ReadAdvance<ReadCMOV, 0>;
 } // Unsupported = true
 }
 
