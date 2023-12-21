@@ -2,12 +2,11 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from __future__ import annotations
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, Union
 
 from .... import ir
-from ....dialects import transform
-from ....dialects.transform import structured
+from .. import AnyOpType, OperationType, NamedSequenceOp, YieldOp
+from .. import structured
 
 
 class Handle(ir.Value):
@@ -25,16 +24,16 @@ class Handle(ir.Value):
         self,
         v: ir.Value,
         *,
-        parent: Optional[Handle] = None,
-        children: Optional[Sequence[Handle]] = None,
+        parent: Optional["Handle"] = None,
+        children: Optional[Sequence["Handle"]] = None,
     ):
         super().__init__(v)
         self.parent = parent
         self.children = children if children is not None else []
 
 
-@ir.register_value_caster(transform.AnyOpType.get_static_typeid())
-@ir.register_value_caster(transform.OperationType.get_static_typeid())
+@ir.register_value_caster(AnyOpType.get_static_typeid())
+@ir.register_value_caster(OperationType.get_static_typeid())
 class OpHandle(Handle):
     """
     Wrapper around a transform operation handle with methods to chain further
@@ -52,11 +51,13 @@ class OpHandle(Handle):
 
     def match_ops(
         self,
-        ops: str
-        | ir.OpView
-        | structured.MatchInterfaceEnum
-        | Sequence[str | ir.OpView],
-    ) -> OpHandle:
+        ops: Union[
+            str,
+            ir.OpView,
+            structured.MatchInterfaceEnum,
+            Sequence[Union[str, ir.OpView]],
+        ],
+    ) -> "OpHandle":
         """
         Emits a `transform.structured.MatchOp`.
         Returns a handle to payload ops that match the given names, types, or
@@ -70,7 +71,7 @@ class OpHandle(Handle):
             if isinstance(ops, str):
                 ops = structured.MatchInterfaceEnum[ops]
             match_op = structured.MatchOp(
-                transform.AnyOpType.get(),
+                AnyOpType.get(),
                 self,
                 interface=ops,
             )
@@ -78,15 +79,15 @@ class OpHandle(Handle):
         # Handle op name(s), either given directly as string or given as op.
         else:
             if isinstance(ops, str):
-                op_type = transform.OperationType.get(ops)
+                op_type = OperationType.get(ops)
                 op_names = [ops]
             elif isinstance(ops, Sequence):
-                op_type = transform.AnyOpType.get()
+                op_type = AnyOpType.get()
                 op_names = [
                     op if isinstance(op, str) else op.OPERATION_NAME for op in ops
                 ]
             else:
-                op_type = transform.OperationType.get(ops.OPERATION_NAME)
+                op_type = OperationType.get(ops.OPERATION_NAME)
                 op_names = [ops.OPERATION_NAME]
             match_op = structured.MatchOp.match_op_names(
                 op_type,
@@ -100,7 +101,7 @@ class OpHandle(Handle):
 
 
 def insert_transform_script(
-    block_or_insertion_point: ir.Block | ir.InsertionPoint,
+    block_or_insertion_point: Union[ir.Block, ir.InsertionPoint],
     script: Callable[[OpHandle], None],
     dump_script: bool = False,
 ) -> None:
@@ -137,12 +138,12 @@ def insert_transform_script(
 
     with context, ir.Location.unknown(context):
         with insertion_point:
-            named_sequence_op = transform.NamedSequenceOp(
-                "__transform_main", [transform.AnyOpType.get()], []
+            named_sequence_op = NamedSequenceOp(
+                "__transform_main", [AnyOpType.get()], []
             )
         with ir.InsertionPoint(named_sequence_op.body):
             script(named_sequence_op.bodyTarget)
-            transform.YieldOp([])
+            YieldOp([])
 
     if dump_script:
         print(named_sequence_op)
