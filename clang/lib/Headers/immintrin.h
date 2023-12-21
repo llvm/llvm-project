@@ -531,8 +531,7 @@ _storebe_i64(void * __P, long long __D) {
 /* Intrinsics inside adcintrin.h are available at all times. */
 #include <adcintrin.h>
 
-#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
-    defined(__ADX__)
+#if !defined(__SCE__) || __has_feature(modules) || defined(__ADX__)
 #include <adxintrin.h>
 #endif
 
