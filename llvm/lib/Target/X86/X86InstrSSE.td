@@ -6772,7 +6772,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in
                              [(set VR128:$dst,
                                (int_x86_sha1rnds4 VR128:$src1, VR128:$src2,
                                 (i8 timm:$src3)))]>,
-                         EVEX_NoCD8, T_MAP4PS, Sched<[SchedWriteVecIMul.XMM]>;
+                         EVEX, NoCD8, T_MAP4PS, Sched<[SchedWriteVecIMul.XMM]>;
   def SHA1RNDS4rmi_EVEX: Ii8<0xD4, MRMSrcMem, (outs VR128:$dst),
                              (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
                              "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
@@ -6780,31 +6780,31 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in
                                (int_x86_sha1rnds4 VR128:$src1,
                                 (memop addr:$src2),
                                 (i8 timm:$src3)))]>,
-                         EVEX_NoCD8, T_MAP4PS,
+                         EVEX, NoCD8, T_MAP4PS,
                          Sched<[SchedWriteVecIMul.XMM.Folded,
                                 SchedWriteVecIMul.XMM.ReadAfterFold]>;
 
   defm SHA1NEXTE : SHAI_binop<0xD8, "sha1nexte", int_x86_sha1nexte,
                                    SchedWriteVecIMul.XMM, "_EVEX">,
-                        EVEX_NoCD8, T_MAP4PS;
+                        EVEX, NoCD8, T_MAP4PS;
   defm SHA1MSG1  : SHAI_binop<0xD9, "sha1msg1", int_x86_sha1msg1,
                               SchedWriteVecIMul.XMM, "_EVEX">,
-                   EVEX_NoCD8, T_MAP4PS;
+                   EVEX, NoCD8, T_MAP4PS;
   defm SHA1MSG2  : SHAI_binop<0xDA, "sha1msg2", int_x86_sha1msg2,
                               SchedWriteVecIMul.XMM, "_EVEX">,
-                   EVEX_NoCD8, T_MAP4PS;
+                   EVEX, NoCD8, T_MAP4PS;
 
   let Uses=[XMM0] in
   defm SHA256RNDS2 : SHAI_binop<0xDB, "sha256rnds2", int_x86_sha256rnds2,
                                 SchedWriteVecIMul.XMM, "_EVEX", 1>,
-                     EVEX_NoCD8, T_MAP4PS;
+                     EVEX, NoCD8, T_MAP4PS;
 
   defm SHA256MSG1 : SHAI_binop<0xDC, "sha256msg1", int_x86_sha256msg1,
                                SchedWriteVecIMul.XMM, "_EVEX">,
-                    EVEX_NoCD8, T_MAP4PS;
+                    EVEX, NoCD8, T_MAP4PS;
   defm SHA256MSG2 : SHAI_binop<0xDD, "sha256msg2", int_x86_sha256msg2,
                                SchedWriteVecIMul.XMM, "_EVEX">,
-                    EVEX_NoCD8, T_MAP4PS;
+                    EVEX, NoCD8, T_MAP4PS;
 }
 
 //===----------------------------------------------------------------------===//
