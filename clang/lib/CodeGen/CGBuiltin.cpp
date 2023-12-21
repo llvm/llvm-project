@@ -10328,8 +10328,10 @@ static void swapCommutativeSMEOperands(unsigned BuiltinID,
     MultiVec = 1;
     break;
   case SME::BI__builtin_sme_svsumla_za32_s8_vg4x2:
+  case SME::BI__builtin_sme_svsudot_za32_s8_vg1x2:
     MultiVec = 2;
     break;
+  case SME::BI__builtin_sme_svsudot_za32_s8_vg1x4:
   case SME::BI__builtin_sme_svsumla_za32_s8_vg4x4:
     MultiVec = 4;
     break;
