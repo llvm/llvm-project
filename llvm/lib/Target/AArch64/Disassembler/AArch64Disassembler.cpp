@@ -165,9 +165,6 @@ static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodeFixedPointScaleImm64(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
-static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
-                                       uint64_t Address,
-                                       const MCDisassembler *Decoder);
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder);
@@ -887,21 +884,6 @@ static DecodeStatus DecodeFixedPointScaleImm64(MCInst &Inst, unsigned Imm,
                                                uint64_t Addr,
                                                const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createImm(64 - Imm));
-  return Success;
-}
-
-static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
-                                       uint64_t Addr,
-                                       const MCDisassembler *Decoder) {
-  // Immediate is encoded as the top 16-bits of an unsigned 18-bit negative
-  // PC-relative offset.
-  int64_t ImmVal = Imm;
-  if (ImmVal < 0 || ImmVal > (1 << 16))
-    return Fail;
-  ImmVal = -ImmVal;
-  if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal << 2), Addr,
-                                         /*IsBranch=*/false, 0, 0, 4))
-    Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }
 
