@@ -440,6 +440,14 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
+  ScheduleDAGMI::DumpDirection Dir;
+  if (ForceTopDown)
+    Dir = ScheduleDAGMI::DumpDirection::TopDown;
+  else if (ForceBottomUp)
+    Dir = ScheduleDAGMI::DumpDirection::BottomUp;
+  else
+    Dir = ScheduleDAGMI::DumpDirection::Bidirectional;
+  Scheduler->setDumpDirection(Dir);
   scheduleRegions(*Scheduler, false);
 
   LLVM_DEBUG(LIS->dump());
@@ -473,6 +481,9 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
+  Scheduler->setDumpDirection(PostRADirection == MISchedPostRASched::TopDown
+                                  ? ScheduleDAGMI::DumpDirection::TopDown
+                                  : ScheduleDAGMI::DumpDirection::BottomUp);
   scheduleRegions(*Scheduler, true);
 
   if (VerifyScheduling)
@@ -1125,12 +1136,14 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
   if (MISchedDumpScheduleTrace) {
-    if (ForceTopDown)
+    if (DumpDir == TopDown)
       dumpScheduleTraceTopDown();
-    else if (ForceBottomUp)
+    else if (DumpDir == BottomUp)
       dumpScheduleTraceBottomUp();
-    else {
+    else if (DumpDir == BottomUp) {
       dbgs() << "* Schedule table (Bidirectional): not implemented\n";
+    } else {
+      dbgs() << "* Schedule table: DumpDirection not set.\n";
     }
   }
 
@@ -3839,6 +3852,11 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
   if (!Top.HazardRec) {
     Top.HazardRec =
+        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
+            Itin, DAG);
+  }
+  if (!Bot.HazardRec) {
+    Bot.HazardRec =
         DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
             Itin, DAG);
   }
