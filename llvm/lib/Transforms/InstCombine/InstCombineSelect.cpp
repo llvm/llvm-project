@@ -2683,6 +2683,56 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
   }
 }
 
+Instruction *InstCombinerImpl::foldSelectOfAndOr(SelectInst &SI) {
+  Value *CondVal = SI.getCondition();
+  Value *CondLHS, *CondRHS;
+  bool IsBitwise = !isa<SelectInst>(CondVal);
+  bool IsAnd;
+
+  if (match(CondVal, m_LogicalOr(m_Value(CondLHS), m_Value(CondRHS))))
+    IsAnd = false;
+  else if (match(CondVal, m_LogicalAnd(m_Value(CondLHS), m_Value(CondRHS))))
+    IsAnd = true;
+  else
+    return nullptr;
+
+  Value *TrueVal = SI.getTrueValue(), *FalseVal = SI.getFalseValue();
+
+  // %cmp = icmp eq i32 %a, %b
+  // %cond = or i1 %other_cond, %cmp
+  // %select = select i1 %cond, i32 %a, i32 %b
+  // =>
+  // %select = select i1 %other_cond, i32 %a, i32 %b
+
+  // Or for an inverted version, we fold it like:
+  // %cmp = icmp ne i32 %a, %b
+  // %cond = and i1 %other_cond, %cmp
+  // %select = select i1 %cond, i32 %a, i32 %b
+  // =>
+  // %select = select i1 %other_cond, i32 %a, i32 %b
+
+  auto FoldAndOrOfEquality = [&](Value *Cmp, Value *OtherCond,
+                                 bool NeedToFreeze) -> Instruction * {
+    ICmpInst::Predicate Pred;
+    if (!match(Cmp, m_c_ICmp(Pred, m_Specific(TrueVal), m_Specific(FalseVal))))
+      return nullptr;
+    if (Pred != (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ))
+      return nullptr;
+    if (NeedToFreeze)
+      OtherCond = Builder.CreateFreeze(OtherCond);
+    return SelectInst::Create(OtherCond, TrueVal, FalseVal);
+  };
+
+  // Order doesn't matter for bitwise and/or. We care about FreezeInst only when
+  // and/or is logical.
+  if (Instruction *Ret = FoldAndOrOfEquality(CondLHS, CondRHS, !IsBitwise))
+    return Ret;
+  if (Instruction *Ret = FoldAndOrOfEquality(CondRHS, CondLHS, false))
+    return Ret;
+
+  return nullptr;
+}
+
 // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
 // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
 static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
@@ -3408,6 +3458,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return new SExtInst(NotCond, SelType);
     }
   }
+
+  if (Instruction *I = foldSelectOfAndOr(SI))
+    return I;
 
   auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
 

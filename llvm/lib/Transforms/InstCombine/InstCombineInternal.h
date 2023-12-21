@@ -442,7 +442,7 @@ private:
   // into simplier select instruction using isImpliedCondition.
   Instruction *foldAndOrOfSelectUsingImpliedCond(Value *Op, SelectInst &SI,
                                                  bool IsAnd);
-
+  Instruction *foldSelectOfAndOr(SelectInst &SI);
   Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
 
 public:
