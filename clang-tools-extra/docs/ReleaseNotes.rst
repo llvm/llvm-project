@@ -195,7 +195,7 @@ New checks
 - New :doc:`modernize-use-digit-separator
   <clang-tidy/checks/modernize/use-digit-separator>` check.
 
-  FIXME: add release notes.
+  Looks for long integral constants and inserts the digits separator (') appropriately.
 
 - New :doc:`modernize-use-starts-ends-with
   <clang-tidy/checks/modernize/use-starts-ends-with>` check.
