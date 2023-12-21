@@ -1400,7 +1400,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
-                         ISD::INSERT_VECTOR_ELT});
+                         ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -14576,6 +14576,50 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
 }
 
+static SDValue
+performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget,
+                                 const RISCVTargetLowering &TLI) {
+  SDValue InputVec = N->getOperand(0);
+  SDValue EltIdx = N->getOperand(1);
+  SDLoc DL(N);
+
+  EVT InVecVT = InputVec.getValueType();
+  if (InVecVT.isScalableVector())
+    return SDValue();
+
+  if (!InputVec.hasOneUse())
+    return SDValue();
+
+  auto *LoadVec = dyn_cast<LoadSDNode>(InputVec);
+  EVT VecEltVT = InVecVT.getVectorElementType();
+  auto *CIdx = dyn_cast<ConstantSDNode>(EltIdx);
+  // extract_vec_elt (load X), C --> scalar load (X+C)
+  if (LoadVec && CIdx && LoadVec->isSimple() && ISD::isNormalLoad(LoadVec)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    SDValue NewPtr = TLI.getVectorElementPointer(DAG, LoadVec->getBasePtr(),
+                                                 InVecVT, EltIdx);
+    unsigned PtrOff = VecEltVT.getSizeInBits() * CIdx->getZExtValue() / 8;
+    MachinePointerInfo MPI = LoadVec->getPointerInfo().getWithOffset(PtrOff);
+    Align Alignment = commonAlignment(LoadVec->getAlign(), PtrOff);
+
+    // Don't perform the combination if unaligned access is not allowed.
+    unsigned IsFast = 0;
+    if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                VecEltVT, LoadVec->getAddressSpace(), Alignment,
+                                LoadVec->getMemOperand()->getFlags(),
+                                &IsFast) ||
+        !IsFast)
+      return SDValue();
+
+    SDValue Load =
+        DAG.getLoad(VecEltVT, DL, LoadVec->getChain(), NewPtr, MPI, Alignment,
+                    LoadVec->getMemOperand()->getFlags(), LoadVec->getAAInfo());
+    DAG.makeEquivalentMemoryOrdering(LoadVec, Load);
+    return Load;
+  }
+  return SDValue();
+}
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
@@ -15643,6 +15687,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::INSERT_VECTOR_ELT:
     if (SDValue V = performINSERT_VECTOR_ELTCombine(N, DAG, Subtarget, *this))
+      return V;
+    break;
+  case ISD::EXTRACT_VECTOR_ELT:
+    if (SDValue V = performEXTRACT_VECTOR_ELTCombine(N, DAG, Subtarget, *this))
       return V;
     break;
   case RISCVISD::VFMV_V_F_VL: {
