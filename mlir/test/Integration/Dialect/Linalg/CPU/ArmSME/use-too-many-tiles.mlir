@@ -1,4 +1,3 @@
-
 // RUN: mlir-opt %s \
 // RUN:   -convert-vector-to-arm-sme -allocate-arm-sme-tiles  \
 // RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
