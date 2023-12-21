@@ -579,15 +579,25 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
 
   // Make a type query object we can use for all types and for one type
+  //
+  // TODO: this test was ported as is and before the new FindTypes patch
+  // this test was trying to find all matches, and it would find one. Then
+  // it would limit its number of matches from zero to < the minimum of the
+  // number of matches that were found in the first search, or 10. Then it
+  // would set the max matches to that number (1) and verify it was the
+  // same (1). This test should be fixed in the figure by updating the
+  // lldb/unittests/SymbolFile/PDB/Inputs/test-pdb-types.cpp file and
+  // recompiling the exe + pdb file so that there are actually multiple
+  // types whose basename is "ClassTypedef" or any other type. Now type
+  // matches only return a single match, or all of the matches.
   TypeQuery query("ClassTypedef");
   {
     // Find all types that match
     TypeResults query_results;
     symfile->FindTypes(query, query_results);
     TypeMap &results = query_results.GetTypeMap();
-    EXPECT_GT(results.GetSize(), 1u);
+    EXPECT_EQ(results.GetSize(), 1u);
   }
-
   {
     // Find a single type that matches
     query.SetFindOne(true);

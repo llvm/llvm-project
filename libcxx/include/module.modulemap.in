@@ -665,6 +665,7 @@ module std_private_algorithm_find_end                                    [system
 module std_private_algorithm_find_first_of                               [system] { header "__algorithm/find_first_of.h" }
 module std_private_algorithm_find_if                                     [system] { header "__algorithm/find_if.h" }
 module std_private_algorithm_find_if_not                                 [system] { header "__algorithm/find_if_not.h" }
+module std_private_algorithm_find_segment_if                             [system] { header "__algorithm/find_segment_if.h" }
 module std_private_algorithm_for_each                                    [system] { header "__algorithm/for_each.h" }
 module std_private_algorithm_for_each_n                                  [system] { header "__algorithm/for_each_n.h" }
 module std_private_algorithm_for_each_segment                            [system] { header "__algorithm/for_each_segment.h" }

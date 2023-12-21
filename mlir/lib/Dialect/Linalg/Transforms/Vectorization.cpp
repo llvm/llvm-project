@@ -2910,17 +2910,16 @@ struct Conv1DGenerator
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         Value lhsVal = lhsVals[linearIndex(kw, w)];
         Value resVal = resVals[w];
-        ShapedType filterBCastTy = cast<ShapedType>(resVal.getType());
         if (flatten) {
-          // Flatten the input and filter vectors (collapse the channel
+          // Flatten the input and output vectors (collapse the channel
           // dimension)
           lhsVal = rewriter.create<vector::ShapeCastOp>(
               loc, lhsCastType, lhsVals[linearIndex(kw, w)]);
           resVal = rewriter.create<vector::ShapeCastOp>(loc, resCastType,
                                                         resVals[w]);
         }
-        resVals[w] = depthwiseConv1dSliceAsMulAcc(
-            rewriter, loc, lhsVal, rhsVals[kw], resVal, filterBCastTy, flatten);
+        resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
+                                                  rhsVals[kw], resVal, flatten);
         if (flatten) {
           // Un-flatten the output vector (restore the channel dimension)
           resVals[w] = rewriter.create<vector::ShapeCastOp>(
@@ -2964,20 +2963,32 @@ struct Conv1DGenerator
   /// to MulAcc.
   Value depthwiseConv1dSliceAsMulAcc(RewriterBase &rewriter, Location loc,
                                      Value lhs, Value rhs, Value res,
-                                     ShapedType bcastTy, bool flatten) {
+                                     bool flatten) {
     auto rhsTy = cast<ShapedType>(rhs.getType());
     auto resTy = cast<ShapedType>(res.getType());
 
     // TODO(suderman): Change this to use a vector.ima intrinsic.
     lhs = promote(rewriter, loc, lhs, resTy);
 
-    rhs = rewriter.create<vector::BroadcastOp>(
-        loc, bcastTy.clone(rhsTy.getElementType()), rhs);
     if (flatten) {
-      // Flatten the channel dimension
-      rhs = rewriter.create<vector::ShapeCastOp>(
-          loc, resTy.clone(rhsTy.getElementType()), rhs);
+      // There are two options for handling the filter:
+      //  * shape_cast(broadcast(filter))
+      //  * broadcast(shuffle(filter))
+      // Opt for the option without shape_cast to simplify the codegen.
+      auto rhsSize = rhs.getType().cast<VectorType>().getShape()[0];
+      auto resSize = res.getType().cast<VectorType>().getShape()[1];
+
+      SmallVector<int64_t, 16> indicies;
+      for (int i = 0; i < resSize / rhsSize; ++i) {
+        for (int j = 0; j < rhsSize; ++j)
+          indicies.push_back(j);
+      }
+
+      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indicies);
     }
+    // Broadcast the filter to match the output vector
+    rhs = rewriter.create<vector::BroadcastOp>(
+        loc, resTy.clone(rhsTy.getElementType()), rhs);
 
     rhs = promote(rewriter, loc, rhs, resTy);
 

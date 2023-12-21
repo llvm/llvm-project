@@ -20,7 +20,7 @@ class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
   const T nan = T(FPBits::build_quiet_nan(1));
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());

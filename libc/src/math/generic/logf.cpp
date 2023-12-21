@@ -57,7 +57,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   using fputil::round_result_slightly_down;
   using fputil::round_result_slightly_up;

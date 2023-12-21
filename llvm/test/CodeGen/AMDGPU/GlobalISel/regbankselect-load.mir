@@ -536,6 +536,7 @@ body: |
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
     ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ;
     ; GFX12-LABEL: name: extload_constant_i8_to_i32_uniform
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -577,6 +578,7 @@ body: |
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
     ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ;
     ; GFX12-LABEL: name: extload_constant_i16_to_i32_uniform
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -755,6 +757,7 @@ body: |
     ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
     ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ;
     ; GFX12-LABEL: name: load_constant_v3i32_align4
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -784,6 +787,7 @@ body: |
     ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
     ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ;
     ; GFX12-LABEL: name: load_constant_v3i32_align8
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -810,6 +814,7 @@ body: |
     ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32), [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ;
     ; GFX12-LABEL: name: load_constant_v3i32_align16
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -840,6 +845,7 @@ body: |
     ; GFX7-NEXT: [[UV4:%[0-9]+]]:sgpr(s16), [[UV5:%[0-9]+]]:sgpr(s16) = G_UNMERGE_VALUES [[LOAD1]](<2 x s16>)
     ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x s16>)
+    ;
     ; GFX12-LABEL: name: load_constant_v6i16_align4
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -870,6 +876,7 @@ body: |
     ; GFX7-NEXT: [[UV4:%[0-9]+]]:sgpr(s16), [[UV5:%[0-9]+]]:sgpr(s16) = G_UNMERGE_VALUES [[LOAD1]](<2 x s16>)
     ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x s16>)
+    ;
     ; GFX12-LABEL: name: load_constant_v6i16_align8
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -896,6 +903,7 @@ body: |
     ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s16), [[UV1:%[0-9]+]]:sgpr(s16), [[UV2:%[0-9]+]]:sgpr(s16), [[UV3:%[0-9]+]]:sgpr(s16), [[UV4:%[0-9]+]]:sgpr(s16), [[UV5:%[0-9]+]]:sgpr(s16), [[UV6:%[0-9]+]]:sgpr(s16), [[UV7:%[0-9]+]]:sgpr(s16) = G_UNMERGE_VALUES [[LOAD]](<8 x s16>)
     ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x s16>)
+    ;
     ; GFX12-LABEL: name: load_constant_v6i16_align16
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -925,6 +933,7 @@ body: |
     ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
     ; GFX7-NEXT: [[MV:%[0-9]+]]:sgpr(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[MV]](s96)
+    ;
     ; GFX12-LABEL: name: load_constant_i96_align4
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -954,6 +963,7 @@ body: |
     ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
     ; GFX7-NEXT: [[MV:%[0-9]+]]:sgpr(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[MV]](s96)
+    ;
     ; GFX12-LABEL: name: load_constant_i96_align8
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
@@ -979,6 +989,7 @@ body: |
     ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(s128) = G_LOAD [[COPY]](p4) :: (invariant load (s128), addrspace 4)
     ; GFX7-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s96) = G_TRUNC [[LOAD]](s128)
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s96)
+    ;
     ; GFX12-LABEL: name: load_constant_i96_align16
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}

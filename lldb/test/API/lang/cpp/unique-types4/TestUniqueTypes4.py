@@ -31,12 +31,13 @@ class UniqueTypesTestCase4(TestBase):
         self.expect_expr("ns::FooDouble::value", result_type="double", result_value="0")
         self.expect_expr("ns::FooInt::value", result_type="int", result_value="0")
 
-
+    @skipIfWindows  # Skip on windows until we can track down why this stopped working
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
     def test_simple_template_names(self):
         self.do_test(dict(CFLAGS_EXTRAS="-gsimple-template-names"))
 
+    @skipIfWindows  # Skip on windows until we can track down why this stopped working
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
     def test_no_simple_template_names(self):

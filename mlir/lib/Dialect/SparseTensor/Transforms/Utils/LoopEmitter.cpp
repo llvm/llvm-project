@@ -437,7 +437,6 @@ void LoopEmitter::initializeLoopEmit(
     auto stt = getSparseTensorType(tensor);
     const Level lvlRank = stt.getLvlRank();
     const auto shape = rtp.getShape();
-    const Level cooStart = stt.getCOOStart();
 
     SmallVector<Value> lvlSzs;
     for (Level l = 0; l < stt.getLvlRank(); l++) {
@@ -457,12 +456,10 @@ void LoopEmitter::initializeLoopEmit(
       if (isCompressedLT(lvlTp) || isLooseCompressedLT(lvlTp)) {
         // Generate sparse primitives to obtain positions and coordinates.
         positionsBuffers[t][l] = genToPositions(builder, loc, tensor, l);
-        coordinatesBuffers[t][l] =
-            genToCoordinates(builder, loc, tensor, l, cooStart);
+        coordinatesBuffers[t][l] = genToCoordinates(builder, loc, tensor, l);
       } else if (isSingletonLT(lvlTp) || is2OutOf4LT(lvlTp)) {
         // Singleton level, fetch coordinates.
-        coordinatesBuffers[t][l] =
-            genToCoordinates(builder, loc, tensor, l, cooStart);
+        coordinatesBuffers[t][l] = genToCoordinates(builder, loc, tensor, l);
       } else {
         // Dense level, nothing to fetch.
         assert(isDenseLT(lvlTp));

@@ -266,7 +266,7 @@ let Predicates = [FeatureVectorEnhancements2] in {
   def VLBRH : UnaryVRX<"vlbrh", 0xE606, z_loadbswap, v128h, 16, 1>;
   def VLBRF : UnaryVRX<"vlbrf", 0xE606, z_loadbswap, v128f, 16, 2>;
   def VLBRG : UnaryVRX<"vlbrg", 0xE606, z_loadbswap, v128g, 16, 3>;
-  def VLBRQ : UnaryVRX<"vlbrq", 0xE606, null_frag, v128q, 16, 4>;
+  def VLBRQ : UnaryVRX<"vlbrq", 0xE606, z_loadbswap, v128q, 16, 4>;
 
   // Load elements reversed.
   def VLER  : UnaryVRXGeneric<"vler", 0xE607>;
@@ -307,7 +307,7 @@ let Predicates = [FeatureVectorEnhancements2] in {
   def VSTBRH : StoreVRX<"vstbrh", 0xE60E, z_storebswap, v128h, 16, 1>;
   def VSTBRF : StoreVRX<"vstbrf", 0xE60E, z_storebswap, v128f, 16, 2>;
   def VSTBRG : StoreVRX<"vstbrg", 0xE60E, z_storebswap, v128g, 16, 3>;
-  def VSTBRQ : StoreVRX<"vstbrq", 0xE60E, null_frag, v128q, 16, 4>;
+  def VSTBRQ : StoreVRX<"vstbrq", 0xE60E, z_storebswap, v128q, 16, 4>;
 
   // Store elements reversed.
   def VSTER  : StoreVRXGeneric<"vster", 0xE60F>;
@@ -478,26 +478,26 @@ let Predicates = [FeatureVector] in {
     def VAH : BinaryVRRc<"vah", 0xE7F3, add, v128h, v128h, 1>;
     def VAF : BinaryVRRc<"vaf", 0xE7F3, add, v128f, v128f, 2>;
     def VAG : BinaryVRRc<"vag", 0xE7F3, add, v128g, v128g, 3>;
-    def VAQ : BinaryVRRc<"vaq", 0xE7F3, int_s390_vaq, v128q, v128q, 4>;
+    def VAQ : BinaryVRRc<"vaq", 0xE7F3, add, v128q, v128q, 4>;
   }
 
   let isCommutable = 1 in {
     // Add compute carry.
     def VACC  : BinaryVRRcGeneric<"vacc", 0xE7F1>;
-    def VACCB : BinaryVRRc<"vaccb", 0xE7F1, int_s390_vaccb, v128b, v128b, 0>;
-    def VACCH : BinaryVRRc<"vacch", 0xE7F1, int_s390_vacch, v128h, v128h, 1>;
-    def VACCF : BinaryVRRc<"vaccf", 0xE7F1, int_s390_vaccf, v128f, v128f, 2>;
-    def VACCG : BinaryVRRc<"vaccg", 0xE7F1, int_s390_vaccg, v128g, v128g, 3>;
-    def VACCQ : BinaryVRRc<"vaccq", 0xE7F1, int_s390_vaccq, v128q, v128q, 4>;
+    def VACCB : BinaryVRRc<"vaccb", 0xE7F1, z_vacc, v128b, v128b, 0>;
+    def VACCH : BinaryVRRc<"vacch", 0xE7F1, z_vacc, v128h, v128h, 1>;
+    def VACCF : BinaryVRRc<"vaccf", 0xE7F1, z_vacc, v128f, v128f, 2>;
+    def VACCG : BinaryVRRc<"vaccg", 0xE7F1, z_vacc, v128g, v128g, 3>;
+    def VACCQ : BinaryVRRc<"vaccq", 0xE7F1, z_vacc, v128q, v128q, 4>;
 
     // Add with carry.
     def VAC  : TernaryVRRdGeneric<"vac", 0xE7BB>;
-    def VACQ : TernaryVRRd<"vacq", 0xE7BB, int_s390_vacq, v128q, v128q, 4>;
+    def VACQ : TernaryVRRd<"vacq", 0xE7BB, z_vac, v128q, v128q, 4>;
 
     // Add with carry compute carry.
     def VACCC  : TernaryVRRdGeneric<"vaccc", 0xE7B9>;
-    def VACCCQ : TernaryVRRd<"vacccq", 0xE7B9, int_s390_vacccq, v128q, v128q, 4>;
- }
+    def VACCCQ : TernaryVRRd<"vacccq", 0xE7B9, z_vaccc, v128q, v128q, 4>;
+  }
 
   // And.
   let isCommutable = 1 in
@@ -830,24 +830,23 @@ let Predicates = [FeatureVector] in {
   def VSH : BinaryVRRc<"vsh", 0xE7F7, sub, v128h, v128h, 1>;
   def VSF : BinaryVRRc<"vsf", 0xE7F7, sub, v128f, v128f, 2>;
   def VSG : BinaryVRRc<"vsg", 0xE7F7, sub, v128g, v128g, 3>;
-  def VSQ : BinaryVRRc<"vsq", 0xE7F7, int_s390_vsq, v128q, v128q, 4>;
+  def VSQ : BinaryVRRc<"vsq", 0xE7F7, sub, v128q, v128q, 4>;
 
   // Subtract compute borrow indication.
   def VSCBI  : BinaryVRRcGeneric<"vscbi", 0xE7F5>;
-  def VSCBIB : BinaryVRRc<"vscbib", 0xE7F5, int_s390_vscbib, v128b, v128b, 0>;
-  def VSCBIH : BinaryVRRc<"vscbih", 0xE7F5, int_s390_vscbih, v128h, v128h, 1>;
-  def VSCBIF : BinaryVRRc<"vscbif", 0xE7F5, int_s390_vscbif, v128f, v128f, 2>;
-  def VSCBIG : BinaryVRRc<"vscbig", 0xE7F5, int_s390_vscbig, v128g, v128g, 3>;
-  def VSCBIQ : BinaryVRRc<"vscbiq", 0xE7F5, int_s390_vscbiq, v128q, v128q, 4>;
+  def VSCBIB : BinaryVRRc<"vscbib", 0xE7F5, z_vscbi, v128b, v128b, 0>;
+  def VSCBIH : BinaryVRRc<"vscbih", 0xE7F5, z_vscbi, v128h, v128h, 1>;
+  def VSCBIF : BinaryVRRc<"vscbif", 0xE7F5, z_vscbi, v128f, v128f, 2>;
+  def VSCBIG : BinaryVRRc<"vscbig", 0xE7F5, z_vscbi, v128g, v128g, 3>;
+  def VSCBIQ : BinaryVRRc<"vscbiq", 0xE7F5, z_vscbi, v128q, v128q, 4>;
 
   // Subtract with borrow indication.
   def VSBI  : TernaryVRRdGeneric<"vsbi", 0xE7BF>;
-  def VSBIQ : TernaryVRRd<"vsbiq", 0xE7BF, int_s390_vsbiq, v128q, v128q, 4>;
+  def VSBIQ : TernaryVRRd<"vsbiq", 0xE7BF, z_vsbi, v128q, v128q, 4>;
 
   // Subtract with borrow compute borrow indication.
   def VSBCBI  : TernaryVRRdGeneric<"vsbcbi", 0xE7BD>;
-  def VSBCBIQ : TernaryVRRd<"vsbcbiq", 0xE7BD, int_s390_vsbcbiq,
-                            v128q, v128q, 4>;
+  def VSBCBIQ : TernaryVRRd<"vsbcbiq", 0xE7BD, z_vsbcbi, v128q, v128q, 4>;
 
   // Sum across doubleword.
   def VSUMG  : BinaryVRRcGeneric<"vsumg", 0xE765>;
@@ -866,34 +865,35 @@ let Predicates = [FeatureVector] in {
 }
 
 // Instantiate the bitwise ops for type TYPE.
-multiclass BitwiseVectorOps<ValueType type> {
+multiclass BitwiseVectorOps<ValueType type, SDPatternOperator not_op> {
   let Predicates = [FeatureVector] in {
     def : Pat<(type (and VR128:$x, VR128:$y)), (VN VR128:$x, VR128:$y)>;
-    def : Pat<(type (and VR128:$x, (z_vnot VR128:$y))),
+    def : Pat<(type (and VR128:$x, (not_op VR128:$y))),
               (VNC VR128:$x, VR128:$y)>;
     def : Pat<(type (or VR128:$x, VR128:$y)), (VO VR128:$x, VR128:$y)>;
     def : Pat<(type (xor VR128:$x, VR128:$y)), (VX VR128:$x, VR128:$y)>;
     def : Pat<(type (or (and VR128:$x, VR128:$z),
-                        (and VR128:$y, (z_vnot VR128:$z)))),
+                        (and VR128:$y, (not_op VR128:$z)))),
               (VSEL VR128:$x, VR128:$y, VR128:$z)>;
-    def : Pat<(type (z_vnot (or VR128:$x, VR128:$y))),
+    def : Pat<(type (not_op (or VR128:$x, VR128:$y))),
               (VNO VR128:$x, VR128:$y)>;
-    def : Pat<(type (z_vnot VR128:$x)), (VNO VR128:$x, VR128:$x)>;
+    def : Pat<(type (not_op VR128:$x)), (VNO VR128:$x, VR128:$x)>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
-    def : Pat<(type (z_vnot (xor VR128:$x, VR128:$y))),
+    def : Pat<(type (not_op (xor VR128:$x, VR128:$y))),
               (VNX VR128:$x, VR128:$y)>;
-    def : Pat<(type (z_vnot (and VR128:$x, VR128:$y))),
+    def : Pat<(type (not_op (and VR128:$x, VR128:$y))),
               (VNN VR128:$x, VR128:$y)>;
-    def : Pat<(type (or VR128:$x, (z_vnot VR128:$y))),
+    def : Pat<(type (or VR128:$x, (not_op VR128:$y))),
               (VOC VR128:$x, VR128:$y)>;
   }
 }
 
-defm : BitwiseVectorOps<v16i8>;
-defm : BitwiseVectorOps<v8i16>;
-defm : BitwiseVectorOps<v4i32>;
-defm : BitwiseVectorOps<v2i64>;
+defm : BitwiseVectorOps<v16i8, z_vnot>;
+defm : BitwiseVectorOps<v8i16, z_vnot>;
+defm : BitwiseVectorOps<v4i32, z_vnot>;
+defm : BitwiseVectorOps<v2i64, z_vnot>;
+defm : BitwiseVectorOps<i128, not>;
 
 // Instantiate additional patterns for absolute-related expressions on
 // type TYPE.  LC is the negate instruction for TYPE and LP is the absolute
@@ -961,6 +961,26 @@ defm : IntegerMinMaxVectorOps<v16i8, z_vicmphl, VMNLB, VMXLB>;
 defm : IntegerMinMaxVectorOps<v8i16, z_vicmphl, VMNLH, VMXLH>;
 defm : IntegerMinMaxVectorOps<v4i32, z_vicmphl, VMNLF, VMXLF>;
 defm : IntegerMinMaxVectorOps<v2i64, z_vicmphl, VMNLG, VMXLG>;
+
+// Instantiate full-vector shifts.
+multiclass FullVectorShiftOps<SDPatternOperator shift,
+                              Instruction sbit, Instruction sbyte> {
+  let Predicates = [FeatureVector] in {
+    def : Pat<(shift (i128 VR128:$x), imm32nobytes:$amt),
+              (sbit VR128:$x, (VREPIB (UIMM8 imm:$amt)))>;
+    def : Pat<(shift (i128 VR128:$x), imm32nobits:$amt),
+              (sbyte VR128:$x, (VREPIB (UIMM8 imm:$amt)))>;
+    def : Pat<(shift (i128 VR128:$x), imm32:$amt),
+              (sbit (sbyte VR128:$x, (VREPIB (UIMM8 imm:$amt))),
+                    (VREPIB (UIMM8 imm:$amt)))>;
+    def : Pat<(shift (i128 VR128:$x), GR32:$amt),
+              (sbit (sbyte VR128:$x, (VREPB (VLVGP32 GR32:$amt, GR32:$amt), 15)),
+                    (VREPB (VLVGP32 GR32:$amt, GR32:$amt), 15))>;
+  }
+}
+defm : FullVectorShiftOps<vshiftop<shl>, VSL, VSLB>;
+defm : FullVectorShiftOps<vshiftop<srl>, VSRL, VSRLB>;
+defm : FullVectorShiftOps<vshiftop<sra>, VSRA, VSRAB>;
 
 //===----------------------------------------------------------------------===//
 // Integer comparison
@@ -1517,12 +1537,165 @@ let Predicates = [FeatureVector] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Support for 128-bit integer values in vector registers
+//===----------------------------------------------------------------------===//
+
+// Loads and stores.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (load bdxaddr12only:$addr)),
+            (VL bdxaddr12only:$addr)>;
+  def : Pat<(store (i128 VR128:$src), bdxaddr12only:$addr),
+            (VST VR128:$src, bdxaddr12only:$addr)>;
+}
+
+// Full i128 move from GPR pair.
+let Predicates = [FeatureVector] in
+  def : Pat<(i128 (or (zext GR64:$x), (shl (anyext GR64:$y), (i32 64)))),
+            (VLVGP GR64:$y, GR64:$x)>;
+
+// Any-extensions from GPR to i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (anyext GR32:$x)), (VLVGP32 GR32:$x, GR32:$x)>;
+  def : Pat<(i128 (anyext GR64:$x)), (VLVGP GR64:$x, GR64:$x)>;
+}
+
+// Any-extending loads into i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (extloadi8 bdxaddr12only:$addr)),
+            (VLREPB bdxaddr12only:$addr)>;
+  def : Pat<(i128 (extloadi16 bdxaddr12only:$addr)),
+            (VLREPH bdxaddr12only:$addr)>;
+  def : Pat<(i128 (extloadi32 bdxaddr12only:$addr)),
+            (VLREPF bdxaddr12only:$addr)>;
+  def : Pat<(i128 (extloadi64 bdxaddr12only:$addr)),
+            (VLREPG bdxaddr12only:$addr)>;
+}
+
+// Truncations from i128 to GPR.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i32 (trunc (i128 VR128:$vec))),
+            (EXTRACT_SUBREG (VLGVF VR128:$vec, zero_reg, 3), subreg_l32)>;
+  def : Pat<(i32 (trunc (srl (i128 VR128:$vec), (i32 32)))),
+            (EXTRACT_SUBREG (VLGVF VR128:$vec, zero_reg, 2), subreg_l32)>;
+  def : Pat<(i32 (trunc (srl (i128 VR128:$vec), (i32 64)))),
+            (EXTRACT_SUBREG (VLGVF VR128:$vec, zero_reg, 1), subreg_l32)>;
+  def : Pat<(i32 (trunc (srl (i128 VR128:$vec), (i32 96)))),
+            (EXTRACT_SUBREG (VLGVF VR128:$vec, zero_reg, 0), subreg_l32)>;
+  def : Pat<(i64 (trunc (i128 VR128:$vec))),
+            (VLGVG VR128:$vec, zero_reg, 1)>;
+  def : Pat<(i64 (trunc (srl (i128 VR128:$vec), (i32 64)))),
+            (VLGVG VR128:$vec, zero_reg, 0)>;
+}
+
+// Truncating stores from i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(truncstorei8 (i128 VR128:$x), bdxaddr12only:$addr),
+            (VSTEB VR128:$x, bdxaddr12only:$addr, 15)>;
+  def : Pat<(truncstorei16 (i128 VR128:$x), bdxaddr12only:$addr),
+            (VSTEH VR128:$x, bdxaddr12only:$addr, 7)>;
+  def : Pat<(truncstorei32 (i128 VR128:$x), bdxaddr12only:$addr),
+            (VSTEF VR128:$x, bdxaddr12only:$addr, 3)>;
+  def : Pat<(truncstorei32 (srl (i128 VR128:$x), (i32 32)), bdxaddr12only:$addr),
+            (VSTEF VR128:$x, bdxaddr12only:$addr, 2)>;
+  def : Pat<(truncstorei32 (srl (i128 VR128:$x), (i32 64)), bdxaddr12only:$addr),
+            (VSTEF VR128:$x, bdxaddr12only:$addr, 1)>;
+  def : Pat<(truncstorei32 (srl (i128 VR128:$x), (i32 96)), bdxaddr12only:$addr),
+            (VSTEF VR128:$x, bdxaddr12only:$addr, 0)>;
+  def : Pat<(truncstorei64 (i128 VR128:$x), bdxaddr12only:$addr),
+            (VSTEG VR128:$x, bdxaddr12only:$addr, 1)>;
+  def : Pat<(truncstorei64 (srl (i128 VR128:$x), (i32 64)), bdxaddr12only:$addr),
+            (VSTEG VR128:$x, bdxaddr12only:$addr, 0)>;
+}
+
+// Zero-extensions from GPR to i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (zext8 (anyext GR32:$x))),
+            (VLVGB (VGBM 0), GR32:$x, zero_reg, 15)>;
+  def : Pat<(i128 (zext16 (anyext GR32:$x))),
+            (VLVGH (VGBM 0), GR32:$x, zero_reg, 7)>;
+  def : Pat<(i128 (zext GR32:$x)),
+            (VLVGF (VGBM 0), GR32:$x, zero_reg, 3)>;
+  def : Pat<(i128 (zext GR64:$x)),
+            (VLVGG (VGBM 0), GR64:$x, zero_reg, 1)>;
+}
+
+// Zero-extending loads into i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (zextloadi8 bdxaddr12only:$addr)),
+            (VLEB (VGBM 0), bdxaddr12only:$addr, 15)>;
+  def : Pat<(i128 (zextloadi16 bdxaddr12only:$addr)),
+            (VLEH (VGBM 0), bdxaddr12only:$addr, 7)>;
+  def : Pat<(i128 (zextloadi32 bdxaddr12only:$addr)),
+            (VLEF (VGBM 0), bdxaddr12only:$addr, 3)>;
+  def : Pat<(i128 (zextloadi64 bdxaddr12only:$addr)),
+            (VLEG (VGBM 0), bdxaddr12only:$addr, 1)>;
+}
+
+// In-register i128 sign-extensions.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (sext_inreg VR128:$x, i8)),
+            (VSRAB (VREPB VR128:$x, 15), (VREPIB 120))>;
+  def : Pat<(i128 (sext_inreg VR128:$x, i16)),
+            (VSRAB (VREPH VR128:$x, 7), (VREPIB 112))>;
+  def : Pat<(i128 (sext_inreg VR128:$x, i32)),
+            (VSRAB (VREPF VR128:$x, 3), (VREPIB 96))>;
+  def : Pat<(i128 (sext_inreg VR128:$x, i64)),
+            (VSRAB (VREPG VR128:$x, 1), (VREPIB 64))>;
+}
+
+// Sign-extensions from GPR to i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (sext_inreg (anyext GR32:$x), i8)),
+            (VLVGP (SRAG (LGBR (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                 GR32:$x, subreg_l32)), zero_reg, 63),
+                   (LGBR (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                            GR32:$x, subreg_l32)))>;
+  def : Pat<(i128 (sext_inreg (anyext GR32:$x), i16)),
+            (VLVGP (SRAG (LGHR (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                  GR32:$x, subreg_l32)), zero_reg, 63),
+                   (LGHR (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                            GR32:$x, subreg_l32)))>;
+  def : Pat<(i128 (sext GR32:$x)),
+            (VLVGP (SRAG (LGFR GR32:$x), zero_reg, 63), (LGFR GR32:$x))>;
+  def : Pat<(i128 (sext GR64:$x)),
+            (VLVGP (SRAG GR64:$x, zero_reg, 63), GR64:$x)>;
+}
+
+// Sign-extending loads into i128.
+let Predicates = [FeatureVector] in {
+  def : Pat<(i128 (sextloadi8 bdxaddr12only:$addr)),
+            (VSRAB (VLREPB bdxaddr12only:$addr), (VREPIB 120))>;
+  def : Pat<(i128 (sextloadi16 bdxaddr12only:$addr)),
+            (VSRAB (VLREPH bdxaddr12only:$addr), (VREPIB 112))>;
+  def : Pat<(i128 (sextloadi32 bdxaddr12only:$addr)),
+            (VSRAB (VLREPF bdxaddr12only:$addr), (VREPIB 96))>;
+  def : Pat<(i128 (sextloadi64 bdxaddr12only:$addr)),
+            (VSRAB (VLREPG bdxaddr12only:$addr), (VREPIB 64))>;
+}
+
+// i128 comparison pseudo-instructions.
+let Predicates = [FeatureVector], Defs = [CC],
+    usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+  def SCmp128Hi : Pseudo<(outs), (ins VR128:$src1, VR128:$src2),
+                         [(set CC, (z_scmp128hi (i128 VR128:$src1),
+                                                (i128 VR128:$src2)))]>;
+  def UCmp128Hi : Pseudo<(outs), (ins VR128:$src1, VR128:$src2),
+                         [(set CC, (z_ucmp128hi (i128 VR128:$src1),
+                                                (i128 VR128:$src2)))]>;
+}
+
+// i128 select pseudo-instructions.
+let Predicates = [FeatureVector] in
+  def Select128 : SelectWrapper<i128, VR128>;
+
+//===----------------------------------------------------------------------===//
 // Conversions
 //===----------------------------------------------------------------------===//
 
 def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
+def : Pat<(v16i8 (bitconvert (i128  VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4f32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2f64 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (f128  VR128:$src))), (v16i8 VR128:$src)>;
@@ -1530,6 +1703,7 @@ def : Pat<(v16i8 (bitconvert (f128  VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v16i8 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v4i32 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v2i64 VR128:$src))), (v8i16 VR128:$src)>;
+def : Pat<(v8i16 (bitconvert (i128  VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v4f32 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v2f64 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (f128  VR128:$src))), (v8i16 VR128:$src)>;
@@ -1537,6 +1711,7 @@ def : Pat<(v8i16 (bitconvert (f128  VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v16i8 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v8i16 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v2i64 VR128:$src))), (v4i32 VR128:$src)>;
+def : Pat<(v4i32 (bitconvert (i128  VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v4f32 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v2f64 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (f128  VR128:$src))), (v4i32 VR128:$src)>;
@@ -1544,6 +1719,7 @@ def : Pat<(v4i32 (bitconvert (f128  VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v16i8 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v8i16 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v4i32 VR128:$src))), (v2i64 VR128:$src)>;
+def : Pat<(v2i64 (bitconvert (i128  VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v4f32 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v2f64 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (f128  VR128:$src))), (v2i64 VR128:$src)>;
@@ -1551,6 +1727,7 @@ def : Pat<(v2i64 (bitconvert (f128  VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v16i8 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v8i16 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v4i32 VR128:$src))), (v4f32 VR128:$src)>;
+def : Pat<(v4f32 (bitconvert (i128  VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v2i64 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v2f64 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (f128  VR128:$src))), (v4f32 VR128:$src)>;
@@ -1558,6 +1735,7 @@ def : Pat<(v4f32 (bitconvert (f128  VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v16i8 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v8i16 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v4i32 VR128:$src))), (v2f64 VR128:$src)>;
+def : Pat<(v2f64 (bitconvert (i128  VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v2i64 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v4f32 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (f128  VR128:$src))), (v2f64 VR128:$src)>;
@@ -1566,8 +1744,17 @@ def : Pat<(f128  (bitconvert (v16i8 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v8i16 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v4i32 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v2i64 VR128:$src))), (f128  VR128:$src)>;
+def : Pat<(f128  (bitconvert (i128  VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v4f32 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v2f64 VR128:$src))), (f128  VR128:$src)>;
+
+def : Pat<(i128  (bitconvert (v16i8 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (v8i16 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (v4i32 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (v2i64 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (v4f32 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (v2f64 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (f128  VR128:$src))), (i128  VR128:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Replicating scalars

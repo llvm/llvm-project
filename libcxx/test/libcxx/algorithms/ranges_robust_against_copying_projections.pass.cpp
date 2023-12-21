@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
 #include "test_macros.h"
 
@@ -224,10 +225,19 @@ constexpr bool all_the_algorithms()
     return true;
 }
 
-int main(int, char**)
-{
-    all_the_algorithms();
-    static_assert(all_the_algorithms());
+void test_deque() {
+  std::deque<T> d;
+  int copies  = 0;
+  void* value = nullptr;
 
-    return 0;
+  (void)std::ranges::find(d, value, Proj(&copies));
+  assert(copies == 0);
+}
+
+int main(int, char**) {
+  test_deque();
+  all_the_algorithms();
+  static_assert(all_the_algorithms());
+
+  return 0;
 }

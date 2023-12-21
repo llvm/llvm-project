@@ -4,6 +4,7 @@
 ; RUN: llc -mcpu=gfx810 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -mcpu=gfx1100 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
 ; RUN: llc -mcpu=gfx1200 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
+
 @esgs_ring = external addrspace(3) global [0 x i32], align 65536
 
 define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {

@@ -563,8 +563,8 @@ bool ByteCodeExprGen<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
-  // FIXME: We expect a pointer on the stack here.
-  //   we should not do that, but that's part of a bigger rework.
+  assert(Initializing);
+
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   PrimType LHSElemT = *this->classifyComplexElementType(LHS->getType());

@@ -227,6 +227,13 @@ enum NodeType : unsigned {
   // rightmost sub-element of the corresponding element of operand 1.
   VSUM,
 
+  // Compute carry/borrow indication for add/subtract.
+  VACC, VSCBI,
+  // Add/subtract with carry/borrow.
+  VAC, VSBI,
+  // Compute carry/borrow indication for add/subtract with carry/borrow.
+  VACCC, VSBCBI,
+
   // Compare integer vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VICMPE is for equality, VICMPH for "signed greater than"
   // and VICMPHL for "unsigned greater than".
@@ -264,6 +271,10 @@ enum NodeType : unsigned {
 
   // AND the two vector operands together and set CC based on the result.
   VTM,
+
+  // i128 high integer comparisons.
+  SCMP128HI,
+  UCMP128HI,
 
   // String operations that set CC as a side-effect.
   VFAE_CC,
@@ -433,6 +444,7 @@ public:
     return TargetLowering::getNumRegisters(Context, VT);
   }
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
+  bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override {
     ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
@@ -742,6 +754,8 @@ private:
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;
+  MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
+                                   bool Unsigned) const;
   MachineBasicBlock *emitPair128(MachineInstr &MI,
                                  MachineBasicBlock *MBB) const;
   MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,

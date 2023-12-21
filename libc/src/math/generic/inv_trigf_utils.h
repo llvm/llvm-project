@@ -40,13 +40,12 @@ LIBC_INLINE double atan_eval(double x) {
   using FPB = fputil::FPBits<double>;
   // Added some small value to umin and umax mantissa to avoid possible rounding
   // errors.
-  FPB::UIntType umin =
-      FPB::create_value(false, FPB::EXPONENT_BIAS - ATAN_T_BITS - 1,
+  FPB::StorageType umin =
+      FPB::create_value(false, FPB::EXP_BIAS - ATAN_T_BITS - 1,
                         0x100000000000UL)
           .uintval();
-  FPB::UIntType umax =
-      FPB::create_value(false, FPB::EXPONENT_BIAS + ATAN_T_BITS,
-                        0xF000000000000UL)
+  FPB::StorageType umax =
+      FPB::create_value(false, FPB::EXP_BIAS + ATAN_T_BITS, 0xF000000000000UL)
           .uintval();
 
   FPB bs(x);

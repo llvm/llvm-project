@@ -457,7 +457,6 @@ protected:
   const SIInstrInfo *TII = nullptr;
   AMDGPU::IsaVersion IV;
   InstCounterType MaxCounter;
-  DenseSet<MachineInstr *> TrackedWaitcntSet;
 
 public:
   WaitcntGenerator() {}
@@ -480,6 +479,9 @@ public:
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
                           MachineBasicBlock::instr_iterator It) const = 0;
+
+  // Transform a soft waitcnt into a normal one.
+  bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
 
   // Generates new wait count instructions according to the  value of
   // Wait, returning true if any new instructions were created.
@@ -1165,9 +1167,8 @@ static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
 
 /// Determine if \p MI is a gfx12+ single-counter S_WAIT_*CNT instruction,
 /// and if so, which counter it is waiting on.
-static std::optional<InstCounterType>
-counterTypeForInstr(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
+static std::optional<InstCounterType> counterTypeForInstr(unsigned Opcode) {
+  switch (Opcode) {
   case AMDGPU::S_WAIT_LOADCNT:
     return LOAD_CNT;
   case AMDGPU::S_WAIT_EXPCNT:
@@ -1185,6 +1186,15 @@ counterTypeForInstr(const MachineInstr &MI) {
   default:
     return {};
   }
+}
+
+bool WaitcntGenerator::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
+  unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Waitcnt->getOpcode());
+  if (Opcode == Waitcnt->getOpcode())
+    return false;
+
+  Waitcnt->setDesc(TII->get(Opcode));
+  return true;
 }
 
 /// Combine consecutive S_WAITCNT and S_WAITCNT_VSCNT instructions that
@@ -1207,83 +1217,78 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     if (II.isMetaInstruction())
       continue;
 
-    // Conservatively update required wait if this waitcnt was added in an
-    // earlier pass. In this case it will not exist in the tracked waitcnt
-    // set.
-    if (II.getOpcode() == AMDGPU::S_WAITCNT) {
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned IEnc = II.getOperand(0).getImm();
-        AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
-        Wait = Wait.combined(OldWait);
-      }
+    unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
+    bool IsSoft = Opcode != II.getOpcode();
 
-      if (!WaitcntInstr) {
+    // Update required wait count. If this is a soft waitcnt (= it was added
+    // by an earlier pass), it may be entirely removed.
+    if (Opcode == AMDGPU::S_WAITCNT) {
+      unsigned IEnc = II.getOperand(0).getImm();
+      AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait);
+      Wait = Wait.combined(OldWait);
+
+      // Merge consecutive waitcnt of the same type by erasing multiples.
+      if (WaitcntInstr || (!Wait.hasWaitExceptStoreCnt() && IsSoft)) {
+        II.eraseFromParent();
+        Modified = true;
+      } else
         WaitcntInstr = &II;
-      } else {
-        II.eraseFromParent();
-        Modified = true;
-      }
     } else {
-      assert(II.getOpcode() == AMDGPU::S_WAITCNT_VSCNT);
+      assert(Opcode == AMDGPU::S_WAITCNT_VSCNT);
       assert(II.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned OldVSCnt =
-            TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-        addWait(Wait, STORE_CNT, OldVSCnt);
-      }
 
-      if (!WaitcntVsCntInstr) {
-        WaitcntVsCntInstr = &II;
-      } else {
+      unsigned OldVSCnt =
+          TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(InstCounterType::STORE_CNT, OldVSCnt);
+      Wait.StoreCnt = std::min(Wait.StoreCnt, OldVSCnt);
+
+      if (WaitcntVsCntInstr || (!Wait.hasWaitStoreCnt() && IsSoft)) {
         II.eraseFromParent();
         Modified = true;
-      }
+      } else
+        WaitcntVsCntInstr = &II;
     }
   }
 
   if (WaitcntInstr) {
-    if (Wait.hasWaitExceptStoreCnt()) {
-      Modified |=
-          updateOperandIfDifferent(*WaitcntInstr, AMDGPU::OpName::simm16,
-                                   AMDGPU::encodeWaitcnt(IV, Wait));
-      ScoreBrackets.applyWaitcnt(LOAD_CNT, Wait.LoadCnt);
-      ScoreBrackets.applyWaitcnt(EXP_CNT, Wait.ExpCnt);
-      ScoreBrackets.applyWaitcnt(DS_CNT, Wait.DsCnt);
-      Wait.LoadCnt = ~0u;
-      Wait.ExpCnt = ~0u;
-      Wait.DsCnt = ~0u;
+    Modified |= updateOperandIfDifferent(*WaitcntInstr, AMDGPU::OpName::simm16,
+                                         AMDGPU::encodeWaitcnt(IV, Wait));
+    Modified |= promoteSoftWaitCnt(WaitcntInstr);
 
-      LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: " << *WaitcntInstr
-                              << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntInstr << '\n');
-    } else {
-      WaitcntInstr->eraseFromParent();
-      Modified = true;
-    }
+    ScoreBrackets.applyWaitcnt(LOAD_CNT, Wait.LoadCnt);
+    ScoreBrackets.applyWaitcnt(EXP_CNT, Wait.ExpCnt);
+    ScoreBrackets.applyWaitcnt(DS_CNT, Wait.DsCnt);
+    Wait.LoadCnt = ~0u;
+    Wait.ExpCnt = ~0u;
+    Wait.DsCnt = ~0u;
+
+    LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
+                   ? dbgs()
+                         << "applyPreexistingWaitcnt\n"
+                         << "New Instr at block end: " << *WaitcntInstr << '\n'
+                   : dbgs() << "applyPreexistingWaitcnt\n"
+                            << "Old Instr: " << *It
+                            << "New Instr: " << *WaitcntInstr << '\n');
   }
 
   if (WaitcntVsCntInstr) {
-    if (Wait.hasWaitStoreCnt()) {
-      Modified |= updateOperandIfDifferent(
-          *WaitcntVsCntInstr, AMDGPU::OpName::simm16, Wait.StoreCnt);
-      ScoreBrackets.applyWaitcnt(STORE_CNT, Wait.StoreCnt);
-      Wait.StoreCnt = ~0u;
+    Modified |= updateOperandIfDifferent(*WaitcntVsCntInstr,
+                                         AMDGPU::OpName::simm16, Wait.StoreCnt);
+    Modified |= promoteSoftWaitCnt(WaitcntVsCntInstr);
 
-      LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: "
-                              << *WaitcntVsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntVsCntInstr << '\n');
-    } else {
-      WaitcntVsCntInstr->eraseFromParent();
-      Modified = true;
-    }
+    ScoreBrackets.applyWaitcnt(STORE_CNT, Wait.StoreCnt);
+    Wait.StoreCnt = ~0u;
+
+    LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
+                   ? dbgs() << "applyPreexistingWaitcnt\n"
+                            << "New Instr at block end: " << *WaitcntVsCntInstr
+                            << '\n'
+                   : dbgs() << "applyPreexistingWaitcnt\n"
+                            << "Old Instr: " << *It
+                            << "New Instr: " << *WaitcntVsCntInstr << '\n');
   }
 
   return Modified;
@@ -1304,9 +1309,8 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   // single instruction while VScnt has its own instruction.
   if (Wait.hasWaitExceptStoreCnt()) {
     unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-    auto SWaitInst =
+    [[maybe_unused]] auto SWaitInst =
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
-    TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1317,10 +1321,9 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   if (Wait.hasWaitStoreCnt()) {
     assert(ST->hasVscnt());
 
-    auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
+    [[maybe_unused]] auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
                          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                          .addImm(Wait.StoreCnt);
-    TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1354,52 +1357,53 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 
     MachineInstr **UpdatableInstr;
 
-    // Conservatively update required wait if this waitcnt was added in an
-    // earlier pass. In this case it will not exist in the tracked waitcnt
-    // set.
+    // Update required wait count. If this is a soft waitcnt (= it was added
+    // by an earlier pass), it may be entirely removed.
 
-    if (II.getOpcode() == AMDGPU::S_WAIT_LOADCNT_DSCNT) {
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned OldEnc =
-            TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-        AMDGPU::Waitcnt OldWait = AMDGPU::decodeLoadcntDscnt(IV, OldEnc);
-        Wait = Wait.combined(OldWait);
-      }
+    unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
+    bool IsSoft = Opcode != II.getOpcode();
+
+    if (Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT) {
+      unsigned OldEnc =
+          TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+      AMDGPU::Waitcnt OldWait = AMDGPU::decodeLoadcntDscnt(IV, OldEnc);
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait);
+      Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedLoadDsCntInstr;
-    } else if (II.getOpcode() == AMDGPU::S_WAIT_STORECNT_DSCNT) {
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned OldEnc =
-            TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-        AMDGPU::Waitcnt OldWait = AMDGPU::decodeStorecntDscnt(IV, OldEnc);
-        Wait = Wait.combined(OldWait);
-      }
+    } else if (Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT) {
+      unsigned OldEnc =
+          TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+      AMDGPU::Waitcnt OldWait = AMDGPU::decodeStorecntDscnt(IV, OldEnc);
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait);
+      Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
-    } else if (II.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned OldEnc =
-            TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-        AMDGPU::Waitcnt OldWait;
-        OldWait.VaVdst = AMDGPU::DepCtr::decodeFieldVaVdst(OldEnc);
-        OldWait.VmVsrc = AMDGPU::DepCtr::decodeFieldVmVsrc(OldEnc);
-        Wait = Wait.combined(OldWait);
-      }
+    } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
+      unsigned OldEnc =
+          TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+      AMDGPU::Waitcnt OldWait;
+      OldWait.VaVdst = AMDGPU::DepCtr::decodeFieldVaVdst(OldEnc);
+      OldWait.VmVsrc = AMDGPU::DepCtr::decodeFieldVmVsrc(OldEnc);
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait);
+      Wait = Wait.combined(OldWait);
       UpdatableInstr = &WaitcntDepctrInstr;
     } else {
-      std::optional<InstCounterType> CT = counterTypeForInstr(II);
+      std::optional<InstCounterType> CT = counterTypeForInstr(Opcode);
       assert(CT.has_value());
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned OldCnt =
-            TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-        addWait(Wait, CT.value(), OldCnt);
-      }
-
+      unsigned OldCnt =
+          TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(CT.value(), OldCnt);
+      addWait(Wait, CT.value(), OldCnt);
       UpdatableInstr = &WaitInstrs[CT.value()];
     }
 
     // Merge consecutive waitcnt of the same type by erasing multiples.
     if (!*UpdatableInstr) {
       *UpdatableInstr = &II;
-    } else if (II.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
+    } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
       // S_WAITCNT_DEPCTR requires special care. Don't remove a
       // duplicate if it is waiting on things other than VA_VDST or
       // VM_VSRC. If that is the case, just make sure the VA_VDST and
@@ -1412,6 +1416,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 
       if (Enc != 0xffff) {
         Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
+        Modified |= promoteSoftWaitCnt(&II);
       } else {
         II.eraseFromParent();
         Modified = true;
@@ -1439,6 +1444,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       unsigned NewEnc = AMDGPU::encodeLoadcntDscnt(IV, Wait);
       Modified |= updateOperandIfDifferent(*CombinedLoadDsCntInstr,
                                            AMDGPU::OpName::simm16, NewEnc);
+      Modified |= promoteSoftWaitCnt(CombinedLoadDsCntInstr);
       ScoreBrackets.applyWaitcnt(LOAD_CNT, Wait.LoadCnt);
       ScoreBrackets.applyWaitcnt(DS_CNT, Wait.DsCnt);
       Wait.LoadCnt = ~0u;
@@ -1463,6 +1469,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       unsigned NewEnc = AMDGPU::encodeStorecntDscnt(IV, Wait);
       Modified |= updateOperandIfDifferent(*CombinedStoreDsCntInstr,
                                            AMDGPU::OpName::simm16, NewEnc);
+      Modified |= promoteSoftWaitCnt(CombinedStoreDsCntInstr);
       ScoreBrackets.applyWaitcnt(STORE_CNT, Wait.StoreCnt);
       ScoreBrackets.applyWaitcnt(DS_CNT, Wait.DsCnt);
       Wait.StoreCnt = ~0u;
@@ -1522,6 +1529,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     if (NewCnt != ~0u) {
       Modified |= updateOperandIfDifferent(*WaitInstrs[CT],
                                            AMDGPU::OpName::simm16, NewCnt);
+      Modified |= promoteSoftWaitCnt(WaitInstrs[CT]);
 
       ScoreBrackets.applyWaitcnt(CT, NewCnt);
       setNoWait(Wait, CT);
@@ -1609,7 +1617,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     }
 
     if (SWaitInst) {
-      TrackedWaitcntSet.insert(SWaitInst);
       Modified = true;
 
       LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1630,7 +1637,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
         BuildMI(Block, It, DL, TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(Count);
 
-    TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1648,7 +1654,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
           BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_DEPCTR))
               .addImm(Enc);
 
-      TrackedWaitcntSet.insert(SWaitInst);
       Modified = true;
 
       LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -2312,13 +2317,13 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 }
 
 static bool isWaitInstr(MachineInstr &Inst) {
-  return Inst.getOpcode() == AMDGPU::S_WAITCNT ||
-         (Inst.getOpcode() == AMDGPU::S_WAITCNT_VSCNT &&
-          Inst.getOperand(0).isReg() &&
+  unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Inst.getOpcode());
+  return Opcode == AMDGPU::S_WAITCNT ||
+         (Opcode == AMDGPU::S_WAITCNT_VSCNT && Inst.getOperand(0).isReg() &&
           Inst.getOperand(0).getReg() == AMDGPU::SGPR_NULL) ||
-         Inst.getOpcode() == AMDGPU::S_WAIT_LOADCNT_DSCNT ||
-         Inst.getOpcode() == AMDGPU::S_WAIT_STORECNT_DSCNT ||
-         counterTypeForInstr(Inst).has_value();
+         Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT ||
+         Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT ||
+         counterTypeForInstr(Opcode).has_value();
 }
 
 void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
