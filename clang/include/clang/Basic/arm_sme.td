@@ -351,6 +351,72 @@ let TargetGuard = "sme2" in {
   def SVBMOPA : Inst<"svbmopa_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmopa_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
 
   def SVBMOPS : Inst<"svbmops_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmops_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+
+  // VERTICAL DOT-PRODUCT
+  def SVVDOT_LANE_ZA32_VG1x2_S : Inst<"svvdot_lane_za32[_{d}]_vg1x2", "vm2di", "s", MergeNone, "aarch64_sme_svdot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVVDOT_LANE_ZA32_VG1x4_S : Inst<"svvdot_lane_za32[_{d}]_vg1x4", "vm4di", "c", MergeNone, "aarch64_sme_svdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVVDOT_LANE_ZA32_VG1x2_U : Inst<"svvdot_lane_za32[_{d}]_vg1x2", "vm2di", "Us", MergeNone, "aarch64_sme_uvdot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVVDOT_LANE_ZA32_VG1x4_U : Inst<"svvdot_lane_za32[_{d}]_vg1x4", "vm4di", "Uc", MergeNone, "aarch64_sme_uvdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVVDOT_LANE_ZA32_VG1x2_F : Inst<"svvdot_lane_za32[_{d}]_vg1x2", "vm2di", "hb", MergeNone, "aarch64_sme_fvdot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVSUVDOT_LANE_ZA32_VG1x4 : Inst<"svsuvdot_lane_za32[_{d}]_vg1x4", "vm4di", "c", MergeNone, "aarch64_sme_suvdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVUSVDOT_LANE_ZA32_VG1x4 : Inst<"svusvdot_lane_za32[_{d}]_vg1x4", "vm4di", "Uc", MergeNone, "aarch64_sme_usvdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+
+  // Multi-vector signed & unsigned integer dot-product
+  def SVDOT_MULTI_ZA32_VG1x2_S  : Inst<"svdot_za32[_{d}]_vg1x2", "vm22", "cs", MergeNone, "aarch64_sme_sdot_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA32_VG1x4_S  : Inst<"svdot_za32[_{d}]_vg1x4", "vm44", "cs", MergeNone, "aarch64_sme_sdot_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA32_VG1x2_U  : Inst<"svdot_za32[_{d}]_vg1x2", "vm22", "UcUs", MergeNone, "aarch64_sme_udot_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA32_VG1x4_U  : Inst<"svdot_za32[_{d}]_vg1x4", "vm44", "UcUs", MergeNone, "aarch64_sme_udot_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA32_VG1x2_S : Inst<"svdot[_single]_za32[_{d}]_vg1x2", "vm2d", "cs", MergeNone, "aarch64_sme_sdot_single_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA32_VG1x4_S : Inst<"svdot[_single]_za32[_{d}]_vg1x4", "vm4d", "cs", MergeNone, "aarch64_sme_sdot_single_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA32_VG1x2_U : Inst<"svdot[_single]_za32[_{d}]_vg1x2", "vm2d", "UcUs", MergeNone, "aarch64_sme_udot_single_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA32_VG1x4_U : Inst<"svdot[_single]_za32[_{d}]_vg1x4", "vm4d", "UcUs", MergeNone, "aarch64_sme_udot_single_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_LANE_ZA32_VG1x2_S   : Inst<"svdot_lane_za32[_{d}]_vg1x2", "vm2di", "cs", MergeNone, "aarch64_sme_sdot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVDOT_LANE_ZA32_VG1x4_S   : Inst<"svdot_lane_za32[_{d}]_vg1x4", "vm4di", "cs", MergeNone, "aarch64_sme_sdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVDOT_LANE_ZA32_VG1x2_U   : Inst<"svdot_lane_za32[_{d}]_vg1x2", "vm2di", "UcUs", MergeNone, "aarch64_sme_udot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVDOT_LANE_ZA32_VG1x4_U   : Inst<"svdot_lane_za32[_{d}]_vg1x4", "vm4di", "UcUs", MergeNone, "aarch64_sme_udot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+
+  def SVUSDOT_SINGLE_ZA32_VG1x2 : Inst<"svusdot[_single]_za32[_{d}]_vg1x2", "vm2.dx", "Uc", MergeNone, "aarch64_sme_usdot_single_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVUSDOT_SINGLE_ZA32_VG1x4 : Inst<"svusdot[_single]_za32[_{d}]_vg1x4", "vm4.dx", "Uc", MergeNone, "aarch64_sme_usdot_single_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVUSDOT_MULTI_ZA32_VG1x2  : Inst<"svusdot_za32[_{d}]_vg1x2", "vm2.d2.x", "Uc", MergeNone, "aarch64_sme_usdot_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVUSDOT_MULTI_ZA32_VG1x4  : Inst<"svusdot_za32[_{d}]_vg1x4", "vm4.d4.x", "Uc", MergeNone, "aarch64_sme_usdot_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVUSDOT_LANE_ZA32_VG1x2   : Inst<"svusdot_lane_za32[_{d}]_vg1x2", "vm2.dxi", "Uc", MergeNone, "aarch64_sme_usdot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVUSDOT_LANE_ZA32_VG1x4   : Inst<"svusdot_lane_za32[_{d}]_vg1x4", "vm4.dxi", "Uc", MergeNone, "aarch64_sme_usdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+
+  def SVSUDOT_SINGLE_ZA32_VG1x2 : Inst<"svsudot[_single]_za32[_{d}]_vg1x2", "vm2.du", "c", MergeNone, "aarch64_sme_sudot_single_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVSUDOT_SINGLE_ZA32_VG1x4 : Inst<"svsudot[_single]_za32[_{d}]_vg1x4", "vm4.du", "c", MergeNone, "aarch64_sme_sudot_single_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+
+  // Multi-multi sudot builtins are mapped to usdot, with zn & zm operands swapped
+  def SVSUDOT_MULTI_ZA32_VG1x2  : Inst<"svsudot_za32[_{d}]_vg1x2", "vm2.d2.u", "c", MergeNone, "aarch64_sme_usdot_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVSUDOT_MULTI_ZA32_VG1x4  : Inst<"svsudot_za32[_{d}]_vg1x4", "vm4.d4.u", "c", MergeNone, "aarch64_sme_usdot_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+
+  def SVSUDOT_LANE_ZA32_VG1x2   : Inst<"svsudot_lane_za32[_{d}]_vg1x2", "vm2.dui", "c", MergeNone, "aarch64_sme_sudot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVSUDOT_LANE_ZA32_VG1x4   : Inst<"svsudot_lane_za32[_{d}]_vg1x4", "vm4.dui", "c", MergeNone, "aarch64_sme_sudot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+
+  // Multi-vector half-precision/BFloat16 floating-point dot-product
+  def SVDOT_MULTI_ZA32_VG1x2_F16  : Inst<"svdot_za32[_{d}]_vg1x2", "vm22", "bh", MergeNone, "aarch64_sme_fdot_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA32_VG1x4_F16  : Inst<"svdot_za32[_{d}]_vg1x4", "vm44", "bh", MergeNone, "aarch64_sme_fdot_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA32_VG1x2_F16 : Inst<"svdot[_single]_za32[_{d}]_vg1x2", "vm2d", "bh", MergeNone, "aarch64_sme_fdot_single_za32_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA32_VG1x4_F16 : Inst<"svdot[_single]_za32[_{d}]_vg1x4", "vm4d", "bh", MergeNone, "aarch64_sme_fdot_single_za32_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_LANE_ZA32_VG1x2_F16   : Inst<"svdot_lane_za32[_{d}]_vg1x2", "vm2di", "bh", MergeNone, "aarch64_sme_fdot_lane_za32_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVDOT_LANE_ZA32_VG1x4_F16   : Inst<"svdot_lane_za32[_{d}]_vg1x4", "vm4di", "bh", MergeNone, "aarch64_sme_fdot_lane_za32_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_3>]>;
+}
+
+let TargetGuard = "sme2,sme-i16i64" in {
+  def SVVDOT_LANE_ZA64_VG1x4_S : Inst<"svvdot_lane_za64[_{d}]_vg1x4", "vm4di", "s", MergeNone, "aarch64_sme_svdot_lane_za64_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVVDOT_LANE_ZA64_VG1x4_U : Inst<"svvdot_lane_za64[_{d}]_vg1x4", "vm4di", "Us", MergeNone, "aarch64_sme_uvdot_lane_za64_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+
+  def SVDOT_MULTI_ZA64_VG1x2_S16  : Inst<"svdot_za64[_{d}]_vg1x2", "vm22", "s", MergeNone, "aarch64_sme_sdot_za64_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA64_VG1x4_S16  : Inst<"svdot_za64[_{d}]_vg1x4", "vm44", "s", MergeNone, "aarch64_sme_sdot_za64_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA64_VG1x2_U16  : Inst<"svdot_za64[_{d}]_vg1x2", "vm22", "Us", MergeNone, "aarch64_sme_udot_za64_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_MULTI_ZA64_VG1x4_U16  : Inst<"svdot_za64[_{d}]_vg1x4", "vm44", "Us", MergeNone, "aarch64_sme_udot_za64_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA64_VG1x2_S16 : Inst<"svdot[_single]_za64[_{d}]_vg1x2", "vm2d", "s", MergeNone, "aarch64_sme_sdot_single_za64_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA64_VG1x4_S16 : Inst<"svdot[_single]_za64[_{d}]_vg1x4", "vm4d", "s", MergeNone, "aarch64_sme_sdot_single_za64_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA64_VG1x2_U16 : Inst<"svdot[_single]_za64[_{d}]_vg1x2", "vm2d", "Us", MergeNone, "aarch64_sme_udot_single_za64_vg1x2", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_SINGLE_ZA64_VG1x4_U16 : Inst<"svdot[_single]_za64[_{d}]_vg1x4", "vm4d", "Us", MergeNone, "aarch64_sme_udot_single_za64_vg1x4", [IsStreaming, IsSharedZA], []>;
+  def SVDOT_LANE_ZA64_VG1x2_S16   : Inst<"svdot_lane_za64[_{d}]_vg1x2", "vm2di", "s", MergeNone, "aarch64_sme_sdot_lane_za64_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVDOT_LANE_ZA64_VG1x4_S16   : Inst<"svdot_lane_za64[_{d}]_vg1x4", "vm4di", "s", MergeNone, "aarch64_sme_sdot_lane_za64_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVDOT_LANE_ZA64_VG1x2_U16   : Inst<"svdot_lane_za64[_{d}]_vg1x2", "vm2di", "Us", MergeNone, "aarch64_sme_udot_lane_za64_vg1x2", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
+  def SVDOT_LANE_ZA64_VG1x4_U16   : Inst<"svdot_lane_za64[_{d}]_vg1x4", "vm4di", "Us", MergeNone, "aarch64_sme_udot_lane_za64_vg1x4", [IsStreaming, IsSharedZA], [ImmCheck<3, ImmCheck0_1>]>;
 }
 
 // FMLA/FMLS
