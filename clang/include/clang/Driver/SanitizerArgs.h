@@ -84,7 +84,8 @@ public:
   bool needsAsanRt() const {
     bool AsanIsNotDeviceOnly =
         !(AsanTargetsToEnable == llvm::AsanTargetsToEnable::Device);
-    return Sanitizers.has(SanitizerKind::Address) && AsanIsNotDeviceOnly; }
+    return Sanitizers.has(SanitizerKind::Address) && AsanIsNotDeviceOnly;
+  }
   bool needsHwasanRt() const {
     return Sanitizers.has(SanitizerKind::HWAddress);
   }
