@@ -330,7 +330,6 @@ void CIRGenFunction::buildAutoVarDecl(const VarDecl &D) {
 
 void CIRGenFunction::buildVarDecl(const VarDecl &D) {
   if (D.hasExternalStorage()) {
-    assert(0 && "should we just returns is there something to track?");
     // Don't emit it now, allow it to be emitted lazily on its first use.
     return;
   }
