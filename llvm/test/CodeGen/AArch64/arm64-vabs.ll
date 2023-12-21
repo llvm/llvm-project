@@ -1640,7 +1640,8 @@ define <2 x i32> @abspattern1(<2 x i32> %a) nounwind {
 ; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-GI-NEXT:    neg.2s v2, v0
 ; CHECK-GI-NEXT:    cmge.2s v1, v0, v1
-; CHECK-GI-NEXT:    bif.8b v0, v2, v1
+; CHECK-GI-NEXT:    bsl.8b v1, v0, v2
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
   %tmp1neg = sub <2 x i32> zeroinitializer, %a
   %b = icmp sge <2 x i32> %a, zeroinitializer
@@ -1660,7 +1661,8 @@ define <4 x i16> @abspattern2(<4 x i16> %a) nounwind {
 ; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-GI-NEXT:    neg.4h v2, v0
 ; CHECK-GI-NEXT:    cmgt.4h v1, v0, v1
-; CHECK-GI-NEXT:    bif.8b v0, v2, v1
+; CHECK-GI-NEXT:    bsl.8b v1, v0, v2
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
   %tmp1neg = sub <4 x i16> zeroinitializer, %a
   %b = icmp sgt <4 x i16> %a, zeroinitializer
@@ -1679,7 +1681,8 @@ define <8 x i8> @abspattern3(<8 x i8> %a) nounwind {
 ; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-GI-NEXT:    neg.8b v2, v0
 ; CHECK-GI-NEXT:    cmgt.8b v1, v1, v0
-; CHECK-GI-NEXT:    bit.8b v0, v2, v1
+; CHECK-GI-NEXT:    bsl.8b v1, v2, v0
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
   %tmp1neg = sub <8 x i8> zeroinitializer, %a
   %b = icmp slt <8 x i8> %a, zeroinitializer
@@ -1736,7 +1739,8 @@ define <16 x i8> @abspattern6(<16 x i8> %a) nounwind {
 ; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-GI-NEXT:    neg.16b v2, v0
 ; CHECK-GI-NEXT:    cmgt.16b v1, v1, v0
-; CHECK-GI-NEXT:    bit.16b v0, v2, v1
+; CHECK-GI-NEXT:    bsl.16b v1, v2, v0
+; CHECK-GI-NEXT:    mov.16b v0, v1
 ; CHECK-GI-NEXT:    ret
   %tmp1neg = sub <16 x i8> zeroinitializer, %a
   %b = icmp slt <16 x i8> %a, zeroinitializer

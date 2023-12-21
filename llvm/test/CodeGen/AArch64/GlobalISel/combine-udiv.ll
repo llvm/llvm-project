@@ -195,9 +195,10 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; GISEL-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    neg v2.16b, v3.16b
 ; GISEL-NEXT:    movi v3.16b, #1
-; GISEL-NEXT:    ushl v1.16b, v1.16b, v2.16b
-; GISEL-NEXT:    cmeq v2.16b, v4.16b, v3.16b
-; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; GISEL-NEXT:    ushl v2.16b, v1.16b, v2.16b
+; GISEL-NEXT:    cmeq v1.16b, v4.16b, v3.16b
+; GISEL-NEXT:    bsl v1.16b, v0.16b, v2.16b
+; GISEL-NEXT:    mov v0.16b, v1.16b
 ; GISEL-NEXT:    ret
   %div = udiv <16 x i8> %x, <i8 -64, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <16 x i8> %div

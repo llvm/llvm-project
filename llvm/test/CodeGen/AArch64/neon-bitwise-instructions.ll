@@ -1099,10 +1099,12 @@ define <8 x i8> @vselect_constant_cond_zero_v8i8(<8 x i8> %a) {
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v8i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI83_0
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI83_0]
 ; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
 ; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #7
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bsl v1.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
   %b = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> zeroinitializer
   ret <8 x i8> %b
@@ -1118,10 +1120,12 @@ define <4 x i16> @vselect_constant_cond_zero_v4i16(<4 x i16> %a) {
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI84_0
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI84_0]
 ; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bsl v1.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
   %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> zeroinitializer
   ret <4 x i16> %b
@@ -1166,7 +1170,8 @@ define <8 x i8> @vselect_constant_cond_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI86_0]
 ; CHECK-GI-NEXT:    shl v2.8b, v2.8b, #7
 ; CHECK-GI-NEXT:    sshr v2.8b, v2.8b, #7
-; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bsl v2.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    fmov d0, d2
 ; CHECK-GI-NEXT:    ret
   %c = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %c
@@ -1188,7 +1193,8 @@ define <4 x i16> @vselect_constant_cond_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI87_0]
 ; CHECK-GI-NEXT:    shl v2.4h, v2.4h, #15
 ; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #15
-; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bsl v2.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    fmov d0, d2
 ; CHECK-GI-NEXT:    ret
   %c = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %c

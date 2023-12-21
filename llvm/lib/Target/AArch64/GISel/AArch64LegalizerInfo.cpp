@@ -715,7 +715,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v4s16, v4s16},
                  {v8s8, v8s8},
                  {v16s8, v16s8}})
-      .widenScalarToNextPow2(0)
+      .widenScalarOrEltToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s32)
       .minScalarEltSameAsIf(all(isVector(0), isVector(1)), 1, 0)
