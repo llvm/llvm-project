@@ -2,7 +2,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S | FileCheck %s --check-prefix=SSE
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7-avx -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=knl -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=XOP

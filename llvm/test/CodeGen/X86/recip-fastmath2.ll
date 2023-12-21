@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=sandybridge | FileCheck %s --check-prefixes=AVX,SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=haswell     | FileCheck %s --check-prefixes=AVX,HASWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -mattr=-fma | FileCheck %s --check-prefixes=AVX,HASWELL-NO-FMA
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=knl         | FileCheck %s --check-prefixes=AVX,AVX512,KNL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper         | FileCheck %s --check-prefixes=AVX,AVX512,KNL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skx         | FileCheck %s --check-prefixes=AVX,AVX512,SKX
 
 ; It's the extra tests coverage for recip as discussed on D26855.

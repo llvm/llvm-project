@@ -2,10 +2,10 @@
 
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=corei7-avx                             -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=core-avx2 -mattr=+avx2                 -o /dev/null
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl                                    -o /dev/null
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl  -mattr=+avx512vl                  -o /dev/null
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl  -mattr=+avx512bw                  -o /dev/null
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl  -mattr=+avx512vl -mattr=+avx512bw -o /dev/null
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper                                    -o /dev/null
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper  -mattr=+avx512vl                  -o /dev/null
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper  -mattr=+avx512bw                  -o /dev/null
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper  -mattr=+avx512vl -mattr=+avx512bw -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=skx                                    -o /dev/null
 
 define <4 x i64> @vpand_256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {

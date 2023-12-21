@@ -11,7 +11,7 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=slm | FileCheck %s --check-prefixes=SLM
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=goldmont | FileCheck %s --check-prefixes=GLM
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=btver2 | FileCheck %s --check-prefixes=AVX1
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=knl | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s --check-prefixes=AVX512,AVX512F
 
 ;
 ; mul vXi8 -> mXi64

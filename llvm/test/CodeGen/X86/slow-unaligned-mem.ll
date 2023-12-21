@@ -21,7 +21,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=ivybridge      2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX128
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=haswell        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=broadwell      2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=knl            2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX512
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper            2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX512
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=skylake-avx512 2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
 
 ; AMD chips with slow unaligned memory accesses

@@ -10,7 +10,7 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=ivybridge -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,IVYBRIDGE %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,HASWELL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,BROADWELL %s
-# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=knl -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,KNL %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,KNL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,SKX %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake-avx512 -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,SKX-AVX512 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-client -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefixes=ALL,ICX %s

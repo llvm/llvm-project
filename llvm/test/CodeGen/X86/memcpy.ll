@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=core2     | FileCheck %s -check-prefix=LINUX
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skylake   | FileCheck %s -check-prefix=LINUX-SKL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skx       | FileCheck %s -check-prefix=LINUX-SKX
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=knl       | FileCheck %s -check-prefix=LINUX-KNL
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper       | FileCheck %s -check-prefix=LINUX-KNL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=avx512bw | FileCheck %s -check-prefix=LINUX-AVX512BW
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

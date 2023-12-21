@@ -2,12 +2,12 @@
 ; RUN: llc < %s -mtriple=i386-unknown -mattr=+sse2 | FileCheck %s --check-prefix=SSE
 ; RUN: llc < %s -mtriple=i386-unknown -mattr=+avx  | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=i386-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX256,AVX2
-; RUN: llc < %s -mtriple=i386-unknown -mcpu=knl | FileCheck %s --check-prefixes=AVX,AVX256,AVX512
+; RUN: llc < %s -mtriple=i386-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s --check-prefixes=AVX,AVX256,AVX512
 ; RUN: llc < %s -mtriple=i386-unknown -mcpu=skx | FileCheck %s --check-prefixes=AVX,AVX256,AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+sse2 | FileCheck %s --check-prefix=SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx  | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX256,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=knl | FileCheck %s --check-prefixes=AVX,AVX256,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s --check-prefixes=AVX,AVX256,AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=skx | FileCheck %s --check-prefixes=AVX,AVX256,AVX512
 
 define <16 x i8> @allones_v16i8() nounwind {

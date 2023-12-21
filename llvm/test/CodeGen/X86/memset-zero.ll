@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=nehalem | FileCheck %s --check-prefix=NEHALEM
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=sandybridge | FileCheck %s --check-prefix=SANDYBRIDGE
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=skylake | FileCheck %s --check-prefix=SKYLAKE
-; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=knl | FileCheck %s --check-prefix=KNL
+; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s --check-prefix=KNL
 
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind

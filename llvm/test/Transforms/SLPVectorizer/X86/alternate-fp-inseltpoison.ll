@@ -3,7 +3,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=slm -passes=slp-vectorizer,instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=SLM
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7-avx -passes=slp-vectorizer,instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer,instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=knl -passes=slp-vectorizer,instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -passes=slp-vectorizer,instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -passes=slp-vectorizer,instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512
 
 define <8 x float> @fadd_fsub_v8f32(<8 x float> %a, <8 x float> %b) {

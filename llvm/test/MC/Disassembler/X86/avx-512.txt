@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 -mcpu=knl | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper | FileCheck %s
 # RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 -mcpu=skx | FileCheck --check-prefix=CHECK-SKX %s
 
 # CHECK: vpbroadcastd    %xmm18, %zmm28 {%k7} {z}

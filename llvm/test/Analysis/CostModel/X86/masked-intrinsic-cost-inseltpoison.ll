@@ -5,7 +5,7 @@
 ; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -mattr=+avx2 -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s --check-prefixes=AVX,AVX2
 ;
 ; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -mcpu=skylake -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s --check-prefixes=AVX,SKL
-; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -mcpu=knl -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s --check-prefixes=AVX512,KNL
+; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s --check-prefixes=AVX512,KNL
 ; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -mcpu=skx -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s --check-prefixes=AVX512,SKX
 
 define i32 @masked_load() {

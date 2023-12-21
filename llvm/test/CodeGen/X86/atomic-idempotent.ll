@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=i686-- -verify-machineinstrs           -mattr=+sse2      | FileCheck %s --check-prefixes=X86,X86-GENERIC,X86-SSE2
 ; RUN: llc < %s -mtriple=i686-- -verify-machineinstrs -mcpu=slm -mattr=-sse2      | FileCheck %s --check-prefixes=X86,X86-GENERIC,X86-SLM
 ; RUN: llc < %s -mtriple=i686-- -verify-machineinstrs -mcpu=goldmont -mattr=-sse2 | FileCheck %s --check-prefixes=X86,X86-GENERIC,X86-SLM
-; RUN: llc < %s -mtriple=i686-- -verify-machineinstrs -mcpu=knl -mattr=-sse2      | FileCheck %s --check-prefixes=X86,X86-GENERIC,X86-SLM
+; RUN: llc < %s -mtriple=i686-- -verify-machineinstrs -mcpu=broadwell -mattr=+avx512f,+avx512cd,+evex512,-vzeroupper -mattr=-sse2      | FileCheck %s --check-prefixes=X86,X86-GENERIC,X86-SLM
 ; RUN: llc < %s -mtriple=i686-- -verify-machineinstrs -mcpu=atom -mattr=-sse2     | FileCheck %s --check-prefixes=X86,X86-ATOM
 
 ; On x86, an atomic rmw operation that does not modify the value in memory
