@@ -769,6 +769,27 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  return SrcTy.isVector() && !SrcTy.isScalable() &&
+         Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1;
+}
+
+void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  assert((SrcTy.isVector() && !SrcTy.isScalable()) &&
+         "Expected a fixed length vector");
+
+  for (int I = 0; I < SrcTy.getNumElements(); ++I)
+    B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  MI.eraseFromParent();
+}
+
 bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
   auto Splat = getAArch64VectorSplat(MI, MRI);

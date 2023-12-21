@@ -7,18 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/HostNativeThreadBase.h"
-#include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
-#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/State.h"
 
 #include "ProcessWindows.h"
-#include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
+#include "lldb/Host/windows/HostThreadWindows.h"
+#include <llvm/Support/ConvertUTF.h>
 
 #if defined(__x86_64__) || defined(_M_AMD64)
 #include "x64/RegisterContextWindows_x64.h"
@@ -32,6 +28,9 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+using GetThreadDescriptionFunctionPtr = HRESULT
+WINAPI (*)(HANDLE hThread, PWSTR *ppszThreadDescription);
 
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
@@ -174,4 +173,30 @@ Status TargetThreadWindows::DoResume() {
   }
 
   return Status();
+}
+
+const char *TargetThreadWindows::GetName() {
+  Log *log = GetLog(LLDBLog::Thread);
+  static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
+    HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
+    return hModule ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
+                         ::GetProcAddress(hModule, "GetThreadDescription"))
+                   : nullptr;
+  }();
+  LLDB_LOGF(log, "GetProcAddress: %p",
+            reinterpret_cast<void *>(GetThreadDescription));
+  if (!GetThreadDescription)
+    return m_name.c_str();
+  PWSTR pszThreadName;
+  if (SUCCEEDED(GetThreadDescription(
+          m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {
+    LLDB_LOGF(log, "GetThreadDescription: %ls", pszThreadName);
+    llvm::convertUTF16ToUTF8String(
+        llvm::ArrayRef(reinterpret_cast<char *>(pszThreadName),
+                       wcslen(pszThreadName) * sizeof(wchar_t)),
+        m_name);
+    ::LocalFree(pszThreadName);
+  }
+
+  return m_name.c_str();
 }

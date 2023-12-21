@@ -6858,8 +6858,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // expanding copies of large vectors from registers. This only works for
     // fixed length vectors, since we need to know the exact number of
     // elements.
-    if (N2C && N1.getOperand(0).getValueType().isFixedLengthVector() &&
-        N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0) {
+    if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
+        N1.getOperand(0).getValueType().isFixedLengthVector()) {
       unsigned Factor =
         N1.getOperand(0).getValueType().getVectorNumElements();
       return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
@@ -6976,7 +6976,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
     // the concat have the same type as the extract.
-    if (N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0 &&
+    if (N1.getOpcode() == ISD::CONCAT_VECTORS &&
         VT == N1.getOperand(0).getValueType()) {
       unsigned Factor = VT.getVectorMinNumElements();
       return N1.getOperand(N2C->getZExtValue() / Factor);

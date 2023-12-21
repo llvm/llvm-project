@@ -1826,6 +1826,8 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
       Known.Zero &= ~Elt;
       Known.One &= Elt;
     }
+    if (Known.hasConflict())
+      Known.resetAll();
     return;
   }
 
@@ -1849,6 +1851,8 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
       Known.Zero &= ~Elt;
       Known.One &= Elt;
     }
+    if (Known.hasConflict())
+      Known.resetAll();
     return;
   }
 
@@ -6670,9 +6674,6 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
     return false;
   }
   case Instruction::ShuffleVector: {
-    // shufflevector may return undef.
-    if (PoisonOnly)
-      return false;
     ArrayRef<int> Mask = isa<ConstantExpr>(Op)
                              ? cast<ConstantExpr>(Op)->getShuffleMask()
                              : cast<ShuffleVectorInst>(Op)->getShuffleMask();
