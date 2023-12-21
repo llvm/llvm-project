@@ -229,7 +229,6 @@ static memref::AllocaOp getOrCreateAllocaForTile(
 ///   TileSliceLayout sliceLayout { TileSliceLayout::Horizontal };
 /// };
 ///
-}
 struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
 
   ConvertArmSMESpillsAndFillsToLLVM(StringRef rootOpName,
