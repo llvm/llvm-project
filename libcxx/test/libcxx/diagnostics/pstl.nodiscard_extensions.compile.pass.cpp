@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Check that PSTL algorithms aren't marked [[nodiscard]] when
-// _LIBCPP_DISBALE_NODISCARD_EXT is defined
+// _LIBCPP_DISABLE_NODISCARD_EXT is defined
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_NODISCARD_EXT
 

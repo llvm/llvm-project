@@ -148,19 +148,19 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable_any
     condition_variable __cv_;
     shared_ptr<mutex>  __mut_;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     condition_variable_any();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void notify_one() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void notify_all() _NOEXCEPT;
 
     template <class _Lock>
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         void wait(_Lock& __lock);
     template <class _Lock, class _Predicate>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void wait(_Lock& __lock, _Predicate __pred);
 
     template <class _Lock, class _Clock, class _Duration>
@@ -171,20 +171,20 @@ public:
 
     template <class _Lock, class _Clock, class _Duration, class _Predicate>
         bool
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         wait_until(_Lock& __lock,
                    const chrono::time_point<_Clock, _Duration>& __t,
                    _Predicate __pred);
 
     template <class _Lock, class _Rep, class _Period>
         cv_status
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         wait_for(_Lock& __lock,
                  const chrono::duration<_Rep, _Period>& __d);
 
     template <class _Lock, class _Rep, class _Period, class _Predicate>
         bool
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         wait_for(_Lock& __lock,
                  const chrono::duration<_Rep, _Period>& __d,
                  _Predicate __pred);
@@ -295,7 +295,7 @@ condition_variable_any::wait_for(_Lock& __lock,
                                  _Predicate __pred)
 {
     return wait_until(__lock, chrono::steady_clock::now() + __d,
-                      _VSTD::move(__pred));
+                      std::move(__pred));
 }
 
 #if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)

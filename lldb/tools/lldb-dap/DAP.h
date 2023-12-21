@@ -191,6 +191,7 @@ struct DAP {
   bool auto_repl_mode_collision_warning;
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
+  lldb::SBFormat thread_format;
 
   DAP();
   ~DAP();
@@ -308,6 +309,8 @@ struct DAP {
   lldb::SBError WaitForProcessToStop(uint32_t seconds);
 
   void SetFrameFormat(llvm::StringRef format);
+
+  void SetThreadFormat(llvm::StringRef format);
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the

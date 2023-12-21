@@ -39,7 +39,7 @@ define i1 @invert_fcmp(float %X, float %Y) {
 
 define i1 @not_not_cmp(i32 %a, i32 %b) {
 ; CHECK-LABEL: @not_not_cmp(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %nota = xor i32 %a, -1
@@ -50,7 +50,7 @@ define i1 @not_not_cmp(i32 %a, i32 %b) {
 
 define <2 x i1> @not_not_cmp_vector(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @not_not_cmp_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
@@ -721,4 +721,51 @@ define i8 @bitcast_to_scalar_sext_bool_use2(<4 x i1> %b) {
   call void @use8(i8 %bc)
   %not = xor i8 %bc, -1
   ret i8 %not
+}
+
+; PR74302
+define i1 @invert_both_cmp_operands_add(i32 %a, i32 %b) {
+; CHECK-LABEL: @invert_both_cmp_operands_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %not.a = xor i32 %a, -1
+  %add = add i32 %b, %not.a
+  %cmp = icmp sgt i32 %add, 0
+  ret i1 %cmp
+}
+
+define i1 @invert_both_cmp_operands_sub(i32 %a, i32 %b) {
+; CHECK-LABEL: @invert_both_cmp_operands_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP0]], -43
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %not.a = xor i32 %a, -1
+  %add = sub i32 %not.a, %b
+  %cmp = icmp ult i32 %add, 42
+  ret i1 %cmp
+}
+
+define i1 @invert_both_cmp_operands_complex(i1 %x, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @invert_both_cmp_operands_complex(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i32 [[TMP0]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[TMP1]], [[C]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %not.a = xor i32 %a, -1
+  %not.b = xor i32 %b, -1
+  %not.c = xor i32 %c, -1
+  %add = add i32 %c, %not.a
+  %select = select i1 %x, i32 %add, i32 %not.b
+  %cmp = icmp sle i32 %select, %not.c
+  ret i1 %cmp
 }

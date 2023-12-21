@@ -151,6 +151,17 @@ private:
   friend struct AnalysisInfoMixin<LazyValueAnalysis>;
 };
 
+/// Printer pass for the LazyValueAnalysis results.
+class LazyValueInfoPrinterPass
+    : public PassInfoMixin<LazyValueInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit LazyValueInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 /// Wrapper around LazyValueInfo.
 class LazyValueInfoWrapperPass : public FunctionPass {
   LazyValueInfoWrapperPass(const LazyValueInfoWrapperPass&) = delete;

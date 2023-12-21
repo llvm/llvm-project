@@ -397,25 +397,25 @@ let Predicates = [HasVendorXSfvcp] in {
   }
 }
 
-let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod" in {
+let Predicates = [HasVendorXSfvqmaccdod] in {
   defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACC;
   defm VQMACC_2x8x2   : VPseudoSiFiveVQMACC;
   defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACC;
   defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACC;
 }
 
-let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq" in {
+let Predicates = [HasVendorXSfvqmaccqoq] in {
   defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACC;
   defm VQMACC_4x8x4   : VPseudoSiFiveVQMACC;
   defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACC;
   defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACC;
 }
 
-let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq" in {
+let Predicates = [HasVendorXSfvfwmaccqqq] in {
   defm VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvfnrclipxfqf" in {
+let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }
@@ -600,7 +600,7 @@ multiclass VPatVFNRCLIP<string intrinsic, string instruction> {
 }
 
 let Predicates = [HasVendorXSfvcp] in {
-  foreach vti = AllVectors in {
+  foreach vti = AllIntegerVectors in {
     defm : VPatVC_X<"x", "X", vti, XLenVT, GPR>;
     defm : VPatVC_X<"i", "I", vti, XLenVT, tsimm5>;
     defm : VPatVC_XV<"xv", "XV", vti, XLenVT, GPR>;
@@ -618,7 +618,7 @@ let Predicates = [HasVendorXSfvcp] in {
                         finfo.ScalarRegClass, payload1>;
     }
   }
-  foreach VtiToWti = !listconcat(AllWidenableIntVectors, AllWidenableFloatVectors) in {
+  foreach VtiToWti = AllWidenableIntVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
     defvar iinfo = GetIntVTypeInfo<vti>.Vti;

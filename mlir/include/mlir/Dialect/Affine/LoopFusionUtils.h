@@ -110,7 +110,6 @@ private:
 /// returns a FusionResult explaining why fusion is not feasible.
 /// NOTE: This function is not feature complete and should only be used in
 /// testing.
-/// TODO: Update comments when this function is fully implemented.
 FusionResult
 canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
              ComputationSliceState *srcSlice,

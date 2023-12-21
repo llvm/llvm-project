@@ -862,6 +862,17 @@ def :  divergent_i64_BinOp <and, V_AND_B32_e64>;
 def :  divergent_i64_BinOp <or,  V_OR_B32_e64>;
 def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 
+// mul24 w/ 64 bit output.
+class mul24_64_Pat<SDPatternOperator Op, Instruction InstLo, Instruction InstHi> : GCNPat<
+  (i64 (Op i32:$src0, i32:$src1)),
+  (REG_SEQUENCE VReg_64,
+    (InstLo $src0, $src1), sub0,
+    (InstHi $src0, $src1), sub1)
+>;
+
+def : mul24_64_Pat<AMDGPUmul_i24, V_MUL_I32_I24_e64, V_MUL_HI_I32_I24_e64>;
+def : mul24_64_Pat<AMDGPUmul_u24, V_MUL_U32_U24_e64, V_MUL_HI_U32_U24_e64>;
+
 //===----------------------------------------------------------------------===//
 // 16-Bit Operand Instructions
 //===----------------------------------------------------------------------===//

@@ -24,6 +24,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -410,6 +411,11 @@ private:
   /// Build DeclarationFragments for a parameter variable declaration
   /// ParmVarDecl.
   static DeclarationFragments getFragmentsForParam(const ParmVarDecl *);
+
+  static DeclarationFragments
+  getFragmentsForBlock(const NamedDecl *BlockDecl, FunctionTypeLoc &Block,
+                       FunctionProtoTypeLoc &BlockProto,
+                       DeclarationFragments &After);
 };
 
 template <typename FunctionT>

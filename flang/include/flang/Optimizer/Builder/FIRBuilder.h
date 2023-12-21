@@ -677,6 +677,10 @@ mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 /// to keep all the lower bound and explicit parameter information.
 fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
                              const fir::ExtendedValue &exv);
+
+/// Generate Null BoxProc for procedure pointer null initialization.
+mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type boxType);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

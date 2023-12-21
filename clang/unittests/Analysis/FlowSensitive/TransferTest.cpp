@@ -4167,6 +4167,34 @@ TEST(TransferTest, LoopWithShortCircuitedConditionConverges) {
   ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
+TEST(TransferTest, LoopCanProveInvariantForBoolean) {
+  // Check that we can prove `b` is always false in the loop.
+  // This test exercises the logic in `widenDistinctValues()` that preserves
+  // information if the boolean can be proved to be either true or false in both
+  // the previous and current iteration.
+  std::string Code = R"cc(
+    int return_int();
+    void target() {
+      bool b = return_int() == 0;
+      if (b) return;
+      while (true) {
+        b;
+        // [[p]]
+        b = return_int() == 0;
+        if (b) return;
+      }
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &BVal = getValueForDecl<BoolValue>(ASTCtx, Env, "b");
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BVal.formula())));
+      });
+}
+
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
   std::string Code = R"(
     union Union {

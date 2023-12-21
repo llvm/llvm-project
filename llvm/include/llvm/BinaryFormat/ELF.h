@@ -738,6 +738,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
 
   // AMDGCN-based processors.
+  // clang-format off
   EF_AMDGPU_MACH_AMDGCN_GFX600        = 0x020,
   EF_AMDGPU_MACH_AMDGCN_GFX601        = 0x021,
   EF_AMDGPU_MACH_AMDGCN_GFX700        = 0x022,
@@ -778,15 +779,18 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1036       = 0x045,
   EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x046,
   EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X48 = 0x048,
+  EF_AMDGPU_MACH_AMDGCN_GFX1200       = 0x048,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49 = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151       = 0x04a,
   EF_AMDGPU_MACH_AMDGCN_GFX941        = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX942,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1201,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1056,6 +1060,9 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Special aarch64-specific section for MTE support, as described in:
+  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#section-types
+  SHT_AARCH64_AUTH_RELR = 0x70000004U,
   // Special aarch64-specific sections for MTE support, as described in:
   // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#7section-types
   SHT_AARCH64_MEMTAG_GLOBALS_STATIC = 0x70000007U,
@@ -1641,6 +1648,11 @@ enum {
   NT_ANDROID_TYPE_IDENT = 1,
   NT_ANDROID_TYPE_KUSER = 3,
   NT_ANDROID_TYPE_MEMTAG = 4,
+};
+
+// ARM note types.
+enum {
+  NT_ARM_TYPE_PAUTH_ABI_TAG = 1,
 };
 
 // Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.

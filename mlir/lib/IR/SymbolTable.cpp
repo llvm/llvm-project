@@ -200,20 +200,16 @@ StringAttr SymbolTable::insert(Operation *symbol, Block::iterator insertPt) {
   // If the symbol was already in the table, also return.
   if (symbolTable.lookup(name) == symbol)
     return name;
-  // If a conflict was detected, then the symbol will not have been added to
-  // the symbol table. Try suffixes until we get to a unique name that works.
-  SmallString<128> nameBuffer(name.getValue());
-  unsigned originalLength = nameBuffer.size();
 
   MLIRContext *context = symbol->getContext();
-
-  // Iteratively try suffixes until we find one that isn't used.
-  do {
-    nameBuffer.resize(originalLength);
-    nameBuffer += '_';
-    nameBuffer += std::to_string(uniquingCounter++);
-  } while (!symbolTable.insert({StringAttr::get(context, nameBuffer), symbol})
-                .second);
+  SmallString<128> nameBuffer = generateSymbolName<128>(
+      name.getValue(),
+      [&](StringRef candidate) {
+        return !symbolTable
+                    .insert({StringAttr::get(context, candidate), symbol})
+                    .second;
+      },
+      uniquingCounter);
   setSymbolName(symbol, nameBuffer);
   return getSymbolName(symbol);
 }

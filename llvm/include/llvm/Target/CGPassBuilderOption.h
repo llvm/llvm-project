@@ -14,7 +14,6 @@
 #ifndef LLVM_TARGET_CGPASSBUILDEROPTION_H
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
@@ -43,7 +42,6 @@ struct CGPassBuilderOption {
   bool DisableConstantHoisting = false;
   bool DisableSelectOptimize = true;
   bool PrintISelInput = false;
-  bool PrintGCInfo = false;
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;

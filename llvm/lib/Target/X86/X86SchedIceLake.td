@@ -1274,8 +1274,8 @@ def ICXWriteResGroup89 : SchedWriteRes<[ICXPort23]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[ICXWriteResGroup89], (instregex "LD_F(32|64|80)m")>;
-def: InstRW<[ICXWriteResGroup89], (instrs VBROADCASTF128,
-                                          VBROADCASTI128,
+def: InstRW<[ICXWriteResGroup89], (instrs VBROADCASTF128rm,
+                                          VBROADCASTI128rm,
                                           VBROADCASTSDYrm,
                                           VBROADCASTSSYrm,
                                           VMOVDDUPYrm,

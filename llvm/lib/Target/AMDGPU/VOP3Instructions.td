@@ -678,11 +678,22 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
         >;
 }
 
+// Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
+// We need to separate this because otherwise OtherPredicates would be overriden.
+class IMAD32_Mul24_Pat<VOP3_Pseudo inst>: GCNPat <
+    (i64 (add (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+    (inst $src0, $src1, $src2, 0 /* clamp */)
+    >;
+
 // exclude pre-GFX9 where it was slow
-let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in
+let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
   defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
-let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in
+  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
+}
+let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in {
   defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
+  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
+}
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,

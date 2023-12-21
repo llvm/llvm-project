@@ -724,8 +724,7 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
 
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
-                             VPTransformState &State,
-                             bool IsEpilogueVectorization) {
+                             VPTransformState &State) {
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
@@ -742,6 +741,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(&VectorTripCount, VectorTripCountV, Part);
 
+  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  // FIXME: Model VF * UF computation completely in VPlan.
+  State.set(&VFxUF,
+            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
+            0);
+
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
@@ -753,7 +758,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                     return isa<VPScalarIVStepsRecipe>(U) ||
                            isa<VPDerivedIVRecipe>(U) ||
                            cast<VPInstruction>(U)->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement;
+                               Instruction::Add;
                   }) &&
            "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
@@ -844,11 +849,14 @@ void VPlan::execute(VPTransformState *State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD
-void VPlan::print(raw_ostream &O) const {
+void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan '" << getName() << "' {";
+  if (VFxUF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VFxUF.printAsOperand(O, SlotTracker);
+    O << " = VF * UF";
+  }
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -868,6 +876,15 @@ void VPlan::print(raw_ostream &O) const {
   TripCount->printAsOperand(O, SlotTracker);
   O << " = original trip-count";
   O << "\n";
+}
+
+LLVM_DUMP_METHOD
+void VPlan::print(raw_ostream &O) const {
+  VPSlotTracker SlotTracker(this);
+
+  O << "VPlan '" << getName() << "' {";
+
+  printLiveIns(O);
 
   if (!getPreheader()->empty()) {
     O << "\n";
@@ -985,11 +1002,18 @@ void VPlanPrinter::dump() {
   OS << "graph [labelloc=t, fontsize=30; label=\"Vectorization Plan";
   if (!Plan.getName().empty())
     OS << "\\n" << DOT::EscapeString(Plan.getName());
-  if (Plan.BackedgeTakenCount) {
-    OS << ", where:\\n";
-    Plan.BackedgeTakenCount->print(OS, SlotTracker);
-    OS << " := BackedgeTakenCount";
+
+  {
+    // Print live-ins.
+  std::string Str;
+  raw_string_ostream SS(Str);
+  Plan.printLiveIns(SS);
+  SmallVector<StringRef, 0> Lines;
+  StringRef(Str).rtrim('\n').split(Lines, "\n");
+  for (auto Line : Lines)
+    OS << DOT::EscapeString(Line.str()) << "\\n";
   }
+
   OS << "\"]\n";
   OS << "node [shape=rect, fontname=Courier, fontsize=30]\n";
   OS << "edge [fontname=Courier, fontsize=30]\n";
@@ -1226,6 +1250,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
+  if (Plan.VFxUF.getNumUsers() > 0)
+    assignSlot(&Plan.VFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
@@ -1247,6 +1273,11 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
   return all_of(Def->users(),
                 [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+}
+
+bool vputils::onlyFirstPartUsed(VPValue *Def) {
+  return all_of(Def->users(),
+                [Def](VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

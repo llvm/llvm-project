@@ -87,10 +87,10 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
     m -= 23;
   }
 
-  m += xbits.get_unbiased_exponent();
+  m += xbits.get_biased_exponent();
   int index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
   float u = static_cast<float>(xbits);
   double v;

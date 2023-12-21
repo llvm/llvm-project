@@ -639,7 +639,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
     sys::path::native(LinkTextStr);
 
     // remove_dots will remove trailing slash, so we need to check before it.
-    auto IsDir = LinkTextStr.endswith(sys::path::get_separator());
+    auto IsDir = LinkTextStr.ends_with(sys::path::get_separator());
     sys::path::remove_dots(LinkTextStr, /*remove_dot_dot=*/true);
 
     SmallString<128> LinkTargetStr(LinkTextStr);

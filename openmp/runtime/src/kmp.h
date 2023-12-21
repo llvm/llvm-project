@@ -4237,6 +4237,11 @@ KMP_EXPORT kmp_int32 __kmpc_omp_task_with_deps(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 ndeps,
     kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
     kmp_depend_info_t *noalias_dep_list);
+
+KMP_EXPORT kmp_base_depnode_t *__kmpc_task_get_depnode(kmp_task_t *task);
+
+KMP_EXPORT kmp_depnode_list_t *__kmpc_task_get_successors(kmp_task_t *task);
+
 KMP_EXPORT void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid,
                                      kmp_int32 ndeps,
                                      kmp_depend_info_t *dep_list,

@@ -714,7 +714,7 @@ TEST(InstructionsTest, CloneCall) {
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   FunctionType *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {
     ConstantInt::get(Int32Ty, 1),
     ConstantInt::get(Int32Ty, 2),
@@ -748,7 +748,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
   std::unique_ptr<CallInst> Call(
@@ -775,7 +775,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
   std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
@@ -855,7 +855,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 
   {
-    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    Value *GEPBase = Constant::getNullValue(B.getPtrTy());
     auto *GI = cast<GetElementPtrInst>(
         B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
@@ -1501,50 +1501,51 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
 
   Type *ITy = Type::getInt32Ty(C);
   FunctionType *IFnTy = FunctionType::get(ITy, {});
-  Value *ICallee = Constant::getNullValue(IFnTy->getPointerTo());
+  PointerType *PtrTy = PointerType::getUnqual(C);
+  Value *ICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
   Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
-  Value *VICallee = Constant::getNullValue(VIFnTy->getPointerTo());
+  Value *VICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(VICall));
 
   Type *AITy = ArrayType::get(ITy, 2);
   FunctionType *AIFnTy = FunctionType::get(AITy, {});
-  Value *AICallee = Constant::getNullValue(AIFnTy->getPointerTo());
+  Value *AICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AICall(CallInst::Create(AIFnTy, AICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(AICall));
 
   Type *FTy = Type::getFloatTy(C);
   FunctionType *FFnTy = FunctionType::get(FTy, {});
-  Value *FCallee = Constant::getNullValue(FFnTy->getPointerTo());
+  Value *FCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
   Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
-  Value *VFCallee = Constant::getNullValue(VFFnTy->getPointerTo());
+  Value *VFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(VFCall));
 
   Type *AFTy = ArrayType::get(FTy, 2);
   FunctionType *AFFnTy = FunctionType::get(AFTy, {});
-  Value *AFCallee = Constant::getNullValue(AFFnTy->getPointerTo());
+  Value *AFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AFCall(CallInst::Create(AFFnTy, AFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AFCall));
 
   Type *AVFTy = ArrayType::get(VFTy, 2);
   FunctionType *AVFFnTy = FunctionType::get(AVFTy, {});
-  Value *AVFCallee = Constant::getNullValue(AVFFnTy->getPointerTo());
+  Value *AVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AVFCall(
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
   Type *AAVFTy = ArrayType::get(AVFTy, 2);
   FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(AAVFFnTy->getPointerTo());
+  Value *AAVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AAVFCall(
       CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));
@@ -1746,14 +1747,14 @@ TEST(InstructionsTest, AllocaInst) {
   AllocaInst &F = cast<AllocaInst>(*It++);
   AllocaInst &G = cast<AllocaInst>(*It++);
   AllocaInst &H = cast<AllocaInst>(*It++);
-  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::Fixed(32));
-  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::Fixed(128));
+  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
   EXPECT_FALSE(C.getAllocationSizeInBits(DL));
-  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::Fixed(512));
-  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::Scalable(512));
-  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::Fixed(32));
-  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::Fixed(768));
-  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::Fixed(160));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
+  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
+  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
 }
 
 TEST(InstructionsTest, InsertAtBegin) {

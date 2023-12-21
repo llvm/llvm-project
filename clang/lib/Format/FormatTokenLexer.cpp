@@ -253,7 +253,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                           TT_BinaryOperator)) {
       return;
     }
-    // Module paths in specify blocks and implications in properties.
+    // Module paths in specify blocks and the implication and boolean equality
+    // operators.
     if (tryMergeTokensAny({{tok::plusequal, tok::greater},
                            {tok::plus, tok::star, tok::greater},
                            {tok::minusequal, tok::greater},
@@ -265,7 +266,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::pipe, tok::arrow},
                            {tok::hash, tok::minus, tok::hash},
                            {tok::hash, tok::equal, tok::hash}},
-                          TT_BinaryOperator)) {
+                          TT_BinaryOperator) ||
+        Tokens.back()->is(tok::arrow)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
@@ -1311,11 +1313,8 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     }
   }
 
-  if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Proto ||
-       Style.Language == FormatStyle::LK_TextProto) &&
-      Tok.is(tok::char_constant)) {
+  if ((Style.isJavaScript() || Style.isProto()) && Tok.is(tok::char_constant))
     Tok.Tok.setKind(tok::string_literal);
-  }
 
   if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
     FormattingDisabled = false;

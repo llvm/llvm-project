@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   // When |x| >= 89, |x| < 2^-25, or x is nan
   if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
-    if (xbits.get_unbiased_exponent() <= 101) {
+    if (xbits.get_biased_exponent() <= 101) {
       return 1.0f + x;
     }
 

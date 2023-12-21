@@ -33,7 +33,8 @@ class Value;
 class OperationFolder {
 public:
   OperationFolder(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
-      : interfaces(ctx), rewriter(ctx, listener) {}
+      : fusedLocationTag(StringAttr::get(ctx, "CSE")), interfaces(ctx),
+        rewriter(ctx, listener) {}
 
   /// Tries to perform folding on the given `op`, including unifying
   /// deduplicated constants. If successful, replaces `op`'s uses with
@@ -94,6 +95,15 @@ private:
   Operation *tryGetOrCreateConstant(ConstantMap &uniquedConstants,
                                     Dialect *dialect, Attribute value,
                                     Type type, Location loc);
+
+  // Fuse `foldedLocation` into the Location of `retainedOp`. This will result
+  // in `retainedOp` having a FusedLoc with `fusedLocationTag` to help trace the
+  // source of the fusion. If `retainedOp` already had a FusedLoc with the same
+  // tag, `foldedLocation` will simply be appended to it.
+  void appendFoldedLocation(Operation *retainedOp, Location foldedLocation);
+
+  /// Tag for annotating fused locations as a result of merging constants.
+  StringAttr fusedLocationTag;
 
   /// A mapping between an insertion region and the constants that have been
   /// created within it.

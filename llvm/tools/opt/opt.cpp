@@ -279,6 +279,13 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
 //
@@ -332,7 +339,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "nvptx-",  "mips-",  "lanai-", "hexagon-", "bpf-",    "avr-",
       "thumb2-", "arm-",   "si-",    "gcn-",     "amdgpu-", "aarch64-",
       "amdgcn-", "polly-", "riscv-", "dxil-"};
-  std::vector<StringRef> PassNameContain = {"ehprepare"};
+  std::vector<StringRef> PassNameContain = {"-eh-prepare"};
   std::vector<StringRef> PassNameExact = {
       "safe-stack",
       "cost-model",
@@ -356,7 +363,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "polyhedral-info",
       "print-polyhedral-info",
       "replace-with-veclib",
-      "jmc-instrument",
+      "jmc-instrumenter",
       "dot-regions",
       "dot-regions-only",
       "view-regions",
@@ -369,7 +376,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "callbrprepare",
   };
   for (const auto &P : PassNamePrefix)
-    if (Pass.startswith(P))
+    if (Pass.starts_with(P))
       return true;
   for (const auto &P : PassNameContain)
     if (Pass.contains(P))
@@ -451,6 +458,17 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv,
     "llvm .bc -> .bc modular optimizer and analysis printer\n");
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+  }
+#endif
+  (void)TryUseNewDbgInfoFormat;
 
   LLVMContext Context;
 

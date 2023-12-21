@@ -67,17 +67,17 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_IN_CXX17
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17
 void return_temporary_buffer(_Tp* __p) _NOEXCEPT
 {
-  _VSTD::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
+  std::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
 }
 
 struct __return_temporary_buffer
 {
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void operator()(_Tp* __p) const {_VSTD::return_temporary_buffer(__p);}
+    _LIBCPP_HIDE_FROM_ABI void operator()(_Tp* __p) const {std::return_temporary_buffer(__p);}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 };
 

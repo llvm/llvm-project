@@ -193,7 +193,7 @@ static void patchI64(raw_pwrite_stream &Stream, uint64_t Value,
 }
 
 bool isDwoSection(const MCSection &Sec) {
-  return Sec.getName().endswith(".dwo");
+  return Sec.getName().ends_with(".dwo");
 }
 
 class WasmObjectWriter : public MCObjectWriter {
@@ -529,7 +529,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   const auto *SymA = cast<MCSymbolWasm>(&RefA->getSymbol());
 
   // The .init_array isn't translated as data, so don't do relocations in it.
-  if (FixupSection.getName().startswith(".init_array")) {
+  if (FixupSection.getName().starts_with(".init_array")) {
     SymA->setUsedInInitArray();
     return;
   }
@@ -1491,7 +1491,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
                       << Section.getGroup() << "\n";);
 
     // .init_array sections are handled specially elsewhere.
-    if (SectionName.startswith(".init_array"))
+    if (SectionName.starts_with(".init_array"))
       continue;
 
     // Code is handled separately
@@ -1526,7 +1526,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       StringRef Name = SectionName;
 
       // For user-defined custom sections, strip the prefix
-      if (Name.startswith(".custom_section."))
+      if (Name.starts_with(".custom_section."))
         Name = Name.substr(strlen(".custom_section."));
 
       MCSymbol *Begin = Sec.getBeginSymbol();
@@ -1851,9 +1851,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
   // Translate .init_array section contents into start functions.
   for (const MCSection &S : Asm) {
     const auto &WS = static_cast<const MCSectionWasm &>(S);
-    if (WS.getName().startswith(".fini_array"))
+    if (WS.getName().starts_with(".fini_array"))
       report_fatal_error(".fini_array sections are unsupported");
-    if (!WS.getName().startswith(".init_array"))
+    if (!WS.getName().starts_with(".init_array"))
       continue;
     if (WS.getFragmentList().empty())
       continue;

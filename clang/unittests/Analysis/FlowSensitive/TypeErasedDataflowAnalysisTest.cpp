@@ -52,29 +52,48 @@ using ::testing::NotNull;
 using ::testing::Test;
 using ::testing::UnorderedElementsAre;
 
-template <typename AnalysisT>
-llvm::Expected<std::vector<
-    std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
-  std::unique_ptr<ASTUnit> AST =
-      tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
+class DataflowAnalysisTest : public Test {
+protected:
+  template <typename AnalysisT>
+  llvm::Expected<std::vector<
+      std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
+  runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
+    AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
 
-  auto *Func = selectFirst<FunctionDecl>(
-      "func", match(functionDecl(ast_matchers::hasName("target")).bind("func"),
-                    AST->getASTContext()));
-  assert(Func != nullptr);
+    auto *Func = selectFirst<FunctionDecl>(
+        "func",
+        match(functionDecl(ast_matchers::hasName("target")).bind("func"),
+              AST->getASTContext()));
+    assert(Func != nullptr);
 
-  auto CFCtx =
-      llvm::cantFail(ControlFlowContext::build(*Func));
+    CFCtx = std::make_unique<ControlFlowContext>(
+        llvm::cantFail(ControlFlowContext::build(*Func)));
 
-  AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
-  DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
-  Environment Env(DACtx);
+    AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
+    DACtx = std::make_unique<DataflowAnalysisContext>(
+        std::make_unique<WatchedLiteralsSolver>());
+    Environment Env(*DACtx, *Func);
 
-  return runDataflowAnalysis(CFCtx, Analysis, Env);
-}
+    return runDataflowAnalysis(*CFCtx, Analysis, Env);
+  }
 
-TEST(DataflowAnalysisTest, NoopAnalysis) {
+  template <typename StateT>
+  const StateT &
+  blockStateForStmt(const std::vector<std::optional<StateT>> &BlockStates,
+                    const Stmt *S) {
+    const CFGBlock *Block = CFCtx->getStmtToBlock().lookup(S);
+    assert(Block != nullptr);
+    const std::optional<StateT> &MaybeState = BlockStates[Block->getBlockID()];
+    assert(MaybeState.has_value());
+    return *MaybeState;
+  };
+
+  std::unique_ptr<ASTUnit> AST;
+  std::unique_ptr<ControlFlowContext> CFCtx;
+  std::unique_ptr<DataflowAnalysisContext> DACtx;
+};
+
+TEST_F(DataflowAnalysisTest, NoopAnalysis) {
   auto BlockStates = llvm::cantFail(
       runAnalysis<NoopAnalysis>("void target() {}", [](ASTContext &C) {
         return NoopAnalysis(C,
@@ -88,7 +107,7 @@ TEST(DataflowAnalysisTest, NoopAnalysis) {
 
 // Basic test that `diagnoseFunction` calls the Diagnoser function for the
 // number of elements expected.
-TEST(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
+TEST_F(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
   std::string Code = R"(void target() { int x = 0; ++x; })";
   std::unique_ptr<ASTUnit> AST =
       tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
@@ -109,6 +128,99 @@ TEST(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
   EXPECT_THAT_EXPECTED(Result, llvm::HasValue(UnorderedElementsAre(
                                    "0\n", "int x = 0;\n", "x\n", "++x\n",
                                    " (Lifetime ends)\n")));
+}
+
+// Tests that check we discard state for expressions correctly.
+using DiscardExprStateTest = DataflowAnalysisTest;
+
+TEST_F(DiscardExprStateTest, WhileStatement) {
+  std::string Code = R"(
+    void foo(int *p);
+    void target(int *p) {
+      while (p != nullptr)
+        foo(p);
+    }
+  )";
+  auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
+      Code, [](ASTContext &C) { return NoopAnalysis(C); }));
+
+  auto *NotEqOp = selectFirst<BinaryOperator>(
+      "op", match(binaryOperator(hasOperatorName("!=")).bind("op"),
+                  AST->getASTContext()));
+  ASSERT_NE(NotEqOp, nullptr);
+
+  auto *CallFoo = selectFirst<CallExpr>(
+      "call", match(callExpr(callee(functionDecl(hasName("foo")))).bind("call"),
+                    AST->getASTContext()));
+  ASSERT_NE(CallFoo, nullptr);
+
+  // In the block that evaluates the expression `p != nullptr`, this expression
+  // is associated with a value.
+  const auto &NotEqOpState = blockStateForStmt(BlockStates, NotEqOp);
+  EXPECT_NE(NotEqOpState.Env.getValue(*NotEqOp), nullptr);
+
+  // In the block that calls `foo(p)`, the value for `p != nullptr` is discarded
+  // because it is not consumed by this block.
+  const auto &CallFooState = blockStateForStmt(BlockStates, CallFoo);
+  EXPECT_EQ(CallFooState.Env.getValue(*NotEqOp), nullptr);
+}
+
+TEST_F(DiscardExprStateTest, BooleanOperator) {
+  std::string Code = R"(
+    bool target(bool b1, bool b2) {
+      return b1 && b2;
+    }
+  )";
+  auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
+      Code, [](ASTContext &C) { return NoopAnalysis(C); }));
+
+  auto *AndOp = selectFirst<BinaryOperator>(
+      "op", match(binaryOperator(hasOperatorName("&&")).bind("op"),
+                  AST->getASTContext()));
+  ASSERT_NE(AndOp, nullptr);
+
+  auto *Return = selectFirst<ReturnStmt>(
+      "return", match(returnStmt().bind("return"), AST->getASTContext()));
+  ASSERT_NE(Return, nullptr);
+
+  // In the block that evaluates the LHS of the `&&` operator, the LHS is
+  // associated with a value, while the right-hand side is not (unsurprisingly,
+  // as it hasn't been evaluated yet).
+  const auto &LHSState = blockStateForStmt(BlockStates, AndOp->getLHS());
+  auto *LHSValue = cast<BoolValue>(LHSState.Env.getValue(*AndOp->getLHS()));
+  ASSERT_NE(LHSValue, nullptr);
+  EXPECT_EQ(LHSState.Env.getValue(*AndOp->getRHS()), nullptr);
+
+  // In the block that evaluates the RHS, the RHS is associated with a
+  // value. The value for the LHS has been discarded as it is not consumed by
+  // this block.
+  const auto &RHSState = blockStateForStmt(BlockStates, AndOp->getRHS());
+  EXPECT_EQ(RHSState.Env.getValue(*AndOp->getLHS()), nullptr);
+  auto *RHSValue = cast<BoolValue>(RHSState.Env.getValue(*AndOp->getRHS()));
+  ASSERT_NE(RHSValue, nullptr);
+
+  // In the block that evaluates the return statement, the expression `b1 && b2`
+  // is associated with a value (and check that it's the right one).
+  // The expressions `b1` and `b2` are _not_ associated with a value in this
+  // block, even though they are consumed by the block, because:
+  // * This block has two prececessor blocks (the one that evaluates `b1` and
+  //   the one that evaluates `b2`).
+  // * `b1` is only associated with a value in the block that evaluates `b1` but
+  //   not the block that evalutes `b2`, so the join operation discards the
+  //   value for `b1`.
+  // * `b2` is only associated with a value in the block that evaluates `b2` but
+  //   not the block that evaluates `b1`, the the join operation discards the
+  //   value for `b2`.
+  // Nevertheless, the analysis generates the correct formula for `b1 && b2`
+  // because the transfer function for the `&&` operator retrieves the values
+  // for its operands from the environments for the blocks that compute the
+  // operands, rather than from the environment for the block that contains the
+  // `&&`.
+  const auto &ReturnState = blockStateForStmt(BlockStates, Return);
+  EXPECT_EQ(ReturnState.Env.getValue(*AndOp->getLHS()), nullptr);
+  EXPECT_EQ(ReturnState.Env.getValue(*AndOp->getRHS()), nullptr);
+  EXPECT_EQ(ReturnState.Env.getValue(*AndOp),
+            &ReturnState.Env.makeAnd(*LHSValue, *RHSValue));
 }
 
 struct NonConvergingLattice {
@@ -142,7 +254,7 @@ public:
   }
 };
 
-TEST(DataflowAnalysisTest, NonConvergingAnalysis) {
+TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
   std::string Code = R"(
     void target() {
       while(true) {}
@@ -163,7 +275,7 @@ TEST(DataflowAnalysisTest, NonConvergingAnalysis) {
 // An earlier version crashed for this condition (for boolean-typed lvalues), so
 // this test only verifies that the analysis runs successfully, without
 // examining any details of the results.
-TEST(DataflowAnalysisTest, JoinBoolLValues) {
+TEST_F(DataflowAnalysisTest, JoinBoolLValues) {
   std::string Code = R"(
     void target() {
       for (int x = 1; x; x = 0)
@@ -402,8 +514,17 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
 public:
-  explicit SpecialBoolAnalysis(ASTContext &Context)
-      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {}
+  explicit SpecialBoolAnalysis(ASTContext &Context, Environment &Env)
+      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {
+    Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
+        [](QualType Ty) -> llvm::StringMap<QualType> {
+          RecordDecl *RD = Ty->getAsRecordDecl();
+          if (RD == nullptr || RD->getIdentifier() == nullptr ||
+              RD->getName() != "SpecialBool")
+            return {};
+          return {{"is_set", RD->getASTContext().BoolTy}};
+        });
+  }
 
   static NoopLattice initialElement() { return {}; }
 
@@ -418,66 +539,17 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
                           getASTContext()))) {
-      cast<RecordValue>(Env.getValue(*E))
-          ->setProperty("is_set", Env.getBoolLiteralValue(false));
+      Env.setValue(Env.getResultObjectLocation(*E).getSyntheticField("is_set"),
+                   Env.getBoolLiteralValue(false));
     } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
                    "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
                                                        SpecialBoolRecordDecl))))
                                      .bind("call"),
                                  *S, getASTContext()))) {
-      auto &ObjectLoc =
-          *cast<RecordStorageLocation>(getImplicitObjectLocation(*E, Env));
-
-      refreshRecordValue(ObjectLoc, Env)
-          .setProperty("is_set", Env.getBoolLiteralValue(true));
+      if (RecordStorageLocation *ObjectLoc = getImplicitObjectLocation(*E, Env))
+        Env.setValue(ObjectLoc->getSyntheticField("is_set"),
+                     Env.getBoolLiteralValue(true));
     }
-  }
-
-  ComparisonResult compare(QualType Type, const Value &Val1,
-                           const Environment &Env1, const Value &Val2,
-                           const Environment &Env2) override {
-    const auto *Decl = Type->getAsCXXRecordDecl();
-    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
-        Decl->getName() != "SpecialBool")
-      return ComparisonResult::Unknown;
-
-    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return IsSet2 == nullptr ? ComparisonResult::Same
-                               : ComparisonResult::Different;
-
-    if (IsSet2 == nullptr)
-      return ComparisonResult::Different;
-
-    return Env1.proves(IsSet1->formula()) == Env2.proves(IsSet2->formula())
-               ? ComparisonResult::Same
-               : ComparisonResult::Different;
-  }
-
-  // Always returns `true` to accept the `MergedVal`.
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override {
-    const auto *Decl = Type->getAsCXXRecordDecl();
-    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
-        Decl->getName() != "SpecialBool")
-      return true;
-
-    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return true;
-
-    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
-    if (IsSet2 == nullptr)
-      return true;
-
-    auto &IsSet = MergedEnv.makeAtomicBoolValue();
-    MergedVal.setProperty("is_set", IsSet);
-    if (Env1.proves(IsSet1->formula()) && Env2.proves(IsSet2->formula()))
-      MergedEnv.assume(IsSet.formula());
-
-    return true;
   }
 };
 
@@ -490,7 +562,7 @@ protected:
             AnalysisInputs<SpecialBoolAnalysis>(
                 Code, ast_matchers::hasName("target"),
                 [](ASTContext &Context, Environment &Env) {
-                  return SpecialBoolAnalysis(Context);
+                  return SpecialBoolAnalysis(Context, Env);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
             /*VerifyResults=*/[&Match](const llvm::StringMap<
@@ -538,7 +610,9 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto GetFoo = [FooDecl](const Environment &Env) -> const Formula & {
-          return cast<BoolValue>(Env.getValue(*FooDecl)->getProperty("is_set"))
+          auto *Loc =
+              cast<RecordStorageLocation>(Env.getStorageLocation(*FooDecl));
+          return cast<BoolValue>(Env.getValue(Loc->getSyntheticField("is_set")))
               ->formula();
         };
 

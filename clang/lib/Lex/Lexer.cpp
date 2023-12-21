@@ -1990,6 +1990,10 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   while (isPreprocessingNumberBody(C)) {
     CurPtr = ConsumeChar(CurPtr, Size, Result);
     PrevCh = C;
+    if (LangOpts.HLSL && C == '.' && (*CurPtr == 'x' || *CurPtr == 'r')) {
+      CurPtr -= Size;
+      break;
+    }
     C = getCharAndSize(CurPtr, Size);
   }
 

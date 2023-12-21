@@ -88,11 +88,6 @@ else()
   set(LIBCXXABI_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
 endif()
 
-# TODO: Remove this after branching for LLVM 15
-if(LIBCXXABI_SYSROOT OR LIBCXXABI_TARGET_TRIPLE OR LIBCXXABI_GCC_TOOLCHAIN)
-  message(WARNING "LIBCXXABI_SYSROOT, LIBCXXABI_TARGET_TRIPLE and LIBCXXABI_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
-endif()
-
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 set(LIBCXXABI_LIBRARY_VERSION "1.0" CACHE STRING
 "Version of libc++abi. This will be reflected in the name of the shared \

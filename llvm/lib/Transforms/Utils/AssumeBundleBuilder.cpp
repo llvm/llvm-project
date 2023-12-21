@@ -19,7 +19,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -587,37 +586,3 @@ PreservedAnalyses AssumeBuilderPass::run(Function &F,
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-namespace {
-class AssumeBuilderPassLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  AssumeBuilderPassLegacyPass() : FunctionPass(ID) {
-    initializeAssumeBuilderPassLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-  bool runOnFunction(Function &F) override {
-    AssumptionCache &AC =
-        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    DominatorTreeWrapperPass *DTWP =
-        getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    for (Instruction &I : instructions(F))
-      salvageKnowledge(&I, &AC, DTWP ? &DTWP->getDomTree() : nullptr);
-    return true;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char AssumeBuilderPassLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AssumeBuilderPassLegacyPass, "assume-builder",
-                      "Assume Builder", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(AssumeBuilderPassLegacyPass, "assume-builder",
-                    "Assume Builder", false, false)

@@ -82,7 +82,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr counted_iterator(_Iter __iter, iter_difference_t<_Iter> __n)
-   : __current_(_VSTD::move(__iter)), __count_(__n) {
+   : __current_(std::move(__iter)), __count_(__n) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0, "__n must not be negative.");
   }
 
@@ -105,7 +105,7 @@ public:
   constexpr const _Iter& base() const& noexcept { return __current_; }
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr _Iter base() && { return _VSTD::move(__current_); }
+  constexpr _Iter base() && { return std::move(__current_); }
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
@@ -128,7 +128,7 @@ public:
   constexpr auto operator->() const noexcept
     requires contiguous_iterator<_Iter>
   {
-    return _VSTD::to_address(__current_);
+    return std::to_address(__current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI

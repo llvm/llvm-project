@@ -173,14 +173,13 @@ private:
 
     auto FixupAddress = orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
-    Edge E(*Kind, Offset, *GraphSymbol, 0);
 
     Expected<int64_t> Addend =
-        aarch32::readAddend(*Base::G, BlockToFix, E, ArmCfg);
+        aarch32::readAddend(*Base::G, BlockToFix, Offset, *Kind, ArmCfg);
     if (!Addend)
       return Addend.takeError();
 
-    E.setAddend(*Addend);
+    Edge E(*Kind, Offset, *GraphSymbol, *Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
       printEdge(dbgs(), BlockToFix, E, getELFAArch32EdgeKindName(*Kind));

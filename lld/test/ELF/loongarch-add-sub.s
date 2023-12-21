@@ -6,7 +6,7 @@
 # RUN: llvm-readelf -x .rodata %t.la64 | FileCheck --check-prefix=CHECK %s
 # CHECK:      section '.rodata':
 # CHECK-NEXT: 0x9876543210 10325476 98badcfe 804602be 79ffffff
-# CHECK-NEXT: 0x9876543220 804602be 804680
+# CHECK-NEXT: 0x9876543220 804602be 80468097
 
 .text
 .global _start
@@ -34,3 +34,7 @@ quux:
     .byte 0
     .reloc quux, R_LARCH_ADD8, 1b
     .reloc quux, R_LARCH_SUB8, 2b
+qux:
+    .byte 0b10000000
+    .reloc qux, R_LARCH_ADD6, qux
+    .reloc qux, R_LARCH_SUB6, 2b

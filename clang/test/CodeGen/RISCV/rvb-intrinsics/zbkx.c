@@ -6,7 +6,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZBKX
 
-#include <stdint.h>
+#include <riscv_bitmanip.h>
 
 #if __riscv_xlen == 32
 // RV32ZBKX-LABEL: @xperm8_32(
@@ -16,7 +16,7 @@
 //
 uint32_t xperm8_32(uint32_t rs1, uint32_t rs2)
 {
-  return __builtin_riscv_xperm8_32(rs1, rs2);
+  return __riscv_xperm8_32(rs1, rs2);
 }
 
 // RV32ZBKX-LABEL: @xperm4_32(
@@ -26,7 +26,7 @@ uint32_t xperm8_32(uint32_t rs1, uint32_t rs2)
 //
 uint32_t xperm4_32(uint32_t rs1, uint32_t rs2)
 {
-  return __builtin_riscv_xperm4_32(rs1, rs2);
+  return __riscv_xperm4_32(rs1, rs2);
 }
 #endif
 
@@ -38,7 +38,7 @@ uint32_t xperm4_32(uint32_t rs1, uint32_t rs2)
 //
 uint64_t xperm8_64(uint64_t rs1, uint64_t rs2)
 {
-  return __builtin_riscv_xperm8_64(rs1, rs2);
+  return __riscv_xperm8_64(rs1, rs2);
 }
 
 // RV64ZBKX-LABEL: @xperm4_64(
@@ -48,6 +48,6 @@ uint64_t xperm8_64(uint64_t rs1, uint64_t rs2)
 //
 uint64_t xperm4_64(uint64_t rs1, uint64_t rs2)
 {
-  return __builtin_riscv_xperm4_64(rs1, rs2);
+  return __riscv_xperm4_64(rs1, rs2);
 }
 #endif

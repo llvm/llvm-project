@@ -1522,7 +1522,7 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   // (or /Library/Logs/DiagnosticReports for root) and has the filename pattern
   // clang-<VERSION>_<YYYY-MM-DD-HHMMSS>_<hostname>.crash.
   path::home_directory(CrashDiagDir);
-  if (CrashDiagDir.startswith("/var/root"))
+  if (CrashDiagDir.starts_with("/var/root"))
     CrashDiagDir = "/";
   path::append(CrashDiagDir, "Library/Logs/DiagnosticReports");
   int PID =
@@ -1939,12 +1939,6 @@ int Driver::ExecuteCompilation(
 
 void Driver::PrintHelp(bool ShowHidden) const {
   llvm::opt::Visibility VisibilityMask = getOptionVisibilityMask();
-
-  // TODO: We're overriding the mask for flang here to keep this NFC for the
-  // option refactoring, but what we really need to do is annotate the flags
-  // that Flang uses.
-  if (IsFlangMode())
-    VisibilityMask = llvm::opt::Visibility(options::FlangOption);
 
   std::string Usage = llvm::formatv("{0} [options] file...", Name).str();
   getOpts().printHelp(llvm::outs(), Usage.c_str(), DriverTitle.c_str(),

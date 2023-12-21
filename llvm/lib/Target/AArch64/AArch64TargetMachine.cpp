@@ -200,7 +200,7 @@ static cl::opt<bool> EnableGISelLoadStoreOptPostLegal(
 static cl::opt<bool>
     EnableSinkFold("aarch64-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),
-                   cl::init(false), cl::Hidden);
+                   cl::init(true), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   // Register the target.
@@ -397,6 +397,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
   StringRef TuneCPU = TuneAttr.isValid() ? TuneAttr.getValueAsString() : CPU;
   StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
+  bool HasMinSize = F.hasMinSize();
 
   bool StreamingSVEMode = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
                           F.hasFnAttribute("aarch64_pstate_sm_body");
@@ -432,8 +433,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
                            << MaxSVEVectorSize
                            << "StreamingSVEMode=" << StreamingSVEMode
                            << "StreamingCompatibleSVEMode="
-                           << StreamingCompatibleSVEMode << CPU << TuneCPU
-                           << FS;
+                           << StreamingCompatibleSVEMode << CPU << TuneCPU << FS
+                           << "HasMinSize=" << HasMinSize;
 
   auto &I = SubtargetMap[Key];
   if (!I) {
@@ -443,7 +444,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, StreamingSVEMode, StreamingCompatibleSVEMode);
+        MaxSVEVectorSize, StreamingSVEMode, StreamingCompatibleSVEMode,
+        HasMinSize);
   }
 
   assert((!StreamingSVEMode || I->hasSME()) &&

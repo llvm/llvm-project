@@ -277,13 +277,6 @@ SmallVector<Value> loadAll(OpBuilder &builder, Location loc, size_t size,
 void storeAll(OpBuilder &builder, Location loc, Value mem, ValueRange vs,
               size_t offsetIdx = 0, Value offsetVal = Value());
 
-/// Reshapes the linear values buffer for an annotated all dense sparse tensor
-/// to match the shape of the corresponding dense tensor to support direct
-/// access of the buffer through `lvlCoords`.
-Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
-                            SparseTensorEncodingAttr enc, ValueRange dimSizes,
-                            Value valuesBuffer, Value lvlCoords);
-
 // Generates code to cast a tensor to a memref.
 TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
                                        Value tensor);
@@ -317,20 +310,16 @@ Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
 Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
                                 Dimension dim);
 
-/// Populates the array with the dimension-shape of the given
-/// `SparseTensorType`, where dynamic sizes are represented by zero.
-void fillDimShape(OpBuilder &builder, Location loc, SparseTensorType stt,
-                  SmallVectorImpl<Value> &out);
-
 /// Generates code that opens a reader and sets the dimension sizes.
 Value genReader(OpBuilder &builder, Location loc, SparseTensorType stt,
                 Value tensor,
-                /*out*/ SmallVectorImpl<Value> &dimShapeValues,
+                /*out*/ SmallVectorImpl<Value> &dimSizesValues,
                 /*out*/ Value &dimSizesBuffer);
 
 /// Generates code to set up the buffer parameters for a map.
 Value genMapBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
-                    ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
+                    ArrayRef<Value> dimSizesValues, Value dimSizesBuffer,
+                    /*out*/ SmallVectorImpl<Value> &lvlSizesValues,
                     /*out*/ Value &dim2lvlBuffer,
                     /*out*/ Value &lvl2dimBuffer);
 
@@ -432,9 +421,9 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 }
 
 /// Generates a constant of the internal dimension level type encoding.
-inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
-                                          DimLevelType dlt) {
-  return constantI8(builder, loc, static_cast<uint8_t>(dlt));
+inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
+                                       LevelType lt) {
+  return constantI8(builder, loc, static_cast<uint8_t>(lt));
 }
 
 inline bool isZeroRankedTensorOrScalar(Type type) {

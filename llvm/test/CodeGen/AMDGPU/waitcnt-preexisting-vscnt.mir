@@ -19,6 +19,7 @@ body:             |
     ; GFX10-NEXT: S_WAITCNT 112
     ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10-NEXT: S_ENDPGM 0
+    ;
     ; GFX11-LABEL: name: test_waitcnt_preexisting_vscnt_unmodified
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
@@ -55,6 +56,7 @@ body:             |
     ; GFX10-NEXT: S_WAITCNT 112
     ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10-NEXT: S_ENDPGM 0
+    ;
     ; GFX11-LABEL: name: test_waitcnt_preexisting_vscnt_needs_vscnt
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
@@ -92,6 +94,7 @@ body:             |
     ; GFX10-NEXT: S_WAITCNT 112
     ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10-NEXT: S_ENDPGM 0
+    ;
     ; GFX11-LABEL: name: test_waitcnt_preexisting_vscnt_with_other_waitcnt
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
@@ -130,6 +133,7 @@ body:             |
     ; GFX10-NEXT: S_WAITCNT 112
     ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10-NEXT: S_ENDPGM 0
+    ;
     ; GFX11-LABEL: name: test_waitcnt_preexisting_vscnt_combined
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
@@ -169,6 +173,7 @@ body:             |
     ; GFX10-NEXT: S_WAITCNT 112
     ; GFX10-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10-NEXT: S_ENDPGM 0
+    ;
     ; GFX11-LABEL: name: test_waitcnt_preexisting_vscnt_combined_both_types
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}

@@ -49,11 +49,8 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
       Args.hasArg(options::OPT_r))
     return false;
 
-  Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
-                           options::OPT_nopie);
-  if (!A)
-    return TC.isPIEDefault(Args);
-  return A->getOption().matches(options::OPT_pie);
+  return Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                      TC.isPIEDefault(Args));
 }
 
 // FIXME: Need to handle CLANG_DEFAULT_LINKER here?

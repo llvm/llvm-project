@@ -52,7 +52,7 @@ struct __allocation_guard {
     template<class _AllocT> // we perform the allocator conversion inside the constructor
     _LIBCPP_HIDE_FROM_ABI
     explicit __allocation_guard(_AllocT __alloc, _Size __n)
-        : __alloc_(_VSTD::move(__alloc))
+        : __alloc_(std::move(__alloc))
         , __n_(__n)
         , __ptr_(allocator_traits<_Alloc>::allocate(__alloc_, __n_)) // initialization order is important
     { }

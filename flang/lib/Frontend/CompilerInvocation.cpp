@@ -18,6 +18,7 @@
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -242,10 +243,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
-  opts.AliasAnalysis =
-      args.hasFlag(clang::driver::options::OPT_falias_analysis,
-                   clang::driver::options::OPT_fno_alias_analysis,
-                   /*default=*/false);
+  opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
@@ -264,6 +262,17 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.PrepareForFullLTO = true;
     else
       opts.PrepareForThinLTO = true;
+  }
+
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mcode_object_version_EQ)) {
+    llvm::StringRef s = a->getValue();
+    if (s == "5")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
+    if (s == "4")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_4;
+    if (s == "none")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_None;
   }
 
   // -f[no-]save-optimization-record[=<format>]
@@ -687,19 +696,19 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 }
 
 // Generate the path to look for intrinsic modules
-static std::string getIntrinsicDir() {
+static std::string getIntrinsicDir(const char *argv) {
   // TODO: Find a system independent API
   llvm::SmallString<128> driverPath;
-  driverPath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
 }
 
 // Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir() {
+static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(includePath);
   includePath.append("/../include/flang/OpenMP/");
   return std::string(includePath);
@@ -1054,6 +1063,27 @@ static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
   return true;
 }
 
+static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
+                                   llvm::opt::ArgList &args,
+                                   clang::DiagnosticsEngine &diags) {
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+
+  // TODO: support --dependent-lib on other platforms when MLIR supports
+  //       !llvm.dependent.lib
+  if (args.hasArg(clang::driver::options::OPT_dependent_lib) &&
+      !triple.isOSWindows()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "--dependent-lib is only supported on Windows");
+    diags.Report(diagID);
+    return false;
+  }
+
+  invoc.getCodeGenOpts().DependentLibs =
+      args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1163,6 +1193,8 @@ bool CompilerInvocation::createFromArgs(
 
   success &= parseVScaleArgs(res, args, diags);
 
+  success &= parseLinkerOptionsArgs(res, args, diags);
+
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent
   // compiler driver invocation with an environment variable, or failing that
@@ -1179,6 +1211,8 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  res.setArgv0(argv0);
 
   return success;
 }
@@ -1222,7 +1256,8 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   // Add the location of omp_lib.h to the search directories. Currently this is
   // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(getOpenMPHeadersDir());
+  fortranOptions.searchDirectories.emplace_back(
+      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1287,7 +1322,8 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
   //  Add the default intrinsic module directory
-  fortranOptions.intrinsicModuleDirectories.emplace_back(getIntrinsicDir());
+  fortranOptions.intrinsicModuleDirectories.emplace_back(
+      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
@@ -1310,11 +1346,13 @@ void CompilerInvocation::setFortranOpts() {
     fortranOptions.features.WarnOnAllUsage();
 }
 
-void CompilerInvocation::setSemanticsOpts(
-    Fortran::parser::AllCookedSources &allCookedSources) {
+std::unique_ptr<Fortran::semantics::SemanticsContext>
+CompilerInvocation::getSemanticsCtx(
+    Fortran::parser::AllCookedSources &allCookedSources,
+    const llvm::TargetMachine &targetMachine) {
   auto &fortranOptions = getFortranOpts();
 
-  semanticsContext = std::make_unique<semantics::SemanticsContext>(
+  auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
@@ -1324,20 +1362,11 @@ void CompilerInvocation::setSemanticsOpts(
       .set_moduleFileSuffix(getModuleFileSuffix())
       .set_underscoring(getCodeGenOpts().Underscoring);
 
-  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    semanticsContext->targetCharacteristics().DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
-
-  std::string version = Fortran::common::getFlangFullVersion();
-  semanticsContext->targetCharacteristics()
-      .set_compilerOptionsString(allCompilerInvocOpts)
-      .set_compilerVersionString(version);
-
-  if (targetTriple.isPPC())
-    semanticsContext->targetCharacteristics().set_isPPC(true);
+  std::string compilerVersion = Fortran::common::getFlangFullVersion();
+  Fortran::tools::setUpTargetCharacteristics(
+      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
+      allCompilerInvocOpts);
+  return semanticsContext;
 }
 
 /// Set \p loweringOptions controlling lowering behavior based

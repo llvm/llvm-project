@@ -189,9 +189,17 @@ ompt_label_##id:
 #elif KMP_ARCH_AARCH64
 // On AArch64 the NOP instruction is 4 bytes long, can be followed by inserted
 // store instruction (another 4 bytes long).
-#define print_possible_return_addresses(addr) \
-  printf("%" PRIu64 ": current_address=%p or %p\n", ompt_get_thread_data()->value, \
-         ((char *)addr) - 4, ((char *)addr) - 8)
+#if KMP_OS_DARWIN
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
+         ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
+         ((char *)addr) - 8, ((char *)addr) - 12)
+#else
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+         ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
+         ((char *)addr) - 8)
+#endif
 #elif KMP_ARCH_RISCV64
 #if __riscv_compressed
 // On RV64GC the C.NOP instruction is 2 byte long. In addition, the compiler

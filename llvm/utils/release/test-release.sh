@@ -246,6 +246,8 @@ if [ "$Release" != "test" ]; then
   fi
 fi
 
+UserNumJobs="$NumJobs"
+
 # Figure out how many make processes to run.
 if [ -z "$NumJobs" ]; then
     NumJobs=`sysctl -n hw.activecpu 2> /dev/null || true`
@@ -258,6 +260,13 @@ if [ -z "$NumJobs" ]; then
 fi
 if [ -z "$NumJobs" ]; then
     NumJobs=3
+fi
+
+if [ "$MAKE" = "ninja" ] && [ -z "$UserNumJobs" ]; then
+  # Rely on default ninja job numbers
+  J_ARG=""
+else
+  J_ARG="-j $NumJobs"
 fi
 
 # Projects list
@@ -465,6 +474,17 @@ function build_llvmCore() {
     fi
     LitVerbose="-v"
 
+    InstallTarget="install"
+    if [ "$Phase" -lt "3" ]; then
+      BuildTarget="clang"
+      InstallTarget="install-clang install-clang-resource-headers"
+      # compiler-rt builtins is needed on AIX to have a functional Phase 1 clang.
+      if [ "$System" = "AIX" -o "$Phase" != "1" ]; then
+        BuildTarget="$BuildTarget runtimes"
+        InstallTarget="$InstallTarget install-runtimes"
+      fi
+    fi
+
     redir="/dev/stdout"
     if [ $do_silent_log == "yes" ]; then
       echo "# Silencing build logs because of -silent-log flag..."
@@ -473,13 +493,13 @@ function build_llvmCore() {
 
     cd $ObjDir
     echo "# Compiling llvm $Release-$RC $Flavor"
-    echo "# ${MAKE} -j $NumJobs $Verbose"
-    ${MAKE} -j $NumJobs $Verbose \
+    echo "# ${MAKE} $J_ARG $Verbose"
+    ${MAKE} $J_ARG $Verbose $BuildTarget \
         2>&1 | tee $LogDir/llvm.make-Phase$Phase-$Flavor.log > $redir
 
     echo "# Installing llvm $Release-$RC $Flavor"
     echo "# ${MAKE} install"
-    DESTDIR="${DestDir}" ${MAKE} install \
+    DESTDIR="${DestDir}" ${MAKE} $InstallTarget \
         2>&1 | tee $LogDir/llvm.install-Phase$Phase-$Flavor.log > $redir
     cd $BuildDir
 }
@@ -497,7 +517,7 @@ function test_llvmCore() {
     fi
 
     cd $ObjDir
-    if ! ( ${MAKE} -j $NumJobs $KeepGoing $Verbose check-all \
+    if ! ( ${MAKE} $J_ARG $KeepGoing $Verbose check-all \
         2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
       deferred_error $Phase $Flavor "check-all failed"
     fi
@@ -508,7 +528,7 @@ function test_llvmCore() {
           cmake $TestSuiteSrcDir -G "$generator" -DTEST_SUITE_LIT=$Lit \
                 -DTEST_SUITE_HOST_CC=$build_compiler
 
-      if ! ( ${MAKE} -j $NumJobs $KeepGoing $Verbose check \
+      if ! ( ${MAKE} $J_ARG $KeepGoing $Verbose check \
           2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
         deferred_error $Phase $Flavor "test suite failed"
       fi

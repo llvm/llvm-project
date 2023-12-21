@@ -41,15 +41,7 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [Pure]> {
 
     Image Operands encodes what operands follow, as per Image Operands.
 
-    <!-- End of AutoGen section -->
-    ```
-    image-operands ::= `"None"` | `"Bias"` | `"Lod"` | `"Grad"`
-                      | `"ConstOffset"` | `"Offser"` | `"ConstOffsets"`
-                      | `"Sample"` | `"MinLod"` | `"MakeTexelAvailable"`
-                      | `"MakeTexelVisible"` | `"NonPrivateTexel"`
-                      | `"VolatileTexel"` | `"SignExtend"` | `"ZeroExtend"`
     #### Example:
-    ```
 
     ```mlir
     %0 = spirv.ImageDrefGather %1 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 -> vector<4xi32>

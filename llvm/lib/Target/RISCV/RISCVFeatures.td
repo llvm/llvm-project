@@ -444,8 +444,8 @@ def FeatureStdExtV
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32x),
-          "'V' (Vector Extension for Application Processors), 'Zve32x' or "
-          "'Zve64x' (Vector Extensions for Embedded Processors)">;
+          "'V' (Vector Extension for Application Processors), 'Zve32x' "
+          "(Vector Extensions for Embedded Processors)">;
 def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve64x),
@@ -454,8 +454,8 @@ def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
 def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32f),
-          "'V' (Vector Extension for Application Processors), 'Zve32f', "
-          "'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors)">;
+          "'V' (Vector Extension for Application Processors), 'Zve32f' "
+          "(Vector Extensions for Embedded Processors)">;
 
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
@@ -851,6 +851,13 @@ def FeatureVendorXSfvfnrclipxfqf
 def HasVendorXSfvfnrclipxfqf : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
                                AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                                "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+def FeatureVendorXCVelw
+   : SubtargetFeature<"xcvelw", "HasVendorXCVelw", "true",
+                      "'XCVelw' (CORE-V Event Load Word)">;
+def HasVendorXCVelw
+   : Predicate<"Subtarget->hasVendorXCVelw()">,
+              AssemblerPredicate<(any_of FeatureVendorXCVelw),
+              "'XCVelw' (CORE-V Event Load Word)">;
 
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
@@ -865,6 +872,14 @@ def FeatureVendorXCVmac
 def HasVendorXCVmac : Predicate<"Subtarget->hasVendorXCVmac()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVmac),
                                 "'XCVmac' (CORE-V Multiply-Accumulate)">;
+
+def FeatureVendorXCVmem
+    : SubtargetFeature<"xcvmem", "HasVendorXCVmem", "true",
+                       "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
+def HasVendorXCVmem
+    : Predicate<"Subtarget->hasVendorXCVmem()">,
+               AssemblerPredicate<(any_of FeatureVendorXCVmem),
+               "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
 
 def FeatureVendorXCValu
     : SubtargetFeature<"xcvalu", "HasVendorXCValu", "true",
@@ -931,15 +946,10 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
-def FeatureUnalignedScalarMem
-   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
-                      "true", "Has reasonably performant unaligned scalar "
-                      "loads and stores">;
-
-def FeatureUnalignedVectorMem
-   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
-                      "true", "Has reasonably performant unaligned vector "
-                      "loads and stores">;
+def FeatureFastUnalignedAccess
+   : SubtargetFeature<"fast-unaligned-access", "HasFastUnalignedAccess",
+                      "true", "Has reasonably performant unaligned "
+                      "loads and stores (both scalar and vector)">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
@@ -960,6 +970,16 @@ def TuneLUIADDIFusion
     : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",
                        "true", "Enable LUI+ADDI macrofusion">;
 
+def TuneAUIPCADDIFusion
+    : SubtargetFeature<"auipc-addi-fusion", "HasAUIPCADDIFusion",
+                       "true", "Enable AUIPC+ADDI macrofusion">;
+def TuneShiftedZExtFusion
+    : SubtargetFeature<"shifted-zext-fusion", "HasShiftedZExtFusion",
+                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension">;
+def TuneLDADDFusion
+    : SubtargetFeature<"ld-add-fusion", "HasLDADDFusion",
+                       "true", "Enable LD+ADD macrofusion.">;
+
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
@@ -977,9 +997,12 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
 
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana-Veyron Series processors",
-                                         [TuneLUIADDIFusion]>;
+def TuneVeyronFusions : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana Veyron-Series processors",
+                                         [TuneLUIADDIFusion,
+                                          TuneAUIPCADDIFusion,
+                                          TuneShiftedZExtFusion,
+                                          TuneLDADDFusion]>;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

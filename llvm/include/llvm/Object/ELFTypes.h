@@ -794,7 +794,6 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 
 // Struct representing the BBAddrMap for one function.
 struct BBAddrMap {
-  uint64_t Addr; // Function address
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
     struct Metadata {
@@ -856,13 +855,24 @@ struct BBAddrMap {
     bool canFallThrough() const { return MD.CanFallThrough; }
     bool hasIndirectBranch() const { return MD.HasIndirectBranch; }
   };
-  std::vector<BBEntry> BBEntries; // Basic block entries for this function.
+
+  BBAddrMap(uint64_t Addr, std::vector<BBEntry> BBEntries)
+      : Addr(Addr), BBEntries(std::move(BBEntries)) {}
+
+  // Returns the address of the corresponding function.
+  uint64_t getFunctionAddress() const { return Addr; }
+
+  // Returns the basic block entries for this function.
+  const std::vector<BBEntry> &getBBEntries() const { return BBEntries; }
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
     return Addr == Other.Addr && std::equal(BBEntries.begin(), BBEntries.end(),
                                             Other.BBEntries.begin());
   }
+
+  uint64_t Addr;                  // Function address
+  std::vector<BBEntry> BBEntries; // Basic block entries for this function.
 };
 
 } // end namespace object.

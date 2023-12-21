@@ -55,6 +55,12 @@ int __llvm_profile_is_continuous_mode_enabled(void);
 void __llvm_profile_enable_continuous_mode(void);
 
 /*!
+ * \brief Disable continuous mode.
+ *
+ */
+void __llvm_profile_disable_continuous_mode(void);
+
+/*!
  * \brief Set the page size.
  *
  * This is a pre-requisite for enabling continuous mode. The buffer size
@@ -260,9 +266,6 @@ uint64_t __llvm_profile_get_magic(void);
 
 /*! \brief Get the version of the file format. */
 uint64_t __llvm_profile_get_version(void);
-
-/*! \brief If the binary is compiled with profile correlation. */
-int __llvm_profile_has_correlation();
 
 /*! \brief Get the number of entries in the profile data section. */
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,

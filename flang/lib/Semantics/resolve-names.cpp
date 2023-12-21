@@ -1332,6 +1332,8 @@ public:
 
   bool Pre(const parser::OpenACCBlockConstruct &);
   void Post(const parser::OpenACCBlockConstruct &);
+  bool Pre(const parser::OpenACCCombinedConstruct &);
+  void Post(const parser::OpenACCCombinedConstruct &);
   bool Pre(const parser::AccBeginBlockDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1377,7 +1379,7 @@ void AccVisitor::AddAccSourceRange(const parser::CharBlock &source) {
 
 bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
   if (NeedsScope(x)) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   }
   return true;
 }
@@ -1387,6 +1389,13 @@ void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
     PopScope();
   }
 }
+
+bool AccVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
+  PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  return true;
+}
+
+void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 
 // Create scopes for OpenMP constructs
 class OmpVisitor : public virtual DeclarationVisitor {
@@ -1457,6 +1466,20 @@ public:
     return true;
   }
   void Post(const parser::OmpEndSectionsDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OmpCriticalDirective &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OmpCriticalDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OmpEndCriticalDirective &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OmpEndCriticalDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
 };
@@ -3508,7 +3531,8 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
     Symbol &ultimate{symbol->GetUltimate()};
     if (ultimate.has<ObjectEntityDetails>() ||
         ultimate.has<AssocEntityDetails>() ||
-        CouldBeDataPointerValuedFunction(&ultimate)) {
+        CouldBeDataPointerValuedFunction(&ultimate) ||
+        (&symbol->owner() == &currScope() && IsFunctionResult(*symbol))) {
       misparsedStmtFuncFound_ = true;
       return false;
     }
@@ -7708,7 +7732,6 @@ void ResolveNamesVisitor::HandleProcedureName(
   } else if (CheckUseError(name)) {
     // error was reported
   } else {
-    auto &nonUltimateSymbol{*symbol};
     symbol = &Resolve(name, symbol)->GetUltimate();
     CheckEntryDummyUse(name.source, symbol);
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
@@ -7733,9 +7756,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       // is created for the current scope.
       // Operate on non ultimate symbol so that HostAssocDetails are also
       // created for symbols used associated in the host procedure.
-      if (IsUplevelReference(nonUltimateSymbol)) {
-        MakeHostAssocSymbol(name, nonUltimateSymbol);
-      }
+      ResolveName(name);
     } else if (symbol->test(Symbol::Flag::Implicit)) {
       Say(name,
           "Use of '%s' as a procedure conflicts with its implicit definition"_err_en_US);

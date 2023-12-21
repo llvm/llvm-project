@@ -324,10 +324,6 @@ namespace llvm {
   /// branch folding).
   extern char &GCMachineCodeAnalysisID;
 
-  /// Creates a pass to print GC metadata.
-  ///
-  FunctionPass *createGCInfoPrinter(raw_ostream &OS);
-
   /// MachineCSE - This pass performs global CSE on machine instructions.
   extern char &MachineCSEID;
 

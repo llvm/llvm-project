@@ -22,6 +22,7 @@ static_library("Sema") {
     "//clang/include/clang/Sema:AttrParsedAttrList",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//clang/include/clang/Sema:AttrTemplateInstantiate",
+    "//clang/lib/APINotes",
     "//clang/lib/AST",
     "//clang/lib/Analysis",
     "//clang/lib/Basic",

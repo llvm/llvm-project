@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   BufferizableOpInterfaceImpl.cpp
   CodegenEnv.cpp
   CodegenUtils.cpp
+  IterationGraphSorter.cpp
   LoopEmitter.cpp
   SparseBufferRewriting.cpp
   SparseGPUCodegen.cpp

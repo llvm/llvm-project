@@ -1,13 +1,13 @@
 // DEFINE: %{entry_point} = test_outerproduct_no_accumulator_4x4xf32
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm -o %t
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
+// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
+// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
+// DEFINE:   -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
-// DEFINE:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile}
 

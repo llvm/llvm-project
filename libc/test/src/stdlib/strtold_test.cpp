@@ -16,9 +16,9 @@
 #include <limits.h>
 #include <stddef.h>
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
 #else
 #define SELECT_CONST(_, __, val) val
@@ -26,7 +26,7 @@
 
 class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
 public:
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint64_t expectedRawData, const int expectedErrno = 0)
 #else

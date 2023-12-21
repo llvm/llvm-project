@@ -52,6 +52,7 @@ public:
 
 protected:
   friend class SBFrame;
+  friend class SBThread;
 
   /// \return
   ///   The underlying shared pointer storage for this object.

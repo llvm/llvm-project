@@ -300,9 +300,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     // Canonicalize (X|C1)*MulC -> X*MulC+C1*MulC.
     Value *X;
     Constant *C1;
-    if ((match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1))))) ||
-        (match(Op0, m_OneUse(m_Or(m_Value(X), m_ImmConstant(C1)))) &&
-         haveNoCommonBitsSet(X, C1, SQ.getWithInstruction(&I)))) {
+    if (match(Op0, m_OneUse(m_AddLike(m_Value(X), m_ImmConstant(C1))))) {
       // C1*MulC simplifies to a tidier constant.
       Value *NewC = Builder.CreateMul(C1, MulC);
       auto *BOp0 = cast<BinaryOperator>(Op0);
@@ -1433,7 +1431,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   // sdiv Op0, (sext i1 X) --> -Op0 (because if X is 0, the op is undefined)
   if (match(Op1, m_AllOnes()) ||
       (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
-    return BinaryOperator::CreateNeg(Op0);
+    return BinaryOperator::CreateNSWNeg(Op0);
 
   // X / INT_MIN --> X == INT_MIN
   if (match(Op1, m_SignMask()))
@@ -1456,7 +1454,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
       Constant *NegPow2C = ConstantExpr::getNeg(cast<Constant>(Op1));
       Constant *C = ConstantExpr::getExactLogBase2(NegPow2C);
       Value *Ashr = Builder.CreateAShr(Op0, C, I.getName() + ".neg", true);
-      return BinaryOperator::CreateNeg(Ashr);
+      return BinaryOperator::CreateNSWNeg(Ashr);
     }
   }
 
@@ -1518,7 +1516,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   if (KnownDividend.isNonNegative()) {
     // If both operands are unsigned, turn this into a udiv.
-    if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
+    if (isKnownNonNegative(Op1, SQ.getWithInstruction(&I))) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
       BO->setIsExact(I.isExact());
       return BO;
@@ -1544,6 +1542,13 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     }
   }
 
+  // -X / X --> X == INT_MIN ? 1 : -1
+  if (isKnownNegation(Op0, Op1)) {
+    APInt MinVal = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
+    Value *Cond = Builder.CreateICmpEQ(Op0, ConstantInt::get(Ty, MinVal));
+    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
+                              ConstantInt::getAllOnesValue(Ty));
+  }
   return nullptr;
 }
 

@@ -897,7 +897,7 @@ static void test_valid_values_date_time() {
 template <class CharT>
 static void test_valid_values_time_zone() {
 // The Apple CI gives %z='-0700'	%Ez='-0700'	%Oz='-0700'	%Z='UTC'
-// -0700 looks like the local time where the CI happens to recide, therefore
+// -0700 looks like the local time where the CI happens to reside, therefore
 // omit this test on Apple.
 // The Windows CI gives %z='-0000', but on local machines set to a different
 // timezone, it gives e.g. %z='+0200'.

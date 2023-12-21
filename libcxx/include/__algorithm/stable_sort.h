@@ -230,7 +230,7 @@ __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
         __d.__set(__len, (value_type*)nullptr);
         std::__merge_move_assign<_AlgPolicy, _Compare>(
             __buff, __buff + __l2, __buff + __l2, __buff + __len, __first, __comp);
-//         _VSTD::__merge<_Compare>(move_iterator<value_type*>(__buff),
+//         std::__merge<_Compare>(move_iterator<value_type*>(__buff),
 //                                  move_iterator<value_type*>(__buff + __l2),
 //                                  move_iterator<_RandomAccessIterator>(__buff + __l2),
 //                                  move_iterator<_RandomAccessIterator>(__buff + __len),

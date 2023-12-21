@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_MEMORY
 #define _LIBCPP_MEMORY
 
+// clang-format off
+
 /*
     memory synopsis
 
@@ -913,6 +915,8 @@ template<size_t N, class T>
 }  // std
 
 */
+
+// clang-format on
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>

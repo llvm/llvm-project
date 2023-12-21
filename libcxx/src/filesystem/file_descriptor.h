@@ -161,7 +161,7 @@ struct FileDescriptor {
   file_status get_status() const { return m_status; }
   StatT const& get_stat() const { return m_stat; }
 
-  bool status_known() const { return _VSTD_FS::status_known(m_status); }
+  bool status_known() const { return filesystem::status_known(m_status); }
 
   file_status refresh_status(error_code& ec);
 

@@ -64,15 +64,9 @@
 ; RUN:  -r=%t.o,sleep, \
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
 ; RUN:  --check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS
-
-; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
-; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
-;; We should clone D once for the cold allocations via C.
-; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
 
@@ -86,15 +80,10 @@
 ; RUN:  -r=%t.o,sleep, \
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
 ; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
 ; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
 ; RUN:  --check-prefix=STATS
 
-; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
-; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
-;; We should clone D once for the cold allocations via C.
-; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
 ;; Check distributed index
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DISTRIB
@@ -184,22 +173,6 @@ attributes #0 = { noinline optnone}
 ; DUMP: 		Edge from Callee [[D]] to Caller: [[C:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
 ; DUMP: 		Edge from Callee [[D]] to Caller: [[F:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 2
 
-; DUMP: Node [[C]]
-; DUMP: 	null Call
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 1
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[C]] AllocTypes: Cold ContextIds: 1
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[F]]
-; DUMP: 	null Call
-; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 2
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
-; DUMP: 	CallerEdges:
-
 ;; After updating for callsite metadata, we should have generated context ids 3 and 4,
 ;; along with 2 new nodes for those callsites. All have the same allocation type
 ;; behavior as the original C node.
@@ -216,42 +189,9 @@ attributes #0 = { noinline optnone}
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
-; DUMP: 		Edge from Callee [[D]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
-; DUMP: 		Edge from Callee [[D]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
-; DUMP: 		Edge from Callee [[D]] to Caller: [[E:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
-
-; DUMP: Node [[F]]
-; DUMP: 	Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 1	(clone 0)
-; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 2
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[C2]]
-; DUMP: 	Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0	(clone 0)
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 3
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[C2]] AllocTypes: Cold ContextIds: 3
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[B]]
-; DUMP: 	Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0, 2	(clone 0)
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 4
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[B]] AllocTypes: Cold ContextIds: 4
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[E]]
-; DUMP: 	Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0, 3	(clone 0)
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 1
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[E]] AllocTypes: Cold ContextIds: 1
-; DUMP: 	CallerEdges:
-
+; DUMP: 		Edge from Callee [[D]] to Caller: [[C1:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
+; DUMP: 		Edge from Callee [[D]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
+; DUMP: 		Edge from Callee [[D]] to Caller: [[C0:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
 
 ; DUMP: CCG after cloning:
 ; DUMP: Callsite Context Graph:
@@ -267,38 +207,6 @@ attributes #0 = { noinline optnone}
 ; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
 ; DUMP:         Clones: [[D2:0x[a-z0-9]+]]
 
-; DUMP: Node [[F]]
-; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 1       (clone 0)
-; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 2
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[C2]]
-; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0       (clone 0)
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 3
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2]] AllocTypes: Cold ContextIds: 3
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[B]]
-; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0, 2    (clone 0)
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 4
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[B]] AllocTypes: Cold ContextIds: 4
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[E]]
-; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0, 3    (clone 0)
-; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 1
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[E]] AllocTypes: Cold ContextIds: 1
-; DUMP: 	CallerEdges:
-
 ; DUMP: Node [[D2]]
 ; DUMP:         Versions: 1 MIB:
 ; DUMP:                 AllocType 2 StackIds: 0
@@ -308,9 +216,9 @@ attributes #0 = { noinline optnone}
 ; DUMP: 	ContextIds: 1 3 4
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[E:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C0]] AllocTypes: Cold ContextIds: 1
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C1]] AllocTypes: Cold ContextIds: 3
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2]] AllocTypes: Cold ContextIds: 4
 ; DUMP:         Clone of [[D]]
 
 ; REMARKS: created clone _Z1Dv.memprof.1
@@ -351,44 +259,6 @@ attributes #0 = { noinline optnone}
 ; STATS-BE: 2 memprof-context-disambiguation - Maximum number of allocation versions created for an original allocation during ThinLTO backend
 ; STATS-BE: 1 memprof-context-disambiguation - Number of original (not cloned) allocations with memprof profiles during ThinLTO backend
 
-
-; DOTPRE: digraph "prestackupdate" {
-; DOTPRE: 	label="prestackupdate";
-; DOTPRE: 	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
-; DOTPRE: 	Node[[C:0x[a-z0-9]+]] [shape=record,tooltip="N[[C]] ContextIds: 1",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 12176601099670543485\nnull call (external)}"];
-; DOTPRE: 	Node[[C]] -> Node[[D]][tooltip="ContextIds: 1",fillcolor="cyan"];
-; DOTPRE: 	Node[[F:0x[a-z0-9]+]] [shape=record,tooltip="N[[F]] ContextIds: 2",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 13543580133643026784\nnull call (external)}"];
-; DOTPRE: 	Node[[F]] -> Node[[D]][tooltip="ContextIds: 2",fillcolor="brown1"];
-; DOTPRE: }
-
-
-; DOTPOST:digraph "postbuild" {
-; DOTPOST:	label="postbuild";
-; DOTPOST:	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 1 2 3 4",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
-; DOTPOST:	Node[[F:0x[a-z0-9]+]] [shape=record,tooltip="N[[F]] ContextIds: 2",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 13543580133643026784\n_Z1Fv -\> _Z1Dv}"];
-; DOTPOST:	Node[[F]] -> Node[[D]][tooltip="ContextIds: 2",fillcolor="brown1"];
-; DOTPOST:	Node[[C:0x[a-z0-9]+]] [shape=record,tooltip="N[[C]] ContextIds: 3",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Cv -\> _Z1Dv}"];
-; DOTPOST:	Node[[C]] -> Node[[D]][tooltip="ContextIds: 3",fillcolor="cyan"];
-; DOTPOST:	Node[[B:0x[a-z0-9]+]] [shape=record,tooltip="N[[B]] ContextIds: 4",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Bv -\> _Z1Dv}"];
-; DOTPOST:	Node[[B]] -> Node[[D]][tooltip="ContextIds: 4",fillcolor="cyan"];
-; DOTPOST:	Node[[E:0x[a-z0-9]+]] [shape=record,tooltip="N[[E]] ContextIds: 1",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Ev -\> _Z1Dv}"];
-; DOTPOST:	Node[[E]] -> Node[[D]][tooltip="ContextIds: 1",fillcolor="cyan"];
-; DOTPOST:}
-
-
-; DOTCLONED: digraph "cloned" {
-; DOTCLONED: 	label="cloned";
-; DOTCLONED: 	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 2",fillcolor="brown1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
-; DOTCLONED: 	Node[[F:0x[a-z0-9]+]] [shape=record,tooltip="N[[F]] ContextIds: 2",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 13543580133643026784\n_Z1Fv -\> _Z1Dv}"];
-; DOTCLONED: 	Node[[F]] -> Node[[D]][tooltip="ContextIds: 2",fillcolor="brown1"];
-; DOTCLONED: 	Node[[C:0x[a-z0-9]+]] [shape=record,tooltip="N[[C]] ContextIds: 3",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Cv -\> _Z1Dv}"];
-; DOTCLONED: 	Node[[C]] -> Node[[D2:0x[a-z0-9]+]][tooltip="ContextIds: 3",fillcolor="cyan"];
-; DOTCLONED: 	Node[[B:0x[a-z0-9]+]] [shape=record,tooltip="N[[B]] ContextIds: 4",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Bv -\> _Z1Dv}"];
-; DOTCLONED: 	Node[[B]] -> Node[[D2]][tooltip="ContextIds: 4",fillcolor="cyan"];
-; DOTCLONED: 	Node[[E:0x[a-z0-9]+]] [shape=record,tooltip="N[[E]] ContextIds: 1",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Ev -\> _Z1Dv}"];
-; DOTCLONED: 	Node[[E]] -> Node[[D2]][tooltip="ContextIds: 1",fillcolor="cyan"];
-; DOTCLONED: 	Node[[D2]] [shape=record,tooltip="N[[D2]] ContextIds: 1 3 4",fillcolor="cyan",style="filled",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
-; DOTCLONED: }
 
 ; DISTRIB: ^[[C:[0-9]+]] = gv: (guid: 1643923691937891493, {{.*}} callsites: ((callee: ^[[D:[0-9]+]], clones: (1)
 ; DISTRIB: ^[[D]] = gv: (guid: 4881081444663423788, {{.*}} allocs: ((versions: (notcold, cold)

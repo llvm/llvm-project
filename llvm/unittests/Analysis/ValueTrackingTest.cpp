@@ -2604,7 +2604,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
     auto M = parseModule(R"(
-  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+  define i32 @test(i32 %X, i32 %Y, i32 noundef %M) {
     %1 = xor i32 %M, -1
     %LHS = and i32 %1, %X
     %RHS = and i32 %Y, %M
@@ -2623,7 +2623,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B)
     auto M = parseModule(R"(
-  define void @test(i32 %A, i32 %B) {
+  define void @test(i32 noundef %A, i32 noundef %B) {
     %LHS = and i32 %A, %B
     %or = or i32 %A, %B
     %RHS = xor i32 %or, -1
@@ -2651,7 +2651,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B) in vector version
     auto M = parseModule(R"(
-  define void @test(<2 x i32> %A, <2 x i32> %B) {
+  define void @test(<2 x i32> noundef %A, <2 x i32> noundef %B) {
     %LHS = and <2 x i32> %A, %B
     %or = or <2 x i32> %A, %B
     %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>

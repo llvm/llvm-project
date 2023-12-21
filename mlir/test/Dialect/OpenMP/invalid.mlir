@@ -1658,40 +1658,4 @@ func.func @omp_target_exit_data(%map1: memref<?xi32>) {
   return
 }
 
-// -----
-
-func.func @omp_map1(%map1: memref<?xi32>, %map2: i32) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) val(%map2 : i32)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-  // expected-error @below {{only one of val or var_ptr must be used}}
-  omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
-    ^bb0(%arg0: memref<?xi32>):
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @omp_map2(%map1: memref<?xi32>, %map2: i32) {
-  %mapv = omp.map_info var_ptr( : , tensor<?xi32>) val(%map2 : i32)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-  // expected-error @below {{var_type supplied without var_ptr}}
-  omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
-    ^bb0(%arg0: memref<?xi32>):
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
-func.func @omp_map3(%map1: memref<?xi32>, %map2: i32) {
-  %mapv = omp.map_info   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-  // expected-error @below {{missing val or var_ptr}}
-  omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
-    ^bb0(%arg0: memref<?xi32>):
-    omp.terminator
-  }
-  return
-}
-
 llvm.mlir.global internal @_QFsubEx() : i32

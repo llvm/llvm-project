@@ -1599,7 +1599,7 @@ def SPRWriteResGroup126 : SchedWriteRes<[SPRPort02_03_11]> {
   let Latency = 8;
 }
 def : InstRW<[SPRWriteResGroup126], (instregex "^MMX_MOV(D|Q)64rm$",
-                                               "^VBROADCAST(F|I)128$",
+                                               "^VBROADCAST(F|I)128rm$",
                                                "^VBROADCAST(F|I)32X(2|4)Z256rm$",
                                                "^VBROADCAST(F|I)32X(8|2Z)rm$",
                                                "^VBROADCAST(F|I)(32|64)X4rm$",

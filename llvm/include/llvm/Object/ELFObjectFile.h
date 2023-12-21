@@ -742,7 +742,7 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
   if (EF.getHeader().e_machine == ELF::EM_AARCH64) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
       StringRef Name = *NameOrErr;
-      if (Name.startswith("$d") || Name.startswith("$x"))
+      if (Name.starts_with("$d") || Name.starts_with("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
@@ -752,8 +752,8 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
       StringRef Name = *NameOrErr;
       // TODO Investigate why empty name symbols need to be marked.
-      if (Name.empty() || Name.startswith("$d") || Name.startswith("$t") ||
-          Name.startswith("$a"))
+      if (Name.empty() || Name.starts_with("$d") || Name.starts_with("$t") ||
+          Name.starts_with("$a"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
@@ -764,7 +764,7 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
   } else if (EF.getHeader().e_machine == ELF::EM_CSKY) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
       StringRef Name = *NameOrErr;
-      if (Name.startswith("$d") || Name.startswith("$t"))
+      if (Name.starts_with("$d") || Name.starts_with("$t"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
@@ -775,7 +775,7 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
       StringRef Name = *NameOrErr;
       // Mark empty name symbols (used for label differences) and mapping
       // symbols.
-      if (Name.empty() || Name.startswith("$d") || Name.startswith("$x"))
+      if (Name.empty() || Name.starts_with("$d") || Name.starts_with("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
@@ -973,8 +973,8 @@ bool ELFObjectFile<ELFT>::isDebugSection(DataRefImpl Sec) const {
     return false;
   }
   StringRef SectionName = SectionNameOrErr.get();
-  return SectionName.startswith(".debug") ||
-         SectionName.startswith(".zdebug") || SectionName == ".gdb_index";
+  return SectionName.starts_with(".debug") ||
+         SectionName.starts_with(".zdebug") || SectionName == ".gdb_index";
 }
 
 template <class ELFT>

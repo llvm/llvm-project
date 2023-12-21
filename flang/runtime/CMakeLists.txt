@@ -104,6 +104,7 @@ set(sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   extensions.cpp
   extrema.cpp
   file.cpp
@@ -308,4 +309,6 @@ else()
     LINK_LIBS
     FortranDecimal.dynamic_dbg
     INSTALL_WITH_TOOLCHAIN)
+  add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
+    FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
 endif()

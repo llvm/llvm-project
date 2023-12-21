@@ -60,7 +60,7 @@ __partial_sort_copy(_InputIterator __first, _Sentinel1 __last,
 }
 
 template <class _InputIterator, class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _RandomAccessIterator
 partial_sort_copy(_InputIterator __first, _InputIterator __last,
                   _RandomAccessIterator __result_first, _RandomAccessIterator __result_last, _Compare __comp)
@@ -74,12 +74,12 @@ partial_sort_copy(_InputIterator __first, _InputIterator __last,
 }
 
 template <class _InputIterator, class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _RandomAccessIterator
 partial_sort_copy(_InputIterator __first, _InputIterator __last,
                   _RandomAccessIterator __result_first, _RandomAccessIterator __result_last)
 {
-    return _VSTD::partial_sort_copy(__first, __last, __result_first, __result_last, __less<>());
+    return std::partial_sort_copy(__first, __last, __result_first, __result_last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

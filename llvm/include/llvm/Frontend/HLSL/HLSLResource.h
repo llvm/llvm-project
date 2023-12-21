@@ -59,15 +59,16 @@ class FrontendResource {
 
 public:
   FrontendResource(MDNode *E) : Entry(E) {
-    assert(Entry->getNumOperands() == 5 && "Unexpected metadata shape");
+    assert(Entry->getNumOperands() == 6 && "Unexpected metadata shape");
   }
 
   FrontendResource(GlobalVariable *GV, StringRef TypeStr, ResourceKind RK,
-                   uint32_t ResIndex, uint32_t Space);
+                   bool IsROV, uint32_t ResIndex, uint32_t Space);
 
   GlobalVariable *getGlobalVariable();
   StringRef getSourceType();
-  uint32_t getResourceKind();
+  ResourceKind getResourceKind();
+  bool getIsROV();
   uint32_t getResourceIndex();
   uint32_t getSpace();
   MDNode *getMetadata() { return Entry; }

@@ -87,46 +87,46 @@ public:
     static_assert(_Min < _Max, "independent_bits_engine invalid parameters");
 
     // engine characteristics
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
     // constructors and seeding functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     independent_bits_engine() {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit independent_bits_engine(const _Engine& __e)
         : __e_(__e) {}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit independent_bits_engine(_Engine&& __e)
-        : __e_(_VSTD::move(__e)) {}
+        : __e_(std::move(__e)) {}
 #endif // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
     template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value &&
                                         !is_convertible<_Sseq, _Engine>::value, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         explicit independent_bits_engine(_Sseq& __q)
          : __e_(__q) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void seed() {__e_.seed();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void seed(result_type __sd) {__e_.seed(__sd);}
     template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void
         seed(_Sseq& __q) {__e_.seed(__q);}
 
     // generating functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type operator()() {return __eval(integral_constant<bool, _Rp != 0>());}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const _Engine& base() const _NOEXCEPT {return __e_;}
 
     template<class _Eng, size_t _Wp, class _UInt>
@@ -158,18 +158,18 @@ public:
                independent_bits_engine<_Eng, _Wp, _UInt>& __x);
 
 private:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type __eval(false_type);
     _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type);
 
     template <size_t __count, __enable_if_t<__count < _Dt, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         static
         result_type
         __lshift(result_type __x) {return __x << __count;}
 
     template <size_t __count, __enable_if_t<(__count >= _Dt), int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         static
         result_type
         __lshift(result_type) {return result_type(0);}
@@ -210,7 +210,7 @@ independent_bits_engine<_Engine, __w, _UIntType>::__eval(true_type)
 }
 
 template<class _Eng, size_t _Wp, class _UInt>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator==(
     const independent_bits_engine<_Eng, _Wp, _UInt>& __x,
@@ -220,7 +220,7 @@ operator==(
 }
 
 template<class _Eng, size_t _Wp, class _UInt>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(
     const independent_bits_engine<_Eng, _Wp, _UInt>& __x,

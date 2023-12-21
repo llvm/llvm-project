@@ -1051,6 +1051,18 @@ MachineIRBuilder::buildFence(unsigned Ordering, unsigned Scope) {
     .addImm(Scope);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildPrefetch(const SrcOp &Addr,
+                                                    unsigned RW,
+                                                    unsigned Locality,
+                                                    unsigned CacheType,
+                                                    MachineMemOperand &MMO) {
+  auto MIB = buildInstr(TargetOpcode::G_PREFETCH);
+  Addr.addSrcToMIB(MIB);
+  MIB.addImm(RW).addImm(Locality).addImm(CacheType);
+  MIB.addMemOperand(&MMO);
+  return MIB;
+}
+
 MachineInstrBuilder
 MachineIRBuilder::buildBlockAddress(Register Res, const BlockAddress *BA) {
 #ifndef NDEBUG
@@ -1065,16 +1077,16 @@ void MachineIRBuilder::validateTruncExt(const LLT DstTy, const LLT SrcTy,
 #ifndef NDEBUG
   if (DstTy.isVector()) {
     assert(SrcTy.isVector() && "mismatched cast between vector and non-vector");
-    assert(SrcTy.getNumElements() == DstTy.getNumElements() &&
+    assert(SrcTy.getElementCount() == DstTy.getElementCount() &&
            "different number of elements in a trunc/ext");
   } else
     assert(DstTy.isScalar() && SrcTy.isScalar() && "invalid extend/trunc");
 
   if (IsExtend)
-    assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownGT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid narrowing extend");
   else
-    assert(DstTy.getSizeInBits() < SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownLT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid widening trunc");
 #endif
 }

@@ -89,7 +89,3 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
   }
   lprofSetProfileDumped(0);
 }
-
-COMPILER_RT_VISIBILITY int __llvm_profile_has_correlation() {
-  return (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
-}

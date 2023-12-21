@@ -215,7 +215,7 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
       GV->hasExternalWeakLinkage())
     Res |= BasicSymbolRef::SF_Weak;
 
-  if (GV->getName().startswith("llvm."))
+  if (GV->getName().starts_with("llvm."))
     Res |= BasicSymbolRef::SF_FormatSpecific;
   else if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
     if (Var->getSection() == "llvm.metadata")

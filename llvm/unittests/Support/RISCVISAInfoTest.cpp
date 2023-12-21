@@ -712,7 +712,9 @@ R"(All available -march extensions for RISC-V
     xcvalu              1.0
     xcvbi               1.0
     xcvbitmanip         1.0
+    xcvelw              1.0
     xcvmac              1.0
+    xcvmem              1.0
     xcvsimd             1.0
     xsfcie              1.0
     xsfvcp              1.0

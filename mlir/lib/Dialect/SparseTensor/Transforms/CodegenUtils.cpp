@@ -546,32 +546,6 @@ void sparse_tensor::storeAll(OpBuilder &builder, Location loc, Value mem,
   }
 }
 
-Value sparse_tensor::reshapeValuesToLevels(OpBuilder &builder, Location loc,
-                                           SparseTensorEncodingAttr enc,
-                                           ValueRange dimSizes,
-                                           Value valuesBuffer,
-                                           Value lvlCoords) {
-  // Reuse the `lvlCoords` buffer to store the level-sizes.
-  const Level lvlRank = enc.getLvlRank();
-  SmallVector<Value> lvlSizes;
-  lvlSizes.reserve(lvlRank);
-  for (Level l = 0; l < lvlRank; l++)
-    // FIXME: `toOrigDim` is deprecated.
-    lvlSizes.push_back(dimSizes[toOrigDim(enc, l)]);
-  storeAll(builder, loc, lvlCoords, lvlSizes);
-  // The memref ReshapeOp requires the sizes buffer to have a static
-  // shape.
-  const auto iTp = builder.getIndexType();
-  const SmallVector<Size, 1> lvlSizesShape{static_cast<Size>(lvlRank)};
-  const auto lvlSizesTp = MemRefType::get(lvlSizesShape, iTp);
-  lvlCoords = builder.create<memref::CastOp>(loc, lvlSizesTp, lvlCoords);
-  // Finally, create the ReshapeOp.
-  const SmallVector<Size> resShape(lvlRank, ShapedType::kDynamic);
-  const Type elemTp = getMemRefType(valuesBuffer).getElementType();
-  const auto resTp = MemRefType::get(resShape, elemTp);
-  return builder.create<memref::ReshapeOp>(loc, resTp, valuesBuffer, lvlCoords);
-}
-
 TypedValue<BaseMemRefType>
 sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
   auto tTp = llvm::cast<TensorType>(tensor.getType());
@@ -639,25 +613,20 @@ Value sparse_tensor::createOrFoldSliceStrideOp(OpBuilder &builder, Location loc,
   return builder.create<ToSliceStrideOp>(loc, tensor, APInt(64, dim));
 }
 
-void sparse_tensor::fillDimShape(OpBuilder &builder, Location loc,
-                                 SparseTensorType stt,
-                                 SmallVectorImpl<Value> &out) {
-  out.clear();
-  out.reserve(stt.getDimRank());
-  for (const Size sz : stt.getDimShape()) {
-    const auto s = ShapedType::isDynamic(sz) ? 0 : sz;
-    out.push_back(constantIndex(builder, loc, s));
-  }
-}
-
 Value sparse_tensor::genReader(OpBuilder &builder, Location loc,
                                SparseTensorType stt, Value tensor,
-                               /*out*/ SmallVectorImpl<Value> &dimShapesValues,
+                               /*out*/ SmallVectorImpl<Value> &dimSizesValues,
                                /*out*/ Value &dimSizesBuffer) {
-  // Construct the dimShapes buffer. The buffer contains the static size
-  // per dimension, or otherwise a zero for a dynamic size.
-  fillDimShape(builder, loc, stt, dimShapesValues);
-  Value dimShapesBuffer = allocaBuffer(builder, loc, dimShapesValues);
+  // Construct the dimension **shapes** buffer. The buffer contains the static
+  // size per dimension, or otherwise a zero for a dynamic size.
+  Dimension dimRank = stt.getDimRank();
+  dimSizesValues.clear();
+  dimSizesValues.reserve(dimRank);
+  for (const Size sz : stt.getDimShape()) {
+    const auto s = ShapedType::isDynamic(sz) ? 0 : sz;
+    dimSizesValues.push_back(constantIndex(builder, loc, s));
+  }
+  Value dimShapesBuffer = allocaBuffer(builder, loc, dimSizesValues);
   // Create the `CheckedSparseTensorReader`. This reader performs a
   // consistency check on the static sizes, but accepts any size
   // of each dimension with a dynamic size.
@@ -679,18 +648,27 @@ Value sparse_tensor::genReader(OpBuilder &builder, Location loc,
         createFuncCall(builder, loc, "getSparseTensorReaderDimSizes", memTp,
                        reader, EmitCInterface::On)
             .getResult(0);
+    // Also convert the dim shapes values into dim sizes values, just in case
+    // subsequent clients need the values (DCE will remove unused).
+    for (Dimension d = 0; d < dimRank; d++) {
+      if (stt.isDynamicDim(d))
+        dimSizesValues[d] = builder.create<memref::LoadOp>(
+            loc, dimSizesBuffer, constantIndex(builder, loc, d));
+    }
   }
   return reader;
 }
 
-Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
-                                   SparseTensorType stt,
-                                   ArrayRef<Value> dimShapesValues,
-                                   Value dimSizesBuffer,
-                                   /*out*/ Value &dim2lvlBuffer,
-                                   /*out*/ Value &lvl2dimBuffer) {
+Value sparse_tensor::genMapBuffers(
+    OpBuilder &builder, Location loc, SparseTensorType stt,
+    ArrayRef<Value> dimSizesValues, Value dimSizesBuffer,
+    /*out*/ SmallVectorImpl<Value> &lvlSizesValues,
+    /*out*/ Value &dim2lvlBuffer,
+    /*out*/ Value &lvl2dimBuffer) {
   const Dimension dimRank = stt.getDimRank();
   const Level lvlRank = stt.getLvlRank();
+  lvlSizesValues.clear();
+  lvlSizesValues.reserve(lvlRank);
   // For an identity mapping, the dim2lvl and lvl2dim mappings are
   // identical as are dimSizes and lvlSizes, so buffers are reused
   // as much as possible.
@@ -698,10 +676,12 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     assert(dimRank == lvlRank);
     SmallVector<Value> iotaValues;
     iotaValues.reserve(lvlRank);
-    for (Level l = 0; l < lvlRank; l++)
+    for (Level l = 0; l < lvlRank; l++) {
       iotaValues.push_back(constantIndex(builder, loc, l));
+      lvlSizesValues.push_back(dimSizesValues[l]);
+    }
     dim2lvlBuffer = lvl2dimBuffer = allocaBuffer(builder, loc, iotaValues);
-    return dimSizesBuffer;
+    return dimSizesBuffer; // now lvlSizesBuffer
   }
   // Otherwise, some code needs to be generated to set up the buffers.
   // This code deals with permutations as well as non-permutations that
@@ -710,7 +690,6 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
   const auto lvlToDim = stt.getLvlToDim();
   SmallVector<Value> dim2lvlValues(lvlRank); // for each lvl, expr in dim vars
   SmallVector<Value> lvl2dimValues(dimRank); // for each dim, expr in lvl vars
-  SmallVector<Value> lvlSizesValues(lvlRank);
   // Generate dim2lvl.
   assert(lvlRank == dimToLvl.getNumResults());
   for (Level l = 0; l < lvlRank; l++) {
@@ -748,17 +727,14 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     //    (3) l = d % c    : c
     Value lvlSz;
     if (cm == 0) {
-      lvlSz = dimShapesValues[d];
-      if (stt.isDynamicDim(d))
-        lvlSz = builder.create<memref::LoadOp>(loc, dimSizesBuffer,
-                                               constantIndex(builder, loc, d));
+      lvlSz = dimSizesValues[d];
       if (cf != 0)
         lvlSz = builder.create<arith::DivUIOp>(loc, lvlSz,
                                                constantIndex(builder, loc, cf));
     } else {
       lvlSz = constantIndex(builder, loc, cm);
     }
-    lvlSizesValues[l] = lvlSz;
+    lvlSizesValues.push_back(lvlSz);
   }
   // Generate lvl2dim.
   assert(dimRank == lvlToDim.getNumResults());
@@ -792,5 +768,5 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
   // Return buffers.
   dim2lvlBuffer = allocaBuffer(builder, loc, dim2lvlValues);
   lvl2dimBuffer = allocaBuffer(builder, loc, lvl2dimValues);
-  return allocaBuffer(builder, loc, lvlSizesValues);
+  return allocaBuffer(builder, loc, lvlSizesValues); // lvlSizesBuffer
 }

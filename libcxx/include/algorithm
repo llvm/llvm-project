@@ -1826,6 +1826,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/pstl_any_all_none_of.h>
 #include <__algorithm/pstl_copy.h>
 #include <__algorithm/pstl_count.h>
+#include <__algorithm/pstl_equal.h>
 #include <__algorithm/pstl_fill.h>
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_for_each.h>

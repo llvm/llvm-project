@@ -50,11 +50,11 @@ private:
     ostream_type* __out_stream_;
     const char_type* __delim_;
 public:
-    _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s) _NOEXCEPT
-        : __out_stream_(_VSTD::addressof(__s)), __delim_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
-        : __out_stream_(_VSTD::addressof(__s)), __delim_(__delimiter) {}
-    _LIBCPP_INLINE_VISIBILITY ostream_iterator& operator=(const _Tp& __value)
+    _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s) _NOEXCEPT
+        : __out_stream_(std::addressof(__s)), __delim_(nullptr) {}
+    _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
+        : __out_stream_(std::addressof(__s)), __delim_(__delimiter) {}
+    _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator=(const _Tp& __value)
         {
             *__out_stream_ << __value;
             if (__delim_)
@@ -62,9 +62,9 @@ public:
             return *this;
         }
 
-    _LIBCPP_INLINE_VISIBILITY ostream_iterator& operator*()     {return *this;}
-    _LIBCPP_INLINE_VISIBILITY ostream_iterator& operator++()    {return *this;}
-    _LIBCPP_INLINE_VISIBILITY ostream_iterator& operator++(int) {return *this;}
+    _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator*()     {return *this;}
+    _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++()    {return *this;}
+    _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++(int) {return *this;}
 };
 
 _LIBCPP_END_NAMESPACE_STD

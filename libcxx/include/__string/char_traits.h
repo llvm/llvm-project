@@ -20,6 +20,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__utility/is_pointer_in_range.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -77,7 +78,7 @@ exposition-only to document what members a char_traits specialization should pro
 //
 #if !defined(_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION)
 template <class _CharT>
-struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, char8_t, char16_t or char32_t is non-standard and is provided for a temporary period. It will be removed in LLVM 18, so please migrate off of it.")
+struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, char8_t, char16_t or char32_t is non-standard and is provided for a temporary period. It will be removed in LLVM 19, so please migrate off of it.")
     char_traits
 {
     using char_type  = _CharT;
@@ -104,14 +105,14 @@ struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, cha
         }
         return 0;
     }
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     size_t length(const char_type* __s) {
         size_t __len = 0;
         for (; !eq(*__s, char_type(0)); ++__s)
             ++__len;
         return __len;
     }
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     const char_type* find(const char_type* __s, size_t __n, const char_type& __a) {
         for (; __n; --__n)
         {
@@ -139,19 +140,17 @@ struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, cha
         }
         return __r;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) {
-        if (!__libcpp_is_constant_evaluated()) {
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1 + __n, "char_traits::copy overlapped range");
-        }
-        char_type* __r = __s1;
-        for (; __n; --__n, ++__s1, ++__s2)
-            assign(*__s1, *__s2);
-        return __r;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      char_type* __r = __s1;
+      for (; __n; --__n, ++__s1, ++__s2)
+        assign(*__s1, *__s2);
+      return __r;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type*       assign(char_type* __s, size_t __n, char_type __a) {
         char_type* __r = __s;
@@ -238,11 +237,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1 + __n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -310,11 +308,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1 + __n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -365,7 +362,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
     static _LIBCPP_HIDE_FROM_ABI constexpr
     size_t           length(const char_type* __s) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY static constexpr
+    _LIBCPP_HIDE_FROM_ABI static constexpr
     const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -375,11 +372,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -446,28 +442,27 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool lt(char_type __c1, char_type __c2) _NOEXCEPT
         {return __c1 < __c2;}
 
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     int              compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     size_t           length(const char_type* __s) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
         return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT {
         std::fill_n(__s, __n, __a);
         return __s;
@@ -541,25 +536,25 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool lt(char_type __c1, char_type __c2) _NOEXCEPT
         {return __c1 < __c2;}
 
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     int              compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     size_t           length(const char_type* __s) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR_SINCE_CXX17
+    _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17
     const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
         return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
         std::copy_n(__s2, __n, __s1);
         return __s1;
     }
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT {
         std::fill_n(__s, __n, __a);
         return __s;
@@ -618,7 +613,7 @@ char_traits<char32_t>::find(const char_type* __s, size_t __n, const char_type& _
 
 // __str_find
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find(const _CharT *__p, _SizeT __sz,
              _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -670,7 +665,7 @@ __search_substring(const _CharT *__first1, const _CharT *__last1,
 }
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find(const _CharT *__p, _SizeT __sz,
        const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -692,7 +687,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
 // __str_rfind
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_rfind(const _CharT *__p, _SizeT __sz,
               _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -711,11 +706,11 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
 }
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_rfind(const _CharT *__p, _SizeT __sz,
         const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
-    __pos = _VSTD::min(__pos, __sz);
+    __pos = std::min(__pos, __sz);
     if (__n < __sz - __pos)
         __pos += __n;
     else
@@ -728,13 +723,13 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
 
 // __str_find_first_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_of(const _CharT *__p, _SizeT __sz,
                 const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
     if (__pos >= __sz || __n == 0)
         return __npos;
-    const _CharT* __r = _VSTD::__find_first_of_ce
+    const _CharT* __r = std::__find_first_of_ce
         (__p + __pos, __p + __sz, __s, __s + __n, _Traits::eq );
     if (__r == __p + __sz)
         return __npos;
@@ -744,7 +739,7 @@ __str_find_first_of(const _CharT *__p, _SizeT __sz,
 
 // __str_find_last_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_of(const _CharT *__p, _SizeT __sz,
                const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
     {
@@ -767,7 +762,7 @@ __str_find_last_of(const _CharT *__p, _SizeT __sz,
 
 // __str_find_first_not_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
                     const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -783,7 +778,7 @@ __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
 
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
                           _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -800,7 +795,7 @@ __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
 
 // __str_find_last_not_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
                    const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -816,7 +811,7 @@ __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
 
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
                          _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -831,7 +826,7 @@ __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
 }
 
 template<class _Ptr>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 size_t __do_string_hash(_Ptr __p, _Ptr __e)
 {
     typedef typename iterator_traits<_Ptr>::value_type value_type;

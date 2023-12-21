@@ -92,7 +92,7 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
         if (!__comp(*__i, *__m))  // if *__first == *__m
         {
             // *__first == *__m, *__first doesn't go in first part
-            if (_VSTD::__nth_element_find_guard<_Compare>(__i, __j, __m, __comp)) {
+            if (std::__nth_element_find_guard<_Compare>(__i, __j, __m, __comp)) {
                 _Ops::iter_swap(__i, __j);
                 ++__n_swaps;
             } else {
@@ -142,7 +142,7 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
                     return;
                 }
                 // __nth_element the second part
-                // _VSTD::__nth_element<_Compare>(__i, __nth, __last, __comp);
+                // std::__nth_element<_Compare>(__i, __nth, __last, __comp);
                 __first = __i;
                 continue;
             }
@@ -228,12 +228,12 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
         // __nth_element on range containing __nth
         if (__nth < __i)
         {
-            // _VSTD::__nth_element<_Compare>(__first, __nth, __i, __comp);
+            // std::__nth_element<_Compare>(__first, __nth, __i, __comp);
             __last = __i;
         }
         else
         {
-            // _VSTD::__nth_element<_Compare>(__i+1, __nth, __last, __comp);
+            // std::__nth_element<_Compare>(__i+1, __nth, __last, __comp);
             __first = ++__i;
         }
     }

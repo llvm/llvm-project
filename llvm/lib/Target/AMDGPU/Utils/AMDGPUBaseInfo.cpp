@@ -716,9 +716,9 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
 
 static TargetIDSetting
 getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.endswith("-"))
+  if (FeatureString.ends_with("-"))
     return TargetIDSetting::Off;
-  if (FeatureString.endswith("+"))
+  if (FeatureString.ends_with("+"))
     return TargetIDSetting::On;
 
   llvm_unreachable("Malformed feature string");
@@ -729,9 +729,9 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   TargetID.split(TargetIDSplit, ':');
 
   for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.startswith("xnack"))
+    if (FeatureString.starts_with("xnack"))
       XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.startswith("sramecc"))
+    if (FeatureString.starts_with("sramecc"))
       SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
   }
 }
@@ -1578,7 +1578,7 @@ unsigned getTgtId(const StringRef Name) {
     if (Val.MaxIndex == 0 && Name == Val.Name)
       return Val.Tgt;
 
-    if (Val.MaxIndex > 0 && Name.startswith(Val.Name)) {
+    if (Val.MaxIndex > 0 && Name.starts_with(Val.Name)) {
       StringRef Suffix = Name.drop_front(Val.Name.size());
 
       unsigned Id;
@@ -1910,7 +1910,7 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   case CallingConv::AMDGPU_Gfx:
     return true;
   default:
-    return isEntryFunctionCC(CC);
+    return isEntryFunctionCC(CC) || isChainCC(CC);
   }
 }
 
@@ -1957,12 +1957,14 @@ bool hasGDS(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGDS);
 }
 
-unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   auto Version = getIsaVersion(STI.getCPU());
   if (Version.Major == 10)
     return Version.Minor >= 3 ? 13 : 5;
   if (Version.Major == 11)
     return 5;
+  if (Version.Major >= 12)
+    return HasSampler ? 4 : 5;
   return 0;
 }
 
@@ -1988,6 +1990,10 @@ bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10(STI);
 }
 
+bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI) {
   return isVI(STI) || isGFX9(STI) || isGFX10(STI);
 }
@@ -2004,6 +2010,10 @@ bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
 
+bool isGFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
   return isGFX10(STI) || isGFX11Plus(STI);
 }
@@ -2013,8 +2023,16 @@ bool isGFX11(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
-  return isGFX11(STI);
+  return isGFX11(STI) || isGFX12Plus(STI);
 }
+
+bool isGFX12(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
+}
+
+bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+
+bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
   return !isGFX11Plus(STI);
@@ -2042,6 +2060,10 @@ bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10_3Insts);
+}
+
+bool isGFX10_3_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10_BEncoding(STI) && !isGFX12Plus(STI);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
@@ -2487,6 +2509,16 @@ bool isInlinableIntLiteralV216(int32_t Literal) {
   return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
 }
 
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType) {
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    return isInlinableLiteralV216(Literal, HasInv2Pi);
+  default:
+    return isInlinableIntLiteralV216(Literal);
+  }
+}
+
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   assert(HasInv2Pi);
 
@@ -2572,6 +2604,9 @@ static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
 
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
+  if (isGFX12Plus(ST))
+    return isUInt<23>(EncodedOffset);
+
   return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
                                : isUInt<8>(EncodedOffset);
 }
@@ -2579,6 +2614,9 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset,
                                     bool IsBuffer) {
+  if (isGFX12Plus(ST))
+    return isInt<24>(EncodedOffset);
+
   return !IsBuffer &&
          hasSMRDSignedImmOffset(ST) &&
          isInt<21>(EncodedOffset);
@@ -2599,6 +2637,10 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
                                             int64_t ByteOffset, bool IsBuffer) {
+  if (isGFX12Plus(ST)) // 24 bit signed offsets
+    return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
+                                 : std::nullopt;
+
   // The signed version is always a byte offset.
   if (!IsBuffer && hasSMRDSignedImmOffset(ST)) {
     assert(hasSMEMByteOffset(ST));

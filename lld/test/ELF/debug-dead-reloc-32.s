@@ -14,6 +14,17 @@
 # CHECK-NEXT: Contents of section .debug_addr:
 # CHECK-NEXT:  0000 00000000
 
+## -z dead-reloc-in-nonalloc= can override the tombstone value.
+# RUN: ld.lld -z dead-reloc-in-nonalloc=.debug_loc=42 -z dead-reloc-in-nonalloc=.debug_addr=0xfffffffffffffffe %t.o -o %t1
+# RUN: llvm-objdump -s %t1 | FileCheck %s --check-prefix=OVERRIDE
+
+# OVERRIDE:      Contents of section .debug_loc:
+# OVERRIDE-NEXT:  0000 2a000000                             *...
+# OVERRIDE-NEXT: Contents of section .debug_ranges:
+# OVERRIDE-NEXT:  0000 01000000                             ....
+# OVERRIDE-NEXT: Contents of section .debug_addr:
+# OVERRIDE-NEXT:  0000 feffffff                             ....
+
 .section .text.1,"axe"
   .byte 0
 

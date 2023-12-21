@@ -182,7 +182,7 @@ public:
   /// Returns the total size of the type. Must only be called on sized types.
   constexpr TypeSize getSizeInBits() const {
     if (isPointer() || isScalar())
-      return TypeSize::Fixed(getScalarSizeInBits());
+      return TypeSize::getFixed(getScalarSizeInBits());
     auto EC = getElementCount();
     return TypeSize(getScalarSizeInBits() * EC.getKnownMinValue(),
                     EC.isScalable());
