@@ -54,7 +54,5 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(i->x, "Attempted to dereference a non-dereferenceable common_iterator");
   }
 
-  // TODO: check `valueless_by_exception
-
   return 0;
 }
