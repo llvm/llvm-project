@@ -234,7 +234,7 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", NoSchedModel,
                                        FeatureStdExtZbb,
                                        FeatureStdExtZbs,
                                        FeatureStdExtZfhmin],
-                                      [TuneCMOVBranchOpt]>;
+                                      [TuneConditionalCompressedMoveFusion]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,

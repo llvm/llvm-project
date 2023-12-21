@@ -151,9 +151,10 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  bool canUseCMOVBranchOpt() const {
-    // Can only predicate c.mv so requires the C or Zca extensions.
-    return HasCMOVBranchOpt && hasStdExtCOrZca();
+  bool hasConditionalMoveFusion() const {
+    // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
+    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+           hasShortForwardBranchOpt();
   }
 
   bool is64Bit() const { return IsRV64; }
