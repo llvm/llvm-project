@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
@@ -1167,13 +1168,7 @@ public:
 /// Class that extracts information from the specified type.
 class TypeInfo {
 public:
-  TypeInfo(mlir::Location loc, mlir::Type ty) : loc(loc) {
-    name = typeScan(ty);
-  }
-
-  // Returns a textual representation of the type, with characters that are
-  // valid in identifiers.
-  const std::string &getName() const { return name; }
+  TypeInfo(mlir::Type ty) { typeScan(ty); }
 
   // Returns the length of character types.
   std::optional<fir::CharacterType::LenType> getCharLength() const {
@@ -1187,77 +1182,28 @@ public:
   bool isBox() const { return inBox; }
 
 private:
-  // Scan type and return an unique name for it.
-  std::string typeScan(mlir::Type type);
+  void typeScan(mlir::Type type);
 
-  mlir::Location loc;
-  std::string name;
   std::optional<fir::CharacterType::LenType> charLen;
   llvm::SmallVector<int64_t> shape;
   bool inBox = false;
 };
 
-std::string TypeInfo::typeScan(mlir::Type ty) {
-  std::ostringstream ss;
-
-  auto unexpectedType = [&] {
-    std::string errmsg;
-    llvm::raw_string_ostream rss(errmsg);
-    rss << "Unexpected type: " << ty;
-    fir::emitFatalError(loc, errmsg);
-  };
-
-  if (auto aty = mlir::dyn_cast<fir::SequenceType>(ty)) {
-    // array -> A<rank>(_<extent>)+_<eleTy>
-    assert(shape.empty() && !aty.getShape().empty());
-    shape = llvm::SmallVector<int64_t>(aty.getShape());
-    ss << "A" << aty.getShape().size();
-    for (auto extent : aty.getShape()) {
-      assert(extent > 0 ||
-             extent == aty.getUnknownExtent() && "Unexpected array extent");
-      if (extent == aty.getUnknownExtent())
-        ss << "_u";
-      else
-        ss << "_" << extent;
-    }
-    ss << "_" << typeScan(aty.getEleTy());
-  } else if (auto dty = mlir::dyn_cast<fir::RecordType>(ty)) {
-    ss << "D" << dty.getName().str();
+void TypeInfo::typeScan(mlir::Type ty) {
+  if (auto sty = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    assert(shape.empty() && !sty.getShape().empty());
+    shape = llvm::SmallVector<int64_t>(sty.getShape());
+    typeScan(sty.getEleTy());
   } else if (auto bty = mlir::dyn_cast<fir::BoxType>(ty)) {
     inBox = true;
-    // allocatable (box<heap<...>>)
-    if (auto hty = mlir::dyn_cast<fir::HeapType>(bty.getEleTy()))
-      ss << "H" << typeScan(hty.getEleTy());
-    // pointer (box<ptr<...>>)
-    else if (auto pty = mlir::dyn_cast<fir::PointerType>(bty.getEleTy()))
-      ss << "P" << typeScan(pty.getEleTy());
-    else
-      unexpectedType();
-  } else if (auto sty = mlir::dyn_cast<fir::CharacterType>(ty)) {
-    // character -> s<kind>l<len>
-    fir::CharacterType::LenType len = sty.getLen();
-    assert(len > 0 || len == fir::CharacterType::unknownLen() &&
-                          "Unexpected character length");
-    charLen = len;
-    ss << "s" << sty.getFKind() << "l";
-    if (len == fir::CharacterType::unknownLen())
-      ss << "u";
-    else
-      ss << len;
-  } else if (auto cty = mlir::dyn_cast<fir::ComplexType>(ty)) {
-    ss << "c" << cty.getFKind();
-  } else if (auto lty = mlir::dyn_cast<fir::LogicalType>(ty)) {
-    ss << "l" << lty.getFKind();
-  } else if (ty.isIntOrIndexOrFloat()) {
-    if (ty.isIntOrIndex())
-      ss << "i";
-    else
-      ss << "f";
-    ss << ty.getIntOrFloatBitWidth();
-  } else {
-    unexpectedType();
+    typeScan(bty.getEleTy());
+  } else if (auto cty = mlir::dyn_cast<fir::CharacterType>(ty)) {
+    charLen = cty.getLen();
+  } else if (auto hty = mlir::dyn_cast<fir::HeapType>(ty)) {
+    typeScan(hty.getEleTy());
+  } else if (auto pty = mlir::dyn_cast<fir::PointerType>(ty)) {
+    typeScan(pty.getEleTy());
   }
-  return ss.str();
 }
 
 // Create a function that performs a copy between two variables, compatible
@@ -1267,9 +1213,10 @@ createCopyFunc(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
                mlir::Type varType, fir::FortranVariableFlagsEnum varAttrs) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::ModuleOp module = builder.getModule();
-  TypeInfo typeInfo(loc,
-                    mlir::cast<fir::ReferenceType>(varType).getElementType());
-  std::string copyFuncName = std::string("_copy_") + typeInfo.getName();
+  mlir::Type eleTy = mlir::cast<fir::ReferenceType>(varType).getEleTy();
+  TypeInfo typeInfo(eleTy);
+  std::string copyFuncName =
+      fir::getTypeAsString(eleTy, builder.getKindMap(), "_copy");
 
   if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
     return decl;

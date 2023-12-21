@@ -2,7 +2,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 !CHECK-DAG: func private @_copy_f32(%{{.*}}: !fir.ref<f32>, %{{.*}}: !fir.ref<f32>)
-!CHECK-DAG: func private @_copy_A1_10_i32(%{{.*}}: !fir.ref<!fir.array<10xi32>>, %{{.*}}: !fir.ref<!fir.array<10xi32>>)
+!CHECK-DAG: func private @_copy_10xi32(%{{.*}}: !fir.ref<!fir.array<10xi32>>, %{{.*}}: !fir.ref<!fir.array<10xi32>>)
 
 !CHECK-LABEL: func private @_copy_i32(
 !CHECK-SAME:                  %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<i32>) {
@@ -36,7 +36,7 @@ end subroutine
 !CHECK-LABEL: func @_QPtest_array
 !CHECK:         omp.parallel
 !CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-!CHECK:           omp.single copyprivate(%[[A]]#0 -> @_copy_A1_10_i32 : !fir.ref<!fir.array<10xi32>>)
+!CHECK:           omp.single copyprivate(%[[A]]#0 -> @_copy_10xi32 : !fir.ref<!fir.array<10xi32>>)
 subroutine test_array()
   integer :: a(10)
 
