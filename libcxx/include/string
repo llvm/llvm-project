@@ -659,13 +659,6 @@ _LIBCPP_PUSH_MACROS
 #else
 #  define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
 #endif
-#ifndef _IF_ASAN
-#  ifndef _LIBCPP_HAS_NO_ASAN
-#    define _IF_ASAN() if _LIBCPP_CONSTEXPR (true)
-#  else
-#    define _IF_ASAN() if _LIBCPP_CONSTEXPR (false)
-#  endif
-#endif
 #define _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED false
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -865,7 +858,7 @@ private:
       __set_long_pointer(__allocation);
       __set_long_size(__size);
     }
-    _IF_ASAN() __annotate_new(__size);
+    _LIBCPP_IF_ASAN() { __annotate_new(__size); }
   }
 
   template <class _Iter, class _Sent>
@@ -887,7 +880,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
       : __r_(__value_init_tag(), __default_init_tag()) {
-    _IF_ASAN() __annotate_new(0);
+    _LIBCPP_IF_ASAN() { __annotate_new(0); }
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const allocator_type& __a)
@@ -897,14 +890,14 @@ public:
       _NOEXCEPT
 #endif
       : __r_(__value_init_tag(), __a) {
-    _IF_ASAN() __annotate_new(0);
+    _LIBCPP_IF_ASAN() { __annotate_new(0); }
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string(const basic_string& __str)
       : __r_(__default_init_tag(), __alloc_traits::select_on_container_copy_construction(__str.__alloc())) {
     if (!__str.__is_long()) {
       __r_.first() = __str.__r_.first();
-      _IF_ASAN() __annotate_new(__get_short_size());
+      _LIBCPP_IF_ASAN() { __annotate_new(__get_short_size()); }
     } else
       __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
   }
@@ -914,7 +907,7 @@ public:
       : __r_(__default_init_tag(), __a) {
     if (!__str.__is_long()) {
       __r_.first() = __str.__r_.first();
-      _IF_ASAN() __annotate_new(__get_short_size());
+      _LIBCPP_IF_ASAN() { __annotate_new(__get_short_size()); }
     } else
       __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
   }
@@ -937,9 +930,11 @@ public:
       : __r_(std::move(__str.__r_)) {
 #endif
     __str.__r_.first() = __rep();
-    _IF_ASAN() __str.__annotate_new(0);
-    _IF_ASAN() if (!__is_long())
-      __annotate_new(size());
+    _LIBCPP_IF_ASAN() {
+      __str.__annotate_new(0);
+      if (!__is_long())
+        __annotate_new(size());
+    }
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(basic_string&& __str, const allocator_type& __a)
@@ -949,13 +944,17 @@ public:
     else {
       if (__libcpp_is_constant_evaluated())
         __r_.first() = __rep();
-      _IF_ASAN() if (!__str.__is_long())
-        __str.__annotate_delete();
+      _LIBCPP_IF_ASAN() {
+        if (!__str.__is_long())
+          __str.__annotate_delete();
+      }
       __r_.first()       = __str.__r_.first();
       __str.__r_.first() = __rep();
-      _IF_ASAN() __str.__annotate_new(0);
-      _IF_ASAN() if (!__is_long() && this != &__str)
-        __annotate_new(size());
+      _LIBCPP_IF_ASAN() {
+        __str.__annotate_new(0);
+        if (!__is_long() && this != &__str)
+          __annotate_new(size());
+      }
     }
   }
 #endif // _LIBCPP_CXX03_LANG
@@ -1113,7 +1112,7 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() {
-    _IF_ASAN() __annotate_delete();
+    _LIBCPP_IF_ASAN() { __annotate_delete(); }
     if (__is_long())
       __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
   }
@@ -1370,17 +1369,19 @@ public:
     // Pilfer the allocation from __str.
     _LIBCPP_ASSERT_INTERNAL(__alloc() == __str.__alloc(), "__move_assign called with wrong allocator");
     size_type __old_sz = __str.size();
-    _IF_ASAN() if (!__str.__is_long())
-      __str.__annotate_delete();
+    _LIBCPP_IF_ASAN() {
+      if (!__str.__is_long())
+        __str.__annotate_delete();
+    }
     __r_.first()       = __str.__r_.first();
     __str.__r_.first() = __rep();
-    _IF_ASAN() __str.__annotate_new(0);
+    _LIBCPP_IF_ASAN() { __str.__annotate_new(0); }
 
     _Traits::move(data(), data() + __pos, __len);
     __set_size(__len);
     _Traits::assign(data()[__len], value_type());
 
-    _IF_ASAN() {
+    _LIBCPP_IF_ASAN() {
       if (!__is_long()) {
         __annotate_new(__len);
       } else if (__old_sz > __len) {
@@ -1816,7 +1817,7 @@ private:
     size_type __cap = capacity();
     value_type* __p;
     if (__cap - __sz >= __n) {
-      _IF_ASAN() __annotate_increase(__n);
+      _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
       __p                = std::__to_address(__get_pointer());
       size_type __n_move = __sz - __ip;
       if (__n_move != 0)
@@ -2041,7 +2042,7 @@ private:
         __clear_and_shrink();
         __alloc() = __str.__alloc();
       } else {
-        _IF_ASAN() __annotate_delete();
+        _LIBCPP_IF_ASAN() { __annotate_delete(); }
         allocator_type __a = __str.__alloc();
         auto __allocation  = std::__allocate_at_least(__a, __str.__get_long_cap());
         __begin_lifetime(__allocation.ptr, __allocation.count);
@@ -2051,7 +2052,7 @@ private:
         __set_long_pointer(__allocation.ptr);
         __set_long_cap(__allocation.count);
         __set_long_size(__str.size());
-        _IF_ASAN() __annotate_new(__get_long_size());
+        _LIBCPP_IF_ASAN() { __annotate_new(__get_long_size()); }
       }
     }
   }
@@ -2091,26 +2092,34 @@ private:
   // Assigns the value in __s, guaranteed to be __n < __min_cap in length.
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_short(const value_type* __s, size_type __n) {
     size_type __old_size = size();
-    _IF_ASAN() if (__n > __old_size)
-      __annotate_increase(__n - __old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__n > __old_size)
+        __annotate_increase(__n - __old_size);
+    }
     pointer __p =
         __is_long() ? (__set_long_size(__n), __get_long_pointer()) : (__set_short_size(__n), __get_short_pointer());
     traits_type::move(std::__to_address(__p), __s, __n);
     traits_type::assign(__p[__n], value_type());
-    _IF_ASAN() if (__old_size > __n)
-      __annotate_shrink(__old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__old_size > __n)
+        __annotate_shrink(__old_size);
+    }
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   __null_terminate_at(value_type* __p, size_type __newsz) {
     size_type __old_size = size();
-    _IF_ASAN() if (__newsz > __old_size)
-      __annotate_increase(__newsz - __old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__newsz > __old_size)
+        __annotate_increase(__newsz - __old_size);
+    }
     __set_size(__newsz);
     traits_type::assign(__p[__newsz], value_type());
-    _IF_ASAN() if (__old_size > __newsz)
-      __annotate_shrink(__old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__old_size > __newsz)
+        __annotate_shrink(__old_size);
+    }
     return *this;
   }
 
@@ -2204,7 +2213,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
   }
   traits_type::copy(std::__to_address(__p), __s, __sz);
   traits_type::assign(__p[__sz], value_type());
-  _IF_ASAN() __annotate_new(__sz);
+  _LIBCPP_IF_ASAN() { __annotate_new(__sz); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2228,7 +2237,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
   }
   traits_type::copy(std::__to_address(__p), __s, __sz);
   traits_type::assign(__p[__sz], value_type());
-  _IF_ASAN() __annotate_new(__sz);
+  _LIBCPP_IF_ASAN() { __annotate_new(__sz); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2252,7 +2261,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(const value
     __set_long_size(__sz);
   }
   traits_type::copy(std::__to_address(__p), __s, __sz + 1);
-  _IF_ASAN() __annotate_new(__sz);
+  _LIBCPP_IF_ASAN() { __annotate_new(__sz); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2276,7 +2285,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   }
   traits_type::assign(std::__to_address(__p), __n, __c);
   traits_type::assign(__p[__n], value_type());
-  _IF_ASAN() __annotate_new(__n);
+  _LIBCPP_IF_ASAN() { __annotate_new(__n); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2291,7 +2300,7 @@ template <class _InputIterator, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator __first, _Sentinel __last) {
   __r_.first() = __rep();
-  _IF_ASAN() __annotate_new(0);
+  _LIBCPP_IF_ASAN() { __annotate_new(0); }
 
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
@@ -2300,7 +2309,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator _
       push_back(*__first);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
-    _IF_ASAN() __annotate_delete();
+    _LIBCPP_IF_ASAN() { __annotate_delete(); }
     if (__is_long())
       __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
     throw;
@@ -2353,7 +2362,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
     throw;
   }
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-  _IF_ASAN() __annotate_new(__sz);
+  _LIBCPP_IF_ASAN() { __annotate_new(__sz); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2371,7 +2380,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   pointer __old_p = __get_pointer();
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
-  _IF_ASAN() __annotate_delete();
+  _LIBCPP_IF_ASAN() { __annotate_delete(); }
   auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
@@ -2390,7 +2399,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  _IF_ASAN() __annotate_new(__old_cap + __delta_cap);
+  _LIBCPP_IF_ASAN() { __annotate_new(__old_cap + __delta_cap); }
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it
@@ -2414,7 +2423,7 @@ void _LIBCPP_CONSTEXPR_SINCE_CXX20
   pointer __old_p = __get_pointer();
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
-  _IF_ASAN() __annotate_delete();
+  _LIBCPP_IF_ASAN() { __annotate_delete(); }
   auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
@@ -2443,7 +2452,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
   __grow_by(__old_cap, __delta_cap, __old_sz, __n_copy, __n_del, __n_add);
   _LIBCPP_SUPPRESS_DEPRECATED_POP
   __set_long_size(__old_sz - __n_del + __n_add);
-  _IF_ASAN() __annotate_new(__old_sz - __n_del + __n_add);
+  _LIBCPP_IF_ASAN() { __annotate_new(__old_sz - __n_del + __n_add); }
 }
 
 // assign
@@ -2455,14 +2464,18 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* _
   size_type __cap = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
   if (__n < __cap) {
     size_type __old_size = __is_short ? __get_short_size() : __get_long_size();
-    _IF_ASAN() if (__n > __old_size)
-      __annotate_increase(__n - __old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__n > __old_size)
+        __annotate_increase(__n - __old_size);
+    }
     pointer __p = __is_short ? __get_short_pointer() : __get_long_pointer();
     __is_short ? __set_short_size(__n) : __set_long_size(__n);
     traits_type::copy(std::__to_address(__p), __s, __n);
     traits_type::assign(__p[__n], value_type());
-    _IF_ASAN() if (__old_size > __n)
-      __annotate_shrink(__old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__old_size > __n)
+        __annotate_shrink(__old_size);
+    }
   } else {
     size_type __sz = __is_short ? __get_short_size() : __get_long_size();
     __grow_by_and_replace(__cap - 1, __n - __cap + 1, __sz, 0, __sz, __n, __s);
@@ -2476,8 +2489,10 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* _
   size_type __cap = capacity();
   if (__cap >= __n) {
     size_type __old_size = size();
-    _IF_ASAN() if (__n > __old_size)
-      __annotate_increase(__n - __old_size);
+    _LIBCPP_IF_ASAN() {
+      if (__n > __old_size)
+        __annotate_increase(__n - __old_size);
+    }
     value_type* __p = std::__to_address(__get_pointer());
     traits_type::move(__p, __s, __n);
     return __null_terminate_at(__p, __n);
@@ -2503,9 +2518,11 @@ basic_string<_CharT, _Traits, _Allocator>::assign(size_type __n, value_type __c)
   if (__cap < __n) {
     size_type __sz = size();
     __grow_by_without_replace(__cap, __n - __cap, __sz, 0, __sz);
-    _IF_ASAN() __annotate_increase(__n);
-  } else _IF_ASAN() if (__n > __old_size)
-    __annotate_increase(__n - __old_size);
+    _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
+  } else _LIBCPP_IF_ASAN() {
+      if (__n > __old_size)
+        __annotate_increase(__n - __old_size);
+    }
   value_type* __p = std::__to_address(__get_pointer());
   traits_type::assign(__p, __n, __c);
   return __null_terminate_at(__p, __n);
@@ -2516,8 +2533,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::operator=(value_type __c) {
   pointer __p;
   size_type __old_size = size();
-  _IF_ASAN() if (__old_size == 0)
-    __annotate_increase(1);
+  _LIBCPP_IF_ASAN() {
+    if (__old_size == 0)
+      __annotate_increase(1);
+  }
   if (__is_long()) {
     __p = __get_long_pointer();
     __set_long_size(1);
@@ -2527,8 +2546,10 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(value_type __c) {
   }
   traits_type::assign(*__p, __c);
   traits_type::assign(*++__p, value_type());
-  _IF_ASAN() if (__old_size > 1)
-    __annotate_shrink(__old_size);
+  _LIBCPP_IF_ASAN() {
+    if (__old_size > 1)
+      __annotate_shrink(__old_size);
+  }
   return *this;
 }
 
@@ -2540,11 +2561,15 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str) 
     if (!__is_long()) {
       if (!__str.__is_long()) {
         size_type __old_size = __get_short_size();
-        _IF_ASAN() if (__get_short_size() < __str.__get_short_size())
-          __annotate_increase(__str.__get_short_size() - __get_short_size());
+        _LIBCPP_IF_ASAN() {
+          if (__get_short_size() < __str.__get_short_size())
+            __annotate_increase(__str.__get_short_size() - __get_short_size());
+        }
         __r_.first() = __str.__r_.first();
-        _IF_ASAN() if (__old_size > __get_short_size())
-          __annotate_shrink(__old_size);
+        _LIBCPP_IF_ASAN() {
+          if (__old_size > __get_short_size())
+            __annotate_shrink(__old_size);
+        }
       } else {
         return __assign_no_alias<true>(__str.data(), __str.size());
       }
@@ -2576,14 +2601,14 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value)
 #  endif
 {
-  _IF_ASAN() __annotate_delete();
+  _LIBCPP_IF_ASAN() { __annotate_delete(); }
   if (__is_long()) {
     __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
 #  if _LIBCPP_STD_VER <= 14
     if (!is_nothrow_move_assignable<allocator_type>::value) {
       __set_short_size(0);
       traits_type::assign(__get_short_pointer()[0], value_type());
-      _IF_ASAN() __annotate_new(0);
+      _LIBCPP_IF_ASAN() { __annotate_new(0); }
     }
 #  endif
   }
@@ -2594,7 +2619,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   __r_.first() = __str.__r_.first();
   __str.__set_short_size(0);
   traits_type::assign(__str.__get_short_pointer()[0], value_type());
-  _IF_ASAN() {
+  _LIBCPP_IF_ASAN() {
     if (__str_was_short && this != &__str)
       __str.__annotate_shrink(__str_old_size);
     else
@@ -2665,16 +2690,20 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_trivial(_Iterator __first, _
     //    object itself stays valid even if reallocation happens.
     size_type __sz = size();
     __grow_by_without_replace(__cap, __n - __cap, __sz, 0, __sz);
-    _IF_ASAN() __annotate_increase(__n);
-  } else _IF_ASAN() if (__n > __old_size)
-    __annotate_increase(__n - __old_size);
+    _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
+  } else _LIBCPP_IF_ASAN() {
+    if (__n > __old_size)
+      __annotate_increase(__n - __old_size);
+  }
   pointer __p = __get_pointer();
   for (; __first != __last; ++__p, (void)++__first)
     traits_type::assign(*__p, *__first);
   traits_type::assign(*__p, value_type());
   __set_size(__n);
-  _IF_ASAN() if (__n < __old_size)
-    __annotate_shrink(__old_size);
+  _LIBCPP_IF_ASAN() {
+    if (__n < __old_size)
+      __annotate_shrink(__old_size);
+  }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2725,7 +2754,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_ty
   size_type __sz  = size();
   if (__cap - __sz >= __n) {
     if (__n) {
-      _IF_ASAN() __annotate_increase(__n);
+      _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
       value_type* __p = std::__to_address(__get_pointer());
       traits_type::copy(__p + __sz, __s, __n);
       __sz += __n;
@@ -2745,7 +2774,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(size_type __n, value_type __c)
     size_type __sz  = size();
     if (__cap - __sz < __n)
       __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-    _IF_ASAN() __annotate_increase(__n);
+    _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
     pointer __p = __get_pointer();
     traits_type::assign(std::__to_address(__p) + __sz, __n, __c);
     __sz += __n;
@@ -2763,7 +2792,7 @@ basic_string<_CharT, _Traits, _Allocator>::__append_default_init(size_type __n) 
     size_type __sz  = size();
     if (__cap - __sz < __n)
       __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-    _IF_ASAN() __annotate_increase(__n);
+    _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
     pointer __p = __get_pointer();
     __sz += __n;
     __set_size(__sz);
@@ -2785,10 +2814,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::pu
   }
   if (__sz == __cap) {
     __grow_by_without_replace(__cap, 1, __sz, __sz, 0);
-    _IF_ASAN() __annotate_increase(1);
+    _LIBCPP_IF_ASAN() { __annotate_increase(1); }
     __is_short = false; // the string is always long after __grow_by
   } else
-    _IF_ASAN() __annotate_increase(1);
+    _LIBCPP_IF_ASAN() { __annotate_increase(1); }
   pointer __p = __get_pointer();
   if (__is_short) {
     __p = __get_short_pointer() + __sz;
@@ -2812,7 +2841,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(_ForwardIterator __first, _For
     if (__string_is_trivial_iterator<_ForwardIterator>::value && !__addr_in_range(*__first)) {
       if (__cap - __sz < __n)
         __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
-      _IF_ASAN() __annotate_increase(__n);
+      _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
       pointer __p = __get_pointer() + __sz;
       for (; __first != __last; ++__p, (void)++__first)
         traits_type::assign(*__p, *__first);
@@ -2868,7 +2897,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_t
   size_type __cap = capacity();
   if (__cap - __sz >= __n) {
     if (__n) {
-      _IF_ASAN() __annotate_increase(__n);
+      _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
       value_type* __p    = std::__to_address(__get_pointer());
       size_type __n_move = __sz - __pos;
       if (__n_move != 0) {
@@ -2896,7 +2925,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
     size_type __cap = capacity();
     value_type* __p;
     if (__cap - __sz >= __n) {
-      _IF_ASAN() __annotate_increase(__n);
+      _LIBCPP_IF_ASAN() { __annotate_increase(__n); }
       __p                = std::__to_address(__get_pointer());
       size_type __n_move = __sz - __pos;
       if (__n_move != 0)
@@ -2989,7 +3018,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_ty
     __grow_by_without_replace(__cap, 1, __sz, __ip, 0, 1);
     __p = std::__to_address(__get_long_pointer());
   } else {
-    _IF_ASAN() __annotate_increase(1);
+    _LIBCPP_IF_ASAN() { __annotate_increase(1); }
     __p                = std::__to_address(__get_pointer());
     size_type __n_move = __sz - __ip;
     if (__n_move != 0)
@@ -3017,8 +3046,10 @@ basic_string<_CharT, _Traits, _Allocator>::replace(
   if (__cap - __sz + __n1 >= __n2) {
     value_type* __p = std::__to_address(__get_pointer());
     if (__n1 != __n2) {
-      _IF_ASAN() if (__n2 > __n1)
-        __annotate_increase(__n2 - __n1);
+      _LIBCPP_IF_ASAN() {
+        if (__n2 > __n1)
+          __annotate_increase(__n2 - __n1);
+      }
       size_type __n_move = __sz - __pos - __n1;
       if (__n_move != 0) {
         if (__n1 > __n2) {
@@ -3060,8 +3091,10 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
   if (__cap - __sz + __n1 >= __n2) {
     __p = std::__to_address(__get_pointer());
     if (__n1 != __n2) {
-      _IF_ASAN() if (__n2 > __n1)
-        __annotate_increase(__n2 - __n1);
+      _LIBCPP_IF_ASAN() {
+        if (__n2 > __n1)
+          __annotate_increase(__n2 - __n1);
+      }
       size_type __n_move = __sz - __pos - __n1;
       if (__n_move != 0)
         traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
@@ -3183,7 +3216,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
     traits_type::assign(*__get_short_pointer(), value_type());
     __set_short_size(0);
   }
-  _IF_ASAN() __annotate_shrink(__old_size);
+  _LIBCPP_IF_ASAN() { __annotate_shrink(__old_size); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3236,7 +3269,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target_capacity) {
-  _IF_ASAN() __annotate_delete();
+  _LIBCPP_IF_ASAN() { __annotate_delete(); }
   size_type __cap = capacity();
   size_type __sz  = size();
 
@@ -3282,7 +3315,7 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     __set_long_pointer(__new_data);
   } else
     __set_short_size(__sz);
-  _IF_ASAN() __annotate_new(__sz);
+  _LIBCPP_IF_ASAN() { __annotate_new(__sz); }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3324,16 +3357,20 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
       __alloc_traits::propagate_on_container_swap::value || __alloc_traits::is_always_equal::value ||
           __alloc() == __str.__alloc(),
       "swapping non-equal allocators");
-  _IF_ASAN() if (!__is_long())
-    __annotate_delete();
-  _IF_ASAN() if (this != &__str && !__str.__is_long())
-    __str.__annotate_delete();
+  _LIBCPP_IF_ASAN() {
+    if (!__is_long())
+      __annotate_delete();
+    if (this != &__str && !__str.__is_long())
+      __str.__annotate_delete();
+  }
   std::swap(__r_.first(), __str.__r_.first());
   std::__swap_allocator(__alloc(), __str.__alloc());
-  _IF_ASAN() if (!__is_long())
-    __annotate_new(__get_short_size());
-  _IF_ASAN() if (this != &__str && !__str.__is_long())
-    __str.__annotate_new(__str.__get_short_size());
+  _LIBCPP_IF_ASAN() {
+    if (!__is_long())
+      __annotate_new(__get_short_size());
+    if (this != &__str && !__str.__is_long())
+      __str.__annotate_new(__str.__get_short_size());
+  }
 }
 
 // find
@@ -3689,7 +3726,7 @@ template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__clear_and_shrink() _NOEXCEPT {
   clear();
   if (__is_long()) {
-    _IF_ASAN() __annotate_delete();
+    _LIBCPP_IF_ASAN() { __annotate_delete(); }
     __alloc_traits::deallocate(__alloc(), __get_long_pointer(), capacity() + 1);
     __r_.first() = __rep();
   }
