@@ -853,7 +853,9 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + size(), data() + capacity());
+    // The default allocator does not require unpoisoning before returning memory.
+    if _LIBCPP_CONSTEXPR (!is_same<allocator_type, __default_allocator_type>::value)
+      __annotate_contiguous_container(data(), data() + capacity(), data() + size(), data() + capacity());
 #endif
   }
 
