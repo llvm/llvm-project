@@ -9,7 +9,7 @@
 
 int t;
 
-__attribute__((noinline)) char* buggy() {
+__attribute__((noinline)) char *buggy() {
   char *volatile p;
   char zzz = {};
   char yyy = {};
@@ -18,7 +18,7 @@ __attribute__((noinline)) char* buggy() {
 }
 
 int main() {
-  char* p = buggy();
+  char *p = buggy();
   return *p;
   // CHECK: READ of size 1 at
   // CHECK: #0 {{.*}} in main strip_path_prefix.c:[[@LINE-2]]
