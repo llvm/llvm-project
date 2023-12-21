@@ -215,6 +215,9 @@ enum NodeType : unsigned {
   // Vector narrowing shift by immediate (bottom)
   RSHRNB_I,
 
+  // Vector bitwise xor and rotate right by immediate
+  XAR_I,
+
   // Vector shift by constant and insert
   VSLI,
   VSRI,
@@ -1143,6 +1146,7 @@ private:
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
