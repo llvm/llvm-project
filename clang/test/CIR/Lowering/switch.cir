@@ -136,4 +136,50 @@ module {
   // CHECK:   llvm.return
   // CHECK: }
 
+  cir.func @shouldLowerNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %arg1, %1 : !s32i, cir.ptr <!s32i>
+    cir.scope {
+      %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
+      cir.switch (%5 : !s32i) [
+      case (equal, 0) {
+        cir.scope {
+          %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+          %7 = cir.const(#cir.int<0> : !s32i) : !s32i
+          %8 = cir.cmp(ge, %6, %7) : !s32i, !s32i
+          %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
+          cir.if %9 {
+            cir.yield break
+          }
+        }
+        cir.yield break
+      }
+      ] 
+    } 
+    %3 = cir.const(#cir.int<3> : !s32i) : !s32i
+    cir.store %3, %2 : !s32i, cir.ptr <!s32i>
+    %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    cir.return %4 : !s32i 
+  }
+  // CHECK:  llvm.func @shouldLowerNestedBreak
+  // CHECK:    llvm.switch %6 : i32, ^bb7 [
+  // CHECK:      0: ^bb2
+  // CHECK:    ]
+  // CHECK:  ^bb2:  // pred: ^bb1
+  // CHECK:    llvm.br ^bb3
+  // CHECK:  ^bb3:  // pred: ^bb2
+  // CHECK:    llvm.cond_br %14, ^bb4, ^bb5
+  // CHECK:  ^bb4:  // pred: ^bb3
+  // CHECK:    llvm.br ^bb7
+  // CHECK:  ^bb5:  // pred: ^bb3
+  // CHECK:    llvm.br ^bb6
+  // CHECK:  ^bb6:  // pred: ^bb5
+  // CHECK:    llvm.br ^bb7
+  // CHECK:  ^bb7:  // 3 preds: ^bb1, ^bb4, ^bb6
+  // CHECK:    llvm.br ^bb8
+  // CHECK:  ^bb8:  // pred: ^bb7
+  // CHECK:    llvm.return
 }
