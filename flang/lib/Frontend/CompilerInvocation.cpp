@@ -249,17 +249,16 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
     std::optional<llvm::FramePointerKind> val =
-      llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
-          .Case("none", llvm::FramePointerKind::None)
-          .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
-          .Case("all", llvm::FramePointerKind::All)
-          .Default(std::nullopt);
+        llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
+            .Case("none", llvm::FramePointerKind::None)
+            .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("all", llvm::FramePointerKind::All)
+            .Default(std::nullopt);
 
     if (!val.has_value()) {
       diags.Report(clang::diag::err_drv_invalid_value)
-        << a->getAsString(args) << a->getValue();
-    }
-    else
+          << a->getAsString(args) << a->getValue();
+    } else
       opts.setFramePointer(val.value());
   }
 
