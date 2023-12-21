@@ -519,8 +519,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV32IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV32IZce =
       (*MaybeRV32IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV32IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV32IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV32IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zce"), 1U);
@@ -562,8 +563,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV64IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV64IZce =
       (*MaybeRV64IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV64IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV64IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV64IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zce"), 1U);
