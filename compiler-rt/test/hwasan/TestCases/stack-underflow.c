@@ -3,8 +3,7 @@
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
-__attribute((noinline))
-void buggy() {
+__attribute((noinline)) void buggy() {
   char c[64];
   char *volatile p = c;
   p[-2] = 0;
