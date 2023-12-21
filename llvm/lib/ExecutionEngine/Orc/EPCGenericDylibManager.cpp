@@ -81,10 +81,11 @@ Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
   return H;
 }
 
-Expected<std::vector<ExecutorAddr>>
+Expected<std::vector<ExecutorSymbolDef>>
 EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
                                const SymbolLookupSet &Lookup) {
-  Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
+  Expected<std::vector<ExecutorSymbolDef>> Result(
+      (std::vector<ExecutorSymbolDef>()));
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
               SAs.Lookup, Result, SAs.Instance, H, Lookup))
@@ -92,10 +93,11 @@ EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
   return Result;
 }
 
-Expected<std::vector<ExecutorAddr>>
+Expected<std::vector<ExecutorSymbolDef>>
 EPCGenericDylibManager::lookup(tpctypes::DylibHandle H,
                                const RemoteSymbolLookupSet &Lookup) {
-  Expected<std::vector<ExecutorAddr>> Result((std::vector<ExecutorAddr>()));
+  Expected<std::vector<ExecutorSymbolDef>> Result(
+      (std::vector<ExecutorSymbolDef>()));
   if (auto Err =
           EPC.callSPSWrapper<rt::SPSSimpleExecutorDylibManagerLookupSignature>(
               SAs.Lookup, Result, SAs.Instance, H, Lookup))
