@@ -1,5 +1,4 @@
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-  list(APPEND LLDB_WINDOWS_LIBS lldbPluginProcessWindows)
   list(APPEND LLDB_WINDOWS_LIBS lldbPluginProcessWindowsCommon)
 endif()
 
