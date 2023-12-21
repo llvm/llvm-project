@@ -170,25 +170,22 @@ public:
     if (seen.contains(typeInfoSym))
       return;
     seen.insert(typeInfoSym);
-    if (!skipRegistration) {
-      registeredTypeInfo.emplace_back(
-          TypeInfo{typeInfoSym, typeSpec, type, loc});
-      return;
-    }
-    // Once the registration is closed, symbols cannot be added to the
-    // registeredTypeInfoSymbols list because it may be iterated over.
-    // However, after registration is closed, it is safe to directly generate
-    // the globals because all FuncOps whose addresses may be required by the
-    // initializers have been generated.
-    createTypeInfoOpAndGlobal(converter,
-                              TypeInfo{typeInfoSym, typeSpec, type, loc});
+    currentTypeInfoStack->emplace_back(
+        TypeInfo{typeInfoSym, typeSpec, type, loc});
+    return;
   }
 
   void createTypeInfo(Fortran::lower::AbstractConverter &converter) {
-    skipRegistration = true;
-    for (const TypeInfo &info : registeredTypeInfo)
-      createTypeInfoOpAndGlobal(converter, info);
-    registeredTypeInfo.clear();
+    while (!registeredTypeInfoA.empty()) {
+      currentTypeInfoStack = &registeredTypeInfoB;
+      for (const TypeInfo &info : registeredTypeInfoA)
+        createTypeInfoOpAndGlobal(converter, info);
+      registeredTypeInfoA.clear();
+      currentTypeInfoStack = &registeredTypeInfoA;
+      for (const TypeInfo &info : registeredTypeInfoB)
+        createTypeInfoOpAndGlobal(converter, info);
+      registeredTypeInfoB.clear();
+    }
   }
 
 private:
@@ -249,11 +246,12 @@ private:
   }
 
   /// Store the front-end data that will be required to generate the type info
-  /// for the derived types that have been converted to fir.type<>.
-  llvm::SmallVector<TypeInfo> registeredTypeInfo;
-  /// Create derived type info immediately without storing the
-  /// symbol in registeredTypeInfo.
-  bool skipRegistration = false;
+  /// for the derived types that have been converted to fir.type<>. There are
+  /// two stacks since the type info may visit new types, so the new types must
+  /// be added to a new stack.
+  llvm::SmallVector<TypeInfo> registeredTypeInfoA;
+  llvm::SmallVector<TypeInfo> registeredTypeInfoB;
+  llvm::SmallVector<TypeInfo> *currentTypeInfoStack = &registeredTypeInfoA;
   /// Track symbols symbols processed during and after the registration
   /// to avoid infinite loops between type conversions and global variable
   /// creation.
@@ -600,6 +598,11 @@ public:
     return Fortran::lower::getFIRType(
         &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc),
         std::nullopt);
+  }
+
+  Fortran::lower::TypeConstructionStack &
+  getTypeConstructionStack() override final {
+    return typeConstructionStack;
   }
 
   bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) override final {
@@ -5008,6 +5011,13 @@ private:
   bool ompDeviceCodeFound = false;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
+
+  /// Stack of derived type under construction to avoid infinite loops when
+  /// dealing with recursive derived types. This is held in the bridge because
+  /// the state needs to be maintained between data and function type lowering
+  /// utilities to deal with procedure pointer components whose arguments have
+  /// the type of the containing derived type.
+  Fortran::lower::TypeConstructionStack typeConstructionStack;
 };
 
 } // namespace

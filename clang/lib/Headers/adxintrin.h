@@ -15,7 +15,8 @@
 #define __ADXINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("adx")))
 
 /* Use C++ inline semantics in C++, GNU inline for C mode. */
 #if defined(__cplusplus)
@@ -53,10 +54,10 @@ extern "C" {
 /// \param __p
 ///    Pointer to memory for storing the sum.
 /// \returns The 8-bit unsigned carry-out value.
-__INLINE unsigned char
-    __attribute__((__always_inline__, __nodebug__, __target__("adx")))
-    _addcarryx_u32(unsigned char __cf, unsigned int __x, unsigned int __y,
-                   unsigned int *__p) {
+__INLINE unsigned char __DEFAULT_FN_ATTRS _addcarryx_u32(unsigned char __cf,
+                                                         unsigned int __x,
+                                                         unsigned int __y,
+                                                         unsigned int *__p) {
   return __builtin_ia32_addcarryx_u32(__cf, __x, __y, __p);
 }
 
@@ -84,10 +85,9 @@ __INLINE unsigned char
 /// \param __p
 ///    Pointer to memory for storing the sum.
 /// \returns The 8-bit unsigned carry-out value.
-__INLINE unsigned char
-    __attribute__((__always_inline__, __nodebug__, __target__("adx")))
-    _addcarryx_u64(unsigned char __cf, unsigned long long __x,
-                   unsigned long long __y, unsigned long long *__p) {
+__INLINE unsigned char __DEFAULT_FN_ATTRS
+_addcarryx_u64(unsigned char __cf, unsigned long long __x,
+               unsigned long long __y, unsigned long long *__p) {
   return __builtin_ia32_addcarryx_u64(__cf, __x, __y, __p);
 }
 #endif

@@ -3062,6 +3062,35 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
                                       ErrMsg))
     return Error(BaseLoc, ErrMsg);
 
+  // If the displacement is a constant, check overflows. For 64-bit addressing,
+  // gas requires isInt<32> and otherwise reports an error. For others, gas
+  // reports a warning and allows a wider range. E.g. gas allows
+  // [-0xffffffff,0xffffffff] for 32-bit addressing (e.g. Linux kernel uses
+  // `leal -__PAGE_OFFSET(%ecx),%esp` where __PAGE_OFFSET is 0xc0000000).
+  if (BaseReg || IndexReg) {
+    if (auto CE = dyn_cast<MCConstantExpr>(Disp)) {
+      auto Imm = CE->getValue();
+      bool Is64 = X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
+                  X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg);
+      bool Is16 = X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg);
+      if (Is64) {
+        if (!isInt<32>(Imm))
+          return Error(BaseLoc, "displacement " + Twine(Imm) +
+                                    " is not within [-2147483648, 2147483647]");
+      } else if (!Is16) {
+        if (!isUInt<32>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+          Warning(BaseLoc, "displacement " + Twine(Imm) +
+                               " shortened to 32-bit signed " +
+                               Twine(static_cast<int32_t>(Imm)));
+        }
+      } else if (!isUInt<16>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+        Warning(BaseLoc, "displacement " + Twine(Imm) +
+                             " shortened to 16-bit signed " +
+                             Twine(static_cast<int16_t>(Imm)));
+      }
+    }
+  }
+
   if (SegReg || BaseReg || IndexReg)
     Operands.push_back(X86Operand::CreateMem(getPointerWidth(), SegReg, Disp,
                                              BaseReg, IndexReg, Scale, StartLoc,

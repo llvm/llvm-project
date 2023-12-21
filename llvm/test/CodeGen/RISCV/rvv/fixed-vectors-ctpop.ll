@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2,LMULMAX2-RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV64
-; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
-; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv32 -mattr=+v,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
 
 define void @ctpop_v16i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v16i8:

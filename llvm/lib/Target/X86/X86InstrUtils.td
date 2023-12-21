@@ -86,7 +86,7 @@ class EVEX_CD8<int esize, CD8VForm form> {
   int CD8_EltSize = !srl(esize, 3);
   bits<3> CD8_Form = form.Value;
 }
-class EVEX_NoCD8 : EVEX { bits<7> CD8_Scale = 0; }
+class NoCD8 { bits<7> CD8_Scale = 0; }
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 class EVEX2VEXOverride<string VEXInstrName> {
@@ -116,6 +116,14 @@ class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
 class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
 class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }
+class DefEFLAGS { list<Register> Defs = [EFLAGS]; }
+class UseEFLAGS { list<Register> Uses = [EFLAGS]; }
+class DisassembleOnly {
+  // The disassembler should know about this, but not the asmparser.
+  bit isCodeGenOnly = 1;
+  bit ForceDisassemble = 1;
+}
+
 
 // SchedModel info for instruction that loads one value and gets the second
 // (and possibly third) value from a register.
@@ -139,7 +147,7 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
                   Operand immoperand, SDPatternOperator immoperator,
                   SDPatternOperator immnosuoperator, Operand imm8operand,
                   SDPatternOperator imm8operator, SDPatternOperator imm8nosuoperator,
-                  bit hasOddOpcode, OperandSize opSize,
+                  bit hasEvenOpcode, OperandSize opSize,
                   bit hasREX_W> {
   /// VT - This is the value type itself.
   ValueType VT = vt;
@@ -189,10 +197,10 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
 
   SDPatternOperator Imm8NoSuOperator = imm8nosuoperator;
 
-  /// HasOddOpcode - This bit is true if the instruction should have an odd (as
-  /// opposed to even) opcode.  Operations on i8 are usually even, operations on
-  /// other datatypes are odd.
-  bit HasOddOpcode = hasOddOpcode;
+  /// HasEvenOpcode - This bit is true if the instruction should have an even (as
+  /// opposed to odd) opcode.  Operations on i8 are even, operations on
+  /// other datatypes are usually odd.
+  bit HasEvenOpcode = hasEvenOpcode;
 
   /// OpSize - Selects whether the instruction needs a 0x66 prefix based on
   /// 16-bit vs 32-bit mode. i8/i64 set this to OpSizeFixed. i16 sets this
@@ -208,16 +216,16 @@ def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
 
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem, Imm8, i8imm,
                        imm_su, imm, i8imm, invalid_node, invalid_node,
-                       0, OpSizeFixed, 0>;
+                       1, OpSizeFixed, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem, Imm16, i16imm,
                        imm_su, imm, i16i8imm, i16immSExt8_su, i16immSExt8,
-                       1, OpSize16, 0>;
+                       0, OpSize16, 0>;
 def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem, Imm32, i32imm,
                        imm_su, imm, i32i8imm, i32immSExt8_su, i32immSExt8,
-                       1, OpSize32, 0>;
+                       0, OpSize32, 0>;
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem, Imm32S, i64i32imm,
                       i64immSExt32_su, i64immSExt32, i64i8imm, i64immSExt8_su,
-                      i64immSExt8, 1, OpSizeFixed, 1>;
+                      i64immSExt8, 0, OpSizeFixed, 1>;
 
 // Group template arguments that can be derived from the vector type (EltNum x
 // EltVT).  These are things like the register class for the writemask, etc.
@@ -959,40 +967,19 @@ class VRS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
 
 // MMX Instruction templates
 //
-
 // MMXI   - MMX instructions with TB prefix.
-// MMXI32 - MMX instructions with TB prefix valid only in 32 bit mode.
-// MMXI64 - MMX instructions with TB prefix valid only in 64 bit mode.
-// MMX2I  - MMX / SSE2 instructions with PD prefix.
+// MMXRI  - MMX instructions with TB prefix and REX.W.
 // MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
-// MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
-// MMXID  - MMX instructions with XD prefix.
-// MMXIS  - MMX instructions with XS prefix.
 class MMXI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX]>;
-class MMXI32<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,Not64BitMode]>;
-class MMXI64<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,In64BitMode]>;
 class MMXRI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PS, REX_W,
         Requires<[HasMMX,In64BitMode]>;
-class MMX2I<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PD, Requires<[HasMMX]>;
 class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
              list<dag> pattern>
       : Ii8<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX]>;
-class MMXID<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XD, Requires<[HasMMX]>;
-class MMXIS<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XS, Requires<[HasMMX]>;
 
 /// ITy - This instruction base class takes the type info for the instruction.
 /// Using this, it:
@@ -1005,10 +992,11 @@ class MMXIS<bits<8> o, Format F, dag outs, dag ins, string asm,
 class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
           string mnemonic, string args, list<dag> pattern>
   : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
-       opcode{3}, opcode{2}, opcode{1}, typeinfo.HasOddOpcode },
-      f, outs, ins,
+       opcode{3}, opcode{2}, opcode{1},
+       !if(!eq(typeinfo.HasEvenOpcode, 1), 0, opcode{0})}, f, outs, ins,
       !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
 
+  let hasSideEffects = 0;
   // Infer instruction prefixes from type info.
   let OpSize = typeinfo.OpSize;
   let hasREX_W  = typeinfo.HasREX_W;

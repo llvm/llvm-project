@@ -139,6 +139,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  adcintrin.h
   adxintrin.h
   adcintrin.h
   ammintrin.h

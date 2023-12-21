@@ -357,9 +357,9 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 
   // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
   APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts, UndefElts))
+  APInt PoisonElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 0, V);
 
   return nullptr;
@@ -439,12 +439,12 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
 
   // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
   APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts, UndefElts))
+  APInt PoisonElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 0, V);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts, UndefElts))
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 1, V);
 
   return nullptr;
@@ -1526,9 +1526,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // support.
   if (auto *IIFVTy = dyn_cast<FixedVectorType>(II->getType())) {
     auto VWidth = IIFVTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
+    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, PoisonElts)) {
       if (V != II)
         return replaceInstUsesWith(*II, V);
       return II;
@@ -1537,6 +1537,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   if (II->isCommutative()) {
     if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
+      return I;
+
+    if (Instruction *I = foldCommutativeIntrinsicOverPhis(*II))
       return I;
 
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
@@ -4232,6 +4235,25 @@ InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
             m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
     replaceOperand(II, 0, B);
     replaceOperand(II, 1, C);
+    return &II;
+  }
+
+  return nullptr;
+}
+
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
+  assert(II.isCommutative() && "Instruction should be commutative");
+
+  PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
+  PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
+    replaceOperand(II, 0, P->first);
+    replaceOperand(II, 1, P->second);
     return &II;
   }
 

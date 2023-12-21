@@ -1781,26 +1781,26 @@ llvm::Error ASTReader::ReadBlockAbbrevs(BitstreamCursor &Cursor,
   }
 }
 
-Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
+Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
                            unsigned &Idx) {
   Token Tok;
   Tok.startToken();
-  Tok.setLocation(ReadSourceLocation(F, Record, Idx));
+  Tok.setLocation(ReadSourceLocation(M, Record, Idx));
   Tok.setKind((tok::TokenKind)Record[Idx++]);
   Tok.setFlag((Token::TokenFlags)Record[Idx++]);
 
   if (Tok.isAnnotation()) {
-    Tok.setAnnotationEndLoc(ReadSourceLocation(F, Record, Idx));
+    Tok.setAnnotationEndLoc(ReadSourceLocation(M, Record, Idx));
     switch (Tok.getKind()) {
     case tok::annot_pragma_loop_hint: {
       auto *Info = new (PP.getPreprocessorAllocator()) PragmaLoopHintInfo;
-      Info->PragmaName = ReadToken(F, Record, Idx);
-      Info->Option = ReadToken(F, Record, Idx);
+      Info->PragmaName = ReadToken(M, Record, Idx);
+      Info->Option = ReadToken(M, Record, Idx);
       unsigned NumTokens = Record[Idx++];
       SmallVector<Token, 4> Toks;
       Toks.reserve(NumTokens);
       for (unsigned I = 0; I < NumTokens; ++I)
-        Toks.push_back(ReadToken(F, Record, Idx));
+        Toks.push_back(ReadToken(M, Record, Idx));
       Info->Toks = llvm::ArrayRef(Toks).copy(PP.getPreprocessorAllocator());
       Tok.setAnnotationValue(static_cast<void *>(Info));
       break;
@@ -1811,7 +1811,7 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
       auto SlotLabel = ReadString(Record, Idx);
       Info->SlotLabel =
           llvm::StringRef(SlotLabel).copy(PP.getPreprocessorAllocator());
-      Info->Alignment = ReadToken(F, Record, Idx);
+      Info->Alignment = ReadToken(M, Record, Idx);
       Tok.setAnnotationValue(static_cast<void *>(Info));
       break;
     }
@@ -1827,7 +1827,7 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
     }
   } else {
     Tok.setLength(Record[Idx++]);
-    if (IdentifierInfo *II = getLocalIdentifier(F, Record[Idx++]))
+    if (IdentifierInfo *II = getLocalIdentifier(M, Record[Idx++]))
       Tok.setIdentifierInfo(II);
   }
   return Tok;
@@ -1997,10 +1997,10 @@ unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
 }
 
 HeaderFileInfoTrait::internal_key_type
-HeaderFileInfoTrait::GetInternalKey(external_key_type FE) {
-  internal_key_type ikey = {FE.getSize(),
-                            M.HasTimestamps ? FE.getModificationTime() : 0,
-                            FE.getName(), /*Imported*/ false};
+HeaderFileInfoTrait::GetInternalKey(external_key_type ekey) {
+  internal_key_type ikey = {ekey.getSize(),
+                            M.HasTimestamps ? ekey.getModificationTime() : 0,
+                            ekey.getName(), /*Imported*/ false};
   return ikey;
 }
 
@@ -8946,10 +8946,10 @@ Module *ASTReader::getModule(unsigned ID) {
   return getSubmodule(ID);
 }
 
-ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &F, unsigned ID) {
+ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) {
   if (ID & 1) {
     // It's a module, look it up by submodule ID.
-    auto I = GlobalSubmoduleMap.find(getGlobalSubmoduleID(F, ID >> 1));
+    auto I = GlobalSubmoduleMap.find(getGlobalSubmoduleID(M, ID >> 1));
     return I == GlobalSubmoduleMap.end() ? nullptr : I->second;
   } else {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
@@ -8959,19 +8959,19 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &F, unsigned ID) {
   }
 }
 
-unsigned ASTReader::getModuleFileID(ModuleFile *F) {
-  if (!F)
+unsigned ASTReader::getModuleFileID(ModuleFile *M) {
+  if (!M)
     return 1;
 
   // For a file representing a module, use the submodule ID of the top-level
   // module as the file ID. For any other kind of file, the number of such
   // files loaded beforehand will be the same on reload.
   // FIXME: Is this true even if we have an explicit module file and a PCH?
-  if (F->isModule())
-    return ((F->BaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS) << 1) | 1;
+  if (M->isModule())
+    return ((M->BaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS) << 1) | 1;
 
   auto PCHModules = getModuleManager().pch_modules();
-  auto I = llvm::find(PCHModules, F);
+  auto I = llvm::find(PCHModules, M);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
   return (I - PCHModules.end()) << 1;
 }

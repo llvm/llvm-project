@@ -245,6 +245,10 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
   if (!get(Opc0).mayLoad() || !get(Opc1).mayLoad())
     return false;
 
+  // A mayLoad instruction without a def is not a load. Likely a prefetch.
+  if (!get(Opc0).getNumDefs() || !get(Opc1).getNumDefs())
+    return false;
+
   if (isDS(Opc0) && isDS(Opc1)) {
 
     // FIXME: Handle this case:
@@ -3654,6 +3658,9 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (isLDSDMA(MIa) || isLDSDMA(MIb))
+    return false;
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,
@@ -4972,6 +4979,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand *Offset = getNamedOperand(MI, AMDGPU::OpName::offset);
     if (Offset->getImm() != 0) {
       ErrInfo = "subtarget does not support offsets in flat instructions";
+      return false;
+    }
+  }
+
+  if (isDS(MI) && !ST.hasGDS()) {
+    const MachineOperand *GDSOp = getNamedOperand(MI, AMDGPU::OpName::gds);
+    if (GDSOp && GDSOp->getImm() != 0) {
+      ErrInfo = "GDS is not supported on this subtarget";
       return false;
     }
   }

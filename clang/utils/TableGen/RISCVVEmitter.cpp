@@ -46,7 +46,7 @@ struct SemaRecord {
   unsigned Log2LMULMask;
 
   // Required extensions for this intrinsic.
-  unsigned RequiredExtensions;
+  uint32_t RequiredExtensions;
 
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
@@ -653,24 +653,26 @@ void RVVEmitter::createRVVIntrinsics(
 
     SR.RequiredExtensions = 0;
     for (auto RequiredFeature : RequiredFeatures) {
-      RVVRequire RequireExt = StringSwitch<RVVRequire>(RequiredFeature)
-                                  .Case("RV64", RVV_REQ_RV64)
-                                  .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
-                                  .Case("Xsfvcp", RVV_REQ_Xsfvcp)
-                                  .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
-                                  .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
-                                  .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
-                                  .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
-                                  .Case("Zvbb", RVV_REQ_Zvbb)
-                                  .Case("Zvbc", RVV_REQ_Zvbc)
-                                  .Case("Zvkb", RVV_REQ_Zvkb)
-                                  .Case("Zvkg", RVV_REQ_Zvkg)
-                                  .Case("Zvkned", RVV_REQ_Zvkned)
-                                  .Case("Zvknha", RVV_REQ_Zvknha)
-                                  .Case("Zvknhb", RVV_REQ_Zvknhb)
-                                  .Case("Zvksed", RVV_REQ_Zvksed)
-                                  .Case("Zvksh", RVV_REQ_Zvksh)
-                                  .Default(RVV_REQ_None);
+      RVVRequire RequireExt =
+          StringSwitch<RVVRequire>(RequiredFeature)
+              .Case("RV64", RVV_REQ_RV64)
+              .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
+              .Case("Xsfvcp", RVV_REQ_Xsfvcp)
+              .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
+              .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
+              .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
+              .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
+              .Case("Zvbb", RVV_REQ_Zvbb)
+              .Case("Zvbc", RVV_REQ_Zvbc)
+              .Case("Zvkb", RVV_REQ_Zvkb)
+              .Case("Zvkg", RVV_REQ_Zvkg)
+              .Case("Zvkned", RVV_REQ_Zvkned)
+              .Case("Zvknha", RVV_REQ_Zvknha)
+              .Case("Zvknhb", RVV_REQ_Zvknhb)
+              .Case("Zvksed", RVV_REQ_Zvksed)
+              .Case("Zvksh", RVV_REQ_Zvksh)
+              .Case("Experimental", RVV_REQ_Experimental)
+              .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
       SR.RequiredExtensions |= RequireExt;
     }

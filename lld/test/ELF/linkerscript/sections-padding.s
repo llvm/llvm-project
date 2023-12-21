@@ -33,8 +33,12 @@
 ## Invalid hex value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
 # RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 \
-# RUN:   | FileCheck --check-prefix=ERR2 %s
-# ERR2: malformed number: 0x99XX
+# RUN:   | FileCheck --check-prefix=ERR2 %s --implicit-check-not=error:
+# ERR2:      error: {{.*}}.script:1: malformed number: 0x99XX
+# ERR2-NEXT: >>> SECTIONS { .mysec : { *(.mysec*) } =0x99XX }
+# ERR2-NEXT: >>>                                     ^
+# ERR2-EMPTY:
+# ERR2-NEXT: error: {{.*}}.script:1: symbol not found: 0x99XX
 
 ## Check case with space between '=' and a value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } = 0x1122 }" > %t.script
@@ -58,13 +62,13 @@
 
 ## Check we report an error if expression value is larger than 32-bits.
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =(0x11 << 32) }" > %t.script
-# RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 | FileCheck --check-prefix=ERR3 %s
-# ERR3: filler expression result does not fit 32-bit: 0x1100000000
+# RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 | FileCheck --check-prefix=ERR3 %s --implicit-check-not=error:
+# ERR3: error: {{.*}}.script:1: filler expression result does not fit 32-bit: 0x1100000000
 
 ## Check we report an error if an expression use a symbol.
 # RUN: echo "SECTIONS { foo = 0x11; .mysec : { *(.mysec*) } = foo }" > %t.script
-# RUN: not ld.lld -o /dev/null %t --script %t.script 2>&1 | FileCheck --check-prefix=ERR4 %s
-# ERR4: symbol not found: foo
+# RUN: not ld.lld -o /dev/null %t --script %t.script 2>&1 | FileCheck --check-prefix=ERR4 %s --implicit-check-not=error:
+# ERR4: error: {{.*}}.script:1: symbol not found: foo
 
 ## Check we are able to parse scripts where "/DISCARD/" follows a section fill expression.
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1122 /DISCARD/ : { *(.text) } }" > %t.script

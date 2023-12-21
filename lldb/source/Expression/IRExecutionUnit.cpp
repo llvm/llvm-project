@@ -537,7 +537,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       sect_type = lldb::eSectionTypeCode;
     else if (name.equals("__data") || name.equals(".data"))
       sect_type = lldb::eSectionTypeCode;
-    else if (name.startswith("__debug_") || name.startswith(".debug_")) {
+    else if (name.starts_with("__debug_") || name.starts_with(".debug_")) {
       const uint32_t name_idx = name[0] == '_' ? 8 : 7;
       llvm::StringRef dwarf_name(name.substr(name_idx));
       switch (dwarf_name[0]) {
@@ -596,7 +596,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       default:
         break;
       }
-    } else if (name.startswith("__apple_") || name.startswith(".apple_"))
+    } else if (name.starts_with("__apple_") || name.starts_with(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
     else if (name.equals("__objc_imageinfo"))
       sect_type = lldb::eSectionTypeOther;
