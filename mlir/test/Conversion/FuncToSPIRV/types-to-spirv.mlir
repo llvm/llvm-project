@@ -211,7 +211,8 @@ module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
 
-// CHECK-NOT: spirv.func @bf16_type
+// CHECK: spirv.func @bf16_type
+// CHECK-SAME: i32
 func.func @bf16_type(%arg0: bf16) { return }
 
 } // end module
