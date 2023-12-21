@@ -226,6 +226,7 @@ set(files
   __atomic/kill_dependency.h
   __atomic/memory_order.h
   __atomic/support.h
+  __atomic/support/common.h
   __atomic/support/c11.h
   __atomic/support/gcc.h
   __atomic/to_gcc_order.h
