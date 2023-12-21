@@ -58,14 +58,15 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(isDefinition(),
-                   anyOf(isNoThrow(),
-                         allOf(anyOf(cxxDestructorDecl(),
-                                     cxxConstructorDecl(isMoveConstructor()),
-                                     cxxMethodDecl(isMoveAssignmentOperator()),
-                                     isMain(), hasName("swap")),
-                               unless(isExplicitThrow())),
-                         isEnabled(FunctionsThatShouldNotThrow)))
+      functionDecl(
+          isDefinition(),
+          anyOf(isNoThrow(),
+                allOf(anyOf(cxxDestructorDecl(),
+                            cxxConstructorDecl(isMoveConstructor()),
+                            cxxMethodDecl(isMoveAssignmentOperator()), isMain(),
+                            hasAnyName("swap", "iter_swap", "iter_move")),
+                      unless(isExplicitThrow())),
+                isEnabled(FunctionsThatShouldNotThrow)))
           .bind("thrower"),
       this);
 }
