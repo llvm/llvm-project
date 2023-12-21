@@ -161,12 +161,6 @@ def SCFUpliftWhileToFor : Pass<"scf-uplift-while-to-for"> {
     compatible form. `scf.while` are left unchanged if uplifting is not
     possible.
   }];
-
-  let options = [
-    Option<"indexBitWidth", "index-bitwidth", "unsigned",
-           /*default=*/"64",
-           "Bitwidth of index type.">,
-  ];
  }
 
 

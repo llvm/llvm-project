@@ -26,22 +26,9 @@ namespace mlir {
 
 using namespace mlir;
 
-static bool checkIndexType(arith::CmpIOp op, unsigned indexBitWidth) {
-  auto type = op.getLhs().getType();
-  if (isa<mlir::IndexType>(type))
-    return true;
-
-  if (type.isSignlessInteger(indexBitWidth))
-    return true;
-
-  return false;
-}
-
 namespace {
 struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
-  UpliftWhileOp(MLIRContext *context, unsigned indexBitWidth_)
-      : OpRewritePattern<scf::WhileOp>(context), indexBitWidth(indexBitWidth_) {
-  }
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(scf::WhileOp loop,
                                 PatternRewriter &rewriter) const override {
@@ -69,11 +56,6 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     if (predicate != Pred::slt && predicate != Pred::sgt)
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
         diag << "Expected 'slt' or 'sgt' predicate: " << *cmp;
-      });
-
-    if (!checkIndexType(cmp, indexBitWidth))
-      return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
-        diag << "Expected index-like type: " << *cmp;
       });
 
     BlockArgument iterVar;
@@ -140,17 +122,9 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
 
     auto begin = loop.getInits()[argNumber];
 
-    auto loc = loop.getLoc();
-    auto indexType = rewriter.getIndexType();
-    auto toIndex = [&](Value val) -> Value {
-      if (val.getType() != indexType)
-        return rewriter.create<arith::IndexCastOp>(loc, indexType, val);
-
-      return val;
-    };
-    begin = toIndex(begin);
-    end = toIndex(end);
-    step = toIndex(step);
+    assert(begin.getType().isIntOrIndex());
+    assert(begin.getType() == end.getType());
+    assert(begin.getType() == step.getType());
 
     llvm::SmallVector<Value> mapping;
     mapping.reserve(loop.getInits().size());
@@ -161,6 +135,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       mapping.emplace_back(init);
     }
 
+    auto loc = loop.getLoc();
     auto emptyBuidler = [](OpBuilder &, Location, Value, ValueRange) {};
     auto newLoop = rewriter.create<scf::ForOp>(loc, begin, end, step, mapping,
                                                emptyBuidler);
@@ -170,9 +145,6 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointToStart(newBody);
     Value newIterVar = newBody->getArgument(0);
-    if (newIterVar.getType() != iterVar.getType())
-      newIterVar = rewriter.create<arith::IndexCastOp>(loc, iterVar.getType(),
-                                                       newIterVar);
 
     mapping.clear();
     auto newArgs = newBody->getArguments();
@@ -180,11 +152,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
       if (i < argNumber) {
         mapping.emplace_back(newArgs[i + 1]);
       } else if (i == argNumber) {
-        Value arg = newArgs.front();
-        if (arg.getType() != iterVar.getType())
-          arg =
-              rewriter.create<arith::IndexCastOp>(loc, iterVar.getType(), arg);
-        mapping.emplace_back(arg);
+        mapping.emplace_back(newArgs.front());
       } else {
         mapping.emplace_back(newArgs[i]);
       }
@@ -207,7 +175,13 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     rewriter.replaceOpWithNewOp<scf::YieldOp>(term, mapping);
 
     rewriter.setInsertionPointAfter(newLoop);
-    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value one;
+    if (isa<IndexType>(step.getType())) {
+      one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    } else {
+      one = rewriter.create<arith::ConstantIntOp>(loc, 1, step.getType());
+    }
+
     Value stepDec = rewriter.create<arith::SubIOp>(loc, step, one);
     Value len = rewriter.create<arith::SubIOp>(loc, end, begin);
     len = rewriter.create<arith::AddIOp>(loc, len, stepDec);
@@ -215,8 +189,6 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     len = rewriter.create<arith::SubIOp>(loc, len, one);
     Value res = rewriter.create<arith::MulIOp>(loc, len, step);
     res = rewriter.create<arith::AddIOp>(loc, begin, res);
-    if (res.getType() != iterVar.getType())
-      res = rewriter.create<arith::IndexCastOp>(loc, iterVar.getType(), res);
 
     mapping.clear();
     llvm::append_range(mapping, newLoop.getResults());
@@ -224,9 +196,6 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     rewriter.replaceOp(loop, mapping);
     return success();
   }
-
-private:
-  unsigned indexBitWidth = 0;
 };
 
 struct SCFUpliftWhileToFor final
@@ -237,14 +206,13 @@ struct SCFUpliftWhileToFor final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     RewritePatternSet patterns(ctx);
-    mlir::scf::populateUpliftWhileToForPatterns(patterns, this->indexBitWidth);
+    mlir::scf::populateUpliftWhileToForPatterns(patterns);
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-void mlir::scf::populateUpliftWhileToForPatterns(RewritePatternSet &patterns,
-                                                 unsigned indexBitwidth) {
-  patterns.add<UpliftWhileOp>(patterns.getContext(), indexBitwidth);
+void mlir::scf::populateUpliftWhileToForPatterns(RewritePatternSet &patterns) {
+  patterns.add<UpliftWhileOp>(patterns.getContext());
 }

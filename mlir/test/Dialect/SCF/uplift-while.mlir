@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(scf-uplift-while-to-for{index-bitwidth=64}))' -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(scf-uplift-while-to-for))' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
   %0 = scf.while (%arg3 = %arg0) : (index) -> (index) {
@@ -141,22 +141,17 @@ func.func @uplift_while(%arg0: i64, %arg1: i64, %arg2: i64) -> i64 {
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGINI:.*]]: i64, %[[ENDI:.*]]: i64, %[[STEPI:.*]]: i64) -> i64
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
-//       CHECK:     %[[BEGIN:.*]] = arith.index_cast %[[BEGINI]] : i64 to index
-//       CHECK:     %[[END:.*]] = arith.index_cast %[[ENDI]] : i64 to index
-//       CHECK:     %[[STEP:.*]] = arith.index_cast %[[STEPI]] : i64 to index
-//       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
-//       CHECK:     %[[II:.*]] = arith.index_cast %[[I]] : index to i64
-//       CHECK:     "test.test1"(%[[II]]) : (i64) -> ()
-//       CHECK:     %[[INC:.*]] = arith.addi %[[II]], %[[STEPI]] : i64
+//  CHECK-SAME:     (%[[BEGIN:.*]]: i64, %[[END:.*]]: i64, %[[STEP:.*]]: i64) -> i64
+//       CHECK:     %[[C1:.*]] = arith.constant 1 : i64
+//       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] : i64 {
+//       CHECK:     "test.test1"(%[[I]]) : (i64) -> ()
+//       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : i64
 //       CHECK:     "test.test2"(%[[INC]]) : (i64) -> ()
-//       CHECK:     %[[R1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
-//       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
-//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
-//       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
-//       CHECK:     %[[R5:.*]] = arith.subi %[[R4]], %[[C1]] : index
-//       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
-//       CHECK:     %[[R7:.*]] = arith.addi %[[BEGIN]], %[[R6]] : index
-//       CHECK:     %[[RES:.*]] = arith.index_cast %[[R7]] : index to i64
-//       CHECK:     return %[[RES]] : i64
+//       CHECK:     %[[R1:.*]] = arith.subi %[[STEP]], %[[C1]] : i64
+//       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : i64
+//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : i64
+//       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : i64
+//       CHECK:     %[[R5:.*]] = arith.subi %[[R4]], %[[C1]] : i64
+//       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : i64
+//       CHECK:     %[[R7:.*]] = arith.addi %[[BEGIN]], %[[R6]] : i64
+//       CHECK:     return %[[R7]] : i64
