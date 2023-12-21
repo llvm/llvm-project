@@ -1374,7 +1374,6 @@ public:
     LangOptions::SignReturnAddressKeyKind SignKey =
         LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
-    bool BranchProtectionPAuthLR = false;
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
