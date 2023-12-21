@@ -2868,6 +2868,11 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
+def PreserveNone : DeclOrTypeAttr {
+  let Spellings = [Clang<"preserve_none">];
+  let Documentation = [PreserveNoneDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];

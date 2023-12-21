@@ -1288,6 +1288,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
+  case CallingConv::PreserveNone:
   // Callee pop conventions:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_StdCall:
