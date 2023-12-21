@@ -173,6 +173,18 @@ let cppNamespace = "::mlir::cir" in {
           }
           return false;
         }]
+      >,
+      InterfaceMethod<"", "bool", "isInStdNamespace", (ins), [{}],
+        /*defaultImplementation=*/ [{
+          return $_attr.getAst()->getDeclContext()->isStdNamespace();
+        }]
+      >,
+      // Note: `getRawDecl` is useful for debugging because it allows dumping
+      // the RecordDecl - it should not be used in regular code.
+      InterfaceMethod<"", "const clang::RecordDecl *", "getRawDecl", (ins), [{}],
+        /*defaultImplementation=*/ [{
+          return $_attr.getAst();
+        }]
       >
     ];
   }
