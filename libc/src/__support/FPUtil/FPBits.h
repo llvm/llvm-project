@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
