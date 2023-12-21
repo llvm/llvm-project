@@ -4,7 +4,7 @@ from typing import Callable
 from mlir import ir
 from mlir.dialects import scf
 from mlir.dialects.transform import structured
-from mlir.extras.dialects.transform import OpHandle, insert_transform_script
+from mlir.dialects.transform.extras import OpHandle, insert_transform_script
 
 
 def build_transform_script(script: Callable[[OpHandle], None]):

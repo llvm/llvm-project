@@ -12446,6 +12446,58 @@ class SystemPXtI<bit L, string asm> :
   BaseSYSPEncoding<L, asm, "\t$op1, $Cn, $Cm, $op2, $Rt", (outs),
   (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XSeqPairClassOperand:$Rt)>;
 
+//----------------------------------------------------------------------------
+// 2023 Armv9.5 Extensions
+//----------------------------------------------------------------------------
+
+//---
+// Checked Pointer Arithmetic (FEAT_CPA)
+//---
+
+def LSLImm3ShiftOperand : AsmOperandClass {
+  let SuperClasses = [ExtendOperandLSL64];
+  let Name = "LSLImm3Shift";
+  let RenderMethod = "addLSLImm3ShifterOperands";
+  let DiagnosticType = "AddSubLSLImm3ShiftLarge";
+}
+
+def lsl_imm3_shift_operand : Operand<i32> {
+  let PrintMethod = "printShifter";
+  let ParserMatchClass = LSLImm3ShiftOperand;
+}
+
+// Base CPA scalar add/subtract with lsl #imm3 shift
+class BaseAddSubCPA<bit isSub, string asm> : I<(outs GPR64sp:$Rd),
+    (ins GPR64sp:$Rn, GPR64:$Rm, lsl_imm3_shift_operand:$shift_imm),
+    asm, "\t$Rd, $Rn, $Rm$shift_imm", "", []>, Sched<[]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  bits<3> shift_imm;
+  let Inst{31} = 0b1;
+  let Inst{30} = isSub;
+  let Inst{29-21} = 0b011010000;
+  let Inst{20-16} = Rm;
+  let Inst{15-13} = 0b001;
+  let Inst{12-10} = shift_imm;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rd;
+}
+
+// Alias for CPA scalar add/subtract with no shift
+class AddSubCPAAlias<string asm, Instruction inst>
+    : InstAlias<asm#"\t$Rd, $Rn, $Rm",
+                (inst GPR64sp:$Rd, GPR64sp:$Rn, GPR64:$Rm, 0)>;
+
+multiclass AddSubCPA<bit isSub, string asm> {
+  def _shift : BaseAddSubCPA<isSub, asm>;
+  def _noshift : AddSubCPAAlias<asm, !cast<Instruction>(NAME#"_shift")>;
+}
+
+class MulAccumCPA<bit isSub, string asm>
+  : BaseMulAccum<isSub, 0b011, GPR64, GPR64, asm, []>, Sched<[]> {
+  let Inst{31} = 0b1;
+}
 
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
