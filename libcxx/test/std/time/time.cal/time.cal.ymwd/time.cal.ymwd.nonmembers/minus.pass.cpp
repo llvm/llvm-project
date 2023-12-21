@@ -35,24 +35,32 @@ constexpr bool test() {
   constexpr weekday Tuesday = std::chrono::Tuesday;
 
   { // year_month_weekday - years
-    year_month_weekday ym{year{1234}, November, weekday_indexed{Tuesday, 1}};
+    year_month_weekday ymwd{year{1234}, November, weekday_indexed{Tuesday, 1}};
     for (int i = 0; i <= 10; ++i) {
-      year_month_weekday ym1 = ym - years{i};
-      assert(static_cast<int>(ym1.year()) == 1234 - i);
-      assert(ym1.month() == November);
-      assert(ym1.weekday() == Tuesday);
-      assert(ym1.index() == 1);
+      year_month_weekday ymwd1 = ymwd - years{i};
+      assert(static_cast<int>(ymwd1.year()) == 1234 - i);
+      assert(ymwd1.month() == November);
+      assert(ymwd1.weekday() == Tuesday);
+      assert(ymwd1.index() == 1);
     }
   }
 
   { // year_month_weekday - months
-    year_month_weekday ym{year{1234}, November, weekday_indexed{Tuesday, 2}};
+    year_month_weekday ymwd{year{1234}, November, weekday_indexed{Tuesday, 2}};
     for (unsigned i = 1; i <= 10; ++i) {
-      year_month_weekday ym1 = ym - months{i};
-      assert(ym1.year() == year{1234});
-      assert(ym1.month() == month{11 - i});
-      assert(ym1.weekday() == Tuesday);
-      assert(ym1.index() == 2);
+      year_month_weekday ymwd1 = ymwd - months{i};
+      assert(ymwd1.year() == year{1234});
+      assert(ymwd1.month() == month{11 - i});
+      assert(ymwd1.weekday() == Tuesday);
+      assert(ymwd1.index() == 2);
+    }
+    // Test the year wraps around.
+    for (unsigned i = 12; i <= 15; ++i) {
+      year_month_weekday ymwd1 = ymwd - months{i};
+      assert(ymwd1.year() == year{1233});
+      assert(ymwd1.month() == month{11 - i + 12});
+      assert(ymwd1.weekday() == Tuesday);
+      assert(ymwd1.index() == 2);
     }
   }
 

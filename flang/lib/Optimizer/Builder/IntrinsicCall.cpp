@@ -1418,13 +1418,13 @@ mlir::Value toValue(const fir::ExtendedValue &val, fir::FirOpBuilder &builder,
 //===----------------------------------------------------------------------===//
 
 static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
-  return name.startswith("c_") || name.startswith("compiler_") ||
-         name.startswith("ieee_") || name.startswith("__ppc_");
+  return name.starts_with("c_") || name.starts_with("compiler_") ||
+         name.starts_with("ieee_") || name.starts_with("__ppc_");
 }
 
 static bool isCoarrayIntrinsic(llvm::StringRef name) {
-  return name.startswith("atomic_") || name.startswith("co_") ||
-         name.contains("image") || name.endswith("cobound") ||
+  return name.starts_with("atomic_") || name.starts_with("co_") ||
+         name.contains("image") || name.ends_with("cobound") ||
          name.equals("team_number");
 }
 
@@ -1433,7 +1433,7 @@ static bool isCoarrayIntrinsic(llvm::StringRef name) {
 /// {_[ail]?[0-9]+}*, such as _1 or _a4.
 llvm::StringRef genericName(llvm::StringRef specificName) {
   const std::string builtin = "__builtin_";
-  llvm::StringRef name = specificName.startswith(builtin)
+  llvm::StringRef name = specificName.starts_with(builtin)
                              ? specificName.drop_front(builtin.size())
                              : specificName;
   size_t size = name.size();

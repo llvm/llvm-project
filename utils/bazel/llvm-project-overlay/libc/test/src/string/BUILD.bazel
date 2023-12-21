@@ -136,6 +136,14 @@ libc_test(
 )
 
 libc_test(
+    name = "mempcpy_test",
+    srcs = ["mempcpy_test.cpp"],
+    libc_function_deps = [
+        "//libc:mempcpy",
+    ],
+)
+
+libc_test(
     name = "memset_test",
     srcs = ["memset_test.cpp"],
     libc_function_deps = [

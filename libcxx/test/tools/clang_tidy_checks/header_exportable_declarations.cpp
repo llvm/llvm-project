@@ -166,7 +166,7 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
   }
 }
 
-/// Returns the qualified name of a declaration.
+/// Returns the qualified name of a public declaration.
 ///
 /// There is a small issue with qualified names. Typically the name returned is
 /// in the namespace \c std instead of the namespace \c std::__1. Except when a
@@ -182,14 +182,37 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
 /// * exception has equality operators for the type \c exception_ptr
 /// * initializer_list has the functions \c begin and \c end
 ///
-/// \warning In some cases the returned name can be an empty string.
-/// The cause has not been investigated.
+/// When the named declaration uses a reserved name the result is an
+/// empty string.
 static std::string get_qualified_name(const clang::NamedDecl& decl) {
-  std::string result = decl.getQualifiedNameAsString();
+  std::string result = decl.getNameAsString();
+  // Reject reserved names (ignoring _ in global namespace).
+  if (result.size() >= 2 && result[0] == '_')
+    if (result[1] == '_' || std::isupper(result[1]))
+      if (result != "_Exit")
+        return "";
 
-  if (result.starts_with("std::__1::"))
-    result.erase(5, 5);
+  for (auto* context = llvm::dyn_cast_or_null<clang::NamespaceDecl>(decl.getDeclContext()); //
+       context;
+       context = llvm::dyn_cast_or_null<clang::NamespaceDecl>(context->getDeclContext())) {
+    std::string ns = std::string(context->getName());
 
+    if (ns.starts_with("__")) {
+      // When the reserved name is an inline namespace the namespace is
+      // not added to the qualified name instead of removed. Libc++ uses
+      // several inline namespace with reserved names. For example,
+      // __1 for every declaration, __cpo in range-based algorithms.
+      //
+      // Note other inline namespaces are expanded. This resolves
+      // ambiguity when two named declarations have the same name but in
+      // different inline namespaces. These typically are the literal
+      // conversion operators like operator""s which can be a
+      // std::string or std::chrono::seconds.
+      if (!context->isInline())
+        return "";
+    } else
+      result = ns + "::" + result;
+  }
   return result;
 }
 
@@ -218,38 +241,6 @@ static bool is_viable_declaration(const clang::NamedDecl* decl) {
 
   // *** Unconditionally accepted declarations ***
   return llvm::isa<clang::EnumDecl, clang::VarDecl, clang::ConceptDecl, clang::TypedefNameDecl, clang::UsingDecl>(decl);
-}
-
-/// Returns the name is a reserved name.
-///
-/// Detected reserved names are names starting with __ or _[A-Z].
-/// These names can be in the global namespace, std namespace or any namespace
-/// inside std. For example, std::ranges contains reserved names to implement
-/// the Niebloids.
-///
-/// This test misses candidates which are not used in libc++
-/// * any identifier with two underscores not at the start
-bool is_reserved_name(std::string_view name) {
-  if (name.starts_with("_")) {
-    // This is a public name declared in cstdlib.
-    if (name == "_Exit")
-      return false;
-
-    return name.size() > 1 && (name[1] == '_' || std::isupper(name[1]));
-  }
-
-  std::size_t pos = name.find("::_");
-  if (pos == std::string::npos)
-    return false;
-
-  if (pos + 3 > name.size())
-    return false;
-
-  // This is a public name declared in cstdlib.
-  if (name == "std::_Exit")
-    return false;
-
-  return name[pos + 3] == '_' || std::isupper(name[pos + 3]);
 }
 
 /// Some declarations in the global namespace are exported from the std module.
@@ -297,9 +288,6 @@ void header_exportable_declarations::check(const clang::ast_matchers::MatchFinde
     if (name.empty())
       return;
 
-    if (is_reserved_name(name))
-      return;
-
     // For modules only take the declarations exported.
     if (is_module(file_type_))
       if (decl->getModuleOwnershipKind() != clang::Decl::ModuleOwnershipKind::VisibleWhenImported)
@@ -336,7 +324,7 @@ void header_exportable_declarations::check(const clang::ast_matchers::MatchFinde
       return;
 
     std::string name = get_qualified_name(*decl);
-    if (is_reserved_name(name))
+    if (name.empty())
       return;
 
     if (global_decls_.contains(name))

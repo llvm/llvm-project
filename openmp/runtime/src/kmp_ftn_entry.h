@@ -593,7 +593,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
     return 0;
   }
   --gtid; // We keep (gtid+1) in TLS
-#elif KMP_OS_LINUX
+#elif KMP_OS_LINUX || KMP_OS_WASI
 #ifdef KMP_TDATA_GTID
   if (__kmp_gtid_mode >= 3) {
     if ((gtid = __kmp_gtid) == KMP_GTID_DNE) {
@@ -1043,7 +1043,7 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void)
     KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) {
-#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_MIC || KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return 0;
 #else
   int (*fptr)();
@@ -1558,7 +1558,7 @@ typedef void *omp_interop_t;
 
 // libomptarget, if loaded, provides this function
 int FTN_STDCALL FTN_GET_NUM_INTEROP_PROPERTIES(const omp_interop_t interop) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return 0;
 #else
   int (*fptr)(const omp_interop_t);
@@ -1573,7 +1573,7 @@ int FTN_STDCALL FTN_GET_NUM_INTEROP_PROPERTIES(const omp_interop_t interop) {
 intptr_t FTN_STDCALL FTN_GET_INTEROP_INT(const omp_interop_t interop,
                                          omp_interop_property_t property_id,
                                          int *err) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return 0;
 #else
   intptr_t (*fptr)(const omp_interop_t, omp_interop_property_t, int *);
@@ -1587,7 +1587,7 @@ intptr_t FTN_STDCALL FTN_GET_INTEROP_INT(const omp_interop_t interop,
 void *FTN_STDCALL FTN_GET_INTEROP_PTR(const omp_interop_t interop,
                                       omp_interop_property_t property_id,
                                       int *err) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return nullptr;
 #else
   void *(*fptr)(const omp_interop_t, omp_interop_property_t, int *);
@@ -1601,7 +1601,7 @@ void *FTN_STDCALL FTN_GET_INTEROP_PTR(const omp_interop_t interop,
 const char *FTN_STDCALL FTN_GET_INTEROP_STR(const omp_interop_t interop,
                                             omp_interop_property_t property_id,
                                             int *err) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return nullptr;
 #else
   const char *(*fptr)(const omp_interop_t, omp_interop_property_t, int *);
@@ -1614,7 +1614,7 @@ const char *FTN_STDCALL FTN_GET_INTEROP_STR(const omp_interop_t interop,
 // libomptarget, if loaded, provides this function
 const char *FTN_STDCALL FTN_GET_INTEROP_NAME(
     const omp_interop_t interop, omp_interop_property_t property_id) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return nullptr;
 #else
   const char *(*fptr)(const omp_interop_t, omp_interop_property_t);
@@ -1627,7 +1627,7 @@ const char *FTN_STDCALL FTN_GET_INTEROP_NAME(
 // libomptarget, if loaded, provides this function
 const char *FTN_STDCALL FTN_GET_INTEROP_TYPE_DESC(
     const omp_interop_t interop, omp_interop_property_t property_id) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return nullptr;
 #else
   const char *(*fptr)(const omp_interop_t, omp_interop_property_t);
@@ -1640,7 +1640,7 @@ const char *FTN_STDCALL FTN_GET_INTEROP_TYPE_DESC(
 // libomptarget, if loaded, provides this function
 const char *FTN_STDCALL FTN_GET_INTEROP_RC_DESC(
     const omp_interop_t interop, omp_interop_property_t property_id) {
-#if KMP_OS_DARWIN || defined(KMP_STUB)
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return nullptr;
 #else
   const char *(*fptr)(const omp_interop_t, omp_interop_property_t);

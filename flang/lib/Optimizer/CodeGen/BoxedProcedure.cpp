@@ -19,6 +19,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace fir {
 #define GEN_PASS_DEF_BOXEDPROCEDUREPASS
@@ -81,7 +82,7 @@ public:
       visitedTypes.pop_back();
       return result;
     }
-    if (auto boxTy = ty.dyn_cast<BoxType>())
+    if (auto boxTy = ty.dyn_cast<BaseBoxType>())
       return needsConversion(boxTy.getEleTy());
     if (isa_ref_type(ty))
       return needsConversion(unwrapRefType(ty));
@@ -117,8 +118,14 @@ public:
     });
     addConversion(
         [&](HeapType ty) { return HeapType::get(convertType(ty.getEleTy())); });
+    addConversion([&](fir::LLVMPointerType ty) {
+      return fir::LLVMPointerType::get(convertType(ty.getEleTy()));
+    });
     addConversion(
         [&](BoxType ty) { return BoxType::get(convertType(ty.getEleTy())); });
+    addConversion([&](ClassType ty) {
+      return ClassType::get(convertType(ty.getEleTy()));
+    });
     addConversion([&](SequenceType ty) {
       // TODO: add ty.getLayoutMap() as needed.
       return SequenceType::get(ty.getShape(), convertType(ty.getEleTy()));
@@ -126,10 +133,13 @@ public:
     addConversion([&](RecordType ty) -> mlir::Type {
       if (!needsConversion(ty))
         return ty;
+      if (auto converted = typeInConversion.lookup(ty))
+        return converted;
       auto rec = RecordType::get(ty.getContext(),
                                  ty.getName().str() + boxprocSuffix.str());
       if (rec.isFinalized())
         return rec;
+      auto it = typeInConversion.try_emplace(ty, rec);
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
       for (auto t : ty.getTypeList()) {
@@ -139,6 +149,7 @@ public:
           cs.emplace_back(t.first, t.second);
       }
       rec.finalize(ps, cs);
+      typeInConversion.erase(it.first);
       return rec;
     });
     addArgumentMaterialization(materializeProcedure);
@@ -159,6 +170,7 @@ public:
 
 private:
   llvm::SmallVector<mlir::Type> visitedTypes;
+  llvm::SmallMapVector<mlir::Type, mlir::Type, 8> typeInConversion;
   mlir::Location loc;
 };
 
@@ -193,7 +205,8 @@ public:
       getModule().walk([&](mlir::Operation *op) {
         typeConverter.setLocation(op->getLoc());
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
-          auto ty = addr.getVal().getType();
+          mlir::Type ty = addr.getVal().getType();
+          mlir::Type resTy = addr.getResult().getType();
           if (typeConverter.needsConversion(ty) ||
               ty.isa<mlir::FunctionType>()) {
             // Rewrite all `fir.box_addr` ops on values of type `!fir.boxproc`
@@ -201,6 +214,10 @@ public:
             rewriter.setInsertionPoint(addr);
             rewriter.replaceOpWithNewOp<ConvertOp>(
                 addr, typeConverter.convertType(addr.getType()), addr.getVal());
+          } else if (typeConverter.needsConversion(resTy)) {
+            rewriter.startRootUpdate(op);
+            op->getResult(0).setType(typeConverter.convertType(resTy));
+            rewriter.finalizeRootUpdate(op);
           }
         } else if (auto func = mlir::dyn_cast<mlir::func::FuncOp>(op)) {
           mlir::FunctionType ty = func.getFunctionType();
@@ -223,7 +240,8 @@ public:
         } else if (auto embox = mlir::dyn_cast<EmboxProcOp>(op)) {
           // Rewrite all `fir.emboxproc` ops to either `fir.convert` or a thunk
           // as required.
-          mlir::Type toTy = embox.getType().cast<BoxProcType>().getEleTy();
+          mlir::Type toTy = typeConverter.convertType(
+              embox.getType().cast<BoxProcType>().getEleTy());
           rewriter.setInsertionPoint(embox);
           if (embox.getHost()) {
             // Create the thunk.

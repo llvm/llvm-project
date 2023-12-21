@@ -14,11 +14,13 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if SANITIZER_POSIX
-#include "lsan.h"
-#include "lsan_allocator.h"
-#include "lsan_thread.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
+#  include <pthread.h>
+
+#  include "lsan.h"
+#  include "lsan_allocator.h"
+#  include "lsan_thread.h"
+#  include "sanitizer_common/sanitizer_stacktrace.h"
+#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __lsan {
 
@@ -96,6 +98,25 @@ void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 void InstallAtExitCheckLeaks() {
   if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
     Atexit(DoLeakCheck);
+}
+
+void InstallAtForkHandler() {
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
+  return;  // FIXME: Implement FutexWait.
+#  endif
+  auto before = []() {
+    LockGlobal();
+    LockThreads();
+    LockAllocator();
+    StackDepotLockAll();
+  };
+  auto after = []() {
+    StackDepotUnlockAll();
+    UnlockAllocator();
+    UnlockThreads();
+    UnlockGlobal();
+  };
+  pthread_atfork(before, after, after);
 }
 
 }  // namespace __lsan

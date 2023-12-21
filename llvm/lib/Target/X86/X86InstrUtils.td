@@ -86,7 +86,7 @@ class EVEX_CD8<int esize, CD8VForm form> {
   int CD8_EltSize = !srl(esize, 3);
   bits<3> CD8_Form = form.Value;
 }
-class EVEX_NoCD8 : EVEX { bits<7> CD8_Scale = 0; }
+class NoCD8 { bits<7> CD8_Scale = 0; }
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 class EVEX2VEXOverride<string VEXInstrName> {
@@ -116,6 +116,14 @@ class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
 class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
 class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }
+class DefEFLAGS { list<Register> Defs = [EFLAGS]; }
+class UseEFLAGS { list<Register> Uses = [EFLAGS]; }
+class DisassembleOnly {
+  // The disassembler should know about this, but not the asmparser.
+  bit isCodeGenOnly = 1;
+  bit ForceDisassemble = 1;
+}
+
 
 // SchedModel info for instruction that loads one value and gets the second
 // (and possibly third) value from a register.
@@ -959,40 +967,19 @@ class VRS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
 
 // MMX Instruction templates
 //
-
 // MMXI   - MMX instructions with TB prefix.
-// MMXI32 - MMX instructions with TB prefix valid only in 32 bit mode.
-// MMXI64 - MMX instructions with TB prefix valid only in 64 bit mode.
-// MMX2I  - MMX / SSE2 instructions with PD prefix.
+// MMXRI  - MMX instructions with TB prefix and REX.W.
 // MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
-// MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
-// MMXID  - MMX instructions with XD prefix.
-// MMXIS  - MMX instructions with XS prefix.
 class MMXI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX]>;
-class MMXI32<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,Not64BitMode]>;
-class MMXI64<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,In64BitMode]>;
 class MMXRI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PS, REX_W,
         Requires<[HasMMX,In64BitMode]>;
-class MMX2I<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PD, Requires<[HasMMX]>;
 class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
              list<dag> pattern>
       : Ii8<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX]>;
-class MMXID<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XD, Requires<[HasMMX]>;
-class MMXIS<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XS, Requires<[HasMMX]>;
 
 /// ITy - This instruction base class takes the type info for the instruction.
 /// Using this, it:
@@ -1009,6 +996,7 @@ class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
       f, outs, ins,
       !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
 
+  let hasSideEffects = 0;
   // Infer instruction prefixes from type info.
   let OpSize = typeinfo.OpSize;
   let hasREX_W  = typeinfo.HasREX_W;

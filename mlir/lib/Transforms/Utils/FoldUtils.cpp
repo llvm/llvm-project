@@ -141,7 +141,6 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // If there is an existing constant, replace `op`.
   if (folderConstOp) {
     notifyRemoval(op);
-    appendFoldedLocation(folderConstOp, op->getLoc());
     rewriter.replaceOp(op, folderConstOp->getResults());
     return false;
   }
@@ -248,10 +247,6 @@ OperationFolder::processFoldResults(Operation *op,
 
     // Check if the result was an SSA value.
     if (auto repl = llvm::dyn_cast_if_present<Value>(foldResults[i])) {
-      if (repl.getType() != op->getResult(i).getType()) {
-        results.clear();
-        return failure();
-      }
       results.emplace_back(repl);
       continue;
     }
@@ -295,10 +290,8 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   // Check if an existing mapping already exists.
   auto constKey = std::make_tuple(dialect, value, type);
   Operation *&constOp = uniquedConstants[constKey];
-  if (constOp) {
-    appendFoldedLocation(constOp, loc);
+  if (constOp)
     return constOp;
-  }
 
   // If one doesn't exist, try to materialize one.
   if (!(constOp = materializeConstant(dialect, rewriter, value, type, loc)))
@@ -319,7 +312,6 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   // materialized operation in favor of the existing one.
   if (auto *existingOp = uniquedConstants.lookup(newKey)) {
     notifyRemoval(constOp);
-    appendFoldedLocation(existingOp, constOp->getLoc());
     rewriter.eraseOp(constOp);
     referencedDialects[existingOp].push_back(dialect);
     return constOp = existingOp;
@@ -329,33 +321,4 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   referencedDialects[constOp].assign({dialect, newDialect});
   auto newIt = uniquedConstants.insert({newKey, constOp});
   return newIt.first->second;
-}
-
-void OperationFolder::appendFoldedLocation(Operation *retainedOp,
-                                           Location foldedLocation) {
-  // Append into existing fused location if it has the same tag.
-  if (auto existingFusedLoc =
-          dyn_cast<FusedLocWith<StringAttr>>(retainedOp->getLoc())) {
-    StringAttr existingMetadata = existingFusedLoc.getMetadata();
-    if (existingMetadata == fusedLocationTag) {
-      ArrayRef<Location> existingLocations = existingFusedLoc.getLocations();
-      SetVector<Location> locations(existingLocations.begin(),
-                                    existingLocations.end());
-      locations.insert(foldedLocation);
-      Location newFusedLoc = FusedLoc::get(
-          retainedOp->getContext(), locations.takeVector(), existingMetadata);
-      retainedOp->setLoc(newFusedLoc);
-      return;
-    }
-  }
-
-  // Create a new fusedloc with retainedOp's loc and foldedLocation.
-  // If they're already equal, no need to fuse.
-  if (retainedOp->getLoc() == foldedLocation)
-    return;
-
-  Location newFusedLoc =
-      FusedLoc::get(retainedOp->getContext(),
-                    {retainedOp->getLoc(), foldedLocation}, fusedLocationTag);
-  retainedOp->setLoc(newFusedLoc);
 }

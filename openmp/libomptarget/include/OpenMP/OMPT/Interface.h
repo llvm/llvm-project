@@ -195,9 +195,6 @@ private:
   /// Target task data representing the target task region
   ompt_data_t *TargetTaskData = nullptr;
 
-  /// Correlation id that is incremented with target operations
-  uint64_t TargetRegionOpId = 1;
-
   /// Used for marking begin of a data operation
   void beginTargetDataOperation();
 

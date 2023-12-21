@@ -150,9 +150,9 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
   // lengh array) is mapped instead of the referred storage.
   TargetPointerResultTy TPR =
-      DeviceOrErr->getTgtPtrBegin(const_cast<void *>(Ptr), 1,
-                                  /*UpdateRefCount=*/false,
-                                  /*UseHoldRefCount=*/false);
+      DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                                   /*UpdateRefCount=*/false,
+                                                   /*UseHoldRefCount=*/false);
   int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
@@ -544,8 +544,8 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   void *DeviceAddr = (void *)((uint64_t)DevicePtr + (uint64_t)DeviceOffset);
-  int Rc = DeviceOrErr->associatePtr(const_cast<void *>(HostPtr),
-                                     const_cast<void *>(DeviceAddr), Size);
+  int Rc = DeviceOrErr->getMappingInfo().associatePtr(
+      const_cast<void *>(HostPtr), const_cast<void *>(DeviceAddr), Size);
   DP("omp_target_associate_ptr returns %d\n", Rc);
   return Rc;
 }
@@ -571,7 +571,8 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  int Rc = DeviceOrErr->disassociatePtr(const_cast<void *>(HostPtr));
+  int Rc = DeviceOrErr->getMappingInfo().disassociatePtr(
+      const_cast<void *>(HostPtr));
   DP("omp_target_disassociate_ptr returns %d\n", Rc);
   return Rc;
 }
@@ -603,9 +604,9 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   TargetPointerResultTy TPR =
-      DeviceOrErr->getTgtPtrBegin(const_cast<void *>(Ptr), 1,
-                                  /*UpdateRefCount=*/false,
-                                  /*UseHoldRefCount=*/false);
+      DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                                   /*UpdateRefCount=*/false,
+                                                   /*UseHoldRefCount=*/false);
   if (!TPR.isPresent()) {
     DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
        DPxPTR(Ptr), DeviceNum);
