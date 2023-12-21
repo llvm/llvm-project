@@ -19,10 +19,11 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrs.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
+include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
-include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -1023,16 +1024,23 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let hasRegionVerifier = 1;
 }
 
+def AnyIntegerOrFloatOr1DVector :
+  AnyTypeOf<[AnyIntegerOrFloat, VectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the value of every work item across a
     subgroup. The result is equal for all work items of a subgroup.
 
+    When the reduced value is of a vector type, each vector element is reduced
+    independently. Only 1-d vector types are allowed.
+
     Example:
 
     ```mlir
-    %1 = gpu.subgroup_reduce add %0 : (f32) -> (f32)
+    %1 = gpu.subgroup_reduce add %a : (f32) -> (f32)
+    %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> (vector<4xf16>)
     ```
 
     If `uniform` flag is set either none or all work items of a subgroup
@@ -1045,11 +1053,11 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
   }];
 
   let arguments = (ins
-    AnyIntegerOrFloat:$value,
+    AnyIntegerOrFloatOr1DVector:$value,
     GPU_AllReduceOperationAttr:$op,
     UnitAttr:$uniform
   );
-  let results = (outs AnyIntegerOrFloat:$result);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? attr-dict
