@@ -116,6 +116,14 @@ class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
 class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
 class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }
+class DefEFLAGS { list<Register> Defs = [EFLAGS]; }
+class UseEFLAGS { list<Register> Uses = [EFLAGS]; }
+class DisassembleOnly {
+  // The disassembler should know about this, but not the asmparser.
+  bit isCodeGenOnly = 1;
+  bit ForceDisassemble = 1;
+}
+
 
 // SchedModel info for instruction that loads one value and gets the second
 // (and possibly third) value from a register.
@@ -988,6 +996,7 @@ class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
       f, outs, ins,
       !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
 
+  let hasSideEffects = 0;
   // Infer instruction prefixes from type info.
   let OpSize = typeinfo.OpSize;
   let hasREX_W  = typeinfo.HasREX_W;
