@@ -2197,10 +2197,12 @@ static void genBodyOfTargetDataOp(
       if (fir::isa_builtin_cptr_type(refType.getElementType())) {
         converter.bindSymbol(*argSymbol, arg);
       } else {
+        // Avoid capture of a reference to a structured binding.
+        const Fortran::semantics::Symbol *sym = argSymbol;
         extVal.match(
             [&](const fir::MutableBoxValue &mbv) {
               converter.bindSymbol(
-                  *argSymbol,
+                  *sym,
                   fir::MutableBoxValue(
                       arg, fir::factory::getNonDeferredLenParams(extVal), {}));
             },
@@ -2489,7 +2491,7 @@ static void genBodyOfTargetOp(
   // Bind the symbols to their corresponding block arguments.
   for (auto [argIndex, argSymbol] : llvm::enumerate(mapSymbols)) {
     const mlir::BlockArgument &arg = region.getArgument(argIndex);
-    // Avoid capture of reference to a structured binding.
+    // Avoid capture of a reference to a structured binding.
     const Fortran::semantics::Symbol *sym = argSymbol;
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
     extVal.match(
