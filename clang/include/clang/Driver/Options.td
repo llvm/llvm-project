@@ -5308,7 +5308,8 @@ def rewrite_objc : Flag<["-"], "rewrite-objc">, Flags<[NoXarchOption]>,
 def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
   Flags<[NoXarchOption]>,
   HelpText<"Rewrite Legacy Objective-C source to C++">;
-def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>;
+def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
