@@ -12,6 +12,8 @@ define i1 @i1_func_void() #0 {
 ; GFX789-NEXT:    s_mov_b32 s6, -1
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
+; GFX789-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX789-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i1_func_void:
@@ -21,6 +23,9 @@ define i1 @i1_func_void() #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val

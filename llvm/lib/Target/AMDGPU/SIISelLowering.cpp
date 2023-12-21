@@ -3028,7 +3028,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       RC = &AMDGPU::SGPR_32RegClass;
     else {
       if (VT == MVT::i1 && Subtarget->isWave64())
-        RC = &AMDGPU::SGPR_64RegClass;
+        RC = Subtarget->getBoolRC();
       else
         llvm_unreachable("Unexpected register class in LowerFormalArguments!");
     }

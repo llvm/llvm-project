@@ -191,6 +191,8 @@ def CC_AMDGPU_Func : CallingConv<[
 
   CCIfType<[i1] , CCCustom<"CC_AMDGPU_Custom_I1">>,
 
+  CCIfType<[i1], CCPromoteToType<i32>>,
+
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
   >>>,

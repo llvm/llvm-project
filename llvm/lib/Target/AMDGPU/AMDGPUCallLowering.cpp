@@ -124,7 +124,15 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     if (VA.getLocVT().getSizeInBits() < 32) {
       // 16-bit types are reported as legal for 32-bit registers. We need to do
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
-      auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+      unsigned CopyToBits = 32;
+
+      // When function return type is i1, it may be in a 64b register.
+      if (VA.getLocVT().getSizeInBits() == 1) {
+        if (MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI) == 64)
+          CopyToBits = 64;
+      }
+
+      auto Copy = MIRBuilder.buildCopy(LLT::scalar(CopyToBits), PhysReg);
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
       // before truncation.
@@ -233,7 +241,15 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
-    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
+    Register ExtReg;
+
+    if (VA.getLocVT().getSizeInBits() == 1 &&
+        MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI) == 64) {
+      ExtReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ValVReg).getReg(0);
+    } else {
+      ExtReg = extendRegisterMin32(*this, ValVReg, VA);
+    }
+
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
