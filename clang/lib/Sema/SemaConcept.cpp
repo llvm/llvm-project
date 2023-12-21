@@ -796,8 +796,8 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
   if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext()))
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
-  ExprResult SubstConstr =
-      S.SubstExpr(const_cast<clang::Expr *>(ConstrExpr), MLTAL);
+  ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
+      const_cast<clang::Expr *>(ConstrExpr), MLTAL);
   if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())
     return nullptr;
   return SubstConstr.get();
