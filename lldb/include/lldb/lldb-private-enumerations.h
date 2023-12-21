@@ -234,6 +234,20 @@ enum LoadDependentFiles {
   eLoadDependentsNo,
 };
 
+enum DiagnosticOrigin {
+  eDiagnosticOriginUnknown = 0,
+  eDiagnosticOriginLLDB,
+  eDiagnosticOriginClang,
+  eDiagnosticOriginSwift,
+  eDiagnosticOriginLLVM
+};
+
+enum DiagnosticSeverity {
+  eDiagnosticSeverityError,
+  eDiagnosticSeverityWarning,
+  eDiagnosticSeverityRemark
+};
+
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
    case StatisticKind::ExpressionSuccessful:

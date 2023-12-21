@@ -18,6 +18,7 @@
 
 #include <cerrno>
 #include <cstdarg>
+#include <sstream>
 #include <string>
 #include <system_error>
 
@@ -160,6 +161,18 @@ const char *Status::AsCString(const char *default_error_str) const {
     else
       return nullptr; // User wanted a nullptr string back...
   }
+
+  if (!m_status_details.empty()) {
+    if (!m_string_with_details.size())
+      return m_string_with_details.c_str();
+
+    m_string_with_details = m_string;
+    for (Status::Detail detail : m_status_details)
+      m_string_with_details += detail.GetMessage();
+
+    return m_string_with_details.c_str();
+  }
+
   return m_string.c_str();
 }
 
@@ -168,6 +181,8 @@ void Status::Clear() {
   m_code = 0;
   m_type = eErrorTypeInvalid;
   m_string.clear();
+  m_string_with_details.clear();
+  m_status_details.clear();
 }
 
 // Access the error value.
@@ -181,10 +196,14 @@ ErrorType Status::GetType() const { return m_type; }
 bool Status::Fail() const { return m_code != 0; }
 
 void Status::SetExpressionError(lldb::ExpressionResults result,
-                                const char *mssg) {
+                                const char *message) {
   m_code = result;
   m_type = eErrorTypeExpression;
-  m_string = mssg;
+
+  if (message)
+    m_string = message;
+  else
+    m_string.clear();
 }
 
 int Status::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
@@ -274,6 +293,18 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
   return 0;
 }
 
+void Status::SetErrorDetails(DiagnosticManager &diagnostic_manager) {
+  m_status_details.clear();
+  m_string_with_details.clear();
+
+  const DiagnosticList &diagnostics = diagnostic_manager.Diagnostics();
+  if (diagnostics.empty())
+    return;
+
+  for (auto &diagnostic : diagnostics)
+    m_status_details.push_back(Status::Detail(diagnostic));
+}
+
 // Returns true if the error code in this object is considered a successful
 // return value.
 bool Status::Success() const { return m_code == 0; }
@@ -283,4 +314,72 @@ void llvm::format_provider<lldb_private::Status>::format(
     llvm::StringRef Options) {
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
+}
+
+void Status::AddDetail(Status::Detail detail) {
+  m_status_details.push_back(detail);
+  m_string_with_details.clear();
+}
+
+std::vector<Status::Detail> Status::GetDetails() const {
+  return m_status_details;
+}
+
+std::string Status::Detail::StringForSeverity(DiagnosticSeverity severity) {
+  switch (severity) {
+  case lldb_private::eDiagnosticSeverityError:
+    return std::string("error: ");
+  case lldb_private::eDiagnosticSeverityWarning:
+    return std::string("warning: ");
+  case lldb_private::eDiagnosticSeverityRemark:
+    return std::string("note: ");
+  }
+}
+
+std::vector<std::string>
+Status::Detail::GetMessageLinesFromDiagnostic(Diagnostic *diagnostic) {
+  const char newline = '\n';
+  std::vector<std::string> message_lines;
+
+  std::string severity = StringForSeverity(m_message_type);
+  std::string message = severity;
+
+  std::stringstream splitter(std::string(diagnostic->GetMessage()));
+  std::string split_line;
+
+  while (getline(splitter, split_line, newline)) {
+    size_t position = split_line.find(severity);
+    if (position != std::string::npos)
+      split_line.erase(position, severity.length());
+
+    // Check for clang-style diagnostic message.
+    std::string separator(" | ");
+    position = split_line.find(separator);
+    if (split_line.find(separator) != std::string::npos) {
+      auto end = split_line.begin() + position + separator.size();
+      split_line.erase(split_line.begin(), end);
+    }
+
+    message_lines.push_back(split_line);
+  }
+
+  return message_lines;
+}
+
+std::vector<std::string> Status::Detail::GetMessageLines() const {
+  return m_message_lines;
+}
+
+std::string Status::Detail::GetMessage() const {
+  if (m_message)
+    return m_message.value();
+
+  std::string severity = StringForSeverity(m_message_type);
+  std::string message = severity;
+  for (auto line : m_message_lines)
+    message += line + "\n";
+
+  message += "\n";
+  m_message = message;
+  return message;
 }

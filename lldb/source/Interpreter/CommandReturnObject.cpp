@@ -109,8 +109,15 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
 
 void CommandReturnObject::SetError(const Status &error,
                                    const char *fallback_error_cstr) {
-  if (error.Fail())
-    AppendError(error.AsCString(fallback_error_cstr));
+  m_error_status = error;
+  if (m_error_status.Fail()) {
+    std::vector<Status::Detail> details = m_error_status.GetDetails();
+    if (!details.empty()) {
+      for (Status::Detail detail : details)
+        AppendError(detail.GetMessage());
+    } else
+      AppendError(error.AsCString(fallback_error_cstr));
+  }
 }
 
 void CommandReturnObject::SetError(llvm::Error error) {

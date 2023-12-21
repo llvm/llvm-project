@@ -325,17 +325,16 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
     if (!parse_success) {
       std::string msg;
-      {
-        llvm::raw_string_ostream os(msg);
-        if (!diagnostic_manager.Diagnostics().empty())
-          os << diagnostic_manager.GetString();
-        else
-          os << "expression failed to parse (no further compiler diagnostics)";
-        if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
-            !fixed_expression->empty())
-          os << "\nfixed expression suggested:\n  " << *fixed_expression;
+      if (diagnostic_manager.Diagnostics().empty())
+        msg += "expression failed to parse (no further compiler diagnostics)";
+
+      if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
+          !fixed_expression->empty()) {
+        msg += "\nfixed expression suggested:\n  ";
+        msg += *fixed_expression;
       }
       error.SetExpressionError(execution_results, msg.c_str());
+      error.SetErrorDetails(diagnostic_manager);
     }
   }
 
@@ -378,9 +377,10 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
         if (!diagnostic_manager.Diagnostics().size())
           error.SetExpressionError(
               execution_results, "expression failed to execute, unknown error");
-        else
-          error.SetExpressionError(execution_results,
-                                   diagnostic_manager.GetString().c_str());
+        else {
+          error.SetExpressionError(execution_results);
+          error.SetErrorDetails(diagnostic_manager);
+        }
       } else {
         if (expr_result) {
           result_valobj_sp = expr_result->GetValueObject();

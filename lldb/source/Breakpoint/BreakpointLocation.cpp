@@ -247,8 +247,6 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   error.Clear();
 
-  DiagnosticManager diagnostics;
-
   if (condition_hash != m_condition_hash || !m_user_expression_sp ||
       !m_user_expression_sp->IsParseCacheable() ||
       !m_user_expression_sp->MatchesContext(exe_ctx)) {
@@ -269,12 +267,14 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
       return true;
     }
 
-    if (!m_user_expression_sp->Parse(diagnostics, exe_ctx,
-                                     eExecutionPolicyOnlyWhenNeeded, true,
-                                     false)) {
-      error.SetErrorStringWithFormat(
-          "Couldn't parse conditional expression:\n%s",
-          diagnostics.GetString().c_str());
+    DiagnosticManager diagnostic_manager;
+
+    bool success = m_user_expression_sp->Parse(diagnostic_manager, exe_ctx,
+                                               eExecutionPolicyOnlyWhenNeeded,
+                                               true, false);
+    if (!success) {
+      error.SetErrorString("Couldn't parse conditional expression:");
+      error.SetErrorDetails(diagnostic_manager);
       m_user_expression_sp.reset();
       return true;
     }
@@ -296,12 +296,13 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   Status expr_error;
 
-  diagnostics.Clear();
+  DiagnosticManager diagnostic_manager;
 
   ExpressionVariableSP result_variable_sp;
 
-  ExpressionResults result_code = m_user_expression_sp->Execute(
-      diagnostics, exe_ctx, options, m_user_expression_sp, result_variable_sp);
+  ExpressionResults result_code =
+      m_user_expression_sp->Execute(diagnostic_manager, exe_ctx, options,
+                                    m_user_expression_sp, result_variable_sp);
 
   bool ret;
 
@@ -331,8 +332,8 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     }
   } else {
     ret = false;
-    error.SetErrorStringWithFormat("Couldn't execute expression:\n%s",
-                                   diagnostics.GetString().c_str());
+    error.SetErrorStringWithFormat("Couldn't execute expression:");
+    error.SetErrorDetails(diagnostic_manager);
   }
 
   return ret;

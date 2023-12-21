@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_STATUS_H
 #define LLDB_UTILITY_STATUS_H
 
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -114,7 +115,7 @@ public:
   ///     The error type enumeration value.
   lldb::ErrorType GetType() const;
 
-  void SetExpressionError(lldb::ExpressionResults, const char *mssg);
+  void SetExpressionError(lldb::ExpressionResults, const char *mssg = nullptr);
 
   int SetExpressionErrorWithFormat(lldb::ExpressionResults, const char *format,
                                    ...) __attribute__((format(printf, 3, 4)));
@@ -180,12 +181,20 @@ public:
   ///     success (non-erro), \b false otherwise.
   bool Success() const;
 
+  struct Detail;
+  void AddDetail(Status::Detail detail);
+  void SetErrorDetails(DiagnosticManager &diagnostic_manager);
+  std::vector<Status::Detail> GetDetails() const;
+
 protected:
   /// Member variables
   ValueType m_code = 0; ///< Status code as an integer value.
   lldb::ErrorType m_type =
       lldb::eErrorTypeInvalid;  ///< The type of the above error code.
   mutable std::string m_string; ///< A string representation of the error code.
+  std::vector<Status::Detail> m_status_details;
+  mutable std::string m_string_with_details;
+
 private:
   explicit Status(const llvm::formatv_object_base &payload) {
     SetErrorToGenericError();
@@ -193,6 +202,41 @@ private:
   }
 };
 
+struct Status::Detail {
+private:
+  std::vector<std::string> m_message_lines;
+  DiagnosticSeverity m_message_type;
+  DiagnosticOrigin m_message_origin;
+
+  mutable std::optional<std::string> m_message;
+
+  static std::string StringForSeverity(DiagnosticSeverity severity);
+
+  std::vector<std::string>
+  GetMessageLinesFromDiagnostic(Diagnostic *diagnostic);
+
+public:
+  Detail(const std::unique_ptr<Diagnostic> &diagnostic)
+      : m_message_lines(GetMessageLinesFromDiagnostic(diagnostic.get())),
+        m_message_type(diagnostic->GetSeverity()),
+        m_message_origin(diagnostic->getKind()) {}
+
+  Detail(const Detail &other)
+      : m_message_lines(other.m_message_lines),
+        m_message_type(other.m_message_type),
+        m_message_origin(other.m_message_origin) {}
+
+  Detail &operator=(const Detail &rhs) {
+    m_message_lines = rhs.m_message_lines;
+    m_message_type = rhs.m_message_type;
+    m_message_origin = rhs.m_message_origin;
+    return *this;
+  }
+
+  std::string GetMessage() const;
+  std::vector<std::string> GetMessageLines() const;
+  DiagnosticSeverity GetType() const { return m_message_type; }
+};
 } // namespace lldb_private
 
 namespace llvm {

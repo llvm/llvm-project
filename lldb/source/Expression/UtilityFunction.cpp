@@ -87,25 +87,25 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     return nullptr;
   }
   if (m_caller_up) {
-    DiagnosticManager diagnostics;
+    DiagnosticManager diagnostic_manager;
 
     unsigned num_errors =
-        m_caller_up->CompileFunction(thread_to_use_sp, diagnostics);
+        m_caller_up->CompileFunction(thread_to_use_sp, diagnostic_manager);
     if (num_errors) {
-      error.SetErrorStringWithFormat(
-          "Error compiling %s caller function: \"%s\".",
-          m_function_name.c_str(), diagnostics.GetString().c_str());
+      error.SetErrorStringWithFormat("Error compiling %s caller function:",
+                                     m_function_name.c_str());
+      error.SetErrorDetails(diagnostic_manager);
       m_caller_up.reset();
       return nullptr;
     }
 
-    diagnostics.Clear();
+    diagnostic_manager.Clear();
     ExecutionContext exe_ctx(process_sp);
 
-    if (!m_caller_up->WriteFunctionWrapper(exe_ctx, diagnostics)) {
-      error.SetErrorStringWithFormat(
-          "Error inserting caller function for %s: \"%s\".",
-          m_function_name.c_str(), diagnostics.GetString().c_str());
+    if (!m_caller_up->WriteFunctionWrapper(exe_ctx, diagnostic_manager)) {
+      error.SetErrorStringWithFormat("Error inserting caller function for %s:",
+                                     m_function_name.c_str());
+      error.SetErrorDetails(diagnostic_manager);
       m_caller_up.reset();
       return nullptr;
     }
