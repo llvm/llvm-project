@@ -13558,7 +13558,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
       FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
     } else if (FRM == RISCVFPRndMode::DYN) {
       unsigned Opc =
-          IsSigned ? RISCVISD::VFCVT_RTZ_X_F_VL : RISCVISD::VFCVT_RTZ_XU_F_VL;
+          IsSigned ? RISCVISD::VFCVT_X_F_VL : RISCVISD::VFCVT_XU_F_VL;
       FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
     } else {
       unsigned Opc =

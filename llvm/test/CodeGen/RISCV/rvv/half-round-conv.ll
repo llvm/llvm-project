@@ -654,7 +654,7 @@ define <vscale x 1 x i8> @rint_nxv1f16_to_si8(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_si8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vfncvt.x.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
@@ -666,7 +666,7 @@ define <vscale x 1 x i8> @rint_nxv1f16_to_ui8(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_ui8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
+; CHECK-NEXT:    vfncvt.xu.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
@@ -678,7 +678,7 @@ define <vscale x 1 x i16> @rint_nxv1f16_to_si16(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_si16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8
+; CHECK-NEXT:    vfcvt.x.f.v v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
   %b = fptosi <vscale x 1 x half> %a to <vscale x 1 x i16>
@@ -689,7 +689,7 @@ define <vscale x 1 x i16> @rint_nxv1f16_to_ui16(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_ui16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
+; CHECK-NEXT:    vfcvt.xu.f.v v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
   %b = fptoui <vscale x 1 x half> %a to <vscale x 1 x i16>
@@ -700,7 +700,7 @@ define <vscale x 1 x i32> @rint_nxv1f16_to_si32(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_si32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v9, v8
+; CHECK-NEXT:    vfwcvt.x.f.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
@@ -712,7 +712,7 @@ define <vscale x 1 x i32> @rint_nxv1f16_to_ui32(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_ui32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v9, v8
+; CHECK-NEXT:    vfwcvt.xu.f.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
@@ -840,7 +840,7 @@ define <vscale x 4 x i8> @rint_nxv4f16_to_si8(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_si8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vfncvt.x.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
@@ -852,7 +852,7 @@ define <vscale x 4 x i8> @rint_nxv4f16_to_ui8(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_ui8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
+; CHECK-NEXT:    vfncvt.xu.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
@@ -864,7 +864,7 @@ define <vscale x 4 x i16> @rint_nxv4f16_to_si16(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_si16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8
+; CHECK-NEXT:    vfcvt.x.f.v v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
   %b = fptosi <vscale x 4 x half> %a to <vscale x 4 x i16>
@@ -875,7 +875,7 @@ define <vscale x 4 x i16> @rint_nxv4f16_to_ui16(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_ui16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
+; CHECK-NEXT:    vfcvt.xu.f.v v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
   %b = fptoui <vscale x 4 x half> %a to <vscale x 4 x i16>
@@ -886,7 +886,7 @@ define <vscale x 4 x i32> @rint_nxv4f16_to_si32(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_si32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v10, v8
+; CHECK-NEXT:    vfwcvt.x.f.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
@@ -898,7 +898,7 @@ define <vscale x 4 x i32> @rint_nxv4f16_to_ui32(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_ui32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8
+; CHECK-NEXT:    vfwcvt.xu.f.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
