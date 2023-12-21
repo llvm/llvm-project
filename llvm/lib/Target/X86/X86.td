@@ -1281,51 +1281,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> CWFFeatures =
     !listconcat(ARLSFeatures, CWFAdditionalFeatures);
 
-  // Knights Landing
-  list<SubtargetFeature> KNLFeatures = [FeatureX87,
-                                        FeatureCX8,
-                                        FeatureCMOV,
-                                        FeatureMMX,
-                                        FeatureFXSR,
-                                        FeatureNOPL,
-                                        FeatureX86_64,
-                                        FeatureCX16,
-                                        FeatureCRC32,
-                                        FeaturePOPCNT,
-                                        FeaturePCLMUL,
-                                        FeatureXSAVE,
-                                        FeatureXSAVEOPT,
-                                        FeatureLAHFSAHF64,
-                                        FeatureAES,
-                                        FeatureRDRAND,
-                                        FeatureF16C,
-                                        FeatureFSGSBase,
-                                        FeatureAVX512,
-                                        FeatureEVEX512,
-                                        FeatureERI,
-                                        FeatureCDI,
-                                        FeaturePFI,
-                                        FeaturePREFETCHWT1,
-                                        FeatureADX,
-                                        FeatureRDSEED,
-                                        FeatureMOVBE,
-                                        FeatureLZCNT,
-                                        FeatureBMI,
-                                        FeatureBMI2,
-                                        FeatureFMA,
-                                        FeaturePRFCHW];
-  list<SubtargetFeature> KNLTuning = [TuningSlowDivide64,
-                                      TuningSlow3OpsLEA,
-                                      TuningSlowIncDec,
-                                      TuningSlowTwoMemOps,
-                                      TuningPreferMaskRegisters,
-                                      TuningFastGather,
-                                      TuningFastMOVBE,
-                                      TuningSlowPMADDWD];
-  // TODO Add AVX5124FMAPS/AVX5124VNNIW features
-  list<SubtargetFeature> KNMFeatures =
-    !listconcat(KNLFeatures, [FeatureVPOPCNTDQ]);
-
   // Barcelona
   list<SubtargetFeature> BarcelonaFeatures = [FeatureX87,
                                               FeatureCX8,
@@ -1745,14 +1700,6 @@ foreach P = ["broadwell", "core_5th_gen_avx", "core_5th_gen_avx_tsx"] in {
 
 def : ProcModel<"skylake", SkylakeClientModel, ProcessorFeatures.SKLFeatures,
                 ProcessorFeatures.SKLTuning>;
-
-// FIXME: define KNL scheduler model
-foreach P = ["knl", "mic_avx512"] in {
-  def : ProcModel<P, HaswellModel, ProcessorFeatures.KNLFeatures,
-                  ProcessorFeatures.KNLTuning>;
-}
-def : ProcModel<"knm", HaswellModel, ProcessorFeatures.KNMFeatures,
-                ProcessorFeatures.KNLTuning>;
 
 foreach P = ["skylake-avx512", "skx", "skylake_avx512"] in {
   def : ProcModel<P, SkylakeServerModel, ProcessorFeatures.SKXFeatures,
