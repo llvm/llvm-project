@@ -2386,9 +2386,9 @@ multiclass VPatTruncSatClip<VTypeInfo vti, VTypeInfo wti> {
   defvar smaxval = !sub(0, !shl(1, !sub(sew, 1)));
 
   defm : VPatTruncSatClipMaxMin<"PseudoVNCLIPU", vti, wti, riscv_umax_vl,
-                                                umaxval, riscv_umin_vl, uminval>;
+                                umaxval, riscv_umin_vl, uminval>;
   defm : VPatTruncSatClipMaxMin<"PseudoVNCLIP", vti, wti, riscv_smin_vl,
-                                                sminval, riscv_smax_vl, smaxval>;
+                                sminval, riscv_smax_vl, smaxval>;
 
   defm : VPatTruncSatClipUMin<vti, wti, uminval>;
 }
