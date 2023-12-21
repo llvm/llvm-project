@@ -2516,7 +2516,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                        Idx2);
     }
     ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExt(m_OneUse(m_NSWAdd(
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
                                      m_Value(Idx1), m_ConstantInt(C))))))) {
       // %add = add nsw i32 %idx1, idx2
       // %sidx = sext i32 %add to i64
