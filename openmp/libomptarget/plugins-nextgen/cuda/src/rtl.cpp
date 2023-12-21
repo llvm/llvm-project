@@ -29,6 +29,8 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Error.h"
 
+extern const uint16_t llvm::omp::target::plugin::ELFMachine = ELF::EM_CUDA;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -1275,7 +1277,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
   Error deinitImpl() override { return Plugin::success(); }
 
   /// Get the ELF code for recognizing the compatible image binary.
-  uint16_t getMagicElfBits() const override { return ELF::EM_CUDA; }
+  uint16_t getMagicElfBits() const override { return ELFMachine; }
 
   Triple::ArchType getTripleArch() const override {
     // TODO: I think we can drop the support for 32-bit NVPTX devices.

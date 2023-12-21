@@ -20,13 +20,19 @@
 #include "Shared/APITypes.h"
 
 extern "C" {
-
 // First method called on the plugin
 int32_t __tgt_rtl_init_plugin();
+
+// Returns non-zero if the plugin has been initialized.
+int32_t __tgt_rtl_is_plugin_active();
 
 // Return the number of available devices of the type supported by the
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void);
+
+// Returns a non-zero integer if the given Image is capable of being run by the
+// plugin. This is intended to be called without initializing the plugin.
+int32_t __tgt_rtl_is_binary_compatible(__tgt_device_image *Image);
 
 // Return an integer different from zero if the provided device image can be
 // supported by the runtime. The functionality is similar to comparing the

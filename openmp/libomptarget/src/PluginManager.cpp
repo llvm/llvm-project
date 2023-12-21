@@ -69,23 +69,6 @@ Error PluginAdaptorTy::init() {
 #include "Shared/PluginAPI.inc"
 #undef PLUGIN_API_HANDLE
 
-  // Remove plugin on failure to call optional init_plugin
-  int32_t Rc = init_plugin();
-  if (Rc != OFFLOAD_SUCCESS) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Unable to initialize library '%s': %u!\n",
-                             Name.c_str(), Rc);
-  }
-
-  // No devices are supported by this RTL?
-  NumberOfPluginDevices = number_of_devices();
-  if (!NumberOfPluginDevices) {
-    return createStringError(inconvertibleErrorCode(),
-                             "No devices supported in this RTL\n");
-  }
-
-  DP("Registered '%s' with %d plugin visible devices!\n", Name.c_str(),
-     NumberOfPluginDevices);
   return Error::success();
 }
 
@@ -162,6 +145,25 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
      NumberOfPluginDevices);
 }
 
+Error PluginAdaptorTy::initPlugin() {
+  if (init_plugin() != OFFLOAD_SUCCESS) {
+    return createStringError(inconvertibleErrorCode(),
+                             "Unable to initialize library '%s'!\n",
+                             Name.c_str());
+  }
+
+  NumberOfPluginDevices = number_of_devices();
+  if (!NumberOfPluginDevices) {
+    return createStringError(inconvertibleErrorCode(),
+                             "No devices supported in this RTL\n");
+  }
+
+  DP("Registered '%s' with %d plugin visible devices!\n", Name.c_str(),
+     NumberOfPluginDevices);
+
+  return Error::success();
+}
+
 void PluginManager::initAllPlugins() {
   for (auto &R : PluginAdaptors)
     R->initDevices(*this);
@@ -202,6 +204,24 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
+
+  // Initialize any needed plugins using the image metadata if needed.
+  for (auto &R : PM->pluginAdaptors()) {
+    if (R.is_plugin_active())
+      continue;
+
+    // We can skip initializing this image if there are no images for it.
+    for (DeviceImageTy &DI : PM->deviceImages()) {
+      if (R.is_binary_compatible(&DI.getExecutableImage())) {
+        if (Error Err = R.initPlugin()) {
+          [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+          DP("Failed to init plugin: %s", InfoMsg.c_str());
+        }
+
+        break;
+      }
+    }
+  }
 
   // Register the images with the RTLs that understand them, if any.
   for (DeviceImageTy &DI : PM->deviceImages()) {

@@ -48,8 +48,11 @@
 namespace llvm {
 namespace omp {
 namespace target {
-
 namespace plugin {
+
+/// The plugin's native ELF architecture. This should be defined individually
+/// by each plugin, and ELF:EM_NONE if the ELF target is not applicable.
+extern const uint16_t ELFMachine;
 
 struct GenericPluginTy;
 struct GenericKernelTy;

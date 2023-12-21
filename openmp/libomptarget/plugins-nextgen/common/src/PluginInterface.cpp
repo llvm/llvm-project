@@ -1675,6 +1675,32 @@ int32_t __tgt_rtl_init_plugin() {
   return OFFLOAD_SUCCESS;
 }
 
+int32_t __tgt_rtl_is_plugin_active() { return Plugin::isActive(); }
+
+int32_t __tgt_rtl_is_binary_compatible(__tgt_device_image *Image) {
+  assert(!Plugin::isActive() && "Should not be called after initialization");
+
+  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
+                   target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+
+  switch (identify_magic(Buffer)) {
+  case file_magic::elf:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object: {
+    // Check if this image is an ELF with a matching machine value.
+    auto MachineOrErr = utils::elf::checkMachine(Buffer, ELFMachine);
+    if (Error Err = MachineOrErr.takeError()) {
+      consumeError(std::move(Err));
+      return false;
+    }
+    return *MachineOrErr;
+  }
+  default:
+    // Assume this image is compatible and check if it's a valid binary later.
+    return true;
+  }
+}
+
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   if (!Plugin::isActive())
     return false;

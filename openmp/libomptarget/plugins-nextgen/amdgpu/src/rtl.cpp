@@ -56,6 +56,8 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+extern const uint16_t llvm::omp::target::plugin::ELFMachine = ELF::EM_AMDGPU;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -3013,7 +3015,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
 
   /// Get the ELF code for recognizing the compatible image binary.
-  uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
+  uint16_t getMagicElfBits() const override { return ELFMachine; }
 
   /// Check whether the image is compatible with an AMDGPU device.
   Expected<bool> isELFCompatible(StringRef Image) const override {

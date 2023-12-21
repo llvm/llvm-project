@@ -49,6 +49,10 @@ struct PluginAdaptorTy {
   /// that fail to initialize are ignored.
   void initDevices(PluginManager &PM);
 
+  /// Initialize as many devices as possible for this plugin adaptor. Devices
+  /// that fail to initialize are ignored.
+  llvm::Error initPlugin();
+
   bool isUsed() const { return DeviceOffset >= 0; }
 
   /// Return the number of devices visible to the underlying plugin.

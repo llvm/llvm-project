@@ -38,6 +38,8 @@
 #define TARGET_ELF_ID ELF::EM_NONE
 #endif
 
+extern const uint16_t llvm::omp::target::plugin::ELFMachine = TARGET_ELF_ID;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -389,7 +391,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Error deinitImpl() override { return Plugin::success(); }
 
   /// Get the ELF code to recognize the compatible binary images.
-  uint16_t getMagicElfBits() const override { return TARGET_ELF_ID; }
+  uint16_t getMagicElfBits() const override { return ELFMachine; }
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
