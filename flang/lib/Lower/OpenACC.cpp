@@ -1464,6 +1464,24 @@ static void genAsyncClause(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static void
+genAsyncClause(Fortran::lower::AbstractConverter &converter,
+               const Fortran::parser::AccClause::Async *asyncClause,
+               llvm::SmallVector<mlir::Value> &async,
+               llvm::SmallVector<mlir::Attribute> &asyncDeviceTypes,
+               llvm::SmallVector<mlir::Attribute> &asyncOnlyDeviceTypes,
+               mlir::acc::DeviceTypeAttr deviceTypeAttr,
+               Fortran::lower::StatementContext &stmtCtx) {
+  const auto &asyncClauseValue = asyncClause->v;
+  if (asyncClauseValue) { // async has a value.
+    async.push_back(fir::getBase(converter.genExprValue(
+        *Fortran::semantics::GetExpr(*asyncClauseValue), stmtCtx)));
+    asyncDeviceTypes.push_back(deviceTypeAttr);
+  } else {
+    asyncOnlyDeviceTypes.push_back(deviceTypeAttr);
+  }
+}
+
 static mlir::acc::DeviceType
 getDeviceType(Fortran::parser::AccDeviceTypeExpr::Device device) {
   switch (device) {
@@ -1530,6 +1548,39 @@ static void genWaitClause(Fortran::lower::AbstractConverter &converter,
           *Fortran::semantics::GetExpr(*waitDevnumValue), stmtCtx));
   } else {
     addWaitAttr = true;
+  }
+}
+
+static void
+genWaitClause(Fortran::lower::AbstractConverter &converter,
+              const Fortran::parser::AccClause::Wait *waitClause,
+              llvm::SmallVector<mlir::Value> &waitOperands,
+              llvm::SmallVector<mlir::Attribute> &waitOperandsDeviceTypes,
+              llvm::SmallVector<mlir::Attribute> &waitOnlyDeviceTypes,
+              llvm::SmallVector<int32_t> &waitOperandsSegments,
+              mlir::Value &waitDevnum, mlir::acc::DeviceTypeAttr deviceTypeAttr,
+              Fortran::lower::StatementContext &stmtCtx) {
+  const auto &waitClauseValue = waitClause->v;
+  if (waitClauseValue) { // wait has a value.
+    const Fortran::parser::AccWaitArgument &waitArg = *waitClauseValue;
+    const auto &waitList =
+        std::get<std::list<Fortran::parser::ScalarIntExpr>>(waitArg.t);
+    auto crtWaitOperands = waitOperands.size();
+    for (const Fortran::parser::ScalarIntExpr &value : waitList) {
+      waitOperands.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(value), stmtCtx)));
+    }
+    waitOperandsDeviceTypes.push_back(deviceTypeAttr);
+    waitOperandsSegments.push_back(waitOperands.size() - crtWaitOperands);
+
+    // TODO: move to device_type model.
+    const auto &waitDevnumValue =
+        std::get<std::optional<Fortran::parser::ScalarIntExpr>>(waitArg.t);
+    if (waitDevnumValue)
+      waitDevnum = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(*waitDevnumValue), stmtCtx));
+  } else {
+    waitOnlyDeviceTypes.push_back(deviceTypeAttr);
   }
 }
 
@@ -1795,6 +1846,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       firstprivateOperands;
   llvm::SmallVector<mlir::Attribute> privatizations, firstPrivatizations,
       reductionRecipes;
+  mlir::Value waitDevnum; // TODO not yet implemented on compute op.
 
   // Self clause has optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -1818,31 +1870,14 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *asyncClause =
             std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
-      const auto &asyncClauseValue = asyncClause->v;
-      if (asyncClauseValue) { // async has a value.
-        async.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*asyncClauseValue), stmtCtx)));
-        asyncDeviceTypes.push_back(crtDeviceTypeAttr);
-      } else {
-        asyncOnlyDeviceTypes.push_back(crtDeviceTypeAttr);
-      }
+      genAsyncClause(converter, asyncClause, async, asyncDeviceTypes,
+                     asyncOnlyDeviceTypes, crtDeviceTypeAttr, stmtCtx);
     } else if (const auto *waitClause =
                    std::get_if<Fortran::parser::AccClause::Wait>(&clause.u)) {
-      const auto &waitClauseValue = waitClause->v;
-      if (waitClauseValue) { // wait has a value.
-        const Fortran::parser::AccWaitArgument &waitArg = *waitClauseValue;
-        const auto &waitList =
-            std::get<std::list<Fortran::parser::ScalarIntExpr>>(waitArg.t);
-        auto crtWaitOperands = waitOperands.size();
-        for (const Fortran::parser::ScalarIntExpr &value : waitList) {
-          waitOperands.push_back(fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(value), stmtCtx)));
-        }
-        waitOperandsDeviceTypes.push_back(crtDeviceTypeAttr);
-        waitOperandsSegments.push_back(waitOperands.size() - crtWaitOperands);
-      } else {
-        waitOnlyDeviceTypes.push_back(crtDeviceTypeAttr);
-      }
+      genWaitClause(converter, waitClause, waitOperands,
+                    waitOperandsDeviceTypes, waitOnlyDeviceTypes,
+                    waitOperandsSegments, waitDevnum, crtDeviceTypeAttr,
+                    stmtCtx);
     } else if (const auto *numGangsClause =
                    std::get_if<Fortran::parser::AccClause::NumGangs>(
                        &clause.u)) {
@@ -2126,20 +2161,23 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                          Fortran::semantics::SemanticsContext &semanticsContext,
                          Fortran::lower::StatementContext &stmtCtx,
                          const Fortran::parser::AccClauseList &accClauseList) {
-  mlir::Value ifCond, async, waitDevnum;
+  mlir::Value ifCond, waitDevnum;
   llvm::SmallVector<mlir::Value> attachEntryOperands, createEntryOperands,
-      copyEntryOperands, copyoutEntryOperands, dataClauseOperands, waitOperands;
-
-  // Async and wait have an optional value but can be present with
-  // no value as well. When there is no value, the op has an attribute to
-  // represent the clause.
-  bool addAsyncAttr = false;
-  bool addWaitAttr = false;
+      copyEntryOperands, copyoutEntryOperands, dataClauseOperands, waitOperands,
+      async;
+  llvm::SmallVector<mlir::Attribute> asyncDeviceTypes, asyncOnlyDeviceTypes,
+      waitOperandsDeviceTypes, waitOnlyDeviceTypes;
+  llvm::SmallVector<int32_t> waitOperandsSegments;
 
   bool hasDefaultNone = false;
   bool hasDefaultPresent = false;
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // device_type attribute is set to `none` until a device_type clause is
+  // encountered.
+  auto crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None);
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separately as clauses can appear
@@ -2221,11 +2259,14 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                                  dataClauseOperands.end());
     } else if (const auto *asyncClause =
                    std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
-      genAsyncClause(converter, asyncClause, async, addAsyncAttr, stmtCtx);
+      genAsyncClause(converter, asyncClause, async, asyncDeviceTypes,
+                     asyncOnlyDeviceTypes, crtDeviceTypeAttr, stmtCtx);
     } else if (const auto *waitClause =
                    std::get_if<Fortran::parser::AccClause::Wait>(&clause.u)) {
-      genWaitClause(converter, waitClause, waitOperands, waitDevnum,
-                    addWaitAttr, stmtCtx);
+      genWaitClause(converter, waitClause, waitOperands,
+                    waitOperandsDeviceTypes, waitOnlyDeviceTypes,
+                    waitOperandsSegments, waitDevnum, crtDeviceTypeAttr,
+                    stmtCtx);
     } else if(const auto *defaultClause = 
                   std::get_if<Fortran::parser::AccClause::Default>(&clause.u)) {
       if ((defaultClause->v).v == llvm::acc::DefaultValue::ACC_Default_none)
@@ -2239,7 +2280,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperand(operands, operandSegments, ifCond);
-  addOperand(operands, operandSegments, async);
+  addOperands(operands, operandSegments, async);
   addOperand(operands, operandSegments, waitDevnum);
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
@@ -2250,8 +2291,18 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
       builder, currentLocation, eval, operands, operandSegments);
 
-  dataOp.setAsyncAttr(addAsyncAttr);
-  dataOp.setWaitAttr(addWaitAttr);
+  if (!asyncDeviceTypes.empty())
+    dataOp.setAsyncDeviceTypeAttr(builder.getArrayAttr(asyncDeviceTypes));
+  if (!asyncOnlyDeviceTypes.empty())
+    dataOp.setAsyncOnlyAttr(builder.getArrayAttr(asyncOnlyDeviceTypes));
+  if (!waitOperandsDeviceTypes.empty())
+    dataOp.setWaitOperandsDeviceTypeAttr(
+        builder.getArrayAttr(waitOperandsDeviceTypes));
+  if (!waitOperandsSegments.empty())
+    dataOp.setWaitOperandsSegmentsAttr(
+        builder.getDenseI32ArrayAttr(waitOperandsSegments));
+  if (!waitOnlyDeviceTypes.empty())
+    dataOp.setWaitOnlyAttr(builder.getArrayAttr(waitOnlyDeviceTypes));
 
   if (hasDefaultNone)
     dataOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::None);

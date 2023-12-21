@@ -836,11 +836,11 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   } attributes { defaultAttr = #acc<defaultvalue none>, wait }
 
   %w1 = arith.constant 1 : i64
-  acc.data wait(%w1 : i64) {
+  acc.data wait({%w1 : i64}) {
   } attributes { defaultAttr = #acc<defaultvalue none>, wait }
 
   %wd1 = arith.constant 1 : i64
-  acc.data wait_devnum(%wd1 : i64) wait(%w1 : i64) {
+  acc.data wait_devnum(%wd1 : i64) wait({%w1 : i64}) {
   } attributes { defaultAttr = #acc<defaultvalue none>, wait }
 
   return
@@ -951,10 +951,10 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // CHECK:      acc.data {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
-// CHECK:      acc.data wait(%{{.*}} : i64) {
+// CHECK:      acc.data wait({%{{.*}} : i64}) {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
-// CHECK:      acc.data wait_devnum(%{{.*}} : i64) wait(%{{.*}} : i64) {
+// CHECK:      acc.data wait_devnum(%{{.*}} : i64) wait({%{{.*}} : i64}) {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
 // -----
