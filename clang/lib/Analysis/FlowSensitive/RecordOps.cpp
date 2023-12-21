@@ -66,19 +66,8 @@ void clang::dataflow::copyRecord(RecordStorageLocation &Src,
     }
   }
 
-  RecordValue *SrcVal = Env.get<RecordValue>(Src);
-  RecordValue *DstVal = Env.get<RecordValue>(Dst);
-
-  DstVal = &Env.create<RecordValue>(Dst);
+  RecordValue *DstVal = &Env.create<RecordValue>(Dst);
   Env.setValue(Dst, *DstVal);
-
-  if (SrcVal == nullptr)
-    return;
-
-  for (const auto &[Name, Value] : SrcVal->properties()) {
-    if (Value != nullptr)
-      DstVal->setProperty(Name, *Value);
-  }
 }
 
 bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
@@ -123,26 +112,6 @@ bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
                Env2.getValue(Loc2.getSyntheticField(Name))) {
       return false;
     }
-  }
-
-  llvm::StringMap<Value *> Props1, Props2;
-
-  if (RecordValue *Val1 = Env1.get<RecordValue>(Loc1))
-    for (const auto &[Name, Value] : Val1->properties())
-      Props1[Name] = Value;
-  if (RecordValue *Val2 = Env2.get<RecordValue>(Loc2))
-    for (const auto &[Name, Value] : Val2->properties())
-      Props2[Name] = Value;
-
-  if (Props1.size() != Props2.size())
-    return false;
-
-  for (const auto &[Name, Value] : Props1) {
-    auto It = Props2.find(Name);
-    if (It == Props2.end())
-      return false;
-    if (Value != It->second)
-      return false;
   }
 
   return true;
