@@ -453,6 +453,7 @@ template <int KIND> struct FitsInIntegerKind;
 
 RT_API_ATTRS bool FitsInDescriptor(
     const Descriptor *length, std::int64_t value, Terminator &terminator);
+
 // Defines a utility function for copying and padding characters
 template <typename TO, typename FROM>
 RT_API_ATTRS void CopyAndPad(

@@ -22,7 +22,8 @@ namespace fir::runtime {
 
 /// Generate a call to the ExecuteCommandLine runtime function which implements
 /// the GET_EXECUTE_ARGUMENT intrinsic.
-/// \p wait, \p exitstat, \p cmdstat and \p cmdmsg must be fir.box that can be
+/// \p wait must be bool that can be absent.
+/// \p exitstat, \p cmdstat and \p cmdmsg must be fir.box that can be
 /// absent (but not null mlir values). The status exitstat and cmdstat are
 /// returned, along with the message cmdmsg.
 void genExecuteCommandLine(fir::FirOpBuilder &, mlir::Location,
