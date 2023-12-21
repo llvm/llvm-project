@@ -324,6 +324,53 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
 
 // -----
 
+llvm.func @static_alloca() -> f32 {
+  %0 = llvm.mlir.constant(4 : i32) : i32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  llvm.return %2 : f32
+}
+
+// CHECK-LABEL: llvm.func @test_inline
+llvm.func @test_inline(%cond0 : i1) {
+  // Verify the alloca is relocated to the entry block of the parent function
+  // if the region operation is neither marked as isolated from above or
+  // automatic allocation scope.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK: "test.one_region_op"() ({
+  "test.one_region_op"() ({
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[ALLOCA]]
+    // CHECK-NEXT: %[[RES:.+]] = llvm.load %[[ALLOCA]]
+    // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[ALLOCA]]
+    // CHECK-NEXT: test.region_yield %[[RES]]
+    test.region_yield %0 : f32
+  }) : () -> ()
+  // Verify the alloca is not relocated out of operations that are marked as
+  // isolated from above.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.isolated_regions
+  test.isolated_regions {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK: test.region_yield
+    test.region_yield %0 : f32
+  }
+  // Verify the alloca is not relocated out of operations that are marked as
+  // automatic allocation scope.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.alloca_scope_region
+  test.alloca_scope_region {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK: test.region_yield
+    test.region_yield %0 : f32
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @alloca_with_lifetime(%cond: i1) -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
