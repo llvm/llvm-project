@@ -1098,28 +1098,31 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
 
 std::optional<std::pair<Value *, Value *>>
 InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
-
   if (LHS->getParent() != RHS->getParent())
     return std::nullopt;
 
   if (LHS->getNumIncomingValues() < 2)
     return std::nullopt;
 
-  BasicBlock *B0 = LHS->getIncomingBlock(0);
-  Value *N1 = LHS->getIncomingValueForBlock(B0);
-  Value *N2 = RHS->getIncomingValueForBlock(B0);
+  for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
+    if (LHS->getIncomingBlock(I) != RHS->getIncomingBlock(I))
+      return std::nullopt;
+  }
+
+  Value *L0 = LHS->getIncomingValue(0);
+  Value *R0 = RHS->getIncomingValue(0);
 
   for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
-    BasicBlock *B1 = LHS->getIncomingBlock(I);
-    Value *N3 = LHS->getIncomingValueForBlock(B1);
-    Value *N4 = RHS->getIncomingValueForBlock(B1);
-    if ((N1 == N3 && N2 == N4) || (N1 == N4 && N2 == N3))
+    Value *L1 = LHS->getIncomingValue(I);
+    Value *R1 = RHS->getIncomingValue(I);
+
+    if ((L0 == L1 && R0 == R1) || (L0 == R1 && R0 == L1))
       continue;
 
     return std::nullopt;
   }
 
-  return std::optional(std::pair(N1, N2));
+  return std::optional(std::pair(L0, R0));
 }
 
 Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
