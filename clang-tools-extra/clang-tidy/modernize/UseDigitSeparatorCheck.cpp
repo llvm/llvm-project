@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <numeric>
 #include <regex>
+#include <sstream>
 
 #include "UseDigitSeparatorCheck.h"
 #include "clang/AST/ASTContext.h"
