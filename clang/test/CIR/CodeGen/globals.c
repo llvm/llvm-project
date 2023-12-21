@@ -75,6 +75,14 @@ struct { int *x; } q2 = {q};
 // CHECK: cir.global external @q1 = #cir.global_view<@q> : !cir.ptr<!s32i>
 // CHECK: cir.global external @q2 = #cir.const_struct<{#cir.global_view<@q> : !cir.ptr<!s32i>}> : !ty_22anon2E1322
 
+int foo() {
+    extern int optind;
+    return optind;
+}
+// CHECK: cir.global "private" external @optind : !s32i
+// CHECK: cir.func {{.*@foo}}
+// CHECK:   {{.*}} = cir.get_global @optind : cir.ptr <!s32i>
+
 // TODO: test tentatives with internal linkage.
 
 // Tentative definition is THE definition. Should be zero-initialized.
