@@ -15,12 +15,12 @@ int test_find(unsigned char n = 3)
     auto f = std::find(v.begin(), v.end(), n);
     // CHECK: {{.*}} cir.call @_ZNSt5arrayIhLj9EE5beginEv(%[[array_addr]])
     // CHECK: {{.*}} cir.call @_ZNSt5arrayIhLj9EE3endEv(%[[array_addr]])
-    // CHECK: {{.*}} cir.call @_ZSt4findINSt5arrayIhLj9EE8iteratorEhET_S3_S3_RKT0_(
+    // CHECK: {{.*}} cir.call @_ZSt4findIPhhET_S1_S1_RKT0_(
 
     if (f != v.end())
         num_found++;
-    // CHECK: {{.*}} cir.call @_ZNSt5arrayIhLj9EE3endEv(%[[array_addr]]
-    // CHECK: %[[neq_cmp:.*]] = cir.call @_ZNSt5arrayIhLj9EE8iteratorneES1_(
+    // CHECK: cir.call @_ZNSt5arrayIhLj9EE3endEv(%[[array_addr]]
+    // CHECK: %[[neq_cmp:.*]] = cir.cmp
     // CHECK: cir.if %[[neq_cmp]]
 
     return num_found;

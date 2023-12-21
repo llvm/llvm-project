@@ -14,4 +14,4 @@ void t() {
 // CHECK: {{.*}} = cir.cast(array_to_ptrdecay
 // CHECK: {{.*}} = cir.const(#cir.int<9> : !u32i) : !u32i
 
-// CHECK: cir.call @_ZNSt5arrayIhLj9EE8iteratorC1EPh
+// CHECK: cir.call @_ZNSt5arrayIhLj9EE3endEv
