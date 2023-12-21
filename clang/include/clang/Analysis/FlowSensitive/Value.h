@@ -189,7 +189,7 @@ private:
 /// be used to initialize a result object. It is not possible to access member
 /// variables or call member functions on a prvalue of class type.
 /// Correspondingly, `RecordValue` also serves only a limited purpose: It
-/// conveys a prvalue of class type from the place where the object isx
+/// conveys a prvalue of class type from the place where the object is
 /// constructed to the result object that it initializes.
 ///
 /// When creating a prvalue of class type, we already need a storage location
