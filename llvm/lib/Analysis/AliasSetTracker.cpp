@@ -228,6 +228,8 @@ AliasSet::PointerVector AliasSet::getPointers() const {
 
 void AliasSetTracker::clear() {
   PointerMap.clear();
+  UndefPointerSets.clear();
+  UndefPointerSetsVector.clear();
   AliasSets.clear();
 }
 
@@ -287,7 +289,8 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   // The PointerMap structure requires that all memory locations for the same
   // value will be in the same alias set, which does not hold for undef values.
   // So we keep UndefValue pointers associated with the nullptr in the pointer
-  // map, and resort to a linear scan of all alias sets in that case.
+  // map, and instead keep a collection with the alias sets that contain memory
+  // locations with undef pointer values.
   auto [It, Inserted] = PointerMap.insert({MemLoc.Ptr, nullptr});
   AliasSet *&MapEntry = It->second;
   if (!Inserted) {
@@ -302,12 +305,27 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
         return *AS;
       }
     } else {
-      for (auto &AS : *this) {
-        if (AS.isForwardingAliasSet())
-          continue;
-        if (llvm::find(AS.MemoryLocs, MemLoc) != AS.MemoryLocs.end())
-          return AS;
-      }
+      // Take opportunity to remove refs to forwarding alias sets from UndefPointerSets.
+      llvm::erase_if(UndefPointerSetsVector, [this](AliasSet *&AS) {
+        if (AS->Forward) {
+          AliasSet *NewAS = AS->getForwardedTarget(*this);
+          UndefPointerSets.erase(AS);
+          AS->dropRef(*this);
+          // Replace earlier entry in UndefPointerSetsVector with forwarded
+          // target, but only if it is new.
+          if (UndefPointerSets.insert(NewAS).second) {
+            NewAS->addRef();
+            AS = NewAS;
+            return false;
+          } else
+            return true;
+        }
+        return false;
+      });
+      // Scan UndefPointerSets for MemLoc.
+      for (AliasSet *AS : UndefPointerSetsVector)
+        if (llvm::find(AS->MemoryLocs, MemLoc) != AS->MemoryLocs.end())
+          return *AS;
     }
   }
 
@@ -348,6 +366,11 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
     } else {
       AS->addRef();
       MapEntry = AS;
+    }
+  } else {
+    if (UndefPointerSets.insert(AS).second) {
+      UndefPointerSetsVector.push_back(AS);
+      AS->addRef();
     }
   }
   return *AS;
