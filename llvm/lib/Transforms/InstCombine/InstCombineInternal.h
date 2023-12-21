@@ -278,14 +278,14 @@ private:
                                               IntrinsicInst &Tramp);
   Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
 
-  // match a pair of Phi Nodes like
+  // Match a pair of Phi Nodes like
   // phi [a, BB0], [b, BB1] & phi [b, BB0], [a, BB1]
-  // return the matched two operands
+  // Return the matched two operands.
   std::optional<std::pair<Value *, Value *>>
   matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS);
 
   // Tries to fold (op phi(a, b) phi(b, a)) -> (op a, b)
-  // while op is a commutative intrinsic call
+  // while op is a commutative intrinsic call.
   Instruction *foldCommutativeIntrinsicOverPhis(IntrinsicInst &II);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
