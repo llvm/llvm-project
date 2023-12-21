@@ -410,13 +410,22 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
   return VarName;
 }
 
+bool isGPUProfTarget(const Module &M) {
+  const auto &triple = M.getTargetTriple();
+  return triple.rfind("nvptx", 0) == 0 || triple.rfind("amdgcn", 0) == 0 ||
+         triple.rfind("r600", 0) == 0;
+}
+
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
+  // Ensure profiling variables on GPU are visible to be read from host
+  if (isGPUProfTarget(M))
+    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  if (Linkage == GlobalValue::ExternalWeakLinkage)
+  else if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -430,8 +439,12 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
                          getPGOFuncNameVarName(PGOFuncName, Linkage));
 
+  // If the target is a GPU, make the symbol protected so it can
+  // be read from the host device
+  if (isGPUProfTarget(M))
+    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
   // Hide the symbol so that we correctly get a copy for each executable.
-  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
     FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
 
   return FuncNameVar;
