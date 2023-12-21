@@ -140,13 +140,13 @@ define void @zip_v4f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_512-NEXT:    ptrue p0.d, vl4
 ; VBITS_EQ_512-NEXT:    mov x8, sp
-; VBITS_EQ_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_EQ_512-NEXT:    mov z2.d, z1.d[3]
-; VBITS_EQ_512-NEXT:    mov z3.d, z0.d[3]
-; VBITS_EQ_512-NEXT:    mov z4.d, z1.d[2]
-; VBITS_EQ_512-NEXT:    mov z5.d, z0.d[2]
-; VBITS_EQ_512-NEXT:    zip1 z0.d, z0.d, z1.d
+; VBITS_EQ_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_EQ_512-NEXT:    mov z2.d, z0.d[3]
+; VBITS_EQ_512-NEXT:    mov z3.d, z1.d[3]
+; VBITS_EQ_512-NEXT:    mov z4.d, z0.d[2]
+; VBITS_EQ_512-NEXT:    mov z5.d, z1.d[2]
+; VBITS_EQ_512-NEXT:    zip1 z0.d, z1.d, z0.d
 ; VBITS_EQ_512-NEXT:    stp d3, d2, [sp, #16]
 ; VBITS_EQ_512-NEXT:    stp d5, d4, [sp]
 ; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x8]
@@ -243,15 +243,15 @@ define void @trn_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ptrue p0.h
 ; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_EQ_256-NEXT:    trn1 z4.h, z0.h, z2.h
-; VBITS_EQ_256-NEXT:    trn2 z0.h, z0.h, z2.h
-; VBITS_EQ_256-NEXT:    trn1 z2.h, z1.h, z3.h
-; VBITS_EQ_256-NEXT:    trn2 z1.h, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    trn1 z4.h, z0.h, z1.h
+; VBITS_EQ_256-NEXT:    trn2 z0.h, z0.h, z1.h
+; VBITS_EQ_256-NEXT:    trn1 z1.h, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    trn2 z2.h, z2.h, z3.h
 ; VBITS_EQ_256-NEXT:    add z0.h, z4.h, z0.h
-; VBITS_EQ_256-NEXT:    add z1.h, z2.h, z1.h
+; VBITS_EQ_256-NEXT:    add z1.h, z1.h, z2.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
@@ -515,18 +515,18 @@ define void @uzp_v32i16(ptr %a, ptr %b) #1 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, #16 // =0x10
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; CHECK-NEXT:    uzp1 z4.h, z3.h, z2.h
-; CHECK-NEXT:    uzp2 z2.h, z3.h, z2.h
-; CHECK-NEXT:    uzp1 z3.h, z1.h, z0.h
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x1, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z4.h, z1.h, z0.h
 ; CHECK-NEXT:    uzp2 z0.h, z1.h, z0.h
-; CHECK-NEXT:    add z1.h, z4.h, z2.h
-; CHECK-NEXT:    add z0.h, z3.h, z0.h
-; CHECK-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    uzp1 z1.h, z3.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z3.h, z2.h
+; CHECK-NEXT:    add z0.h, z4.h, z0.h
+; CHECK-NEXT:    add z1.h, z1.h, z2.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <32 x i16>, ptr %a
   %tmp2 = load <32 x i16>, ptr %b
@@ -657,13 +657,13 @@ define void @zip_vscale2_4(ptr %a, ptr %b) #2 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    mov z2.d, z1.d[3]
-; CHECK-NEXT:    mov z3.d, z0.d[3]
-; CHECK-NEXT:    mov z4.d, z1.d[2]
-; CHECK-NEXT:    mov z5.d, z0.d[2]
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov z3.d, z1.d[3]
+; CHECK-NEXT:    mov z4.d, z0.d[2]
+; CHECK-NEXT:    mov z5.d, z1.d[2]
+; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    stp d3, d2, [sp, #16]
 ; CHECK-NEXT:    stp d5, d4, [sp]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]

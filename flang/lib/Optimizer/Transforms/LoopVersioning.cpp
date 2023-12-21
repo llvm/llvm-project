@@ -11,7 +11,7 @@
 /// This pass looks for loops iterating over assumed-shape arrays, that can
 /// be optimized by "guessing" that the stride is element-sized.
 ///
-/// This is done by createing two versions of the same loop: one which assumes
+/// This is done by creating two versions of the same loop: one which assumes
 /// that the elements are contiguous (stride == size of element), and one that
 /// is the original generic loop.
 ///

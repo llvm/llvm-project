@@ -20,6 +20,9 @@ def ArmStreamingMode : I32EnumAttr<"ArmStreamingMode", "Armv9 Streaming SVE mode
       // StreamingLocally: PSTATE.SM is kept internal and the callee manages it
       // on entry/exit.
       I32EnumAttrCase<"StreamingLocally", 2, "arm_locally_streaming">,
+      // StreamingCompatible: the function may be entered in either
+      // non-streaming mode (PSTATE.SM=0) or in streaming mode (PSTATE.SM=1)
+      I32EnumAttrCase<"StreamingCompatible", 3, "arm_streaming_compatible">,
     ]>{
   let cppNamespace = "mlir::arm_sme";
   let genSpecializedAttr = 0;
@@ -61,7 +64,11 @@ def EnableArmStreaming
                 clEnumValN(mlir::arm_sme::ArmStreamingMode::StreamingLocally,
                            "streaming-locally",
                            "Streaming mode is internal to the function, callee "
-                           "manages PSTATE.SM on entry/exit.")
+                           "manages PSTATE.SM on entry/exit."),
+                clEnumValN(mlir::arm_sme::ArmStreamingMode::StreamingCompatible,
+                           "streaming-compatible",
+                           "Function supports both streaming and non-streaming "
+                           "modes.")
           )}]>,
     Option<"zaMode", "za-mode", "mlir::arm_sme::ArmZaMode",
            /*default=*/"mlir::arm_sme::ArmZaMode::Disabled",
@@ -73,7 +80,11 @@ def EnableArmStreaming
                             "new-za",
                             "The function has ZA state. The ZA state is "
                             "created on entry and destroyed on exit.")
-           )}]>
+           )}]>,
+    Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
+           /*default=*/"false",
+           "Only apply the selected streaming/ZA modes if the function "
+           " contains ops that require them.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
@@ -83,8 +94,9 @@ def TileAllocation
   let summary = "Allocate SME tiles";
   let description = [{
     This pass does tile allocation for SME "virtual tiles". It is run at the
-    'func.func' op level, replacing 'arm_sme.get_tile_id' ops with (i32) tile
-    ids. An error will be emitted when there's no tiles left.
+    'func.func' op level, and assigns tile IDs (via an attribute) to all ops
+    that implement the `ArmSMETileOpInterface`. An error will be emitted when
+    there's no tiles left.
   }];
   let constructor = "mlir::arm_sme::createTileAllocationPass()";
   let dependentDialects = ["func::FuncDialect"];

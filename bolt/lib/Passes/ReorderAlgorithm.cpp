@@ -20,7 +20,7 @@
 #include <random>
 #include <stack>
 
-#undef  DEBUG_TYPE
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
 
 using namespace llvm;
@@ -425,7 +425,7 @@ void TSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
   }
 
   std::vector<std::vector<int64_t>> DP;
-  DP.resize(1 << N);
+  DP.resize(static_cast<size_t>(1) << N);
   for (std::vector<int64_t> &Elmt : DP)
     Elmt.resize(N, -1);
 

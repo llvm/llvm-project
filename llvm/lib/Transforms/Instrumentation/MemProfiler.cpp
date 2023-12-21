@@ -676,25 +676,17 @@ static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI) {
   auto &Ctx = M.getContext();
-
-  auto FuncName = getIRPGOFuncName(F);
+  // Previously we used getIRPGOFuncName() here. If F is local linkage,
+  // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
+  // llvm-profdata uses FuncName in dwarf to create GUID which doesn't
+  // contain FileName's prefix. It caused local linkage function can't
+  // find MemProfRecord. So we use getName() now.
+  // 'unique-internal-linkage-names' can make MemProf work better for local
+  // linkage function.
+  auto FuncName = F.getName();
   auto FuncGUID = Function::getGUID(FuncName);
   std::optional<memprof::MemProfRecord> MemProfRec;
   auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
-  if (Err) {
-    // If we don't find getIRPGOFuncName(), try getPGOFuncName() to handle
-    // profiles built by older compilers
-    Err = handleErrors(std::move(Err), [&](const InstrProfError &IE) -> Error {
-      if (IE.get() != instrprof_error::unknown_function)
-        return make_error<InstrProfError>(IE);
-      auto FuncName = getPGOFuncName(F);
-      auto FuncGUID = Function::getGUID(FuncName);
-      if (auto Err =
-              MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec))
-        return Err;
-      return Error::success();
-    });
-  }
   if (Err) {
     handleAllErrors(std::move(Err), [&](const InstrProfError &IPE) {
       auto Err = IPE.get();

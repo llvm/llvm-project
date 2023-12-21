@@ -1,5 +1,5 @@
 // RUN: %clang %cflags -Wl,--defsym='__global_pointer$'=0x2800 -o %t %s
-// RUN: llvm-bolt --print-cfg --print-only=_start -o /dev/null %t \
+// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
 // RUN:    | FileCheck %s
 
   .data

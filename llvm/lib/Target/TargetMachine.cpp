@@ -39,30 +39,60 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
 
 TargetMachine::~TargetMachine() = default;
 
-bool TargetMachine::isLargeData(const GlobalVariable *GV) const {
-  if (getTargetTriple().getArch() != Triple::x86_64 || GV->isThreadLocal())
-    return false;
-  // Large data under the large code model still needs to be thought about, so
-  // restrict this to medium.
-  if (getCodeModel() != CodeModel::Medium)
+bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
 
-  // Allowing large metadata sections in the presence of an explicit section is
-  // useful, even if GCC does not allow them. However, we should not mark
-  // certain well-known prefixes as large, because it would make the whole
-  // output section large and cause the linker to move it, which is almost
-  // always undesired.
+  auto *GO = GVal->getAliaseeObject();
+
+  // Be conservative if we can't find an underlying GlobalObject.
+  if (!GO)
+    return true;
+
+  auto *GV = dyn_cast<GlobalVariable>(GO);
+
+  // Functions/GlobalIFuncs are only large under the large code model.
+  if (!GV)
+    return getCodeModel() == CodeModel::Large;
+
+  if (GV->isThreadLocal())
+    return false;
+
+  // We should properly mark well-known section name prefixes as small/large,
+  // because otherwise the output section may have the wrong section flags and
+  // the linker will lay it out in an unexpected way.
+  // TODO: bring back lbss/ldata/lrodata checks after fixing accesses to large
+  // globals in the small code model.
   StringRef Name = GV->getSection();
-  auto IsPrefix = [&](StringRef Prefix) {
-    StringRef S = Name;
-    return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
-  };
-  if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
-    return false;
+  if (!Name.empty()) {
+    auto IsPrefix = [&](StringRef Prefix) {
+      StringRef S = Name;
+      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
+    };
+    if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
+      return false;
+  }
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
-  uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
-  return Size == 0 || Size > LargeDataThreshold;
+  // For x86-64, we treat an explicit GlobalVariable small code model to mean
+  // that the global should be placed in a small section, and ditto for large.
+  // Well-known section names above take precedence for correctness.
+  if (auto CM = GV->getCodeModel()) {
+    if (*CM == CodeModel::Small)
+      return false;
+    if (*CM == CodeModel::Large)
+      return true;
+  }
+
+  if (getCodeModel() == CodeModel::Medium ||
+      getCodeModel() == CodeModel::Large) {
+    if (!GV->getValueType()->isSized())
+      return true;
+    const DataLayout &DL = GV->getParent()->getDataLayout();
+    uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+    return Size == 0 || Size > LargeDataThreshold;
+  }
+
+  return false;
 }
 
 bool TargetMachine::isPositionIndependent() const {

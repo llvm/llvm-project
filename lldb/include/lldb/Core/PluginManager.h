@@ -355,7 +355,8 @@ public:
           nullptr,
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
           nullptr,
-      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr);
+      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
+      DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
 
@@ -525,6 +526,14 @@ public:
   GetSettingForProcessPlugin(Debugger &debugger, llvm::StringRef setting_name);
 
   static bool CreateSettingForProcessPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForSymbolLocatorPlugin(Debugger &debugger,
+                                   llvm::StringRef setting_name);
+
+  static bool CreateSettingForSymbolLocatorPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 

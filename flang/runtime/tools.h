@@ -453,6 +453,27 @@ template <int KIND> struct FitsInIntegerKind;
 
 RT_API_ATTRS bool FitsInDescriptor(
     const Descriptor *length, std::int64_t value, Terminator &terminator);
+// Defines a utility function for copying and padding characters
+template <typename TO, typename FROM>
+RT_API_ATTRS void CopyAndPad(
+    TO *to, const FROM *from, std::size_t toChars, std::size_t fromChars) {
+  if constexpr (sizeof(TO) != sizeof(FROM)) {
+    std::size_t copyChars{std::min(toChars, fromChars)};
+    for (std::size_t j{0}; j < copyChars; ++j) {
+      to[j] = from[j];
+    }
+    for (std::size_t j{copyChars}; j < toChars; ++j) {
+      to[j] = static_cast<TO>(' ');
+    }
+  } else if (toChars <= fromChars) {
+    std::memcpy(to, from, toChars * sizeof(TO));
+  } else {
+    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    for (std::size_t j{fromChars}; j < toChars; ++j) {
+      to[j] = static_cast<TO>(' ');
+    }
+  }
+}
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

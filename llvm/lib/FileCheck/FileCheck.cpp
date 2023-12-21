@@ -404,7 +404,7 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
     StringRef &Expr, AllowedOperand AO, bool MaybeInvalidConstraint,
     std::optional<size_t> LineNumber, FileCheckPatternContext *Context,
     const SourceMgr &SM) {
-  if (Expr.startswith("(")) {
+  if (Expr.starts_with("(")) {
     if (AO != AllowedOperand::Any)
       return ErrorDiagnostic::get(
           SM, Expr, "parenthesized expression not permitted here");
@@ -417,7 +417,7 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
         parseVariable(Expr, SM);
     if (ParseVarResult) {
       // Try to parse a function call.
-      if (Expr.ltrim(SpaceChars).startswith("(")) {
+      if (Expr.ltrim(SpaceChars).starts_with("(")) {
         if (AO != AllowedOperand::Any)
           return ErrorDiagnostic::get(SM, ParseVarResult->Name,
                                       "unexpected function call");
@@ -458,7 +458,7 @@ Expected<std::unique_ptr<ExpressionAST>>
 Pattern::parseParenExpr(StringRef &Expr, std::optional<size_t> LineNumber,
                         FileCheckPatternContext *Context, const SourceMgr &SM) {
   Expr = Expr.ltrim(SpaceChars);
-  assert(Expr.startswith("("));
+  assert(Expr.starts_with("("));
 
   // Parse right operand.
   Expr.consume_front("(");
@@ -471,7 +471,7 @@ Pattern::parseParenExpr(StringRef &Expr, std::optional<size_t> LineNumber,
       Expr, AllowedOperand::Any, /*MaybeInvalidConstraint=*/false, LineNumber,
       Context, SM);
   Expr = Expr.ltrim(SpaceChars);
-  while (SubExprResult && !Expr.empty() && !Expr.startswith(")")) {
+  while (SubExprResult && !Expr.empty() && !Expr.starts_with(")")) {
     StringRef OrigExpr = Expr;
     SubExprResult = parseBinop(OrigExpr, Expr, std::move(*SubExprResult), false,
                                LineNumber, Context, SM);
@@ -537,7 +537,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
                        std::optional<size_t> LineNumber,
                        FileCheckPatternContext *Context, const SourceMgr &SM) {
   Expr = Expr.ltrim(SpaceChars);
-  assert(Expr.startswith("("));
+  assert(Expr.starts_with("("));
 
   auto OptFunc = StringSwitch<binop_eval_t>(FuncName)
                      .Case("add", exprAdd)
@@ -557,8 +557,8 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
 
   // Parse call arguments, which are comma separated.
   SmallVector<std::unique_ptr<ExpressionAST>, 4> Args;
-  while (!Expr.empty() && !Expr.startswith(")")) {
-    if (Expr.startswith(","))
+  while (!Expr.empty() && !Expr.starts_with(")")) {
+    if (Expr.starts_with(","))
       return ErrorDiagnostic::get(SM, Expr, "missing argument");
 
     // Parse the argument, which is an arbitary expression.
@@ -569,7 +569,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
     while (Arg && !Expr.empty()) {
       Expr = Expr.ltrim(SpaceChars);
       // Have we reached an argument terminator?
-      if (Expr.startswith(",") || Expr.startswith(")"))
+      if (Expr.starts_with(",") || Expr.starts_with(")"))
         break;
 
       // Arg = Arg <op> <expr>
@@ -588,7 +588,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
       break;
 
     Expr = Expr.ltrim(SpaceChars);
-    if (Expr.startswith(")"))
+    if (Expr.starts_with(")"))
       return ErrorDiagnostic::get(SM, Expr, "missing argument");
   }
 
@@ -818,7 +818,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
   // by escaping scary characters in fixed strings, building up one big regex.
   while (!PatternStr.empty()) {
     // RegEx matches.
-    if (PatternStr.startswith("{{")) {
+    if (PatternStr.starts_with("{{")) {
       // This is the start of a regex match.  Scan for the }}.
       size_t End = PatternStr.find("}}");
       if (End == StringRef::npos) {
@@ -857,7 +857,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
     // names must satisfy the regular expression "[a-zA-Z_][0-9a-zA-Z_]*" to be
     // valid, as this helps catch some common errors. If there are extra '['s
     // before the "[[", treat them literally.
-    if (PatternStr.startswith("[[") && !PatternStr.startswith("[[[")) {
+    if (PatternStr.starts_with("[[") && !PatternStr.starts_with("[[[")) {
       StringRef UnparsedPatternStr = PatternStr.substr(2);
       // Find the closing bracket pair ending the match.  End is going to be an
       // offset relative to the beginning of the match string.
@@ -1392,7 +1392,7 @@ size_t Pattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
   size_t BracketDepth = 0;
 
   while (!Str.empty()) {
-    if (Str.startswith("]]") && BracketDepth == 0)
+    if (Str.starts_with("]]") && BracketDepth == 0)
       return Offset;
     if (Str[0] == '\\') {
       // Backslash escapes the next char within regexes, so skip them both.
@@ -1591,10 +1591,10 @@ FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix,
   }
 
   // You can't combine -NOT with another suffix.
-  if (Rest.startswith("DAG-NOT:") || Rest.startswith("NOT-DAG:") ||
-      Rest.startswith("NEXT-NOT:") || Rest.startswith("NOT-NEXT:") ||
-      Rest.startswith("SAME-NOT:") || Rest.startswith("NOT-SAME:") ||
-      Rest.startswith("EMPTY-NOT:") || Rest.startswith("NOT-EMPTY:"))
+  if (Rest.starts_with("DAG-NOT:") || Rest.starts_with("NOT-DAG:") ||
+      Rest.starts_with("NEXT-NOT:") || Rest.starts_with("NOT-NEXT:") ||
+      Rest.starts_with("SAME-NOT:") || Rest.starts_with("NOT-SAME:") ||
+      Rest.starts_with("EMPTY-NOT:") || Rest.starts_with("NOT-EMPTY:"))
     return {Check::CheckBadNot, Rest};
 
   if (Rest.consume_front("NEXT"))

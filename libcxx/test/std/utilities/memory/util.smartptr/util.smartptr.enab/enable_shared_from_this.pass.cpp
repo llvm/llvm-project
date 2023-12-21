@@ -18,7 +18,7 @@
 //     shared_ptr<T> shared_from_this();
 //     shared_ptr<T const> shared_from_this() const;
 //     weak_ptr<T> weak_from_this() noexcept;                         // C++17
-//     weak_ptr<T const> weak_from_this() const noexecpt;             // C++17
+//     weak_ptr<T const> weak_from_this() const noexcept;             // C++17
 // };
 
 #include <memory>

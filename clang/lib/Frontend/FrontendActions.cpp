@@ -258,6 +258,16 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(
   return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
+std::unique_ptr<ASTConsumer>
+GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) {
+  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
+
+  return GenerateModuleAction::CreateASTConsumer(CI, InFile);
+}
+
 std::unique_ptr<raw_pwrite_stream>
 GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
                                                 StringRef InFile) {

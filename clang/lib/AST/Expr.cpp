@@ -205,22 +205,85 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 }
 
 bool Expr::isFlexibleArrayMemberLike(
-    ASTContext &Ctx,
+    ASTContext &Context,
     LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) const {
+
+  // For compatibility with existing code, we treat arrays of length 0 or
+  // 1 as flexible array members.
+  const auto *CAT = Context.getAsConstantArrayType(getType());
+  if (CAT) {
+    llvm::APInt Size = CAT->getSize();
+
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+
+    if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
+      return false;
+
+    // GCC extension, only allowed to represent a FAM.
+    if (Size == 0)
+      return true;
+
+    if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete && Size.uge(1))
+      return false;
+
+    if (StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete && Size.uge(2))
+      return false;
+  } else if (!Context.getAsIncompleteArrayType(getType()))
+    return false;
+
   const Expr *E = IgnoreParens();
-  const Decl *D = nullptr;
 
-  if (const auto *ME = dyn_cast<MemberExpr>(E))
-    D = ME->getMemberDecl();
-  else if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    D = DRE->getDecl();
+  const NamedDecl *ND = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    ND = DRE->getDecl();
+  else if (const auto *ME = dyn_cast<MemberExpr>(E))
+    ND = ME->getMemberDecl();
   else if (const auto *IRE = dyn_cast<ObjCIvarRefExpr>(E))
-    D = IRE->getDecl();
+    return IRE->getDecl()->getNextIvar() == nullptr;
 
-  return Decl::isFlexibleArrayMemberLike(Ctx, D, E->getType(),
-                                         StrictFlexArraysLevel,
-                                         IgnoreTemplateOrMacroSubstitution);
+  if (!ND)
+    return false;
+
+  // A flexible array member must be the last member in the class.
+  // FIXME: If the base type of the member expr is not FD->getParent(),
+  // this should not be treated as a flexible array member access.
+  if (const auto *FD = dyn_cast<FieldDecl>(ND)) {
+    // GCC treats an array memeber of a union as an FAM if the size is one or
+    // zero.
+    if (CAT) {
+      llvm::APInt Size = CAT->getSize();
+      if (FD->getParent()->isUnion() && (Size.isZero() || Size.isOne()))
+        return true;
+    }
+
+    // Don't consider sizes resulting from macro expansions or template argument
+    // substitution to form C89 tail-padded arrays.
+    if (IgnoreTemplateOrMacroSubstitution) {
+      TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
+      while (TInfo) {
+        TypeLoc TL = TInfo->getTypeLoc();
+        // Look through typedefs.
+        if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
+          const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
+          TInfo = TDL->getTypeSourceInfo();
+          continue;
+        }
+        if (ConstantArrayTypeLoc CTL = TL.getAs<ConstantArrayTypeLoc>()) {
+          const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
+          if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
+            return false;
+        }
+        break;
+      }
+    }
+
+    RecordDecl::field_iterator FI(
+        DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+    return ++FI == FD->getParent()->field_end();
+  }
+
+  return false;
 }
 
 const ValueDecl *
@@ -4887,6 +4950,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_load_n:
     return 2;
 
+  case AO__scoped_atomic_load_n:
   case AO__opencl_atomic_load:
   case AO__hip_atomic_load:
   case AO__c11_atomic_store:
@@ -4921,6 +4985,26 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_fetch_max:
     return 3;
 
+  case AO__scoped_atomic_load:
+  case AO__scoped_atomic_store:
+  case AO__scoped_atomic_store_n:
+  case AO__scoped_atomic_fetch_add:
+  case AO__scoped_atomic_fetch_sub:
+  case AO__scoped_atomic_fetch_and:
+  case AO__scoped_atomic_fetch_or:
+  case AO__scoped_atomic_fetch_xor:
+  case AO__scoped_atomic_fetch_nand:
+  case AO__scoped_atomic_add_fetch:
+  case AO__scoped_atomic_sub_fetch:
+  case AO__scoped_atomic_and_fetch:
+  case AO__scoped_atomic_or_fetch:
+  case AO__scoped_atomic_xor_fetch:
+  case AO__scoped_atomic_nand_fetch:
+  case AO__scoped_atomic_min_fetch:
+  case AO__scoped_atomic_max_fetch:
+  case AO__scoped_atomic_fetch_min:
+  case AO__scoped_atomic_fetch_max:
+  case AO__scoped_atomic_exchange_n:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:
@@ -4942,6 +5026,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_exchange:
     return 4;
 
+  case AO__scoped_atomic_exchange:
   case AO__c11_atomic_compare_exchange_strong:
   case AO__c11_atomic_compare_exchange_weak:
     return 5;
@@ -4952,6 +5037,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_compare_exchange:
   case AO__atomic_compare_exchange_n:
     return 6;
+
+  case AO__scoped_atomic_compare_exchange:
+  case AO__scoped_atomic_compare_exchange_n:
+    return 7;
   }
   llvm_unreachable("unknown atomic op");
 }

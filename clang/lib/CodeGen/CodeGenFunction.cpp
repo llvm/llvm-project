@@ -495,12 +495,12 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
     LargestVectorWidth = CurFnInfo->getMaxVectorWidth();
 
-  // Add the required-vector-width attribute. This contains the max width from:
+  // Add the min-legal-vector-width attribute. This contains the max width from:
   // 1. min-vector-width attribute used in the source program.
   // 2. Any builtins used that have a vector width specified.
   // 3. Values passed in and out of inline assembly.
   // 4. Width of vector arguments and return types for this function.
-  // 5. Width of vector aguments and return types for functions called by this
+  // 5. Width of vector arguments and return types for functions called by this
   //    function.
   if (getContext().getTargetInfo().getTriple().isX86())
     CurFn->addFnAttr("min-legal-vector-width",

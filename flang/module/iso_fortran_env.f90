@@ -9,11 +9,11 @@
 ! See Fortran 2018, clause 16.10.2
 ! TODO: These are placeholder values so that some tests can be run.
 
-include '../include/flang/Runtime/magic-numbers.h' ! for IOSTAT= error/end code values
+include '../include/flang/Runtime/magic-numbers.h' ! IOSTAT values
 
 module iso_fortran_env
 
-  use __Fortran_builtins, only: &
+  use __fortran_builtins, only: &
     event_type => __builtin_event_type, &
     lock_type => __builtin_lock_type, &
     team_type => __builtin_team_type, &
@@ -142,9 +142,11 @@ module iso_fortran_env
 
   integer, parameter :: stat_failed_image = FORTRAN_RUNTIME_STAT_FAILED_IMAGE
   integer, parameter :: stat_locked = FORTRAN_RUNTIME_STAT_LOCKED
-  integer, parameter :: stat_locked_other_image = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE
+  integer, parameter :: &
+    stat_locked_other_image = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE
   integer, parameter :: stat_stopped_image = FORTRAN_RUNTIME_STAT_STOPPED_IMAGE
   integer, parameter :: stat_unlocked = FORTRAN_RUNTIME_STAT_UNLOCKED
-  integer, parameter :: stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
+  integer, parameter :: &
+    stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
 
 end module iso_fortran_env

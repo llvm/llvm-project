@@ -806,6 +806,7 @@ static int parseFilenamePattern(const char *FilenamePat,
         if (__llvm_profile_is_continuous_mode_enabled()) {
           PROF_WARN("%%c specifier can only be specified once in %s.\n",
                     FilenamePat);
+          __llvm_profile_disable_continuous_mode();
           return -1;
         }
 #if defined(__APPLE__) || defined(__ELF__) || defined(_WIN32)

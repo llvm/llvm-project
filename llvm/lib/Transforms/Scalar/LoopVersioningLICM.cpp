@@ -266,6 +266,11 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
     for (const auto &A : AS) {
       Value *Ptr = A.getValue();
       // Alias tracker should have pointers of same data type.
+      //
+      // FIXME: check no longer effective since opaque pointers?
+      // If the intent is to check that the memory accesses use the
+      // same data type (such that LICM can promote them), then we
+      // can no longer see this from the pointer value types.
       TypeCheck = (TypeCheck && (SomePtr->getType() == Ptr->getType()));
     }
     // At least one alias tracker should have pointers of same data type.

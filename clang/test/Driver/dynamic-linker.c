@@ -11,7 +11,7 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -### -shared /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHARED %s
 
 
-// RUN: %clang -target armv7-unknown-linux-gnueabi -### -shared -rdynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHARED %s
+// RUN: %clang --target=armv7-unknown-linux-gnueabi -### -Werror -shared -rdynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHARED %s
 // RUN: %clang -target i386-unknown-linux-gnu -### -shared -rdynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHARED %s
 // RUN: %clang -target mips64-unknown-linux-gnu -### -shared -rdynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHARED %s
 // RUN: %clang -target powerpc64-unknown-linux-gnu -### -shared -rdynamic /dev/null -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHARED %s

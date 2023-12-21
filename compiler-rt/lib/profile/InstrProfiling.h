@@ -55,6 +55,12 @@ int __llvm_profile_is_continuous_mode_enabled(void);
 void __llvm_profile_enable_continuous_mode(void);
 
 /*!
+ * \brief Disable continuous mode.
+ *
+ */
+void __llvm_profile_disable_continuous_mode(void);
+
+/*!
  * \brief Set the page size.
  *
  * This is a pre-requisite for enabling continuous mode. The buffer size

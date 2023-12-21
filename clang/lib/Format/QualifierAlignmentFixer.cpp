@@ -535,14 +535,21 @@ LeftRightQualifierAlignmentFixer::analyze(
     SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
   tooling::Replacements Fixes;
+  AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+  fixQualifierAlignment(AnnotatedLines, Tokens, Fixes);
+  return {Fixes, 0};
+}
+
+void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
+    SmallVectorImpl<AnnotatedLine *> &AnnotatedLines, FormatTokenLexer &Tokens,
+    tooling::Replacements &Fixes) {
   const AdditionalKeywords &Keywords = Tokens.getKeywords();
   const SourceManager &SourceMgr = Env.getSourceManager();
-  AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
-
   tok::TokenKind QualifierToken = getTokenFromQualifier(Qualifier);
   assert(QualifierToken != tok::identifier && "Unrecognised Qualifier");
 
   for (AnnotatedLine *Line : AnnotatedLines) {
+    fixQualifierAlignment(Line->Children, Tokens, Fixes);
     if (!Line->Affected || Line->InPPDirective)
       continue;
     FormatToken *First = Line->First;
@@ -565,7 +572,6 @@ LeftRightQualifierAlignmentFixer::analyze(
       }
     }
   }
-  return {Fixes, 0};
 }
 
 void prepareLeftRightOrderingForQualifierAlignmentFixer(

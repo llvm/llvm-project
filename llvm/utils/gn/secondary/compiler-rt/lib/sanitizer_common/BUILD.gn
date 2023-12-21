@@ -151,6 +151,8 @@ source_set("sources") {
     "sanitizer_symbolizer_mac.cpp",
     "sanitizer_symbolizer_mac.h",
     "sanitizer_symbolizer_markup.cpp",
+    "sanitizer_symbolizer_markup.h",
+    "sanitizer_symbolizer_markup_fuchsia.cpp",
     "sanitizer_symbolizer_posix_libcdep.cpp",
     "sanitizer_symbolizer_report.cpp",
     "sanitizer_symbolizer_report_fuchsia.cpp",

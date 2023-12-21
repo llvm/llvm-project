@@ -50,6 +50,8 @@ entry:
   ret void
 }
 
+; ASM:        .csect ..text..[PR],5
+; ASM-NEXT:   .rename ..text..[PR],""
 ; ASM:        .csect .foo[PR],5
 ; ASM-NEXT:  	.globl	foo[DS]                         # -- Begin function foo
 ; ASM-NEXT:  	.globl	.foo[PR]
@@ -117,9 +119,9 @@ entry:
 ; XCOFF32-NEXT: 00000000 l       .text	00000000 (idx: 5) [PR]
 ; XCOFF32-NEXT: 00000000 g       .text	00000019 (idx: 7) .foo[PR]
 ; XCOFF32-NEXT: 00000000 g     F .text (csect: (idx: 7) .foo[PR]) 	00000000 (idx: 9) .alias_foo
-; XCOFF32-NEXT: 00000020 g       .text	00000020 .hidden (idx: 11) .hidden_foo[PR]
-; XCOFF32-NEXT: 00000040 g       .text	00000059 (idx: 13) .bar[PR]
-; XCOFF32-NEXT: 000000c0 l       .text	0000002a (idx: 15) .static_overalign_foo[PR]
+; XCOFF32-NEXT: 00000020 g     F .text	00000020 .hidden (idx: 11) .hidden_foo[PR]
+; XCOFF32-NEXT: 00000040 g     F .text	00000059 (idx: 13) .bar[PR]
+; XCOFF32-NEXT: 000000c0 l     F .text	0000002a (idx: 15) .static_overalign_foo[PR]
 ; XCOFF32-NEXT: 000000ec g     O .data	0000000c (idx: 17) foo[DS]
 ; XCOFF32-NEXT: 000000ec g     O .data (csect: (idx: 17) foo[DS]) 	00000000 (idx: 19) alias_foo
 ; XCOFF32-NEXT: 000000f8 g     O .data	0000000c .hidden (idx: 21) hidden_foo[DS]
@@ -152,9 +154,9 @@ entry:
 ; XCOFF64-NEXT: 0000000000000000 l       .text	0000000000000000 (idx: 5) [PR]
 ; XCOFF64-NEXT: 0000000000000000 g       .text	0000000000000019 (idx: 7) .foo[PR]
 ; XCOFF64-NEXT: 0000000000000000 g     F .text (csect: (idx: 7) .foo[PR]) 	0000000000000000 (idx: 9) .alias_foo
-; XCOFF64-NEXT: 0000000000000020 g       .text	0000000000000020 .hidden (idx: 11) .hidden_foo[PR]
-; XCOFF64-NEXT: 0000000000000040 g       .text	0000000000000059 (idx: 13) .bar[PR]
-; XCOFF64-NEXT: 00000000000000c0 l       .text	000000000000002a (idx: 15) .static_overalign_foo[PR]
+; XCOFF64-NEXT: 0000000000000020 g     F .text	0000000000000020 .hidden (idx: 11) .hidden_foo[PR]
+; XCOFF64-NEXT: 0000000000000040 g     F .text	0000000000000059 (idx: 13) .bar[PR]
+; XCOFF64-NEXT: 00000000000000c0 l     F .text	000000000000002a (idx: 15) .static_overalign_foo[PR]
 ; XCOFF64-NEXT: 00000000000000f0 g     O .data	0000000000000018 (idx: 17) foo[DS]
 ; XCOFF64-NEXT: 00000000000000f0 g     O .data (csect: (idx: 17) foo[DS]) 	0000000000000000 (idx: 19) alias_foo
 ; XCOFF64-NEXT: 0000000000000108 g     O .data	0000000000000018 .hidden (idx: 21) hidden_foo[DS]

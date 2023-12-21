@@ -41,6 +41,6 @@ RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/extern/ext
 RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/private_extern/private_extern.out -o %t.dSYM --verbose | FileCheck %s
 RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/extern/extern.out -o %t.dSYM --verbose | FileCheck %s
 
-CHECK-NOT: could not find object file symbol for symbol _baz
+CHECK-NOT: could not find symbol '_baz'
 CHECK: { sym: _baz, objAddr: 0x0, binAddr: 0x100007F58, size: 0x0 }
 CHECK: { sym: _foo, objAddr: 0x0, binAddr: 0x100007F58, size: 0x20 }

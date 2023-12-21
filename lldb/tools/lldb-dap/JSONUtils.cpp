@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -57,7 +58,7 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
                           llvm::StringRef defaultValue) {
   if (obj == nullptr)
     return defaultValue;
-  return GetString(*obj, key);
+  return GetString(*obj, key, defaultValue);
 }
 
 // Gets an unsigned integer from a JSON object using the key, or returns the
@@ -454,8 +455,9 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
 static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
   uint64_t debug_info_size = 0;
   llvm::StringRef section_name(section.GetName());
-  if (section_name.startswith(".debug") || section_name.startswith("__debug") ||
-      section_name.startswith(".apple") || section_name.startswith("__apple"))
+  if (section_name.starts_with(".debug") ||
+      section_name.starts_with("__debug") ||
+      section_name.starts_with(".apple") || section_name.starts_with("__apple"))
     debug_info_size += section.GetFileByteSize();
   size_t num_sub_sections = section.GetNumSubSections();
   for (size_t i = 0; i < num_sub_sections; i++) {
@@ -803,9 +805,11 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     llvm::raw_string_ostream os(frame_name);
     os << llvm::format_hex(frame.GetPC(), 18);
   }
-  bool is_optimized = frame.GetFunction().GetIsOptimized();
-  if (is_optimized)
+
+  // We only include `[opt]` if a custom frame format is not specified.
+  if (!g_dap.frame_format && frame.GetFunction().GetIsOptimized())
     frame_name += " [opt]";
+
   EmplaceSafeString(object, "name", frame_name);
 
   auto source = CreateSource(frame);
@@ -959,11 +963,10 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
       body.try_emplace("reason", "breakpoint");
-      char desc_str[64];
-      uint64_t bp_id = thread.GetStopReasonDataAtIndex(0);
-      uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
-      snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
-               bp_id, bp_loc_id);
+      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+      lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
+      std::string desc_str =
+          llvm::formatv("breakpoint {0}.{1}", bp_id, bp_loc_id);
       body.try_emplace("hitBreakpointIds",
                        llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);
@@ -1101,6 +1104,29 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 //                       can use this optional information to present the
 //                       children in a paged UI and fetch them in chunks."
 //     }
+//     "declaration": {
+//       "type": "object | undefined",
+//       "description": "Extension to the protocol that indicates the source
+//                       location where the variable was declared. This value
+//                       might not be present if no declaration is available.",
+//       "properties": {
+//         "path": {
+//           "type": "string | undefined",
+//           "description": "The source file path where the variable was
+//                           declared."
+//         },
+//         "line": {
+//           "type": "number | undefined",
+//           "description": "The 1-indexed source line where the variable was
+//                          declared."
+//         },
+//         "column": {
+//           "type": "number | undefined",
+//           "description": "The 1-indexed source column where the variable was
+//                          declared."
+//         }
+//       }
+//     }
 //   },
 //   "required": [ "name", "value", "variablesReference" ]
 // }
@@ -1165,6 +1191,24 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   const char *evaluateName = evaluateStream.GetData();
   if (evaluateName && evaluateName[0])
     EmplaceSafeString(object, "evaluateName", std::string(evaluateName));
+
+  if (lldb::SBDeclaration decl = v.GetDeclaration(); decl.IsValid()) {
+    llvm::json::Object decl_obj;
+    if (lldb::SBFileSpec file = decl.GetFileSpec(); file.IsValid()) {
+      char path[PATH_MAX] = "";
+      if (file.GetPath(path, sizeof(path)) &&
+          lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
+        decl_obj.try_emplace("path", std::string(path));
+      }
+    }
+
+    if (int line = decl.GetLine())
+      decl_obj.try_emplace("line", line);
+    if (int column = decl.GetColumn())
+      decl_obj.try_emplace("column", column);
+
+    object.try_emplace("declaration", std::move(decl_obj));
+  }
   return llvm::json::Value(std::move(object));
 }
 

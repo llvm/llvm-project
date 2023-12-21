@@ -117,6 +117,7 @@ def tc_788b1d09 : InstrItinClass;
 def tc_78f87ed3 : InstrItinClass;
 def tc_7af3a37e : InstrItinClass;
 def tc_7b9187d3 : InstrItinClass;
+def tc_7c28bd7e : InstrItinClass;
 def tc_7c31e19a : InstrItinClass;
 def tc_7c6d32e4 : InstrItinClass;
 def tc_7d6a2568 : InstrItinClass;
@@ -212,6 +213,7 @@ def tc_e3d699e3 : InstrItinClass;
 def tc_e60def48 : InstrItinClass;
 def tc_e9170fb7 : InstrItinClass;
 def tc_ed03645c : InstrItinClass;
+def tc_ed3f8d2a : InstrItinClass;
 def tc_eed07714 : InstrItinClass;
 def tc_eeda4109 : InstrItinClass;
 def tc_ef921005 : InstrItinClass;
@@ -869,6 +871,10 @@ class DepScalarItinV55 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -1236,6 +1242,10 @@ class DepScalarItinV55 {
     InstrItinData <tc_ed03645c, /*tc_2early*/
       [InstrStage<1, [SLOT2]>], [3, 1],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -1736,6 +1746,10 @@ class DepScalarItinV60 {
     InstrItinData <tc_7b9187d3, /*tc_newvjump*/
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
 
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
@@ -2625,6 +2639,10 @@ class DepScalarItinV60se {
        InstrStage<1, [CVI_ST]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -3003,6 +3021,10 @@ class DepScalarItinV60se {
       [InstrStage<1, [SLOT2], 0>,
        InstrStage<1, [CVI_ST]>], [3, 1],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -3509,6 +3531,10 @@ class DepScalarItinV62 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -3876,6 +3902,10 @@ class DepScalarItinV62 {
     InstrItinData <tc_ed03645c, /*tc_2early*/
       [InstrStage<1, [SLOT2]>], [3, 1],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -4381,6 +4411,10 @@ class DepScalarItinV65 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -4756,6 +4790,10 @@ class DepScalarItinV65 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -5261,6 +5299,10 @@ class DepScalarItinV66 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -5636,6 +5678,10 @@ class DepScalarItinV66 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -6141,6 +6187,10 @@ class DepScalarItinV67 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -6520,6 +6570,10 @@ class DepScalarItinV67 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -7025,6 +7079,10 @@ class DepScalarItinV67T {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -7400,6 +7458,10 @@ class DepScalarItinV67T {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -7905,6 +7967,10 @@ class DepScalarItinV68 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -8280,6 +8346,10 @@ class DepScalarItinV68 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -8785,6 +8855,10 @@ class DepScalarItinV69 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -9160,6 +9234,10 @@ class DepScalarItinV69 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -9665,6 +9743,10 @@ class DepScalarItinV71 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -10040,6 +10122,10 @@ class DepScalarItinV71 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -10545,6 +10631,10 @@ class DepScalarItinV71T {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -10920,6 +11010,10 @@ class DepScalarItinV71T {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],
@@ -11425,6 +11519,10 @@ class DepScalarItinV73 {
       [InstrStage<1, [SLOT0]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
 
+    InstrItinData <tc_7c28bd7e, /*tc_st*/
+      [InstrStage<1, [SLOT0]>], [3],
+      [Hex_FWD]>,
+
     InstrItinData <tc_7c31e19a, /*tc_st*/
       [InstrStage<1, [SLOT0, SLOT1]>], [1, 2, 2],
       [Hex_FWD, Hex_FWD, Hex_FWD]>,
@@ -11800,6 +11898,10 @@ class DepScalarItinV73 {
     InstrItinData <tc_ed03645c, /*tc_1*/
       [InstrStage<1, [SLOT2]>], [3, 2],
       [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ed3f8d2a, /*tc_ld*/
+      [InstrStage<1, [SLOT0]>], [4, 1, 1],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
 
     InstrItinData <tc_eed07714, /*tc_ld*/
       [InstrStage<1, [SLOT0, SLOT1]>], [4, 1, 2],

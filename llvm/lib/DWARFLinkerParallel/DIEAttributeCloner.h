@@ -13,6 +13,7 @@
 #include "DIEGenerator.h"
 #include "DWARFLinkerCompileUnit.h"
 #include "DWARFLinkerGlobalData.h"
+#include "DWARFLinkerTypeUnit.h"
 
 namespace llvm {
 namespace dwarflinker_parallel {
@@ -44,20 +45,28 @@ struct AttributesInfo {
 /// attribute, adds cloned attribute to the output DIE.
 class DIEAttributeCloner {
 public:
-  DIEAttributeCloner(DIE *OutDIE, CompileUnit &CU,
+  DIEAttributeCloner(DIE *OutDIE, CompileUnit &InUnit, CompileUnit *OutUnit,
                      const DWARFDebugInfoEntry *InputDieEntry,
                      DIEGenerator &Generator,
                      std::optional<int64_t> FuncAddressAdjustment,
                      std::optional<int64_t> VarAddressAdjustment,
                      bool HasLocationExpressionAddress)
-      : OutDIE(OutDIE), CU(CU),
-        DebugInfoOutputSection(
-            CU.getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo)),
-        InputDieEntry(InputDieEntry), Generator(Generator),
-        FuncAddressAdjustment(FuncAddressAdjustment),
-        VarAddressAdjustment(VarAddressAdjustment),
-        HasLocationExpressionAddress(HasLocationExpressionAddress) {
-    InputDIEIdx = CU.getDIEIndex(InputDieEntry);
+      : DIEAttributeCloner(OutDIE, InUnit,
+                           CompileUnit::OutputUnitVariantPtr(OutUnit),
+                           InputDieEntry, Generator, FuncAddressAdjustment,
+                           VarAddressAdjustment, HasLocationExpressionAddress) {
+  }
+
+  DIEAttributeCloner(DIE *OutDIE, CompileUnit &InUnit, TypeUnit *OutUnit,
+                     const DWARFDebugInfoEntry *InputDieEntry,
+                     DIEGenerator &Generator,
+                     std::optional<int64_t> FuncAddressAdjustment,
+                     std::optional<int64_t> VarAddressAdjustment,
+                     bool HasLocationExpressionAddress)
+      : DIEAttributeCloner(OutDIE, InUnit,
+                           CompileUnit::OutputUnitVariantPtr(OutUnit),
+                           InputDieEntry, Generator, FuncAddressAdjustment,
+                           VarAddressAdjustment, HasLocationExpressionAddress) {
   }
 
   /// Clone attributes of input DIE.
@@ -69,7 +78,36 @@ public:
   /// Cannot be used concurrently.
   AttributesInfo AttrInfo;
 
+  unsigned getOutOffset() { return AttrOutOffset; }
+
 protected:
+  DIEAttributeCloner(DIE *OutDIE, CompileUnit &InUnit,
+                     CompileUnit::OutputUnitVariantPtr OutUnit,
+                     const DWARFDebugInfoEntry *InputDieEntry,
+                     DIEGenerator &Generator,
+                     std::optional<int64_t> FuncAddressAdjustment,
+                     std::optional<int64_t> VarAddressAdjustment,
+                     bool HasLocationExpressionAddress)
+      : OutDIE(OutDIE), InUnit(InUnit), OutUnit(OutUnit),
+        DebugInfoOutputSection(
+            OutUnit->getSectionDescriptor(DebugSectionKind::DebugInfo)),
+        InputDieEntry(InputDieEntry), Generator(Generator),
+        FuncAddressAdjustment(FuncAddressAdjustment),
+        VarAddressAdjustment(VarAddressAdjustment),
+        HasLocationExpressionAddress(HasLocationExpressionAddress) {
+    InputDIEIdx = InUnit.getDIEIndex(InputDieEntry);
+
+    // Use DW_FORM_strp form for string attributes for DWARF version less than 5
+    // or if output unit is type unit and we need to produce deterministic
+    // result. (We can not generate deterministic results for debug_str_offsets
+    // section when attributes are cloned parallelly).
+    Use_DW_FORM_strp =
+        (InUnit.getVersion() < 5) ||
+        (OutUnit.isTypeUnit() &&
+         ((InUnit.getGlobalData().getOptions().Threads != 1) &&
+          !InUnit.getGlobalData().getOptions().AllowNonDeterministicOutput));
+  }
+
   /// Clone string attribute.
   size_t
   cloneStringAttr(const DWARFFormValue &Val,
@@ -99,18 +137,14 @@ protected:
   bool
   shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec);
 
-  /// Update patches offsets with the size of abbreviation number.
-  void
-  updatePatchesWithSizeOfAbbreviationNumber(unsigned SizeOfAbbreviationNumber) {
-    for (uint64_t *OffsetPtr : PatchesOffsets)
-      *OffsetPtr += SizeOfAbbreviationNumber;
-  }
-
   /// Output DIE.
   DIE *OutDIE = nullptr;
 
-  /// Compile unit for the output DIE.
-  CompileUnit &CU;
+  /// Input compilation unit.
+  CompileUnit &InUnit;
+
+  /// Output unit(either "plain" compilation unit, either artificial type unit).
+  CompileUnit::OutputUnitVariantPtr OutUnit;
 
   /// .debug_info section descriptor.
   SectionDescriptor &DebugInfoOutputSection;
@@ -139,6 +173,9 @@ protected:
 
   /// Patches for the cloned attributes.
   OffsetsPtrVector PatchesOffsets;
+
+  /// This flag forces using DW_FORM_strp for string attributes.
+  bool Use_DW_FORM_strp = false;
 };
 
 } // end of namespace dwarflinker_parallel

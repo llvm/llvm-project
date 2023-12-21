@@ -357,6 +357,9 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("void f(std::integral auto const &x);",
                "void f(const std::integral auto &x);", Style);
 
+  verifyFormat("auto lambda = [] { int const i = 0; };",
+               "auto lambda = [] { const int i = 0; };", Style);
+
   verifyFormat("Foo<Foo<int> const> P;\n#if 0\n#else\n#endif",
                "Foo<const Foo<int>> P;\n#if 0\n#else\n#endif", Style);
 
@@ -662,6 +665,9 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
                "void f(Concept auto const &x);", Style);
   verifyFormat("void f(const std::integral auto &x);",
                "void f(std::integral auto const &x);", Style);
+
+  verifyFormat("auto lambda = [] { const int i = 0; };",
+               "auto lambda = [] { int const i = 0; };", Style);
 
   verifyFormat("Foo<const Foo<int>> P;\n#if 0\n#else\n#endif",
                "Foo<Foo<int> const> P;\n#if 0\n#else\n#endif", Style);

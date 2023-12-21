@@ -63,7 +63,7 @@ define i8 @test3(ptr %a) nounwind {
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret i8 0
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[SHOULD_BE_CONST:%.*]] = load i8, ptr @gv, align 1
+; CHECK-NEXT:    [[SHOULD_BE_CONST:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[SHOULD_BE_CONST]]
 ;
 entry:
@@ -210,8 +210,8 @@ define i32 @switch1(i32 %s) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEGATIVE:%.*]], label [[OUT:%.*]]
 ; CHECK:       negative:
 ; CHECK-NEXT:    switch i32 [[S]], label [[OUT]] [
-; CHECK-NEXT:    i32 -2, label [[NEXT:%.*]]
-; CHECK-NEXT:    i32 -1, label [[NEXT]]
+; CHECK-NEXT:      i32 -2, label [[NEXT:%.*]]
+; CHECK-NEXT:      i32 -1, label [[NEXT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       out:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ -1, [[NEGATIVE]] ]
@@ -443,9 +443,9 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
 ; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
 ; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i32 1, label [[EXIT1:%.*]]
-; CHECK-NEXT:    i32 2, label [[EXIT2:%.*]]
-; CHECK-NEXT:    i32 3, label [[EXIT1]]
+; CHECK-NEXT:      i32 1, label [[EXIT1:%.*]]
+; CHECK-NEXT:      i32 2, label [[EXIT2:%.*]]
+; CHECK-NEXT:      i32 3, label [[EXIT1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 1
@@ -480,8 +480,8 @@ define i32 @switch_range_not_full(i32 %cond) {
 ; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
 ; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
 ; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i32 1, label [[EXIT1:%.*]]
-; CHECK-NEXT:    i32 3, label [[EXIT2:%.*]]
+; CHECK-NEXT:      i32 1, label [[EXIT1:%.*]]
+; CHECK-NEXT:      i32 3, label [[EXIT2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 1
@@ -514,8 +514,8 @@ define i8 @switch_defaultdest_multipleuse(i8 %t0) {
 ; CHECK-NEXT:    [[O:%.*]] = or i8 [[T0:%.*]], 1
 ; CHECK-NEXT:    [[R:%.*]] = srem i8 1, [[O]]
 ; CHECK-NEXT:    switch i8 [[R]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i8 0, label [[EXIT]]
-; CHECK-NEXT:    i8 1, label [[EXIT]]
+; CHECK-NEXT:      i8 0, label [[EXIT]]
+; CHECK-NEXT:      i8 1, label [[EXIT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0

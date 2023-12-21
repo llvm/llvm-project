@@ -554,6 +554,8 @@ def : Pat<(XLenVT (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
 
 def : Pat<(XLenVT (shiftop<shl> 1, (XLenVT GPR:$rs2))),
           (BSET (XLenVT X0), GPR:$rs2)>;
+def : Pat<(XLenVT (not (shiftop<shl> -1, (XLenVT GPR:$rs2)))),
+          (ADDI (BSET (XLenVT X0), GPR:$rs2), -1)>;
 
 def : Pat<(XLenVT (and GPR:$rs1, BCLRMask:$mask)),
           (BCLRI GPR:$rs1, BCLRMask:$mask)>;
@@ -896,6 +898,11 @@ def : Pat<(i32 (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
           (BEXT GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (and (anyext (i32 (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)))), 1)),
           (BEXT GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(i32 (shiftop<shl> 1, (XLenVT GPR:$rs2))),
+          (BSET (XLenVT X0), GPR:$rs2)>;
+def : Pat<(i32 (not (shiftop<shl> -1, (XLenVT GPR:$rs2)))),
+          (ADDI (BSET (XLenVT X0), GPR:$rs2), -1)>;
 
 def : Pat<(i32 (and (srl GPR:$rs1, uimm5:$shamt), (i32 1))),
           (BEXTI GPR:$rs1, uimm5:$shamt)>;

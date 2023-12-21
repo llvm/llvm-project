@@ -21,6 +21,9 @@ namespace dwarflinker_parallel {
 /// Method add() can be called asynchronously.
 template <typename T, size_t ItemsGroupSize = 512> class ArrayList {
 public:
+  ArrayList(parallel::PerThreadBumpPtrAllocator *Allocator)
+      : Allocator(Allocator) {}
+
   /// Add specified \p Item to the list.
   T &add(const T &Item) {
     assert(Allocator);
@@ -73,8 +76,27 @@ public:
     LastGroup = nullptr;
   }
 
-  void setAllocator(parallel::PerThreadBumpPtrAllocator *Allocator) {
-    this->Allocator = Allocator;
+  void sort(function_ref<bool(const T &LHS, const T &RHS)> Comparator) {
+    SmallVector<T> SortedItems;
+    forEach([&](T &Item) { SortedItems.push_back(Item); });
+
+    if (SortedItems.size()) {
+      std::sort(SortedItems.begin(), SortedItems.end(), Comparator);
+
+      size_t SortedItemIdx = 0;
+      forEach([&](T &Item) { Item = SortedItems[SortedItemIdx++]; });
+      assert(SortedItemIdx == SortedItems.size());
+    }
+  }
+
+  size_t size() {
+    size_t Result = 0;
+
+    for (ItemsGroup *CurGroup = GroupsHead; CurGroup != nullptr;
+         CurGroup = CurGroup->Next)
+      Result += CurGroup->getItemsCount();
+
+    return Result;
   }
 
 protected:
