@@ -571,9 +571,8 @@ define i16 @cond_value_may_not_well_defined(i16 %x) {
 define i16 @and_elide_poison_flags(i16 noundef %a) {
 ; CHECK-LABEL: @and_elide_poison_flags(
 ; CHECK-NEXT:    [[X:%.*]] = add nuw i16 [[A:%.*]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 8
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[AND]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[X]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %x = add nuw i16 %a, 1
