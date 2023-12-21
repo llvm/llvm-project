@@ -1651,10 +1651,10 @@ struct SampleOverlapStats {
 
 namespace {
 struct FuncSampleStats {
-  uint64_t SampleSum;
-  uint64_t MaxSample;
-  uint64_t HotBlockCount;
-  FuncSampleStats() : SampleSum(0), MaxSample(0), HotBlockCount(0) {}
+  uint64_t SampleSum = 0;
+  uint64_t MaxSample = 0;
+  uint64_t HotBlockCount = 0;
+  FuncSampleStats() = default;
   FuncSampleStats(uint64_t SampleSum, uint64_t MaxSample,
                   uint64_t HotBlockCount)
       : SampleSum(SampleSum), MaxSample(MaxSample),
@@ -2563,12 +2563,10 @@ static int overlap_main(int argc, const char *argv[]) {
 
 namespace {
 struct ValueSitesStats {
-  ValueSitesStats()
-      : TotalNumValueSites(0), TotalNumValueSitesWithValueProfile(0),
-        TotalNumValues(0) {}
-  uint64_t TotalNumValueSites;
-  uint64_t TotalNumValueSitesWithValueProfile;
-  uint64_t TotalNumValues;
+  ValueSitesStats() = default;
+  uint64_t TotalNumValueSites = 0;
+  uint64_t TotalNumValueSitesWithValueProfile = 0;
+  uint64_t TotalNumValues = 0;
   std::vector<unsigned> ValueSitesHistogram;
 };
 } // namespace
@@ -2867,13 +2865,12 @@ static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
 namespace {
 struct HotFuncInfo {
   std::string FuncName;
-  uint64_t TotalCount;
-  double TotalCountPercent;
-  uint64_t MaxCount;
-  uint64_t EntryCount;
+  uint64_t TotalCount = 0;
+  double TotalCountPercent = 0.0f;
+  uint64_t MaxCount = 0;
+  uint64_t EntryCount = 0;
 
-  HotFuncInfo()
-      : TotalCount(0), TotalCountPercent(0.0f), MaxCount(0), EntryCount(0) {}
+  HotFuncInfo() = default;
 
   HotFuncInfo(StringRef FN, uint64_t TS, double TSP, uint64_t MS, uint64_t ES)
       : FuncName(FN.begin(), FN.end()), TotalCount(TS), TotalCountPercent(TSP),
