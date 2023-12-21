@@ -336,8 +336,8 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     SmallVector<Register, 4> Ext1UnmergeReg;
     SmallVector<Register, 4> Ext2UnmergeReg;
     if (SrcTy.getNumElements() % 16 != 0) {
-      SmallVector<Register, 1> Leftover1;
-      SmallVector<Register, 1> Leftover2;
+      SmallVector<Register> Leftover1;
+      SmallVector<Register> Leftover2;
 
       // Split the elements into v16i8 and v8i8
       LLT MainTy = LLT::fixed_vector(16, 8);
@@ -352,20 +352,19 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       }
 
       // Pad the leftover v8i8 vector with register of 0s of type v8i8
-      MachineInstr *v8Zeroes =
-          Builder.buildConstant(LLT::fixed_vector(8, 8), 0);
-      Leftover1.push_back(v8Zeroes->getOperand(0).getReg());
-      Leftover2.push_back(v8Zeroes->getOperand(0).getReg());
+      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
+                              ->getOperand(0)
+                              .getReg();
 
       Ext1UnmergeReg.push_back(
           Builder
               .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
-                                   {Leftover1[0], Leftover1[1]})
+                                   {Leftover1[0], v8Zeroes})
               .getReg(0));
       Ext2UnmergeReg.push_back(
           Builder
               .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
-                                   {Leftover2[0], Leftover2[1]})
+                                   {Leftover2[0], v8Zeroes})
               .getReg(0));
 
     } else {
