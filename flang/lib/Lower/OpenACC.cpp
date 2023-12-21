@@ -1783,6 +1783,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   // Parallel operation operands
   mlir::Value ifCond;
   mlir::Value selfCond;
+  mlir::Value waitDevnum;
   llvm::SmallVector<mlir::Value> waitOperands, attachEntryOperands,
       copyEntryOperands, copyoutEntryOperands, createEntryOperands,
       dataClauseOperands, numGangs, numWorkers, vectorLength, async;
