@@ -322,6 +322,7 @@ void error_fflush_on_open_failed_stream(void) {
 
 void error_fflush_on_unknown_stream(FILE *F) {
   fflush(F);   // no-warning
+  fclose(F);   // no-warning
 }
 
 void error_fflush_on_non_null_stream_clear_error_states(void) {
@@ -337,7 +338,6 @@ void error_fflush_on_non_null_stream_clear_error_states(void) {
   }
   // `fflush` clears an EOF stream's error state.
   if (F1) {
-    StreamTesterChecker_make_ferror_stream(F1);
     StreamTesterChecker_make_feof_stream(F1);
     if (fflush(F1) == 0) {             // no-warning
       clang_analyzer_eval(ferror(F1)); // expected-warning {{FALSE}}
@@ -352,7 +352,6 @@ void error_fflush_on_null_stream_clear_error_states(void) {
   // `fflush` clears all stream's error states, while retains their EOF states.
   if (F0 && F1) {
     StreamTesterChecker_make_ferror_stream(F0);
-    StreamTesterChecker_make_ferror_stream(F1);
     StreamTesterChecker_make_feof_stream(F1);
     if (fflush(NULL) == 0) {           // no-warning
       clang_analyzer_eval(ferror(F0)); // expected-warning {{FALSE}}

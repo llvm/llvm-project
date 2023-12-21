@@ -1207,10 +1207,11 @@ void StreamChecker::preFflush(const FnDescription *Desc, const CallEvent &Call,
   if (!Stream)
     return;
 
-  ConstraintManager::ProgramStatePair SP =
+  ProgramStateRef StateNotNull, StateNull;
+  std::tie(StateNotNull, StateNull) =
       C.getConstraintManager().assumeDual(State, *Stream);
-  if (SP.first)
-    ensureStreamOpened(StreamVal, C, SP.first);
+  if (StateNotNull && !StateNull)
+    ensureStreamOpened(StreamVal, C, StateNotNull);
 }
 
 void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
@@ -1241,8 +1242,8 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
 
   // Clear error states if `fflush` returns 0, but retain their EOF flags.
-  auto ClearError = [&StateNotFailed, Desc](SymbolRef Sym,
-                                            const StreamState *SS) {
+  auto ClearErrorInNotFailed = [&StateNotFailed, Desc](SymbolRef Sym,
+                                                       const StreamState *SS) {
     if (SS->ErrorState & ErrorFError) {
       StreamErrorState NewES =
           (SS->ErrorState & ErrorFEof) ? ErrorFEof : ErrorNone;
@@ -1255,10 +1256,9 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
     // Skip if the input stream's state is unknown, open-failed or closed.
     if (SymbolRef StreamSym = StreamVal.getAsSymbol()) {
       const StreamState *SS = State->get<StreamMap>(StreamSym);
-      if (SS && SS->isOpened()) {
-        ClearError(StreamSym, SS);
-        C.addTransition(StateNotFailed);
-        C.addTransition(StateFailed);
+      if (SS) {
+        assert(SS->isOpened() && "Stream is expected to be opened");
+        ClearErrorInNotFailed(StreamSym, SS);
       }
     }
   } else {
@@ -1268,11 +1268,12 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
       SymbolRef Sym = I.first;
       const StreamState &SS = I.second;
       if (SS.isOpened())
-        ClearError(Sym, &SS);
+        ClearErrorInNotFailed(Sym, &SS);
     }
-    C.addTransition(StateNotFailed);
-    C.addTransition(StateFailed);
   }
+
+  C.addTransition(StateNotFailed);
+  C.addTransition(StateFailed);
 }
 
 ProgramStateRef
