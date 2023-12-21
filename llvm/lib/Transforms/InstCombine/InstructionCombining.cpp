@@ -1104,10 +1104,8 @@ InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getNumIncomingValues() < 2)
     return std::nullopt;
 
-  for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
-    if (LHS->getIncomingBlock(I) != RHS->getIncomingBlock(I))
-      return std::nullopt;
-  }
+  if (!equal(LHS->blocks(), RHS->blocks()))
+    return std::nullopt;
 
   Value *L0 = LHS->getIncomingValue(0);
   Value *R0 = RHS->getIncomingValue(0);
