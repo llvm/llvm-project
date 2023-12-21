@@ -2969,31 +2969,31 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
-  // This code is heavily based on Abseil's 'address_is_readable.cc',
-  // which is Copyright Abseil Authors (2017).
+  // We use SYS_rt_sigprocmask, inspired by Abseil's AddressIsReadable.
 
   const auto sigsetAddr = reinterpret_cast<sigset_t *>(addr);
   // We have to check that addr is nullptr because sigprocmask allows that
   // as an argument without failure.
   if (!sigsetAddr)
     return false;
+  const auto saveErrno = errno;
   // We MUST use a raw syscall here, as wrappers may try to access
   // sigsetAddr which may cause a SIGSEGV. A raw syscall however is
   // safe. Additionally, we need to pass the kernel_sigset_size, which is
   // different from libc sizeof(sigset_t). For the majority of architectures,
   // it's 64 bits (_NSIG), and libc NSIG is _NSIG + 1.
   const auto kernelSigsetSize = NSIG / 8;
-  const int Result = syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr,
-                             nullptr, kernelSigsetSize);
-  (void)Result;
+  [[maybe_unused]] const int Result = syscall(
+      SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, nullptr, kernelSigsetSize);
   // Because our "how" is invalid, this syscall should always fail, and our
-  // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
-  // by the POSIX standard. Additionally, this relies on the Linux kernel
-  // to check copy_from_user before checking if the "how" argument is
+  // errno should always be EINVAL or an EFAULT. This relies on the Linux
+  // kernel to check copy_from_user before checking if the "how" argument is
   // invalid.
   assert(Result == -1);
   assert(errno == EFAULT || errno == EINVAL);
-  return errno != EFAULT;
+  const auto readable = errno != EFAULT;
+  errno = saveErrno;
+  return readable;
 }
 #endif
 
