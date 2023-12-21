@@ -6482,23 +6482,23 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 // f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, 0)))),
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, 0)))),
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if
 // the lane number is anything other than zero.
-def : Pat<(vector_extract (v2f64 V128:$Rn), 0),
+def : Pat<(f64 (vector_extract (v2f64 V128:$Rn), (i64 0))),
           (f64 (EXTRACT_SUBREG V128:$Rn, dsub))>;
-def : Pat<(vector_extract (v4f32 V128:$Rn), 0),
+def : Pat<(f32 (vector_extract (v4f32 V128:$Rn), (i64 0))),
           (f32 (EXTRACT_SUBREG V128:$Rn, ssub))>;
-def : Pat<(vector_extract (v8f16 V128:$Rn), 0),
+def : Pat<(f16 (vector_extract (v8f16 V128:$Rn), (i64 0))),
           (f16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
-def : Pat<(vector_extract (v8bf16 V128:$Rn), 0),
+def : Pat<(bf16 (vector_extract (v8bf16 V128:$Rn), (i64 0))),
           (bf16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
 
 
