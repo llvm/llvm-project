@@ -661,9 +661,9 @@ _LIBCPP_PUSH_MACROS
 #endif
 // _LIBCPP_STRING_IF_ASAN is used to removed ASan related code, whenever compiled without ASan.
 #if  !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUCTMENTED_WITH_ASAN)
-#  define _LIBCPP_STRING_IF_ASAN() if _LIBCPP_CONSTEXPR (true)
+#  define _LIBCPP_STRING_IF_ASAN() if _LIBCPP_CONSTEXPR_SINCE_CXX17 (true)
 #else
-#  define _LIBCPP_STRING_IF_ASAN() if _LIBCPP_CONSTEXPR (false)
+#  define _LIBCPP_STRING_IF_ASAN() if _LIBCPP_CONSTEXPR_SINCE_CXX17 (false)
 #endif
 #define _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED false
 
