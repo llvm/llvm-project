@@ -225,7 +225,7 @@ TEST_F(NoArgv, FdateGetDate) {
   char input[charLen]{"24LengthCharIsJustRight"};
 
   FORTRAN_PROCEDURE_NAME(fdate)
-  (reinterpret_cast<std::int8_t *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input), charLen);
 
   for (int i{0}; i < charLen; i++) {
     EXPECT_NE(input[i], '\n');
@@ -237,7 +237,7 @@ TEST_F(NoArgv, FdateGetDateTooShort) {
   char input[charLen]{"TooShortAllPadSpace"};
 
   FORTRAN_PROCEDURE_NAME(fdate)
-  (reinterpret_cast<std::int8_t *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input), charLen);
 
   for (int i{0}; i < charLen; i++) {
     EXPECT_EQ(input[i], ' ');
@@ -249,7 +249,7 @@ TEST_F(NoArgv, FdateGetDatePadSpace) {
   char input[charLen]{"All char after 23 pad spaces"};
 
   FORTRAN_PROCEDURE_NAME(fdate)
-  (reinterpret_cast<std::int8_t *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input), charLen);
 
   for (int i{24}; i < charLen; i++) {
     EXPECT_EQ(input[i], ' ');

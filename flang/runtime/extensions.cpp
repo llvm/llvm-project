@@ -10,8 +10,8 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
-#include "tools.h"
 #include "terminator.h"
+#include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
@@ -67,7 +67,7 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
 } // namespace io
 
 // CALL FDATE(DATE)
-void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
+void FORTRAN_PROCEDURE_NAME(fdate)(std::byte *arg, std::int64_t length) {
   std::array<char, 26> str;
   // If the length is too short to fit completely, blank return.
   if (length < 24) {
