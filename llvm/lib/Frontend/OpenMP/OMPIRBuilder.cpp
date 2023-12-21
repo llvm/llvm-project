@@ -3993,8 +3993,7 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, bool IsNowait, llvm::Value *DidIt,
-    ArrayRef<llvm::Value *> CPVars,
-    ArrayRef<llvm::Function *> CPFuncs) {
+    ArrayRef<llvm::Value *> CPVars, ArrayRef<llvm::Function *> CPFuncs) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
