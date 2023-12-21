@@ -33,7 +33,7 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const TargetInfo &Target, const LangOptions &LangOpts) {
   StringRef Name = Attr->getName();
   // Normalize the attribute name, __foo__ becomes foo.
-  if (Name.size() >= 4 && Name.startswith("__") && Name.endswith("__"))
+  if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
     Name = Name.substr(2, Name.size() - 4);
 
   // Normalize the scope name, but only for gnu and clang attributes.
@@ -103,8 +103,8 @@ static StringRef normalizeAttrName(const IdentifierInfo *Name,
        (NormalizedScopeName.empty() || NormalizedScopeName == "gnu" ||
         NormalizedScopeName == "clang"));
   StringRef AttrName = Name->getName();
-  if (ShouldNormalize && AttrName.size() >= 4 && AttrName.startswith("__") &&
-      AttrName.endswith("__"))
+  if (ShouldNormalize && AttrName.size() >= 4 && AttrName.starts_with("__") &&
+      AttrName.ends_with("__"))
     AttrName = AttrName.slice(2, AttrName.size() - 2);
 
   return AttrName;

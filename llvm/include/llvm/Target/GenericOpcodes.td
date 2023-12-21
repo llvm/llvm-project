@@ -1209,6 +1209,15 @@ def G_FENCE : GenericInstruction {
   let hasSideEffects = true;
 }
 
+// Generic opcode equivalent to the llvm.prefetch intrinsic.
+def G_PREFETCH : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$address, i32imm:$rw, i32imm:$locality, i32imm:$cachetype);
+  let hasSideEffects = true;
+  let mayLoad = true;
+  let mayStore = true;
+}
+
 //------------------------------------------------------------------------------
 // Variadic ops
 //------------------------------------------------------------------------------

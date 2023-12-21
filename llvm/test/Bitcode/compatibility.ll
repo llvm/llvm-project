@@ -1359,6 +1359,10 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   xor i8 %op1, %op2
   ; CHECK: xor i8 %op1, %op2
 
+  ; disjoint
+  or disjoint i8 %op1, %op2
+  ; CHECK: or disjoint i8 %op1, %op2
+
   ret void
 }
 

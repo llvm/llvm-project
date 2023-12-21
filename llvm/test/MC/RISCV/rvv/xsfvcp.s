@@ -7,10 +7,10 @@
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+v,+xsfvcp %s \
-# RUN:        | llvm-objdump -d --mattr=+v,+xsfvcp - \
+# RUN:        | llvm-objdump -d --mattr=+v,+xsfvcp --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v,+xsfvcp %s \
-# RUN:        | llvm-objdump -d --mattr=+v,+xsfvcp - \
+# RUN:        | llvm-objdump -d --mattr=+v,+xsfvcp --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+v,+xsfvcp %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN

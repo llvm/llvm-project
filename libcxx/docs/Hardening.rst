@@ -15,61 +15,72 @@ assertions that prevent undefined behavior caused by violating preconditions of
 the standard library. Different hardening modes make different trade-offs
 between the amount of checking and runtime performance. The available hardening
 modes are:
-- fast mode;
-- extensive mode;
-- debug mode.
 
-The fast mode contains a set of security-critical checks that can be done with
-relatively little overhead in constant time and are intended to be used in
-production. We recommend most projects to adopt the fast mode.
+- **Unchecked mode/none**, which disables all hardening checks.
+- **Fast mode**, which contains a set of security-critical checks that can be
+  done with relatively little overhead in constant time and are intended to be
+  used in production. We recommend most projects adopt this.
+- **Extensive mode**, which contains all the checks from fast mode and some
+  additional checks for undefined behavior that incur relatively little overhead
+  but aren't security-critical. Production builds requiring a broader set of
+  checks than fast mode should consider enabling extensive mode. The additional
+  rigour impacts performance more than fast mode: we recommend benchmarking to
+  determine if that is acceptable for your program.
+- **Debug mode**, which enables all the available checks in the library,
+  including internal assertions, some of which might be very expensive. This
+  mode is intended to be used for testing, not in production.
 
-The extensive mode contains all the checks from the fast mode and additionally
-some checks for undefined behavior that incur relatively little overhead but
-aren't security-critical. While the performance penalty is somewhat more
-significant compared to the fast mode, the extensive mode is still intended to
-be usable in production.
+.. note::
 
-The debug mode enables all the available checks in the library, including
-internal assertions, some of which might be very expensive. This mode is
-intended to be used for testing, not in production.
+   Enabling hardening has no impact on the ABI.
 
-Vendors can set the default hardening mode by using the
-``LIBCXX_HARDENING_MODE`` variable at CMake configuration time with the possible
-values of ``none``, ``fast``, ``extensive`` and ``debug``. The default value is
-``none`` which doesn't enable any hardening checks (this mode is sometimes
-called the ``unchecked`` mode).
+Notes for users
+---------------
 
-When hardening is enabled, the compiled library is built with the corresponding
-mode enabled, **and** user code will be built with the same mode enabled by
-default. If the mode is set to "none" at the CMake configuration time, the
-compiled library will not contain any assertions and the default when building
-user code will be to have assertions disabled. As a user, you can consult your
-vendor to know which level of hardening is enabled by default.
+As a libc++ user, consult with your vendor to determine the level of hardening
+enabled by default.
 
-Furthermore, independently of any vendor-selected default, users can always
-control which level of hardening is enabled in their code by defining the macro
-``_LIBCPP_HARDENING_MODE`` before including any libc++ headers (preferably by
-passing ``-D_LIBCPP_HARDENING_MODE=X`` to the compiler). The macro can be
-set to one of the following possible values:
+Users wishing for a different hardening level to their vendor default are able
+to control the level by passing **one** of the following options to the compiler:
 
-- ``_LIBCPP_HARDENING_MODE_NONE``;
-- ``_LIBCPP_HARDENING_MODE_FAST``;
-- ``_LIBCPP_HARDENING_MODE_EXTENSIVE``;
-- ``_LIBCPP_HARDENING_MODE_DEBUG``.
+- ``-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE``
+- ``-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST``
+- ``-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE``
+- ``-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG``
 
-The exact numeric values of these macros are unspecified and users should not
-rely on them (e.g. expect the values to be sorted in any way).
+.. warning::
 
-Note that if the compiled library was built by the vendor with the hardening
-mode set to "none", functions compiled inside the static or shared library won't
-have any hardening enabled even if the user compiles with hardening enabled (the
-same is true for the inverse case where the static or shared library was
-compiled **with** hardening enabled but the user tries to disable it). However,
-most of the code in libc++ is in the headers, so the user-selected value for
-``_LIBCPP_HARDENING_MODE``, if any, will usually be respected.
+   The exact numeric values of these macros are unspecified and users should not
+   rely on them (e.g. expect the values to be sorted in any way).
 
-Enabling hardening has no impact on the ABI.
+.. warning::
+
+   If you would prefer to override the hardening level on a per-translation-unit
+   basis, you must do so **before** including any headers to avoid `ODR issues`_.
+
+.. _`ODR issues`: https://en.cppreference.com/w/cpp/language/definition#:~:text=is%20ill%2Dformed.-,One%20Definition%20Rule,-Only%20one%20definition
+
+.. note::
+
+   Since the static and shared library components of libc++ are built by the
+   vendor, setting this macro will have no impact on the hardening mode for the
+   pre-built components. Most libc++ code is header-based, so a user-provided
+   value for ``_LIBCPP_HARDENING_MODE`` will be mostly respected.
+
+Notes for vendors
+-----------------
+
+Vendors can set the default hardening mode by providing ``LIBCXX_HARDENING_MODE``
+as a configuration option, with the possible values of ``none``, ``fast``,
+``extensive`` and ``debug``. The default value is ``none`` which doesn't enable
+any hardening checks (this mode is sometimes called the ``unchecked`` mode).
+
+This option controls both the hardening mode that the precompiled library is
+built with and the default hardening mode that users will build with. If set to
+``none``, the precompiled library will not contain any assertions, and user code
+will default to building without assertions.
 
 Iterator bounds checking
 ------------------------
+
 TODO(hardening)

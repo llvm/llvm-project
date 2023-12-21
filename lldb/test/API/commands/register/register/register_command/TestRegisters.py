@@ -630,9 +630,9 @@ class RegisterCommandsTestCase(TestBase):
         # N/Z/C/V bits will always be present, so check only for those.
         self.expect("register read cpsr", substrs=["= (N = 0, Z = 1, C = 1, V = 0"])
         self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
-        # AHP/DN/FZ/RMMode always present, others may vary.
+        # AHP/DN/FZ/RMode always present, others may vary.
         self.expect(
-            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMMode = 0"]
+            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = 0"]
         )
 
     @skipUnlessPlatform(["linux"])

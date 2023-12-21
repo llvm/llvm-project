@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fmodules \
 // RUN:   -fimplicit-module-maps -x c++ -emit-module \
 // RUN:   -fmodules-cache-path=%t.cache \
-// RUN:   -fmodule-name=pragma_pack %S/Inputs/module.map
+// RUN:   -fmodule-name=pragma_pack %S/Inputs/module.modulemap
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fmodules \
 // RUN:   -fimplicit-module-maps -x c++ -verify \
 // RUN:   -fmodules-cache-path=%t.cache \
@@ -11,7 +11,7 @@
 // RUN:   -fmodules-local-submodule-visibility \
 // RUN:   -fimplicit-module-maps -x c++ -emit-module \
 // RUN:   -fmodules-cache-path=%tlocal.cache \
-// RUN:   -fmodule-name=pragma_pack %S/Inputs/module.map
+// RUN:   -fmodule-name=pragma_pack %S/Inputs/module.modulemap
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fmodules \
 // RUN:   -fmodules-local-submodule-visibility \
 // RUN:   -fimplicit-module-maps -x c++ -verify \

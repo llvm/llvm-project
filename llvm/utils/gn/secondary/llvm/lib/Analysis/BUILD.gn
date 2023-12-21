@@ -44,6 +44,7 @@ static_library("Analysis") {
     "DependenceAnalysis.cpp",
     "DependenceGraphBuilder.cpp",
     "DevelopmentModeInlineAdvisor.cpp",
+    "DomConditionCache.cpp",
     "DomPrinter.cpp",
     "DomTreeUpdater.cpp",
     "DominanceFrontier.cpp",

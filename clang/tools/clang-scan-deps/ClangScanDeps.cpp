@@ -830,9 +830,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                 // Also, clang-cl adds ".obj" extension if none is found.
                 if ((Arg == "-o" || Arg == "/o") && I != R)
                   LastO = I[-1]; // Next argument (reverse iterator)
-                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                else if (Arg.starts_with("/Fo") || Arg.starts_with("-Fo"))
                   LastO = Arg.drop_front(3).str();
-                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                else if (Arg.starts_with("/o") || Arg.starts_with("-o"))
                   LastO = Arg.drop_front(2).str();
 
                 if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))

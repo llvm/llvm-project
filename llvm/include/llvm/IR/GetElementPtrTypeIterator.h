@@ -20,7 +20,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>

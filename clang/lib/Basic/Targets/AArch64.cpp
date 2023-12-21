@@ -333,6 +333,12 @@ void AArch64TargetInfo::getTargetDefinesARMV94A(const LangOptions &Opts,
   getTargetDefinesARMV89A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.5-A does not have a v8.* equivalent, but is a superset of v9.4-A.
+  getTargetDefinesARMV94A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -565,12 +571,15 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV93A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_4A)
     getTargetDefinesARMV94A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
+    getTargetDefinesARMV95A(Opts, Builder);
 
-  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
+  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16");
 
   // Allow detection of fast FMA support.
   Builder.defineMacro("__FP_FAST_FMA", "1");
@@ -677,6 +686,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme", HasSME)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
+      .Case("sme-fa64", HasSMEFA64)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -806,6 +816,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
+    if (Feature == "+sme-fa64") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasSME = true;
+      HasSVE2 = true;
+      HasSMEFA64 = true;
+    }
     if (Feature == "+sb")
       HasSB = true;
     if (Feature == "+predres")
@@ -899,6 +916,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.4a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_4A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_4A;
+    if (Feature == "+v9.5a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_5A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1042,7 +1062,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         // Pushing the original feature string to give a sema error later on
         // when they get checked.
-        if (Feature.startswith("no"))
+        if (Feature.starts_with("no"))
           Features.push_back("-" + Feature.drop_front(2).str());
         else
           Features.push_back("+" + Feature.str());
@@ -1051,15 +1071,15 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
@@ -1075,7 +1095,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
       else {
@@ -1086,14 +1106,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.CPU = Split.first;
         SplitAndAddFeatures(Split.second, Ret.Features);
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("+")) {
+    } else if (Feature.starts_with("+")) {
       SplitAndAddFeatures(Feature, Ret.Features);
-    } else if (Feature.startswith("no-")) {
+    } else if (Feature.starts_with("no-")) {
       StringRef FeatureName =
           llvm::AArch64::getArchExtFeature(Feature.split("-").second);
       if (!FeatureName.empty())

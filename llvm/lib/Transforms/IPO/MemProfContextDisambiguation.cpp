@@ -2984,6 +2984,21 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         if (!mayHaveMemprofSummary(CB))
           continue;
 
+        auto *CalledValue = CB->getCalledOperand();
+        auto *CalledFunction = CB->getCalledFunction();
+        if (CalledValue && !CalledFunction) {
+          CalledValue = CalledValue->stripPointerCasts();
+          // Stripping pointer casts can reveal a called function.
+          CalledFunction = dyn_cast<Function>(CalledValue);
+        }
+        // Check if this is an alias to a function. If so, get the
+        // called aliasee for the checks below.
+        if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
+          assert(!CalledFunction &&
+                 "Expected null called function in callsite for alias");
+          CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
+        }
+
         CallStack<MDNode, MDNode::op_iterator> CallsiteContext(
             I.getMetadata(LLVMContext::MD_callsite));
         auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
@@ -3115,13 +3130,13 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           CloneFuncIfNeeded(/*NumClones=*/StackNode.Clones.size());
 
           // Should have skipped indirect calls via mayHaveMemprofSummary.
-          assert(CB->getCalledFunction());
-          assert(!IsMemProfClone(*CB->getCalledFunction()));
+          assert(CalledFunction);
+          assert(!IsMemProfClone(*CalledFunction));
 
           // Update the calls per the summary info.
           // Save orig name since it gets updated in the first iteration
           // below.
-          auto CalleeOrigName = CB->getCalledFunction()->getName();
+          auto CalleeOrigName = CalledFunction->getName();
           for (unsigned J = 0; J < StackNode.Clones.size(); J++) {
             // Do nothing if this version calls the original version of its
             // callee.
@@ -3129,7 +3144,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               continue;
             auto NewF = M.getOrInsertFunction(
                 getMemProfFuncName(CalleeOrigName, StackNode.Clones[J]),
-                CB->getCalledFunction()->getFunctionType());
+                CalledFunction->getFunctionType());
             CallBase *CBClone;
             // Copy 0 is the original function.
             if (!J)

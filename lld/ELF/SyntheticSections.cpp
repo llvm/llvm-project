@@ -3140,10 +3140,8 @@ bool VersionTableSection::isNeeded() const {
 
 void elf::addVerneed(Symbol *ss) {
   auto &file = cast<SharedFile>(*ss->file);
-  if (ss->verdefIndex == VER_NDX_GLOBAL) {
-    ss->versionId = VER_NDX_GLOBAL;
+  if (ss->versionId == VER_NDX_GLOBAL)
     return;
-  }
 
   if (file.vernauxs.empty())
     file.vernauxs.resize(file.verdefs.size());
@@ -3152,10 +3150,10 @@ void elf::addVerneed(Symbol *ss) {
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum()]; this causes the vernaux identifiers to start from
   // getVerDefNum()+1.
-  if (file.vernauxs[ss->verdefIndex] == 0)
-    file.vernauxs[ss->verdefIndex] = ++SharedFile::vernauxNum + getVerDefNum();
+  if (file.vernauxs[ss->versionId] == 0)
+    file.vernauxs[ss->versionId] = ++SharedFile::vernauxNum + getVerDefNum();
 
-  ss->versionId = file.vernauxs[ss->verdefIndex];
+  ss->versionId = file.vernauxs[ss->versionId];
 }
 
 template <class ELFT>

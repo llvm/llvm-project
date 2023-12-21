@@ -20,187 +20,332 @@
 
 namespace llvm {
 namespace X86Disassembler {
-
-// Accessor functions for various fields of an Intel instruction
-#define modFromModRM(modRM)  (((modRM) & 0xc0) >> 6)
-#define regFromModRM(modRM)  (((modRM) & 0x38) >> 3)
-#define rmFromModRM(modRM)   ((modRM) & 0x7)
-#define scaleFromSIB(sib)    (((sib) & 0xc0) >> 6)
-#define indexFromSIB(sib)    (((sib) & 0x38) >> 3)
-#define baseFromSIB(sib)     ((sib) & 0x7)
-#define wFromREX(rex)        (((rex) & 0x8) >> 3)
-#define rFromREX(rex)        (((rex) & 0x4) >> 2)
-#define xFromREX(rex)        (((rex) & 0x2) >> 1)
-#define bFromREX(rex)        ((rex) & 0x1)
-
-#define rFromEVEX2of4(evex)     (((~(evex)) & 0x80) >> 7)
-#define xFromEVEX2of4(evex)     (((~(evex)) & 0x40) >> 6)
-#define bFromEVEX2of4(evex)     (((~(evex)) & 0x20) >> 5)
-#define r2FromEVEX2of4(evex)    (((~(evex)) & 0x10) >> 4)
-#define mmmFromEVEX2of4(evex)   ((evex) & 0x7)
-#define wFromEVEX3of4(evex)     (((evex) & 0x80) >> 7)
-#define vvvvFromEVEX3of4(evex)  (((~(evex)) & 0x78) >> 3)
-#define ppFromEVEX3of4(evex)    ((evex) & 0x3)
-#define zFromEVEX4of4(evex)     (((evex) & 0x80) >> 7)
-#define l2FromEVEX4of4(evex)    (((evex) & 0x40) >> 6)
-#define lFromEVEX4of4(evex)     (((evex) & 0x20) >> 5)
-#define bFromEVEX4of4(evex)     (((evex) & 0x10) >> 4)
-#define v2FromEVEX4of4(evex)    (((~evex) & 0x8) >> 3)
-#define aaaFromEVEX4of4(evex)   ((evex) & 0x7)
-
-#define rFromVEX2of3(vex)       (((~(vex)) & 0x80) >> 7)
-#define xFromVEX2of3(vex)       (((~(vex)) & 0x40) >> 6)
-#define bFromVEX2of3(vex)       (((~(vex)) & 0x20) >> 5)
-#define mmmmmFromVEX2of3(vex)   ((vex) & 0x1f)
-#define wFromVEX3of3(vex)       (((vex) & 0x80) >> 7)
-#define vvvvFromVEX3of3(vex)    (((~(vex)) & 0x78) >> 3)
-#define lFromVEX3of3(vex)       (((vex) & 0x4) >> 2)
-#define ppFromVEX3of3(vex)      ((vex) & 0x3)
-
-#define rFromVEX2of2(vex)       (((~(vex)) & 0x80) >> 7)
-#define vvvvFromVEX2of2(vex)    (((~(vex)) & 0x78) >> 3)
-#define lFromVEX2of2(vex)       (((vex) & 0x4) >> 2)
-#define ppFromVEX2of2(vex)      ((vex) & 0x3)
-
-#define rFromXOP2of3(xop)       (((~(xop)) & 0x80) >> 7)
-#define xFromXOP2of3(xop)       (((~(xop)) & 0x40) >> 6)
-#define bFromXOP2of3(xop)       (((~(xop)) & 0x20) >> 5)
-#define mmmmmFromXOP2of3(xop)   ((xop) & 0x1f)
-#define wFromXOP3of3(xop)       (((xop) & 0x80) >> 7)
-#define vvvvFromXOP3of3(vex)    (((~(vex)) & 0x78) >> 3)
-#define lFromXOP3of3(xop)       (((xop) & 0x4) >> 2)
-#define ppFromXOP3of3(xop)      ((xop) & 0x3)
+// Helper macros
+#define bitFromOffset0(val) ((val) & 0x1)
+#define bitFromOffset1(val) (((val) >> 1) & 0x1)
+#define bitFromOffset2(val) (((val) >> 2) & 0x1)
+#define bitFromOffset3(val) (((val) >> 3) & 0x1)
+#define bitFromOffset4(val) (((val) >> 4) & 0x1)
+#define bitFromOffset5(val) (((val) >> 5) & 0x1)
+#define bitFromOffset6(val) (((val) >> 6) & 0x1)
+#define bitFromOffset7(val) (((val) >> 7) & 0x1)
+#define twoBitsFromOffset0(val) ((val) & 0x3)
+#define twoBitsFromOffset6(val) (((val) >> 6) & 0x3)
+#define threeBitsFromOffset0(val) ((val) & 0x7)
+#define threeBitsFromOffset3(val) (((val) >> 3) & 0x7)
+#define fiveBitsFromOffset0(val) ((val) & 0x1f)
+#define invertedBitFromOffset2(val) (((~(val)) >> 2) & 0x1)
+#define invertedBitFromOffset3(val) (((~(val)) >> 3) & 0x1)
+#define invertedBitFromOffset4(val) (((~(val)) >> 4) & 0x1)
+#define invertedBitFromOffset5(val) (((~(val)) >> 5) & 0x1)
+#define invertedBitFromOffset6(val) (((~(val)) >> 6) & 0x1)
+#define invertedBitFromOffset7(val) (((~(val)) >> 7) & 0x1)
+#define invertedFourBitsFromOffset3(val) (((~(val)) >> 3) & 0xf)
+// MOD/RM
+#define modFromModRM(modRM) twoBitsFromOffset6(modRM)
+#define regFromModRM(modRM) threeBitsFromOffset3(modRM)
+#define rmFromModRM(modRM) threeBitsFromOffset0(modRM)
+// SIB
+#define scaleFromSIB(sib) twoBitsFromOffset6(sib)
+#define indexFromSIB(sib) threeBitsFromOffset3(sib)
+#define baseFromSIB(sib) threeBitsFromOffset0(sib)
+// REX
+#define wFromREX(rex) bitFromOffset3(rex)
+#define rFromREX(rex) bitFromOffset2(rex)
+#define xFromREX(rex) bitFromOffset1(rex)
+#define bFromREX(rex) bitFromOffset0(rex)
+// REX2
+#define mFromREX2(rex2) bitFromOffset7(rex2)
+#define r2FromREX2(rex2) bitFromOffset6(rex2)
+#define x2FromREX2(rex2) bitFromOffset5(rex2)
+#define b2FromREX2(rex2) bitFromOffset4(rex2)
+#define wFromREX2(rex2) bitFromOffset3(rex2)
+#define rFromREX2(rex2) bitFromOffset2(rex2)
+#define xFromREX2(rex2) bitFromOffset1(rex2)
+#define bFromREX2(rex2) bitFromOffset0(rex2)
+// XOP
+#define rFromXOP2of3(xop) invertedBitFromOffset7(xop)
+#define xFromXOP2of3(xop) invertedBitFromOffset6(xop)
+#define bFromXOP2of3(xop) invertedBitFromOffset5(xop)
+#define mmmmmFromXOP2of3(xop) fiveBitsFromOffset0(xop)
+#define wFromXOP3of3(xop) bitFromOffset7(xop)
+#define vvvvFromXOP3of3(xop) invertedFourBitsFromOffset3(xop)
+#define lFromXOP3of3(xop) bitFromOffset2(xop)
+#define ppFromXOP3of3(xop) twoBitsFromOffset0(xop)
+// VEX2
+#define rFromVEX2of2(vex) invertedBitFromOffset7(vex)
+#define vvvvFromVEX2of2(vex) invertedFourBitsFromOffset3(vex)
+#define lFromVEX2of2(vex) bitFromOffset2(vex)
+#define ppFromVEX2of2(vex) twoBitsFromOffset0(vex)
+// VEX3
+#define rFromVEX2of3(vex) invertedBitFromOffset7(vex)
+#define xFromVEX2of3(vex) invertedBitFromOffset6(vex)
+#define bFromVEX2of3(vex) invertedBitFromOffset5(vex)
+#define mmmmmFromVEX2of3(vex) fiveBitsFromOffset0(vex)
+#define wFromVEX3of3(vex) bitFromOffset7(vex)
+#define vvvvFromVEX3of3(vex) invertedFourBitsFromOffset3(vex)
+#define lFromVEX3of3(vex) bitFromOffset2(vex)
+#define ppFromVEX3of3(vex) twoBitsFromOffset0(vex)
+// EVEX
+#define rFromEVEX2of4(evex) invertedBitFromOffset7(evex)
+#define xFromEVEX2of4(evex) invertedBitFromOffset6(evex)
+#define bFromEVEX2of4(evex) invertedBitFromOffset5(evex)
+#define r2FromEVEX2of4(evex) invertedBitFromOffset4(evex)
+#define b2FromEVEX2of4(evex) bitFromOffset3(evex)
+#define mmmFromEVEX2of4(evex) threeBitsFromOffset0(evex)
+#define wFromEVEX3of4(evex) bitFromOffset7(evex)
+#define vvvvFromEVEX3of4(evex) invertedFourBitsFromOffset3(evex)
+#define x2FromEVEX3of4(evex) invertedBitFromOffset2(evex)
+#define ppFromEVEX3of4(evex) twoBitsFromOffset0(evex)
+#define zFromEVEX4of4(evex) bitFromOffset7(evex)
+#define l2FromEVEX4of4(evex) bitFromOffset6(evex)
+#define lFromEVEX4of4(evex) bitFromOffset5(evex)
+#define bFromEVEX4of4(evex) bitFromOffset4(evex)
+#define v2FromEVEX4of4(evex) invertedBitFromOffset3(evex)
+#define aaaFromEVEX4of4(evex) threeBitsFromOffset0(evex)
 
 // These enums represent Intel registers for use by the decoder.
-#define REGS_8BIT     \
-  ENTRY(AL)           \
-  ENTRY(CL)           \
-  ENTRY(DL)           \
-  ENTRY(BL)           \
-  ENTRY(AH)           \
-  ENTRY(CH)           \
-  ENTRY(DH)           \
-  ENTRY(BH)           \
-  ENTRY(R8B)          \
-  ENTRY(R9B)          \
-  ENTRY(R10B)         \
-  ENTRY(R11B)         \
-  ENTRY(R12B)         \
-  ENTRY(R13B)         \
-  ENTRY(R14B)         \
-  ENTRY(R15B)         \
-  ENTRY(SPL)          \
-  ENTRY(BPL)          \
-  ENTRY(SIL)          \
+#define REGS_8BIT                                                              \
+  ENTRY(AL)                                                                    \
+  ENTRY(CL)                                                                    \
+  ENTRY(DL)                                                                    \
+  ENTRY(BL)                                                                    \
+  ENTRY(AH)                                                                    \
+  ENTRY(CH)                                                                    \
+  ENTRY(DH)                                                                    \
+  ENTRY(BH)                                                                    \
+  ENTRY(R8B)                                                                   \
+  ENTRY(R9B)                                                                   \
+  ENTRY(R10B)                                                                  \
+  ENTRY(R11B)                                                                  \
+  ENTRY(R12B)                                                                  \
+  ENTRY(R13B)                                                                  \
+  ENTRY(R14B)                                                                  \
+  ENTRY(R15B)                                                                  \
+  ENTRY(R16B)                                                                  \
+  ENTRY(R17B)                                                                  \
+  ENTRY(R18B)                                                                  \
+  ENTRY(R19B)                                                                  \
+  ENTRY(R20B)                                                                  \
+  ENTRY(R21B)                                                                  \
+  ENTRY(R22B)                                                                  \
+  ENTRY(R23B)                                                                  \
+  ENTRY(R24B)                                                                  \
+  ENTRY(R25B)                                                                  \
+  ENTRY(R26B)                                                                  \
+  ENTRY(R27B)                                                                  \
+  ENTRY(R28B)                                                                  \
+  ENTRY(R29B)                                                                  \
+  ENTRY(R30B)                                                                  \
+  ENTRY(R31B)                                                                  \
+  ENTRY(SPL)                                                                   \
+  ENTRY(BPL)                                                                   \
+  ENTRY(SIL)                                                                   \
   ENTRY(DIL)
 
-#define EA_BASES_16BIT  \
-  ENTRY(BX_SI)          \
-  ENTRY(BX_DI)          \
-  ENTRY(BP_SI)          \
-  ENTRY(BP_DI)          \
-  ENTRY(SI)             \
-  ENTRY(DI)             \
-  ENTRY(BP)             \
-  ENTRY(BX)             \
-  ENTRY(R8W)            \
-  ENTRY(R9W)            \
-  ENTRY(R10W)           \
-  ENTRY(R11W)           \
-  ENTRY(R12W)           \
-  ENTRY(R13W)           \
-  ENTRY(R14W)           \
-  ENTRY(R15W)
+#define EA_BASES_16BIT                                                         \
+  ENTRY(BX_SI)                                                                 \
+  ENTRY(BX_DI)                                                                 \
+  ENTRY(BP_SI)                                                                 \
+  ENTRY(BP_DI)                                                                 \
+  ENTRY(SI)                                                                    \
+  ENTRY(DI)                                                                    \
+  ENTRY(BP)                                                                    \
+  ENTRY(BX)                                                                    \
+  ENTRY(R8W)                                                                   \
+  ENTRY(R9W)                                                                   \
+  ENTRY(R10W)                                                                  \
+  ENTRY(R11W)                                                                  \
+  ENTRY(R12W)                                                                  \
+  ENTRY(R13W)                                                                  \
+  ENTRY(R14W)                                                                  \
+  ENTRY(R15W)                                                                  \
+  ENTRY(R16W)                                                                  \
+  ENTRY(R17W)                                                                  \
+  ENTRY(R18W)                                                                  \
+  ENTRY(R19W)                                                                  \
+  ENTRY(R20W)                                                                  \
+  ENTRY(R21W)                                                                  \
+  ENTRY(R22W)                                                                  \
+  ENTRY(R23W)                                                                  \
+  ENTRY(R24W)                                                                  \
+  ENTRY(R25W)                                                                  \
+  ENTRY(R26W)                                                                  \
+  ENTRY(R27W)                                                                  \
+  ENTRY(R28W)                                                                  \
+  ENTRY(R29W)                                                                  \
+  ENTRY(R30W)                                                                  \
+  ENTRY(R31W)
 
-#define REGS_16BIT    \
-  ENTRY(AX)           \
-  ENTRY(CX)           \
-  ENTRY(DX)           \
-  ENTRY(BX)           \
-  ENTRY(SP)           \
-  ENTRY(BP)           \
-  ENTRY(SI)           \
-  ENTRY(DI)           \
-  ENTRY(R8W)          \
-  ENTRY(R9W)          \
-  ENTRY(R10W)         \
-  ENTRY(R11W)         \
-  ENTRY(R12W)         \
-  ENTRY(R13W)         \
-  ENTRY(R14W)         \
-  ENTRY(R15W)
+#define REGS_16BIT                                                             \
+  ENTRY(AX)                                                                    \
+  ENTRY(CX)                                                                    \
+  ENTRY(DX)                                                                    \
+  ENTRY(BX)                                                                    \
+  ENTRY(SP)                                                                    \
+  ENTRY(BP)                                                                    \
+  ENTRY(SI)                                                                    \
+  ENTRY(DI)                                                                    \
+  ENTRY(R8W)                                                                   \
+  ENTRY(R9W)                                                                   \
+  ENTRY(R10W)                                                                  \
+  ENTRY(R11W)                                                                  \
+  ENTRY(R12W)                                                                  \
+  ENTRY(R13W)                                                                  \
+  ENTRY(R14W)                                                                  \
+  ENTRY(R15W)                                                                  \
+  ENTRY(R16W)                                                                  \
+  ENTRY(R17W)                                                                  \
+  ENTRY(R18W)                                                                  \
+  ENTRY(R19W)                                                                  \
+  ENTRY(R20W)                                                                  \
+  ENTRY(R21W)                                                                  \
+  ENTRY(R22W)                                                                  \
+  ENTRY(R23W)                                                                  \
+  ENTRY(R24W)                                                                  \
+  ENTRY(R25W)                                                                  \
+  ENTRY(R26W)                                                                  \
+  ENTRY(R27W)                                                                  \
+  ENTRY(R28W)                                                                  \
+  ENTRY(R29W)                                                                  \
+  ENTRY(R30W)                                                                  \
+  ENTRY(R31W)
 
-#define EA_BASES_32BIT  \
-  ENTRY(EAX)            \
-  ENTRY(ECX)            \
-  ENTRY(EDX)            \
-  ENTRY(EBX)            \
-  ENTRY(sib)            \
-  ENTRY(EBP)            \
-  ENTRY(ESI)            \
-  ENTRY(EDI)            \
-  ENTRY(R8D)            \
-  ENTRY(R9D)            \
-  ENTRY(R10D)           \
-  ENTRY(R11D)           \
-  ENTRY(R12D)           \
-  ENTRY(R13D)           \
-  ENTRY(R14D)           \
-  ENTRY(R15D)
+#define EA_BASES_32BIT                                                         \
+  ENTRY(EAX)                                                                   \
+  ENTRY(ECX)                                                                   \
+  ENTRY(EDX)                                                                   \
+  ENTRY(EBX)                                                                   \
+  ENTRY(sib)                                                                   \
+  ENTRY(EBP)                                                                   \
+  ENTRY(ESI)                                                                   \
+  ENTRY(EDI)                                                                   \
+  ENTRY(R8D)                                                                   \
+  ENTRY(R9D)                                                                   \
+  ENTRY(R10D)                                                                  \
+  ENTRY(R11D)                                                                  \
+  ENTRY(R12D)                                                                  \
+  ENTRY(R13D)                                                                  \
+  ENTRY(R14D)                                                                  \
+  ENTRY(R15D)                                                                  \
+  ENTRY(R16D)                                                                  \
+  ENTRY(R17D)                                                                  \
+  ENTRY(R18D)                                                                  \
+  ENTRY(R19D)                                                                  \
+  ENTRY(R20D)                                                                  \
+  ENTRY(R21D)                                                                  \
+  ENTRY(R22D)                                                                  \
+  ENTRY(R23D)                                                                  \
+  ENTRY(R24D)                                                                  \
+  ENTRY(R25D)                                                                  \
+  ENTRY(R26D)                                                                  \
+  ENTRY(R27D)                                                                  \
+  ENTRY(R28D)                                                                  \
+  ENTRY(R29D)                                                                  \
+  ENTRY(R30D)                                                                  \
+  ENTRY(R31D)
 
-#define REGS_32BIT  \
-  ENTRY(EAX)        \
-  ENTRY(ECX)        \
-  ENTRY(EDX)        \
-  ENTRY(EBX)        \
-  ENTRY(ESP)        \
-  ENTRY(EBP)        \
-  ENTRY(ESI)        \
-  ENTRY(EDI)        \
-  ENTRY(R8D)        \
-  ENTRY(R9D)        \
-  ENTRY(R10D)       \
-  ENTRY(R11D)       \
-  ENTRY(R12D)       \
-  ENTRY(R13D)       \
-  ENTRY(R14D)       \
-  ENTRY(R15D)
+#define REGS_32BIT                                                             \
+  ENTRY(EAX)                                                                   \
+  ENTRY(ECX)                                                                   \
+  ENTRY(EDX)                                                                   \
+  ENTRY(EBX)                                                                   \
+  ENTRY(ESP)                                                                   \
+  ENTRY(EBP)                                                                   \
+  ENTRY(ESI)                                                                   \
+  ENTRY(EDI)                                                                   \
+  ENTRY(R8D)                                                                   \
+  ENTRY(R9D)                                                                   \
+  ENTRY(R10D)                                                                  \
+  ENTRY(R11D)                                                                  \
+  ENTRY(R12D)                                                                  \
+  ENTRY(R13D)                                                                  \
+  ENTRY(R14D)                                                                  \
+  ENTRY(R15D)                                                                  \
+  ENTRY(R16D)                                                                  \
+  ENTRY(R17D)                                                                  \
+  ENTRY(R18D)                                                                  \
+  ENTRY(R19D)                                                                  \
+  ENTRY(R20D)                                                                  \
+  ENTRY(R21D)                                                                  \
+  ENTRY(R22D)                                                                  \
+  ENTRY(R23D)                                                                  \
+  ENTRY(R24D)                                                                  \
+  ENTRY(R25D)                                                                  \
+  ENTRY(R26D)                                                                  \
+  ENTRY(R27D)                                                                  \
+  ENTRY(R28D)                                                                  \
+  ENTRY(R29D)                                                                  \
+  ENTRY(R30D)                                                                  \
+  ENTRY(R31D)
 
-#define EA_BASES_64BIT  \
-  ENTRY(RAX)            \
-  ENTRY(RCX)            \
-  ENTRY(RDX)            \
-  ENTRY(RBX)            \
-  ENTRY(sib64)          \
-  ENTRY(RBP)            \
-  ENTRY(RSI)            \
-  ENTRY(RDI)            \
-  ENTRY(R8)             \
-  ENTRY(R9)             \
-  ENTRY(R10)            \
-  ENTRY(R11)            \
-  ENTRY(R12)            \
-  ENTRY(R13)            \
-  ENTRY(R14)            \
-  ENTRY(R15)
+#define EA_BASES_64BIT                                                         \
+  ENTRY(RAX)                                                                   \
+  ENTRY(RCX)                                                                   \
+  ENTRY(RDX)                                                                   \
+  ENTRY(RBX)                                                                   \
+  ENTRY(sib64)                                                                 \
+  ENTRY(RBP)                                                                   \
+  ENTRY(RSI)                                                                   \
+  ENTRY(RDI)                                                                   \
+  ENTRY(R8)                                                                    \
+  ENTRY(R9)                                                                    \
+  ENTRY(R10)                                                                   \
+  ENTRY(R11)                                                                   \
+  ENTRY(R12)                                                                   \
+  ENTRY(R13)                                                                   \
+  ENTRY(R14)                                                                   \
+  ENTRY(R15)                                                                   \
+  ENTRY(R16)                                                                   \
+  ENTRY(R17)                                                                   \
+  ENTRY(R18)                                                                   \
+  ENTRY(R19)                                                                   \
+  ENTRY(R20)                                                                   \
+  ENTRY(R21)                                                                   \
+  ENTRY(R22)                                                                   \
+  ENTRY(R23)                                                                   \
+  ENTRY(R24)                                                                   \
+  ENTRY(R25)                                                                   \
+  ENTRY(R26)                                                                   \
+  ENTRY(R27)                                                                   \
+  ENTRY(R28)                                                                   \
+  ENTRY(R29)                                                                   \
+  ENTRY(R30)                                                                   \
+  ENTRY(R31)
 
-#define REGS_64BIT  \
-  ENTRY(RAX)        \
-  ENTRY(RCX)        \
-  ENTRY(RDX)        \
-  ENTRY(RBX)        \
-  ENTRY(RSP)        \
-  ENTRY(RBP)        \
-  ENTRY(RSI)        \
-  ENTRY(RDI)        \
-  ENTRY(R8)         \
-  ENTRY(R9)         \
-  ENTRY(R10)        \
-  ENTRY(R11)        \
-  ENTRY(R12)        \
-  ENTRY(R13)        \
-  ENTRY(R14)        \
-  ENTRY(R15)
+#define REGS_64BIT                                                             \
+  ENTRY(RAX)                                                                   \
+  ENTRY(RCX)                                                                   \
+  ENTRY(RDX)                                                                   \
+  ENTRY(RBX)                                                                   \
+  ENTRY(RSP)                                                                   \
+  ENTRY(RBP)                                                                   \
+  ENTRY(RSI)                                                                   \
+  ENTRY(RDI)                                                                   \
+  ENTRY(R8)                                                                    \
+  ENTRY(R9)                                                                    \
+  ENTRY(R10)                                                                   \
+  ENTRY(R11)                                                                   \
+  ENTRY(R12)                                                                   \
+  ENTRY(R13)                                                                   \
+  ENTRY(R14)                                                                   \
+  ENTRY(R15)                                                                   \
+  ENTRY(R16)                                                                   \
+  ENTRY(R17)                                                                   \
+  ENTRY(R18)                                                                   \
+  ENTRY(R19)                                                                   \
+  ENTRY(R20)                                                                   \
+  ENTRY(R21)                                                                   \
+  ENTRY(R22)                                                                   \
+  ENTRY(R23)                                                                   \
+  ENTRY(R24)                                                                   \
+  ENTRY(R25)                                                                   \
+  ENTRY(R26)                                                                   \
+  ENTRY(R27)                                                                   \
+  ENTRY(R28)                                                                   \
+  ENTRY(R29)                                                                   \
+  ENTRY(R30)                                                                   \
+  ENTRY(R31)
 
 #define REGS_MMX  \
   ENTRY(MM0)      \
@@ -483,6 +628,7 @@ enum VEXLeadingOpcodeByte {
   VEX_LOB_0F = 0x1,
   VEX_LOB_0F38 = 0x2,
   VEX_LOB_0F3A = 0x3,
+  VEX_LOB_MAP4 = 0x4,
   VEX_LOB_MAP5 = 0x5,
   VEX_LOB_MAP6 = 0x6,
   VEX_LOB_MAP7 = 0x7
@@ -540,6 +686,8 @@ struct InternalInstruction {
   uint8_t vectorExtensionPrefix[4];
   // The type of the vector extension prefix
   VectorExtensionType vectorExtensionType;
+  // The value of the REX2 prefix, if present
+  uint8_t rex2ExtensionPrefix[2];
   // The value of the REX prefix, if present
   uint8_t rexPrefix;
   // The segment override type

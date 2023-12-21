@@ -39,13 +39,22 @@ private:
   std::string IncludeSuffix;
   flags_list Flags;
 
+  // Optionally, a multilib can be assigned a string tag indicating that it's
+  // part of a group of mutually exclusive possibilities. If two or more
+  // multilibs have the same non-empty value of ExclusiveGroup, then only the
+  // last matching one of them will be selected.
+  //
+  // Setting this to the empty string is a special case, indicating that the
+  // directory is not mutually exclusive with anything else.
+  std::string ExclusiveGroup;
+
 public:
   /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
   /// sysroot string so they must either be empty or begin with a '/' character.
   /// This is enforced with an assert in the constructor.
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
-           StringRef IncludeSuffix = {},
-           const flags_list &Flags = flags_list());
+           StringRef IncludeSuffix = {}, const flags_list &Flags = flags_list(),
+           StringRef ExclusiveGroup = {});
 
   /// Get the detected GCC installation path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
@@ -62,6 +71,9 @@ public:
   /// Get the flags that indicate or contraindicate this multilib's use
   /// All elements begin with either '-' or '!'
   const flags_list &flags() const { return Flags; }
+
+  /// Get the exclusive group label.
+  const std::string &exclusiveGroup() const { return ExclusiveGroup; }
 
   LLVM_DUMP_METHOD void dump() const;
   /// print summary of the Multilib
@@ -118,7 +130,7 @@ public:
 
   /// Select compatible variants, \returns false if none are compatible
   bool select(const Multilib::flags_list &Flags,
-              llvm::SmallVector<Multilib> &) const;
+              llvm::SmallVectorImpl<Multilib> &) const;
 
   unsigned size() const { return Multilibs.size(); }
 

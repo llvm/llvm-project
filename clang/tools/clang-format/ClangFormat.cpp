@@ -330,8 +330,7 @@ static void outputReplacementXML(StringRef Text) {
 
 static void outputReplacementsXML(const Replacements &Replaces) {
   for (const auto &R : Replaces) {
-    outs() << "<replacement "
-           << "offset='" << R.getOffset() << "' "
+    outs() << "<replacement " << "offset='" << R.getOffset() << "' "
            << "length='" << R.getLength() << "'>";
     outputReplacementXML(R.getReplacementText());
     outs() << "</replacement>\n";
@@ -399,8 +398,8 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName) {
-  if (!OutputXML && Inplace && FileName == "-") {
+static bool format(StringRef FileName, bool IsSTDIN) {
+  if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
     return false;
   }
@@ -424,7 +423,7 @@ static bool format(StringRef FileName) {
   if (InvalidBOM) {
     errs() << "error: encoding with unsupported byte order mark \""
            << InvalidBOM << "\" detected";
-    if (FileName != "-")
+    if (!IsSTDIN)
       errs() << " in file '" << FileName << "'";
     errs() << ".\n";
     return true;
@@ -433,7 +432,7 @@ static bool format(StringRef FileName) {
   std::vector<tooling::Range> Ranges;
   if (fillRanges(Code.get(), Ranges))
     return true;
-  StringRef AssumedFileName = (FileName == "-") ? AssumeFileName : FileName;
+  StringRef AssumedFileName = IsSTDIN ? AssumeFileName : FileName;
   if (AssumedFileName.empty()) {
     llvm::errs() << "error: empty filenames are not allowed\n";
     return true;
@@ -545,28 +544,23 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 // Dump the configuration.
-static int dumpConfig() {
-  StringRef FileName;
+static int dumpConfig(bool IsSTDIN) {
   std::unique_ptr<llvm::MemoryBuffer> Code;
-  if (FileNames.empty()) {
-    // We can't read the code to detect the language if there's no
-    // file name, so leave Code empty here.
-    FileName = AssumeFileName;
-  } else {
-    // Read in the code in case the filename alone isn't enough to
-    // detect the language.
+  // We can't read the code to detect the language if there's no file name.
+  if (!IsSTDIN) {
+    // Read in the code in case the filename alone isn't enough to detect the
+    // language.
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
         MemoryBuffer::getFileOrSTDIN(FileNames[0]);
     if (std::error_code EC = CodeOrErr.getError()) {
       llvm::errs() << EC.message() << "\n";
       return 1;
     }
-    FileName = (FileNames[0] == "-") ? AssumeFileName : FileNames[0];
     Code = std::move(CodeOrErr.get());
   }
   llvm::Expected<clang::format::FormatStyle> FormatStyle =
-      clang::format::getStyle(Style, FileName, FallbackStyle,
-                              Code ? Code->getBuffer() : "");
+      clang::format::getStyle(Style, IsSTDIN ? AssumeFileName : FileNames[0],
+                              FallbackStyle, Code ? Code->getBuffer() : "");
   if (!FormatStyle) {
     llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
     return 1;
@@ -597,8 +591,11 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
+  if (FileNames.empty())
+    FileNames.push_back("-");
+
   if (DumpConfig)
-    return dumpConfig();
+    return dumpConfig(FileNames[0] == "-");
 
   if (!Files.empty()) {
     std::ifstream ExternalFileOfFiles{std::string(Files)};
@@ -611,11 +608,6 @@ int main(int argc, const char **argv) {
     errs() << "Clang-formating " << LineNo << " files\n";
   }
 
-  bool Error = false;
-  if (FileNames.empty()) {
-    Error = clang::format::format("-");
-    return Error ? 1 : 0;
-  }
   if (FileNames.size() != 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
     errs() << "error: -offset, -length and -lines can only be used for "
@@ -624,12 +616,13 @@ int main(int argc, const char **argv) {
   }
 
   unsigned FileNo = 1;
+  bool Error = false;
   for (const auto &FileName : FileNames) {
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName);
+    Error |= clang::format::format(FileName, FileName == "-");
   }
   return Error ? 1 : 0;
 }

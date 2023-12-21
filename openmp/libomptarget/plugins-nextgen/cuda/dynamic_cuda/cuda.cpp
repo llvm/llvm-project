@@ -13,9 +13,10 @@
 
 #include "llvm/Support/DynamicLibrary.h"
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+
+#include "DLWrap.h"
 #include "cuda.h"
-#include "dlwrap.h"
 
 #include <memory>
 #include <string>

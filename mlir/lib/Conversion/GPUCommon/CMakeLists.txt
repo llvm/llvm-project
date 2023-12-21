@@ -32,6 +32,7 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   MLIRArithToLLVM
   MLIRAsyncToLLVM
   MLIRControlFlowToLLVM
+  MLIRConvertToLLVMPass
   MLIRFuncToLLVM
   MLIRGPUTransforms
   MLIRIR

@@ -100,7 +100,8 @@ public:
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 };
 
 } // end anonymous namespace
@@ -499,7 +500,8 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
-                                              const MCValue &Target) {
+                                              const MCValue &Target,
+                                              const MCSubtargetInfo *STI) {
   unsigned Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return true;

@@ -24,7 +24,6 @@
 #include "SourcePrinter.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1275,8 +1274,8 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   auto Iter = AddrToBBAddrMap.find(StartAddress);
   if (Iter == AddrToBBAddrMap.end())
     return;
-  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.BBEntries) {
-    uint64_t BBAddress = BBEntry.Offset + Iter->second.Addr;
+  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.getBBEntries()) {
+    uint64_t BBAddress = BBEntry.Offset + Iter->second.getFunctionAddress();
     if (BBAddress >= EndAddress)
       continue;
     Labels[BBAddress].push_back(("BB" + Twine(BBEntry.ID)).str());
@@ -1539,7 +1538,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // __mh_(execute|dylib|dylinker|bundle|preload|object)_header are special
       // symbols that support MachO header introspection. They do not bind to
       // code locations and are irrelevant for disassembly.
-      if (NameOrErr->startswith("__mh_") && NameOrErr->endswith("_header"))
+      if (NameOrErr->starts_with("__mh_") && NameOrErr->ends_with("_header"))
         continue;
       // Don't ask a Mach-O STAB symbol for its section unless you know that
       // STAB symbol's section field refers to a valid section index. Otherwise
@@ -1780,19 +1779,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // inside functions, for which STT_FUNC would be inaccurate.
       //
       // So here, we spot whether there's any non-data symbol present at all,
-      // and only set the DisassembleAsData flag if there isn't. Also, we use
+      // and only set the DisassembleAsELFData flag if there isn't. Also, we use
       // this distinction to inform the decision of which symbol to print at
       // the head of the section, so that if we're printing code, we print a
       // code-related symbol name to go with it.
-      bool DisassembleAsData = false;
+      bool DisassembleAsELFData = false;
       size_t DisplaySymIndex = SymbolsHere.size() - 1;
       if (Obj.isELF() && !DisassembleAll && Section.isText()) {
-        DisassembleAsData = true; // unless we find a code symbol below
+        DisassembleAsELFData = true; // unless we find a code symbol below
 
         for (size_t i = 0; i < SymbolsHere.size(); ++i) {
           uint8_t SymTy = SymbolsHere[i].Type;
           if (SymTy != ELF::STT_OBJECT && SymTy != ELF::STT_COMMON) {
-            DisassembleAsData = false;
+            DisassembleAsELFData = false;
             DisplaySymIndex = i;
           }
         }
@@ -1943,10 +1942,17 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (SectionAddr < StartAddress)
         Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
-      if (DisassembleAsData) {
+      if (DisassembleAsELFData) {
         dumpELFData(SectionAddr, Index, End, Bytes);
         Index = End;
         continue;
+      }
+
+      // Skip relocations from symbols that are not dumped.
+      for (; RelCur != RelEnd; ++RelCur) {
+        uint64_t Offset = RelCur->getOffset() - RelAdjustment;
+        if (Index <= Offset)
+          break;
       }
 
       bool DumpARMELFData = false;
@@ -2215,7 +2221,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           while (RelCur != RelEnd) {
             uint64_t Offset = RelCur->getOffset() - RelAdjustment;
             // If this relocation is hidden, skip it.
-            if (getHidden(*RelCur) || SectionAddr + Offset < StartAddress) {
+            if (getHidden(*RelCur)) {
               ++RelCur;
               continue;
             }
@@ -3314,10 +3320,13 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
         DisassemblerOptions.push_back(V.str());
     }
   }
-  if (AsmSyntax) {
-    const char *Argv[] = {"llvm-objdump", AsmSyntax};
-    llvm::cl::ParseCommandLineOptions(2, Argv);
-  }
+  SmallVector<const char *> Args = {"llvm-objdump"};
+  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_mllvm))
+    Args.push_back(A->getValue());
+  if (AsmSyntax)
+    Args.push_back(AsmSyntax);
+  if (Args.size() > 1)
+    llvm::cl::ParseCommandLineOptions(Args.size(), Args.data());
 
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {

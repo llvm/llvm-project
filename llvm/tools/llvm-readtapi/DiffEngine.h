@@ -141,14 +141,14 @@ public:
 /// output of the differences found in the files.
 class DiffEngine {
 public:
-  DiffEngine(object::TapiUniversal *InputFileNameLHS,
-             object::TapiUniversal *InputFileNameRHS)
+  DiffEngine(MachO::InterfaceFile *InputFileNameLHS,
+             MachO::InterfaceFile *InputFileNameRHS)
       : FileLHS(InputFileNameLHS), FileRHS(InputFileNameRHS){};
   bool compareFiles(raw_ostream &);
 
 private:
-  object::TapiUniversal *FileLHS;
-  object::TapiUniversal *FileRHS;
+  MachO::InterfaceFile *FileLHS;
+  MachO::InterfaceFile *FileRHS;
 
   /// Function that prints the differences found in the files.
   void printDifferences(raw_ostream &, const std::vector<DiffOutput> &, int);

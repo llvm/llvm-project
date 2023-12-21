@@ -57,9 +57,9 @@ constexpr bool test() {
   //
   // See https://github.com/llvm/llvm-project/issues/68552 and the linked PR.
   {
-    auto f1 = [] -> std::expected<std::optional<int>, long> { return 0; };
+    auto f1 = []() -> std::expected<std::optional<int>, long> { return 0; };
 
-    auto f2 = [&f1] -> std::expected<std::optional<int>, int> {
+    auto f2 = [&f1]() -> std::expected<std::optional<int>, int> {
       return f1().transform_error([](auto) { return 0; });
     };
 

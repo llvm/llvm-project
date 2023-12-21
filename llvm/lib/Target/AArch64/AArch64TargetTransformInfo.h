@@ -291,6 +291,7 @@ public:
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
+
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }

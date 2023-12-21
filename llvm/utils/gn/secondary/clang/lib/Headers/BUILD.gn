@@ -50,6 +50,13 @@ clang_tablegen("arm_cde") {
   output_name = "arm_cde.h"
 }
 
+# Generate arm__vector_types.h
+clang_tablegen("arm_vector_types") {
+  args = [ "-gen-arm-vector-type" ]
+  td_file = "//clang/include/clang/Basic/arm_neon.td"
+  output_name = "arm_vector_types.h"
+}
+
 # Generate riscv_vector.h
 clang_tablegen("riscv_vector") {
   args = [ "-gen-riscv-vector-header" ]
@@ -67,6 +74,7 @@ copy("tablegen_headers") {
     ":arm_neon",
     ":arm_sme_draft_spec_subject_to_change",
     ":arm_sve",
+    ":arm_vector_types",
     ":riscv_vector",
   ]
   sources = []
@@ -251,6 +259,8 @@ copy("Headers") {
     "raointintrin.h",
     "rdpruintrin.h",
     "rdseedintrin.h",
+    "riscv_bitmanip.h",
+    "riscv_crypto.h",
     "riscv_ntlh.h",
     "rtmintrin.h",
     "s390intrin.h",

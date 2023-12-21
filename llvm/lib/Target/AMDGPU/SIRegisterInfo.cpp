@@ -503,7 +503,7 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
   // an immediate "0" which we represent by returning NoRegister.
-  if (FuncInfo->isEntryFunction() || FuncInfo->isChainFunction()) {
+  if (FuncInfo->isBottomOfStack()) {
     return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg() : Register();
   }
   return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
@@ -738,7 +738,7 @@ bool SIRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
 
   // FIXME: Should be able to specify the entry frame alignment per calling
   // convention instead.
-  if (Info->isEntryFunction() || Info->isChainFunction())
+  if (Info->isBottomOfStack())
     return false;
 
   return TargetRegisterInfo::shouldRealignStack(MF);
@@ -804,10 +804,10 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
   int64_t FullOffset = Offset + getScratchInstrOffset(MI);
 
-  if (SIInstrInfo::isMUBUF(*MI))
-    return !SIInstrInfo::isLegalMUBUFImmOffset(FullOffset);
-
   const SIInstrInfo *TII = ST.getInstrInfo();
+  if (SIInstrInfo::isMUBUF(*MI))
+    return !TII->isLegalMUBUFImmOffset(FullOffset);
+
   return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                  SIInstrFlags::FlatScratch);
 }
@@ -905,8 +905,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   assert(SOffset->isImm() && SOffset->getImm() == 0);
 #endif
 
-  assert(SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
-         "offset should be legal");
+  assert(TII->isLegalMUBUFImmOffset(NewOffset) && "offset should be legal");
 
   FIOp->ChangeToRegister(BaseReg, false);
   OffsetOp->setImm(NewOffset);
@@ -920,10 +919,10 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
   int64_t NewOffset = Offset + getScratchInstrOffset(MI);
 
-  if (SIInstrInfo::isMUBUF(*MI))
-    return SIInstrInfo::isLegalMUBUFImmOffset(NewOffset);
-
   const SIInstrInfo *TII = ST.getInstrInfo();
+  if (SIInstrInfo::isMUBUF(*MI))
+    return TII->isLegalMUBUFImmOffset(NewOffset);
+
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                 SIInstrFlags::FlatScratch);
 }
@@ -1404,7 +1403,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   bool IsOffsetLegal =
       IsFlat ? TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                       SIInstrFlags::FlatScratch)
-             : SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset);
+             : TII->isLegalMUBUFImmOffset(MaxOffset);
   if (!IsOffsetLegal || (IsFlat && !SOffset && !ST.hasFlatScratchSTMode())) {
     SOffset = MCRegister();
 
@@ -1649,7 +1648,7 @@ void SIRegisterInfo::buildSpillLoadStore(
         if (UseVGPROffset && ScratchOffsetReg) {
           MIB.addReg(ScratchOffsetReg);
         } else {
-          assert(FuncInfo->isEntryFunction() || FuncInfo->isChainFunction());
+          assert(FuncInfo->isBottomOfStack());
           MIB.addImm(0);
         }
       }
@@ -2424,7 +2423,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       bool IsMUBUF = TII->isMUBUF(*MI);
 
-      if (!IsMUBUF && !MFI->isEntryFunction() && !MFI->isChainFunction()) {
+      if (!IsMUBUF && !MFI->isBottomOfStack()) {
         // Convert to a swizzled stack address by scaling by the wave size.
         // In an entry function/kernel the offset is already swizzled.
         bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
@@ -2562,7 +2561,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           = TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm();
         int64_t NewOffset = OldImm + Offset;
 
-        if (SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
+        if (TII->isLegalMUBUFImmOffset(NewOffset) &&
             buildMUBUFOffsetLoadStore(ST, FrameInfo, MI, Index, NewOffset)) {
           MI->eraseFromParent();
           return true;
@@ -3084,7 +3083,8 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                                          const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
-    return getVGPRClassForBitWidth(std::max(32u, Size));
+    return getVGPRClassForBitWidth(
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass

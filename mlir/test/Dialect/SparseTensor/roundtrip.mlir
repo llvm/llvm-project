@@ -307,7 +307,7 @@ func.func @sparse_load_ins(%arg0: tensor<16x32xf64, #DenseMatrix>) -> tensor<16x
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_insert(
-//  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #sparse_tensor.encoding<{{.*}}>>,
+//  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #sparse{{[0-9]*}}>,
 //  CHECK-SAME: %[[B:.*]]: index,
 //  CHECK-SAME: %[[C:.*]]: f64)
 //       CHECK: %[[T:.*]] = sparse_tensor.insert %[[C]] into %[[A]][%[[B]]] : tensor<128xf64, #{{.*}}>
@@ -362,7 +362,7 @@ func.func @sparse_push_back_n(%arg0: index, %arg1: memref<?xf64>, %arg2: f64, %a
 #SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_expansion(
-//  CHECK-SAME: %[[A:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>)
+//  CHECK-SAME: %[[A:.*]]: tensor<8x8xf64, #sparse{{[0-9]*}}>)
 //       CHECK: %{{.*}}, %{{.*}}, %{{.*}}, %[[T:.*]] = sparse_tensor.expand %[[A]]
 //       CHECK: return %[[T]] : index
 func.func @sparse_expansion(%tensor: tensor<8x8xf64, #SparseMatrix>) -> index {
@@ -380,10 +380,10 @@ func.func @sparse_expansion(%tensor: tensor<8x8xf64, #SparseMatrix>) -> index {
 //  CHECK-SAME: %[[A1:.*1]]: memref<?xi1>,
 //  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
 //  CHECK-SAME: %[[A3:.*3]]: index
-//  CHECK-SAME: %[[A4:.*4]]: tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>,
+//  CHECK-SAME: %[[A4:.*4]]: tensor<8x8xf64, #sparse{{[0-9]*}}>,
 //  CHECK-SAME: %[[A5:.*5]]: index)
 //       CHECK: %[[T:.*]] = sparse_tensor.compress %[[A0]], %[[A1]], %[[A2]], %[[A3]] into %[[A4]][%[[A5]]
-//       CHECK: return %[[T]] : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>
+//       CHECK: return %[[T]] : tensor<8x8xf64, #sparse{{[0-9]*}}>
 func.func @sparse_compression(%values: memref<?xf64>,
                               %filled: memref<?xi1>,
                               %added: memref<?xindex>,
@@ -400,9 +400,9 @@ func.func @sparse_compression(%values: memref<?xf64>,
 #SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_out(
-//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>,
+//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse{{[0-9]*}}>,
 //  CHECK-SAME: %[[B:.*]]: !llvm.ptr)
-//       CHECK: sparse_tensor.out %[[A]], %[[B]] : tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>, !llvm.ptr
+//       CHECK: sparse_tensor.out %[[A]], %[[B]] : tensor<?x?xf64, #sparse{{[0-9]*}}>, !llvm.ptr
 //       CHECK: return
 func.func @sparse_out(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr) {
   sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #SparseMatrix>, !llvm.ptr
@@ -590,7 +590,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 #DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_tensor_foreach(
-//  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>>,
+//  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64, #sparse{{[0-9]*}}>,
 //  CHECK-SAME:   %[[A1:.*]]: f32
 //  CHECK-NEXT:   %[[RET:.*]] = sparse_tensor.foreach in %[[A0]] init(%[[A1]])
 //  CHECK-NEXT:    ^bb0(%[[TMP_1:.*]]: index, %[[TMP_2:.*]]: index, %[[TMP_v:.*]]: f64, %[[TMP_r:.*]]: f32)
@@ -640,7 +640,7 @@ func.func @sparse_sort_coo_stable(%arg0: index, %arg1: memref<?xi64>, %arg2: mem
 #OrderedCOO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
 
 // CHECK-LABEL: func @sparse_reorder_coo(
-//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf32, #sparse{{[0-9]*}}>
 //       CHECK: %[[R:.*]] = sparse_tensor.reorder_coo quick_sort %[[A]]
 //       CHECK: return %[[R]]
 func.func @sparse_reorder_coo(%arg0 : tensor<?x?xf32, #UnorderedCOO>) -> tensor<?x?xf32, #OrderedCOO> {

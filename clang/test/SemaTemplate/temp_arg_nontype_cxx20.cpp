@@ -62,12 +62,13 @@ namespace ClassNTTP {
   template<A a> constexpr int f() { return a.y; }
   static_assert(f<A{1,2}>() == 2);
 
-  template<A a> int id;
+  template<A a> int id; // #ClassNTTP1
   constexpr A a = {1, 2};
   static_assert(&id<A{1,2}> == &id<a>);
   static_assert(&id<A{1,3}> != &id<a>);
 
   int k = id<1>; // expected-error {{no viable conversion from 'int' to 'A'}}
+                 // expected-note@#ClassNTTP1 {{passing argument to parameter 'a' here}}
 
   struct B {
     constexpr B() {}
@@ -90,8 +91,8 @@ namespace ConvertedConstant {
     constexpr A(float) {}
   };
   template <A> struct X {};
-  void f(X<1.0f>) {} // OK, user-defined conversion
-  void f(X<2>) {} // expected-error {{conversion from 'int' to 'A' is not allowed in a converted constant expression}}
+  void f(X<1.0f>) {}
+  void g(X<2>) {}
 }
 
 namespace CopyCounting {

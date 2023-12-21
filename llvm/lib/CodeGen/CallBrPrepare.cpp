@@ -31,6 +31,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -53,15 +54,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "callbrprepare"
 
+static bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT);
+static bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
+                                 DominatorTree &DT);
+static void UpdateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
+                      SSAUpdater &SSAUpdate);
+static SmallVector<CallBrInst *, 2> FindCallBrs(Function &Fn);
+
 namespace {
 
 class CallBrPrepare : public FunctionPass {
-  bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT);
-  bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
-                            DominatorTree &DT) const;
-  void UpdateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
-                 SSAUpdater &SSAUpdate) const;
-
 public:
   CallBrPrepare() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -70,6 +72,26 @@ public:
 };
 
 } // end anonymous namespace
+
+PreservedAnalyses CallBrPreparePass::run(Function &Fn,
+                                         FunctionAnalysisManager &FAM) {
+  bool Changed = false;
+  SmallVector<CallBrInst *, 2> CBRs = FindCallBrs(Fn);
+
+  if (CBRs.empty())
+    return PreservedAnalyses::all();
+
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(Fn);
+
+  Changed |= SplitCriticalEdges(CBRs, DT);
+  Changed |= InsertIntrinsicCalls(CBRs, DT);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 char CallBrPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(CallBrPrepare, DEBUG_TYPE, "Prepare callbr", false, false)
@@ -82,7 +104,7 @@ void CallBrPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
-static SmallVector<CallBrInst *, 2> FindCallBrs(Function &Fn) {
+SmallVector<CallBrInst *, 2> FindCallBrs(Function &Fn) {
   SmallVector<CallBrInst *, 2> CBRs;
   for (BasicBlock &BB : Fn)
     if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator()))
@@ -91,8 +113,7 @@ static SmallVector<CallBrInst *, 2> FindCallBrs(Function &Fn) {
   return CBRs;
 }
 
-bool CallBrPrepare::SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs,
-                                       DominatorTree &DT) {
+bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT) {
   bool Changed = false;
   CriticalEdgeSplittingOptions Options(&DT);
   Options.setMergeIdenticalEdges();
@@ -114,8 +135,7 @@ bool CallBrPrepare::SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs,
   return Changed;
 }
 
-bool CallBrPrepare::InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
-                                         DominatorTree &DT) const {
+bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT) {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
   IRBuilder<> Builder(CBRs[0]->getContext());
@@ -160,9 +180,8 @@ static void PrintDebugDomInfo(const DominatorTree &DT, const Use &U,
 }
 #endif
 
-void CallBrPrepare::UpdateSSA(DominatorTree &DT, CallBrInst *CBR,
-                              CallInst *Intrinsic,
-                              SSAUpdater &SSAUpdate) const {
+void UpdateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
+               SSAUpdater &SSAUpdate) {
 
   SmallPtrSet<Use *, 4> Visited;
   BasicBlock *DefaultDest = CBR->getDefaultDest();

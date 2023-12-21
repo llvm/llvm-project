@@ -11,7 +11,7 @@
 // void reserve(); // Deprecated in C++20.
 // void reserve(size_type);
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE
 
 // This test ensures that libc++ implements https://wg21.link/P0966R1 (reserve never shrinks)
 // even before C++20. This is required in order to avoid ODR violations because basic_string::reserve(size)

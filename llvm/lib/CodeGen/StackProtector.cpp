@@ -215,14 +215,14 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       APInt Offset(IndexSize, 0);
       if (!GEP->accumulateConstantOffset(DL, Offset))
         return true;
-      TypeSize OffsetSize = TypeSize::Fixed(Offset.getLimitedValue());
+      TypeSize OffsetSize = TypeSize::getFixed(Offset.getLimitedValue());
       if (!TypeSize::isKnownGT(AllocSize, OffsetSize))
         return true;
       // Adjust AllocSize to be the space remaining after this offset.
       // We can't subtract a fixed size from a scalable one, so in that case
       // assume the scalable value is of minimum size.
       TypeSize NewAllocSize =
-          TypeSize::Fixed(AllocSize.getKnownMinValue()) - OffsetSize;
+          TypeSize::getFixed(AllocSize.getKnownMinValue()) - OffsetSize;
       if (HasAddressTaken(I, NewAllocSize, M, VisitedPHIs))
         return true;
       break;

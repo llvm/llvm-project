@@ -1,5 +1,5 @@
 // RUN: cd %S
-// RUN: %clang_cc1 -fmodules -fno-implicit-modules -x objective-c++ -fmodule-name=std -emit-module Inputs/submodules/module.map -o %t/mod.pcm
+// RUN: %clang_cc1 -fmodules -fno-implicit-modules -x objective-c++ -fmodule-name=std -emit-module Inputs/submodules/module.modulemap -o %t/mod.pcm
 // RUN: llvm-bcanalyzer --dump --disable-histogram %t/mod.pcm | FileCheck %s
 
 // CHECK: <SUBMODULE_HEADER abbrevid=6/> blob data = 'vector.h'

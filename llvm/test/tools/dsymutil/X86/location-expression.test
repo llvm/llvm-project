@@ -18,15 +18,15 @@
 # CHECK: Compile Unit:
 # CHECK: DW_TAG_compile_unit
 # CHECK: DW_AT_name{{.*}}"CU1"
-# CHECK: 0x0000001b:   DW_TAG_variable
+# CHECK: DW_TAG_variable
 # CHECK: DW_AT_name {{.*}}"var1"
 # CHECK: DW_AT_type {{.*}}"class1"
 # CHECK:   DW_AT_location [DW_FORM_block1]  (DW_OP_const8u 0x{{.*}}, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address)
-# CHECK: 0x000000ab:   DW_TAG_variable
+# CHECK: DW_TAG_variable
 # CHECK: DW_AT_name {{.*}}"var2"
 # CHECK: DW_AT_type {{.*}}"class1"
 # CHECK:   DW_AT_location [DW_FORM_block]  (DW_OP_const8u 0x{{.*}}, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address, DW_OP_const8u 0x2000, DW_OP_form_tls_address)
-# CHECK: 0x00000146:   DW_TAG_variable
+# CHECK: DW_TAG_variable
 # CHECK: DW_AT_name {{.*}}"var3"
 # CHECK: DW_AT_type {{.*}}"class1"
 #

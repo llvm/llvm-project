@@ -40,7 +40,7 @@ func.func @sparse_pack(%values: tensor<6xf64>, %pos:tensor<2xindex>, %coordinate
 // CHECK-SAME:      %[[VAL_0:.*]]: memref<?xindex>,
 // CHECK-SAME:      %[[VAL_1:.*]]: memref<?xi32>,
 // CHECK-SAME:      %[[VAL_2:.*]]: memref<?xf64>,
-// CHECK-SAME:      %[[VAL_3:.*]]: !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:      %[[VAL_3:.*]]: !sparse_tensor.storage_specifier<#sparse{{[0-9]*}}>,
 // CHECK-SAME:      %[[VAL_4:.*]]: tensor<6xf64>,
 // CHECK-SAME:      %[[VAL_5:.*]]: tensor<2xindex>,
 // CHECK-SAME:      %[[VAL_6:.*]]: tensor<6x2xi32>) -> (tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>) {
