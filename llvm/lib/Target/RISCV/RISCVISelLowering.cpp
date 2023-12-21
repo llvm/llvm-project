@@ -13493,6 +13493,7 @@ static SDValue performMemPairCombine(SDNode *N,
 //   (fp_to_int (ffloor X))     -> fcvt X, rdn
 //   (fp_to_int (fceil X))      -> fcvt X, rup
 //   (fp_to_int (fround X))     -> fcvt X, rmm
+//   (fp_to_int (frint X))      -> fcvt X
 static SDValue performFP_TO_INTCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const RISCVSubtarget &Subtarget) {
@@ -13516,10 +13517,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
 
   RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Src.getOpcode());
   // If the result is invalid, we didn't find a foldable instruction.
-  // If the result is dynamic, then we found an frint which we don't yet
-  // support. It will cause 7 to be written to the FRM CSR for vector.
-  // FIXME: We could support this by using VFCVT_X_F_VL/VFCVT_XU_F_VL below.
-  if (FRM == RISCVFPRndMode::Invalid || FRM == RISCVFPRndMode::DYN)
+  if (FRM == RISCVFPRndMode::Invalid)
     return SDValue();
 
   SDLoc DL(N);
@@ -13557,6 +13555,10 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
       // don't need to generate calls to fsrmi/fsrm
       unsigned Opc =
           IsSigned ? RISCVISD::VFCVT_RTZ_X_F_VL : RISCVISD::VFCVT_RTZ_XU_F_VL;
+      FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
+    } else if (FRM == RISCVFPRndMode::DYN) {
+      unsigned Opc =
+          IsSigned ? RISCVISD::VFCVT_X_F_VL : RISCVISD::VFCVT_XU_F_VL;
       FpToInt = DAG.getNode(Opc, DL, ContainerVT, XVal, Mask, VL);
     } else {
       unsigned Opc =
