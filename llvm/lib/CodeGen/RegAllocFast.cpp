@@ -86,6 +86,15 @@ public:
       return false;
     }
 
+    // Distance is the number of consecutive unassigned instructions including
+    // MI. Start is the first instruction of them. End is the next of last
+    // instruction of them.
+    // e.g.
+    // |Instruction|  A   |  B   |  C   |  MI  |  D   |  E   |
+    // |   Index   | 1024 |      |      |      |      | 2048 |
+    //
+    // In this case, B, C, MI, D are unassigned. Distance is 4, Start is B, End
+    // is E.
     unsigned Distance = 1;
     MachineBasicBlock::const_iterator Start = MI.getIterator(),
                                       End = std::next(Start);
@@ -99,11 +108,38 @@ public:
       ++Distance;
     }
 
+    // LastIndex is initialized to last used index prior to MI or zero.
+    // In previous example, LastIndex is 1024, EndIndex is 2048;
     uint64_t LastIndex =
         Start == CurMBB->begin() ? 0 : Instr2PosIndex.at(&*std::prev(Start));
-    uint64_t Step = End == CurMBB->end()
-                        ? static_cast<uint64_t>(InstrDist)
-                        : (Instr2PosIndex.at(&*End) - LastIndex - 1) / Distance;
+    uint64_t Step;
+    if (End == CurMBB->end())
+      Step = static_cast<uint64_t>(InstrDist);
+    else {
+      // No instruction uses index zero.
+      uint64_t EndIndex = Instr2PosIndex.at(&*End);
+      assert(EndIndex > LastIndex && "Index must be ascending order");
+      unsigned NumAvailableIndexes = EndIndex - LastIndex - 1;
+      // We want index gap between two adjacent MI is as same as possible. Given
+      // total A available indexes, D is number of consecutive unassigned
+      // instructions, S is the step.
+      // |<- S-1 -> MI <- S-1 -> MI <- A-S*D ->|
+      // There're S-1 available indexes between unassigned instruction and its
+      // predecessor. There're A-S*D available indexes between the last
+      // unassigned instruction and its successor.
+      // Ideally, we want
+      //    S-1 = A-S*D
+      // then
+      //    S = (A+1)/(D+1)
+      // An valid S must be integer greater than zero, so
+      //    S <= (A+1)/(D+1)
+      // =>
+      //    A-S*D >= 0
+      // That means we can safely use (A+1)/(D+1) as step.
+      // In previous example, Step is 204, Index of B, C, MI, D is 1228, 1432,
+      // 1636, 1840.
+      Step = (NumAvailableIndexes + 1) / (Distance + 1);
+    }
 
     // Reassign index for all instructions if number of new inserted
     // instructions exceed slot or all instructions are new.
