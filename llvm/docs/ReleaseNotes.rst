@@ -175,7 +175,7 @@ Changes to the X86 Backend
 * Marking global variables with ``code_model = "small"/"large"`` in the IR now
   overrides the global code model to allow 32-bit relocations or require 64-bit
   relocations to the global variable.
-* The medium code model's code generation was audited to be much similar to the
+* The medium code model's code generation was audited to be more similar to the
   small code model where possible.
 
 Changes to the OCaml bindings
