@@ -390,12 +390,6 @@ public:
     return mlir::cir::PointerType::get(getContext(), ty);
   }
 
-  mlir::cir::PointerType getVoidPtrTy(unsigned AddrSpace = 0) {
-    if (AddrSpace)
-      llvm_unreachable("address space is NYI");
-    return typeCache.VoidPtrTy;
-  }
-
   /// Get a CIR anonymous struct type.
   mlir::cir::StructType
   getAnonStructTy(llvm::ArrayRef<mlir::Type> members, bool packed = false,
