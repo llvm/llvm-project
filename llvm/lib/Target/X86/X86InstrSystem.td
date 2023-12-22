@@ -520,6 +520,7 @@ let SchedRW = [WriteSystem] in {
     } // Defs SSP
   } // Uses SSP
 
+let Predicates = [NoEGPR] in {
   def WRSSD : I<0xF6, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                 "wrssd\t{$src, $dst|$dst, $src}",
                 [(int_x86_wrssd GR32:$src, addr:$dst)]>, T8PS;
@@ -532,6 +533,22 @@ let SchedRW = [WriteSystem] in {
   def WRUSSQ : RI<0xF5, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                   "wrussq\t{$src, $dst|$dst, $src}",
                   [(int_x86_wrussq GR64:$src, addr:$dst)]>, T8PD;
+}
+
+let Predicates = [HasEGPR, In64BitMode] in {
+  def WRSSD_EVEX : I<0x66, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
+                     "wrssd\t{$src, $dst|$dst, $src}",
+                     [(int_x86_wrssd GR32:$src, addr:$dst)]>, EVEX, NoCD8, T_MAP4PS;
+  def WRSSQ_EVEX : RI<0x66, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
+                      "wrssq\t{$src, $dst|$dst, $src}",
+                      [(int_x86_wrssq GR64:$src, addr:$dst)]>, EVEX, NoCD8, T_MAP4PS;
+  def WRUSSD_EVEX : I<0x65, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
+                      "wrussd\t{$src, $dst|$dst, $src}",
+                      [(int_x86_wrussd GR32:$src, addr:$dst)]>, EVEX, NoCD8, T_MAP4PD;
+  def WRUSSQ_EVEX : RI<0x65, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
+                       "wrussq\t{$src, $dst|$dst, $src}",
+                       [(int_x86_wrussq GR64:$src, addr:$dst)]>, EVEX, NoCD8, T_MAP4PD;
+}
 
   let Defs = [SSP] in {
     let Uses = [SSP] in {
