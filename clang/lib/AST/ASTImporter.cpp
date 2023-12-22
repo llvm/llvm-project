@@ -9103,6 +9103,12 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     break;
   }
 
+  case attr::AlignValue: {
+    auto *From = cast<AlignValueAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getAlignment()).value());
+    break;
+  }
+
   case attr::Format: {
     const auto *From = cast<FormatAttr>(FromAttr);
     AI.importAttr(From, Import(From->getType()), From->getFormatIdx(),
