@@ -19,48 +19,50 @@ using namespace mlir;
 using namespace presburger;
 
 QuasiPolynomial::QuasiPolynomial(
-    unsigned numParam, SmallVector<Fraction> coeffs,
+    unsigned numVars, SmallVector<Fraction> coeffs,
     std::vector<std::vector<SmallVector<Fraction>>> aff)
-    : numParam(numParam), coefficients(coeffs), affine(aff) {
+    : PresburgerSpace(/*numDomain=*/numVars, /*numRange=*/1, /*numSymbols=*/0,
+                      /*numLocals=*/0),
+      coefficients(coeffs), affine(aff) {
   // For each term which involves at least one affine function,
   for (const std::vector<SmallVector<Fraction>> &term : affine) {
     if (term.size() == 0)
       continue;
     // the number of elements in each affine function is
-    // one more than the number of parameters.
+    // one more than the number of symbols.
     for (const SmallVector<Fraction> &aff : term) {
-      assert(aff.size() == numParam + 1 &&
+      assert(aff.size() == getNumInputs() + 1 &&
              "dimensionality of affine functions does not match number of "
-             "parameters!");
+             "symbols!");
     }
   }
 }
 
 QuasiPolynomial QuasiPolynomial::operator+(const QuasiPolynomial &x) const {
-  assert(numParam == x.getNumParams() &&
-         "two quasi-polynomials with different numbers of parameters cannot "
+  assert(getNumInputs() == x.getNumInputs() &&
+         "two quasi-polynomials with different numbers of symbols cannot "
          "be added!");
   SmallVector<Fraction> sumCoeffs = coefficients;
   sumCoeffs.append(x.coefficients);
   std::vector<std::vector<SmallVector<Fraction>>> sumAff = affine;
   sumAff.insert(sumAff.end(), x.affine.begin(), x.affine.end());
-  return QuasiPolynomial(numParam, sumCoeffs, sumAff);
+  return QuasiPolynomial(getNumInputs(), sumCoeffs, sumAff);
 }
 
 QuasiPolynomial QuasiPolynomial::operator-(const QuasiPolynomial &x) const {
-  assert(numParam == x.getNumParams() &&
-         "two quasi-polynomials with different numbers of parameters cannot "
+  assert(getNumInputs() == x.getNumInputs() &&
+         "two quasi-polynomials with different numbers of symbols cannot "
          "be subtracted!");
-  QuasiPolynomial qp(numParam, x.coefficients, x.affine);
+  QuasiPolynomial qp(getNumInputs(), x.coefficients, x.affine);
   for (Fraction &coeff : qp.coefficients)
     coeff = -coeff;
   return *this + qp;
 }
 
 QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
-  assert(numParam == x.getNumParams() &&
+  assert(getNumInputs() == x.getNumInputs() &&
          "two quasi-polynomials with different numbers of "
-         "parameters cannot be multiplied!");
+         "symbols cannot be multiplied!");
 
   SmallVector<Fraction> coeffs;
   coeffs.reserve(coefficients.size() * x.coefficients.size());
@@ -80,7 +82,7 @@ QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
     }
   }
 
-  return QuasiPolynomial(numParam, coeffs, aff);
+  return QuasiPolynomial(getNumInputs(), coeffs, aff);
 }
 
 QuasiPolynomial QuasiPolynomial::operator/(const Fraction x) const {
@@ -111,5 +113,5 @@ QuasiPolynomial QuasiPolynomial::simplify() {
     newCoeffs.push_back(coefficients[i]);
     newAffine.push_back(affine[i]);
   }
-  return QuasiPolynomial(numParam, newCoeffs, newAffine);
+  return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
 }

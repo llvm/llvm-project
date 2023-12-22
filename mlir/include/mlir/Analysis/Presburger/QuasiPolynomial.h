@@ -20,6 +20,7 @@
 
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 
 namespace mlir {
 namespace presburger {
@@ -34,13 +35,16 @@ namespace presburger {
 //
 // where c_i \in Q and
 // g_{ij} : Q^n -> Q are affine functionals.
-class QuasiPolynomial {
+class QuasiPolynomial : public PresburgerSpace {
 public:
-  QuasiPolynomial(unsigned numParam, SmallVector<Fraction> coeffs = {},
+  QuasiPolynomial(unsigned numVars, SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {});
 
-  // Find the number of parameters involved in the polynomial.
-  const unsigned &getNumParams() const { return numParam; }
+  // Find the number of inputs (numDomain) to the polynomial.
+  // numSymbols is set to zero.
+  unsigned getNumInputs() const {
+    return getNumDomainVars() + getNumSymbolVars();
+  }
 
   const SmallVector<Fraction> &getCoefficients() const { return coefficients; }
 
@@ -58,7 +62,6 @@ public:
   QuasiPolynomial simplify();
 
 private:
-  unsigned numParam;
   SmallVector<Fraction> coefficients;
   std::vector<std::vector<SmallVector<Fraction>>> affine;
 };
