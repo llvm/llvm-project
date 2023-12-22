@@ -1143,7 +1143,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
         (NumWritePtrChecks == 1 && NumReadPtrChecks == 0)) {
       assert((ASPointers.size() <= 1 ||
               all_of(ASPointers,
-                     [this](auto Ptr) {
+                     [this](const Value *Ptr) {
                        MemAccessInfo AccessWrite(const_cast<Value *>(Ptr),
                                                  true);
                        return DepCands.findValue(AccessWrite) == DepCands.end();

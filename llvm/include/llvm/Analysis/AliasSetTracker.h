@@ -54,7 +54,7 @@ class AliasSet : public ilist_node<AliasSet> {
   AliasSet *Forward = nullptr;
 
   /// Memory locations in this alias set.
-  std::vector<MemoryLocation> MemoryLocs;
+  SmallVector<MemoryLocation, 0> MemoryLocs;
 
   /// All instructions without a specific address in this alias set.
   std::vector<AssertingVH<Instruction>> UnknownInsts;
@@ -119,7 +119,7 @@ public:
 
   // Alias Set iteration - Allow access to all of the memory locations which are
   // part of this alias set.
-  using iterator = std::vector<MemoryLocation>::const_iterator;
+  using iterator = SmallVectorImpl<MemoryLocation>::const_iterator;
   iterator begin() const { return MemoryLocs.begin(); }
   iterator end() const { return MemoryLocs.end(); }
 

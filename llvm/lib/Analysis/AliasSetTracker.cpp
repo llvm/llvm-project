@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GuardUtils.h"
@@ -201,23 +202,10 @@ ModRefInfo AliasSet::aliasesUnknownInst(const Instruction *Inst,
 }
 
 AliasSet::PointerVector AliasSet::getPointers() const {
-  // To deduplicate pointer values, use a linear scan if the number of elements
-  // is small, or a set if large. This is the same idea as SmallSetVector. In
-  // addition, we can allocate space for the result vector upfront.
-  PointerVector Result;
-  if (MemoryLocs.size() <= Result.capacity()) {
-    for (const MemoryLocation &MemLoc : MemoryLocs)
-      if (llvm::find(Result, MemLoc.Ptr) == Result.end())
-        Result.push_back(MemLoc.Ptr);
-  } else {
-    Result.reserve(MemoryLocs.size());
-    DenseSet<const Value *> Seen;
-    Seen.reserve(MemoryLocs.size());
-    for (const MemoryLocation &MemLoc : MemoryLocs)
-      if (Seen.insert(MemLoc.Ptr).second)
-        Result.push_back(MemLoc.Ptr);
-  }
-  return Result;
+  SmallSetVector<const Value *, 8> Pointers;
+  for (const MemoryLocation &MemLoc : MemoryLocs)
+    Pointers.insert(MemLoc.Ptr);
+  return Pointers.takeVector();
 }
 
 void AliasSetTracker::clear() {
