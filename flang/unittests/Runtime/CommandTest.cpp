@@ -227,8 +227,14 @@ TEST_F(NoArgv, FdateGetDate) {
   FORTRAN_PROCEDURE_NAME(fdate)
   (reinterpret_cast<std::byte *>(input), charLen);
 
+  // Tue May 26 21:51:03 2015\n\0
+  // index at 3, 7, 10, 19 should be space
   for (int i{0}; i < charLen; i++) {
-    EXPECT_NE(input[i], '\n');
+    if (i == 3 || i == 7 || i == 10 || i == 19) {
+      EXPECT_EQ(input[i], ' ');
+      continue;
+    }
+    EXPECT_NE(input[i], ' ');
   }
 }
 
