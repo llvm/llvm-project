@@ -11,8 +11,6 @@
 // clang-cl and cl currently don't support [[no_unique_address]]
 // XFAIL: msvc
 
-// This test ensures that <copyable-box> behaves correctly when it holds an empty type.
-
 #include <ranges>
 
 #include <cassert>

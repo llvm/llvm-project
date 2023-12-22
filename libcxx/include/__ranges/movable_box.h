@@ -137,7 +137,7 @@ concept __doesnt_need_empty_state =
 
 // When _Tp doesn't have an assignment operator, we must implement __movable_box's assignment operator
 // by doing destroy_at followed by construct_at. However, that implementation strategy leads to UB if the nested
-// _Tp is potentially overlapping. As it is doing a non-transparent replacement of the sub-object, which means that
+// _Tp is potentially overlapping, as it is doing a non-transparent replacement of the sub-object, which means that
 // we're not considered "nested" inside the movable-box anymore, and since we're not nested within it, [basic.life]/1.5
 // says that we essentially just reused the storage of the movable-box for a completely unrelated object and ended the
 // movable-box's lifetime.

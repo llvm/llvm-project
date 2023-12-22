@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Test that views that use __movable_box do not overwrite overlapping subobjects.
+// https://github.com/llvm/llvm-project/issues/70506
 
 #include <cassert>
 #include <ranges>
@@ -31,17 +32,17 @@ struct View : std::ranges::view_base {
   constexpr int* end() const { return nullptr; }
 };
 
-template <class T>
+template <class View>
 struct S {
-  [[no_unique_address]] T t{};
+  [[no_unique_address]] View view{};
   char c = 42;
 };
 
-template <class T>
+template <class View>
 constexpr void testOne() {
-  S<T> s1;
+  S<View> s1;
   assert(s1.c == 42);
-  s1.t = T{};
+  s1.view = View{};
   assert(s1.c == 42);
 }
 
