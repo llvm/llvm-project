@@ -165,6 +165,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"fptr", asInquired},
        {"shape", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"c_f_procpointer",
+     &I::genCFProcPointer,
+     {{{"cptr", asValue}, {"fptr", asInquired}}},
+     /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"ceiling", &I::genCeiling},
@@ -2523,6 +2527,22 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   fir::factory::associateMutableBox(builder, loc, *fPtr, getCPtrExtVal(*fPtr),
                                     /*lbounds=*/mlir::ValueRange{});
+}
+
+// C_F_PROCPOINTER
+void IntrinsicLibrary::genCFProcPointer(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value cptr =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, fir::getBase(args[0]));
+  mlir::Value fptr = fir::getBase(args[1]);
+  auto boxProcType =
+      mlir::cast<fir::BoxProcType>(fir::unwrapRefType(fptr.getType()));
+  mlir::Value cptrCast =
+      builder.createConvert(loc, boxProcType.getEleTy(), cptr);
+  mlir::Value cptrBox =
+      builder.create<fir::EmboxProcOp>(loc, boxProcType, cptrCast);
+  builder.create<fir::StoreOp>(loc, cptrBox, fptr);
 }
 
 // C_FUNLOC
