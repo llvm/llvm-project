@@ -6158,12 +6158,24 @@ def err_illegal_initializer_type : Error<"illegal initializer type %0">;
 def ext_init_list_type_narrowing : ExtWarn<
   "type %0 cannot be narrowed to %1 in initializer list">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
+// *_narrowing_const_reference diagnostics have the same messages, but are
+// controlled by -Wc++11-narrowing-const-reference for narrowing involving a
+// const reference.
+def ext_init_list_type_narrowing_const_reference : ExtWarn<
+  "type %0 cannot be narrowed to %1 in initializer list">,
+  InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;
 def ext_init_list_variable_narrowing : ExtWarn<
   "non-constant-expression cannot be narrowed from type %0 to %1 in "
   "initializer list">, InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
+def ext_init_list_variable_narrowing_const_reference : ExtWarn<
+  "non-constant-expression cannot be narrowed from type %0 to %1 in "
+  "initializer list">, InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;
 def ext_init_list_constant_narrowing : ExtWarn<
   "constant expression evaluates to %0 which cannot be narrowed to type %1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
+def ext_init_list_constant_narrowing_const_reference : ExtWarn<
+  "constant expression evaluates to %0 which cannot be narrowed to type %1">,
+  InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;
 def warn_init_list_type_narrowing : Warning<
   "type %0 cannot be narrowed to %1 in initializer list in C++11">,
   InGroup<CXX11Narrowing>, DefaultIgnore;
