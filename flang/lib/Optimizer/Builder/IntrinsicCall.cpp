@@ -165,6 +165,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"fptr", asInquired},
        {"shape", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"c_f_procpointer",
+     &I::genCFProcPointer,
+     {{{"cptr", asValue}, {"fptr", asInquired}}},
+     /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"ceiling", &I::genCeiling},
@@ -2134,6 +2138,33 @@ fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
+  if (fir::isBoxProcAddressType(fir::getBase(args[0]).getType())) {
+    mlir::Value pointerBoxProc =
+        builder.create<fir::LoadOp>(loc, fir::getBase(args[0]));
+    mlir::Value pointerTarget =
+        builder.create<fir::BoxAddrOp>(loc, pointerBoxProc);
+    if (isStaticallyAbsent(args[1]))
+      return builder.genIsNotNullAddr(loc, pointerTarget);
+    mlir::Value target = fir::getBase(args[1]);
+    if (fir::isBoxProcAddressType(target.getType()))
+      target = builder.create<fir::LoadOp>(loc, target);
+    if (target.getType().isa<fir::BoxProcType>())
+      target = builder.create<fir::BoxAddrOp>(loc, target);
+    mlir::Type intPtrTy = builder.getIntPtrType();
+    mlir::Value pointerInt =
+        builder.createConvert(loc, intPtrTy, pointerTarget);
+    mlir::Value targetInt = builder.createConvert(loc, intPtrTy, target);
+    mlir::Value sameTarget = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, pointerInt, targetInt);
+    mlir::Value zero = builder.createIntegerConstant(loc, intPtrTy, 0);
+    mlir::Value notNull = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne, zero, pointerInt);
+    // The not notNull test covers the following two cases:
+    // - TARGET is a procedure that is OPTIONAL and absent at runtime.
+    // - TARGET is a procedure pointer that is NULL.
+    // In both cases, ASSOCIATED should be false if POINTER is NULL.
+    return builder.create<mlir::arith::AndIOp>(loc, sameTarget, notNull);
+  }
   auto *pointer =
       args[0].match([&](const fir::MutableBoxValue &x) { return &x; },
                     [&](const auto &) -> const fir::MutableBoxValue * {
@@ -2496,6 +2527,22 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   fir::factory::associateMutableBox(builder, loc, *fPtr, getCPtrExtVal(*fPtr),
                                     /*lbounds=*/mlir::ValueRange{});
+}
+
+// C_F_PROCPOINTER
+void IntrinsicLibrary::genCFProcPointer(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value cptr =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, fir::getBase(args[0]));
+  mlir::Value fptr = fir::getBase(args[1]);
+  auto boxProcType =
+      mlir::cast<fir::BoxProcType>(fir::unwrapRefType(fptr.getType()));
+  mlir::Value cptrCast =
+      builder.createConvert(loc, boxProcType.getEleTy(), cptr);
+  mlir::Value cptrBox =
+      builder.create<fir::EmboxProcOp>(loc, boxProcType, cptrCast);
+  builder.create<fir::StoreOp>(loc, cptrBox, fptr);
 }
 
 // C_FUNLOC
