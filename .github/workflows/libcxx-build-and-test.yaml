@@ -90,13 +90,14 @@ jobs:
       # elsewhere.
       - name: install-artifacts
         run: |
-          cmake --build build/{{matrix.config}} -- install
-      - uses: actions/upload-artifact@v3
-        if: {{ matrix.config == 'generic-cxx26'}}  # Upload artifacts even if the build or test suite fails
+          cmake --build build/${{matrix.config}} -- install
+      - name: upload-installation
+        if: matrix.config == 'generic-cxx26'  # Upload artifacts even if the build or test suite fails
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.config }}-installation
           path: |
-            build/{{matrix.config}}/install
+            build/${{matrix.config}}/install
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-runners-8-set
