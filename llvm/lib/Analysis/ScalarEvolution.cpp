@@ -7914,9 +7914,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         //    expression. We already checked that ShlAmt < BitWidth, so
         //    the multiplier, 1 << (ShlAmt - AShrAmt), fits into TruncTy as
         //    ShlAmt - AShrAmt < Amt.
-        uint64_t ShlAmt = ShlAmtCI->getZExtValue();
-        if (ShlAmtCI->getValue().ult(BitWidth) && ShlAmt >= AShrAmt) {
-          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt, ShlAmt - AShrAmt);
+        const APInt &ShlAmt = ShlAmtCI->getValue();
+        if (ShlAmt.ult(BitWidth) && ShlAmt.uge(AShrAmt)) {
+          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt,
+                                          ShlAmtCI->getZExtValue() - AShrAmt);
           const SCEV *CompositeExpr =
               getMulExpr(AddTruncateExpr, getConstant(Mul));
           if (L->getOpcode() != Instruction::Shl)
