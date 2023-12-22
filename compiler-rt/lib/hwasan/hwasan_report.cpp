@@ -238,7 +238,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
           found_local = true;
         }
         StackTracePrinter::GetOrInit()->RenderSourceLocation(
-            &location, local.decl_file, local.decl_line, 0,
+            &location, local.decl_file, local.decl_line, /* column= */ 0,
             common_flags()->symbolize_vs_style,
             common_flags()->strip_path_prefix);
         Printf("  %s in %s %s\n", local.name, local.function_name,
@@ -654,23 +654,19 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
   if (candidate.heap.is_allocated) {
     uptr offset;
     const char *whence;
-    const char *cause;
     if (candidate.heap.begin <= untagged_addr &&
         untagged_addr < candidate.heap.end) {
       offset = untagged_addr - candidate.heap.begin;
       whence = "inside";
-      cause = "heap-use-after-free";
     } else if (candidate.after) {
       offset = untagged_addr - candidate.heap.end;
       whence = "after";
-      cause = "heap-buffer-overflow";
     } else {
       offset = candidate.heap.begin - untagged_addr;
       whence = "before";
-      cause = "heap-buffer-underflow";
     }
     Printf("%s", d.Error());
-    Printf("\nCause: %s\n", cause);
+    Printf("\nCause: heap-buffer-overflow\n");
     Printf("%s", d.Default());
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",

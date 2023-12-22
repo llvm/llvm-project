@@ -1451,7 +1451,7 @@ filegroup(
 
 filegroup(
     name = "TransformExtrasPackagePyFiles",
-    srcs = glob(["mlir/extras/dialects/transform/*.py"]),
+    srcs = glob(["mlir/dialects/transform/extras/*.py"]),
 )
 
 ##---------------------------------------------------------------------------##
