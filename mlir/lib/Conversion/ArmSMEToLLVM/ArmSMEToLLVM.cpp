@@ -349,7 +349,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
 
 enum class RequiresSpillsAndFills { Yes, No };
 
-/// Base class for ArmSME to LLVM conversion patterns. By default, this  adds
+/// Base class for ArmSME to LLVM conversion patterns. By default, this adds
 /// spills and fills around ArmSME ops that use in-memory tile IDs. This can be
 /// disabled by setting the `requiresSpillsAndFills` template parameter to
 /// `RequiresSpillsAndFills::No`.
