@@ -478,3 +478,24 @@ entry:
   %and = select i1 %c.1, i1 %c.2, i1 false
   ret i1 %and
 }
+
+define i1 @and_select_second_implies_first_guaranteed_not_poison(ptr noundef %A, ptr noundef %B) {
+; CHECK-LABEL: @and_select_second_implies_first_guaranteed_not_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr [[B]], i64 -1
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt ptr [[GEP]], [[A]]
+; CHECK-NEXT:    call void @no_noundef(i1 [[C_2]])
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+entry:
+  %c.1 = icmp ne ptr %A, %B
+  %gep = getelementptr inbounds ptr, ptr %B, i64 -1
+  %c.2 = icmp ugt ptr %gep, %A
+  call void @no_noundef(i1 %c.2)
+  %and = select i1 %c.1, i1 %c.2, i1 false
+  ret i1 %and
+}
+
+declare void @no_noundef(i1 noundef)

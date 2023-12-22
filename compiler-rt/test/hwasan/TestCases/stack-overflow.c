@@ -18,7 +18,7 @@ int main() {
   // CHECK: Potentially referenced stack objects:
   // CHECK: Cause: stack-buffer-overflow
   // CHECK-NEXT: 0x{{.*}} is located 1 bytes after a 64-byte region
-  // CHECK-NEXT: declared as c in buggy {{.*}}stack-overflow.c:
+  // CHECK-NEXT: c in buggy {{.*}}stack-overflow.c:
   // CHECK: Memory tags around the buggy address
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in buggy

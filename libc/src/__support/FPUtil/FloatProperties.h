@@ -111,7 +111,7 @@ public:
       (1U << (EXP_LEN - 1U)) - 1U;
   static_assert(EXP_BIAS > 0);
 
-private:
+protected:
   // The shift amount to get the *significand* part to the least significant
   // bit. Always `0` but kept for consistency.
   LIBC_INLINE_VAR static constexpr int SIG_MASK_SHIFT = 0;

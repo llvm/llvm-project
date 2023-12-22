@@ -26,20 +26,27 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-template <> struct FPBits<long double> : private FloatProperties<long double> {
-  using typename FloatProperties<long double>::StorageType;
-  using FloatProperties<long double>::TOTAL_LEN;
-  using FloatProperties<long double>::EXP_MASK;
-  using FloatProperties<long double>::EXP_BIAS;
-  using FloatProperties<long double>::EXP_LEN;
-  using FloatProperties<long double>::FRACTION_MASK;
-  using FloatProperties<long double>::FRACTION_LEN;
+template <>
+struct FPBits<long double>
+    : public internal::FPBitsCommon<FPType::X86_Binary80> {
+  using UP = internal::FPBitsCommon<FPType::X86_Binary80>;
+  using StorageType = typename UP::StorageType;
+  using UP::bits;
 
 private:
-  using FloatProperties<long double>::QUIET_NAN_MASK;
+  using UP::EXP_SIG_MASK;
+  using UP::QUIET_NAN_MASK;
 
 public:
-  using FloatProperties<long double>::SIGN_MASK;
+  using UP::EXP_BIAS;
+  using UP::EXP_LEN;
+  using UP::EXP_MASK;
+  using UP::EXP_MASK_SHIFT;
+  using UP::FP_MASK;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::SIGN_MASK;
+  using UP::TOTAL_LEN;
 
   static constexpr int MAX_BIASED_EXPONENT = 0x7FFF;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
@@ -51,33 +58,11 @@ public:
       (StorageType(MAX_BIASED_EXPONENT - 1) << (FRACTION_LEN + 1)) |
       (StorageType(1) << FRACTION_LEN) | MAX_SUBNORMAL;
 
-  StorageType bits;
-
-  LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
-    mantVal &= FRACTION_MASK;
-    bits &= ~FRACTION_MASK;
-    bits |= mantVal;
-  }
-
-  LIBC_INLINE constexpr StorageType get_mantissa() const {
-    return bits & FRACTION_MASK;
-  }
-
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
     // The x86 80 bit float represents the leading digit of the mantissa
     // explicitly. This is the mask for that bit.
     constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1) << FRACTION_LEN;
     return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
-  }
-
-  LIBC_INLINE constexpr void set_biased_exponent(StorageType expVal) {
-    expVal = (expVal << (TOTAL_LEN - 1 - EXP_LEN)) & EXP_MASK;
-    bits &= ~EXP_MASK;
-    bits |= expVal;
-  }
-
-  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXP_MASK) >> (TOTAL_LEN - 1 - EXP_LEN));
   }
 
   LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
@@ -89,22 +74,12 @@ public:
     return bool((bits & (StorageType(1) << FRACTION_LEN)) >> FRACTION_LEN);
   }
 
-  LIBC_INLINE constexpr void set_sign(bool signVal) {
-    bits &= ~SIGN_MASK;
-    StorageType sign1 = StorageType(signVal) << (TOTAL_LEN - 1);
-    bits |= sign1;
-  }
-
-  LIBC_INLINE constexpr bool get_sign() const {
-    return bool((bits & SIGN_MASK) >> (TOTAL_LEN - 1));
-  }
-
-  LIBC_INLINE constexpr FPBits() : bits(0) {}
+  LIBC_INLINE constexpr FPBits() : UP() {}
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
   LIBC_INLINE constexpr explicit FPBits(XType x)
-      : bits(cpp::bit_cast<StorageType>(x)) {
+      : UP(cpp::bit_cast<StorageType>(x)) {
     // bits starts uninitialized, and setting it to a long double only
     // overwrites the first 80 bits. This clears those upper bits.
     bits = bits & ((StorageType(1) << 80) - 1);
@@ -112,45 +87,14 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x) : bits(x) {}
+  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
 
   LIBC_INLINE constexpr operator long double() {
     return cpp::bit_cast<long double>(bits);
   }
 
-  LIBC_INLINE constexpr StorageType uintval() {
-    // We zero the padding bits as they can contain garbage.
-    return bits & FP_MASK;
-  }
-
   LIBC_INLINE constexpr long double get_val() const {
     return cpp::bit_cast<long double>(bits);
-  }
-
-  LIBC_INLINE constexpr int get_exponent() const {
-    return int(get_biased_exponent()) - EXP_BIAS;
-  }
-
-  // If the number is subnormal, the exponent is treated as if it were the
-  // minimum exponent for a normal number. This is to keep continuity between
-  // the normal and subnormal ranges, but it causes problems for functions where
-  // values are calculated from the exponent, since just subtracting the bias
-  // will give a slightly incorrect result. Additionally, zero has an exponent
-  // of zero, and that should actually be treated as zero.
-  LIBC_INLINE constexpr int get_explicit_exponent() const {
-    const int biased_exp = int(get_biased_exponent());
-    if (is_zero()) {
-      return 0;
-    } else if (biased_exp == 0) {
-      return 1 - EXP_BIAS;
-    } else {
-      return biased_exp - EXP_BIAS;
-    }
-  }
-
-  LIBC_INLINE constexpr bool is_zero() const {
-    return get_biased_exponent() == 0 && get_mantissa() == 0 &&
-           get_implicit_bit() == 0;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {

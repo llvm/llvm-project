@@ -52,7 +52,7 @@ int main() {
   // CHECK: Potentially referenced stack objects:
   // CHECK: Cause: use-after-scope
   // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a 2048-byte region
-  // CHECK-NEXT: declared as {{zzz|yyy}} in buggy {{.*}}stack-uar.c:
+  // CHECK-NEXT: {{zzz|yyy}} in buggy {{.*}}stack-uar.c:
   // CHECK: Memory tags around the buggy address
 
   // NOSYM: Previously allocated frames:

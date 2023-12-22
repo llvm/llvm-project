@@ -223,7 +223,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
           continue;
         if (!(local.name && internal_strlen(local.name)) &&
             !(local.function_name && internal_strlen(local.name)) &&
-            !local.decl_file)
+            !(local.decl_file && internal_strlen(local.decl_file)))
           continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
         if (obj_tag != addr_tag)
@@ -251,7 +251,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         } else {
           offset = local_beg - untagged_addr;
           whence = "before";
-          cause = "stack-buffer-underflow";
+          cause = "stack-buffer-overflow";
         }
         Decorator d;
         Printf("%s", d.Error());
@@ -263,10 +263,10 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
                local_end);
         Printf("%s", d.Allocation());
         StackTracePrinter::GetOrInit()->RenderSourceLocation(
-            &location, local.decl_file, local.decl_line, 0,
+            &location, local.decl_file, local.decl_line, /* column= */ 0,
             common_flags()->symbolize_vs_style,
             common_flags()->strip_path_prefix);
-        Printf("declared as %s in %s %s\n", local.name, local.function_name,
+        Printf("  %s in %s %s\n", local.name, local.function_name,
                location.data());
         location.clear();
         Printf("%s\n", d.Default());
@@ -680,23 +680,19 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
   if (candidate.heap.is_allocated) {
     uptr offset;
     const char *whence;
-    const char *cause;
     if (candidate.heap.begin <= untagged_addr &&
         untagged_addr < candidate.heap.end) {
       offset = untagged_addr - candidate.heap.begin;
       whence = "inside";
-      cause = "heap-use-after-free";
     } else if (candidate.after) {
       offset = untagged_addr - candidate.heap.end;
       whence = "after";
-      cause = "heap-buffer-overflow";
     } else {
       offset = candidate.heap.begin - untagged_addr;
       whence = "before";
-      cause = "heap-buffer-underflow";
     }
     Printf("%s", d.Error());
-    Printf("\nCause: %s\n", cause);
+    Printf("\nCause: heap-buffer-overflow\n");
     Printf("%s", d.Default());
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
