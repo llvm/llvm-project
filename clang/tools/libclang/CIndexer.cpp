@@ -14,10 +14,10 @@
 #include "CXString.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
@@ -127,7 +127,7 @@ const std::string &CIndexer::getClangResourcesPath() {
   getClangResourcesPathImplAIX(LibClangPath);
 #else
   bool PathFound = false;
-#if defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
+#if defined(CLANG_HAVE_DLFCN_H) && defined(CLANG_HAVE_DLADDR)
   Dl_info info;
   // This silly cast below avoids a C++ warning.
   if (dladdr((void *)(uintptr_t)clang_createTranslationUnit, &info) != 0) {
