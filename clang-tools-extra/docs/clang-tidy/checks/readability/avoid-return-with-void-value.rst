@@ -1,7 +1,7 @@
-.. title:: clang-tidy - readability-return-expression-in-void-function
+.. title:: clang-tidy - readability-avoid-return-with-void-value
 
-readability-return-expression-in-void-function
-==============================================
+readability-avoid-return-with-void-value
+========================================
 
 Complains about statements returning expressions of type ``void``. It can be
 confusing if a function returns an expression even though its return type is

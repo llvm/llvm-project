@@ -1,4 +1,4 @@
-//===--- ReturnExpressionInVoidFunctionCheck.h - clang-tidy -----*- C++ -*-===//
+//===--- AvoidReturnWithVoidValueCheck.h - clang-tidy -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_RETURNEXPRESSIONINVOIDFUNCTIONCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_RETURNEXPRESSIONINVOIDFUNCTIONCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDRETURNWITHVOIDVALUECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDRETURNWITHVOIDVALUECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,10 +16,10 @@ namespace clang::tidy::readability {
 /// Looks for statements returning expressions of type `void`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/return-expression-in-void-function.html
-class ReturnExpressionInVoidFunctionCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-return-with-void-value.html
+class AvoidReturnWithVoidValueCheck : public ClangTidyCheck {
 public:
-  ReturnExpressionInVoidFunctionCheck(StringRef Name, ClangTidyContext *Context)
+  AvoidReturnWithVoidValueCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_RETURNEXPRESSIONINVOIDFUNCTIONCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDRETURNWITHVOIDVALUECHECK_H

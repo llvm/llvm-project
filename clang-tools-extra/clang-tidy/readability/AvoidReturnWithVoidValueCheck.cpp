@@ -1,4 +1,4 @@
-//===--- ReturnExpressionInVoidFunctionCheck.cpp - clang-tidy -------------===//
+//===--- AvoidReturnWithVoidValueCheck.cpp - clang-tidy -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ReturnExpressionInVoidFunctionCheck.h"
+#include "AvoidReturnWithVoidValueCheck.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -15,14 +15,13 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-void ReturnExpressionInVoidFunctionCheck::registerMatchers(
-    MatchFinder *Finder) {
+void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       returnStmt(hasReturnValue(hasType(voidType()))).bind("void_return"),
       this);
 }
 
-void ReturnExpressionInVoidFunctionCheck::check(
+void AvoidReturnWithVoidValueCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
   diag(VoidReturn->getBeginLoc(),

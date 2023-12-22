@@ -337,6 +337,7 @@ Clang-Tidy Checks
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
+   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`,
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
    :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
@@ -372,7 +373,6 @@ Clang-Tidy Checks
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
    :doc:`readability-redundant-string-init <readability/redundant-string-init>`, "Yes"
    :doc:`readability-reference-to-constructed-temporary <readability/reference-to-constructed-temporary>`,
-   :doc:`readability-return-expression-in-void-function <readability/return-expression-in-void-function>`,
    :doc:`readability-simplify-boolean-expr <readability/simplify-boolean-expr>`, "Yes"
    :doc:`readability-simplify-subscript-expr <readability/simplify-subscript-expr>`, "Yes"
    :doc:`readability-static-accessed-through-instance <readability/static-accessed-through-instance>`, "Yes"
