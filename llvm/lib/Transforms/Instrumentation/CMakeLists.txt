@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMInstrumentation
   SanitizerBinaryMetadata.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
+  TypeSanitizer.cpp
   HWAddressSanitizer.cpp
   RealtimeSanitizer.cpp
 

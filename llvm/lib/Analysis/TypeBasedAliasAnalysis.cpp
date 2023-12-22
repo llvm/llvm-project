@@ -372,11 +372,27 @@ static bool isStructPathTBAA(const MDNode *MD) {
   return isa<MDNode>(MD->getOperand(0)) && MD->getNumOperands() >= 3;
 }
 
+// When using the TypeSanitizer, don't use TBAA information for alias analysis.
+// This might cause us to remove memory accesses that we need to verify at
+// runtime.
+static bool usingSanitizeType(const Value *V) {
+  const Function *F;
+
+  if (auto *I = dyn_cast<Instruction>(V))
+    F = I->getParent()->getParent();
+  else if (auto *A = dyn_cast<Argument>(V))
+    F = A->getParent();
+  else
+    return false;
+
+  return F->hasFnAttribute(Attribute::SanitizeType);
+}
+
 AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
                                      const MemoryLocation &LocB,
                                      AAQueryInfo &AAQI, const Instruction *) {
-  if (!EnableTBAA)
-    return AliasResult::MayAlias;
+  if (!EnableTBAA || usingSanitizeType(LocA.Ptr) || usingSanitizeType(LocB.Ptr))
+    return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
     return AliasResult::MayAlias;
@@ -426,8 +442,8 @@ MemoryEffects TypeBasedAAResult::getMemoryEffects(const Function *F) {
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
                                             const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI) {
-  if (!EnableTBAA)
-    return ModRefInfo::ModRef;
+  if (!EnableTBAA || usingSanitizeType(Call))
+    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 
   if (const MDNode *L = Loc.AATags.TBAA)
     if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
@@ -440,8 +456,8 @@ ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call1,
                                             const CallBase *Call2,
                                             AAQueryInfo &AAQI) {
-  if (!EnableTBAA)
-    return ModRefInfo::ModRef;
+  if (!EnableTBAA || usingSanitizeType(Call1))
+    return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
 
   if (const MDNode *M1 = Call1->getMetadata(LLVMContext::MD_tbaa))
     if (const MDNode *M2 = Call2->getMetadata(LLVMContext::MD_tbaa))
