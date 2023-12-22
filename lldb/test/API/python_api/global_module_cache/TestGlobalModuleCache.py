@@ -26,6 +26,13 @@ class GlobalModuleCacheTestCase(TestBase):
         # a previous build, so sleep a bit here to ensure that the touch is later.
         time.sleep(2)
         try:
+            # Make sure dst is writeable before trying to write to it.
+            subprocess.run(
+                ["chmod", "777", dst],
+                stdin=None,
+                capture_output=False,
+                encoding="utf-8",
+            )
             shutil.copy(src, dst)
         except:
             self.fail(f"Could not copy {src} to {dst}")
@@ -34,6 +41,10 @@ class GlobalModuleCacheTestCase(TestBase):
     # The rerun tests indicate rerunning on Windows doesn't really work, so
     # this one won't either.
     @skipIfWindows
+    # On Arm and AArch64 Linux, this test attempts to pop a thread plan when
+    # we only have the base plan remaining. Skip it until we can figure out
+    # the bug this is exposing (https://github.com/llvm/llvm-project/issues/76057).
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
@@ -50,11 +61,6 @@ class GlobalModuleCacheTestCase(TestBase):
         self.do_test(True, False)
 
     def do_test(self, one_target, one_debugger):
-        # Here to debug flakiness on Arm, remove later!
-        log_cmd_result = lldb.SBCommandReturnObject()
-        interp = self.dbg.GetCommandInterpreter()
-        interp.HandleCommand("log enable lldb step", log_cmd_result)
-
         # Make sure that if we have one target, and we run, then
         # change the binary and rerun, the binary (and any .o files
         # if using dwarf in .o file debugging) get removed from the
