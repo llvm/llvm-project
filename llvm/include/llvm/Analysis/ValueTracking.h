@@ -863,6 +863,11 @@ ConstantRange computeConstantRange(const Value *V, bool ForSigned,
                                    const DominatorTree *DT = nullptr,
                                    unsigned Depth = 0);
 
+/// Combine constant ranges from computeConstantRange() and computeKnownBits().
+ConstantRange
+computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
+                                       bool ForSigned, const SimplifyQuery &SQ);
+
 /// Return true if this function can prove that the instruction I will
 /// always transfer execution to one of its successors (including the next
 /// instruction that follows within a basic block). E.g. this is not
