@@ -1,4 +1,4 @@
-set(PLUGINS_TEST_COMMON omptarget OMPT omptarget.devicertl)
+set(PLUGINS_TEST_COMMON omptarget)
 set(PLUGINS_TEST_SOURCES NextgenPluginsTest.cpp)
 set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR})
 
