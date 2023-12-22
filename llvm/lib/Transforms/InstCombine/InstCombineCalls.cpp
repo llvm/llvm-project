@@ -1796,6 +1796,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
 
+    // Try to fold minmax with constant RHS based on range information
+    const APInt *RHSC;
+    if (match(I1, m_APIntAllowUndef(RHSC))) {
+      ICmpInst::Predicate Pred =
+          ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
+      bool IsSigned = MinMaxIntrinsic::isSigned(IID);
+      ConstantRange LHS_CR = computeConstantRangeIncludingKnownBits(
+          I0, IsSigned, SQ.getWithInstruction(II));
+      if (!LHS_CR.isFullSet()) {
+        if (LHS_CR.icmp(Pred, *RHSC))
+          return replaceInstUsesWith(*II, I0);
+        if (LHS_CR.icmp(ICmpInst::getSwappedPredicate(Pred), *RHSC))
+          return replaceInstUsesWith(*II,
+                                     ConstantInt::get(II->getType(), *RHSC));
+      }
+    }
+
     break;
   }
   case Intrinsic::bitreverse: {
