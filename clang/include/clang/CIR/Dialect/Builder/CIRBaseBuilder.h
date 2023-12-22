@@ -47,6 +47,13 @@ public:
                                          getAttr<mlir::cir::IntAttr>(typ, val));
   }
 
+  mlir::cir::PointerType getVoidPtrTy(unsigned AddrSpace = 0) {
+    if (AddrSpace)
+      llvm_unreachable("address space is NYI");
+    return ::mlir::cir::PointerType::get(
+        getContext(), ::mlir::cir::VoidType::get(getContext()));
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<mlir::cir::UnaryOp>(value.getLoc(), value.getType(),
                                       mlir::cir::UnaryOpKind::Not, value);

@@ -24,6 +24,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 
+#include "StdHelpers.h"
+
 using cir::CIRBaseBuilderTy;
 using namespace mlir;
 using namespace mlir::cir;
@@ -120,20 +122,10 @@ static bool isIteratorLikeType(mlir::Type t) {
 }
 
 static bool isIteratorInStdContainter(mlir::Type t) {
-  auto sTy = t.dyn_cast<StructType>();
-  if (!sTy)
-    return false;
-  auto recordDecl = sTy.getAst();
-  if (!recordDecl.isInStdNamespace())
-    return false;
-
   // TODO: only std::array supported for now, generalize and
   // use tablegen. CallDescription.cpp in the static analyzer
   // could be a good inspiration source too.
-  if (recordDecl.getName().compare("array") != 0)
-    return false;
-
-  return true;
+  return isStdArrayType(t);
 }
 
 void IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
