@@ -433,11 +433,13 @@ bool matchExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT ExtSrcTy = MRI.getType(ExtSrcReg);
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   if ((DstTy.getScalarSizeInBits() == 16 &&
-       ExtSrcTy.getNumElements() % 8 == 0) ||
+       ExtSrcTy.getNumElements() % 8 == 0 && ExtSrcTy.getNumElements() < 256) ||
       (DstTy.getScalarSizeInBits() == 32 &&
-       ExtSrcTy.getNumElements() % 4 == 0) ||
+       ExtSrcTy.getNumElements() % 4 == 0 &&
+       ExtSrcTy.getNumElements() < 65536) ||
       (DstTy.getScalarSizeInBits() == 64 &&
-       ExtSrcTy.getNumElements() % 4 == 0)) {
+       ExtSrcTy.getNumElements() % 4 == 0 &&
+       ExtSrcTy.getNumElements() < 4294967296)) {
     std::get<0>(MatchInfo) = ExtSrcReg;
     return true;
   }
@@ -538,12 +540,9 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register outReg;
   if (WorkingRegisters.size() > 1) {
     outReg = B.buildAdd(MidScalarLLT, WorkingRegisters[0], WorkingRegisters[1])
-                 ->getOperand(0)
-                 .getReg();
+                 .getReg(0);
     for (unsigned I = 2; I < WorkingRegisters.size(); I++) {
-      outReg = B.buildAdd(MidScalarLLT, outReg, WorkingRegisters[I])
-                   ->getOperand(0)
-                   .getReg();
+      outReg = B.buildAdd(MidScalarLLT, outReg, WorkingRegisters[I]).getReg(0);
     }
   } else {
     outReg = WorkingRegisters[0];
