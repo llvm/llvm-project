@@ -27,6 +27,7 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "indvars"
 
@@ -786,8 +787,6 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
 /// otherwise.
 bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
                                           Instruction *IVOperand) {
-  using namespace llvm::PatternMatch;
-
   if (BO->getOpcode() == Instruction::Shl) {
     bool Changed = false;
     ConstantRange IVRange = SE->getUnsignedRange(SE->getSCEV(IVOperand));
@@ -2011,8 +2010,6 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
 /// by looking at dominating conditions inside of the loop
 void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
                                     Instruction *NarrowUser) {
-  using namespace llvm::PatternMatch;
-
   Value *NarrowDefLHS;
   const APInt *NarrowDefRHS;
   if (!match(NarrowDef, m_NSWAdd(m_Value(NarrowDefLHS),
