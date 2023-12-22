@@ -129,6 +129,18 @@ void check_ftell(FILE *F) {
   clang_analyzer_eval(ferror(F)); // expected-warning {{UNKNOWN}}
 }
 
+void check_fileno(FILE *F) {
+  int Ret = fileno(F);
+  clang_analyzer_eval(F != NULL);    // expected-warning{{TRUE}}
+  if (!(Ret >= 0)) {
+    clang_analyzer_eval(Ret == -1);  // expected-warning{{TRUE}}
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  }
+  clang_analyzer_eval(feof(F));      // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(ferror(F));    // expected-warning{{UNKNOWN}}
+}
+
 void test_rewind(FILE *F) {
   errno = 0;
   rewind(F);

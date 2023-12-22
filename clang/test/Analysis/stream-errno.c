@@ -216,9 +216,10 @@ void check_fileno(void) {
   int N = fileno(F);
   if (N == -1) {
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {} // no-warning
-    fclose(F);
-    return;
+    if (errno) {}                    // no-warning
+  } else {
+    clang_analyzer_eval(N >= 0);     // expected-warning{{TRUE}}
   }
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+  fclose(F);
 }

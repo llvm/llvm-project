@@ -265,7 +265,11 @@ private:
       {{{"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
-       {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
+       {&StreamChecker::preDefault,
+        std::bind(&StreamChecker::evalFtellFileno, _1, _2, _3, _4, true), 0}},
+      {{{"fileno"}, 1},
+       {&StreamChecker::preDefault,
+        std::bind(&StreamChecker::evalFtellFileno, _1, _2, _3, _4, false), 0}},
       {{{"fflush"}, 1},
        {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
       {{{"rewind"}, 1},
@@ -284,7 +288,6 @@ private:
        {&StreamChecker::preDefault,
         std::bind(&StreamChecker::evalFeofFerror, _1, _2, _3, _4, ErrorFError),
         0}},
-      {{{"fileno"}, 1}, {&StreamChecker::preDefault, nullptr, 0}},
   };
 
   CallDescriptionMap<FnDescription> FnTestDescriptions = {
@@ -342,8 +345,8 @@ private:
   void evalFsetpos(const FnDescription *Desc, const CallEvent &Call,
                    CheckerContext &C) const;
 
-  void evalFtell(const FnDescription *Desc, const CallEvent &Call,
-                 CheckerContext &C) const;
+  void evalFtellFileno(const FnDescription *Desc, const CallEvent &Call,
+                       CheckerContext &C, bool IsRetLongTy) const;
 
   void evalRewind(const FnDescription *Desc, const CallEvent &Call,
                   CheckerContext &C) const;
@@ -1049,8 +1052,9 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
   C.addTransition(StateFailed);
 }
 
-void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
-                              CheckerContext &C) const {
+void StreamChecker::evalFtellFileno(const FnDescription *Desc,
+                                    const CallEvent &Call, CheckerContext &C,
+                                    bool IsRetLongTy) const {
   ProgramStateRef State = C.getState();
   SymbolRef Sym = getStreamArg(Desc, Call).getAsSymbol();
   if (!Sym)
@@ -1067,10 +1071,12 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
       State->BindExpr(CE, C.getLocationContext(), RetVal);
-  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal,
-                            SVB.makeZeroVal(C.getASTContext().LongTy),
-                            SVB.getConditionType())
-                  .getAs<DefinedOrUnknownSVal>();
+  auto Cond =
+      SVB.evalBinOp(State, BO_GE, RetVal,
+                    SVB.makeZeroVal(IsRetLongTy ? C.getASTContext().LongTy
+                                                : C.getASTContext().IntTy),
+                    SVB.getConditionType())
+          .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
   StateNotFailed = StateNotFailed->assume(*Cond, true);
@@ -1078,7 +1084,9 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   ProgramStateRef StateFailed = State->BindExpr(
-      CE, C.getLocationContext(), SVB.makeIntVal(-1, C.getASTContext().LongTy));
+      CE, C.getLocationContext(),
+      SVB.makeIntVal(-1, IsRetLongTy ? C.getASTContext().LongTy
+                                     : C.getASTContext().IntTy));
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.
