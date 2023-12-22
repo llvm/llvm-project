@@ -240,9 +240,9 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto tileOp = dyn_cast<arm_sme::ArmSMETileOpInterface>(op);
+    auto tileOp = cast<arm_sme::ArmSMETileOpInterface>(op);
     // Tile has a real (hardware) tile. No spills/reloads required.
-    if (!tileOp || !tileOp.isInMemoryTile())
+    if (!tileOp.isInMemoryTile())
       return failure();
 
     // Step 1. Create an alloca for the tile at the top of the function (if one
@@ -363,6 +363,31 @@ struct ConvertArmSMEOpToLLVMPattern : ConvertOpToLLVMPattern<SourceOp> {
     return requiresSpillsAndFills == RequiresSpillsAndFills::Yes;
   }
 };
+
+/// Helper to register `ConvertArmSMEOpToLLVMPattern` patterns.
+template <typename... Pattern>
+static void
+addArmSMEConversionPatterns(RewritePatternSet &patterns,
+                            LLVMTypeConverter const &typeConverter) {
+  (
+      [&] {
+        // Register spills/fills for ops that implement the
+        // `ArmSMETileOpInterface` and have `requiresSpillsAndFills` set to
+        // `RequiresSpillsAndFills::Yes`.
+        if constexpr (Pattern::requiresSpillsAndFillsConversion() &&
+                      std::is_base_of_v<arm_sme::ArmSMETileOpInterface::Trait<
+                                            typename Pattern::ArmSMEOp>,
+                                        typename Pattern::ArmSMEOp>) {
+          // Add spill/fill conversions with a very high benefit to ensure
+          // they are lowered first.
+          patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(
+              Pattern::ArmSMEOp::getOperationName(), typeConverter,
+              /*benefit=*/1337);
+        }
+        patterns.add<Pattern>(typeConverter);
+      }(),
+      ...);
+}
 
 struct GetTileConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::GetTileOp,
@@ -817,25 +842,6 @@ struct ConvertArmSMEToLLVMPass
       signalPassFailure();
   }
 };
-
-/// Helper to register `ConvertArmSMEOpToLLVMPattern` patterns.
-template <typename... Pattern>
-static void
-addArmSMEConversionPatterns(RewritePatternSet &patterns,
-                            LLVMTypeConverter const &typeConverter) {
-  (
-      [&] {
-        if (Pattern::requiresSpillsAndFillsConversion()) {
-          // Add spill/fill conversions with a very high benefit to ensure they
-          // are lowered first.
-          patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(
-              Pattern::ArmSMEOp::getOperationName(), typeConverter,
-              /*benefit=*/1337);
-        }
-        patterns.add<Pattern>(typeConverter);
-      }(),
-      ...);
-}
 
 } // namespace
 
