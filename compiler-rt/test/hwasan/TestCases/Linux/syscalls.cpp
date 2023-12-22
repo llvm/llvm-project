@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
   __sanitizer_syscall_pre_recvmsg(0, buf - 1, 0);
   // CHECK: HWAddressSanitizer: tag-mismatch on address [[PTR:0x[a-f0-9]+]]
-  // CHECK: Cause: heap-buffer-overflow
+  // CHECK: Cause: heap-buffer-underflow
   // CHECK: [[PTR]] is located 1 bytes before a 1000-byte region
 
   free(buf);

@@ -29,7 +29,8 @@ int main(int argc, char **argv) {
   if (size == 1000000) {
     fprintf(stderr, "is a large allocated heap chunk; size: 1003520 offset: %d\n",
             offset);
-    fprintf(stderr, "Cause: heap-buffer-overflow\n");
+    fprintf(stderr, "Cause: heap-buffer-%s\n",
+            offset == -30 ? "underflow" : "overflow");
     fprintf(stderr, "is located %s a 1000000-byte region\n",
             offset == -30 ? "30 bytes before" : "0 bytes after");
     return -1;
@@ -44,11 +45,11 @@ int main(int argc, char **argv) {
   // CHECK80: Cause: heap-buffer-overflow
   // CHECK80: is located 50 bytes after a 30-byte region
   //
-  // CHECKm30: Cause: heap-buffer-overflow
+  // CHECKm30: Cause: heap-buffer-underflow
   // CHECKm30: is located 30 bytes before a 30-byte region
   //
   // CHECKMm30: is a large allocated heap chunk; size: 1003520 offset: -30
-  // CHECKMm30: Cause: heap-buffer-overflow
+  // CHECKMm30: Cause: heap-buffer-underflow
   // CHECKMm30: is located 30 bytes before a 1000000-byte region
   //
   // CHECKM: is a large allocated heap chunk; size: 1003520 offset: 1000000
