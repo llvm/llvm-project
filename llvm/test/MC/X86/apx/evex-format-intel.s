@@ -60,6 +60,12 @@
 # CHECK: encoding: [0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00]
          vpslldq	zmm0, zmmword ptr [r16 + r17], 0
 
+## MRMDestMem4VOp3CC
+
+# CHECK: cmpbexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe6,0xb4,0xac,0x23,0x01,0x00,0x00]
+         cmpbexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+
 ## MRMSrcMem4VOp3
 
 # CHECK: bzhi	r23, qword ptr [r28 + 4*r29 + 291], r19
