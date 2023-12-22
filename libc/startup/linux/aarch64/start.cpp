@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "startup/linux/do_start.h"
-extern "C" void _start() {
+extern "C" [[noreturn]] void _start() {
   // Skip the Frame Pointer and the Link Register
   // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst
   // Section 6.2.3. Note that this only works if the current function
