@@ -1117,8 +1117,8 @@ let Predicates = [HasBMI, HasEGPR, In64BitMode] in {
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let Defs = [EFLAGS], AddedComplexity = -6 in {
-  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8PS;
-  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8PS, REX_W;
+  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8, PS;
+  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8, PS, REX_W;
 }
 
 let Predicates = [HasBMI], AddedComplexity = -6 in {
@@ -1141,12 +1141,12 @@ let hasSideEffects = 0 in {
 let Predicates = [HasBMI2, NoEGPR] in {
   def rr : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8XD, VEX, VVVV, Sched<[WriteIMulH, sched]>;
+             []>, T8, XD, VEX, VVVV, Sched<[WriteIMulH, sched]>;
 
   let mayLoad = 1 in
   def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8XD, VEX, VVVV,
+             []>, T8, XD, VEX, VVVV,
              Sched<[WriteIMulHLd, sched.Folded,
                     // Memory operand.
                     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
@@ -1165,11 +1165,11 @@ let Predicates = [HasBMI2, NoEGPR] in {
 let Predicates = [HasBMI2, HasEGPR, In64BitMode] in
   def rr#_EVEX : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
                    !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-                   []>, T8XD, EVEX, VVVV, Sched<[WriteIMulH, sched]>;
+                   []>, T8, XD, EVEX, VVVV, Sched<[WriteIMulH, sched]>;
 let Predicates = [HasBMI2, HasEGPR, In64BitMode], mayLoad = 1 in
   def rm#_EVEX : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
                    !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-                   []>, T8XD, EVEX, VVVV,
+                   []>, T8, XD, EVEX, VVVV,
                  Sched<[WriteIMulHLd, sched.Folded,
                         // Memory operand.
                         ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
@@ -1201,12 +1201,12 @@ class ADCOXOpRM <string m, X86TypeInfo t>
 
 let OpSize = OpSizeFixed, Constraints = "$src1 = $dst",
     Predicates = [HasADX] in {
-def ADCX32rr : ADCOXOpRR<"adcx", Xi32>, T8PD;
-def ADCX64rr : ADCOXOpRR<"adcx", Xi64>, T8PD;
-def ADOX32rr : ADCOXOpRR<"adox", Xi32>, T8XS;
-def ADOX64rr : ADCOXOpRR<"adox", Xi64>, T8XS;
-def ADCX32rm : ADCOXOpRM<"adcx", Xi32>, T8PD;
-def ADCX64rm : ADCOXOpRM<"adcx", Xi64>, T8PD;
-def ADOX32rm : ADCOXOpRM<"adox", Xi32>, T8XS;
-def ADOX64rm : ADCOXOpRM<"adox", Xi64>, T8XS;
+def ADCX32rr : ADCOXOpRR<"adcx", Xi32>, T8, PD;
+def ADCX64rr : ADCOXOpRR<"adcx", Xi64>, T8, PD;
+def ADOX32rr : ADCOXOpRR<"adox", Xi32>, T8, XS;
+def ADOX64rr : ADCOXOpRR<"adox", Xi64>, T8, XS;
+def ADCX32rm : ADCOXOpRM<"adcx", Xi32>, T8, PD;
+def ADCX64rm : ADCOXOpRM<"adcx", Xi64>, T8, PD;
+def ADOX32rm : ADCOXOpRM<"adox", Xi32>, T8, XS;
+def ADOX64rm : ADCOXOpRM<"adox", Xi64>, T8, XS;
 }
