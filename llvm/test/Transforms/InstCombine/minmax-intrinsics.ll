@@ -2496,8 +2496,7 @@ define i8 @fold_umax_with_knownbits_info(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[SUB]], i8 1)
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[SUB]]
 ;
 entry:
   %a1 = or i8 %a, 1
@@ -2513,8 +2512,7 @@ define <3 x i8> @fold_umax_with_knownbits_info_undef_in_splat(<3 x i8> %a, <3 x 
 ; CHECK-NEXT:    [[A1:%.*]] = or <3 x i8> [[A:%.*]], <i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[A2:%.*]] = shl <3 x i8> [[B:%.*]], <i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i8> [[A1]], [[A2]]
-; CHECK-NEXT:    [[VAL:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[SUB]], <3 x i8> <i8 1, i8 undef, i8 1>)
-; CHECK-NEXT:    ret <3 x i8> [[VAL]]
+; CHECK-NEXT:    ret <3 x i8> [[SUB]]
 ;
 entry:
   %a1 = or <3 x i8> %a, <i8 1, i8 1, i8 1>
@@ -2527,11 +2525,7 @@ entry:
 define i8 @fold_umin_with_knownbits_info(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_umin_with_knownbits_info(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 3
-; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[SUB]], i8 3)
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 3
 ;
 entry:
   %a1 = or i8 %a, 3
@@ -2544,11 +2538,7 @@ entry:
 define <3 x i8> @fold_umin_with_knownbits_info_undef_in_splat(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-LABEL: @fold_umin_with_knownbits_info_undef_in_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A1:%.*]] = or <3 x i8> [[A:%.*]], <i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[A2:%.*]] = shl <3 x i8> [[B:%.*]], <i8 2, i8 2, i8 2>
-; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i8> [[A1]], [[A2]]
-; CHECK-NEXT:    [[VAL:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[SUB]], <3 x i8> <i8 3, i8 undef, i8 3>)
-; CHECK-NEXT:    ret <3 x i8> [[VAL]]
+; CHECK-NEXT:    ret <3 x i8> <i8 3, i8 3, i8 3>
 ;
 entry:
   %a1 = or <3 x i8> %a, <i8 3, i8 3, i8 3>
