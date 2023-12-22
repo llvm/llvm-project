@@ -3,18 +3,17 @@
 
 %B = type { i1, i3 }
 
-; FIXME: This is a miscompile.
 define void @test(i7 %x) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i7 [[X:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[RES:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i1, align 8
 ; CHECK-NEXT:    [[TMP_SROA_1:%.*]] = alloca i3, align 1
 ; CHECK-NEXT:    store i7 [[X]], ptr [[TMP_SROA_1]], align 1
-; CHECK-NEXT:    store i1 undef, ptr [[RES]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[RES]], ptr align 8 [[TMP_SROA_0]], i64 1, i1 false)
 ; CHECK-NEXT:    [[TMP_SROA_1_0_RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 1
-; CHECK-NEXT:    [[TMP_SROA_1_0_TMP_SROA_1_0_COPYLOAD:%.*]] = load i3, ptr [[TMP_SROA_1]], align 1
-; CHECK-NEXT:    store i3 [[TMP_SROA_1_0_TMP_SROA_1_0_COPYLOAD]], ptr [[TMP_SROA_1_0_RES_SROA_IDX]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP_SROA_1_0_RES_SROA_IDX]], ptr align 1 [[TMP_SROA_1]], i64 1, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @use(ptr [[RES]])
 ; CHECK-NEXT:    ret void
 ;
