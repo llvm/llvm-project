@@ -358,15 +358,14 @@ multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
 multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
   foreach i = [0, 1, 2, 3] in
     let VLMul = MxListVF4[i].value in
-    defm NAME : VPseudoSiFiveVMACC<MxListVF8[i].MX, MxListVF8[i].vrclass,
+    defm NAME : VPseudoSiFiveVMACC<MxListVF4[i].MX, MxListVF8[i].vrclass,
                                    MxListVF4[i].vrclass, Constraint>;
 }
 
 multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
-  foreach i = [0, 1, 2, 3, 4] in
-    let VLMul = MxListVF2[i].value in
-    defm NAME : VPseudoSiFiveVMACC<MxListVF4[i].MX, MxListFW[i].wvrclass,
-                                   MxListFW[i].vrclass, Constraint>;
+  foreach m = MxListVF2 in
+    let VLMul = m.value in
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
 }
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
@@ -561,15 +560,17 @@ class GetFTypeInfo<int Sew> {
 }
 
 multiclass VPatVMACC<string intrinsic, string instruction, string kind,
-                     list<VTypeInfoToWide> info_pairs, ValueType vec_m1> {
+                     list<VTypeInfoToWide> info_pairs, ValueType vec_m1,
+                     bit lmul_follows_vd = 0> {
   foreach pair = info_pairs in {
     defvar VdInfo = pair.Wti;
     defvar Vs2Info = pair.Vti;
+    defvar LMul = !if(!eq(lmul_follows_vd, 1), VdInfo.LMul, Vs2Info.LMul);
     let Predicates = [HasVInstructions] in
     def : VPatTernaryNoMaskWithPolicy<"int_riscv_sf_" # intrinsic,
                                       "Pseudo" # instruction, kind, VdInfo.Vector,
                                       vec_m1, Vs2Info.Vector,
-                                      Vs2Info.Log2SEW, VdInfo.LMul,
+                                      Vs2Info.Log2SEW, LMul,
                                       VdInfo.RegClass, VR, Vs2Info.RegClass>;
   }
 }
@@ -589,7 +590,7 @@ defset list<VTypeInfoToWide> VQMACCQOQInfoPairs = {
 }
 
 multiclass VPatVQMACCDOD<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, VQMACCDODInfoPairs, vint8m1_t>;
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCDODInfoPairs, vint8m1_t, 1>;
 
 multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
