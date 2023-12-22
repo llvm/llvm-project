@@ -1095,23 +1095,23 @@ let Predicates = [HasBMI, NoEGPR] in {
   def rr : I<0xF2, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, EFLAGS, (X86and_flag (not RC:$src1), RC:$src2))]>,
-           VEX_4V, Sched<[sched]>;
+           VEX, VVVV, Sched<[sched]>;
   def rm : I<0xF2, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, EFLAGS,
               (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
-           VEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
+           VEX, VVVV, Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 let Predicates = [HasBMI, HasEGPR, In64BitMode] in {
   def rr_EVEX : I<0xF2, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
                   !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   [(set RC:$dst, EFLAGS, (X86and_flag (not RC:$src1), RC:$src2))]>,
-                EVEX_4V, Sched<[sched]>;
+                EVEX, VVVV, Sched<[sched]>;
   def rm_EVEX : I<0xF2, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
                   !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   [(set RC:$dst, EFLAGS,
                    (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
-                EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
+                EVEX, VVVV, Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 }
 
@@ -1141,12 +1141,12 @@ let hasSideEffects = 0 in {
 let Predicates = [HasBMI2, NoEGPR] in {
   def rr : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8XD, VEX_4V, Sched<[WriteIMulH, sched]>;
+             []>, T8XD, VEX, VVVV, Sched<[WriteIMulH, sched]>;
 
   let mayLoad = 1 in
   def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8XD, VEX_4V,
+             []>, T8XD, VEX, VVVV,
              Sched<[WriteIMulHLd, sched.Folded,
                     // Memory operand.
                     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
@@ -1165,11 +1165,11 @@ let Predicates = [HasBMI2, NoEGPR] in {
 let Predicates = [HasBMI2, HasEGPR, In64BitMode] in
   def rr#_EVEX : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
                    !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-                   []>, T8XD, EVEX_4V, Sched<[WriteIMulH, sched]>;
+                   []>, T8XD, EVEX, VVVV, Sched<[WriteIMulH, sched]>;
 let Predicates = [HasBMI2, HasEGPR, In64BitMode], mayLoad = 1 in
   def rm#_EVEX : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
                    !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-                   []>, T8XD, EVEX_4V,
+                   []>, T8XD, EVEX, VVVV,
                  Sched<[WriteIMulHLd, sched.Folded,
                         // Memory operand.
                         ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,

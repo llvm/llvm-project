@@ -66,11 +66,10 @@ class VEX    { Encoding OpEnc = EncVEX; }
 class WIG  { bit IgnoresW = 1; }
 // Special version of REX_W that can be changed to VEX.W==0 for EVEX2VEX.
 class VEX_W1X  { bit hasREX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
-class VEX_4V : VEX { bit hasVEX_4V = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
+class VVVV { bit hasVEX_4V = 1; }
 class EVEX   { Encoding OpEnc = EncEVEX; }
-class EVEX_4V : EVEX { bit hasVEX_4V = 1; }
 class EVEX_K { bit hasEVEX_K = 1; }
 class EVEX_KZ : EVEX_K { bit hasEVEX_Z = 1; }
 class EVEX_B { bit hasEVEX_B = 1; }
@@ -88,7 +87,6 @@ class EVEX_CD8<int esize, CD8VForm form> {
 }
 class NoCD8 { bits<7> CD8_Scale = 0; }
 class XOP { Encoding OpEnc = EncXOP; }
-class XOP_4V : XOP { bit hasVEX_4V = 1; }
 class EVEX2VEXOverride<string VEXInstrName> {
   string EVEX2VEXOverride = VEXInstrName;
 }
@@ -860,7 +858,7 @@ class AVX512PI<bits<8> o, Format F, dag outs, dag ins, string asm,
 class AVX512FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        EVEX_4V, Requires<[HasAVX512]>;
+        EVEX, VVVV, Requires<[HasAVX512]>;
 
 class AVX512<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
@@ -889,29 +887,29 @@ class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoVLX]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA, NoFMA4, NoVLX]>;
 class FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoAVX512]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA, NoFMA4, NoAVX512]>;
 class FMA3S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
                 list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoAVX512]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA, NoAVX512]>;
 
 // FMA4 Instruction Templates
 class FMA4<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4, NoVLX]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA4, NoVLX]>;
 class FMA4S<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4, NoAVX512]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA4, NoAVX512]>;
 class FMA4S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
                 list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA4]>;
 
 // XOP 2, 3 and 4 Operand Instruction Template
 class IXOP<bits<8> o, Format F, dag outs, dag ins, string asm,
@@ -934,7 +932,7 @@ class IXOPi8Reg<bits<8> o, Format F, dag outs, dag ins, string asm,
 class IXOP5<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern, SSEPackedInt>, TAPD,
-        VEX_4V, Requires<[HasXOP]>;
+        VEX, VVVV, Requires<[HasXOP]>;
 
 // X86-64 Instruction templates...
 //

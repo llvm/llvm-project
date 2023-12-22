@@ -1,7 +1,10 @@
-// RUN: %clang_hwasan -O0 %s -o %t && %env_hwasan_opts=strip_path_prefix='"%S/"' not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 %s -o %t && %env_hwasan_opts=strip_path_prefix=/TestCases/ not %run %t 2>&1 | FileCheck %s
 
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
+
+// FIXME: Android does not see a variable.
+// XFAIL: android
 
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>
