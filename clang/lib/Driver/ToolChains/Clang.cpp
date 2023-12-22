@@ -5250,6 +5250,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_clangir_disable_passes))
     CmdArgs.push_back("-clangir-disable-passes");
 
+  // ClangIR lib opt requires idiom recognizer.
+  if (Args.hasArg(options::OPT_fclangir_lib_opt,
+                  options::OPT_fclangir_lib_opt_EQ)) {
+    if (!Args.hasArg(options::OPT_fclangir_idiom_recognizer,
+                     options::OPT_fclangir_idiom_recognizer_EQ))
+      CmdArgs.push_back("-fclangir-idiom-recognizer");
+  }
+
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.
     std::string NormalizedTriple =

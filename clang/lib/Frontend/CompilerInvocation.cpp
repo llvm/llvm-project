@@ -2880,6 +2880,17 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Consumer, OPT_fmodule_file, ModuleFile);
 
+  if (Opts.ClangIRLifetimeCheck)
+    GenerateArg(Consumer, OPT_fclangir_lifetime_check_EQ,
+                Opts.ClangIRLifetimeCheckOpts);
+
+  if (Opts.ClangIRIdiomRecognizer)
+    GenerateArg(Consumer, OPT_fclangir_idiom_recognizer_EQ,
+                Opts.ClangIRIdiomRecognizerOpts);
+
+  if (Opts.ClangIRLibOpt)
+    GenerateArg(Consumer, OPT_fclangir_lib_opt_EQ, Opts.ClangIRLibOptOpts);
+
   if (Opts.AuxTargetCPU)
     GenerateArg(Consumer, OPT_aux_target_cpu, *Opts.AuxTargetCPU);
 
@@ -3121,9 +3132,17 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ClangIRLifetimeCheckOpts = A->getValue();
   }
 
-  if (Args.hasArg(OPT_fclangir_idiom_recognizer_EQ))
-    Opts.AuxTargetCPU =
-        std::string(Args.getLastArgValue(OPT_fclangir_idiom_recognizer_EQ));
+  if (const Arg *A = Args.getLastArg(OPT_fclangir_idiom_recognizer,
+                                     OPT_fclangir_idiom_recognizer_EQ)) {
+    Opts.ClangIRIdiomRecognizer = true;
+    Opts.ClangIRIdiomRecognizerOpts = A->getValue();
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(OPT_fclangir_lib_opt, OPT_fclangir_lib_opt_EQ)) {
+    Opts.ClangIRLibOpt = true;
+    Opts.ClangIRLibOptOpts = A->getValue();
+  }
 
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
