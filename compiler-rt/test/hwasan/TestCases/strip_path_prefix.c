@@ -1,4 +1,4 @@
-// RUN: %clang_hwasan -O0 %s -o %t && %env_hwasan_opts=strip_path_prefix=/TestCases/ not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -g %s -o %t && %env_hwasan_opts=strip_path_prefix=/TestCases/ not %run %t 2>&1 | FileCheck %s
 
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
