@@ -28,8 +28,10 @@
 //
 // TODO List:
 //
-// * When optimizing for code size we may want to avoid some transformations.
-// * We can also support the inverse case where we scan for a matching element.
+// * Add support for the inverse case where we scan for a matching element.
+// * Permit 64-bit induction variable types.
+// * Recognize loops that increment the IV *after* comparing bytes.
+// * Allow 32-bit sign-extends of the IV used by the GEP.
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,6 +48,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "aarch64-loop-idiom-transform"
 
@@ -95,9 +98,9 @@ private:
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
   bool recognizeByteCompare();
-  Value *expandFindMismatch(IRBuilder<> &Builder, GetElementPtrInst *GEPA,
-                            GetElementPtrInst *GEPB, Instruction *Index,
-                            Value *Start, Value *MaxLen);
+  Value *expandFindMismatch(IRBuilder<> &Builder, DomTreeUpdater &DTU,
+                            GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
+                            Instruction *Index, Value *Start, Value *MaxLen);
   void transformByteCompare(GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
                             PHINode *IndPhi, Value *MaxLen, Instruction *Index,
                             Value *Start, bool IncIdx, BasicBlock *FoundBB,
@@ -187,7 +190,7 @@ AArch64LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
 bool AArch64LoopIdiomTransform::run(Loop *L) {
   CurLoop = L;
 
-  if (DisableAll)
+  if (DisableAll || L->getHeader()->getParent()->hasOptSize())
     return false;
 
   // If the loop could not be converted to canonical form, it must have an
@@ -201,7 +204,6 @@ bool AArch64LoopIdiomTransform::run(Loop *L) {
 
   return recognizeByteCompare();
 }
-
 
 bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   // Currently the transformation only works on scalable vector types, although
@@ -252,8 +254,6 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   auto LoopBBInsts = LoopBlocks[1]->instructionsWithoutDebug();
   if (std::distance(LoopBBInsts.begin(), LoopBBInsts.end()) > 7)
     return false;
-
-  using namespace PatternMatch;
 
   // The incoming value to the PHI node from the loop should be an add of 1.
   Value *StartIdx = nullptr;
@@ -307,6 +307,11 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   if (!match(LoadA, m_Load(m_Value(A))) || !match(LoadB, m_Load(m_Value(B))))
     return false;
 
+  LoadInst *LoadAI = cast<LoadInst>(LoadA);
+  LoadInst *LoadBI = cast<LoadInst>(LoadB);
+  if (!LoadAI->isSimple() || !LoadBI->isSimple())
+    return false;
+
   GetElementPtrInst *GEPA = dyn_cast<GetElementPtrInst>(A);
   GetElementPtrInst *GEPB = dyn_cast<GetElementPtrInst>(B);
 
@@ -320,8 +325,8 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   if (!CurLoop->isLoopInvariant(PtrA) || !CurLoop->isLoopInvariant(PtrB) ||
       !GEPA->getResultElementType()->isIntegerTy(8) ||
       !GEPB->getResultElementType()->isIntegerTy(8) ||
-      !cast<LoadInst>(LoadA)->getType()->isIntegerTy(8) ||
-      !cast<LoadInst>(LoadB)->getType()->isIntegerTy(8) || PtrA == PtrB)
+      !LoadAI->getType()->isIntegerTy(8) ||
+      !LoadBI->getType()->isIntegerTy(8) || PtrA == PtrB)
     return false;
 
   // Check that the index to the GEPs is the index we found earlier
@@ -331,6 +336,11 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   Value *IdxA = GEPA->getOperand(GEPA->getNumIndices());
   Value *IdxB = GEPB->getOperand(GEPB->getNumIndices());
   if (IdxA != IdxB || !match(IdxA, m_ZExt(m_Specific(Index))))
+    return false;
+
+  // We only ever expect the pre-incremented index value to be used inside the
+  // loop.
+  if (!PN->hasOneUse())
     return false;
 
   // Ensure that when the Found and End blocks are identical the PHIs have the
@@ -352,18 +362,17 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   // choose the correct value.
   // TODO: We could add support for this in future.
   if (FoundBB == EndBB) {
-    for (PHINode &PN : EndBB->phis()) {
-      Value *LastValue = nullptr;
-      for (unsigned I = 0; I < PN.getNumIncomingValues(); I++) {
-        BasicBlock *BB = PN.getIncomingBlock(I);
-        if (CurLoop->contains(BB)) {
-          Value *V = PN.getIncomingValue(I);
-          if (!LastValue)
-            LastValue = V;
-          else if (LastValue != V)
-            return false;
-        }
-      }
+    for (PHINode &EndPN : EndBB->phis()) {
+      Value *WhileCondVal = EndPN.getIncomingValueForBlock(Header);
+      Value *WhileBodyVal = EndPN.getIncomingValueForBlock(WhileBB);
+
+      // The value of the index when leaving the while.cond block is always the
+      // same as the end value (MaxLen) so we permit either. Otherwise for any
+      // other value defined outside the loop we only allow values that are the
+      // same as the exit value for while.body.
+      if (WhileCondVal != Index && WhileCondVal != MaxLen &&
+          WhileCondVal != WhileBodyVal)
+        return false;
     }
   }
 
@@ -378,8 +387,8 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
 }
 
 Value *AArch64LoopIdiomTransform::expandFindMismatch(
-    IRBuilder<> &Builder, GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
-    Instruction *Index, Value *Start, Value *MaxLen) {
+    IRBuilder<> &Builder, DomTreeUpdater &DTU, GetElementPtrInst *GEPA,
+    GetElementPtrInst *GEPB, Instruction *Index, Value *Start, Value *MaxLen) {
   Value *PtrA = GEPA->getPointerOperand();
   Value *PtrB = GEPB->getPointerOperand();
 
@@ -391,7 +400,6 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   Type *ResType = Builder.getInt32Ty();
 
   // Split block in the original loop preheader.
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   BasicBlock *EndBlock =
       SplitBlock(Preheader, PHBranch, DT, LI, nullptr, "mismatch_end");
 
@@ -569,16 +577,15 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   PHINode *SVEIndexPhi = Builder.CreatePHI(I64Type, 2, "mismatch_sve_index");
   SVEIndexPhi->addIncoming(ExtStart, SVELoopPreheaderBlock);
   Type *SVELoadType = ScalableVectorType::get(Builder.getInt8Ty(), 16);
-  Value *GepOffset = SVEIndexPhi;
   Value *Passthru = ConstantInt::getNullValue(SVELoadType);
 
-  Value *SVELhsGep = Builder.CreateGEP(LoadType, PtrA, GepOffset);
+  Value *SVELhsGep = Builder.CreateGEP(LoadType, PtrA, SVEIndexPhi);
   if (GEPA->isInBounds())
     cast<GetElementPtrInst>(SVELhsGep)->setIsInBounds(true);
   Value *SVELhsLoad = Builder.CreateMaskedLoad(SVELoadType, SVELhsGep, Align(1),
                                                LoopPred, Passthru);
 
-  Value *SVERhsGep = Builder.CreateGEP(LoadType, PtrB, GepOffset);
+  Value *SVERhsGep = Builder.CreateGEP(LoadType, PtrB, SVEIndexPhi);
   if (GEPB->isInBounds())
     cast<GetElementPtrInst>(SVERhsGep)->setIsInBounds(true);
   Value *SVERhsLoad = Builder.CreateMaskedLoad(SVELoadType, SVERhsGep, Align(1),
@@ -654,7 +661,7 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
 
   // Otherwise compare the values
   // Load bytes from each array and compare them.
-  GepOffset = Builder.CreateZExt(IndexPhi, I64Type);
+  Value *GepOffset = Builder.CreateZExt(IndexPhi, I64Type);
 
   Value *LhsGep = Builder.CreateGEP(LoadType, PtrA, GepOffset);
   if (GEPA->isInBounds())
@@ -725,6 +732,7 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   BasicBlock *Header = CurLoop->getHeader();
   BranchInst *PHBranch = cast<BranchInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 
   // Increment the pointer if this was done before the loads in the loop.
@@ -732,11 +740,11 @@ void AArch64LoopIdiomTransform::transformByteCompare(
     Start = Builder.CreateAdd(Start, ConstantInt::get(Start->getType(), 1));
 
   Value *ByteCmpRes =
-      expandFindMismatch(Builder, GEPA, GEPB, Index, Start, MaxLen);
+      expandFindMismatch(Builder, DTU, GEPA, GEPB, Index, Start, MaxLen);
 
   // Replaces uses of index & induction Phi with intrinsic (we already
   // checked that the the first instruction of Header is the Phi above).
-  IndPhi->replaceAllUsesWith(ByteCmpRes);
+  assert(IndPhi->hasOneUse() && "Index phi node has more than one use!");
   Index->replaceAllUsesWith(ByteCmpRes);
 
   assert(PHBranch->isUnconditional() &&
@@ -753,14 +761,22 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   Builder.CreateCondBr(Builder.getTrue(), CmpBB, Header);
   PHBranch->eraseFromParent();
 
+  BasicBlock *MismatchEnd = cast<Instruction>(ByteCmpRes)->getParent();
+  DTU.applyUpdates({{DominatorTree::Insert, MismatchEnd, CmpBB}});
+
   // Create the branch to either the end or found block depending on the value
   // returned by the intrinsic.
   Builder.SetInsertPoint(CmpBB);
   if (FoundBB != EndBB) {
     Value *FoundCmp = Builder.CreateICmpEQ(ByteCmpRes, MaxLen);
     Builder.CreateCondBr(FoundCmp, EndBB, FoundBB);
-  } else
+    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB},
+                      {DominatorTree::Insert, CmpBB, EndBB}});
+
+  } else {
     Builder.CreateBr(FoundBB);
+    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB}});
+  }
 
   auto fixSuccessorPhis = [&](BasicBlock *SuccBB) {
     for (PHINode &PN : SuccBB->phis()) {
@@ -780,12 +796,11 @@ void AArch64LoopIdiomTransform::transformByteCompare(
       if (ResPhi)
         PN.addIncoming(ByteCmpRes, CmpBB);
       else {
-        // Since there should be no other outside uses of values in the
-        // original loop, any incoming values should be for blocks outside the
-        // loop.
-
-        // Otherwise, this is a Phi for different values. We should create
-        // a new incoming value from CmpBB matching the same value as from
+        // There should be no other outside uses of other values in the
+        // original loop. Any incoming values should either:
+        //   1. Be for blocks outside the loop, which aren't interesting. Or ..
+        //   2. These are from blocks in the loop with values defined outside
+        //      the loop. We should a similar incoming value from CmpBB.
         for (BasicBlock *BB : PN.blocks())
           if (CurLoop->contains(BB)) {
             PN.addIncoming(PN.getIncomingValueForBlock(BB), CmpBB);
@@ -804,9 +819,6 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   // the outer loop if there is one.
   if (!CurLoop->isOutermost())
     CurLoop->getParentLoop()->addBasicBlockToLoop(CmpBB, *LI);
-
-  // Update the dominator tree with the new block.
-  DT->addNewBlock(CmpBB, Preheader);
 
   if (VerifyLoops && CurLoop->getParentLoop()) {
     CurLoop->getParentLoop()->verifyLoop();
