@@ -60,6 +60,12 @@
 # CHECK: encoding: [0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00]
          vpslldq	$0, (%r16,%r17), %zmm0
 
+## MRMDestMem4VOp3CC
+
+# CHECK: cmpbexadd	%r18d, %r22d, 291(%r28,%r29,4)
+# CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe6,0xb4,0xac,0x23,0x01,0x00,0x00]
+         cmpbexadd	%r18d, %r22d, 291(%r28,%r29,4)
+
 ## MRMSrcMem4VOp3
 
 # CHECK: bzhiq	%r19, 291(%r28,%r29,4), %r23
