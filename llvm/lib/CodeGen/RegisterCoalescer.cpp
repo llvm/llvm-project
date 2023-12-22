@@ -306,7 +306,11 @@ namespace {
     /// number if it is not zero. If DstReg is a physical register and the
     /// existing subregister number of the def / use being updated is not zero,
     /// make sure to set it to the correct physical subregister.
-    void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx);
+    ///
+    /// If \p IsSubregToReg, we are coalescing a DstReg = SUBREG_TO_REG
+    /// SrcReg. This introduces an implicit-def of DstReg on coalesced users.
+    void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx,
+                           bool IsSubregToReg);
 
     /// If the given machine operand reads only undefined lanes add an undef
     /// flag.
@@ -1516,7 +1520,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     MRI->setRegClass(DstReg, NewRC);
 
     // Update machine operands and add flags.
-    updateRegDefsUses(DstReg, DstReg, DstIdx);
+    updateRegDefsUses(DstReg, DstReg, DstIdx, false);
     NewMI.getOperand(0).setSubReg(NewIdx);
     // updateRegDefUses can add an "undef" flag to the definition, since
     // it will replace DstReg with DstReg.DstIdx. If NewIdx is 0, make
@@ -1857,7 +1861,7 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
 }
 
 void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
-                                          unsigned SubIdx) {
+                                          unsigned SubIdx, bool IsSubregToReg) {
   bool DstIsPhys = DstReg.isPhysical();
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
 
@@ -1900,6 +1904,8 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
     if (DstInt && !Reads && SubIdx && !UseMI->isDebugInstr())
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
+    bool FullDef = true;
+
     // Replace SrcReg with DstReg in all UseMI operands.
     for (unsigned Op : Ops) {
       MachineOperand &MO = UseMI->getOperand(Op);
@@ -1907,8 +1913,12 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       // Adjust <undef> flags in case of sub-register joins. We don't want to
       // turn a full def into a read-modify-write sub-register def and vice
       // versa.
-      if (SubIdx && MO.isDef())
+      if (SubIdx && MO.isDef()) {
         MO.setIsUndef(!Reads);
+
+        if (!Reads)
+          FullDef = false;
+      }
 
       // A subreg use of a partially undef (super) register may be a complete
       // undef use now and then has to be marked that way.
@@ -1939,6 +1949,25 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
         MO.substPhysReg(DstReg, *TRI);
       else
         MO.substVirtReg(DstReg, SubIdx, *TRI);
+    }
+
+    if (IsSubregToReg && !FullDef) {
+      // If the coalesed instruction doesn't fully define the register, we need
+      // to preserve the original super register liveness for SUBREG_TO_REG.
+      //
+      // We pretended SUBREG_TO_REG was a regular copy for coalescing purposes,
+      // but it introduces liveness for other subregisters. Downstream users may
+      // have been relying on those bits, so we need to ensure their liveness is
+      // captured with a def of other lanes.
+
+      // FIXME: Need to add new subrange if tracking subranges. We could also
+      // skip adding this if we knew the other lanes are dead, and only for
+      // other lanes.
+
+      assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
+             "this should update subranges");
+      MachineInstrBuilder MIB(*MF, UseMI);
+      MIB.addReg(DstReg, RegState::ImplicitDefine);
     }
 
     LLVM_DEBUG({
@@ -2142,6 +2171,8 @@ bool RegisterCoalescer::joinCopy(
     });
   }
 
+  const bool IsSubregToReg = CopyMI->isSubregToReg();
+
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
@@ -2211,9 +2242,12 @@ bool RegisterCoalescer::joinCopy(
 
   // Rewrite all SrcReg operands to DstReg.
   // Also update DstReg operands to include DstIdx if it is set.
-  if (CP.getDstIdx())
-    updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx());
-  updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx());
+  if (CP.getDstIdx()) {
+    assert(!IsSubregToReg && "can this happen?");
+    updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx(), false);
+  }
+  updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx(),
+                    IsSubregToReg);
 
   // Shrink subregister ranges if necessary.
   if (ShrinkMask.any()) {
