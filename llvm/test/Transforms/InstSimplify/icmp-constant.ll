@@ -1140,3 +1140,20 @@ define <2 x i1> @heterogeneous_constvector(<2 x i8> %x) {
   %c = icmp ult <2 x i8> %x, <i8 undef, i8 poison>
   ret <2 x i1> %c
 }
+
+define i8 @infer_sub_with_knownbits_info(i8 %a, i8 %b) {
+; CHECK-LABEL: @infer_sub_with_knownbits_info(
+; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
+; CHECK-NEXT:    [[UMAX:%.*]] = tail call i8 @llvm.umax.i8(i8 [[SUB]], i8 1)
+; CHECK-NEXT:    ret i8 [[UMAX]]
+;
+  %a1 = or i8 %a, 1
+  %a2 = shl i8 %b, 1
+  %sub = sub i8 %a1, %a2
+  %umax = tail call i8 @llvm.umax.i8(i8 %sub, i8 1)
+  ret i8 %umax
+}
+
+declare i8 @llvm.umax.i8(i8, i8)
