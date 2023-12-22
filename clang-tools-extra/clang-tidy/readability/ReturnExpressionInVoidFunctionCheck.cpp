@@ -25,7 +25,8 @@ void ReturnExpressionInVoidFunctionCheck::registerMatchers(
 void ReturnExpressionInVoidFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
-  diag(VoidReturn->getBeginLoc(), "return statements should not return void");
+  diag(VoidReturn->getBeginLoc(),
+       "return statement in void function should not return a value");
 }
 
 } // namespace clang::tidy::readability
