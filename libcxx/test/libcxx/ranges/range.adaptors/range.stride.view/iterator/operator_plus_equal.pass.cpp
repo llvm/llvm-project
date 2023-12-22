@@ -11,18 +11,15 @@
 // UNSUPPORTED: !libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 
-#include "check_assertion.h"
 #include <ranges>
 
-void operator_plus_equal_past_end_is_illegal() {
+#include "check_assertion.h"
+
+int main(int, char**) {
   int range[]   = {1, 2, 3};
   auto striv    = std::ranges::views::stride(range, 2);
   auto striv_it = striv.begin();
   TEST_LIBCPP_ASSERT_FAILURE(striv_it += 3, "Advancing the iterator beyond the end is not allowed.");
-}
-
-int main(int, char**) {
-  operator_plus_equal_past_end_is_illegal();
 
   return 0;
 }
