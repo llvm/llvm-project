@@ -2674,34 +2674,33 @@ SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy(DAG.getDataLayout()));
 }
 
-bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model M,
-                                       bool hasSymbolicDisplacement) {
+bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model CM,
+                                       bool HasSymbolicDisplacement) {
   // Offset should fit into 32 bit immediate field.
   if (!isInt<32>(Offset))
     return false;
 
   // If we don't have a symbolic displacement - we don't have any extra
   // restrictions.
-  if (!hasSymbolicDisplacement)
+  if (!HasSymbolicDisplacement)
     return true;
 
-  // FIXME: Some tweaks might be needed for medium code model.
-  if (M != CodeModel::Small && M != CodeModel::Kernel)
-    return false;
-
-  // For small code model we assume that latest object is 16MB before end of 31
-  // bits boundary. We may also accept pretty large negative constants knowing
-  // that all objects are in the positive half of address space.
-  if (M == CodeModel::Small && Offset < 16*1024*1024)
+  // We can fold large offsets in the large code model because we always use
+  // 64-bit offsets.
+  if (CM == CodeModel::Large)
     return true;
 
   // For kernel code model we know that all object resist in the negative half
   // of 32bits address space. We may not accept negative offsets, since they may
   // be just off and we may accept pretty large positive ones.
-  if (M == CodeModel::Kernel && Offset >= 0)
-    return true;
+  if (CM == CodeModel::Kernel)
+    return Offset >= 0;
 
-  return false;
+  // For other non-large code models we assume that latest small object is 16MB
+  // before end of 31 bits boundary. We may also accept pretty large negative
+  // constants knowing that all objects are in the positive half of address
+  // space.
+  return Offset < 16 * 1024 * 1024;
 }
 
 /// Return true if the condition is an signed comparison operation.
