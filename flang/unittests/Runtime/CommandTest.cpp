@@ -220,16 +220,18 @@ protected:
   NoArgv() : CommandFixture(0, nullptr) {}
 };
 
+#if _WIN32 || _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || \
+    _SVID_SOURCE || _POSIX_SOURCE
 TEST_F(NoArgv, FdateGetDate) {
-  const int charLen{24};
-  char input[charLen]{"24LengthCharIsJustRight"};
+  char input[]{"24LengthCharIsJustRight"};
+  const std::size_t charLen = sizeof(input);
 
   FORTRAN_PROCEDURE_NAME(fdate)
   (reinterpret_cast<std::byte *>(input), charLen);
 
   // Tue May 26 21:51:03 2015\n\0
   // index at 3, 7, 10, 19 should be space
-  for (int i{0}; i < charLen; i++) {
+  for (std::size_t i{0}; i < charLen; i++) {
     if (i == 3 || i == 7 || i == 10 || i == 19) {
       EXPECT_EQ(input[i], ' ');
       continue;
@@ -239,28 +241,40 @@ TEST_F(NoArgv, FdateGetDate) {
 }
 
 TEST_F(NoArgv, FdateGetDateTooShort) {
-  const int charLen{23};
-  char input[charLen]{"TooShortAllPadSpace"};
+  char input[]{"TooShortAllPadSpace"};
+  const std::size_t charLen = sizeof(input);
 
   FORTRAN_PROCEDURE_NAME(fdate)
   (reinterpret_cast<std::byte *>(input), charLen);
 
-  for (int i{0}; i < charLen; i++) {
+  for (std::size_t i{0}; i < charLen; i++) {
     EXPECT_EQ(input[i], ' ');
   }
 }
 
 TEST_F(NoArgv, FdateGetDatePadSpace) {
-  const int charLen{29};
-  char input[charLen]{"All char after 23 pad spaces"};
+  char input[]{"All char after 23 pad spaces"};
+  const std::size_t charLen = sizeof(input);
 
   FORTRAN_PROCEDURE_NAME(fdate)
   (reinterpret_cast<std::byte *>(input), charLen);
 
-  for (int i{24}; i < charLen; i++) {
+  for (std::size_t i{24}; i < charLen; i++) {
     EXPECT_EQ(input[i], ' ');
   }
 }
+
+#else
+TEST_F(NoArgv, FdateNotSupported) {
+  char input[]{"No change due to crash"};
+
+  EXPECT_DEATH(FORTRAN_PROCEDURE_NAME(fdate)(
+                   reinterpret_cast<std::byte *>(input), sizeof(input)),
+      "fdate is not supported.");
+
+  CheckCharEqStr(input, "No change due to crash");
+}
+#endif
 
 // TODO: Test other intrinsics with this fixture.
 
