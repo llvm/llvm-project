@@ -103,7 +103,7 @@ struct BreakDownSubgroupReduce final : OpRewritePattern<gpu::SubgroupReduceOp> {
     return success();
   }
 
-  private:
+private:
   unsigned maxShuffleBitwidth = 0;
 };
 
