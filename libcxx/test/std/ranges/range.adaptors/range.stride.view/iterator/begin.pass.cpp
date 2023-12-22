@@ -10,11 +10,12 @@
 
 // std::views::stride_view::iterator
 
-#include "../test.h"
-#include "__iterator/concepts.h"
-#include "test_iterators.h"
 #include <ranges>
 #include <type_traits>
+
+#include "__iterator/concepts.h"
+#include "test_iterators.h"
+#include "../types.h"
 
 constexpr bool iterator_concept_test() {
   {
