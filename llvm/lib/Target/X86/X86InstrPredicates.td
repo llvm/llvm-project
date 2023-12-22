@@ -10,6 +10,8 @@ def TruePredicate : Predicate<"true">;
 
 def HasEGPR      : Predicate<"Subtarget->hasEGPR()">;
 def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
+def HasNDD       : Predicate<"Subtarget->hasNDD()">;
+def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;

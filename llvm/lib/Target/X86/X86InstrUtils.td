@@ -50,6 +50,7 @@ class EVEX   { Encoding OpEnc = EncEVEX; }
 class EVEX_K { bit hasEVEX_K = 1; }
 class EVEX_KZ : EVEX_K { bit hasEVEX_Z = 1; }
 class EVEX_B { bit hasEVEX_B = 1; }
+class EVEX_NF { bit hasEVEX_NF = 1; }
 class EVEX_RC { bit hasEVEX_RC = 1; }
 class EVEX_V512 { bit hasEVEX_L2 = 1; bit hasVEX_L = 0; }
 class EVEX_V256 { bit hasEVEX_L2 = 0; bit hasVEX_L = 1; }
@@ -958,3 +959,17 @@ class ITy<bits<8> o, Format f, X86TypeInfo t, dag outs, dag ins, string m,
 defvar unaryop_args = "$src";
 defvar binop_args = "{$src2, $src1|$src1, $src2}";
 defvar binop_ndd_args = "{$src2, $src1, $dst|$dst, $src1, $src2}";
+defvar binop_constraint = "$src1 = $dst";
+
+// NDD - Helper for new data destination instructions
+class NDD<bit ndd> {
+  string Constraints = !if(!eq(ndd, 0), binop_constraint, "");
+  Encoding OpEnc = !if(!eq(ndd, 0), EncNormal, EncEVEX);
+  bit hasEVEX_B = ndd;
+  bit hasVEX_4V = ndd;
+  Map OpMap = !if(!eq(ndd, 0), OB, T_MAP4);
+}
+// NF - Helper for NF (no flags update) instructions
+class NF: T_MAP4, EVEX, EVEX_NF;
+// PL - Helper for promoted legacy instructions
+class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
