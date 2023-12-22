@@ -221,22 +221,49 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       for (LocalInfo &local : frame.locals) {
         if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
           continue;
+        if (!(local.name && internal_strlen(local.name)) &&
+            !(local.function_name && internal_strlen(local.name)) &&
+            !(local.decl_file && internal_strlen(local.decl_file)))
+          continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
         if (obj_tag != addr_tag)
           continue;
-        // Calculate the offset from the object address to the faulting
-        // address. Because we only store bits 4-19 of FP (bits 0-3 are
-        // guaranteed to be zero), the calculation is performed mod 2^20 and may
-        // harmlessly underflow if the address mod 2^20 is below the object
-        // address.
-        uptr obj_offset =
-            (untagged_addr - fp - local.frame_offset) & (kRecordFPModulus - 1);
-        if (obj_offset >= local.size)
-          continue;
+        // Guess top bits of local variable from the faulting address, because
+        // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
+        uptr local_beg = (fp + local.frame_offset) |
+                         (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
+        uptr local_end = local_beg + local.size;
+
         if (!found_local) {
           Printf("\nPotentially referenced stack objects:\n");
           found_local = true;
         }
+
+        uptr offset;
+        const char *whence;
+        const char *cause;
+        if (local_beg <= untagged_addr && untagged_addr < local_end) {
+          offset = untagged_addr - local_beg;
+          whence = "inside";
+          cause = "use-after-scope";
+        } else if (untagged_addr >= local_end) {
+          offset = untagged_addr - local_end;
+          whence = "after";
+          cause = "stack-buffer-overflow";
+        } else {
+          offset = local_beg - untagged_addr;
+          whence = "before";
+          cause = "stack-buffer-overflow";
+        }
+        Decorator d;
+        Printf("%s", d.Error());
+        Printf("Cause: %s\n", cause);
+        Printf("%s", d.Default());
+        Printf("%s", d.Location());
+        Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
+               untagged_addr, offset, whence, local_end - local_beg, local_beg,
+               local_end);
+        Printf("%s", d.Allocation());
         StackTracePrinter::GetOrInit()->RenderSourceLocation(
             &location, local.decl_file, local.decl_line, /* column= */ 0,
             common_flags()->symbolize_vs_style,
@@ -244,6 +271,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         Printf("  %s in %s %s\n", local.name, local.function_name,
                location.data());
         location.clear();
+        Printf("%s\n", d.Default());
       }
       frame.Clear();
     }
@@ -751,8 +779,6 @@ void BaseReport::PrintAddressDescription() const {
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
   for (const auto &sa : allocations.stack) {
-    // TODO(fmayer): figure out how to distinguish use-after-return and
-    // stack-buffer-overflow.
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
