@@ -1149,7 +1149,7 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::AMDFAM17H_ZNVER2;
       break;
     }
-    if (Model <= 0x2f) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x20 && Model <= 0x2f)) {
       // Family 17h Models 10h-1Fh (Raven1) Zen
       // Family 17h Models 10h-1Fh (Picasso) Zen+
       // Family 17h Models 20h-2Fh (Raven2 x86) Zen
