@@ -2,7 +2,7 @@
 
 #include "llvm_blake3_prefix.h"
 
-#if defined(__ELF__) && defined(__linux__)
+#if defined(__ELF__) && (defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__))
 .section .note.GNU-stack,"",%progbits
 #endif
 
