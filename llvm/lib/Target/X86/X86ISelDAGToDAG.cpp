@@ -1828,9 +1828,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
   // That signifies access to globals that are known to be "near",
   // such as the GOT itself.
   CodeModel::Model M = TM.getCodeModel();
-  if (Subtarget->is64Bit() &&
-      ((M == CodeModel::Large && !IsRIPRelTLS) ||
-       (M == CodeModel::Medium && !IsRIPRel)))
+  if (Subtarget->is64Bit() && M == CodeModel::Large && !IsRIPRelTLS)
     return true;
 
   // Base and index reg must be 0 in order to use %rip as base.
@@ -1865,6 +1863,13 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
     Offset = BA->getOffset();
   } else
     llvm_unreachable("Unhandled symbol reference node.");
+
+  // Can't use an addressing mode with large globals.
+  if (Subtarget->is64Bit() && !IsRIPRel && AM.GV &&
+      TM.isLargeGlobalValue(AM.GV)) {
+    AM = Backup;
+    return true;
+  }
 
   if (foldOffsetIntoAddress(Offset, AM)) {
     AM = Backup;
@@ -1910,20 +1915,12 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
 
   // Post-processing: Convert foo to foo(%rip), even in non-PIC mode,
   // because it has a smaller encoding.
-  // TODO: Which other code models can use this?
-  switch (TM.getCodeModel()) {
-    default: break;
-    case CodeModel::Small:
-    case CodeModel::Kernel:
-      if (Subtarget->is64Bit() &&
-          AM.Scale == 1 &&
-          AM.BaseType == X86ISelAddressMode::RegBase &&
-          AM.Base_Reg.getNode() == nullptr &&
-          AM.IndexReg.getNode() == nullptr &&
-          AM.SymbolFlags == X86II::MO_NO_FLAG &&
-          AM.hasSymbolicDisplacement())
-        AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
-      break;
+  if (TM.getCodeModel() != CodeModel::Large &&
+      (!AM.GV || !TM.isLargeGlobalValue(AM.GV)) && Subtarget->is64Bit() &&
+      AM.Scale == 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
+      AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr &&
+      AM.SymbolFlags == X86II::MO_NO_FLAG && AM.hasSymbolicDisplacement()) {
+    AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
   }
 
   return false;
