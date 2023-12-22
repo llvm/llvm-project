@@ -46,18 +46,18 @@
 # HEX64: 0x00012368 70330100 00000000
 
 ## &.got[2]-. = 0x12214-0x1119c = 4096*1+120
-# DIS32:      1119c: auipc a0, 1
-# DIS32-NEXT:        lw a0, 120(a0)
+# DIS32:      1119c: auipc a0, 0x1
+# DIS32-NEXT:        lw a0, 0x78(a0)
 ## &.got[1]-. = 0x12210-0x111a4 = 4096*1+108
-# DIS32:      111a4: auipc a0, 1
-# DIS32-NEXT:        lw a0, 108(a0)
+# DIS32:      111a4: auipc a0, 0x1
+# DIS32-NEXT:        lw a0, 0x6c(a0)
 
 ## &.got[2]-. = 0x12368-0x11288 = 4096*1+224
-# DIS64:      11288: auipc a0, 1
-# DIS64-NEXT:        ld a0, 224(a0)
+# DIS64:      11288: auipc a0, 0x1
+# DIS64-NEXT:        ld a0, 0xe0(a0)
 ## &.got[1]-. = 0x12360-0x11290 = 4096*1+208
-# DIS64:      11290: auipc a0, 1
-# DIS64-NEXT:        ld a0, 208(a0)
+# DIS64:      11290: auipc a0, 0x1
+# DIS64-NEXT:        ld a0, 0xd0(a0)
 
 la a0,a
 la a0,b

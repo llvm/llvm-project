@@ -91,6 +91,7 @@ static_library("Basic") {
     "Sarif.cpp",
     "SourceLocation.cpp",
     "SourceManager.cpp",
+    "SourceMgrAdapter.cpp",
     "Stack.cpp",
     "TargetID.cpp",
     "TargetInfo.cpp",

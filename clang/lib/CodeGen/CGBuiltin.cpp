@@ -25,7 +25,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -188,8 +187,7 @@ static Value *EmitFromInt(CodeGenFunction &CGF, llvm::Value *V,
   return V;
 }
 
-static llvm::Value *CheckAtomicAlignment(CodeGenFunction &CGF,
-                                         const CallExpr *E) {
+static Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E) {
   ASTContext &Ctx = CGF.getContext();
   Address Ptr = CGF.EmitPointerWithAlignment(E->getArg(0));
   unsigned Bytes = Ptr.getElementType()->isPointerTy()
@@ -199,8 +197,10 @@ static llvm::Value *CheckAtomicAlignment(CodeGenFunction &CGF,
   if (Align % Bytes != 0) {
     DiagnosticsEngine &Diags = CGF.CGM.getDiags();
     Diags.Report(E->getBeginLoc(), diag::warn_sync_op_misaligned);
+    // Force address to be at least naturally-aligned.
+    return Ptr.withAlignment(CharUnits::fromQuantity(Bytes));
   }
-  return Ptr.getPointer();
+  return Ptr;
 }
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
@@ -215,37 +215,35 @@ static Value *MakeBinaryAtomicValue(
                                   E->getArg(0)->getType()->getPointeeType()));
   assert(CGF.getContext().hasSameUnqualifiedType(T, E->getArg(1)->getType()));
 
-  llvm::Value *DestPtr = CheckAtomicAlignment(CGF, E);
+  Address DestAddr = CheckAtomicAlignment(CGF, E);
 
   llvm::IntegerType *IntType = llvm::IntegerType::get(
       CGF.getLLVMContext(), CGF.getContext().getTypeSize(T));
 
-  llvm::Value *Args[2];
-  Args[0] = DestPtr;
-  Args[1] = CGF.EmitScalarExpr(E->getArg(1));
-  llvm::Type *ValueType = Args[1]->getType();
-  Args[1] = EmitToInt(CGF, Args[1], T, IntType);
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Type *ValueType = Val->getType();
+  Val = EmitToInt(CGF, Val, T, IntType);
 
-  llvm::Value *Result = CGF.Builder.CreateAtomicRMW(
-      Kind, Args[0], Args[1], Ordering);
+  llvm::Value *Result =
+      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
   return EmitFromInt(CGF, Result, T, ValueType);
 }
 
 static Value *EmitNontemporalStore(CodeGenFunction &CGF, const CallExpr *E) {
   Value *Val = CGF.EmitScalarExpr(E->getArg(0));
-  Value *Address = CGF.EmitScalarExpr(E->getArg(1));
+  Address Addr = CGF.EmitPointerWithAlignment(E->getArg(1));
 
   Val = CGF.EmitToMemory(Val, E->getArg(0)->getType());
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(Address, E->getArg(0)->getType());
+  LValue LV = CGF.MakeAddrLValue(Addr, E->getArg(0)->getType());
   LV.setNontemporal(true);
   CGF.EmitStoreOfScalar(Val, LV, false);
   return nullptr;
 }
 
 static Value *EmitNontemporalLoad(CodeGenFunction &CGF, const CallExpr *E) {
-  Value *Address = CGF.EmitScalarExpr(E->getArg(0));
+  Address Addr = CGF.EmitPointerWithAlignment(E->getArg(0));
 
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(Address, E->getType());
+  LValue LV = CGF.MakeAddrLValue(Addr, E->getType());
   LV.setNontemporal(true);
   return CGF.EmitLoadOfScalar(LV, E->getExprLoc());
 }
@@ -270,20 +268,18 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
                                   E->getArg(0)->getType()->getPointeeType()));
   assert(CGF.getContext().hasSameUnqualifiedType(T, E->getArg(1)->getType()));
 
-  llvm::Value *DestPtr = CheckAtomicAlignment(CGF, E);
+  Address DestAddr = CheckAtomicAlignment(CGF, E);
 
   llvm::IntegerType *IntType = llvm::IntegerType::get(
       CGF.getLLVMContext(), CGF.getContext().getTypeSize(T));
 
-  llvm::Value *Args[2];
-  Args[1] = CGF.EmitScalarExpr(E->getArg(1));
-  llvm::Type *ValueType = Args[1]->getType();
-  Args[1] = EmitToInt(CGF, Args[1], T, IntType);
-  Args[0] = DestPtr;
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Type *ValueType = Val->getType();
+  Val = EmitToInt(CGF, Val, T, IntType);
 
   llvm::Value *Result = CGF.Builder.CreateAtomicRMW(
-      Kind, Args[0], Args[1], llvm::AtomicOrdering::SequentiallyConsistent);
-  Result = CGF.Builder.CreateBinOp(Op, Result, Args[1]);
+      Kind, DestAddr, Val, llvm::AtomicOrdering::SequentiallyConsistent);
+  Result = CGF.Builder.CreateBinOp(Op, Result, Val);
   if (Invert)
     Result =
         CGF.Builder.CreateBinOp(llvm::Instruction::Xor, Result,
@@ -309,20 +305,18 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 static Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
                                      bool ReturnBool) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
-  llvm::Value *DestPtr = CheckAtomicAlignment(CGF, E);
+  Address DestAddr = CheckAtomicAlignment(CGF, E);
 
   llvm::IntegerType *IntType = llvm::IntegerType::get(
       CGF.getLLVMContext(), CGF.getContext().getTypeSize(T));
 
-  Value *Args[3];
-  Args[0] = DestPtr;
-  Args[1] = CGF.EmitScalarExpr(E->getArg(1));
-  llvm::Type *ValueType = Args[1]->getType();
-  Args[1] = EmitToInt(CGF, Args[1], T, IntType);
-  Args[2] = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
+  Value *Cmp = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Type *ValueType = Cmp->getType();
+  Cmp = EmitToInt(CGF, Cmp, T, IntType);
+  Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      Args[0], Args[1], Args[2], llvm::AtomicOrdering::SequentiallyConsistent,
+      DestAddr, Cmp, New, llvm::AtomicOrdering::SequentiallyConsistent,
       llvm::AtomicOrdering::SequentiallyConsistent);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
@@ -358,7 +352,8 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
   assert(CGF.getContext().hasSameUnqualifiedType(E->getType(),
                                                  E->getArg(2)->getType()));
 
-  auto *Destination = CGF.EmitScalarExpr(E->getArg(0));
+  Address DestAddr = CheckAtomicAlignment(CGF, E);
+
   auto *Comparand = CGF.EmitScalarExpr(E->getArg(2));
   auto *Exchange = CGF.EmitScalarExpr(E->getArg(1));
 
@@ -372,8 +367,7 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
   // _Interlocked* operations in the future, we will have to remove the volatile
   // marker.
   auto *Result = CGF.Builder.CreateAtomicCmpXchg(
-                   Destination, Comparand, Exchange,
-                   SuccessOrdering, FailureOrdering);
+      DestAddr, Comparand, Exchange, SuccessOrdering, FailureOrdering);
   Result->setVolatile(true);
   return CGF.Builder.CreateExtractValue(Result, 0);
 }
@@ -386,29 +380,34 @@ Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
 //     __int64 _ExchangeHigh,
 //     __int64 _ExchangeLow,
 //     __int64 * _ComparandResult);
+//
+// Note that Destination is assumed to be at least 16-byte aligned, despite
+// being typed int64.
+
 static Value *EmitAtomicCmpXchg128ForMSIntrin(CodeGenFunction &CGF,
                                               const CallExpr *E,
                                               AtomicOrdering SuccessOrdering) {
   assert(E->getNumArgs() == 4);
-  llvm::Value *Destination = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *DestPtr = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *ExchangeHigh = CGF.EmitScalarExpr(E->getArg(1));
   llvm::Value *ExchangeLow = CGF.EmitScalarExpr(E->getArg(2));
-  llvm::Value *ComparandPtr = CGF.EmitScalarExpr(E->getArg(3));
+  Address ComparandAddr = CGF.EmitPointerWithAlignment(E->getArg(3));
 
-  assert(Destination->getType()->isPointerTy());
+  assert(DestPtr->getType()->isPointerTy());
   assert(!ExchangeHigh->getType()->isPointerTy());
   assert(!ExchangeLow->getType()->isPointerTy());
-  assert(ComparandPtr->getType()->isPointerTy());
 
   // For Release ordering, the failure ordering should be Monotonic.
   auto FailureOrdering = SuccessOrdering == AtomicOrdering::Release
                              ? AtomicOrdering::Monotonic
                              : SuccessOrdering;
 
-  // Convert to i128 pointers and values.
+  // Convert to i128 pointers and values. Alignment is also overridden for
+  // destination pointer.
   llvm::Type *Int128Ty = llvm::IntegerType::get(CGF.getLLVMContext(), 128);
-  Address ComparandResult(ComparandPtr, Int128Ty,
-                          CGF.getContext().toCharUnitsFromBits(128));
+  Address DestAddr(DestPtr, Int128Ty,
+                   CGF.getContext().toCharUnitsFromBits(128));
+  ComparandAddr = ComparandAddr.withElementType(Int128Ty);
 
   // (((i128)hi) << 64) | ((i128)lo)
   ExchangeHigh = CGF.Builder.CreateZExt(ExchangeHigh, Int128Ty);
@@ -418,9 +417,9 @@ static Value *EmitAtomicCmpXchg128ForMSIntrin(CodeGenFunction &CGF,
   llvm::Value *Exchange = CGF.Builder.CreateOr(ExchangeHigh, ExchangeLow);
 
   // Load the comparand for the instruction.
-  llvm::Value *Comparand = CGF.Builder.CreateLoad(ComparandResult);
+  llvm::Value *Comparand = CGF.Builder.CreateLoad(ComparandAddr);
 
-  auto *CXI = CGF.Builder.CreateAtomicCmpXchg(Destination, Comparand, Exchange,
+  auto *CXI = CGF.Builder.CreateAtomicCmpXchg(DestAddr, Comparand, Exchange,
                                               SuccessOrdering, FailureOrdering);
 
   // The atomic instruction is marked volatile for consistency with MSVC. This
@@ -431,7 +430,7 @@ static Value *EmitAtomicCmpXchg128ForMSIntrin(CodeGenFunction &CGF,
 
   // Store the result as an outparameter.
   CGF.Builder.CreateStore(CGF.Builder.CreateExtractValue(CXI, 0),
-                          ComparandResult);
+                          ComparandAddr);
 
   // Get the success boolean and zero extend it to i8.
   Value *Success = CGF.Builder.CreateExtractValue(CXI, 1);
@@ -443,24 +442,21 @@ static Value *EmitAtomicIncrementValue(CodeGenFunction &CGF, const CallExpr *E,
   assert(E->getArg(0)->getType()->isPointerType());
 
   auto *IntTy = CGF.ConvertType(E->getType());
+  Address DestAddr = CheckAtomicAlignment(CGF, E);
   auto *Result = CGF.Builder.CreateAtomicRMW(
-                   AtomicRMWInst::Add,
-                   CGF.EmitScalarExpr(E->getArg(0)),
-                   ConstantInt::get(IntTy, 1),
-                   Ordering);
+      AtomicRMWInst::Add, DestAddr, ConstantInt::get(IntTy, 1), Ordering);
   return CGF.Builder.CreateAdd(Result, ConstantInt::get(IntTy, 1));
 }
 
-static Value *EmitAtomicDecrementValue(CodeGenFunction &CGF, const CallExpr *E,
+static Value *EmitAtomicDecrementValue(
+    CodeGenFunction &CGF, const CallExpr *E,
     AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent) {
   assert(E->getArg(0)->getType()->isPointerType());
 
   auto *IntTy = CGF.ConvertType(E->getType());
+  Address DestAddr = CheckAtomicAlignment(CGF, E);
   auto *Result = CGF.Builder.CreateAtomicRMW(
-                   AtomicRMWInst::Sub,
-                   CGF.EmitScalarExpr(E->getArg(0)),
-                   ConstantInt::get(IntTy, 1),
-                   Ordering);
+      AtomicRMWInst::Sub, DestAddr, ConstantInt::get(IntTy, 1), Ordering);
   return CGF.Builder.CreateSub(Result, ConstantInt::get(IntTy, 1));
 }
 
@@ -860,149 +856,6 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
-  if (IsDynamic) {
-    // The code generated here calculates the size of a struct with a flexible
-    // array member that uses the counted_by attribute. There are two instances
-    // we handle:
-    //
-    //       struct s {
-    //         unsigned long flags;
-    //         int count;
-    //         int array[] __attribute__((counted_by(count)));
-    //       }
-    //
-    //   1) bdos of the flexible array itself:
-    //
-    //     __builtin_dynamic_object_size(p->array, 1) ==
-    //         p->count * sizeof(*p->array)
-    //
-    //   2) bdos of a pointer into the flexible array:
-    //
-    //     __builtin_dynamic_object_size(&p->array[42], 1) ==
-    //         (p->count - 42) * sizeof(*p->array)
-    //
-    //   2) bdos of the whole struct, including the flexible array:
-    //
-    //     __builtin_dynamic_object_size(p, 1) ==
-    //        max(sizeof(struct s),
-    //            offsetof(struct s, array) + p->count * sizeof(*p->array))
-    //
-    const Expr *Base = E->IgnoreParenImpCasts();
-    const Expr *Idx = nullptr;
-    if (const auto *UO = dyn_cast<UnaryOperator>(Base);
-        UO && UO->getOpcode() == UO_AddrOf) {
-      if (const auto *ASE =
-              dyn_cast<ArraySubscriptExpr>(UO->getSubExpr()->IgnoreParens())) {
-        Base = ASE->getBase();
-        Idx = ASE->getIdx()->IgnoreParenImpCasts();
-
-        if (const auto *IL = dyn_cast<IntegerLiteral>(Idx);
-            IL && !IL->getValue().getSExtValue())
-          Idx = nullptr;
-      }
-    }
-
-    if (const ValueDecl *CountedByFD = FindCountedByField(Base)) {
-      bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
-      const RecordDecl *OuterRD =
-          CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
-      ASTContext &Ctx = getContext();
-
-      // Load the counted_by field.
-      const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
-      Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
-      llvm::Type *CountedByTy = CountedByInst->getType();
-
-      if (Idx) {
-        // There's an index into the array. Remove it from the count.
-        bool IdxSigned = Idx->getType()->isSignedIntegerType();
-        Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
-        IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
-                            : Builder.CreateZExtOrTrunc(IdxInst, CountedByTy);
-
-        // If the index is negative, don't subtract it from the counted_by
-        // value. The pointer is pointing to something before the FAM.
-        IdxInst = Builder.CreateNeg(IdxInst, "", !IdxSigned, IdxSigned);
-        CountedByInst =
-            Builder.CreateAdd(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
-      }
-
-      // Get the size of the flexible array member's base type.
-      const ValueDecl *FAMDecl = nullptr;
-      if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-        const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-            getLangOpts().getStrictFlexArraysLevel();
-        if (const ValueDecl *MD = ME->getMemberDecl();
-            MD && Decl::isFlexibleArrayMemberLike(
-                      Ctx, MD, MD->getType(), StrictFlexArraysLevel,
-                      /*IgnoreTemplateOrMacroSubstitution=*/true))
-          // Base is referencing the FAM itself.
-          FAMDecl = MD;
-      }
-
-      if (!FAMDecl)
-        FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD);
-
-      assert(FAMDecl && "Can't find the flexible array member field");
-
-      const ArrayType *ArrayTy = Ctx.getAsArrayType(FAMDecl->getType());
-      CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-      llvm::Constant *ElemSize =
-          llvm::ConstantInt::get(CountedByTy, Size.getQuantity(), IsSigned);
-
-      // Calculate how large the flexible array member is in bytes.
-      Value *FAMSize =
-          Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
-      FAMSize = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
-                         : Builder.CreateZExtOrTrunc(FAMSize, ResType);
-      Value *Res = FAMSize;
-
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-        // The whole struct is specificed in the __bdos.
-        const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
-
-        // Get the offset of the FAM.
-        CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
-        llvm::Constant *FAMOffset =
-            ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
-
-        // max(sizeof(struct s),
-        //     offsetof(struct s, array) + p->count * sizeof(*p->array))
-        Value *OffsetAndFAMSize =
-            Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
-
-        // Get the full size of the struct.
-        llvm::Constant *SizeofStruct =
-            ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
-
-        Res = IsSigned
-                  ? Builder.CreateBinaryIntrinsic(
-                        llvm::Intrinsic::smax, OffsetAndFAMSize, SizeofStruct)
-                  : Builder.CreateBinaryIntrinsic(
-                        llvm::Intrinsic::umax, OffsetAndFAMSize, SizeofStruct);
-      } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-        // Pointing to a place before the FAM. Add the difference to the FAM's
-        // size.
-        if (const ValueDecl *MD = ME->getMemberDecl(); MD != FAMDecl) {
-          CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(MD));
-          CharUnits FAMOffset =
-              Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
-
-          Res = Builder.CreateAdd(
-              Res, ConstantInt::get(ResType, FAMOffset.getQuantity() -
-                                                 Offset.getQuantity()));
-        }
-      }
-
-      // A negative 'FAMSize' means that the index was greater than the count,
-      // or an improperly set count field. Return -1 (for types 0 and 1) or 0
-      // (for types 2 and 3).
-      return Builder.CreateSelect(
-          Builder.CreateIsNeg(FAMSize),
-          getDefaultBuiltinObjectSizeResult(Type, ResType), Res);
-    }
-  }
-
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
   assert(Ptr->getType()->isPointerTy() &&
          "Non-pointer passed to __builtin_object_size?");
@@ -1192,8 +1045,7 @@ static llvm::Value *EmitBitTestIntrinsic(CodeGenFunction &CGF,
       Mask = CGF.Builder.CreateNot(Mask);
       RMWOp = llvm::AtomicRMWInst::And;
     }
-    OldByte = CGF.Builder.CreateAtomicRMW(RMWOp, ByteAddr.getPointer(), Mask,
-                                          Ordering);
+    OldByte = CGF.Builder.CreateAtomicRMW(RMWOp, ByteAddr, Mask, Ordering);
   } else {
     // Emit a plain load for the non-interlocked intrinsics.
     OldByte = CGF.Builder.CreateLoad(ByteAddr, "bittest.byte");
@@ -3195,7 +3047,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *AlignmentValue = EmitScalarExpr(E->getArg(1));
     ConstantInt *AlignmentCI = cast<ConstantInt>(AlignmentValue);
     if (AlignmentCI->getValue().ugt(llvm::Value::MaximumAlignment))
-      AlignmentCI = ConstantInt::get(AlignmentCI->getType(),
+      AlignmentCI = ConstantInt::get(AlignmentCI->getIntegerType(),
                                      llvm::Value::MaximumAlignment);
 
     emitAlignmentAssumption(PtrValue, Ptr,
@@ -3391,9 +3243,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    { Src0->getType(), Src1->getType() });
     return RValue::get(Builder.CreateCall(F, { Src0, Src1 }));
   }
+  case Builtin::BI__builtin_frexpl: {
+    // Linux PPC will not be adding additional PPCDoubleDouble support.
+    // WIP to switch default to IEEE long double. Will emit libcall for
+    // frexpl instead of legalizing this type in the BE.
+    if (&getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
-  case Builtin::BI__builtin_frexpl:
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
@@ -4433,14 +4292,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
   case Builtin::BI__sync_lock_release_16: {
-    Value *Ptr = CheckAtomicAlignment(*this, E);
+    Address Ptr = CheckAtomicAlignment(*this, E);
     QualType ElTy = E->getArg(0)->getType()->getPointeeType();
-    CharUnits StoreSize = getContext().getTypeSizeInChars(ElTy);
-    llvm::Type *ITy =
-        llvm::IntegerType::get(getLLVMContext(), StoreSize.getQuantity() * 8);
+
+    llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
+                                             getContext().getTypeSize(ElTy));
     llvm::StoreInst *Store =
-      Builder.CreateAlignedStore(llvm::Constant::getNullValue(ITy), Ptr,
-                                 StoreSize);
+        Builder.CreateStore(llvm::Constant::getNullValue(ITy), Ptr);
     Store->setAtomic(llvm::AtomicOrdering::Release);
     return RValue::get(nullptr);
   }
@@ -4491,7 +4349,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     bool Volatile =
         PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
 
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Address Ptr =
+        EmitPointerWithAlignment(E->getArg(0)).withElementType(Int8Ty);
+
     Value *NewVal = Builder.getInt8(1);
     Value *Order = EmitScalarExpr(E->getArg(1));
     if (isa<llvm::ConstantInt>(Order)) {
@@ -5012,7 +4872,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::IntegerType *IntType = IntegerType::get(
         getLLVMContext(), getContext().getTypeSize(E->getType()));
 
-    llvm::Value *Destination = EmitScalarExpr(E->getArg(0));
+    Address DestAddr = CheckAtomicAlignment(*this, E);
 
     llvm::Value *Exchange = EmitScalarExpr(E->getArg(1));
     RTy = Exchange->getType();
@@ -5025,7 +4885,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       BuiltinID == Builtin::BI_InterlockedCompareExchangePointer_nf ?
       AtomicOrdering::Monotonic : AtomicOrdering::SequentiallyConsistent;
 
-    auto Result = Builder.CreateAtomicCmpXchg(Destination, Comparand, Exchange,
+    auto Result = Builder.CreateAtomicCmpXchg(DestAddr, Comparand, Exchange,
                                               Ordering, Ordering);
     Result->setVolatile(true);
 
@@ -5722,12 +5582,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address DestAddr = EmitMSVAListRef(E->getArg(0));
     Address SrcAddr = EmitMSVAListRef(E->getArg(1));
 
-    llvm::Type *BPP = Int8PtrPtrTy;
-
-    DestAddr = Address(Builder.CreateBitCast(DestAddr.getPointer(), BPP, "cp"),
-                       Int8PtrTy, DestAddr.getAlignment());
-    SrcAddr = Address(Builder.CreateBitCast(SrcAddr.getPointer(), BPP, "ap"),
-                      Int8PtrTy, SrcAddr.getAlignment());
+    DestAddr = DestAddr.withElementType(Int8PtrTy);
+    SrcAddr = SrcAddr.withElementType(Int8PtrTy);
 
     Value *ArgPtr = Builder.CreateLoad(SrcAddr, "ap.val");
     return RValue::get(Builder.CreateStore(ArgPtr, DestAddr));
@@ -8401,8 +8257,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     }
 
     Value *LdPtr = EmitScalarExpr(E->getArg(0));
-    Value *Val = Builder.CreateCall(F, Builder.CreateBitCast(LdPtr, Int8PtrTy),
-                                    "ldrexd");
+    Value *Val = Builder.CreateCall(F, LdPtr, "ldrexd");
 
     Value *Val0 = Builder.CreateExtractValue(Val, 1);
     Value *Val1 = Builder.CreateExtractValue(Val, 0);
@@ -8460,7 +8315,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
 
     Value *Arg0 = Builder.CreateExtractValue(Val, 0);
     Value *Arg1 = Builder.CreateExtractValue(Val, 1);
-    Value *StPtr = Builder.CreateBitCast(EmitScalarExpr(E->getArg(1)), Int8PtrTy);
+    Value *StPtr = EmitScalarExpr(E->getArg(1));
     return Builder.CreateCall(F, {Arg0, Arg1, StPtr}, "strexd");
   }
 
@@ -9629,14 +9484,17 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
   case Intrinsic::aarch64_sve_ld2_sret:
   case Intrinsic::aarch64_sve_ld1_pn_x2:
   case Intrinsic::aarch64_sve_ldnt1_pn_x2:
+  case Intrinsic::aarch64_sve_ld2q_sret:
     N = 2;
     break;
   case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
     N = 3;
     break;
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld1_pn_x4:
   case Intrinsic::aarch64_sve_ldnt1_pn_x4:
+  case Intrinsic::aarch64_sve_ld4q_sret:
     N = 4;
     break;
   default:
@@ -9674,14 +9532,17 @@ Value *CodeGenFunction::EmitSVEStructStore(const SVETypeFlags &TypeFlags,
   case Intrinsic::aarch64_sve_st2:
   case Intrinsic::aarch64_sve_st1_pn_x2:
   case Intrinsic::aarch64_sve_stnt1_pn_x2:
+  case Intrinsic::aarch64_sve_st2q:
     N = 2;
     break;
   case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
     N = 3;
     break;
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st1_pn_x4:
   case Intrinsic::aarch64_sve_stnt1_pn_x4:
+  case Intrinsic::aarch64_sve_st4q:
     N = 4;
     break;
   default:
@@ -9757,7 +9618,7 @@ Value *CodeGenFunction::EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           llvm::Type *ReturnTy,
                                           SmallVectorImpl<Value *> &Ops,
-                                          unsigned BuiltinID,
+                                          unsigned IntrinsicID,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
   llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
@@ -9766,28 +9627,46 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   // The vector type that is returned may be different from the
   // eventual type loaded from memory.
   auto VectorTy = cast<llvm::ScalableVectorType>(ReturnTy);
-  auto MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
+  llvm::ScalableVectorType *MemoryTy = nullptr;
+  llvm::ScalableVectorType *PredTy = nullptr;
+  bool IsQuadLoad = false;
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_ld1udq:
+    MemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
+    PredTy = llvm::ScalableVectorType::get(
+        llvm::Type::getInt1Ty(getLLVMContext()), 1);
+    IsQuadLoad = true;
+    break;
+  default:
+    MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
+    PredTy = MemoryTy;
+    break;
+  }
 
-  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], PredTy);
   Value *BasePtr = Ops[1];
 
   // Does the load have an offset?
   if (Ops.size() > 2)
     BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
 
-  Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+  Function *F = CGM.getIntrinsic(IntrinsicID, IsQuadLoad ? VectorTy : MemoryTy);
   auto *Load =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
+  if (IsQuadLoad)
+    return Load;
+
   return IsZExtReturn ? Builder.CreateZExt(Load, VectorTy)
-                     : Builder.CreateSExt(Load, VectorTy);
+                      : Builder.CreateSExt(Load, VectorTy);
 }
 
 Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            SmallVectorImpl<Value *> &Ops,
-                                           unsigned BuiltinID) {
+                                           unsigned IntrinsicID) {
   QualType LangPTy = E->getArg(1)->getType();
   llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
       LangPTy->castAs<PointerType>()->getPointeeType());
@@ -9797,17 +9676,34 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   auto VectorTy = cast<llvm::ScalableVectorType>(Ops.back()->getType());
   auto MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
 
-  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  auto PredTy = MemoryTy;
+  auto AddrMemoryTy = MemoryTy;
+  bool IsQuadStore = false;
+
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_st1uwq:
+  case Intrinsic::aarch64_sve_st1udq:
+    AddrMemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
+    PredTy =
+        llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
+    IsQuadStore = true;
+    break;
+  default:
+    break;
+  }
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], PredTy);
   Value *BasePtr = Ops[1];
 
   // Does the store have an offset?
   if (Ops.size() == 4)
-    BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
+    BasePtr = Builder.CreateGEP(AddrMemoryTy, BasePtr, Ops[2]);
 
   // Last value is always the data
-  llvm::Value *Val = Builder.CreateTrunc(Ops.back(), MemoryTy);
+  Value *Val =
+      IsQuadStore ? Ops.back() : Builder.CreateTrunc(Ops.back(), MemoryTy);
 
-  Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
+  Function *F =
+      CGM.getIntrinsic(IntrinsicID, IsQuadStore ? VectorTy : MemoryTy);
   auto *Store =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Val, Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
@@ -9870,18 +9766,10 @@ Value *CodeGenFunction::EmitSMEZero(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  if (Ops.size() == 3) {
-    Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
-    llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
-
-    llvm::Value *VecNum = Ops[2];
-    llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
-
-    Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] = Builder.CreateAdd(
-        Ops[0], Builder.CreateIntCast(VecNum, Int32Ty, true), "tileslice");
-    Ops.erase(&Ops[2]);
-  }
+  if (Ops.size() == 2)
+    Ops.push_back(Builder.getInt32(0));
+  else
+    Ops[2] = Builder.CreateIntCast(Ops[2], Int32Ty, true);
   Function *F = CGM.getIntrinsic(IntID, {});
   return Builder.CreateCall(F, Ops);
 }
@@ -9936,6 +9824,10 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
 
   if (TypeFlags.isOverloadCvt())
     return {Ops[0]->getType(), Ops.back()->getType()};
+
+  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
+      ResultType->isVectorTy())
+    return {ResultType, Ops[1]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
@@ -10163,6 +10055,22 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return nullptr;
+
+  case SVE::BI__builtin_sve_svreinterpret_b: {
+    auto SVCountTy =
+        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    Function *CastFromSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
+    return Builder.CreateCall(CastFromSVCountF, Ops[0]);
+  }
+  case SVE::BI__builtin_sve_svreinterpret_c: {
+    auto SVCountTy =
+        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    Function *CastToSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
+    return Builder.CreateCall(CastToSVCountF, Ops[0]);
+  }
+
   case SVE::BI__builtin_sve_svpsel_lane_b8:
   case SVE::BI__builtin_sve_svpsel_lane_b16:
   case SVE::BI__builtin_sve_svpsel_lane_b32:
@@ -10410,6 +10318,30 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
+static void swapCommutativeSMEOperands(unsigned BuiltinID,
+                                       SmallVectorImpl<Value *> &Ops) {
+  unsigned MultiVec;
+  switch (BuiltinID) {
+  default:
+    return;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x1:
+    MultiVec = 1;
+    break;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x2:
+  case SME::BI__builtin_sme_svsudot_za32_s8_vg1x2:
+    MultiVec = 2;
+    break;
+  case SME::BI__builtin_sme_svsudot_za32_s8_vg1x4:
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x4:
+    MultiVec = 4;
+    break;
+  }
+
+  if (MultiVec > 0)
+    for (unsigned I = 0; I < MultiVec; ++I)
+      std::swap(Ops[I + 1], Ops[I + 1 + MultiVec]);
+}
+
 Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
   auto *Builtin = findARMVectorIntrinsicInMap(AArch64SMEIntrinsicMap, BuiltinID,
@@ -10431,6 +10363,9 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
            BuiltinID == SME::BI__builtin_sme_svldr_za ||
            BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+
+  // Handle builtins which require their multi-vector operands to be swapped
+  swapCommutativeSMEOperands(BuiltinID, Ops);
 
   // Should not happen!
   if (Builtin->LLVMIntrinsic == 0)
@@ -11850,12 +11785,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   case clang::AArch64::BI_InterlockedAdd: {
-    Value *Arg0 = EmitScalarExpr(E->getArg(0));
-    Value *Arg1 = EmitScalarExpr(E->getArg(1));
-    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Add, Arg0, Arg1,
-      llvm::AtomicOrdering::SequentiallyConsistent);
-    return Builder.CreateAdd(RMWI, Arg1);
+    Address DestAddr = CheckAtomicAlignment(*this, E);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    AtomicRMWInst *RMWI =
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val,
+                                llvm::AtomicOrdering::SequentiallyConsistent);
+    return Builder.CreateAdd(RMWI, Val);
   }
   }
 
@@ -16959,7 +16894,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     ConstantInt *AlignmentCI = cast<ConstantInt>(Op0);
     if (AlignmentCI->getValue().ugt(llvm::Value::MaximumAlignment))
-      AlignmentCI = ConstantInt::get(AlignmentCI->getType(),
+      AlignmentCI = ConstantInt::get(AlignmentCI->getIntegerType(),
                                      llvm::Value::MaximumAlignment);
 
     emitAlignmentAssumption(Op1, E->getArg(1),
@@ -17197,7 +17132,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         Op0, llvm::FixedVectorType::get(ConvertType(E->getType()), 2));
 
     if (getTarget().isLittleEndian())
-      Index = ConstantInt::get(Index->getType(), 1 - Index->getZExtValue());
+      Index =
+          ConstantInt::get(Index->getIntegerType(), 1 - Index->getZExtValue());
 
     return Builder.CreateExtractElement(Unpacked, Index);
   }
@@ -17537,7 +17473,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
-  if (Cov == clang::TargetOptions::COV_None) {
+  if (Cov == CodeObjectVersionKind::COV_None) {
     StringRef Name = "__oclc_ABI_version";
     auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
     if (!ABIVersionC)
@@ -17555,7 +17491,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 
     Value *IsCOV5 = CGF.Builder.CreateICmpSGE(
         ABIVersion,
-        llvm::ConstantInt::get(CGF.Int32Ty, clang::TargetOptions::COV_5));
+        llvm::ConstantInt::get(CGF.Int32Ty, CodeObjectVersionKind::COV_5));
 
     // Indexing the implicit kernarg segment.
     Value *ImplicitGEP = CGF.Builder.CreateConstGEP1_32(
@@ -17570,7 +17506,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
   } else {
     Value *GEP = nullptr;
-    if (Cov == clang::TargetOptions::COV_5) {
+    if (Cov == CodeObjectVersionKind::COV_5) {
       // Indexing the implicit kernarg segment.
       GEP = CGF.Builder.CreateConstGEP1_32(
           CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);
@@ -18168,7 +18104,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     }
 
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Address Ptr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
 
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
@@ -18284,6 +18220,32 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, ResultType);
     return Builder.CreateCall(F, {X, Undef});
+  }
+
+  case SystemZ::BI__builtin_s390_verllb:
+  case SystemZ::BI__builtin_s390_verllh:
+  case SystemZ::BI__builtin_s390_verllf:
+  case SystemZ::BI__builtin_s390_verllg: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    llvm::Value *Src = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Amt = EmitScalarExpr(E->getArg(1));
+    // Splat scalar rotate amount to vector type.
+    unsigned NumElts = cast<llvm::FixedVectorType>(ResultType)->getNumElements();
+    Amt = Builder.CreateIntCast(Amt, ResultType->getScalarType(), false);
+    Amt = Builder.CreateVectorSplat(NumElts, Amt);
+    Function *F = CGM.getIntrinsic(Intrinsic::fshl, ResultType);
+    return Builder.CreateCall(F, { Src, Src, Amt });
+  }
+
+  case SystemZ::BI__builtin_s390_verllvb:
+  case SystemZ::BI__builtin_s390_verllvh:
+  case SystemZ::BI__builtin_s390_verllvf:
+  case SystemZ::BI__builtin_s390_verllvg: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    llvm::Value *Src = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Amt = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::fshl, ResultType);
+    return Builder.CreateCall(F, { Src, Src, Amt });
   }
 
   case SystemZ::BI__builtin_s390_vfsqsb:
@@ -19031,9 +18993,10 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
 
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Address DestAddr = EmitPointerWithAlignment(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
-    return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, Ptr, Val,
+
+    return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, DestAddr, Val,
                                    AtomicOrdering::SequentiallyConsistent);
   }
 

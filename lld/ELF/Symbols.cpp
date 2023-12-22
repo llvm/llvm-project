@@ -683,3 +683,13 @@ void Symbol::resolve(const SharedSymbol &other) {
   } else if (traced)
     printTraceSymbol(other, getName());
 }
+
+void Defined::overwrite(Symbol &sym) const {
+  if (isa_and_nonnull<SharedFile>(sym.file))
+    sym.versionId = VER_NDX_GLOBAL;
+  Symbol::overwrite(sym, DefinedKind);
+  auto &s = static_cast<Defined &>(sym);
+  s.value = value;
+  s.size = size;
+  s.section = section;
+}

@@ -28,7 +28,7 @@ std::string createQualifiedNameForReplacement(
     const find_all_symbols::SymbolInfo &MatchedSymbol) {
   // No need to add missing qualifiers if SymbolIdentifier has a global scope
   // operator "::".
-  if (RawSymbolName.startswith("::"))
+  if (RawSymbolName.starts_with("::"))
     return std::string(RawSymbolName);
 
   std::string QualifiedName = MatchedSymbol.getQualifiedName();
@@ -42,7 +42,7 @@ std::string createQualifiedNameForReplacement(
   auto SymbolQualifiers = SplitQualifiers(RawSymbolName);
   std::string StrippedQualifiers;
   while (!SymbolQualifiers.empty() &&
-         !llvm::StringRef(QualifiedName).endswith(SymbolQualifiers.back())) {
+         !llvm::StringRef(QualifiedName).ends_with(SymbolQualifiers.back())) {
     StrippedQualifiers =
         "::" + SymbolQualifiers.back().str() + StrippedQualifiers;
     SymbolQualifiers.pop_back();

@@ -75,4 +75,6 @@ if (DEFINED MSVC)
     binary-to-decimal.cpp
     decimal-to-binary.cpp
   )
+  add_dependencies(FortranDecimal FortranDecimal.static FortranDecimal.dynamic
+    FortranDecimal.static_dbg FortranDecimal.dynamic_dbg)
 endif()

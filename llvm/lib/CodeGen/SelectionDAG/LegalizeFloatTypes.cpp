@@ -2214,6 +2214,9 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
     case ISD::FP_EXTEND:  R = PromoteFloatOp_FP_EXTEND(N, OpNo); break;
+    case ISD::STRICT_FP_EXTEND:
+      R = PromoteFloatOp_STRICT_FP_EXTEND(N, OpNo);
+      break;
     case ISD::SELECT_CC:  R = PromoteFloatOp_SELECT_CC(N, OpNo); break;
     case ISD::SETCC:      R = PromoteFloatOp_SETCC(N, OpNo); break;
     case ISD::STORE:      R = PromoteFloatOp_STORE(N, OpNo); break;
@@ -2274,6 +2277,26 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo) {
 
   // Else, extend the promoted float value to the desired VT.
   return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N,
+                                                          unsigned OpNo) {
+  assert(OpNo == 1);
+
+  SDValue Op = GetPromotedFloat(N->getOperand(1));
+  EVT VT = N->getValueType(0);
+
+  // Desired VT is same as promoted type.  Use promoted float directly.
+  if (VT == Op->getValueType(0)) {
+    ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return Op;
+  }
+
+  // Else, extend the promoted float value to the desired VT.
+  SDValue Res = DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(N), N->getVTList(),
+                            N->getOperand(0), Op);
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 // Promote the float operands used for comparison.  The true- and false-
@@ -2774,6 +2797,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FPOWI:
   case ISD::FLDEXP:      R = SoftPromoteHalfRes_ExpOp(N); break;
 
+  case ISD::FFREXP:      R = SoftPromoteHalfRes_FFREXP(N); break;
+
   case ISD::LOAD:        R = SoftPromoteHalfRes_LOAD(N); break;
   case ISD::SELECT:      R = SoftPromoteHalfRes_SELECT(N); break;
   case ISD::SELECT_CC:   R = SoftPromoteHalfRes_SELECT_CC(N); break;
@@ -2897,6 +2922,24 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ExpOp(SDNode *N) {
   Op0 = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op0);
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1);
+
+  // Convert back to FP16 as an integer.
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FFREXP(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Promote to the larger FP type.
+  Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
+
+  SDValue Res = DAG.getNode(N->getOpcode(), dl,
+                            DAG.getVTList(NVT, N->getValueType(1)), Op);
+
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);

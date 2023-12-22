@@ -310,16 +310,6 @@ builtin.module {
 
 // -----
 
-// The "passthrough_fold" folder will naively return its operand, but we don't
-// want to fold here because of the type mismatch.
-func.func @typemismatch(%arg: f32) -> i32 {
-  // expected-remark@+1 {{op 'test.passthrough_fold' is not legalizable}}
-  %0 = "test.passthrough_fold"(%arg) : (f32) -> (i32)
-  "test.return"(%0) : (i32) -> ()
-}
-
-// -----
-
 // expected-remark @below {{applyPartialConversion failed}}
 module {
   func.func private @callee(%0 : f32) -> f32

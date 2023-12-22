@@ -176,7 +176,7 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
 #endif
 }
 
-[[gnu::noinline]] LIBC_INLINE void start_thread() {
+[[gnu::noinline]] void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
   self.attrib = attrib;

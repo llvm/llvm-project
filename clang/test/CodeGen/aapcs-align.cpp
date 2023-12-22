@@ -134,8 +134,8 @@ void g6() {
   f6m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g6
-// CHECK: call void @f6(i32 noundef 1, [4 x i32] [i32 6, i32 7, i32 0, i32 undef])
-// CHECK: call void @f6m(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, [4 x i32] [i32 6, i32 7, i32 0, i32 undef])
+// CHECK: call void @f6(i32 noundef 1, [4 x i32] [i32 6, i32 7, i32 0, i32 0])
+// CHECK: call void @f6m(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, [4 x i32] [i32 6, i32 7, i32 0, i32 0])
 // CHECK: declare void @f6(i32 noundef, [4 x i32])
 // CHECK: declare void @f6m(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [4 x i32])
 }

@@ -48,11 +48,11 @@ define i64 @f4(i64 %dummy, ptr %src) {
   ret i64 %res
 }
 
-; Check the next value up, which must use a register.  (We could use
-; combinations of XIH* and XIL* instead, but that isn't implemented.)
+; Check the next value up.
 define i64 @f5(i64 %dummy, ptr %src) {
 ; CHECK-LABEL: f5:
-; CHECK: xgr
+; CHECK: xihf %r0, 1
+; CHECK: xilf %r0, 1
 ; CHECK: br %r14
   %res = atomicrmw xor ptr %src, i64 4294967297 seq_cst
   ret i64 %res
@@ -70,7 +70,8 @@ define i64 @f6(i64 %dummy, ptr %src) {
 ; Check the next value up, which must use a register.
 define i64 @f7(i64 %dummy, ptr %src) {
 ; CHECK-LABEL: f7:
-; CHECK: xgr
+; CHECK: xihf %r0, 4294967295
+; CHECK: xilf %r0, 1
 ; CHECK: br %r14
   %res = atomicrmw xor ptr %src, i64 -4294967295 seq_cst
   ret i64 %res

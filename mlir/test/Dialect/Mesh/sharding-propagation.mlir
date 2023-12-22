@@ -1,7 +1,7 @@
 // RUN: mlir-opt -sharding-propagation %s | FileCheck %s
 
 mesh.cluster @mesh_1d(rank = 1)
-mesh.cluster @mesh_2d(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh_2d(rank = 2, dim_sizes = 2x4)
 mesh.cluster @mesh_3d(rank = 3)
 
 // CHECK-LABEL: func.func @element_wise_empty_sharding_info

@@ -11,9 +11,9 @@
 // roundtrip:
 //
 // CHECK-ROUND-LABEL: func.func @sparse_expand(
-// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>> into tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  return %[[E]] : tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<100xf64, #sparse{{[0-9]*}}>) -> tensor<10x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<100xf64, #sparse{{[0-9]*}}> into tensor<10x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  return %[[E]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @sparse_expand(
 // CHECK-SAME:    %[[S:.*0]]:
@@ -36,7 +36,7 @@
 // CHECK:         }
 // CHECK:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:     sparse_tensor.convert
-// CHECK:         return %[[NT1]] : tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:         return %[[NT1]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10xf64, #SparseMatrix> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] :
@@ -48,9 +48,9 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // roundtrip:
 //
 // CHECK-ROUND-LABEL: func.func @sparse_collapse(
-// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  %[[C:.*]] = tensor.collapse_shape %[[A]] {{\[\[}}0, 1]] : tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>> into tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  return %[[C]] : tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<10x10xf64, #sparse{{[0-9]*}}>) -> tensor<100xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[C:.*]] = tensor.collapse_shape %[[A]] {{\[\[}}0, 1]] : tensor<10x10xf64, #sparse{{[0-9]*}}> into tensor<100xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  return %[[C]] : tensor<100xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @sparse_collapse(
 // CHECK-SAME:    %[[S:.*0]]:
@@ -82,7 +82,7 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK:         }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:    sparse_tensor.convert
-// CHECK:        return %[[NT1]] : tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:        return %[[NT1]] : tensor<100xf64, #sparse{{[0-9]*}}>
 //
 func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<100xf64, #SparseVector> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] :
@@ -94,9 +94,9 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // roundtrip:
 //
 // CHECK-ROUND-LABEL: func.func @dynamic_sparse_expand(
-// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<?x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>> into tensor<?x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  return %[[E]] : tensor<?x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<?xf64, #sparse{{[0-9]*}}>) -> tensor<?x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<?xf64, #sparse{{[0-9]*}}> into tensor<?x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  return %[[E]] : tensor<?x10xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @dynamic_sparse_expand(
 // CHECK-SAME:    %[[S:.*0]]:
@@ -125,7 +125,7 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK:         }
 // CHECK:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:     sparse_tensor.convert
-// CHECK:         return %[[NT1]] : tensor<?x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:         return %[[NT1]] : tensor<?x10xf64, #sparse{{[0-9]*}}>
 //
 func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?x10xf64, #SparseMatrix> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] :
@@ -137,9 +137,9 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // roundtrip:
 //
 // CHECK-ROUND-LABEL: func.func @dynamic_sparse_collapse(
-// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<10x?xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  %[[C:.*]] = tensor.collapse_shape %[[A]] {{\[\[}}0, 1]] : tensor<10x?xf64, #sparse_tensor.encoding<{{{.*}}}>> into tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>>
-//      CHECK-ROUND:  return %[[C]] : tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<10x?xf64, #sparse{{[0-9]*}}>) -> tensor<?xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[C:.*]] = tensor.collapse_shape %[[A]] {{\[\[}}0, 1]] : tensor<10x?xf64, #sparse{{[0-9]*}}> into tensor<?xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  return %[[C]] : tensor<?xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @dynamic_sparse_collapse(
 // CHECK-SAME:    %[[S:.*0]]:
@@ -176,7 +176,7 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK:        }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:    sparse_tensor.convert
-// CHECK:        return %[[NT1]] : tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:        return %[[NT1]] : tensor<?xf64, #sparse{{[0-9]*}}>
 //
 func.func @dynamic_sparse_collapse(%arg0: tensor<10x?xf64, #SparseMatrix>) -> tensor<?xf64, #SparseVector> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] :

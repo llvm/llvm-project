@@ -186,6 +186,7 @@ let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass]in {
   def MxDRegClass : MxOpClass<"DReg">;
 
   def MxFPDRegClass : MxOpClass<"FPDReg">;
+  def MxFPCRegClass : MxOpClass<"FPCReg">;
 }
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
@@ -240,6 +241,12 @@ let ParserMatchClass = MxFPDRegClass in {
   def MxFPR32 : MxRegOp<f32, FPDR32, MxSizeF32, "fp">;
   def MxFPR64 : MxRegOp<f64, FPDR64, MxSizeF64, "fp">;
   def MxFPR80 : MxRegOp<f80, FPDR80, MxSizeF80, "fp">;
+}
+
+// FLOATING POINT SYSTEM CONTROL REGISTER
+let ParserMatchClass = MxFPCRegClass in {
+  def MxFPCSR : MxRegOp<i32, FPCSC, MxSize32, "fpcs">;
+  def MxFPIR  : MxRegOp<i32, FPIC,  MxSize32, "fpi">;
 }
 
 class MxMemOp<dag ops, MxSize size, string letter,
@@ -726,6 +733,9 @@ foreach size = [16, 32] in {
 foreach size = [32, 64, 80] in
 def MxOp#size#AddrMode_fpr
   : MxOpBundle<size, !cast<MxOperand>("MxFPR"#size), ?>;
+
+def MxOp32AddrMode_fpcs : MxOpBundle<32, MxFPCSR, ?>;
+def MxOp32AddrMode_fpi  : MxOpBundle<32, MxFPIR, ?>;
 
 class MxType8Class<string rLet, MxOperand reg>
     : MxType<i8, "b", "", rLet, reg,

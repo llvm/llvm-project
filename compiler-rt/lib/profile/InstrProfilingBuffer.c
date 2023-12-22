@@ -33,6 +33,10 @@ COMPILER_RT_VISIBILITY void __llvm_profile_enable_continuous_mode(void) {
   ContinuouslySyncProfile = 1;
 }
 
+COMPILER_RT_VISIBILITY void __llvm_profile_disable_continuous_mode(void) {
+  ContinuouslySyncProfile = 0;
+}
+
 COMPILER_RT_VISIBILITY void __llvm_profile_set_page_size(unsigned PS) {
   PageSize = PS;
 }
@@ -56,8 +60,6 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
                                      const __llvm_profile_data *End) {
-  if (__llvm_profile_has_correlation())
-    return 0;
   intptr_t BeginI = (intptr_t)Begin, EndI = (intptr_t)End;
   return ((EndI + sizeof(__llvm_profile_data) - 1) - BeginI) /
          sizeof(__llvm_profile_data);
@@ -66,8 +68,6 @@ uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End) {
-  if (__llvm_profile_has_correlation())
-    return 0;
   return __llvm_profile_get_num_data(Begin, End) * sizeof(__llvm_profile_data);
 }
 
@@ -98,8 +98,6 @@ uint64_t __llvm_profile_get_num_bitmap_bytes(const char *Begin,
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End) {
-  if (__llvm_profile_has_correlation())
-    return 0;
   return End - Begin;
 }
 

@@ -42,7 +42,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   PTXVersion = 32;
   for (const StringRef Feature : Opts.FeaturesAsWritten) {
     int PTXV;
-    if (!Feature.startswith("+ptx") ||
+    if (!Feature.starts_with("+ptx") ||
         Feature.drop_front(4).getAsInteger(10, PTXV))
       continue;
     PTXVersion = PTXV; // TODO: should it be max(PTXVersion, PTXV)?
@@ -214,6 +214,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1200:
+      case CudaArch::GFX1201:
       case CudaArch::Generic:
       case CudaArch::LAST:
         break;
@@ -260,11 +262,14 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::SM_89:
         return "890";
       case CudaArch::SM_90:
+      case CudaArch::SM_90a:
         return "900";
       }
       llvm_unreachable("unhandled CudaArch");
     }();
     Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
+    if (GPU == CudaArch::SM_90a)
+      Builder.defineMacro("__CUDA_ARCH_FEAT_SM90_ALL", "1");
   }
 }
 

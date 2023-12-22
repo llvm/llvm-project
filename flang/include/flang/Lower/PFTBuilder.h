@@ -708,6 +708,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
+  bool hasIeeeAccess{false};
+  bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};

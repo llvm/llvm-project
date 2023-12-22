@@ -233,7 +233,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
                            Mangled::ManglingScheme scheme) {
   switch (scheme) {
   case Mangled::eManglingSchemeItanium: {
-    if (mangled.size() < 3 || !mangled.startswith("_Z"))
+    if (mangled.size() < 3 || !mangled.starts_with("_Z"))
       return true;
 
     // Avoid the following types of symbols in the index.

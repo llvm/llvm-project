@@ -74,24 +74,24 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* data() const noexcept { return __value_.operator->(); }
 };
 
-template<class _Tp>
+template <class _Tp>
 single_view(_Tp) -> single_view<_Tp>;
 
 namespace views {
 namespace __single_view {
 
 struct __fn : __range_adaptor_closure<__fn> {
-  template<class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
-  constexpr auto operator()(_Range&& __range) const
-    noexcept(noexcept(single_view<decay_t<_Range&&>>(std::forward<_Range>(__range))))
-    -> decltype(      single_view<decay_t<_Range&&>>(std::forward<_Range>(__range)))
-    { return          single_view<decay_t<_Range&&>>(std::forward<_Range>(__range)); }
+  template <class _Range>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
+      noexcept(noexcept(single_view<decay_t<_Range&&>>(std::forward<_Range>(__range))))
+          -> decltype(single_view<decay_t<_Range&&>>(std::forward<_Range>(__range))) {
+    return single_view<decay_t<_Range&&>>(std::forward<_Range>(__range));
+  }
 };
 } // namespace __single_view
 
 inline namespace __cpo {
-  inline constexpr auto single = __single_view::__fn{};
+inline constexpr auto single = __single_view::__fn{};
 } // namespace __cpo
 
 } // namespace views

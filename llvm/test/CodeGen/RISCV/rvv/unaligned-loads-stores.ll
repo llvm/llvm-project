@@ -3,9 +3,9 @@
 ; RUN:    -verify-machineinstrs | FileCheck %s
 ; RUN: llc -mtriple riscv64 -mattr=+d,+zfh,+zvfh,+v < %s \
 ; RUN:    -verify-machineinstrs | FileCheck %s
-; RUN: llc -mtriple riscv32 -mattr=+d,+zfh,+zvfh,+v,+unaligned-vector-mem < %s \
+; RUN: llc -mtriple riscv32 -mattr=+d,+zfh,+zvfh,+v,+fast-unaligned-access < %s \
 ; RUN:    -verify-machineinstrs | FileCheck --check-prefix=FAST %s
-; RUN: llc -mtriple riscv64 -mattr=+d,+zfh,+zvfh,+v,+unaligned-vector-mem < %s \
+; RUN: llc -mtriple riscv64 -mattr=+d,+zfh,+zvfh,+v,+fast-unaligned-access < %s \
 ; RUN:    -verify-machineinstrs | FileCheck --check-prefix=FAST %s
 
 

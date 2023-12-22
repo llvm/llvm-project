@@ -29,6 +29,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 class NotAnIterator {};
 using NotAnInputIterator = std::back_insert_iterator<std::basic_string<char16_t>>;
@@ -66,6 +67,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(std::is_same_v<S::allocator_type, std::allocator<char>>, "");
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s1));
   }
   {
     const char* s = "12345678901234";
@@ -76,6 +78,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(std::is_same_v<S::allocator_type, std::allocator<char>>, "");
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s1));
   }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
@@ -87,6 +90,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(std::is_same_v<S::allocator_type, test_allocator<wchar_t>>, "");
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s1));
   }
 #endif
   {
@@ -98,6 +102,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(std::is_same_v<S::allocator_type, min_allocator<char16_t>>, "");
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s1));
   }
   {
     const char32_t* s = U"12345678901234";
@@ -108,6 +113,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(std::is_same_v<S::allocator_type, explicit_allocator<char32_t>>, "");
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s1));
   }
 
   return true;

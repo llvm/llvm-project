@@ -49,9 +49,8 @@ __equal_range(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp
       __len = __half_len;
     } else {
       _Iter __mp1 = __mid;
-      return pair<_Iter, _Iter>(
-          std::__lower_bound<_AlgPolicy>(__first, __mid, __value, __comp, __proj),
-          std::__upper_bound<_AlgPolicy>(++__mp1, __end, __value, __comp, __proj));
+      return pair<_Iter, _Iter>(std::__lower_bound<_AlgPolicy>(__first, __mid, __value, __comp, __proj),
+                                std::__upper_bound<_AlgPolicy>(++__mp1, __end, __value, __comp, __proj));
     }
   }
   return pair<_Iter, _Iter>(__first, __first);
@@ -60,10 +59,8 @@ __equal_range(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp
 template <class _ForwardIterator, class _Tp, class _Compare>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value, _Compare __comp) {
-  static_assert(__is_callable<_Compare, decltype(*__first), const _Tp&>::value,
-                "The comparator has to be callable");
-  static_assert(is_copy_constructible<_ForwardIterator>::value,
-                "Iterator has to be copy constructible");
+  static_assert(__is_callable<_Compare, decltype(*__first), const _Tp&>::value, "The comparator has to be callable");
+  static_assert(is_copy_constructible<_ForwardIterator>::value, "Iterator has to be copy constructible");
   return std::__equal_range<_ClassicAlgPolicy>(
       std::move(__first),
       std::move(__last),

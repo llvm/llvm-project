@@ -536,19 +536,8 @@ static MaybeAlign getAlign(Value *Ptr) {
 }
 
 CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
-#ifndef NDEBUG
-  // Handle specially for constexpr cast. This is possible when
-  // opaque pointers not enabled since constant could be sinked
-  // directly by the design of llvm. This could be eliminated
-  // after we eliminate the abuse of constexpr.
-  auto *V = Ptr;
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->isCast())
-      V = CE->getOperand(0);
-
-  assert(isa<GlobalValue>(V) && cast<GlobalValue>(V)->isThreadLocal() &&
+  assert(isa<GlobalValue>(Ptr) && cast<GlobalValue>(Ptr)->isThreadLocal() &&
          "threadlocal_address only applies to thread local variables.");
-#endif
   CallInst *CI = CreateIntrinsic(llvm::Intrinsic::threadlocal_address,
                                  {Ptr->getType()}, {Ptr});
   if (MaybeAlign A = getAlign(Ptr)) {

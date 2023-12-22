@@ -495,7 +495,7 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
   }
 }
 
-unsigned RegisterBankInfo::getSizeInBits(Register Reg,
+TypeSize RegisterBankInfo::getSizeInBits(Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          const TargetRegisterInfo &TRI) const {
   if (Reg.isPhysical()) {
@@ -553,7 +553,7 @@ bool RegisterBankInfo::ValueMapping::partsAllUniform() const {
 }
 
 bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
-                                            unsigned MeaningfulBitWidth) const {
+                                            TypeSize MeaningfulBitWidth) const {
   assert(NumBreakDowns && "Value mapped nowhere?!");
   unsigned OrigValueBitWidth = 0;
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {
@@ -565,7 +565,8 @@ bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
     OrigValueBitWidth =
         std::max(OrigValueBitWidth, PartMap.getHighBitIdx() + 1);
   }
-  assert(OrigValueBitWidth >= MeaningfulBitWidth &&
+  assert((MeaningfulBitWidth.isScalable() ||
+          OrigValueBitWidth >= MeaningfulBitWidth) &&
          "Meaningful bits not covered by the mapping");
   APInt ValueMask(OrigValueBitWidth, 0);
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {

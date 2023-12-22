@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// MSVC warning C4389: '==': signed/unsigned mismatch
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4389
 
 // <algorithm>
 
@@ -17,6 +19,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
 #include <vector>
 #include <type_traits>
 
@@ -113,6 +116,52 @@ struct TestTypes {
   }
 };
 
+void test_deque() {
+  { // empty deque
+    std::deque<int> data;
+    assert(std::find(data.begin(), data.end(), 4) == data.end());
+  }
+
+  { // single element - match
+    std::deque<int> data;
+    data.push_back(4);
+    assert(std::find(data.begin(), data.end(), 4) == data.begin());
+  }
+
+  { // single element - no match
+    std::deque<int> data;
+    data.push_back(3);
+    assert(std::find(data.begin(), data.end(), 4) == data.end());
+  }
+
+  // many elements
+  int sizes[] = {2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+  for (auto size : sizes) {
+    { // last element match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      data[size - 1] = 4;
+      assert(std::find(data.begin(), data.end(), 4) == data.end() - 1);
+    }
+
+    { // second-last element match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      data[size - 2] = 4;
+      assert(std::find(data.begin(), data.end(), 4) == data.end() - 2);
+    }
+
+    { // no match
+      std::deque<int> data;
+      data.resize(size);
+      std::fill(data.begin(), data.end(), 3);
+      assert(std::find(data.begin(), data.end(), 4) == data.end());
+    }
+  }
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::integer_types(), TestTypes<char>());
   types::for_each(types::integer_types(), TestTypes<int>());
@@ -122,10 +171,21 @@ TEST_CONSTEXPR_CXX20 bool test() {
   Test<TriviallyComparable<wchar_t>, TriviallyComparable<wchar_t>>().operator()<TriviallyComparable<wchar_t>*>();
 #endif
 
+  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
+  // experimental anymore
+#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
+  {
+    std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    auto view                         = vec | std::views::join;
+    assert(std::find(view.begin(), view.end(), 4) == std::next(view.begin(), 3));
+  }
+#endif
+
   return true;
 }
 
 int main(int, char**) {
+  test_deque();
   test();
 #if TEST_STD_VER >= 20
   static_assert(test());

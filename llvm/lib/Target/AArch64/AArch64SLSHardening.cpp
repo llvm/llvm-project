@@ -14,7 +14,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -213,7 +212,7 @@ bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
-  assert(MF.getName().startswith(getThunkPrefix()));
+  assert(MF.getName().starts_with(getThunkPrefix()));
   auto ThunkIt = llvm::find_if(
       SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
   assert(ThunkIt != std::end(SLSBLRThunks));

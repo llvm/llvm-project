@@ -118,6 +118,30 @@ set(LIBCXX_MODULE_STD_SOURCES
   std/version.inc
 )
 
+set(LIBCXX_MODULE_STD_COMPAT_SOURCES
+  std.compat/cassert.inc
+  std.compat/cctype.inc
+  std.compat/cerrno.inc
+  std.compat/cfenv.inc
+  std.compat/cfloat.inc
+  std.compat/cinttypes.inc
+  std.compat/climits.inc
+  std.compat/clocale.inc
+  std.compat/cmath.inc
+  std.compat/csetjmp.inc
+  std.compat/csignal.inc
+  std.compat/cstdarg.inc
+  std.compat/cstddef.inc
+  std.compat/cstdint.inc
+  std.compat/cstdio.inc
+  std.compat/cstdlib.inc
+  std.compat/cstring.inc
+  std.compat/ctime.inc
+  std.compat/cuchar.inc
+  std.compat/cwchar.inc
+  std.compat/cwctype.inc
+)
+
 # TODO MODULES the CMakeLists.txt in the install directory is only temporary
 # When that is removed the configured file can use the substitution
 # LIBCXX_GENERATED_INCLUDE_TARGET_DIR avoiding this set.
@@ -154,10 +178,25 @@ configure_file(
   @ONLY
 )
 
+set(LIBCXX_MODULE_STD_COMPAT_INCLUDE_SOURCES)
+foreach(file ${LIBCXX_MODULE_STD_COMPAT_SOURCES})
+  set(
+    LIBCXX_MODULE_STD_COMPAT_INCLUDE_SOURCES
+    "${LIBCXX_MODULE_STD_COMPAT_INCLUDE_SOURCES}#include \"${file}\"\n"
+  )
+endforeach()
+
+configure_file(
+  "std.compat.cppm.in"
+  "${LIBCXX_GENERATED_MODULE_DIR}/std.compat.cppm"
+  @ONLY
+)
+
 set(_all_modules)
 list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/CMakeLists.txt")
 list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/std.cppm")
-foreach(file ${LIBCXX_MODULE_STD_SOURCES})
+list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/std.compat.cppm")
+foreach(file ${LIBCXX_MODULE_STD_SOURCES} ${LIBCXX_MODULE_STD_COMPAT_SOURCES})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
   set(dst "${LIBCXX_GENERATED_MODULE_DIR}/${file}")
   add_custom_command(OUTPUT ${dst}

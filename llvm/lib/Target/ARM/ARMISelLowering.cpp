@@ -40,6 +40,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -1411,6 +1412,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i64, Custom);
     setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+    setOperationAction(ISD::GET_FPENV, MVT::i32, Legal);
+    setOperationAction(ISD::SET_FPENV, MVT::i32, Legal);
+    setOperationAction(ISD::RESET_FPENV, MVT::Other, Legal);
+    setOperationAction(ISD::GET_FPMODE, MVT::i32, Legal);
+    setOperationAction(ISD::SET_FPMODE, MVT::i32, Custom);
+    setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
   }
 
   // We want to custom lower some of our intrinsics.
@@ -1977,7 +1984,7 @@ Sched::Preference ARMTargetLowering::getSchedulingPreference(SDNode *N) const {
   if (MCID.getNumDefs() == 0)
     return Sched::RegPressure;
   if (!Itins->isEmpty() &&
-      Itins->getOperandCycle(MCID.getSchedClass(), 0) > 2)
+      Itins->getOperandCycle(MCID.getSchedClass(), 0) > 2U)
     return Sched::ILP;
 
   return Sched::RegPressure;
@@ -6443,6 +6450,57 @@ SDValue ARMTargetLowering::LowerSET_ROUNDING(SDValue Op,
   return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
 }
 
+SDValue ARMTargetLowering::LowerSET_FPMODE(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue Mode = Op->getOperand(1);
+
+  // Generate nodes to build:
+  // FPSCR = (FPSCR & FPStatusBits) | (Mode & ~FPStatusBits)
+  SDValue Ops[] = {Chain,
+                   DAG.getConstant(Intrinsic::arm_get_fpscr, DL, MVT::i32)};
+  SDValue FPSCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i32, MVT::Other}, Ops);
+  Chain = FPSCR.getValue(1);
+  FPSCR = FPSCR.getValue(0);
+
+  SDValue FPSCRMasked =
+      DAG.getNode(ISD::AND, DL, MVT::i32, FPSCR,
+                  DAG.getConstant(ARM::FPStatusBits, DL, MVT::i32));
+  SDValue InputMasked =
+      DAG.getNode(ISD::AND, DL, MVT::i32, Mode,
+                  DAG.getConstant(~ARM::FPStatusBits, DL, MVT::i32));
+  FPSCR = DAG.getNode(ISD::OR, DL, MVT::i32, FPSCRMasked, InputMasked);
+
+  SDValue Ops2[] = {
+      Chain, DAG.getConstant(Intrinsic::arm_set_fpscr, DL, MVT::i32), FPSCR};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
+SDValue ARMTargetLowering::LowerRESET_FPMODE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // To get the default FP mode all control bits are cleared:
+  // FPSCR = FPSCR & (FPStatusBits | FPReservedBits)
+  SDValue Ops[] = {Chain,
+                   DAG.getConstant(Intrinsic::arm_get_fpscr, DL, MVT::i32)};
+  SDValue FPSCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i32, MVT::Other}, Ops);
+  Chain = FPSCR.getValue(1);
+  FPSCR = FPSCR.getValue(0);
+
+  SDValue FPSCRMasked = DAG.getNode(
+      ISD::AND, DL, MVT::i32, FPSCR,
+      DAG.getConstant(ARM::FPStatusBits | ARM::FPReservedBits, DL, MVT::i32));
+  SDValue Ops2[] = {Chain,
+                    DAG.getConstant(Intrinsic::arm_set_fpscr, DL, MVT::i32),
+                    FPSCRMasked};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
 static SDValue LowerCTTZ(SDNode *N, SelectionDAG &DAG,
                          const ARMSubtarget *ST) {
   SDLoc dl(N);
@@ -10398,10 +10456,7 @@ static void ReplaceREADCYCLECOUNTER(SDNode *N,
 
 static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
   SDLoc dl(V.getNode());
-  SDValue VLo = DAG.getAnyExtOrTrunc(V, dl, MVT::i32);
-  SDValue VHi = DAG.getAnyExtOrTrunc(
-      DAG.getNode(ISD::SRL, dl, MVT::i64, V, DAG.getConstant(32, dl, MVT::i32)),
-      dl, MVT::i32);
+  auto [VLo, VHi] = DAG.SplitScalar(V, dl, MVT::i32, MVT::i32);
   bool isBigEndian = DAG.getDataLayout().isBigEndian();
   if (isBigEndian)
     std::swap (VLo, VHi);
@@ -10556,6 +10611,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ZERO_EXTEND:   return LowerVectorExtend(Op.getNode(), DAG, Subtarget);
   case ISD::GET_ROUNDING:  return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:  return LowerSET_ROUNDING(Op, DAG);
+  case ISD::SET_FPMODE:
+    return LowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
   case ISD::SDIV:
     if (Subtarget->isTargetWindows() && !Op.getValueType().isVector())
@@ -16641,7 +16700,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
     unsigned NewOffset = i * NumElements * ToEltVT.getSizeInBits() / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue Extract =
         DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewFromVT, Trunc.getOperand(0),
@@ -16690,7 +16749,7 @@ static SDValue PerformSplittingMVETruncToNarrowingStores(StoreSDNode *St,
     unsigned NewOffset =
         i * FromVT.getVectorNumElements() * ToVT.getScalarSizeInBits() / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue Extract = Trunc.getOperand(i);
     SDValue Store = DAG.getTruncStore(
@@ -17770,7 +17829,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
     unsigned NewOffset = (i * NewFromVT.getSizeInBits()) / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue NewLoad =
         DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
@@ -18607,7 +18666,7 @@ SDValue ARMTargetLowering::PerformMVETruncCombine(
   if (!DCI.isAfterLegalizeDAG())
     return SDValue();
 
-  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::Fixed(16), Align(4));
+  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::getFixed(16), Align(4));
   int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   int NumIns = N->getNumOperands();
   assert((NumIns == 2 || NumIns == 4) &&
@@ -18684,7 +18743,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
     unsigned NewOffset = (i * NewFromVT.getSizeInBits()) / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue NewLoad =
         DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
@@ -18775,7 +18834,7 @@ SDValue ARMTargetLowering::PerformMVEExtCombine(
 
   // Lower to a stack store and reload:
   //  VSTRW.32 a, stack; VLDRH.32 stack; VLDRH.32 stack+8;
-  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::Fixed(16), Align(4));
+  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::getFixed(16), Align(4));
   int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   int NumOuts = N->getNumValues();
   assert((NumOuts == 2 || NumOuts == 4) &&

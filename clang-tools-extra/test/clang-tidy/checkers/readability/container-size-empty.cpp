@@ -528,12 +528,12 @@ template <typename T> void f() {
   if (s.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: string:28:8: note: method 'basic_string'::empty() defined here
+  // CHECK-MESSAGES: string:{{[0-9]+}}:8: note: method 'basic_string'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!s.empty()){{$}}
   if (s.length())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length' [readability-container-size-empty]
-  // CHECK-MESSAGES: string:28:8: note: method 'basic_string'::empty() defined here
+  // CHECK-MESSAGES: string:{{[0-9]+}}:8: note: method 'basic_string'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!s.empty()){{$}}
 }
 

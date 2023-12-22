@@ -19,23 +19,9 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
-
-namespace {
-struct LowerWidenableConditionLegacyPass : public FunctionPass {
-  static char ID;
-  LowerWidenableConditionLegacyPass() : FunctionPass(ID) {
-    initializeLowerWidenableConditionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-}
 
 static bool lowerWidenableCondition(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
@@ -63,19 +49,6 @@ static bool lowerWidenableCondition(Function &F) {
     CI->eraseFromParent();
   }
   return true;
-}
-
-bool LowerWidenableConditionLegacyPass::runOnFunction(Function &F) {
-  return lowerWidenableCondition(F);
-}
-
-char LowerWidenableConditionLegacyPass::ID = 0;
-INITIALIZE_PASS(LowerWidenableConditionLegacyPass, "lower-widenable-condition",
-                "Lower the widenable condition to default true value", false,
-                false)
-
-Pass *llvm::createLowerWidenableConditionPass() {
-  return new LowerWidenableConditionLegacyPass();
 }
 
 PreservedAnalyses LowerWidenableConditionPass::run(Function &F,

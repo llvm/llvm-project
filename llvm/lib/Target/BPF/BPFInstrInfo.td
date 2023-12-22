@@ -49,8 +49,8 @@ def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
                              [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                               SDNPMayStore, SDNPMayLoad]>;
-def BPFIsLittleEndian : Predicate<"CurDAG->getDataLayout().isLittleEndian()">;
-def BPFIsBigEndian    : Predicate<"!CurDAG->getDataLayout().isLittleEndian()">;
+def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
+def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
 def BPFNoALU32 : Predicate<"!Subtarget->getHasAlu32()">;
 def BPFHasLdsx : Predicate<"Subtarget->hasLdsx()">;
@@ -149,6 +149,7 @@ def BPF_CC_LTU_32 : PatLeaf<(i32 imm),
                          [{return (N->getZExtValue() == ISD::SETULT);}]>;
 def BPF_CC_LEU_32 : PatLeaf<(i32 imm),
                          [{return (N->getZExtValue() == ISD::SETULE);}]>;
+def NoCond : PatLeaf<(vt)> {}
 
 // For arithmetic and jump instructions the 8-bit 'code'
 // field is divided into three parts:
@@ -265,6 +266,7 @@ defm JULT : J<BPF_JLT, "<", BPF_CC_LTU, BPF_CC_LTU_32>;
 defm JULE : J<BPF_JLE, "<=", BPF_CC_LEU, BPF_CC_LEU_32>;
 defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
 defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
+defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
 }
 
 // ALU instructions

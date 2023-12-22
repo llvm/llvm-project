@@ -73,7 +73,7 @@ Linkage MachOLinkGraphBuilder::getLinkage(uint16_t Desc) {
 
 Scope MachOLinkGraphBuilder::getScope(StringRef Name, uint8_t Type) {
   if (Type & MachO::N_EXT) {
-    if ((Type & MachO::N_PEXT) || Name.startswith("l"))
+    if ((Type & MachO::N_PEXT) || Name.starts_with("l"))
       return Scope::Hidden;
     else
       return Scope::Default;

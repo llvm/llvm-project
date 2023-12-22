@@ -61,7 +61,7 @@ Note that similarly to `-Xclang` in `clang`, you can use `-Xflang` to forward a
 frontend specific flag from the _compiler_ directly to the _frontend_ driver,
 e.g.:
 
-```lang=bash
+```bash
 flang-new -Xflang -fdebug-dump-parse-tree input.f95
 ```
 
@@ -69,7 +69,7 @@ In the invocation above, `-fdebug-dump-parse-tree` is forwarded to `flang-new
 -fc1`. Without the forwarding flag, `-Xflang`, you would see the following
 warning:
 
-```lang=bash
+```bash
 flang-new: warning: argument unused during compilation:
 ```
 

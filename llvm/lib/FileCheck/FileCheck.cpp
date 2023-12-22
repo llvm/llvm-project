@@ -404,7 +404,7 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
     StringRef &Expr, AllowedOperand AO, bool MaybeInvalidConstraint,
     std::optional<size_t> LineNumber, FileCheckPatternContext *Context,
     const SourceMgr &SM) {
-  if (Expr.startswith("(")) {
+  if (Expr.starts_with("(")) {
     if (AO != AllowedOperand::Any)
       return ErrorDiagnostic::get(
           SM, Expr, "parenthesized expression not permitted here");
@@ -417,7 +417,7 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
         parseVariable(Expr, SM);
     if (ParseVarResult) {
       // Try to parse a function call.
-      if (Expr.ltrim(SpaceChars).startswith("(")) {
+      if (Expr.ltrim(SpaceChars).starts_with("(")) {
         if (AO != AllowedOperand::Any)
           return ErrorDiagnostic::get(SM, ParseVarResult->Name,
                                       "unexpected function call");
@@ -458,7 +458,7 @@ Expected<std::unique_ptr<ExpressionAST>>
 Pattern::parseParenExpr(StringRef &Expr, std::optional<size_t> LineNumber,
                         FileCheckPatternContext *Context, const SourceMgr &SM) {
   Expr = Expr.ltrim(SpaceChars);
-  assert(Expr.startswith("("));
+  assert(Expr.starts_with("("));
 
   // Parse right operand.
   Expr.consume_front("(");
@@ -471,7 +471,7 @@ Pattern::parseParenExpr(StringRef &Expr, std::optional<size_t> LineNumber,
       Expr, AllowedOperand::Any, /*MaybeInvalidConstraint=*/false, LineNumber,
       Context, SM);
   Expr = Expr.ltrim(SpaceChars);
-  while (SubExprResult && !Expr.empty() && !Expr.startswith(")")) {
+  while (SubExprResult && !Expr.empty() && !Expr.starts_with(")")) {
     StringRef OrigExpr = Expr;
     SubExprResult = parseBinop(OrigExpr, Expr, std::move(*SubExprResult), false,
                                LineNumber, Context, SM);
@@ -537,7 +537,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
                        std::optional<size_t> LineNumber,
                        FileCheckPatternContext *Context, const SourceMgr &SM) {
   Expr = Expr.ltrim(SpaceChars);
-  assert(Expr.startswith("("));
+  assert(Expr.starts_with("("));
 
   auto OptFunc = StringSwitch<binop_eval_t>(FuncName)
                      .Case("add", exprAdd)
@@ -557,8 +557,8 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
 
   // Parse call arguments, which are comma separated.
   SmallVector<std::unique_ptr<ExpressionAST>, 4> Args;
-  while (!Expr.empty() && !Expr.startswith(")")) {
-    if (Expr.startswith(","))
+  while (!Expr.empty() && !Expr.starts_with(")")) {
+    if (Expr.starts_with(","))
       return ErrorDiagnostic::get(SM, Expr, "missing argument");
 
     // Parse the argument, which is an arbitary expression.
@@ -569,7 +569,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
     while (Arg && !Expr.empty()) {
       Expr = Expr.ltrim(SpaceChars);
       // Have we reached an argument terminator?
-      if (Expr.startswith(",") || Expr.startswith(")"))
+      if (Expr.starts_with(",") || Expr.starts_with(")"))
         break;
 
       // Arg = Arg <op> <expr>
@@ -588,7 +588,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
       break;
 
     Expr = Expr.ltrim(SpaceChars);
-    if (Expr.startswith(")"))
+    if (Expr.starts_with(")"))
       return ErrorDiagnostic::get(SM, Expr, "missing argument");
   }
 
@@ -818,7 +818,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
   // by escaping scary characters in fixed strings, building up one big regex.
   while (!PatternStr.empty()) {
     // RegEx matches.
-    if (PatternStr.startswith("{{")) {
+    if (PatternStr.starts_with("{{")) {
       // This is the start of a regex match.  Scan for the }}.
       size_t End = PatternStr.find("}}");
       if (End == StringRef::npos) {
@@ -832,12 +832,16 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
       // capturing the result for any purpose.  This is required in case the
       // expression contains an alternation like: CHECK:  abc{{x|z}}def.  We
       // want this to turn into: "abc(x|z)def" not "abcx|zdef".
-      RegExStr += '(';
-      ++CurParen;
+      bool HasAlternation = PatternStr.contains('|');
+      if (HasAlternation) {
+        RegExStr += '(';
+        ++CurParen;
+      }
 
       if (AddRegExToRegEx(PatternStr.substr(2, End - 2), CurParen, SM))
         return true;
-      RegExStr += ')';
+      if (HasAlternation)
+        RegExStr += ')';
 
       PatternStr = PatternStr.substr(End + 2);
       continue;
@@ -853,7 +857,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
     // names must satisfy the regular expression "[a-zA-Z_][0-9a-zA-Z_]*" to be
     // valid, as this helps catch some common errors. If there are extra '['s
     // before the "[[", treat them literally.
-    if (PatternStr.startswith("[[") && !PatternStr.startswith("[[[")) {
+    if (PatternStr.starts_with("[[") && !PatternStr.starts_with("[[[")) {
       StringRef UnparsedPatternStr = PatternStr.substr(2);
       // Find the closing bracket pair ending the match.  End is going to be an
       // offset relative to the beginning of the match string.
@@ -1388,7 +1392,7 @@ size_t Pattern::FindRegexVarEnd(StringRef Str, SourceMgr &SM) {
   size_t BracketDepth = 0;
 
   while (!Str.empty()) {
-    if (Str.startswith("]]") && BracketDepth == 0)
+    if (Str.starts_with("]]") && BracketDepth == 0)
       return Offset;
     if (Str[0] == '\\') {
       // Backslash escapes the next char within regexes, so skip them both.
@@ -1587,10 +1591,10 @@ FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix,
   }
 
   // You can't combine -NOT with another suffix.
-  if (Rest.startswith("DAG-NOT:") || Rest.startswith("NOT-DAG:") ||
-      Rest.startswith("NEXT-NOT:") || Rest.startswith("NOT-NEXT:") ||
-      Rest.startswith("SAME-NOT:") || Rest.startswith("NOT-SAME:") ||
-      Rest.startswith("EMPTY-NOT:") || Rest.startswith("NOT-EMPTY:"))
+  if (Rest.starts_with("DAG-NOT:") || Rest.starts_with("NOT-DAG:") ||
+      Rest.starts_with("NEXT-NOT:") || Rest.starts_with("NOT-NEXT:") ||
+      Rest.starts_with("SAME-NOT:") || Rest.starts_with("NOT-SAME:") ||
+      Rest.starts_with("EMPTY-NOT:") || Rest.starts_with("NOT-EMPTY:"))
     return {Check::CheckBadNot, Rest};
 
   if (Rest.consume_front("NEXT"))
@@ -1630,6 +1634,60 @@ static size_t SkipWord(StringRef Str, size_t Loc) {
   return Loc;
 }
 
+static const char *DefaultCheckPrefixes[] = {"CHECK"};
+static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
+
+static void addDefaultPrefixes(FileCheckRequest &Req) {
+  if (Req.CheckPrefixes.empty()) {
+    for (const char *Prefix : DefaultCheckPrefixes)
+      Req.CheckPrefixes.push_back(Prefix);
+    Req.IsDefaultCheckPrefix = true;
+  }
+  if (Req.CommentPrefixes.empty())
+    for (const char *Prefix : DefaultCommentPrefixes)
+      Req.CommentPrefixes.push_back(Prefix);
+}
+
+struct PrefixMatcher {
+  /// Prefixes and their first occurrence past the current position.
+  SmallVector<std::pair<StringRef, size_t>> Prefixes;
+  StringRef Input;
+
+  PrefixMatcher(ArrayRef<StringRef> CheckPrefixes,
+                ArrayRef<StringRef> CommentPrefixes, StringRef Input)
+      : Input(Input) {
+    for (StringRef Prefix : CheckPrefixes)
+      Prefixes.push_back({Prefix, Input.find(Prefix)});
+    for (StringRef Prefix : CommentPrefixes)
+      Prefixes.push_back({Prefix, Input.find(Prefix)});
+
+    // Sort by descending length.
+    llvm::sort(Prefixes,
+               [](auto A, auto B) { return A.first.size() > B.first.size(); });
+  }
+
+  /// Find the next match of a prefix in Buffer.
+  /// Returns empty StringRef if not found.
+  StringRef match(StringRef Buffer) {
+    assert(Buffer.data() >= Input.data() &&
+           Buffer.data() + Buffer.size() == Input.data() + Input.size() &&
+           "Buffer must be suffix of Input");
+
+    size_t From = Buffer.data() - Input.data();
+    StringRef Match;
+    for (auto &[Prefix, Pos] : Prefixes) {
+      // If the last occurrence was before From, find the next one after From.
+      if (Pos < From)
+        Pos = Input.find(Prefix, From);
+      // Find the first prefix with the lowest position.
+      if (Pos != StringRef::npos &&
+          (Match.empty() || size_t(Match.data() - Input.data()) > Pos))
+        Match = StringRef(Input.substr(Pos, Prefix.size()));
+    }
+    return Match;
+  }
+};
+
 /// Searches the buffer for the first prefix in the prefix regular expression.
 ///
 /// This searches the buffer using the provided regular expression, however it
@@ -1654,19 +1712,15 @@ static size_t SkipWord(StringRef Str, size_t Loc) {
 /// If no valid prefix is found, the state of Buffer, LineNumber, and CheckTy
 /// is unspecified.
 static std::pair<StringRef, StringRef>
-FindFirstMatchingPrefix(const FileCheckRequest &Req, Regex &PrefixRE,
+FindFirstMatchingPrefix(const FileCheckRequest &Req, PrefixMatcher &Matcher,
                         StringRef &Buffer, unsigned &LineNumber,
                         Check::FileCheckType &CheckTy) {
-  SmallVector<StringRef, 2> Matches;
-
   while (!Buffer.empty()) {
-    // Find the first (longest) match using the RE.
-    if (!PrefixRE.match(Buffer, &Matches))
+    // Find the first (longest) prefix match.
+    StringRef Prefix = Matcher.match(Buffer);
+    if (Prefix.empty())
       // No match at all, bail.
       return {StringRef(), StringRef()};
-
-    StringRef Prefix = Matches[0];
-    Matches.clear();
 
     assert(Prefix.data() >= Buffer.data() &&
            Prefix.data() < Buffer.data() + Buffer.size() &&
@@ -1716,7 +1770,7 @@ FileCheck::FileCheck(FileCheckRequest Req)
 FileCheck::~FileCheck() = default;
 
 bool FileCheck::readCheckFile(
-    SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+    SourceMgr &SM, StringRef Buffer,
     std::pair<unsigned, unsigned> *ImpPatBufferIDRange) {
   if (ImpPatBufferIDRange)
     ImpPatBufferIDRange->first = ImpPatBufferIDRange->second = 0;
@@ -1765,6 +1819,8 @@ bool FileCheck::readCheckFile(
   // found.
   unsigned LineNumber = 1;
 
+  addDefaultPrefixes(Req);
+  PrefixMatcher Matcher(Req.CheckPrefixes, Req.CommentPrefixes, Buffer);
   std::set<StringRef> PrefixesNotFound(Req.CheckPrefixes.begin(),
                                        Req.CheckPrefixes.end());
   const size_t DistinctPrefixes = PrefixesNotFound.size();
@@ -1775,7 +1831,7 @@ bool FileCheck::readCheckFile(
     StringRef UsedPrefix;
     StringRef AfterSuffix;
     std::tie(UsedPrefix, AfterSuffix) =
-        FindFirstMatchingPrefix(Req, PrefixRE, Buffer, LineNumber, CheckTy);
+        FindFirstMatchingPrefix(Req, Matcher, Buffer, LineNumber, CheckTy);
     if (UsedPrefix.empty())
       break;
     if (CheckTy != Check::CheckComment)
@@ -2427,9 +2483,6 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
   return true;
 }
 
-static const char *DefaultCheckPrefixes[] = {"CHECK"};
-static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
-
 bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> UniquePrefixes;
   // Add default prefixes to catch user-supplied duplicates of them below.
@@ -2448,33 +2501,6 @@ bool FileCheck::ValidateCheckPrefixes() {
   if (!ValidatePrefixes("comment", UniquePrefixes, Req.CommentPrefixes))
     return false;
   return true;
-}
-
-Regex FileCheck::buildCheckPrefixRegex() {
-  if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      Req.CheckPrefixes.push_back(Prefix);
-    Req.IsDefaultCheckPrefix = true;
-  }
-  if (Req.CommentPrefixes.empty()) {
-    for (const char *Prefix : DefaultCommentPrefixes)
-      Req.CommentPrefixes.push_back(Prefix);
-  }
-
-  // We already validated the contents of CheckPrefixes and CommentPrefixes so
-  // just concatenate them as alternatives.
-  SmallString<32> PrefixRegexStr;
-  for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
-    if (I != 0)
-      PrefixRegexStr.push_back('|');
-    PrefixRegexStr.append(Req.CheckPrefixes[I]);
-  }
-  for (StringRef Prefix : Req.CommentPrefixes) {
-    PrefixRegexStr.push_back('|');
-    PrefixRegexStr.append(Prefix);
-  }
-
-  return Regex(PrefixRegexStr);
 }
 
 Error FileCheckPatternContext::defineCmdlineVariables(

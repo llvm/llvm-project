@@ -87,8 +87,8 @@ def Vector_ContractionOp :
     An optional kind attribute may be used to specify the combining function
     between the intermediate result and accumulator argument of rank K. This
     attribute can take the values `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
-    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
-    /`maximumf` for floats. The default is `add`.
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minnumf`/`maxnumf`
+    /`minimumf`/`maximumf` for floats. The default is `add`.
 
     Example:
 
@@ -150,7 +150,7 @@ def Vector_ContractionOp :
     #contraction_trait = {
       indexing_maps = #contraction_accesses,
       iterator_types = ["reduction"],
-      kind = #vector.kind<maxf>
+      kind = #vector.kind<maxnumf>
     }
     %6 = vector.contract #contraction_trait %0, %1, %2
       : vector<10xf32>, vector<10xf32> into f32
@@ -234,8 +234,8 @@ def Vector_ReductionOp :
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
     operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
-    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats.
-    Reductions also allow an optional fused accumulator.
+    integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`/`maximumf` for
+    floats. Reductions also allow an optional fused accumulator.
 
     Note that these operations are restricted to 1-D vectors to remain
     close to the corresponding LLVM intrinsics:
@@ -292,7 +292,7 @@ def Vector_MultiDimReductionOp :
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
     using the given operation: `add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`
-    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`
+    /`and`/`or`/`xor` for integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
@@ -942,7 +942,8 @@ def Vector_OuterProductOp :
 
     An optional kind attribute may be specified to be: `add`/`mul`/`minsi`
     /`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for integers, and `add`/`mul`
-    /`minf`/`maxf`/`minimumf`/`maximumf` for floats. The default is `add`.
+    /`minnumf`/`maxnumf`/`minimumf`/`maximumf` for floats. The default is
+    `add`.
 
     Example:
 
@@ -954,7 +955,7 @@ def Vector_OuterProductOp :
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
-    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxf>}:
+    %4 = vector.outerproduct %0, %1, %2 {kind = #vector.kind<maxnumf>}:
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
 
@@ -1581,22 +1582,27 @@ def Vector_LoadOp : Vector_Op<"load"> {
     vector. If the memref element type is vector, it should match the result
     vector type.
 
-    Example 1: 1-D vector load on a scalar memref.
+    Example: 0-D vector load on a scalar memref.
+    ```mlir
+    %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<f32>
+    ```
+
+    Example: 1-D vector load on a scalar memref.
     ```mlir
     %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<8xf32>
     ```
 
-    Example 2: 1-D vector load on a vector memref.
+    Example: 1-D vector load on a vector memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
     ```
 
-    Example 3:  2-D vector load on a scalar memref.
+    Example:  2-D vector load on a scalar memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
     ```
 
-    Example 4:  2-D vector load on a vector memref.
+    Example:  2-D vector load on a vector memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
@@ -1607,12 +1613,12 @@ def Vector_LoadOp : Vector_Op<"load"> {
     loaded out of bounds. Not all targets may support out-of-bounds vector
     loads.
 
-    Example 5:  Potential out-of-bound vector load.
+    Example:  Potential out-of-bound vector load.
     ```mlir
     %result = vector.load %memref[%index] : memref<?xf32>, vector<8xf32>
     ```
 
-    Example 6:  Explicit out-of-bound vector load.
+    Example:  Explicit out-of-bound vector load.
     ```mlir
     %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
@@ -1621,7 +1627,7 @@ def Vector_LoadOp : Vector_Op<"load"> {
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
       Variadic<Index>:$indices);
-  let results = (outs AnyVector:$result);
+  let results = (outs AnyVectorOfAnyRank:$result);
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1659,22 +1665,27 @@ def Vector_StoreOp : Vector_Op<"store"> {
     to store. If the memref element type is vector, it should match the type
     of the value to store.
 
-    Example 1: 1-D vector store on a scalar memref.
+    Example: 0-D vector store on a scalar memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+    ```
+
+    Example: 1-D vector store on a scalar memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
     ```
 
-    Example 2: 1-D vector store on a vector memref.
+    Example: 1-D vector store on a vector memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
     ```
 
-    Example 3:  2-D vector store on a scalar memref.
+    Example:  2-D vector store on a scalar memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
     ```
 
-    Example 4:  2-D vector store on a vector memref.
+    Example:  2-D vector store on a vector memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
@@ -1684,21 +1695,23 @@ def Vector_StoreOp : Vector_Op<"store"> {
     target-specific. No assumptions should be made on the memory written out of
     bounds. Not all targets may support out-of-bounds vector stores.
 
-    Example 5:  Potential out-of-bounds vector store.
+    Example:  Potential out-of-bounds vector store.
     ```mlir
     vector.store %valueToStore, %memref[%index] : memref<?xf32>, vector<8xf32>
     ```
 
-    Example 6:  Explicit out-of-bounds vector store.
+    Example:  Explicit out-of-bounds vector store.
     ```mlir
     vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
   }];
 
-  let arguments = (ins AnyVector:$valueToStore,
+  let arguments = (ins
+      AnyVectorOfAnyRank:$valueToStore,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$base,
-      Variadic<Index>:$indices);
+      Variadic<Index>:$indices
+  );
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2203,12 +2216,6 @@ def Vector_TypeCastOp :
     super-vectorization operational. It can be seen as a special case of the
     `view` operation but scoped in the super-vectorization context.
 
-    Syntax:
-
-    ```
-    operation ::= `vector.type_cast` ssa-use : memref-type to memref-type
-    ```
-
     Example:
 
     ```mlir
@@ -2436,14 +2443,13 @@ def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector, I64ArrayAttr:$transp)>,
-    Results<(outs AnyVectorOfAnyRank:$result)> {
+                 TCresVTEtIsSameAsOpBase<0, 0>>]> {
   let summary = "vector transpose operation";
   let description = [{
     Takes a n-D vector and returns the transposed n-D vector defined by
     the permutation of ranks in the n-sized integer array attribute (in case
     of 0-D vectors the array attribute must be empty).
+
     In the operation
 
     ```mlir
@@ -2452,7 +2458,7 @@ def Vector_TransposeOp :
       to vector<d_trans[0] x .. x d_trans[n-1] x f32>
     ```
 
-    the transp array [i_1, .., i_n] must be a permutation of [0, .., n-1].
+    the `permutation` array [i_1, .., i_n] must be a permutation of [0, .., n-1].
 
     Example:
 
@@ -2464,8 +2470,13 @@ def Vector_TransposeOp :
                           [c, f] ]
     ```
   }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$vector,
+                       DenseI64ArrayAttr:$permutation);
+  let results = (outs AnyVectorOfAnyRank:$result);
+
   let builders = [
-    OpBuilder<(ins "Value":$vector, "ArrayRef<int64_t>":$transp)>
+    OpBuilder<(ins "Value":$vector, "ArrayRef<int64_t>":$permutation)>
   ];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
@@ -2474,10 +2485,9 @@ def Vector_TransposeOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
-    void getTransp(SmallVectorImpl<int64_t> &results);
   }];
   let assemblyFormat = [{
-    $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
+    $vector `,` $permutation attr-dict `:` type($vector) `to` type($result)
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -2772,9 +2782,9 @@ def Vector_ScanOp :
     Performs an inclusive/exclusive scan on an n-D vector along a single
     dimension returning an n-D result vector using the given
     operation (`add`/`mul`/`minsi`/`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for
-    integers, and `add`/`mul`/`minf`/`maxf`/`minimumf`/`maximumf` for floats),
-    and a specified value for the initial value. The operator returns the
-    result of scan as well as the result of the last reduction in the scan.
+    integers, and `add`/`mul`/`minnumf`/`maxnumf`/`minimumf`/`maximumf` for
+    floats), and a specified value for the initial value. The operator returns
+    the result of scan as well as the result of the last reduction in the scan.
 
     Example:
 

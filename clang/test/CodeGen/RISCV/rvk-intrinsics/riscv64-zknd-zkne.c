@@ -6,7 +6,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKND-ZKNE
 
-#include <stdint.h>
+#include <riscv_crypto.h>
 
 // RV64ZKND-ZKNE-LABEL: @aes64ks1i(
 // RV64ZKND-ZKNE-NEXT:  entry:
@@ -14,7 +14,7 @@
 // RV64ZKND-ZKNE-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t aes64ks1i(uint64_t rs1) {
-  return __builtin_riscv_aes64ks1i(rs1, 0);
+  return __riscv_aes64ks1i(rs1, 0);
 }
 
 // RV64ZKND-ZKNE-LABEL: @aes64ks2(
@@ -23,5 +23,5 @@ uint64_t aes64ks1i(uint64_t rs1) {
 // RV64ZKND-ZKNE-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t aes64ks2(uint64_t rs1, uint64_t rs2) {
-  return __builtin_riscv_aes64ks2(rs1, rs2);
+  return __riscv_aes64ks2(rs1, rs2);
 }

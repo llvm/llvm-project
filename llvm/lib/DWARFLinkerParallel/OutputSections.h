@@ -31,6 +31,8 @@
 namespace llvm {
 namespace dwarflinker_parallel {
 
+class TypeUnit;
+
 /// List of tracked debug tables.
 enum class DebugSectionKind : uint8_t {
   DebugInfo = 0,
@@ -113,7 +115,7 @@ struct DebugDieRefPatch : SectionPatch {
                    uint32_t RefIdx);
 
   PointerIntPair<CompileUnit *, 1> RefCU;
-  uint64_t RefDieIdxOrClonedOffset;
+  uint64_t RefDieIdxOrClonedOffset = 0;
 };
 
 /// This structure is used to update reference to the DIE of ULEB128 form.
@@ -122,7 +124,53 @@ struct DebugULEB128DieRefPatch : SectionPatch {
                           CompileUnit *RefCU, uint32_t RefIdx);
 
   PointerIntPair<CompileUnit *, 1> RefCU;
-  uint64_t RefDieIdxOrClonedOffset;
+  uint64_t RefDieIdxOrClonedOffset = 0;
+};
+
+/// This structure is used to update reference to the type DIE.
+struct DebugDieTypeRefPatch : SectionPatch {
+  DebugDieTypeRefPatch(uint64_t PatchOffset, TypeEntry *RefTypeName);
+
+  TypeEntry *RefTypeName = nullptr;
+};
+
+/// This structure is used to update reference to the type DIE.
+struct DebugType2TypeDieRefPatch : SectionPatch {
+  DebugType2TypeDieRefPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
+                            TypeEntry *RefTypeName);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  TypeEntry *RefTypeName = nullptr;
+};
+
+struct DebugTypeStrPatch : SectionPatch {
+  DebugTypeStrPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
+                    StringEntry *String);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  StringEntry *String = nullptr;
+};
+
+struct DebugTypeLineStrPatch : SectionPatch {
+  DebugTypeLineStrPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
+                        StringEntry *String);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  StringEntry *String = nullptr;
+};
+
+struct DebugTypeDeclFilePatch {
+  DebugTypeDeclFilePatch(DIE *Die, TypeEntry *TypeName, StringEntry *Directory,
+                         StringEntry *FilePath);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  StringEntry *Directory = nullptr;
+  StringEntry *FilePath = nullptr;
+  uint32_t FileID = 0;
 };
 
 /// Type for section data.
@@ -140,16 +188,20 @@ struct SectionDescriptor {
 
   SectionDescriptor(DebugSectionKind SectionKind, LinkingGlobalData &GlobalData,
                     dwarf::FormParams Format, llvm::endianness Endianess)
-      : OS(Contents), GlobalData(GlobalData), SectionKind(SectionKind),
-        Format(Format), Endianess(Endianess) {
-    ListDebugStrPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugLineStrPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugRangePatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugLocPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugDieRefPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugULEB128DieRefPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugOffsetPatch.setAllocator(&GlobalData.getAllocator());
-  }
+      : OS(Contents), ListDebugStrPatch(&GlobalData.getAllocator()),
+        ListDebugLineStrPatch(&GlobalData.getAllocator()),
+        ListDebugRangePatch(&GlobalData.getAllocator()),
+        ListDebugLocPatch(&GlobalData.getAllocator()),
+        ListDebugDieRefPatch(&GlobalData.getAllocator()),
+        ListDebugULEB128DieRefPatch(&GlobalData.getAllocator()),
+        ListDebugOffsetPatch(&GlobalData.getAllocator()),
+        ListDebugDieTypeRefPatch(&GlobalData.getAllocator()),
+        ListDebugType2TypeDieRefPatch(&GlobalData.getAllocator()),
+        ListDebugTypeStrPatch(&GlobalData.getAllocator()),
+        ListDebugTypeLineStrPatch(&GlobalData.getAllocator()),
+        ListDebugTypeDeclFilePatch(&GlobalData.getAllocator()),
+        GlobalData(GlobalData), SectionKind(SectionKind), Format(Format),
+        Endianess(Endianess) {}
 
   /// Erase whole section contents(data bits, list of patches).
   void clearAllSectionData();
@@ -178,9 +230,16 @@ struct SectionDescriptor {
   ADD_PATCHES_LIST(DebugDieRefPatch)
   ADD_PATCHES_LIST(DebugULEB128DieRefPatch)
   ADD_PATCHES_LIST(DebugOffsetPatch)
+  ADD_PATCHES_LIST(DebugDieTypeRefPatch)
+  ADD_PATCHES_LIST(DebugType2TypeDieRefPatch)
+  ADD_PATCHES_LIST(DebugTypeStrPatch)
+  ADD_PATCHES_LIST(DebugTypeLineStrPatch)
+  ADD_PATCHES_LIST(DebugTypeDeclFilePatch)
 
-  /// Offsets to some fields are not known at the moment of noting patch.
-  /// In that case we remember pointers to patch offset to update them later.
+  /// While creating patches, offsets to attributes may be partially
+  /// unknown(because size of abbreviation number is unknown). In such case we
+  /// remember patch itself and pointer to patch application offset to add size
+  /// of abbreviation number later.
   template <typename T>
   void notePatchWithOffsetUpdate(const T &Patch,
                                  OffsetsPtrVector &PatchesOffsetsList) {
@@ -222,7 +281,6 @@ struct SectionDescriptor {
   /// Emit specified integer value into the current section contents.
   void emitIntVal(uint64_t Val, unsigned Size);
 
-  /// Emit specified string value into the current section contents.
   void emitString(dwarf::Form StringForm, const char *StringVal);
 
   /// Emit specified inplace string value into the current section contents.
@@ -395,7 +453,8 @@ public:
   /// Enumerate all sections, for each section apply all section patches.
   void applyPatches(SectionDescriptor &Section,
                     StringEntryToDwarfStringPoolEntryMap &DebugStrStrings,
-                    StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings);
+                    StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings,
+                    TypeUnit *TypeUnitPtr);
 
   /// Endiannes for the sections.
   llvm::endianness getEndianness() const { return Endianness; }

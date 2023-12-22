@@ -296,7 +296,7 @@ static void DiagnoseObjCImplementedDeprecations(Sema &S, const NamedDecl *ND,
         RealizedPlatform = S.Context.getTargetInfo().getPlatformName();
       // Warn about implementing unavailable methods, unless the unavailable
       // is for an app extension.
-      if (RealizedPlatform.endswith("_app_extension"))
+      if (RealizedPlatform.ends_with("_app_extension"))
         return;
       S.Diag(ImplLoc, diag::warn_unavailable_def);
       S.Diag(ND->getLocation(), diag::note_method_declared_at)

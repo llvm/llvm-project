@@ -405,7 +405,7 @@ mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
 mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
   if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
     return seqTy.getEleTy();
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
     auto eleTy = unwrapRefType(boxTy.getEleTy());
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
       return seqTy.getEleTy();
@@ -847,6 +847,12 @@ fir::RealType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       KindTy fKind) {
   // TODO
   return mlir::success();
+}
+
+mlir::Type fir::RealType::getFloatType(const fir::KindMapping &kindMap) const {
+  auto fkind = getFKind();
+  auto realTypeID = kindMap.getRealTypeID(fkind);
+  return fir::fromRealTypeID(getContext(), realTypeID, fkind);
 }
 
 //===----------------------------------------------------------------------===//

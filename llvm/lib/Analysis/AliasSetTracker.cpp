@@ -348,8 +348,16 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
     // due to a quirk of alias analysis behavior. Since alias(undef, undef)
     // is NoAlias, mergeAliasSetsForPointer(undef, ...) will not find the
     // the right set for undef, even if it exists.
-    if (Entry.updateSizeAndAAInfo(Size, AAInfo))
+    if (Entry.updateSizeAndAAInfo(Size, AAInfo)) {
       mergeAliasSetsForPointer(Pointer, Size, AAInfo, MustAliasAll);
+
+      // For MustAlias sets, also update Size/AAInfo of the representative
+      // pointer.
+      AliasSet &AS = *Entry.getAliasSet(*this);
+      if (AS.isMustAlias())
+        if (AliasSet::PointerRec *P = AS.getSomePointer())
+          P->updateSizeAndAAInfo(Size, AAInfo);
+    }
     // Return the set!
     return *Entry.getAliasSet(*this)->getForwardedTarget(*this);
   }
@@ -367,9 +375,8 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   return AliasSets.back();
 }
 
-void AliasSetTracker::add(Value *Ptr, LocationSize Size,
-                          const AAMDNodes &AAInfo) {
-  addPointer(MemoryLocation(Ptr, Size, AAInfo), AliasSet::NoAccess);
+void AliasSetTracker::add(const MemoryLocation &Loc) {
+  addPointer(Loc, AliasSet::NoAccess);
 }
 
 void AliasSetTracker::add(LoadInst *LI) {

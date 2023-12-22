@@ -49,11 +49,8 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
       Args.hasArg(options::OPT_r))
     return false;
 
-  Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
-                           options::OPT_nopie);
-  if (!A)
-    return TC.isPIEDefault(Args);
-  return A->getOption().matches(options::OPT_pie);
+  return Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                      TC.isPIEDefault(Args));
 }
 
 // FIXME: Need to handle CLANG_DEFAULT_LINKER here?
@@ -331,7 +328,7 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 
   // If we are currently running Clang inside of the requested system root,
   // add its parent library path to those searched.
-  if (StringRef(D.Dir).startswith(D.SysRoot))
+  if (StringRef(D.Dir).starts_with(D.SysRoot))
     addPathIfExists(D, D.Dir + "/../lib", Paths);
 
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);
