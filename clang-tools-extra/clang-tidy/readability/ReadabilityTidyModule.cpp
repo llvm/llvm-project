@@ -45,6 +45,7 @@
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
+#include "ReturnExpressionInVoidFunctionCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "SimplifySubscriptExprCheck.h"
 #include "StaticAccessedThroughInstanceCheck.h"
@@ -119,6 +120,8 @@ public:
         "readability-redundant-preprocessor");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
         "readability-reference-to-constructed-temporary");
+    CheckFactories.registerCheck<ReturnExpressionInVoidFunctionCheck>(
+        "readability-return-expression-in-void-function");
     CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
         "readability-simplify-subscript-expr");
     CheckFactories.registerCheck<StaticAccessedThroughInstanceCheck>(

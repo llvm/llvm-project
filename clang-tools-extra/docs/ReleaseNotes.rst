@@ -230,6 +230,13 @@ New checks
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
 
+- New :doc:`readability-return-expression-in-void-function
+  <clang-tidy/checks/readability/return-expression-in-void-function>` check.
+
+  Complains about statements returning expressions of type ``void``. It can be
+  confusing if a function returns an expression even though its return type is
+  ``void``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
