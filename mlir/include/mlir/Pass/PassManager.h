@@ -222,6 +222,12 @@ struct ReproducerStream {
 using ReproducerStreamFactory =
     std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
 
+std::string
+makeReproducer(StringRef anchorName,
+               const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+               Operation *op, StringRef outputFile, bool disableThreads = false,
+               bool verifyPasses = false);
+
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
 public:
