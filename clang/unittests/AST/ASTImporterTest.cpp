@@ -7445,67 +7445,46 @@ void ImportAttributes::checkImported<Decl>(const Decl *From, const Decl *To) {
             ToAST->getASTContext().getTranslationUnitDecl());
 }
 
-// FIXME: Use ImportAttributes for this test.
-TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
-  // Test if import of these packed and aligned attributes does not trigger an
-  // error situation where source location from 'From' context is referenced in
-  // 'To' context through evaluation of the alignof attribute.
-  // This happens if the 'alignof(A)' expression is not imported correctly.
-  Decl *FromTU = getTuDecl(
+TEST_P(ImportAttributes, ImportAligned) {
+  AlignedAttr *FromAttr, *ToAttr;
+  importAttr<RecordDecl>(
       R"(
       struct __attribute__((packed)) A { int __attribute__((aligned(8))) X; };
-      struct alignas(alignof(A)) S {};
+      struct alignas(alignof(A)) test {};
       )",
-      Lang_CXX11, "input.cc");
-  auto *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
-      FromTU, cxxRecordDecl(hasName("S"), unless(isImplicit())));
-  ASSERT_TRUE(FromD);
-
-  auto *ToD = Import(FromD, Lang_CXX11);
-  ASSERT_TRUE(ToD);
-
-  auto *FromAttr = FromD->getAttr<AlignedAttr>();
-  auto *ToAttr = ToD->getAttr<AlignedAttr>();
-  EXPECT_EQ(FromAttr->isInherited(), ToAttr->isInherited());
-  EXPECT_EQ(FromAttr->isPackExpansion(), ToAttr->isPackExpansion());
-  EXPECT_EQ(FromAttr->isImplicit(), ToAttr->isImplicit());
-  EXPECT_EQ(FromAttr->getSyntax(), ToAttr->getSyntax());
-  EXPECT_EQ(FromAttr->getSemanticSpelling(), ToAttr->getSemanticSpelling());
-  EXPECT_TRUE(ToAttr->getAlignmentExpr());
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getAlignmentExpr(), ToAttr->getAlignmentExpr());
 
   auto *ToA = FirstDeclMatcher<CXXRecordDecl>().match(
-      ToD->getTranslationUnitDecl(),
+      ToAST->getASTContext().getTranslationUnitDecl(),
       cxxRecordDecl(hasName("A"), unless(isImplicit())));
   // Ensure that 'struct A' was imported (through reference from attribute of
-  // 'S').
+  // struct 'test').
   EXPECT_TRUE(ToA);
 }
 
-// FIXME: Use ImportAttributes for this test.
-TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
-  Decl *FromTU = getTuDecl(
+TEST_P(ImportAttributes, ImportAlignValue) {
+  AlignValueAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>(
       R"(
-      int foo(const char * fmt, ...)
+      void *test __attribute__((align_value(64)));
+      )",
+      FromAttr, ToAttr);
+  checkImported(FromAttr->getAlignment(), ToAttr->getAlignment());
+}
+
+TEST_P(ImportAttributes, ImportFormat) {
+  FormatAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>(
+      R"(
+      int test(const char * fmt, ...)
       __attribute__ ((__format__ (__scanf__, 1, 2)));
       )",
-      Lang_CXX03, "input.cc");
-  auto *FromD = FirstDeclMatcher<FunctionDecl>().match(
-      FromTU, functionDecl(hasName("foo")));
-  ASSERT_TRUE(FromD);
+      FromAttr, ToAttr);
 
-  auto *ToD = Import(FromD, Lang_CXX03);
-  ASSERT_TRUE(ToD);
-  ToD->dump(); // Should not crash!
-
-  auto *FromAttr = FromD->getAttr<FormatAttr>();
-  auto *ToAttr = ToD->getAttr<FormatAttr>();
-  EXPECT_EQ(FromAttr->isInherited(), ToAttr->isInherited());
-  EXPECT_EQ(FromAttr->isPackExpansion(), ToAttr->isPackExpansion());
-  EXPECT_EQ(FromAttr->isImplicit(), ToAttr->isImplicit());
-  EXPECT_EQ(FromAttr->getSyntax(), ToAttr->getSyntax());
-  EXPECT_EQ(FromAttr->getAttributeSpellingListIndex(),
-            ToAttr->getAttributeSpellingListIndex());
   EXPECT_EQ(FromAttr->getType()->getName(), ToAttr->getType()->getName());
+  EXPECT_EQ(FromAttr->getFirstArg(), ToAttr->getFirstArg());
+  EXPECT_EQ(FromAttr->getFormatIdx(), ToAttr->getFormatIdx());
 }
 
 TEST_P(ImportAttributes, ImportEnableIf) {
