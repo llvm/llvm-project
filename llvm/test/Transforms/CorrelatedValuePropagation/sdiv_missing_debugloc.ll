@@ -2,11 +2,6 @@
 ; CHECK: %{{[a-zA-Z0-9_]*}} = udiv i8 %x.nonneg, %y, !dbg ![[DBGLOC:[0-9]+]]
 ; CHECK-NEXT: %{{[a-zA-Z0-9_]*}}.neg = sub i8 0, %rem1, !dbg ![[DBGLOC]]
 
-; ModuleID = 'reduced.ll'
-source_filename = "orig.ll"
-target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv7m-arm-none-eabi"
-
 ; Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind willreturn
 declare void @llvm.assume(i1 noundef) #0
 
@@ -27,13 +22,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}
-!llvm.debugify = !{!3, !4}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !2 = !DIFile(filename: "reduced.ll", directory: "/")
-!3 = !{i32 6}
-!4 = !{i32 3}
 !5 = distinct !DISubprogram(name: "test8_neg_neg", linkageName: "test8_neg_neg", scope: null, file: !2, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !8)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
