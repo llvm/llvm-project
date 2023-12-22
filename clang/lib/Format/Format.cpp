@@ -1698,6 +1698,9 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
           /*BasedOnStyle=*/"google",
       },
   };
+  GoogleStyle.AttributeMacros.push_back("GUARDED_BY");
+  GoogleStyle.AttributeMacros.push_back("ABSL_GUARDED_BY");
+
   GoogleStyle.SpacesBeforeTrailingComments = 2;
   GoogleStyle.Standard = FormatStyle::LS_Auto;
 
