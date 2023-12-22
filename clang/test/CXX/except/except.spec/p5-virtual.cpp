@@ -45,6 +45,8 @@ struct Base
   virtual void f15();
   virtual void f16();
 
+  virtual void f17() noexcept = delete;
+
   virtual void g1() throw(); // expected-note {{overridden virtual function is here}}
   virtual void g2() throw(int); // expected-note {{overridden virtual function is here}}
   virtual void g3() throw(A); // expected-note {{overridden virtual function is here}}
@@ -80,6 +82,8 @@ struct Derived : Base
 
   virtual void f15() noexcept;
   virtual void f16() throw();
+
+  virtual void f17() = delete;
 
   virtual void g1() throw(int); // expected-error {{exception specification of overriding function is more lax}}
   virtual void g2(); // expected-error {{exception specification of overriding function is more lax}}
