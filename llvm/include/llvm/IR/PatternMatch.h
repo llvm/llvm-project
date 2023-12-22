@@ -1656,6 +1656,19 @@ template <typename Op_t> struct PtrToIntSameSize_match {
   }
 };
 
+template <typename Op_t> struct NNegZExt_match {
+  Op_t Op;
+
+  NNegZExt_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<Instruction>(V))
+      return I->getOpcode() == Instruction::ZExt && I->hasNonNeg() &&
+             Op.match(I->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::BitCast>
@@ -1708,6 +1721,11 @@ inline CastInst_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline NNegZExt_match<OpTy> m_NNegZExt(const OpTy &Op) {
+  return NNegZExt_match<OpTy>(Op);
+}
+
+template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, Instruction::ZExt>, OpTy>
 m_ZExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), Op);
@@ -1717,6 +1735,14 @@ template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>, OpTy>
 m_SExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), Op);
+}
+
+/// Match either "sext" or "zext nneg".
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>,
+                        NNegZExt_match<OpTy>>
+m_SExtLike(const OpTy &Op) {
+  return m_CombineOr(m_SExt(Op), m_NNegZExt(Op));
 }
 
 template <typename OpTy>

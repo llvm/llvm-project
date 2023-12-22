@@ -21,13 +21,20 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
-    extras/types.py
     dialects/_ods_common.py
 
     # The main _mlir module has submodules: include stubs from each.
     _mlir_libs/_mlir/__init__.pyi
     _mlir_libs/_mlir/ir.pyi
     _mlir_libs/_mlir/passmanager.pyi
+)
+
+declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Core.Python
+  SOURCES
+    extras/types.py
+    extras/meta.py
 )
 
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine

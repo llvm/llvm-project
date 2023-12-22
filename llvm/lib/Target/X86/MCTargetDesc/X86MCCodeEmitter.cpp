@@ -1060,7 +1060,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     CurOp += X86::AddrNumOperands;
-    Prefix.set4V(MI, CurOp++);
+    Prefix.set4VV2(MI, CurOp++);
     break;
   }
   case X86II::MRM_C0:

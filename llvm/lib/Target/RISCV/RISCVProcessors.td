@@ -273,7 +273,13 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                              FeatureStdExtZicbop,
                                              FeatureStdExtZicboz,
                                              FeatureVendorXVentanaCondOps],
-                                             [TuneVeyronFusions]>;
+                                             [TuneVentanaVeyron,
+                                              TuneLUIADDIFusion,
+                                              TuneAUIPCADDIFusion,
+                                              TuneZExtHFusion,
+                                              TuneZExtWFusion,
+                                              TuneShiftedZExtWFusion,
+                                              TuneLDADDFusion]>;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           NoSchedModel,
