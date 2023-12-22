@@ -64,11 +64,9 @@ QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
 
   SmallVector<Fraction> coeffs;
   coeffs.reserve(coefficients.size() * x.coefficients.size());
-  for (const Fraction &coeff : coefficients) {
-    for (const Fraction &xcoeff : x.coefficients) {
+  for (const Fraction &coeff : coefficients)
+    for (const Fraction &xcoeff : x.coefficients)
       coeffs.push_back(coeff * xcoeff);
-    }
-  }
 
   std::vector<SmallVector<Fraction>> product;
   std::vector<std::vector<SmallVector<Fraction>>> aff;

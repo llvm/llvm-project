@@ -88,10 +88,9 @@ inline void EXPECT_EQ_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
   EXPECT_EQ(aAff.size(), bAff.size());
   for (unsigned i = 0, e = aAff.size(); i < e; i++) {
     EXPECT_EQ(aAff[i].size(), bAff[i].size());
-    for (unsigned j = 0, f = aAff[i].size(); j < f; j++) {
+    for (unsigned j = 0, f = aAff[i].size(); j < f; j++)
       for (unsigned k = 0, g = a.getNumParams(); k <= g; k++)
         EXPECT_EQ(aAff[i][j][k], bAff[i][j][k]);
-    }
   }
 }
 
