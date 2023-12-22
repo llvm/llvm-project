@@ -3,9 +3,6 @@
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
-// FIXME: Android does not see a variable.
-// XFAIL: android
-
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>
