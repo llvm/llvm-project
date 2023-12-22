@@ -205,6 +205,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
                                   tag_t addr_tag, uptr untagged_addr) {
   uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
   bool found_local = false;
+  InternalScopedString location;
   for (uptr i = 0; i < frames; i++) {
     const uptr *record_addr = &(*sa)[i];
     uptr record = *record_addr;
@@ -236,8 +237,13 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
           Printf("\nPotentially referenced stack objects:\n");
           found_local = true;
         }
-        Printf("  %s in %s %s:%d\n", local.name, local.function_name,
-               local.decl_file, local.decl_line);
+        StackTracePrinter::GetOrInit()->RenderSourceLocation(
+            &location, local.decl_file, local.decl_line, /* column= */ 0,
+            common_flags()->symbolize_vs_style,
+            common_flags()->strip_path_prefix);
+        Printf("  %s in %s %s\n", local.name, local.function_name,
+               location.data());
+        location.clear();
       }
       frame.Clear();
     }
