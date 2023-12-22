@@ -10,17 +10,14 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen(
 ; TFNONE-NEXT:  entry:
+; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFNONE:       vector.ph:
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -29,9 +26,9 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; TFNONE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFNONE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFNONE-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFNONE:       middle.block:
 ; TFNONE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
@@ -60,19 +57,19 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFCOMMON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFCOMMON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFCOMMON-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; TFCOMMON-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFCOMMON-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFCOMMON-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFCOMMON:       vector.body:
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFCOMMON-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFCOMMON-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFCOMMON-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
+; TFCOMMON-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFCOMMON-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFCOMMON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFCOMMON-NEXT:    [[TMP10:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFCOMMON-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 2 x i1> [[TMP10]], i32 0
@@ -102,17 +99,14 @@ for.cond.cleanup:
 define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_if_then(
 ; TFNONE-NEXT:  entry:
+; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFNONE:       vector.ph:
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 2
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -124,9 +118,9 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> [[TMP6]]
 ; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
-; TFNONE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TFNONE:       middle.block:
 ; TFNONE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
@@ -135,16 +129,16 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[TMP12:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP12]], 50
+; TFNONE-NEXT:    [[TMP10:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP10]], 50
 ; TFNONE-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; TFNONE:       if.then:
-; TFNONE-NEXT:    [[TMP13:%.*]] = call i64 @foo(i64 [[TMP12]]) #[[ATTR3]]
+; TFNONE-NEXT:    [[TMP11:%.*]] = call i64 @foo(i64 [[TMP10]]) #[[ATTR3]]
 ; TFNONE-NEXT:    br label [[IF_END]]
 ; TFNONE:       if.end:
-; TFNONE-NEXT:    [[TMP14:%.*]] = phi i64 [ [[TMP13]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; TFNONE-NEXT:    [[TMP12:%.*]] = phi i64 [ [[TMP11]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[TMP14]], ptr [[ARRAYIDX1]], align 8
+; TFNONE-NEXT:    store i64 [[TMP12]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -161,25 +155,25 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFCOMMON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFCOMMON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFCOMMON-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 2
+; TFCOMMON-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFCOMMON-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFCOMMON-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFCOMMON:       vector.body:
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFCOMMON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFCOMMON-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 50, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; TFCOMMON-NEXT:    [[TMP7:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
-; TFCOMMON-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP7]])
-; TFCOMMON-NEXT:    [[TMP9:%.*]] = xor <vscale x 2 x i1> [[TMP6]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
-; TFCOMMON-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i1> zeroinitializer
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP10]], <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> [[TMP8]]
-; TFCOMMON-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[TMP12:%.*]] = or <vscale x 2 x i1> [[TMP7]], [[TMP10]]
-; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP11]], i32 8, <vscale x 2 x i1> [[TMP12]])
-; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP14]]
+; TFCOMMON-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFCOMMON-NEXT:    [[TMP8:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 50, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; TFCOMMON-NEXT:    [[TMP9:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i1> zeroinitializer
+; TFCOMMON-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP9]])
+; TFCOMMON-NEXT:    [[TMP11:%.*]] = xor <vscale x 2 x i1> [[TMP8]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; TFCOMMON-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i1> zeroinitializer
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP12]], <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> [[TMP10]]
+; TFCOMMON-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFCOMMON-NEXT:    [[TMP14:%.*]] = or <vscale x 2 x i1> [[TMP9]], [[TMP12]]
+; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP13]], i32 8, <vscale x 2 x i1> [[TMP14]])
+; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFCOMMON-NEXT:    [[TMP15:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFCOMMON-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x i1> [[TMP15]], i32 0
@@ -220,17 +214,14 @@ for.cond.cleanup:
 define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen_if_then_else(
 ; TFNONE-NEXT:  entry:
+; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFNONE:       vector.ph:
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -243,9 +234,9 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]]
 ; TFNONE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP9]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; TFNONE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFNONE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFNONE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; TFNONE:       middle.block:
 ; TFNONE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
@@ -254,19 +245,19 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[TMP13:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP13]], 50
+; TFNONE-NEXT:    [[TMP11:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP11]], 50
 ; TFNONE-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TFNONE:       if.then:
-; TFNONE-NEXT:    [[TMP14:%.*]] = call i64 @foo(i64 [[TMP13]]) #[[ATTR4:[0-9]+]]
+; TFNONE-NEXT:    [[TMP12:%.*]] = call i64 @foo(i64 [[TMP11]]) #[[ATTR4:[0-9]+]]
 ; TFNONE-NEXT:    br label [[IF_END]]
 ; TFNONE:       if.else:
-; TFNONE-NEXT:    [[TMP15:%.*]] = call i64 @foo(i64 0) #[[ATTR4]]
+; TFNONE-NEXT:    [[TMP13:%.*]] = call i64 @foo(i64 0) #[[ATTR4]]
 ; TFNONE-NEXT:    br label [[IF_END]]
 ; TFNONE:       if.end:
-; TFNONE-NEXT:    [[TMP16:%.*]] = phi i64 [ [[TMP14]], [[IF_THEN]] ], [ [[TMP15]], [[IF_ELSE]] ]
+; TFNONE-NEXT:    [[TMP14:%.*]] = phi i64 [ [[TMP12]], [[IF_THEN]] ], [ [[TMP13]], [[IF_ELSE]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[TMP16]], ptr [[ARRAYIDX1]], align 8
+; TFNONE-NEXT:    store i64 [[TMP14]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -283,26 +274,26 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFCOMMON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFCOMMON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFCOMMON-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 2
+; TFCOMMON-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFCOMMON-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFCOMMON-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFCOMMON:       vector.body:
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFCOMMON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFCOMMON-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 50, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; TFCOMMON-NEXT:    [[TMP7:%.*]] = xor <vscale x 2 x i1> [[TMP6]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
-; TFCOMMON-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> zeroinitializer
-; TFCOMMON-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP8]])
-; TFCOMMON-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
-; TFCOMMON-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP10]])
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP11]]
-; TFCOMMON-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
-; TFCOMMON-NEXT:    [[TMP13:%.*]] = or <vscale x 2 x i1> [[TMP8]], [[TMP10]]
-; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP12]], i32 8, <vscale x 2 x i1> [[TMP13]])
-; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP15]]
+; TFCOMMON-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFCOMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFCOMMON-NEXT:    [[TMP8:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 50, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; TFCOMMON-NEXT:    [[TMP9:%.*]] = xor <vscale x 2 x i1> [[TMP8]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; TFCOMMON-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i1> zeroinitializer
+; TFCOMMON-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP10]])
+; TFCOMMON-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i1> zeroinitializer
+; TFCOMMON-NEXT:    [[TMP13:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP12]])
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP10]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[TMP13]]
+; TFCOMMON-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFCOMMON-NEXT:    [[TMP15:%.*]] = or <vscale x 2 x i1> [[TMP10]], [[TMP12]]
+; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr [[TMP14]], i32 8, <vscale x 2 x i1> [[TMP15]])
+; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFCOMMON-NEXT:    [[TMP16:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFCOMMON-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 2 x i1> [[TMP16]], i32 0
@@ -346,17 +337,14 @@ for.cond.cleanup:
 define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen_nomask(
 ; TFNONE-NEXT:  entry:
+; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFNONE:       vector.ph:
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -365,9 +353,9 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
 ; TFNONE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFNONE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFNONE-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; TFNONE:       middle.block:
 ; TFNONE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
@@ -406,31 +394,23 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:  entry:
 ; TFFALLBACK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFFALLBACK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFFALLBACK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFFALLBACK:       vector.ph:
+; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFFALLBACK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFFALLBACK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
 ; TFFALLBACK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFFALLBACK:       vector.body:
-; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 8
 ; TFFALLBACK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFFALLBACK-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
-; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; TFFALLBACK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFFALLBACK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; TFFALLBACK:       scalar.ph:
-; TFFALLBACK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[N_VEC]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
+; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFFALLBACK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFFALLBACK-NEXT:    br i1 [[TMP7]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; TFFALLBACK:       for.body:
-; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[N_VEC]], [[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; TFFALLBACK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR5:[0-9]+]]
@@ -466,17 +446,14 @@ for.cond.cleanup:
 define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen_optmask(
 ; TFNONE-NEXT:  entry:
+; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFNONE:       vector.ph:
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -485,9 +462,9 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
 ; TFNONE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP5]], ptr [[TMP6]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFNONE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFNONE-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; TFNONE:       middle.block:
 ; TFNONE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
@@ -516,19 +493,19 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFALWAYS-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFALWAYS-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFALWAYS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFALWAYS-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; TFALWAYS-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFALWAYS-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFALWAYS-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFALWAYS:       vector.body:
 ; TFALWAYS-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFALWAYS-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFALWAYS-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFALWAYS-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
+; TFALWAYS-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFALWAYS-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFALWAYS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFALWAYS-NEXT:    [[TMP10:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFALWAYS-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 2 x i1> [[TMP10]], i32 0
@@ -546,19 +523,19 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFFALLBACK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; TFFALLBACK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFFALLBACK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFFALLBACK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFFALLBACK:       vector.body:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; TFFALLBACK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
+; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; TFFALLBACK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFFALLBACK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFFALLBACK-NEXT:    [[TMP10:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFFALLBACK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 2 x i1> [[TMP10]], i32 0
@@ -590,17 +567,14 @@ for.cond.cleanup:
 define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, double %m) #4 {
 ; TFNONE-LABEL: @test_widen_fmuladd_and_call(
 ; TFNONE-NEXT:  entry:
+; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; TFNONE:       vector.ph:
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
 ; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M:%.*]], i64 0
 ; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -615,9 +589,9 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP8]], align 8
 ; TFNONE-NEXT:    [[TMP9]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP5]])
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; TFNONE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; TFNONE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; TFNONE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TFNONE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; TFNONE:       middle.block:
 ; TFNONE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
@@ -651,8 +625,8 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFALWAYS-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFALWAYS-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFALWAYS-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFALWAYS-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; TFALWAYS-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 2
+; TFALWAYS-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFALWAYS-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFALWAYS-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M:%.*]], i64 0
 ; TFALWAYS-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
@@ -660,23 +634,23 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFALWAYS:       vector.body:
 ; TFALWAYS-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFALWAYS-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
-; TFALWAYS-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
-; TFALWAYS-NEXT:    [[TMP6:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
-; TFALWAYS-NEXT:    [[TMP7:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
-; TFALWAYS-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFALWAYS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFALWAYS-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP6]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
-; TFALWAYS-NEXT:    [[TMP11]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP10]])
-; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP13]]
+; TFALWAYS-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
+; TFALWAYS-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
+; TFALWAYS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
+; TFALWAYS-NEXT:    [[TMP8:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
+; TFALWAYS-NEXT:    [[TMP9:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
+; TFALWAYS-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP9]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFALWAYS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFALWAYS-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP10]], ptr [[TMP11]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFALWAYS-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP8]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+; TFALWAYS-NEXT:    [[TMP13]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP12]])
+; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFALWAYS-NEXT:    [[TMP14:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFALWAYS-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 2 x i1> [[TMP14]], i32 0
 ; TFALWAYS-NEXT:    br i1 [[TMP15]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; TFALWAYS:       for.cond.cleanup:
-; TFALWAYS-NEXT:    ret double [[TMP11]]
+; TFALWAYS-NEXT:    ret double [[TMP13]]
 ;
 ; TFFALLBACK-LABEL: @test_widen_fmuladd_and_call(
 ; TFFALLBACK-NEXT:  entry:
@@ -688,8 +662,8 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFFALLBACK-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TFFALLBACK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 2
+; TFFALLBACK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; TFFALLBACK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; TFFALLBACK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M:%.*]], i64 0
 ; TFFALLBACK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
@@ -697,23 +671,23 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFFALLBACK:       vector.body:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP5]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
-; TFFALLBACK-NEXT:    [[TMP6:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
-; TFFALLBACK-NEXT:    [[TMP7:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
-; TFFALLBACK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFFALLBACK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr [[TMP9]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; TFFALLBACK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP6]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
-; TFFALLBACK-NEXT:    [[TMP11]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP10]])
-; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP13]]
+; TFFALLBACK-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
+; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr [[TMP7]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> poison)
+; TFFALLBACK-NEXT:    [[TMP8:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
+; TFFALLBACK-NEXT:    [[TMP9:%.*]] = fptoui <vscale x 2 x double> [[WIDE_MASKED_LOAD]] to <vscale x 2 x i64>
+; TFFALLBACK-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[TMP9]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFFALLBACK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP10]], ptr [[TMP11]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; TFFALLBACK-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP8]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+; TFFALLBACK-NEXT:    [[TMP13]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP12]])
+; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFFALLBACK-NEXT:    [[TMP14:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; TFFALLBACK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 2 x i1> [[TMP14]], i32 0
 ; TFFALLBACK-NEXT:    br i1 [[TMP15]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; TFFALLBACK:       for.cond.cleanup:
-; TFFALLBACK-NEXT:    ret double [[TMP11]]
+; TFFALLBACK-NEXT:    ret double [[TMP13]]
 ;
 entry:
   br label %for.body

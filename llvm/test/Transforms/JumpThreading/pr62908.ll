@@ -5,7 +5,14 @@
 
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
-; CHECK-NEXT:  end:
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       unreachable:
+; CHECK-NEXT:    [[SH_PROM:%.*]] = zext i32 -1 to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 -1, [[SH_PROM]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[SHL]] to i32
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

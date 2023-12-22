@@ -484,8 +484,7 @@ define i1 @test_shl_zero_start(i8 %n) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop
@@ -559,8 +558,7 @@ define i1 @test_lshr_zero_start(i8 %n) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop
@@ -633,8 +631,7 @@ define i1 @test_ashr_zero_start(i8 %n) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop

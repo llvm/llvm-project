@@ -433,9 +433,7 @@ define <2 x i1> @or1_vec_partial_undef(<2 x i32> %X) {
 ; Single bit OR.
 define i1 @or2_true(i8 %x) {
 ; CHECK-LABEL: @or2_true(
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 64
-; CHECK-NEXT:    [[Z:%.*]] = icmp sge i8 [[Y]], -64
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 true
 ;
   %y = or i8 %x, 64
   %z = icmp sge i8 %y, -64
@@ -457,9 +455,7 @@ define i1 @or2_unknown(i8 %x) {
 ; 78 = 0b01001110; -50 = 0b11001110
 define i1 @or3_true(i8 %x) {
 ; CHECK-LABEL: @or3_true(
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 78
-; CHECK-NEXT:    [[Z:%.*]] = icmp sge i8 [[Y]], -50
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 true
 ;
   %y = or i8 %x, 78
   %z = icmp sge i8 %y, -50
@@ -573,9 +569,7 @@ define i1 @and3_unknown1(i8 %x) {
 
 define i1 @and3_true2(i8 %x) {
 ; CHECK-LABEL: @and3_true2(
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -75
-; CHECK-NEXT:    [[Z:%.*]] = icmp sle i8 [[Y]], 53
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 true
 ;
   %y = and i8 %x, -75
   %z = icmp sle i8 %y, 53
@@ -1146,8 +1140,7 @@ define i8 @infer_sub_with_knownbits_info(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
-; CHECK-NEXT:    [[UMAX:%.*]] = tail call i8 @llvm.umax.i8(i8 [[SUB]], i8 1)
-; CHECK-NEXT:    ret i8 [[UMAX]]
+; CHECK-NEXT:    ret i8 [[SUB]]
 ;
   %a1 = or i8 %a, 1
   %a2 = shl i8 %b, 1

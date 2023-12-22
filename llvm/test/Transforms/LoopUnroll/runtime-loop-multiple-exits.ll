@@ -4578,10 +4578,8 @@ define void @test8() {
 ; EPILOG-BLOCK:       outerloop:
 ; EPILOG-BLOCK-NEXT:    %i = phi i64 [ 3, %bb ], [ 0, %outerloop.loopexit.1 ]
 ; EPILOG-BLOCK-NEXT:    %0 = sub i64 100, %i
-; EPILOG-BLOCK-NEXT:    %1 = sub i64 99, %i
 ; EPILOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
-; EPILOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; EPILOG-BLOCK-NEXT:    br i1 %2, label %exit.unr-lcssa, label %outerloop.new
+; EPILOG-BLOCK-NEXT:    br i1 false, label %exit.unr-lcssa, label %outerloop.new
 ; EPILOG-BLOCK:       outerloop.new:
 ; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i64 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %innerH
@@ -4711,7 +4709,6 @@ define void @test8() {
 ; PROLOG-BLOCK:       outerloop:
 ; PROLOG-BLOCK-NEXT:    %i = phi i64 [ 3, %bb ], [ 0, %outerloop.loopexit.1 ]
 ; PROLOG-BLOCK-NEXT:    %0 = sub i64 100, %i
-; PROLOG-BLOCK-NEXT:    %1 = sub i64 99, %i
 ; PROLOG-BLOCK-NEXT:    %xtraiter = and i64 %0, 1
 ; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
 ; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %innerH.prol.preheader, label %innerH.prol.loopexit
@@ -4724,8 +4721,7 @@ define void @test8() {
 ; PROLOG-BLOCK-NEXT:    br label %innerH.prol.loopexit
 ; PROLOG-BLOCK:       innerH.prol.loopexit:
 ; PROLOG-BLOCK-NEXT:    %i3.unr = phi i64 [ %i, %outerloop ], [ %i4.prol, %latch.prol ]
-; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
-; PROLOG-BLOCK-NEXT:    br i1 %2, label %exit.loopexit, label %outerloop.new
+; PROLOG-BLOCK-NEXT:    br i1 false, label %exit.loopexit, label %outerloop.new
 ; PROLOG-BLOCK:       outerloop.new:
 ; PROLOG-BLOCK-NEXT:    br label %innerH
 ; PROLOG-BLOCK:       innerH:

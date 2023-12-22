@@ -335,11 +335,7 @@ define i1 @blsi_ne_is_true(i32 %x) {
 
 define <2 x i1> @blsi_ge_is_false_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_ge_is_false_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 10, i32 10>
-; CHECK-NEXT:    [[X2:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i32> [[X3]], <i32 7, i32 7>
-; CHECK-NEXT:    ret <2 x i1> [[Z]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 10>
   %x2 = sub <2 x i32> <i32 0, i32 0>, %x1
@@ -350,11 +346,7 @@ define <2 x i1> @blsi_ge_is_false_vec(<2 x i32> %x) {
 
 define <2 x i1> @blsi_ge_is_false_diff_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_ge_is_false_diff_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 10, i32 11>
-; CHECK-NEXT:    [[X2:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i32> [[X3]], <i32 7, i32 7>
-; CHECK-NEXT:    ret <2 x i1> [[Z]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 11>
   %x2 = sub <2 x i32> <i32 0, i32 0>, %x1

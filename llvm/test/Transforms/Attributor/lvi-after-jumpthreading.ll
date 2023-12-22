@@ -148,8 +148,7 @@ define i32 @test4(i32 %i, i1 %f, i32 %n) {
 ; CHECK-NEXT:    call void @dummy(i1 [[F]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[CONSUME:%.*]] = call i32 @exit()
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[F]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i1 [[F]], false
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[CONT:%.*]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i32 30
 ;
