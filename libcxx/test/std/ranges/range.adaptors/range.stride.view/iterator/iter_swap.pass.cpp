@@ -15,6 +15,7 @@
 #include <ranges>
 
 #include "../test.h"
+#include "__ranges/concepts.h"
 
 template <typename T>
 concept swappable = requires(T&& t, T&& u) { std::ranges::iter_swap(t, u); };
@@ -96,6 +97,7 @@ constexpr bool test() {
 
     static_assert(!swappable<std::ranges::iterator_t<StrideView>>);
   }
+
   return true;
 }
 

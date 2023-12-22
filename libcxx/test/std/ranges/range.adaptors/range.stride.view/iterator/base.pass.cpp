@@ -8,11 +8,13 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// std::views::stride_view
+// constexpr iterator_t<_Base> const& base() const& noexcept
+// constexpr iterator_t<_Base> base() &&
 
-#include "../test.h"
 #include <ranges>
 #include <type_traits>
+
+#include "../test.h"
 
 constexpr bool base_noexcept() {
   {
