@@ -65,7 +65,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
-  TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime Data Copy:",
+  TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: Data Copy",
                                    "NumArgs=" + std::to_string(ArgNum), Loc);
 
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
@@ -263,7 +263,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
          !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
          "OpenMP interface should not use multiple dimensions");
   TIMESCOPE_WITH_DETAILS_AND_IDENT(
-      "Runtime target exe:",
+      "Runtime: target exe",
       "NumTeams=" + std::to_string(NumTeams) +
           ";NumArgs=" + std::to_string(KernelArgs->NumArgs),
       Loc);
@@ -297,9 +297,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
-
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
+  { // required to show syncronization
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: syncronize", "", Loc);
+    if (Rc == OFFLOAD_SUCCESS)
+      Rc = AsyncInfo.synchronize();
 
     handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
     assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
