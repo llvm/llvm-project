@@ -6131,18 +6131,30 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   // Given the known and unknown bits, compute a range that the LHS could be
   // in.  Compute the Min, Max and RHS values based on the known bits. For the
   // EQ and NE we use unsigned values.
+  bool IsSigned = I.isSigned();
+  ConstantRange::PreferredRangeType RangeType =
+      IsSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+  ConstantRange Op0CR = ConstantRange::fromKnownBits(Op0Known, IsSigned);
+  if (Ty->isIntOrIntVectorTy())
+    Op0CR.intersectWith(
+        computeConstantRange(Op0, IsSigned, SQ.IIQ.UseInstrInfo), RangeType);
+  ConstantRange Op1CR = ConstantRange::fromKnownBits(Op1Known, IsSigned);
+  if (Ty->isIntOrIntVectorTy())
+    Op1CR.intersectWith(
+        computeConstantRange(Op1, IsSigned, SQ.IIQ.UseInstrInfo), RangeType);
+
   APInt Op0Min(BitWidth, 0), Op0Max(BitWidth, 0);
   APInt Op1Min(BitWidth, 0), Op1Max(BitWidth, 0);
   if (I.isSigned()) {
-    Op0Min = Op0Known.getSignedMinValue();
-    Op0Max = Op0Known.getSignedMaxValue();
-    Op1Min = Op1Known.getSignedMinValue();
-    Op1Max = Op1Known.getSignedMaxValue();
+    Op0Min = Op0CR.getSignedMin();
+    Op0Max = Op0CR.getSignedMax();
+    Op1Min = Op1CR.getSignedMin();
+    Op1Max = Op1CR.getSignedMax();
   } else {
-    Op0Min = Op0Known.getMinValue();
-    Op0Max = Op0Known.getMaxValue();
-    Op1Min = Op1Known.getMinValue();
-    Op1Max = Op1Known.getMaxValue();
+    Op0Min = Op0CR.getUnsignedMin();
+    Op0Max = Op0CR.getUnsignedMax();
+    Op1Min = Op1CR.getUnsignedMin();
+    Op1Max = Op1CR.getUnsignedMax();
   }
 
   // If Min and Max are known to be the same, then SimplifyDemandedBits figured
