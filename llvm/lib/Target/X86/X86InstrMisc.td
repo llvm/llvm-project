@@ -1686,14 +1686,14 @@ def CMPCCXADDmr32_EVEX : I<0xe0, MRMDestMem4VOp3CC, (outs GR32:$dst),
           "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
           [(set GR32:$dst, (X86cmpccxadd addr:$dstsrc2,
             GR32:$dstsrc1, GR32:$src3, timm:$cond))]>,
-          EVEX_4V, NoCD8, T8PD, Sched<[WriteXCHG]>;
+          EVEX, VVVV, NoCD8, T8PD, Sched<[WriteXCHG]>;
 
 def CMPCCXADDmr64_EVEX : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
           (ins GR64:$dstsrc1, i64mem:$dstsrc2, GR64:$src3, ccode:$cond),
           "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
           [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
             GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
-          EVEX_4V, NoCD8, REX_W, T8PD, Sched<[WriteXCHG]>;
+          EVEX, VVVV, NoCD8, REX_W, T8PD, Sched<[WriteXCHG]>;
 }
 }
 
