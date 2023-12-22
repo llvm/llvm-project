@@ -676,17 +676,25 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 25:
     CPU = "znver3";
     *Type = AMDFAM19H;
-    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x5f)) {
-      // Family 19h Models 00h-0Fh - Zen3
-      // Family 19h Models 20h-2Fh - Zen3
-      // Family 19h Models 30h-3Fh - Zen3
-      // Family 19h Models 40h-4Fh - Zen3+
-      // Family 19h Models 50h-5Fh - Zen3+
+    if ((Model >= 0x00 && Model <= 0x0f) || (Model >= 0x20 && Model <= 0x2f) ||
+        (Model >= 0x30 && Model <= 0x3f) || (Model >= 0x40 && Model <= 0x4f) ||
+        (Model >= 0x50 && Model <= 0x5f)) {
+      // Family 19h Models 00h-0Fh (Genesis, Chagall) Zen 3
+      // Family 19h Models 20h-2Fh (Vermeer) Zen 3
+      // Family 19h Models 30h-3Fh (Badami) Zen 3
+      // Family 19h Models 40h-4Fh (Rembrandt) Zen 3+
+      // Family 19h Models 50h-5Fh (Cezanne) Zen 3
       *Subtype = AMDFAM19H_ZNVER3;
       break;
     }
-    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x60 && Model <= 0x74) ||
-        (Model >= 0x78 && Model <= 0x7b) || (Model >= 0xA0 && Model <= 0xAf)) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x60 && Model <= 0x6f) ||
+        (Model >= 0x70 && Model <= 0x77) || (Model >= 0x78 && Model <= 0x7f) ||
+        (Model >= 0xa0 && Model <= 0xaf)) {
+      // Family 19h Models 10h-1Fh (Stones; Storm Peak) Zen 4
+      // Family 19h Models 60h-6Fh (Raphael) Zen 4
+      // Family 19h Models 70h-77h (Phoenix, Hawkpoint1) Zen 4
+      // Family 19h Models 78h-7Fh (Phoenix 2, Hawkpoint2) Zen 4
+      // Family 19h Models A0h-AFh (Stones-Dense) Zen 4
       CPU = "znver4";
       *Subtype = AMDFAM19H_ZNVER4;
       break; //  "znver4"
