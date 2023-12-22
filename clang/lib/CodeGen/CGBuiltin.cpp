@@ -20696,6 +20696,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_clz_64:
   case RISCV::BI__builtin_riscv_ctz_32:
   case RISCV::BI__builtin_riscv_ctz_64:
+  case RISCV::BI__builtin_riscv_cpop_32:
+  case RISCV::BI__builtin_riscv_cpop_64:
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
   case RISCV::BI__builtin_riscv_clmulh_32:
@@ -20732,6 +20734,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       Value *Result = Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
       if (Result->getType() != ResultType)
         Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
+                                       "cast");
+      return Result;
+    }
+    case RISCV::BI__builtin_riscv_cpop_32:
+    case RISCV::BI__builtin_riscv_cpop_64: {
+      Value *Result = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Ops[0]);
+      if (Result->getType() != ResultType)
+        Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/ true,
                                        "cast");
       return Result;
     }

@@ -82,3 +82,29 @@ unsigned int ctz_64(unsigned long a) {
   return __builtin_riscv_ctz_64(a);
 }
 #endif
+
+// RV32ZBB-LABEL: @cpop_32(
+// RV32ZBB-NEXT:  entry:
+// RV32ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[A:%.*]])
+// RV32ZBB-NEXT:    ret i32 [[TMP0]]
+//
+// RV64ZBB-LABEL: @cpop_32(
+// RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[A:%.*]])
+// RV64ZBB-NEXT:    ret i32 [[TMP0]]
+//
+unsigned int cpop_32(unsigned int a) {
+  return __builtin_riscv_cpop_32(a);
+}
+
+#if __riscv_xlen == 64
+// RV64ZBB-LABEL: @cpop_64(
+// RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[A:%.*]])
+// RV64ZBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
+// RV64ZBB-NEXT:    ret i32 [[CAST]]
+//
+unsigned int cpop_64(unsigned long a) {
+  return __builtin_riscv_cpop_64(a);
+}
+#endif
