@@ -1,6 +1,5 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck %s -check-prefix=MLIR --input-file=%t.mlir
-// XFAIL: *
 
 !s32i = !cir.int<s, 32>
 module {

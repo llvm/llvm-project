@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s -check-prefix=LLVM
 // RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s -check-prefix=LLVM
-// XFAIL: *
 
 typedef struct {
     int a;
@@ -18,7 +17,7 @@ typedef struct A {
   fun_typ fun;  
 } A;
 
-// CIR: !ty_22A22 = !cir.struct<struct "A" {!cir.ptr<!cir.func<!cir.int<s, 32> (!cir.ptr<!cir.struct<struct "A">>)>>} #cir.record.decl.ast>
+// CIR: !ty_22A22 = !cir.struct<struct "A" {!cir.ptr<!cir.func<!s32i (!cir.ptr<!cir.struct<struct "A">>)>>} #cir.record.decl.ast>
 A a = {(fun_typ)0};
 
 int extract_a(Data* d) {
