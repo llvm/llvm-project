@@ -9,13 +9,12 @@
 #include "startup/linux/do_start.h"
 
 extern "C" [[noreturn]] void _start() {
-  using namespace LIBC_NAMESPACE;
-  LIBC_INLINE_ASM(".option push\n\t"
-                  ".option norelax\n\t"
-                  "lla gp, __global_pointer$\n\t"
-                  ".option pop\n\t");
+  asm volatile(".option push\n\t"
+               ".option norelax\n\t"
+               "lla gp, __global_pointer$\n\t"
+               ".option pop\n\t");
   // Fetch the args using the frame pointer.
-  app.args = reinterpret_cast<Args *>(
+  LIBC_NAMESPACE::app.args = reinterpret_cast<LIBC_NAMESPACE::Args *>(
       reinterpret_cast<uintptr_t *>(__builtin_frame_address(0)));
-  do_start();
+  LIBC_NAMESPACE::do_start();
 }

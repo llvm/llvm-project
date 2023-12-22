@@ -8,7 +8,6 @@
 
 #include "startup/linux/do_start.h"
 extern "C" void _start() {
-  using namespace LIBC_NAMESPACE;
   // Skip the Frame Pointer and the Link Register
   // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst
   // Section 6.2.3. Note that this only works if the current function
@@ -19,7 +18,7 @@ extern "C" void _start() {
   // will take us to the previous stack pointer. That is the reason why the
   // actual business logic of the startup code is pushed into a non-inline
   // function do_start so that this function is free of any stack usage.
-  app.args = reinterpret_cast<Args *>(
+  LIBC_NAMESPACE::app.args = reinterpret_cast<LIBC_NAMESPACE::Args *>(
       reinterpret_cast<uintptr_t *>(__builtin_frame_address(0)) + 2);
-  do_start();
+  LIBC_NAMESPACE::do_start();
 }

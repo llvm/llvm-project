@@ -9,12 +9,10 @@
 #include "startup/linux/do_start.h"
 
 extern "C" [[noreturn]] void _start() {
-  using namespace LIBC_NAMESPACE;
   // This TU is compiled with -fno-omit-frame-pointer. Hence, the previous
   // value of the base pointer is pushed on to the stack. So, we step over
-  // it (the
-  // "+ 1" below) to get to the args.
-  app.args = reinterpret_cast<Args *>(
+  // it (the "+ 1" below) to get to the args.
+  LIBC_NAMESPACE::app.args = reinterpret_cast<LIBC_NAMESPACE::Args *>(
       reinterpret_cast<uintptr_t *>(__builtin_frame_address(0)) + 1);
 
   // The x86_64 ABI requires that the stack pointer is aligned to a 16-byte
@@ -28,8 +26,8 @@ extern "C" [[noreturn]] void _start() {
   // compilers can generate code assuming the alignment as required by the ABI.
   // If the stack pointers as setup by the OS are already aligned, then the
   // following code is a NOP.
-  LIBC_INLINE_ASM("andq $0xfffffffffffffff0, %rsp\n\t");
-  LIBC_INLINE_ASM("andq $0xfffffffffffffff0, %rbp\n\t");
+  asm volatile("andq $0xfffffffffffffff0, %rsp\n\t");
+  asm volatile("andq $0xfffffffffffffff0, %rbp\n\t");
 
-  do_start();
+  LIBC_NAMESPACE::do_start();
 }
