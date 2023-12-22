@@ -11,21 +11,18 @@
 // UNSUPPORTED: !libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 
-// Call stride_view() ctor with stride <= 0.
+// constexpr explicit stride_view(_View, range_difference_t<_View>)
 
-#include "check_assertion.h"
 #include <ranges>
 
-void stride_view_over_only_input_ranges() {
+#include "check_assertion.h"
+
+int main(int, char**) {
   int range[] = {1, 2, 3};
   TEST_LIBCPP_ASSERT_FAILURE(
       [&range] { std::ranges::stride_view sv(range, 0); }(), "The value of stride must be greater than 0");
   TEST_LIBCPP_ASSERT_FAILURE(
       [&range] { std::ranges::stride_view sv(range, -1); }(), "The value of stride must be greater than 0");
-}
-
-int main(int, char**) {
-  stride_view_over_only_input_ranges();
 
   return 0;
 }
