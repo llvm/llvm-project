@@ -69,6 +69,8 @@ int main() {
   // CHECK: Cause: stack tag-mismatch
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
+  // CHECK: Cause: use-after-scope
+  // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a 2048-byte region
   // CHECK-NEXT: {{zzz|yyy}} in buggy {{.*}}stack-uas.c:
   // CHECK: Memory tags around the buggy address
 
