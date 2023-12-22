@@ -91,19 +91,19 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
       def TDPBSSD : I<0x5e, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbssd\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      VEX_4V, T8XD;
+                      VEX, VVVV, T8XD;
       def TDPBSUD : I<0x5e, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbsud\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      VEX_4V, T8XS;
+                      VEX, VVVV, T8XS;
       def TDPBUSD : I<0x5e, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbusd\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      VEX_4V, T8PD;
+                      VEX, VVVV, T8PD;
       def TDPBUUD : I<0x5e, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbuud\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      VEX_4V, T8PS;
+                      VEX, VVVV, T8PS;
     }
 
     // Pseduo instruction for RA.
@@ -163,7 +163,7 @@ let Predicates = [HasAMXBF16, In64BitMode] in {
     def TDPBF16PS : I<0x5c, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbf16ps\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                      []>, VEX_4V, T8XS;
+                      []>, VEX, VVVV, T8XS;
 
     // Pseduo instruction for RA.
     let isPseudo = true, Constraints = "$src4 = $dst" in
@@ -193,7 +193,7 @@ let Predicates = [HasAMXFP16, In64BitMode] in {
       def TDPFP16PS : I<0x5c, MRMSrcReg4VOp3, (outs TILE:$dst),
                         (ins TILE:$src1, TILE:$src2, TILE:$src3),
                         "tdpfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
-                        []>, VEX_4V, T8XD;
+                        []>, VEX, VVVV, T8XD;
     }
 
     // Pseduo instruction for RA.
@@ -222,11 +222,11 @@ let Predicates = [HasAMXCOMPLEX, In64BitMode] in {
       def TCMMIMFP16PS   : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
                             (ins TILE:$src1, TILE:$src2, TILE:$src3),
                             "tcmmimfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
-                            []>, T8PD, VEX_4V;
+                            []>, T8PD, VEX, VVVV;
       def TCMMRLFP16PS : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
                             (ins TILE:$src1, TILE:$src2, TILE:$src3),
                             "tcmmrlfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
-                            []>, VEX_4V, WIG, T8PS;
+                            []>, VEX, VVVV, WIG, T8PS;
 
     } // Constraints = "$src1 = $dst"
 

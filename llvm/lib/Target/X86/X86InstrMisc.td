@@ -165,10 +165,10 @@ def POPP64r  : I<0x58, AddRegFrm, (outs GR64:$reg), (ins), "popp\t$reg", []>,
                  REX_W, ExplicitREX2Prefix, Requires<[In64BitMode]>;
 def POP2: I<0x8F, MRM0r, (outs GR64:$reg1, GR64:$reg2), (ins),
             "pop2\t{$reg2, $reg1|$reg1, $reg2}",
-            []>, EVEX_4V, EVEX_B, T_MAP4PS;
+            []>, EVEX, VVVV, EVEX_B, T_MAP4PS;
 def POP2P: I<0x8F, MRM0r, (outs GR64:$reg1, GR64:$reg2), (ins),
              "pop2p\t{$reg2, $reg1|$reg1, $reg2}",
-             []>, EVEX_4V, EVEX_B, T_MAP4PS, REX_W;
+             []>, EVEX, VVVV, EVEX_B, T_MAP4PS, REX_W;
 
 } // mayLoad, SchedRW
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteCopy] in
@@ -186,10 +186,10 @@ def PUSHP64r  : I<0x50, AddRegFrm, (outs), (ins GR64:$reg), "pushp\t$reg", []>,
                   REX_W, ExplicitREX2Prefix, Requires<[In64BitMode]>;
 def PUSH2: I<0xFF, MRM6r, (outs), (ins GR64:$reg1, GR64:$reg2),
             "push2\t{$reg2, $reg1|$reg1, $reg2}",
-            []>, EVEX_4V, EVEX_B, T_MAP4PS;
+            []>, EVEX, VVVV, EVEX_B, T_MAP4PS;
 def PUSH2P: I<0xFF, MRM6r, (outs), (ins GR64:$reg1, GR64:$reg2),
              "push2p\t{$reg2, $reg1|$reg1, $reg2}",
-             []>, EVEX_4V, EVEX_B, T_MAP4PS, REX_W;
+             []>, EVEX, VVVV, EVEX_B, T_MAP4PS, REX_W;
 } // mayStore, SchedRW
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteCopy] in {
 def PUSH64rmm: I<0xFF, MRM6m, (outs), (ins i64mem:$src), "push{q}\t$src", []>,
@@ -1218,11 +1218,11 @@ multiclass bmi_bls<string mnemonic, Format RegMRM, Format MemMRM,
 let hasSideEffects = 0 in {
   def rr#Suffix : I<0xF3, RegMRM, (outs RC:$dst), (ins RC:$src),
                     !strconcat(mnemonic, "\t{$src, $dst|$dst, $src}"), []>,
-                  T8PS, VEX_4V, Sched<[sched]>;
+                  T8PS, VEX, VVVV, Sched<[sched]>;
   let mayLoad = 1 in
   def rm#Suffix : I<0xF3, MemMRM, (outs RC:$dst), (ins x86memop:$src),
                     !strconcat(mnemonic, "\t{$src, $dst|$dst, $src}"), []>,
-                  T8PS, VEX_4V, Sched<[sched.Folded]>;
+                  T8PS, VEX, VVVV, Sched<[sched.Folded]>;
 }
 }
 
@@ -1371,11 +1371,11 @@ multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
   def rr#Suffix : I<0xF5, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
                     !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (OpNode RC:$src1, RC:$src2))]>,
-                  VEX_4V, Sched<[WriteALU]>;
+                  VEX, VVVV, Sched<[WriteALU]>;
   def rm#Suffix : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
                     !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (OpNode RC:$src1, (ld_frag addr:$src2)))]>,
-                  VEX_4V, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
+                  VEX, VVVV, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
@@ -1419,12 +1419,12 @@ multiclass lwpins_intr<RegisterClass RC> {
   def rri : Ii32<0x12, MRM0r, (outs), (ins RC:$src0, GR32:$src1, i32imm:$cntl),
                  "lwpins\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
                  [(set EFLAGS, (X86lwpins RC:$src0, GR32:$src1, timm:$cntl))]>,
-                 XOP_4V, XOPA;
+                 XOP, VVVV, XOPA;
   let mayLoad = 1 in
   def rmi : Ii32<0x12, MRM0m, (outs), (ins RC:$src0, i32mem:$src1, i32imm:$cntl),
                  "lwpins\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
                  [(set EFLAGS, (X86lwpins RC:$src0, (loadi32 addr:$src1), timm:$cntl))]>,
-                 XOP_4V, XOPA;
+                 XOP, VVVV, XOPA;
 }
 
 let Defs = [EFLAGS] in {
@@ -1435,12 +1435,12 @@ let Defs = [EFLAGS] in {
 multiclass lwpval_intr<RegisterClass RC, Intrinsic Int> {
   def rri : Ii32<0x12, MRM1r, (outs), (ins RC:$src0, GR32:$src1, i32imm:$cntl),
                  "lwpval\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
-                 [(Int RC:$src0, GR32:$src1, timm:$cntl)]>, XOP_4V, XOPA;
+                 [(Int RC:$src0, GR32:$src1, timm:$cntl)]>, XOP, VVVV, XOPA;
   let mayLoad = 1 in
   def rmi : Ii32<0x12, MRM1m, (outs), (ins RC:$src0, i32mem:$src1, i32imm:$cntl),
                  "lwpval\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
                  [(Int RC:$src0, (loadi32 addr:$src1), timm:$cntl)]>,
-                 XOP_4V, XOPA;
+                 XOP, VVVV, XOPA;
 }
 
 defm LWPVAL32 : lwpval_intr<GR32, int_x86_lwpval32>;
@@ -1670,14 +1670,14 @@ def CMPCCXADDmr32 : I<0xe0, MRMDestMem4VOp3CC, (outs GR32:$dst),
           "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
           [(set GR32:$dst, (X86cmpccxadd addr:$dstsrc2,
             GR32:$dstsrc1, GR32:$src3, timm:$cond))]>,
-          VEX_4V, T8PD, Sched<[WriteXCHG]>;
+          VEX, VVVV, T8PD, Sched<[WriteXCHG]>;
 
 def CMPCCXADDmr64 : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
           (ins GR64:$dstsrc1, i64mem:$dstsrc2, GR64:$src3, ccode:$cond),
           "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
           [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
             GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
-          VEX_4V, REX_W, T8PD, Sched<[WriteXCHG]>;
+          VEX, VVVV, REX_W, T8PD, Sched<[WriteXCHG]>;
 }
 
 //===----------------------------------------------------------------------===//
