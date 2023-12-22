@@ -14,22 +14,23 @@
 //===----------------------------------------------------------------------===//
 // AMX instructions
 
-let Predicates = [HasAMXTILE, In64BitMode] in {
-  let SchedRW = [WriteSystem] in {
+let SchedRW = [WriteSystem] in {
+  let Predicates = [HasAMXTILE, NoEGPR, In64BitMode] in {
     let hasSideEffects = 1,
         Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
     def LDTILECFG : I <0x49, MRM0m, (outs), (ins opaquemem:$src),
                        "ldtilecfg\t$src",
                        [(int_x86_ldtilecfg addr:$src)]>, VEX, T8;
     let hasSideEffects = 1 in
-    def STTILECFG : I <0x49, MRM0m, (outs), (ins opaquemem:$src),
-                       "sttilecfg\t$src",
-                       [(int_x86_sttilecfg addr:$src)]>, VEX, T8, PD;
+    def STTILECFG : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
+                      "sttilecfg\t$src",
+                      [(int_x86_sttilecfg addr:$src)]>,
+                    VEX, T8, PD;
     let mayLoad = 1 in
     def TILELOADD : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
                       (ins sibmem:$src),
                       "tileloadd\t{$src, $dst|$dst, $src}", []>,
-                      VEX, T8, XD;
+                    VEX, T8, XD;
     let mayLoad = 1 in
     def TILELOADDT1 : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
                         (ins sibmem:$src),
@@ -42,7 +43,41 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
     def TILESTORED : I<0x4b, MRMDestMemFSIB, (outs),
                        (ins sibmem:$dst, TILE:$src),
                        "tilestored\t{$src, $dst|$dst, $src}", []>,
-                       VEX, T8, XS;
+                      VEX, T8, XS;
+  } // HasAMXTILE, NoEGPR
+  let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
+    let hasSideEffects = 1,
+        Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
+    def LDTILECFG_EVEX : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
+                           "ldtilecfg\t$src",
+                           [(int_x86_ldtilecfg addr:$src)]>,
+                         EVEX, NoCD8, T8, PS;
+    let hasSideEffects = 1 in
+    def STTILECFG_EVEX : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
+                           "sttilecfg\t$src",
+                           [(int_x86_sttilecfg addr:$src)]>,
+                         EVEX, NoCD8, T8, PD;
+    let mayLoad = 1 in
+    def TILELOADD_EVEX : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
+                           (ins sibmem:$src),
+                           "tileloadd\t{$src, $dst|$dst, $src}", []>,
+                         EVEX, NoCD8, T8, XD;
+    let mayLoad = 1 in
+    def TILELOADDT1_EVEX : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
+                             (ins sibmem:$src),
+                             "tileloaddt1\t{$src, $dst|$dst, $src}", []>,
+                           EVEX, NoCD8, T8, PD;
+    let mayStore = 1 in
+    def TILESTORED_EVEX : I<0x4b, MRMDestMemFSIB, (outs),
+                            (ins sibmem:$dst, TILE:$src),
+                            "tilestored\t{$src, $dst|$dst, $src}", []>,
+                          EVEX, NoCD8, T8, XS;
+  } // HasAMXTILE, HasEGPR
+  let Predicates = [HasAMXTILE, In64BitMode] in {
+    let Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
+    def TILERELEASE : I<0x49, MRM_C0, (outs), (ins),
+                        "tilerelease", [(int_x86_tilerelease)]>,
+                      VEX, T8, PS;
     def TILEZERO : I<0x49, MRMr0, (outs TILE:$dst), (ins),
                      "tilezero\t$dst", []>,
                      VEX, T8, XD;
@@ -82,8 +117,8 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
       def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
                               [(int_x86_tilezero timm:$src)]>;
     }
-  } // SchedRW
-} // HasAMXTILE
+  } // HasAMXTILE
+} // SchedRW
 
 let Predicates = [HasAMXINT8, In64BitMode] in {
   let SchedRW = [WriteSystem] in {

@@ -1,0 +1,6 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   tileloaddt1	291(%r28,%r29,4), %tmm6
+# INTEL: tileloaddt1	tmm6, [r28 + 4*r29 + 291]
+0x62,0x9a,0x79,0x08,0x4b,0xb4,0xac,0x23,0x01,0x00,0x00
