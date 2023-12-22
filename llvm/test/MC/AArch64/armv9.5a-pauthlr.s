@@ -98,6 +98,33 @@ label1:
 // CHECK-ERROR: instruction requires: pauth-lr
 // CHECK-UNKNOWN: dac197fe <unknown>
 
+  pacia171615
+// CHECK-INST: pacia171615
+// CHECK-DISASS: pacia171615
+// CHECK-ENCODING: [0xfe,0x8b,0xc1,0xda]
+// CHECK-ERROR: instruction requires: pauth-lr
+// CHECK-UNKNOWN: dac18bfe <unknown>
+
+  pacib171615
+// CHECK-INST: pacib171615
+// CHECK-DISASS: pacib171615
+// CHECK-ENCODING: [0xfe,0x8f,0xc1,0xda]
+// CHECK-ERROR: instruction requires: pauth-lr
+// CHECK-UNKNOWN: dac18ffe <unknown>
+
+  autia171615
+// CHECK-INST: autia171615
+// CHECK-DISASS: autia171615
+// CHECK-ENCODING: [0xfe,0xbb,0xc1,0xda]
+// CHECK-ERROR: instruction requires: pauth-lr
+// CHECK-UNKNOWN: dac1bbfe <unknown>
+
+  autib171615
+// CHECK-INST: autib171615
+// CHECK-DISASS: autib171615
+// CHECK-ENCODING: [0xfe,0xbf,0xc1,0xda]
+// CHECK-ERROR: instruction requires: pauth-lr
+// CHECK-UNKNOWN: dac1bffe <unknown>
 
   retaasppc label1
 // CHECK-INST: retaasppc label1
@@ -105,7 +132,7 @@ label1:
 // CHECK-ENCODING: [0bAAA11111,A,0b000AAAAA,0x55]
 // CHECK-ENCODING: //   fixup A - offset: 0, value: label1, kind: fixup_aarch64_pcrel_branch16
 // CHECK-ERROR: instruction requires: pauth-lr
-// CHECK-UNKNOWN: 5500019f <unknown>
+// CHECK-UNKNOWN: 5500021f <unknown>
 
   retabsppc label1
 // CHECK-INST: retabsppc label1
@@ -113,18 +140,18 @@ label1:
 // CHECK-ENCODING: [0bAAA11111,A,0b001AAAAA,0x55]
 // CHECK-ENCODING: //   fixup A - offset: 0, value: label1, kind: fixup_aarch64_pcrel_branch16
 // CHECK-ERROR: instruction requires: pauth-lr
-// CHECK-UNKNOWN: 552001bf <unknown>
+// CHECK-UNKNOWN: 5520023f <unknown>
 
   retaasppc #0
 // CHECK-INST: retaasppc #0
-// CHECK-DISASS: retaasppc 0x3c <label1+0x38>
+// CHECK-DISASS: retaasppc 0x4c <label1+0x48>
 // CHECK-ENCODING: [0x1f,0x00,0x00,0x55]
 // CHECK-ERROR: instruction requires: pauth-lr
 // CHECK-UNKNOWN: 5500001f <unknown>
 
   retaasppc #-(1<<18)+4
 // CHECK-INST: retaasppc #-262140
-// CHECK-DISASS: retaasppc 0xfffffffffffc0044 <label1+0xfffffffffffc0040>
+// CHECK-DISASS: retaasppc 0xfffffffffffc0054 <label1+0xfffffffffffc0050>
 // CHECK-ENCODING: [0xff,0xff,0x1f,0x55]
 // CHECK-ERROR: instruction requires: pauth-lr
 // CHECK-UNKNOWN: 551fffff <unknown>
