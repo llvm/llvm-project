@@ -10411,39 +10411,52 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // No narrowing occurred.
     return;
 
-  case NK_Type_Narrowing:
+  case NK_Type_Narrowing: {
     // This was a floating-to-integer conversion, which is always considered a
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
-    S.Diag(PostInit->getBeginLoc(), NarrowingErrs(S.getLangOpts())
-                                        ? diag::ext_init_list_type_narrowing
-                                        : diag::warn_init_list_type_narrowing)
-        << PostInit->getSourceRange()
-        << PreNarrowingType.getLocalUnqualifiedType()
-        << EntityType.getNonReferenceType().getLocalUnqualifiedType();
-    break;
-
-  case NK_Constant_Narrowing:
-    // A constant value was narrowed.
+    QualType T = EntityType.getNonReferenceType();
     S.Diag(PostInit->getBeginLoc(),
            NarrowingErrs(S.getLangOpts())
-               ? diag::ext_init_list_constant_narrowing
+               ? (T == EntityType
+                      ? diag::ext_init_list_type_narrowing
+                      : diag::ext_init_list_type_narrowing_const_reference)
+               : diag::warn_init_list_type_narrowing)
+        << PostInit->getSourceRange()
+        << PreNarrowingType.getLocalUnqualifiedType()
+        << T.getLocalUnqualifiedType();
+    break;
+  }
+
+  case NK_Constant_Narrowing: {
+    // A constant value was narrowed.
+    QualType T = EntityType.getNonReferenceType();
+    S.Diag(PostInit->getBeginLoc(),
+           NarrowingErrs(S.getLangOpts())
+               ? (T == EntityType
+                      ? diag::ext_init_list_constant_narrowing
+                      : diag::ext_init_list_constant_narrowing_const_reference)
                : diag::warn_init_list_constant_narrowing)
         << PostInit->getSourceRange()
         << ConstantValue.getAsString(S.getASTContext(), ConstantType)
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
+  }
 
-  case NK_Variable_Narrowing:
+  case NK_Variable_Narrowing: {
     // A variable's value may have been narrowed.
+    QualType T = EntityType.getNonReferenceType();
     S.Diag(PostInit->getBeginLoc(),
            NarrowingErrs(S.getLangOpts())
-               ? diag::ext_init_list_variable_narrowing
+               ? (T == EntityType
+                      ? diag::ext_init_list_variable_narrowing
+                      : diag::ext_init_list_variable_narrowing_const_reference)
                : diag::warn_init_list_variable_narrowing)
         << PostInit->getSourceRange()
         << PreNarrowingType.getLocalUnqualifiedType()
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
+  }
   }
 
   SmallString<128> StaticCast;
