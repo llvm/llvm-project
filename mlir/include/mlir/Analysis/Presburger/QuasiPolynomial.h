@@ -40,11 +40,11 @@ public:
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {});
 
   // Find the number of parameters involved in the polynomial.
-  unsigned getNumParams() const { return numParam; }
+  const unsigned &getNumParams() const { return numParam; }
 
-  SmallVector<Fraction> getCoefficients() const { return coefficients; }
+  const SmallVector<Fraction> &getCoefficients() const { return coefficients; }
 
-  std::vector<std::vector<SmallVector<Fraction>>> getAffine() const {
+  const std::vector<std::vector<SmallVector<Fraction>>> &getAffine() const {
     return affine;
   }
 
