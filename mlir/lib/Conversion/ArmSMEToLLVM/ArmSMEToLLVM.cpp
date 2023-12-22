@@ -240,9 +240,9 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto tileOp = cast<arm_sme::ArmSMETileOpInterface>(op);
+    auto tileOp = dyn_cast<arm_sme::ArmSMETileOpInterface>(op);
     // Tile has a real (hardware) tile. No spills/reloads required.
-    if (!tileOp.isInMemoryTile())
+    if (!tileOp || !tileOp.isInMemoryTile())
       return failure();
 
     // Step 1. Create an alloca for the tile at the top of the function (if one
@@ -347,8 +347,29 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
   }
 };
 
-struct GetTileConversion : public ConvertOpToLLVMPattern<arm_sme::GetTileOp> {
-  using ConvertOpToLLVMPattern<arm_sme::GetTileOp>::ConvertOpToLLVMPattern;
+enum class RequiresSpillsAndFills { Yes, No };
+
+/// Base class for ArmSME to LLVM conversion patterns. By default, this  adds
+/// spills and fills around ArmSME ops that use in-memory tile IDs. This can be
+/// disabled by setting the `requiresSpillsAndFills` template parameter to
+/// `RequiresSpillsAndFills::No`.
+template <typename SourceOp, RequiresSpillsAndFills requiresSpillsAndFills =
+                                 RequiresSpillsAndFills::Yes>
+struct ConvertArmSMEOpToLLVMPattern : ConvertOpToLLVMPattern<SourceOp> {
+  using ArmSMEOp = SourceOp;
+  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+
+  static constexpr bool requiresSpillsAndFillsConversion() {
+    return requiresSpillsAndFills == RequiresSpillsAndFills::Yes;
+  }
+};
+
+struct GetTileConversion
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::GetTileOp,
+                                          RequiresSpillsAndFills::No> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::GetTileOp,
+      RequiresSpillsAndFills::No>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::GetTileOp getTile, OpAdaptor,
@@ -374,8 +395,9 @@ struct GetTileConversion : public ConvertOpToLLVMPattern<arm_sme::GetTileOp> {
 ///
 ///  The 'arm_sme.materialize_ssa_tile' (which models the return) will fold away
 ///  once all ArmSME ops have been converted to LLVM intrinsics.
-struct ZeroOpConversion : public ConvertOpToLLVMPattern<arm_sme::ZeroOp> {
-  using ConvertOpToLLVMPattern<arm_sme::ZeroOp>::ConvertOpToLLVMPattern;
+struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::ZeroOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::ZeroOp zero, OpAdaptor adaptor,
@@ -451,9 +473,9 @@ struct ZeroOpConversion : public ConvertOpToLLVMPattern<arm_sme::ZeroOp> {
 
 /// Lower `arm_sme.load_tile_slice` to SME intrinsics.
 struct LoadTileSliceConversion
-    : public ConvertOpToLLVMPattern<arm_sme::LoadTileSliceOp> {
-  using ConvertOpToLLVMPattern<
-      arm_sme::LoadTileSliceOp>::ConvertOpToLLVMPattern;
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::LoadTileSliceOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::LoadTileSliceOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::LoadTileSliceOp loadTileSliceOp,
@@ -495,9 +517,9 @@ struct LoadTileSliceConversion
 
 /// Lower for `arm_sme.store_tile_slice` to SME intrinsics.
 struct StoreTileSliceConversion
-    : public ConvertOpToLLVMPattern<arm_sme::StoreTileSliceOp> {
-  using ConvertOpToLLVMPattern<
-      arm_sme::StoreTileSliceOp>::ConvertOpToLLVMPattern;
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::StoreTileSliceOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::StoreTileSliceOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::StoreTileSliceOp storeTileSliceOp,
@@ -537,9 +559,9 @@ struct StoreTileSliceConversion
 
 /// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics.
 struct MoveVectorToTileSliceConversion
-    : public ConvertOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
-  using ConvertOpToLLVMPattern<
-      arm_sme::MoveVectorToTileSliceOp>::ConvertOpToLLVMPattern;
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::MoveVectorToTileSliceOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::MoveVectorToTileSliceOp moveVectorToTileSliceOp,
@@ -591,9 +613,9 @@ struct MoveVectorToTileSliceConversion
 
 /// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics.
 struct MoveTileSliceToVectorConversion
-    : public ConvertOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
-  using ConvertOpToLLVMPattern<
-      arm_sme::MoveTileSliceToVectorOp>::ConvertOpToLLVMPattern;
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::MoveTileSliceToVectorOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::MoveTileSliceToVectorOp moveTileSliceToVector,
@@ -653,8 +675,9 @@ struct MoveTileSliceToVectorConversion
 ///
 /// Currently only supports FMOPA and BFMOPA (non-widening).
 struct OuterProductOpConversion
-    : public ConvertOpToLLVMPattern<arm_sme::OuterProductOp> {
-  using ConvertOpToLLVMPattern<arm_sme::OuterProductOp>::ConvertOpToLLVMPattern;
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::OuterProductOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      arm_sme::OuterProductOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::OuterProductOp outerProductOp,
@@ -748,8 +771,9 @@ struct OuterProductOpConversion
 ///   %0 = arith.index_cast %cnt : i64 to index
 ///
 struct StreamingVLOpConversion
-    : public ConvertOpToLLVMPattern<arm_sme::StreamingVLOp> {
-  using ConvertOpToLLVMPattern<arm_sme::StreamingVLOp>::ConvertOpToLLVMPattern;
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::StreamingVLOp,
+                                          RequiresSpillsAndFills::No> {
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::StreamingVLOp streamingVlOp,
@@ -794,15 +818,22 @@ struct ConvertArmSMEToLLVMPass
   }
 };
 
-template <typename... TileOp>
-static void addSpillAndFillsForTileOp(RewritePatternSet &patterns,
-                                      LLVMTypeConverter const &typeConverter) {
-  // Add spill/fill conversions with a very high benefit to ensure they are
-  // lowered first.
-  (patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(TileOp::getOperationName(),
-                                                   typeConverter,
-                                                   /*benefit=*/1337),
-   ...);
+template <typename... Pattern>
+static void
+addArmSMEConversionPatterns(RewritePatternSet &patterns,
+                            LLVMTypeConverter const &typeConverter) {
+  (
+      [&] {
+        if (Pattern::requiresSpillsAndFillsConversion()) {
+          // Add spill/fill conversions with a very high benefit to ensure they
+          // are lowered first.
+          patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(
+              Pattern::ArmSMEOp::getOperationName(), typeConverter,
+              /*benefit=*/1337);
+        }
+        patterns.add<Pattern>(typeConverter);
+      }(),
+      ...);
 }
 
 } // namespace
@@ -843,16 +874,11 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
     return std::nullopt;
   });
 
-  // Register ops that need spills/fills.
-  addSpillAndFillsForTileOp<
-      arm_sme::LoadTileSliceOp, arm_sme::MoveTileSliceToVectorOp,
-      arm_sme::MoveVectorToTileSliceOp, arm_sme::StoreTileSliceOp,
-      arm_sme::OuterProductOp, arm_sme::ZeroOp>(patterns, converter);
-
-  patterns.add<LoadTileSliceConversion, MoveTileSliceToVectorConversion,
-               MoveVectorToTileSliceConversion, StoreTileSliceConversion,
-               OuterProductOpConversion, ZeroOpConversion, GetTileConversion,
-               StreamingVLOpConversion>(converter);
+  addArmSMEConversionPatterns<
+      LoadTileSliceConversion, MoveTileSliceToVectorConversion,
+      MoveVectorToTileSliceConversion, StoreTileSliceConversion,
+      OuterProductOpConversion, ZeroOpConversion, GetTileConversion,
+      StreamingVLOpConversion>(patterns, converter);
 }
 
 std::unique_ptr<Pass> mlir::createConvertArmSMEToLLVMPass() {
