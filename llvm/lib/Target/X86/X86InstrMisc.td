@@ -1663,8 +1663,8 @@ let Predicates = [HasPREFETCHI, In64BitMode], SchedRW = [WriteLoad] in {
 // CMPCCXADD Instructions
 //
 let isCodeGenOnly = 1, ForceDisassemble = 1, mayLoad = 1, mayStore = 1,
-    Predicates = [HasCMPCCXADD, In64BitMode], Defs = [EFLAGS],
-    Constraints = "$dstsrc1 = $dst" in {
+    Defs = [EFLAGS], Constraints = "$dstsrc1 = $dst" in {
+let Predicates = [HasCMPCCXADD, NoEGPR, In64BitMode] in {
 def CMPCCXADDmr32 : I<0xe0, MRMDestMem4VOp3CC, (outs GR32:$dst),
           (ins GR32:$dstsrc1, i32mem:$dstsrc2, GR32:$src3, ccode:$cond),
           "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
@@ -1678,6 +1678,23 @@ def CMPCCXADDmr64 : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
           [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
             GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
           VEX, VVVV, REX_W, T8PD, Sched<[WriteXCHG]>;
+}
+
+let Predicates = [HasCMPCCXADD, HasEGPR, In64BitMode] in {
+def CMPCCXADDmr32_EVEX : I<0xe0, MRMDestMem4VOp3CC, (outs GR32:$dst),
+          (ins GR32:$dstsrc1, i32mem:$dstsrc2, GR32:$src3, ccode:$cond),
+          "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+          [(set GR32:$dst, (X86cmpccxadd addr:$dstsrc2,
+            GR32:$dstsrc1, GR32:$src3, timm:$cond))]>,
+          EVEX, VVVV, NoCD8, T8PD, Sched<[WriteXCHG]>;
+
+def CMPCCXADDmr64_EVEX : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
+          (ins GR64:$dstsrc1, i64mem:$dstsrc2, GR64:$src3, ccode:$cond),
+          "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+          [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
+            GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
+          EVEX, VVVV, NoCD8, REX_W, T8PD, Sched<[WriteXCHG]>;
+}
 }
 
 //===----------------------------------------------------------------------===//
