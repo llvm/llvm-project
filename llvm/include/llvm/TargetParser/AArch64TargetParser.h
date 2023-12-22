@@ -175,6 +175,7 @@ enum ArchExtKind : unsigned {
   AEK_SMEFA64 =       71, // FEAT_SME_FA64
   AEK_CPA =           72, // FEAT_CPA
   AEK_PAUTHLR =       73, // FEAT_PAuth_LR
+  AEK_TLBIW =         74, // FEAT_TLBIW
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -299,6 +300,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme-fa64",  AArch64::AEK_SMEFA64,  "+sme-fa64", "-sme-fa64",  FEAT_INIT, "", 0},
     {"cpa", AArch64::AEK_CPA, "+cpa", "-cpa", FEAT_INIT, "", 0},
     {"pauth-lr", AArch64::AEK_PAUTHLR, "+pauth-lr", "-pauth-lr", FEAT_INIT, "", 0},
+    {"tlbiw", AArch64::AEK_TLBIW, "+tlbiw", "-tlbiw", FEAT_INIT, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };
