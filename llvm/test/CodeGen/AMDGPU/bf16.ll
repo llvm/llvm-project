@@ -9716,7 +9716,8 @@ define amdgpu_ps i32 @s_fabs_bf16(bfloat inreg %a) {
   %op = call bfloat @llvm.fabs.bf16(bfloat %a)
   %cast = bitcast bfloat %op to i16
   %zext = zext i16 %cast to i32
-  ret i32 %zext
+  %readlane = call i32 @llvm.amdgcn.readfirstlane(i32 %zext)
+  ret i32 %readlane
 }
 
 define bfloat @v_fneg_bf16(bfloat %a) {
