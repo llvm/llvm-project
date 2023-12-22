@@ -1946,3 +1946,8 @@ def : RWSysReg<"MDSTEPOP_EL1",      0b10, 0b000, 0b0000, 0b0101, 0b010>;
 // v9.5a System PMU zero register (FEAT_SPMU2)
 //                                  Op0   Op1    CRn     CRm     Op2
 def : WOSysReg<"SPMZR_EL0",         0b10, 0b011, 0b1001, 0b1100, 0b100>;
+
+// v9.5a Delegated SError exceptions for EL3 (FEAT_E3DSE)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"VDISR_EL3",         0b11, 0b110, 0b1100, 0b0001, 0b001>;
+def : RWSysReg<"VSESR_EL3",         0b11, 0b110, 0b0101, 0b0010, 0b011>;
