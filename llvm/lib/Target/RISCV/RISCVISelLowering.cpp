@@ -16008,14 +16008,13 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           static_cast<RISCVII::VLMUL>(Op.getConstantOperandVal(HasAVL + 2));
       unsigned SEW = RISCVVType::decodeVSEW(VSEW);
       auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMUL);
-      unsigned VLenMax = Subtarget.getRealMaxVLen();
-      uint64_t MaxVL = VLenMax / SEW;
-      if (Fractional)
-        MaxVL /= LMul;
-      else
-        MaxVL *= LMul;
+      uint64_t MaxVL = Subtarget.getRealMaxVLen() / SEW;
+      MaxVL = (Fractional) ? MaxVL / LMul : MaxVL * LMul;
+
+      // Result of vsetvli must be not larger than AVL.
       if (HasAVL && isa<ConstantSDNode>(Op.getOperand(1)))
         MaxVL = std::min(MaxVL, Op.getConstantOperandVal(1));
+
       unsigned KnownZeroFirstBit = Log2_32(MaxVL) + 1;
       if (BitWidth > KnownZeroFirstBit)
         Known.Zero.setBitsFrom(KnownZeroFirstBit);
