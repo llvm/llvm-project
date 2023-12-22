@@ -14,8 +14,8 @@
 #include <cassert>
 #include <ranges>
 
-#include "test.h"
 #include "test_iterators.h"
+#include "types.h"
 
 template <typename T>
 concept hasLValueQualifiedBase = requires(T&& t) { t.base(); };

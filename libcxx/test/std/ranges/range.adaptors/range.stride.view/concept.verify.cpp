@@ -13,9 +13,9 @@
 
 #include "__ranges/stride_view.h"
 #include "almost_satisfies_types.h"
-#include "test.h"
 #include "test_iterators.h"
 #include "test_range.h"
+#include "types.h"
 
 // Ensure that the InputRangeNotIndirectlyReadable is a valid range.
 static_assert(std::ranges::range<InputRangeNotIndirectlyReadable>);

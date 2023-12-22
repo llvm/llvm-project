@@ -14,7 +14,7 @@
 
 #include <ranges>
 
-#include "../test.h"
+#include "../types.h"
 #include "test_iterators.h"
 
 struct NotSimpleViewIterBegin : InputIterBase<NotSimpleViewIterBegin> {};
