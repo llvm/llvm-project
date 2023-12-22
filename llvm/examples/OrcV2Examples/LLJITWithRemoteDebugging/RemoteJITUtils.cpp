@@ -27,22 +27,6 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-Error addDebugSupport(ObjectLayer &ObjLayer) {
-  ExecutionSession &ES = ObjLayer.getExecutionSession();
-  auto Registrar = createJITLoaderGDBRegistrar(ES);
-  if (!Registrar)
-    return Registrar.takeError();
-
-  auto *ObjLinkingLayer = cast<ObjectLinkingLayer>(&ObjLayer);
-  if (!ObjLinkingLayer)
-    return createStringError(inconvertibleErrorCode(),
-                             "No debug support for given object layer type");
-
-  ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-      ES, std::move(*Registrar), true, true));
-  return Error::success();
-}
-
 Expected<std::unique_ptr<DefinitionGenerator>>
 loadDylib(ExecutionSession &ES, StringRef RemotePath) {
   if (auto Handle = ES.getExecutorProcessControl().loadDylib(RemotePath.data()))
