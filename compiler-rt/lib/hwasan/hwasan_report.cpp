@@ -228,6 +228,8 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         tag_t obj_tag = base_tag ^ local.tag_offset;
         if (obj_tag != addr_tag)
           continue;
+        // Guess top bits of local variable from the faulting address, because
+        // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
         uptr local_beg = (fp + local.frame_offset) |
                          (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
         uptr local_end = local_beg + local.size;
@@ -776,8 +778,6 @@ void BaseReport::PrintAddressDescription() const {
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
   for (const auto &sa : allocations.stack) {
-    // TODO(fmayer): figure out how to distinguish use-after-return and
-    // stack-buffer-overflow.
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());

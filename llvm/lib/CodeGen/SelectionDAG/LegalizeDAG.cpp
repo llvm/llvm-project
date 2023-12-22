@@ -5352,6 +5352,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
+  case ISD::FCANONICALIZE:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(
