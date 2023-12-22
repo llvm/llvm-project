@@ -2,7 +2,6 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=MLIR
 // RUN: cir-translate %s -cir-to-llvmir -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// XFAIL: *
 
 !void = !cir.void
 !s16i = !cir.int<s, 16>
