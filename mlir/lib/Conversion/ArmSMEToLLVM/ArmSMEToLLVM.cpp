@@ -270,7 +270,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     // touches (i.e. a single tile slice).
     {
       rewriter.setInsertionPoint(op);
-      // Swap the in-memory tile's contents into ZA before the op.
+      // Swap the contents of ZA and the in-memory tile before the op.
       emitTileSwap();
       rewriter.setInsertionPointAfter(op);
       // Swap the tile back out to memory again after the op.
@@ -818,6 +818,7 @@ struct ConvertArmSMEToLLVMPass
   }
 };
 
+/// Helper to register `ConvertArmSMEOpToLLVMPattern` patterns.
 template <typename... Pattern>
 static void
 addArmSMEConversionPatterns(RewritePatternSet &patterns,

@@ -235,8 +235,8 @@ struct AssignTileIDsPattern
     if (!tileIsInMemory)
       setDiscardableIntAttr(kTilesInUseAttr, tilesInUse);
     else {
-      // If we could not find a real tile, set use a virtual tile ID (ID >= 16).
-      // A later pass will insert the necessary spills and reloads.
+      // If we could not find a real tile ID, use an in-memory tile ID (ID >=
+      // 16). A later pass will insert the necessary spills and reloads.
       tileId =
           getDiscardableIntAttr(kNextInMemoryTileIdAttr, kInMemoryTileIdBase);
       setDiscardableIntAttr(kNextInMemoryTileIdAttr, *tileId + 1);
