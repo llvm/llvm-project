@@ -14,8 +14,8 @@
 
 #include "__iterator/concepts.h"
 #include "__ranges/concepts.h"
-#include "test.h"
 #include "test_iterators.h"
+#include "types.h"
 
 template <class View, class T>
 concept CanBePiped = requires(View&& view, T&& t) {

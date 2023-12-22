@@ -13,7 +13,7 @@
 
 #include <ranges>
 
-#include "../test.h"
+#include "../types.h"
 #include "test_iterators.h"
 
 struct NonDefaultConstructibleIterator : InputIterBase<NonDefaultConstructibleIterator> {
@@ -31,10 +31,9 @@ inline constexpr bool std::ranges::enable_borrowed_range<ViewWithNonDefaultConst
 // If the type of the iterator of the range being strided is non-default
 // constructible, then the stride view's iterator should not be default
 // constructible, either!
-static_assert(!std::is_default_constructible<
-              std::ranges::iterator_t<ViewWithNonDefaultConstructibleIterator>>());
+static_assert(!std::is_default_constructible< std::ranges::iterator_t<ViewWithNonDefaultConstructibleIterator>>());
 // If the type of the iterator of the range being strided is default
 // constructible, then the stride view's iterator should be default
 // constructible, too!
-static_assert(std::is_default_constructible<std::ranges::iterator_t<
-                  std::ranges::stride_view<std::ranges::ref_view<const int[3]>>>>());
+static_assert(std::is_default_constructible<
+              std::ranges::iterator_t< std::ranges::stride_view<std::ranges::ref_view<const int[3]>>>>());

@@ -12,9 +12,9 @@
 
 #include <type_traits>
 
-#include "test.h"
 #include "test_convertible.h"
 #include "test_iterators.h"
+#include "types.h"
 
 // There is no default ctor for stride_view.
 using View = InputView<cpp17_input_iterator<int*>>;
