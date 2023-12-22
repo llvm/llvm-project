@@ -643,6 +643,14 @@ defm : TLBI<"PAALLOS",      0b110, 0b1000, 0b0001, 0b100, 0>;
 defm : TLBI<"PAALL",        0b110, 0b1000, 0b0111, 0b100, 0>;
 }
 
+// Armv9.5-A TLBI VMALL for Dirty State
+let Requires = ["AArch64::FeatureTLBIW"] in {
+//                           op1,   CRn,    CRm,    op2,   needsreg
+defm : TLBI<"VMALLWS2E1",    0b100, 0b1000, 0b0110, 0b010, 0>;
+defm : TLBI<"VMALLWS2E1IS",  0b100, 0b1000, 0b0010, 0b010, 0>;
+defm : TLBI<"VMALLWS2E1OS",  0b100, 0b1000, 0b0101, 0b010, 0>;
+}
+
 //===----------------------------------------------------------------------===//
 // MRS/MSR (system register read/write) instruction options.
 //===----------------------------------------------------------------------===//
@@ -1951,3 +1959,17 @@ def : WOSysReg<"SPMZR_EL0",         0b10, 0b011, 0b1001, 0b1100, 0b100>;
 //                                  Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"VDISR_EL3",         0b11, 0b110, 0b1100, 0b0001, 0b001>;
 def : RWSysReg<"VSESR_EL3",         0b11, 0b110, 0b0101, 0b0010, 0b011>;
+
+// v9.5a Hardware Dirty State Tracking Structure (FEAT_HDBSS)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"HDBSSBR_EL2",       0b11, 0b100, 0b0010, 0b0011, 0b010>;
+def : RWSysReg<"HDBSSPROD_EL2",     0b11, 0b100, 0b0010, 0b0011, 0b011>;
+
+// v9.5a Hardware Accelerator for Cleaning Dirty State (FEAT_HACDBS)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"HACDBSBR_EL2",      0b11, 0b100, 0b0010, 0b0011, 0b100>;
+def : RWSysReg<"HACDBSCONS_EL2",    0b11, 0b100, 0b0010, 0b0011, 0b101>;
+
+// v9.5a Fine Grained Write Trap EL3 (FEAT_FGWTE3)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"FGWTE3_EL3",        0b11, 0b110, 0b0001, 0b0001, 0b101>;
