@@ -779,8 +779,6 @@ void BaseReport::PrintAddressDescription() const {
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
   for (const auto &sa : allocations.stack) {
-    // TODO(fmayer): figure out how to distinguish use-after-return and
-    // stack-buffer-overflow.
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
