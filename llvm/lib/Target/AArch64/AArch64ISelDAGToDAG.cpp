@@ -6834,10 +6834,10 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1udq:
-  case Intrinsic::aarch64_sve_st1udq:
+  case Intrinsic::aarch64_sve_st1dq:
     return EVT(MVT::nxv1i64);
   case Intrinsic::aarch64_sve_ld1uwq:
-  case Intrinsic::aarch64_sve_st1uwq:
+  case Intrinsic::aarch64_sve_st1wq:
     return EVT(MVT::nxv1i32);
   }
 }

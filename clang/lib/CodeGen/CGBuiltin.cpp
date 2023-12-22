@@ -9681,8 +9681,8 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   bool IsQuadStore = false;
 
   switch (IntrinsicID) {
-  case Intrinsic::aarch64_sve_st1uwq:
-  case Intrinsic::aarch64_sve_st1udq:
+  case Intrinsic::aarch64_sve_st1wq:
+  case Intrinsic::aarch64_sve_st1dq:
     AddrMemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
     PredTy =
         llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
