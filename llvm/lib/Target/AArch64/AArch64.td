@@ -630,6 +630,9 @@ def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
 def FeaturePAuthLR : SubtargetFeature<"pauth-lr", "HasPAuthLR",
     "true", "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
 
+def FeatureTLBIW : SubtargetFeature<"tlbiw", "HasTLBIW", "true",
+  "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

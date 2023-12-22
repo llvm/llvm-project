@@ -977,9 +977,19 @@ def TuneLUIADDIFusion
 def TuneAUIPCADDIFusion
     : SubtargetFeature<"auipc-addi-fusion", "HasAUIPCADDIFusion",
                        "true", "Enable AUIPC+ADDI macrofusion">;
-def TuneShiftedZExtFusion
-    : SubtargetFeature<"shifted-zext-fusion", "HasShiftedZExtFusion",
-                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension">;
+
+def TuneZExtHFusion
+    : SubtargetFeature<"zexth-fusion", "HasZExtHFusion",
+                       "true", "Enable SLLI+SRLI to be fused to zero extension of halfword">;
+
+def TuneZExtWFusion
+    : SubtargetFeature<"zextw-fusion", "HasZExtWFusion",
+                       "true", "Enable SLLI+SRLI to be fused to zero extension of word">;
+
+def TuneShiftedZExtWFusion
+    : SubtargetFeature<"shifted-zextw-fusion", "HasShiftedZExtWFusion",
+                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension of word">;
+
 def TuneLDADDFusion
     : SubtargetFeature<"ld-add-fusion", "HasLDADDFusion",
                        "true", "Enable LD+ADD macrofusion.">;
@@ -1001,12 +1011,8 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
 
-def TuneVeyronFusions : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [TuneLUIADDIFusion,
-                                          TuneAUIPCADDIFusion,
-                                          TuneShiftedZExtFusion,
-                                          TuneLDADDFusion]>;
+def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana Veyron-Series processors">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

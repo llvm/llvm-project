@@ -7826,6 +7826,18 @@ ExpectedStmt ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
         *ToLParenLocOrErr, OCE->getBridgeKind(), E->getCastKind(),
         *ToBridgeKeywordLocOrErr, ToTypeInfoAsWritten, ToSubExpr);
   }
+  case Stmt::BuiltinBitCastExprClass: {
+    auto *BBC = cast<BuiltinBitCastExpr>(E);
+    ExpectedSLoc ToKWLocOrErr = import(BBC->getBeginLoc());
+    if (!ToKWLocOrErr)
+      return ToKWLocOrErr.takeError();
+    ExpectedSLoc ToRParenLocOrErr = import(BBC->getEndLoc());
+    if (!ToRParenLocOrErr)
+      return ToRParenLocOrErr.takeError();
+    return new (Importer.getToContext()) BuiltinBitCastExpr(
+        ToType, E->getValueKind(), E->getCastKind(), ToSubExpr,
+        ToTypeInfoAsWritten, *ToKWLocOrErr, *ToRParenLocOrErr);
+  }
   default:
     llvm_unreachable("Cast expression of unsupported type!");
     return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -9100,6 +9112,12 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     else
       AI.importAttr(From, false,
                     AI.importArg(From->getAlignmentType()).value());
+    break;
+  }
+
+  case attr::AlignValue: {
+    auto *From = cast<AlignValueAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getAlignment()).value());
     break;
   }
 

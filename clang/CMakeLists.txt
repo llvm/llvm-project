@@ -167,6 +167,23 @@ endif()
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
+# This check requires _GNU_SOURCE on linux
+check_include_file(dlfcn.h CLANG_HAVE_DLFCN_H)
+if( CLANG_HAVE_DLFCN_H )
+  include(CheckLibraryExists)
+  include(CheckSymbolExists)
+  check_library_exists(dl dlopen "" HAVE_LIBDL)
+  if( HAVE_LIBDL )
+    list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
+  endif()
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+  check_symbol_exists(dladdr dlfcn.h CLANG_HAVE_DLADDR)
+  list(REMOVE_ITEM CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+  if( HAVE_LIBDL )
+    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
+  endif()
+endif()
+
 set(CLANG_RESOURCE_DIR "" CACHE STRING
   "Relative directory from the Clang binary to its resource files.")
 
