@@ -1,0 +1,88 @@
+name: "Libc++ Build and Test Action"
+description: "Reusable build and test action for libc++"
+inputs:
+      ref:
+        description: 'LLVM reference to check out'
+        required: false
+        default: 'main'
+      skip_checkout:
+        description: 'Skip checking out llvm-project'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      config:
+        description: 'the run-buildbot target to use'
+        type: str
+        required: true
+      runners:
+        description: 'the runners to use'
+        type: str
+        required: false
+        default: libcxx-runners-8-set
+      cc:
+        description: 'the C compiler to use'
+        type: str
+        required: false
+        default: clang-18
+      cxx:
+        description: 'the C++ compiler to use'
+        type: str
+        required: false
+        default: clang++-18
+      enable_clang_tidy:
+        description: 'whether to enable clang-tidy'
+        type: choice
+        required: false
+        default: ON
+        options:
+            - ON
+            - OFF
+      enable_std_modules:
+        description: 'whether to enable std modules'
+        type: choice
+        required: false
+        default: ON
+        options:
+            - ON
+            - OFF
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout llvm-project
+      if: github.event.inputs.skip_checkout == 'false'
+      uses: actions/checkout@v4
+      with:
+        repository: llvm/llvm-project
+        ref: ${{ github.event.inputs.ref }}
+    - name: run buildbot
+      cmd: libcxx/utils/ci/run-buildbot ${{ github.event.inputs.config }}
+      env:
+          CC: ${{ github.event.inputs.cc }}
+          CXX: ${{ github.event.inputs.cxx }}
+          ENABLE_CLANG_TIDY: ${{ github.event.inputs.enable_clang_tidy }}
+          ENABLE_STD_MODULES: ${{ github.event.inputs.enable_std_modules }}
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: ${{ github.events.input.config }}-results
+        path: |
+          **/test-results.xml
+          **/*.abilist
+          **/CMakeError.log
+          **/CMakeOutput.log
+          **/crash_diagnostics/*
+
+
+
+permissions:
+  contents: read # Default everything to read-only
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+
