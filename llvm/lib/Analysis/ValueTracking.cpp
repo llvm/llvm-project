@@ -6289,10 +6289,10 @@ static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
 }
 
 /// Combine constant ranges from computeConstantRange() and computeKnownBits().
-static ConstantRange
-computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
-                                       bool ForSigned,
-                                       const SimplifyQuery &SQ) {
+ConstantRange
+llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
+                                             bool ForSigned,
+                                             const SimplifyQuery &SQ) {
   ConstantRange CR1 =
       ConstantRange::fromKnownBits(V.getKnownBits(SQ), ForSigned);
   ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ.IIQ.UseInstrInfo);
