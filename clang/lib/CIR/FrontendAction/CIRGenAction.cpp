@@ -173,18 +173,21 @@ public:
       std::string lifetimeOpts, idiomRecognizerOpts, libOptOpts;
       if (feOptions.ClangIRLifetimeCheck)
         lifetimeOpts = sanitizePassOptions(feOptions.ClangIRLifetimeCheckOpts);
-      idiomRecognizerOpts =
-          sanitizePassOptions(feOptions.ClangIRIdiomRecognizerOpts);
-      libOptOpts = sanitizePassOptions(feOptions.ClangIRLibOptOpts);
+      if (feOptions.ClangIRIdiomRecognizer)
+        idiomRecognizerOpts =
+            sanitizePassOptions(feOptions.ClangIRIdiomRecognizerOpts);
+      if (feOptions.ClangIRLibOpt)
+        libOptOpts = sanitizePassOptions(feOptions.ClangIRLibOptOpts);
 
       // Setup and run CIR pipeline.
-      bool passOptParsingFailure = false;
+      std::string passOptParsingFailure;
       if (runCIRToCIRPasses(
               mlirMod, mlirCtx.get(), C, !feOptions.ClangIRDisableCIRVerifier,
-              feOptions.ClangIRLifetimeCheck, lifetimeOpts, idiomRecognizerOpts,
-              libOptOpts, passOptParsingFailure)
+              feOptions.ClangIRLifetimeCheck, lifetimeOpts,
+              feOptions.ClangIRIdiomRecognizer, idiomRecognizerOpts,
+              feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure)
               .failed()) {
-        if (passOptParsingFailure)
+        if (!passOptParsingFailure.empty())
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)
               << feOptions.ClangIRLifetimeCheckOpts;
         else
