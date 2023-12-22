@@ -325,9 +325,9 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
   InstrSignature MISign = instrToSignature(MI, MAI);
-  if (auto FoundMI = IS.find(MISign); FoundMI != IS.end())
-    return; // Found a duplicate, so don't add it.
-  IS.insert(MISign);
+  auto FoundMI = IS.insert(MISign);
+  if (!FoundMI.second)
+    return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.
   if (Append)
     MAI.MS[MSType].push_back(&MI);
