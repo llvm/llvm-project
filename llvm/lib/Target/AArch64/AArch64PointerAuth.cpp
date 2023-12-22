@@ -74,7 +74,7 @@ static void BuildPACM(const AArch64Subtarget &Subtarget, MachineBasicBlock &MBB,
   if (PACSym) {
     assert(Flags == MachineInstr::FrameDestroy);
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADR))
-        .addReg(AArch64::X16)
+        .addReg(AArch64::X16, RegState::Define)
         .addSym(PACSym);
   }
 
