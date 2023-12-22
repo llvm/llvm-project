@@ -583,26 +583,18 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       return true;
   }
 
-  const auto WrapBeforeName = [&] {
-    // If the return type spans multiple lines, wrap before the function name.
-    if (Current.isNot(TT_FunctionDeclarationName) ||
-        State.Line->ReturnTypeWrapped) {
-      return false;
-    }
-    if (Previous.is(tok::kw_template) || Current.is(tok::kw_operator))
-      return false;
-    if (!CurrentState.BreakBeforeParameter)
-      return false;
-    // Don't break before a C# function when no break after return type.
-    return (!Style.isCSharp() ||
-            Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
-           // Don't always break between a JavaScript `function` and the
-           // function name.
-           !Style.isJavaScript();
-  };
-
-  if (WrapBeforeName())
+  if (Current.is(TT_FunctionDeclarationName) &&
+      !State.Line->ReturnTypeWrapped &&
+      // Don't break before a C# function when no break after return type.
+      (!Style.isCSharp() ||
+       Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
+      // Don't always break between a JavaScript `function` and the function
+      // name.
+      !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
+      CurrentState.BreakBeforeParameter) {
     return true;
+  }
+
   // The following could be precomputed as they do not depend on the state.
   // However, as they should take effect only if the UnwrappedLine does not fit
   // into the ColumnLimit, they are checked here in the ContinuationIndenter.
