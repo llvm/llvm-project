@@ -392,9 +392,7 @@ addArmSMEConversionPatterns(RewritePatternSet &patterns,
 struct GetTileConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::GetTileOp,
                                           RequiresSpillsAndFills::No> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::GetTileOp,
-      RequiresSpillsAndFills::No>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::GetTileOp getTile, OpAdaptor,
@@ -421,8 +419,7 @@ struct GetTileConversion
 ///  The 'arm_sme.materialize_ssa_tile' (which models the return) will fold away
 ///  once all ArmSME ops have been converted to LLVM intrinsics.
 struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::ZeroOp>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::ZeroOp zero, OpAdaptor adaptor,
@@ -499,8 +496,7 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
 /// Lower `arm_sme.load_tile_slice` to SME intrinsics.
 struct LoadTileSliceConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::LoadTileSliceOp> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::LoadTileSliceOp>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::LoadTileSliceOp loadTileSliceOp,
@@ -543,8 +539,7 @@ struct LoadTileSliceConversion
 /// Lower for `arm_sme.store_tile_slice` to SME intrinsics.
 struct StoreTileSliceConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::StoreTileSliceOp> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::StoreTileSliceOp>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::StoreTileSliceOp storeTileSliceOp,
@@ -585,8 +580,7 @@ struct StoreTileSliceConversion
 /// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics.
 struct MoveVectorToTileSliceConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::MoveVectorToTileSliceOp>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::MoveVectorToTileSliceOp moveVectorToTileSliceOp,
@@ -639,8 +633,7 @@ struct MoveVectorToTileSliceConversion
 /// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics.
 struct MoveTileSliceToVectorConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::MoveTileSliceToVectorOp>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::MoveTileSliceToVectorOp moveTileSliceToVector,
@@ -701,8 +694,7 @@ struct MoveTileSliceToVectorConversion
 /// Currently only supports FMOPA and BFMOPA (non-widening).
 struct OuterProductOpConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::OuterProductOp> {
-  using ConvertArmSMEOpToLLVMPattern<
-      arm_sme::OuterProductOp>::ConvertArmSMEOpToLLVMPattern;
+  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arm_sme::OuterProductOp outerProductOp,
