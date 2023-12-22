@@ -21,6 +21,8 @@ char *buggy(int b) {
 int main() {
   char *p = buggy(1);
   // CHECK: Potentially referenced stack objects:
+  // CHECK-NEXT: use-after-scope
+  // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a 64-byte region
   // CHECK-NEXT: c in buggy
   p[0] = 0;
 }

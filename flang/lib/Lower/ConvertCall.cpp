@@ -13,6 +13,7 @@
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
+#include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
@@ -165,20 +166,28 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   // will be used only if there is no explicit length in the local interface).
   mlir::Value funcPointer;
   mlir::Value charFuncPointerLength;
-  if (const Fortran::semantics::Symbol *sym =
-          caller.getIfIndirectCallSymbol()) {
-    funcPointer = fir::getBase(converter.getSymbolExtendedValue(*sym, &symMap));
-    if (!funcPointer)
-      fir::emitFatalError(loc, "failed to find indirect call symbol address");
-    if (fir::isCharacterProcedureTuple(funcPointer.getType(),
-                                       /*acceptRawFunc=*/false))
-      std::tie(funcPointer, charFuncPointerLength) =
-          fir::factory::extractCharacterProcedureTuple(builder, loc,
-                                                       funcPointer);
-    // Reference to a procedure pointer. Load its value, the address of the
-    // procedure it points to.
-    if (Fortran::semantics::IsProcedurePointer(sym))
-      funcPointer = builder.create<fir::LoadOp>(loc, funcPointer);
+  if (const Fortran::evaluate::ProcedureDesignator *procDesignator =
+          caller.getIfIndirectCall()) {
+    if (mlir::Value passedArg = caller.getIfPassedArg()) {
+      // Procedure pointer component call with PASS argument. To avoid
+      // "double" lowering of the ComponentRef, semantics only place the
+      // ComponentRef in the ActualArguments, not in the ProcedureDesignator (
+      // that is only the component symbol).
+      // Fetch the passed argument and addresses of its procedure pointer
+      // component.
+      funcPointer = Fortran::lower::derefPassProcPointerComponent(
+          loc, converter, *procDesignator, passedArg, symMap, stmtCtx);
+    } else {
+      Fortran::lower::SomeExpr expr{*procDesignator};
+      fir::ExtendedValue loweredProc =
+          converter.genExprAddr(loc, expr, stmtCtx);
+      funcPointer = fir::getBase(loweredProc);
+      // Dummy procedure may have assumed length, in which case the result
+      // length was passed along the dummy procedure.
+      // This is not possible with procedure pointer components.
+      if (const fir::CharBoxValue *charBox = loweredProc.getCharBox())
+        charFuncPointerLength = charBox->getLen();
+    }
   }
 
   mlir::IndexType idxTy = builder.getIndexType();

@@ -25,7 +25,6 @@
 
 #include <functional>
 #include <memory>
-#include <shared_mutex>
 #include <string>
 
 struct __tgt_device_image;

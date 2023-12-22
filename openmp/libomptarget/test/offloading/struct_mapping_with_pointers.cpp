@@ -4,6 +4,9 @@
 
 // REQUIRES: libomptarget-debug
 
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -153,7 +153,7 @@ func.func @foo(%lb: index, %ub: index, %step: index) {
   // expected-remark @below {{loop-like}}
   scf.parallel (%i) = (%lb) to (%ub) step (%step) {
     func.call @callee() : () -> ()
-    scf.yield
+    scf.reduce
   }
   // expected-remark @below {{loop-like}}
   scf.forall (%i) in (%ub) {

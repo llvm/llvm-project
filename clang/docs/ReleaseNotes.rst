@@ -253,7 +253,7 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 * ``-fassume-nothrow-exception-dtor`` is added to assume that the destructor of
-  an thrown exception object will not throw. The generated code for catch
+  a thrown exception object will not throw. The generated code for catch
   handlers will be smaller. A throw expression of a type with a
   potentially-throwing destructor will lead to an error.
 
@@ -686,6 +686,9 @@ Bug Fixes in This Version
 - Fix an issue where clang doesn't respect detault template arguments that
   are added in a later redeclaration for CTAD.
   Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
+- Fix an issue where CTAD fails for explicit type conversion.
+  Fixes (#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

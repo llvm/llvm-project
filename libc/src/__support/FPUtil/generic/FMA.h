@@ -128,9 +128,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   y_exp += y_bits.get_biased_exponent();
   z_exp += z_bits.get_biased_exponent();
 
-  if (LIBC_UNLIKELY(x_exp == FPBits::MAX_EXPONENT ||
-                    y_exp == FPBits::MAX_EXPONENT ||
-                    z_exp == FPBits::MAX_EXPONENT))
+  if (LIBC_UNLIKELY(x_exp == FPBits::MAX_BIASED_EXPONENT ||
+                    y_exp == FPBits::MAX_BIASED_EXPONENT ||
+                    z_exp == FPBits::MAX_BIASED_EXPONENT))
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
@@ -255,7 +255,7 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
 
   // Finalize the result.
   int round_mode = fputil::quick_get_round();
-  if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_EXPONENT)) {
+  if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_BIASED_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign) ||
         (round_mode == FE_DOWNWARD && !prod_sign)) {

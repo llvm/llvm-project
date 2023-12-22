@@ -517,9 +517,9 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   FloatBits xbits(x), ybits(y);
 
   uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
   uint32_t y_u = ybits.uintval();
-  uint32_t y_abs = y_u & FloatProp::EXP_MANT_MASK;
+  uint32_t y_abs = ybits.abs().uintval();
 
   ///////// BEGIN - Check exceptional cases ////////////////////////////////////
 

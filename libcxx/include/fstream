@@ -280,6 +280,8 @@ private:
 
   bool __read_mode();
   void __write_mode();
+
+  _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 };
 
 template <class _CharT, class _Traits>

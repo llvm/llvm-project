@@ -66,11 +66,10 @@ class VEX    { Encoding OpEnc = EncVEX; }
 class WIG  { bit IgnoresW = 1; }
 // Special version of REX_W that can be changed to VEX.W==0 for EVEX2VEX.
 class VEX_W1X  { bit hasREX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
-class VEX_4V : VEX { bit hasVEX_4V = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
+class VVVV { bit hasVEX_4V = 1; }
 class EVEX   { Encoding OpEnc = EncEVEX; }
-class EVEX_4V : EVEX { bit hasVEX_4V = 1; }
 class EVEX_K { bit hasEVEX_K = 1; }
 class EVEX_KZ : EVEX_K { bit hasEVEX_Z = 1; }
 class EVEX_B { bit hasEVEX_B = 1; }
@@ -86,9 +85,8 @@ class EVEX_CD8<int esize, CD8VForm form> {
   int CD8_EltSize = !srl(esize, 3);
   bits<3> CD8_Form = form.Value;
 }
-class EVEX_NoCD8 : EVEX { bits<7> CD8_Scale = 0; }
+class NoCD8 { bits<7> CD8_Scale = 0; }
 class XOP { Encoding OpEnc = EncXOP; }
-class XOP_4V : XOP { bit hasVEX_4V = 1; }
 class EVEX2VEXOverride<string VEXInstrName> {
   string EVEX2VEXOverride = VEXInstrName;
 }
@@ -116,6 +114,14 @@ class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
 class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
 class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }
+class DefEFLAGS { list<Register> Defs = [EFLAGS]; }
+class UseEFLAGS { list<Register> Uses = [EFLAGS]; }
+class DisassembleOnly {
+  // The disassembler should know about this, but not the asmparser.
+  bit isCodeGenOnly = 1;
+  bit ForceDisassemble = 1;
+}
+
 
 // SchedModel info for instruction that loads one value and gets the second
 // (and possibly third) value from a register.
@@ -139,7 +145,7 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
                   Operand immoperand, SDPatternOperator immoperator,
                   SDPatternOperator immnosuoperator, Operand imm8operand,
                   SDPatternOperator imm8operator, SDPatternOperator imm8nosuoperator,
-                  bit hasOddOpcode, OperandSize opSize,
+                  bit hasEvenOpcode, OperandSize opSize,
                   bit hasREX_W> {
   /// VT - This is the value type itself.
   ValueType VT = vt;
@@ -189,10 +195,10 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
 
   SDPatternOperator Imm8NoSuOperator = imm8nosuoperator;
 
-  /// HasOddOpcode - This bit is true if the instruction should have an odd (as
-  /// opposed to even) opcode.  Operations on i8 are usually even, operations on
-  /// other datatypes are odd.
-  bit HasOddOpcode = hasOddOpcode;
+  /// HasEvenOpcode - This bit is true if the instruction should have an even (as
+  /// opposed to odd) opcode.  Operations on i8 are even, operations on
+  /// other datatypes are usually odd.
+  bit HasEvenOpcode = hasEvenOpcode;
 
   /// OpSize - Selects whether the instruction needs a 0x66 prefix based on
   /// 16-bit vs 32-bit mode. i8/i64 set this to OpSizeFixed. i16 sets this
@@ -208,16 +214,16 @@ def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
 
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem, Imm8, i8imm,
                        imm_su, imm, i8imm, invalid_node, invalid_node,
-                       0, OpSizeFixed, 0>;
+                       1, OpSizeFixed, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem, Imm16, i16imm,
                        imm_su, imm, i16i8imm, i16immSExt8_su, i16immSExt8,
-                       1, OpSize16, 0>;
+                       0, OpSize16, 0>;
 def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem, Imm32, i32imm,
                        imm_su, imm, i32i8imm, i32immSExt8_su, i32immSExt8,
-                       1, OpSize32, 0>;
+                       0, OpSize32, 0>;
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem, Imm32S, i64i32imm,
                       i64immSExt32_su, i64immSExt32, i64i8imm, i64immSExt8_su,
-                      i64immSExt8, 1, OpSizeFixed, 1>;
+                      i64immSExt8, 0, OpSizeFixed, 1>;
 
 // Group template arguments that can be derived from the vector type (EltNum x
 // EltVT).  These are things like the register class for the writemask, etc.
@@ -852,7 +858,7 @@ class AVX512PI<bits<8> o, Format F, dag outs, dag ins, string asm,
 class AVX512FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        EVEX_4V, Requires<[HasAVX512]>;
+        EVEX, VVVV, Requires<[HasAVX512]>;
 
 class AVX512<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
@@ -881,29 +887,29 @@ class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoVLX]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA, NoFMA4, NoVLX]>;
 class FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoAVX512]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA, NoFMA4, NoAVX512]>;
 class FMA3S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
                 list<dag>pattern>
       : I<o, F, outs, ins, asm, pattern>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA, NoAVX512]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA, NoAVX512]>;
 
 // FMA4 Instruction Templates
 class FMA4<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4, NoVLX]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA4, NoVLX]>;
 class FMA4S<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4, NoAVX512]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA4, NoAVX512]>;
 class FMA4S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
                 list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4]>;
+        VEX, VVVV, FMASC, Requires<[HasFMA4]>;
 
 // XOP 2, 3 and 4 Operand Instruction Template
 class IXOP<bits<8> o, Format F, dag outs, dag ins, string asm,
@@ -926,7 +932,7 @@ class IXOPi8Reg<bits<8> o, Format F, dag outs, dag ins, string asm,
 class IXOP5<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern>
       : Ii8Reg<o, F, outs, ins, asm, pattern, SSEPackedInt>, TAPD,
-        VEX_4V, Requires<[HasXOP]>;
+        VEX, VVVV, Requires<[HasXOP]>;
 
 // X86-64 Instruction templates...
 //
@@ -984,10 +990,11 @@ class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
           string mnemonic, string args, list<dag> pattern>
   : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
-       opcode{3}, opcode{2}, opcode{1}, typeinfo.HasOddOpcode },
-      f, outs, ins,
+       opcode{3}, opcode{2}, opcode{1},
+       !if(!eq(typeinfo.HasEvenOpcode, 1), 0, opcode{0})}, f, outs, ins,
       !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
 
+  let hasSideEffects = 0;
   // Infer instruction prefixes from type info.
   let OpSize = typeinfo.OpSize;
   let hasREX_W  = typeinfo.HasREX_W;
