@@ -73,6 +73,10 @@ T qux(T Generic) {
     async::Future<Units> MustBeUsed;
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: unused local variable 'MustBeUsed' of type 'async::Future<Units>' [bugprone-unused-local-non-trivial-variable]
     PendingA.get();
+    async::Future<T> TemplateType;
+    // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: unused local variable 'TemplateType' of type 'async::Future<T>' [bugprone-unused-local-non-trivial-variable]
+    a::Future<T> AliasTemplateType;
+    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unused local variable 'AliasTemplateType' of type 'a::Future<T>' (aka 'Future<type-parameter-0-0>') [bugprone-unused-local-non-trivial-variable]
     return Generic;
 }
 
