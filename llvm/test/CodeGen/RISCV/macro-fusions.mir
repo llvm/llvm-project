@@ -41,7 +41,7 @@ body:             |
 # CHECK: slli_srli_shifted_zext
 # CHECK: Macro fuse: {{.*}}SLLI - SRLI
 ---
-name: shifted_zext
+name: slli_srli_shifted_zext
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
@@ -58,7 +58,7 @@ body:             |
 # CHECK: slli_srli_zexth
 # CHECK: Macro fuse: {{.*}}SLLI - SRLI
 ---
-name: zexth
+name: slli_srli_zexth
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
@@ -75,7 +75,7 @@ body:             |
 # CHECK: slli_srli_zextw
 # CHECK: Macro fuse: {{.*}}SLLI - SRLI
 ---
-name: zextw
+name: slli_srli_zextw
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
