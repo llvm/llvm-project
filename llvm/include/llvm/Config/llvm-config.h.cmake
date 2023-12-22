@@ -198,10 +198,4 @@
 /* Define if plugins enabled */
 #cmakedefine LLVM_ENABLE_PLUGINS
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
-
-/* Define if dladdr() is available on this platform. */
-#cmakedefine HAVE_DLADDR ${HAVE_DLADDR}
-
 #endif
