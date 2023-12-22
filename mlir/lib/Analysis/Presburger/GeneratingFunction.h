@@ -54,7 +54,7 @@ public:
                      std::vector<std::vector<Point>> dens)
       : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
     for (const ParamPoint &term : numerators)
-      assert(term.getNumColumns() - 1 == numParam &&
+      assert(term.getNumColumns() == numParam + 1 &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
   }
