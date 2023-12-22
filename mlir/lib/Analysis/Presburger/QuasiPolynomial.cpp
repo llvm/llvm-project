@@ -22,14 +22,14 @@ QuasiPolynomial::QuasiPolynomial(
     unsigned numParam, SmallVector<Fraction> coeffs,
     std::vector<std::vector<SmallVector<Fraction>>> aff)
     : numParam(numParam), coefficients(coeffs), affine(aff) {
-  // Find the first term which involves some affine function.
+  // For each term which involves at least one affine function,
   for (const std::vector<SmallVector<Fraction>> &term : affine) {
     if (term.size() == 0)
       continue;
-    // The number of elements in each affine function is
+    // the number of elements in each affine function is
     // one more than the number of parameters.
     for (const SmallVector<Fraction> &aff : term) {
-      assert(aff.size() - 1 == numParam &&
+      assert(aff.size() == numParam + 1 &&
              "dimensionality of affine functions does not match number of "
              "parameters!");
     }
