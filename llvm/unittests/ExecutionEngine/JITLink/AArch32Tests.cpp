@@ -11,6 +11,8 @@
 
 #include "gtest/gtest.h"
 
+#include "JITLinkAArch32.inc"
+
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::jitlink::aarch32;

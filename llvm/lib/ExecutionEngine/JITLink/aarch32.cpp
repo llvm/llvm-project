@@ -21,6 +21,8 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 
+#include "JITLinkAArch32.inc"
+
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
