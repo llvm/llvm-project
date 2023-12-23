@@ -61,23 +61,6 @@ exit:
 define void @chained_conditions(i64 noundef %a, i64 noundef %b, i64 noundef %c, i64 noundef %d) #0 {
 ; CHECK-LABEL: @chained_conditions(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A:%.*]], 2048
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[B:%.*]], 1024
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i64 [[C:%.*]], 1024
-; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[OR_COND]], [[CMP3]]
-; CHECK-NEXT:    br i1 [[OR_COND1]], label [[IF_END10:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[B]], [[A]]
-; CHECK-NEXT:    [[ADD4:%.*]] = add nuw nsw i64 [[ADD]], [[C]]
-; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp uge i64 [[ADD4]], [[D:%.*]]
-; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp ult i64 [[A]], [[D]]
-; CHECK-NEXT:    [[OR_COND7:%.*]] = or i1 [[CMP5_NOT]], [[CMP8_NOT]]
-; CHECK-NEXT:    br i1 [[OR_COND7]], label [[IF_END10]], label [[IF_THEN9:%.*]]
-; CHECK:       if.then9:
-; CHECK-NEXT:    tail call void @bar()
-; CHECK-NEXT:    br label [[IF_END10]]
-; CHECK:       if.end10:
 ; CHECK-NEXT:    ret void
 ;
 entry:
