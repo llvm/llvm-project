@@ -947,7 +947,7 @@ class NamelessValue:
         return re.search(self.ir_prefix, match[0])[0], self.check_prefix
 
     # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
-    def get_ir_regex_from_ir_value_re_match(self, match):
+    def get_ir_regex(self):
         # for backwards compatibility we check locals with '.*'
         if self.is_local_def_ir_value():
             return ".*"
@@ -988,7 +988,7 @@ class NamelessValue:
             regex = ""  # always capture a number in the default format
             capture_start = "[[#"
         else:
-            regex = self.get_ir_regex_from_ir_value_re_match(match)
+            regex = self.get_ir_regex()
             capture_start = "[["
         if self.is_local_def_ir_value():
             return capture_start + varname + ":" + prefix + regex + "]]"
