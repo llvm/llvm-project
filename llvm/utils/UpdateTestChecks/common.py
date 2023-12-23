@@ -933,7 +933,7 @@ class NamelessValue:
         self.variable_mapping = {}
 
     # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
-    def is_local_def_ir_value_match(self, match):
+    def is_local_def_ir_value(self):
         return self.ir_prefix == "%"
 
     # Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
@@ -949,7 +949,7 @@ class NamelessValue:
     # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
     def get_ir_regex_from_ir_value_re_match(self, match):
         # for backwards compatibility we check locals with '.*'
-        if self.is_local_def_ir_value_match(match):
+        if self.is_local_def_ir_value():
             return ".*"
         return self.ir_regexp
 
@@ -990,7 +990,7 @@ class NamelessValue:
         else:
             regex = self.get_ir_regex_from_ir_value_re_match(match)
             capture_start = "[["
-        if self.is_local_def_ir_value_match(match):
+        if self.is_local_def_ir_value():
             return capture_start + varname + ":" + prefix + regex + "]]"
         return prefix + capture_start + varname + ":" + regex + "]]"
 
@@ -999,7 +999,7 @@ class NamelessValue:
         if var_prefix is None:
             var_prefix = self.check_prefix
         capture_start = "[[#" if self.is_number else "[["
-        if self.is_local_def_ir_value_match(match):
+        if self.is_local_def_ir_value():
             return capture_start + self.get_value_name(var, var_prefix) + "]]"
         prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
         return prefix + capture_start + self.get_value_name(var, var_prefix) + "]]"
@@ -1209,7 +1209,7 @@ def generalize_check_lines_common(
                 " with scripted FileCheck name." % (var,)
             )
         key = (var, nameless_value.check_key)
-        is_local_def = nameless_value.is_local_def_ir_value_match(match)
+        is_local_def = nameless_value.is_local_def_ir_value()
         if is_local_def and key in vars_seen:
             rv = nameless_value.get_value_use(var, match)
         elif not is_local_def and key in global_vars_seen:
