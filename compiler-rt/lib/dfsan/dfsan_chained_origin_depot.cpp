@@ -19,4 +19,10 @@ static ChainedOriginDepot chainedOriginDepot;
 
 ChainedOriginDepot* GetChainedOriginDepot() { return &chainedOriginDepot; }
 
+void ChainedOriginDepotLockBeforeFork() { chainedOriginDepot.LockAll(); }
+
+void ChainedOriginDepotUnlockAfterFork(bool fork_child) {
+  chainedOriginDepot.UnlockAll();
+}
+
 }  // namespace __dfsan
