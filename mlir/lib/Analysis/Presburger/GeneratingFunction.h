@@ -97,9 +97,17 @@ public:
       }
 
       os << "x^[";
-      for (unsigned j = 0, e = numerators[i].size(); j < e - 1; j++)
-        os << numerators[i][j] << ",";
-      os << numerators[i].back() << "]/";
+      unsigned r = numerators[i].getNumRows();
+      for (unsigned j = 0; j < r - 1; j++) {
+        os << "[";
+        for (unsigned k = 0, c = numerators[i].getNumColumns(); k < c - 1; k++)
+          os << numerators[i].at(j, k) << ",";
+        os << numerators[i].getRow(j).back() << "],";
+      }
+      os << "[";
+      for (unsigned k = 0, c = numerators[i].getNumColumns(); k < c - 1; k++)
+        os << numerators[i].at(r - 1, k) << ",";
+      os << numerators[i].getRow(r - 1).back() << "]]/";
 
       for (const Point &den : denominators[i]) {
         os << "(x^[";
