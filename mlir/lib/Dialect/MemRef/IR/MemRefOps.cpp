@@ -3148,7 +3148,7 @@ void TransposeOp::getAsmResultNames(
   setNameFn(getResult(), "transpose");
 }
 
-/// Build a strided memref type by applying `permutationMap` tp `memRefType`.
+/// Build a strided memref type by applying `permutationMap` to `memRefType`.
 static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
   auto rank = memRefType.getRank();
@@ -3157,18 +3157,14 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
   assert(originalStrides.size() == static_cast<unsigned>(rank));
 
   // Compute permuted sizes and strides.
-  SmallVector<int64_t> sizes(rank, 0);
-  SmallVector<int64_t> strides(rank, 1);
-  for (const auto &en : llvm::enumerate(permutationMap.getResults())) {
-    unsigned position = cast<AffineDimExpr>(en.value()).getPosition();
-    sizes[en.index()] = originalSizes[position];
-    strides[en.index()] = originalStrides[position];
-  }
+  auto sizes = applyPermutationMap<int64_t>(permutationMap, originalSizes);
+  auto strides = applyPermutationMap<int64_t>(permutationMap, originalStrides);
 
-  return MemRefType::Builder(memRefType)
-      .setShape(sizes)
-      .setLayout(
-          StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
+  auto stridedTy = MemRefType::Builder(memRefType)
+                       .setShape(sizes)
+                       .setLayout(StridedLayoutAttr::get(
+                           memRefType.getContext(), offset, strides));
+  return canonicalizeStridedLayout(stridedTy);
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
@@ -3216,18 +3212,34 @@ LogicalResult TransposeOp::verify() {
     return emitOpError("expected a permutation map of same rank as the input");
 
   auto srcType = llvm::cast<MemRefType>(getIn().getType());
-  auto dstType = llvm::cast<MemRefType>(getType());
-  auto transposedType = inferTransposeResultType(srcType, getPermutation());
-  if (dstType != transposedType)
-    return emitOpError("output type ")
-           << dstType << " does not match transposed input type " << srcType
-           << ", " << transposedType;
+  auto canonicalDstType =
+      canonicalizeStridedLayout(llvm::cast<MemRefType>(getType()));
+  auto inferedDstType = inferTransposeResultType(srcType, getPermutation());
+
+  if (canonicalDstType != inferedDstType)
+    return emitOpError("canonicalized output type ")
+           << canonicalDstType
+           << " does not match canonical transposed input type " << srcType
+           << ", " << inferedDstType;
   return success();
 }
 
 OpFoldResult TransposeOp::fold(FoldAdaptor) {
+  // First check for identity permutation, we can fold it away if input and
+  // result types are identical already.
+  if (getPermutation().isIdentity() && getType() == getIn().getType())
+    return getIn();
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
+  // Fold two consecutive memref.transpose Ops into one by composing their
+  // permutation maps.
+  if (auto otherTransposeOp = getIn().getDefiningOp<memref::TransposeOp>()) {
+    AffineMap composedPermutation =
+        otherTransposeOp.getPermutation().compose(getPermutation());
+    getInMutable().assign(otherTransposeOp.getIn());
+    setPermutation(composedPermutation);
+    return getResult();
+  }
   return {};
 }
 
