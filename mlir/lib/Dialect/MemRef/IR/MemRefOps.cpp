@@ -3235,7 +3235,7 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
   // permutation maps.
   if (auto otherTransposeOp = getIn().getDefiningOp<memref::TransposeOp>()) {
     AffineMap composedPermutation =
-        otherTransposeOp.getPermutation().compose(getPermutation());
+        getPermutation().compose(otherTransposeOp.getPermutation());
     getInMutable().assign(otherTransposeOp.getIn());
     setPermutation(composedPermutation);
     return getResult();
