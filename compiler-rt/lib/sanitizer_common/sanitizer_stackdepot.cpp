@@ -215,16 +215,26 @@ StackTrace StackDepotGet(u32 id) {
   return theDepot.Get(id);
 }
 
-void StackDepotLockAll() {
-  theDepot.LockAll();
+void StackDepotLockBeforeFork() {
+  // Do not `theDepot.LockAll()`. It's very slow, but not rely needed. The
+  // parent process will neither lock nor unlock. Child process risks to be
+  // deadlocked on already locked buckets. To avoid deadlock we will unlock
+  // every locked buckets. This may affect consistency of the hash table, but
+  // the only possible issue is a few items inserted by parent process will be
+  // not found by child, and the child may insert them again, wasting some space
+  // in `stackStore`.
   compress_thread.LockAndStop();
   stackStore.LockAll();
 }
 
-void StackDepotUnlockAll() {
+void StackDepotUnlockAfterFork(bool fork_child) {
   stackStore.UnlockAll();
   compress_thread.Unlock();
-  theDepot.UnlockAll();
+  if (fork_child) {
+    // Only child process needs to unlock to avoid deadlock. See
+    // `StackDepotLockAll`.
+    theDepot.UnlockAll();
+  }
 }
 
 void StackDepotPrintAll() {
