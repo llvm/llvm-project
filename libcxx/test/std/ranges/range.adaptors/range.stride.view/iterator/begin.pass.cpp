@@ -13,9 +13,9 @@
 #include <ranges>
 #include <type_traits>
 
+#include "../types.h"
 #include "__iterator/concepts.h"
 #include "test_iterators.h"
-#include "../types.h"
 
 constexpr bool iterator_concept_test() {
   {
