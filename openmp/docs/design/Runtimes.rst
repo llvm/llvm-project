@@ -115,6 +115,19 @@ threads for that level is inherited from the previous level.
 | **Syntax:** ``OMP_NUM_THREADS=value[,value]*``
 | **Example:** ``OMP_NUM_THREADS=4,3``
 
+OMP_NUM_TEAMS_DEV_<device>
+""""""""""""""""""""""""""
+
+Sets the maximum number of teams for a device with ``deviceId`` being ``<device>``. This also sets
+the ICV ``NTeams`` of the device to such value. The value must be nonnegative. If using 
+``void omp_set_num_teams(uint32_t V)`` to update ``NTeams`` ICV, ``V`` has a lower bound of 0 and upper 
+bound of the environment variable's value; if ``V`` is negative, it will be set to 0; if ``V`` is larger
+than the value of ``OMP_NUM_TEAMS_DEV_<device>``, it will be set to that value.
+
+| **Default:** ``0``
+| **Syntax:** ``OMP_NUM_TEAMS_DEV_<device>=value``
+| **Example:** ``OMP_NUM_TEAMS_DEV_4=8`` sets maximum number of teams of device whose ``deviceId`` is 4 to 8.
+
 OMP_PLACES
 """"""""""
 
