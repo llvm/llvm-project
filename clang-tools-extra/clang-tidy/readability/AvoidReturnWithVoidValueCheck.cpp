@@ -1,4 +1,4 @@
-//===--- AvoidReturnWithVoidValueCheck.cpp - clang-tidy -------------===//
+//===--- AvoidReturnWithVoidValueCheck.cpp - clang-tidy -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,8 +24,8 @@ void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
 void AvoidReturnWithVoidValueCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
-  diag(VoidReturn->getBeginLoc(),
-       "return statement in void function should not return a value");
+  diag(VoidReturn->getBeginLoc(), "return statement within a void function "
+                                  "should not have a specified return value");
 }
 
 } // namespace clang::tidy::readability

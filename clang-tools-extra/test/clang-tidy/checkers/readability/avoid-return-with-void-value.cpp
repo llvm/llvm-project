@@ -4,14 +4,14 @@ void f1();
 
 void f2() {
     return f1();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement in void function should not return a value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
 }
 
 void f3(bool b) {
     if (b) return f1();
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: return statement in void function should not return a value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
     return f2();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement in void function should not return a value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
 }
 
 template<class T>
@@ -19,7 +19,7 @@ T f4() {}
 
 void f5() {
     return f4<void>();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement in void function should not return a value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
 }
 
 void f6() { return; }
@@ -30,5 +30,5 @@ int f8() { return f7(); }
 
 void f9() {
     return (void)f7();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement in void function should not return a value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
 }
