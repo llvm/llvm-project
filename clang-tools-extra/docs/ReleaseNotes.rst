@@ -233,9 +233,8 @@ New checks
 - New :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
 
-  Complains about statements returning expressions of type ``void``. It can be
-  confusing if a function returns an expression even though its return type is
-  ``void``.
+  Finds return statements with ``void`` values used within functions with
+  ``void`` result types.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
