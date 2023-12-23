@@ -31,11 +31,9 @@ u32 ChainedOriginDepotGet(u32 id, u32 *other) {
   return chainedOriginDepot.Get(id, other);
 }
 
-void ChainedOriginDepotLockAll() {
-  chainedOriginDepot.LockAll();
-}
+void ChainedOriginDepotBeforeFork() { chainedOriginDepot.LockAll(); }
 
-void ChainedOriginDepotUnlockAll() {
+void ChainedOriginDepotAfterFork(bool fork_child) {
   chainedOriginDepot.UnlockAll();
 }
 
