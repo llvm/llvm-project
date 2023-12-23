@@ -212,14 +212,14 @@ using ValueTable = SmallVector<ValueIDNum, 0>;
 struct FuncValueTable {
   FuncValueTable(int NumBBs, int NumLocs) {
     Storage.reserve(NumBBs);
-    for ([[maybe_unused]] auto _ : llvm::seq(NumBBs))
+    for (int i = 0; i != NumBBs; ++i)
       Storage.push_back(
           std::make_unique<ValueTable>(NumLocs, ValueIDNum::EmptyValue));
   }
 
   /// Returns the ValueTable associated with MBB.
   ValueTable &operator[](const MachineBasicBlock &MBB) const {
-    return this->operator[](MBB.getNumber());
+    return (*this)[MBB.getNumber()];
   }
 
   /// Returns the ValueTable associated with the MachineBasicBlock whose number
@@ -231,7 +231,7 @@ struct FuncValueTable {
   }
 
   /// Returns the ValueTable associated with the entry MachineBasicBlock.
-  ValueTable &tableForEntryMBB() const { return this->operator[](0); }
+  ValueTable &tableForEntryMBB() const { return (*this)[0]; }
 
   /// Returns true if the ValueTable associated with MBB has not been freed.
   bool hasTableFor(MachineBasicBlock &MBB) const {
