@@ -6,6 +6,8 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZBB
 
+#include <riscv_bitmanip.h>
+
 // RV32ZBB-LABEL: @orc_b_32(
 // RV32ZBB-NEXT:  entry:
 // RV32ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.orc.b.i32(i32 [[A:%.*]])
@@ -16,8 +18,8 @@
 // RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.orc.b.i32(i32 [[A:%.*]])
 // RV64ZBB-NEXT:    ret i32 [[TMP0]]
 //
-unsigned int orc_b_32(unsigned int a) {
-  return __builtin_riscv_orc_b_32(a);
+uint32_t orc_b_32(uint32_t a) {
+  return __riscv_orc_b_32(a);
 }
 
 #if __riscv_xlen == 64
@@ -26,8 +28,8 @@ unsigned int orc_b_32(unsigned int a) {
 // RV64ZBB-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.orc.b.i64(i64 [[A:%.*]])
 // RV64ZBB-NEXT:    ret i64 [[TMP0]]
 //
-unsigned long orc_b_64(unsigned long a) {
-  return __builtin_riscv_orc_b_64(a);
+uint64_t orc_b_64(uint64_t a) {
+  return __riscv_orc_b_64(a);
 }
 #endif
 
@@ -41,8 +43,8 @@ unsigned long orc_b_64(unsigned long a) {
 // RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[A:%.*]], i1 false)
 // RV64ZBB-NEXT:    ret i32 [[TMP0]]
 //
-unsigned int clz_32(unsigned int a) {
-  return __builtin_riscv_clz_32(a);
+unsigned int clz_32(uint32_t a) {
+  return __riscv_clz_32(a);
 }
 
 #if __riscv_xlen == 64
@@ -52,8 +54,8 @@ unsigned int clz_32(unsigned int a) {
 // RV64ZBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
 // RV64ZBB-NEXT:    ret i32 [[CAST]]
 //
-unsigned int clz_64(unsigned long a) {
-  return __builtin_riscv_clz_64(a);
+unsigned int clz_64(uint64_t a) {
+  return __riscv_clz_64(a);
 }
 #endif
 
@@ -67,8 +69,8 @@ unsigned int clz_64(unsigned long a) {
 // RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 false)
 // RV64ZBB-NEXT:    ret i32 [[TMP0]]
 //
-unsigned int ctz_32(unsigned int a) {
-  return __builtin_riscv_ctz_32(a);
+unsigned int ctz_32(uint32_t a) {
+  return __riscv_ctz_32(a);
 }
 
 #if __riscv_xlen == 64
@@ -78,7 +80,7 @@ unsigned int ctz_32(unsigned int a) {
 // RV64ZBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP0]] to i32
 // RV64ZBB-NEXT:    ret i32 [[CAST]]
 //
-unsigned int ctz_64(unsigned long a) {
-  return __builtin_riscv_ctz_64(a);
+unsigned int ctz_64(uint64_t a) {
+  return __riscv_ctz_64(a);
 }
 #endif
