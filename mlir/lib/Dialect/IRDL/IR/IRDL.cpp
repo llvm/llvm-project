@@ -119,11 +119,35 @@ LogicalResult AttributesOp::verify() {
 
 LogicalResult BaseOp::verify() {
   std::optional<StringRef> baseName = getBaseName();
-  std::optional<SymbolRefAttr> base = getBaseRef();
-  if (baseName.has_value() == base.has_value())
+  std::optional<SymbolRefAttr> baseRef = getBaseRef();
+  if (baseName.has_value() == baseRef.has_value())
     return emitOpError() << "the base type or attribute should be specified by "
                             "either a name or a reference";
+
+  if (baseName && (baseName->size() == 0 ||
+                   ((*baseName)[0] != '!' && (*baseName)[0] != '#')))
+    return emitOpError() << "the base type or attribute name should start with "
+                            "'!' or '#'";
+
   return success();
+}
+
+LogicalResult BaseOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  std::optional<SymbolRefAttr> baseRef = getBaseRef();
+  if (!baseRef)
+    return success();
+
+  TypeOp typeOp = symbolTable.lookupNearestSymbolFrom<TypeOp>(*this, *baseRef);
+  if (typeOp)
+    return success();
+
+  AttributeOp attrOp =
+      symbolTable.lookupNearestSymbolFrom<AttributeOp>(*this, *baseRef);
+  if (attrOp)
+    return success();
+
+  return emitOpError() << "'" << *baseRef
+                       << "' does not refer to a type or attribute definition";
 }
 
 /// Parse a value with its variadicity first. By default, the variadicity is
