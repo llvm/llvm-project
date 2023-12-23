@@ -14,21 +14,26 @@
 ; ...
 ; CHECK: CU[256]: 0x{{[0-9a-f]*}}
 
-; CHECK: Abbreviation [[ABBREV:0x[0-9a-f]*]]
+; CHECK: Abbreviation [[ABBREV_1BYTE:0x[0-9a-f]*]]
+; CHECK-NEXT: Tag: DW_TAG_variable
+; CHECK-NEXT: DW_IDX_compile_unit: DW_FORM_data1
+; CHECK-NEXT: DW_IDX_die_offset: DW_FORM_ref4
+
+; CHECK: Abbreviation [[ABBREV_2BYTES:0x[0-9a-f]*]]
 ; CHECK-NEXT: Tag: DW_TAG_variable
 ; CHECK-NEXT: DW_IDX_compile_unit: DW_FORM_data2
 ; CHECK-NEXT: DW_IDX_die_offset: DW_FORM_ref4
 
 ; CHECK: String: 0x{{[0-9a-f]*}} "foobar1"
 ; CHECK-NEXT: Entry
-; CHECK-NEXT: Abbrev: [[ABBREV]]
+; CHECK-NEXT: Abbrev: [[ABBREV_1BYTE]]
 ; CHECK-NEXT: Tag: DW_TAG_variable
-; CHECK-NEXT: DW_IDX_compile_unit: 0x0000
+; CHECK-NEXT: DW_IDX_compile_unit: 0x00
 ; CHECK-NEXT: DW_IDX_die_offset: 0x{{[0-9a-f]*}}
 
 ; CHECK: String: 0x{{[0-9a-f]*}} "foobar257"
 ; CHECK-NEXT: Entry
-; CHECK-NEXT: Abbrev: [[ABBREV]]
+; CHECK-NEXT: Abbrev: [[ABBREV_2BYTES]]
 ; CHECK-NEXT: Tag: DW_TAG_variable
 ; CHECK-NEXT: DW_IDX_compile_unit: 0x0100
 ; CHECK-NEXT: DW_IDX_die_offset: 0x{{[0-9a-f]*}}

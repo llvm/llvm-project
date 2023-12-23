@@ -306,18 +306,15 @@ void DwarfStreamer::emitDebugNames(DWARF5AccelTable &Table) {
   }
 
   Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
-  dwarf::Form Form = DIEInteger::BestForm(/*IsSigned*/ false,
-                                          (uint64_t)UniqueIdToCuMap.size() - 1);
   /// llvm-dwarfutil doesn't support type units + .debug_names right now.
   // FIXME: add support for type units + .debug_names. For now the behavior is
   // unsuported.
   emitDWARF5AccelTable(
       Asm.get(), Table, CompUnits,
       [&](const DWARF5AccelTableData &Entry)
-          -> std::optional<DWARF5AccelTable::UnitIndexAndEncoding> {
+          -> std::optional<DWARF5AccelTable::UnitIndex> {
         if (UniqueIdToCuMap.size() > 1)
-          return {{UniqueIdToCuMap[Entry.getUnitID()],
-                   {dwarf::DW_IDX_compile_unit, Form}}};
+          return {{UniqueIdToCuMap[Entry.getUnitID()], false /*IsType*/}};
         return std::nullopt;
       });
 }

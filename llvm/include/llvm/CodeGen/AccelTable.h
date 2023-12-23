@@ -305,9 +305,9 @@ class DWARF5AccelTable : public AccelTable<DWARF5AccelTableData> {
   TUVectorTy TUSymbolsOrHashes;
 
 public:
-  struct UnitIndexAndEncoding {
+  struct UnitIndex {
     unsigned Index;
-    DWARF5AccelTableData::AttributeEncoding Encoding;
+    bool IsType;
   };
   /// Returns type units that were constructed.
   const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }
@@ -366,7 +366,7 @@ void emitDWARF5AccelTable(AsmPrinter *Asm, DWARF5AccelTable &Contents,
 void emitDWARF5AccelTable(
     AsmPrinter *Asm, DWARF5AccelTable &Contents,
     ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
-    llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
+    llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndex>(
         const DWARF5AccelTableData &)>
         getIndexForEntry);
 

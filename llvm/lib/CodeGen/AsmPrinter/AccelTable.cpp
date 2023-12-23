@@ -179,6 +179,120 @@ public:
 #endif
 };
 
+/// Helper enum to encode whether something is a Type or Compile unit (or none)
+/// with the minimal number of bits.
+enum class TypeOrCompileUnit : uint8_t { Compile = 0, Type = 1, None = 2 };
+
+/// Helper enum to encode DW_FORM_data{1,2,4,8} with the minimal number of
+/// bits.
+enum class FormDataLength : uint8_t {
+  Data1 = 0,
+  Data2 = 1,
+  Data4 = 2,
+  Data8 = 3
+};
+
+/// Maps `Index` into the smallest DW_FORM_data{1,2,4,8} that can represent it,
+/// and returns the corresponding `FormDataLength`.
+static FormDataLength getFormForIndex(uint32_t Index) {
+  dwarf::Form Form = DIEInteger::BestForm(false /*IsSigned*/, Index);
+  switch (Form) {
+  case dwarf::Form::DW_FORM_data1:
+    return FormDataLength::Data1;
+  case dwarf::Form::DW_FORM_data2:
+    return FormDataLength::Data2;
+  case dwarf::Form::DW_FORM_data4:
+    return FormDataLength::Data4;
+  case dwarf::Form::DW_FORM_data8:
+    return FormDataLength::Data8;
+  default:
+    llvm_unreachable("invalid getFormForIndex");
+  }
+}
+
+/// Maps a `FormDataLength` back to the corresponding DW_FORM_data{1,2,4,8}
+static dwarf::Form toDwarfDataForm(FormDataLength DataLength) {
+  switch (DataLength) {
+  case FormDataLength::Data1:
+    return dwarf::Form::DW_FORM_data1;
+  case FormDataLength::Data2:
+    return dwarf::Form::DW_FORM_data2;
+  case FormDataLength::Data4:
+    return dwarf::Form::DW_FORM_data4;
+  case FormDataLength::Data8:
+    return dwarf::Form::DW_FORM_data8;
+  }
+  llvm_unreachable("invalid toDwarfDataForm");
+}
+
+/// Converts `UnitType` and `UnitForm` into an `AttributeEncoding` and push it
+/// into `Ans`, if UnitType != None.
+void pushTypeOrCompileUnitEncondings(
+    SmallVectorImpl<DWARF5AccelTableData::AttributeEncoding> &Vec,
+    TypeOrCompileUnit UnitType, FormDataLength UnitForm) {
+  switch (UnitType) {
+  case TypeOrCompileUnit::Compile:
+    Vec.push_back({dwarf::DW_IDX_compile_unit, toDwarfDataForm(UnitForm)});
+    break;
+  case TypeOrCompileUnit::Type:
+    Vec.push_back({dwarf::DW_IDX_type_unit, toDwarfDataForm((UnitForm))});
+    break;
+  case TypeOrCompileUnit::None:
+    break;
+  }
+  return;
+}
+
+/// Represent the contents of an Abbreviation Entry for a DWARF5AccelTable, so
+/// that a set of such entries may be created.
+/// All Abbreviations have some common content:
+///    1. IDX_die_offset, with form ref4.
+///    2. IDX_{type, compile}_unit with a form DW_FORM_data{1,2,4,8}.
+/// This class doesn't encode such common elements; instead, it only encodes
+/// contents that may change from one abbreviation to another, as those define
+/// the uniqueness of each abbreviation.
+/// Common elements still show up in accessor methods (e.g. `getAttrEncodings`).
+struct AbbreviationContents {
+  uint16_t Tag : 16;
+  TypeOrCompileUnit UnitType : 2;
+  FormDataLength UnitForm : 2;
+
+  AbbreviationContents(uint16_t Tag, TypeOrCompileUnit UnitType,
+                       uint32_t UnitIndex)
+      : Tag(Tag), UnitType(UnitType), UnitForm(getFormForIndex(UnitIndex)) {}
+  AbbreviationContents(uint16_t Tag)
+      : Tag(Tag), UnitType(TypeOrCompileUnit::None),
+        UnitForm(getFormForIndex(0)) {}
+
+  uint32_t getUniqueCode() const {
+    uint32_t Bitfield = static_cast<uint32_t>(UnitType);
+    Bitfield |= static_cast<uint32_t>(UnitForm) << 2;
+    Bitfield |= static_cast<uint32_t>(Tag) << 4;
+    return Bitfield;
+  }
+
+  SmallVector<DWARF5AccelTableData::AttributeEncoding, 2>
+  getAttrEncodings() const {
+    SmallVector<DWARF5AccelTableData::AttributeEncoding, 2> Ans;
+    pushTypeOrCompileUnitEncondings(Ans, UnitType, UnitForm);
+    Ans.push_back({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
+    return Ans;
+  }
+};
+
+struct AbbreviationContentsInfo {
+  static AbbreviationContents getEmptyKey() { return AbbreviationContents(0); };
+  static AbbreviationContents getTombstoneKey() {
+    return AbbreviationContents(~0);
+  };
+  static uint32_t getHashValue(AbbreviationContents Contents) {
+    return Contents.getUniqueCode();
+  }
+  static bool isEqual(AbbreviationContents LHS, AbbreviationContents RHS) {
+    return LHS.Tag == RHS.Tag && LHS.UnitType == RHS.UnitType;
+  }
+};
+
 /// Class responsible for emitting a DWARF v5 Accelerator Table. The only
 /// public function is emit(), which performs the actual emission.
 ///
@@ -207,11 +321,10 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   };
 
   Header Header;
-  DenseMap<uint32_t, SmallVector<DWARF5AccelTableData::AttributeEncoding, 2>>
-      Abbreviations;
+  DenseSet<AbbreviationContents, AbbreviationContentsInfo> Abbreviations;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> TypeUnits;
-  llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
+  llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndex>(
       const DWARF5AccelTableData &)>
       getIndexForEntry;
   MCSymbol *ContributionEnd = nullptr;
@@ -236,7 +349,7 @@ public:
       AsmPrinter *Asm, const AccelTableBase &Contents,
       ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits,
       ArrayRef<std::variant<MCSymbol *, uint64_t>> TypeUnits,
-      llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
+      llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndex>(
           const DWARF5AccelTableData &)>
           getIndexForEntry,
       bool IsSplitDwarf);
@@ -395,39 +508,27 @@ void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
   Asm->OutStreamer->emitBytes({AugmentationString, AugmentationStringSize});
 }
 
-static uint32_t constexpr LowerBitSize = dwarf::DW_IDX_type_hash;
-static uint32_t getTagFromAbbreviationTag(const uint32_t AbbrvTag) {
-  return AbbrvTag >> LowerBitSize;
+static AbbreviationContents constructAbbreviationContents(
+    const unsigned Tag,
+    const std::optional<DWARF5AccelTable::UnitIndex> &EntryRet) {
+  if (!EntryRet)
+    return AbbreviationContents(Tag);
+  return AbbreviationContents(Tag,
+                              EntryRet->IsType ? TypeOrCompileUnit::Type
+                                               : TypeOrCompileUnit::Compile,
+                              EntryRet->Index);
 }
 
-/// Constructs a unique AbbrevTag that captures what a DIE accesses.
-/// Using this tag we can emit a unique abbreviation for each DIE.
-static uint32_t constructAbbreviationTag(
-    const unsigned Tag,
-    const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet) {
-  uint32_t AbbrvTag = 0;
-  if (EntryRet)
-    AbbrvTag |= 1 << EntryRet->Encoding.Index;
-  AbbrvTag |= 1 << dwarf::DW_IDX_die_offset;
-  AbbrvTag |= Tag << LowerBitSize;
-  return AbbrvTag;
-}
 void Dwarf5AccelTableWriter::populateAbbrevsMap() {
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       for (auto *Value : Hash->Values) {
-        std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
+        std::optional<DWARF5AccelTable::UnitIndex> EntryRet =
             getIndexForEntry(*static_cast<const DWARF5AccelTableData *>(Value));
         unsigned Tag =
             static_cast<const DWARF5AccelTableData *>(Value)->getDieTag();
-        uint32_t AbbrvTag = constructAbbreviationTag(Tag, EntryRet);
-        if (Abbreviations.count(AbbrvTag) == 0) {
-          SmallVector<DWARF5AccelTableData::AttributeEncoding, 2> UA;
-          if (EntryRet)
-            UA.push_back(EntryRet->Encoding);
-          UA.push_back({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
-          Abbreviations.try_emplace(AbbrvTag, UA);
-        }
+        auto AbbrevContents = constructAbbreviationContents(Tag, EntryRet);
+        Abbreviations.insert(AbbrevContents);
       }
     }
   }
@@ -479,12 +580,11 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
   Asm->OutStreamer->emitLabel(AbbrevStart);
   for (const auto &Abbrev : Abbreviations) {
     Asm->OutStreamer->AddComment("Abbrev code");
-    uint32_t Tag = getTagFromAbbreviationTag(Abbrev.first);
-    assert(Tag != 0);
-    Asm->emitULEB128(Abbrev.first);
-    Asm->OutStreamer->AddComment(dwarf::TagString(Tag));
-    Asm->emitULEB128(Tag);
-    for (const auto &AttrEnc : Abbrev.second) {
+    assert(Abbrev.Tag != 0);
+    Asm->emitULEB128(Abbrev.getUniqueCode());
+    Asm->OutStreamer->AddComment(dwarf::TagString(Abbrev.Tag));
+    Asm->emitULEB128(Abbrev.Tag);
+    for (const auto &AttrEnc : Abbrev.getAttrEncodings()) {
       Asm->emitULEB128(AttrEnc.Index, dwarf::IndexString(AttrEnc.Index).data());
       Asm->emitULEB128(AttrEnc.Form,
                        dwarf::FormEncodingString(AttrEnc.Form).data());
@@ -498,17 +598,14 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
 
 void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry) const {
-  std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
-      getIndexForEntry(Entry);
-  uint32_t AbbrvTag = constructAbbreviationTag(Entry.getDieTag(), EntryRet);
-  auto AbbrevIt = Abbreviations.find(AbbrvTag);
-  assert(AbbrevIt != Abbreviations.end() &&
+  std::optional<DWARF5AccelTable::UnitIndex> EntryRet = getIndexForEntry(Entry);
+  auto AbbrevContents =
+      constructAbbreviationContents(Entry.getDieTag(), EntryRet);
+  assert(Abbreviations.contains(AbbrevContents) &&
          "Why wasn't this abbrev generated?");
-  assert(getTagFromAbbreviationTag(AbbrevIt->first) == Entry.getDieTag() &&
-         "Invalid Tag");
-  Asm->emitULEB128(AbbrevIt->first, "Abbreviation code");
+  Asm->emitULEB128(AbbrevContents.getUniqueCode(), "Abbreviation code");
 
-  for (const auto &AttrEnc : AbbrevIt->second) {
+  for (const auto &AttrEnc : AbbrevContents.getAttrEncodings()) {
     Asm->OutStreamer->AddComment(dwarf::IndexString(AttrEnc.Index));
     switch (AttrEnc.Index) {
     case dwarf::DW_IDX_compile_unit:
@@ -545,7 +642,7 @@ Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
     AsmPrinter *Asm, const AccelTableBase &Contents,
     ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits,
     ArrayRef<std::variant<MCSymbol *, uint64_t>> TypeUnits,
-    llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
+    llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndex>(
         const DWARF5AccelTableData &)>
         getIndexForEntry,
     bool IsSplitDwarf)
@@ -620,20 +717,14 @@ void llvm::emitDWARF5AccelTable(
       Asm->getObjFileLowering().getDwarfDebugNamesSection());
 
   Contents.finalize(Asm, "names");
-  dwarf::Form CUIndexForm =
-      DIEInteger::BestForm(/*IsSigned*/ false, CompUnits.size() - 1);
-  dwarf::Form TUIndexForm =
-      DIEInteger::BestForm(/*IsSigned*/ false, TypeUnits.size() - 1);
   Dwarf5AccelTableWriter(
       Asm, Contents, CompUnits, TypeUnits,
       [&](const DWARF5AccelTableData &Entry)
-          -> std::optional<DWARF5AccelTable::UnitIndexAndEncoding> {
+          -> std::optional<DWARF5AccelTable::UnitIndex> {
         if (Entry.isTU())
-          return {{TUIndex[Entry.getUnitID()],
-                   {dwarf::DW_IDX_type_unit, TUIndexForm}}};
+          return {{TUIndex[Entry.getUnitID()], true /*IsType*/}};
         if (CUIndex.size() > 1)
-          return {{CUIndex[Entry.getUnitID()],
-                   {dwarf::DW_IDX_compile_unit, CUIndexForm}}};
+          return {{CUIndex[Entry.getUnitID()], false /*IsType*/}};
         return std::nullopt;
       },
       DD.useSplitDwarf())
@@ -651,7 +742,7 @@ void DWARF5AccelTable::addTypeUnitSignature(DwarfTypeUnit &U) {
 void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, DWARF5AccelTable &Contents,
     ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
-    llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
+    llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndex>(
         const DWARF5AccelTableData &)>
         getIndexForEntry) {
   std::vector<std::variant<MCSymbol *, uint64_t>> TypeUnits;
