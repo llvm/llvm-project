@@ -930,8 +930,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AlignConsecutiveTableGenCondOperatorColons);
     IO.mapOptional("AlignConsecutiveTableGenBreakingDAGArgColons",
                    Style.AlignConsecutiveTableGenBreakingDAGArgColons);
-    IO.mapOptional("AlignConsecutiveTableGenDefinitions",
-                   Style.AlignConsecutiveTableGenDefinitions);
+    IO.mapOptional("AlignConsecutiveTableGenDefinitionColons",
+                   Style.AlignConsecutiveTableGenDefinitionColons);
     IO.mapOptional("AlignEscapedNewlines", Style.AlignEscapedNewlines);
     IO.mapOptional("AlignOperands", Style.AlignOperands);
     IO.mapOptional("AlignTrailingComments", Style.AlignTrailingComments);
@@ -1130,10 +1130,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("StatementAttributeLikeMacros",
                    Style.StatementAttributeLikeMacros);
     IO.mapOptional("StatementMacros", Style.StatementMacros);
-    IO.mapOptional("TableGenAllowBreakAfterInheritColon",
-                   Style.TableGenAllowBreakAfterInheritColon);
-    IO.mapOptional("TableGenAllowBreakBeforeInheritColon",
-                   Style.TableGenAllowBreakBeforeInheritColon);
+    IO.mapOptional("TableGenBreakingDAGArgOperators",
+                   Style.TableGenBreakingDAGArgOperators);
     IO.mapOptional("TableGenBreakInsideCondOperator",
                    Style.TableGenBreakInsideCondOperator);
     IO.mapOptional("TableGenBreakInsideDAGArgList",
@@ -1142,8 +1140,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.TableGenPreferBreakInsideSquareBracket);
     IO.mapOptional("TableGenSpaceAroundDAGArgColon",
                    Style.TableGenSpaceAroundDAGArgColon);
-    IO.mapOptional("TableGenBreakingDAGArgOperators",
-                   Style.TableGenBreakingDAGArgOperators);
     IO.mapOptional("TabWidth", Style.TabWidth);
     IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
@@ -1459,7 +1455,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveShortCaseStatements = {};
   LLVMStyle.AlignConsecutiveTableGenBreakingDAGArgColons = {};
   LLVMStyle.AlignConsecutiveTableGenCondOperatorColons = {};
-  LLVMStyle.AlignConsecutiveTableGenDefinitions = {};
+  LLVMStyle.AlignConsecutiveTableGenDefinitionColons = {};
   LLVMStyle.AlignTrailingComments = {};
   LLVMStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
   LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
@@ -1608,8 +1604,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.StatementAttributeLikeMacros.push_back("Q_EMIT");
   LLVMStyle.StatementMacros.push_back("Q_UNUSED");
   LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
-  LLVMStyle.TableGenAllowBreakAfterInheritColon = true;
-  LLVMStyle.TableGenAllowBreakBeforeInheritColon = false;
+  LLVMStyle.TableGenBreakingDAGArgOperators = {};
   LLVMStyle.TableGenBreakInsideCondOperator = true;
   LLVMStyle.TableGenBreakInsideDAGArgList = false;
   LLVMStyle.TableGenPreferBreakInsideSquareBracket = false;

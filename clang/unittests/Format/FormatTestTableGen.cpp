@@ -192,9 +192,9 @@ TEST_F(FormatTestTableGen, Values) {
 }
 
 TEST_F(FormatTestTableGen, ClassDefinition) {
-  verifyFormat("class Class<int x, int y = 1, string z = \"z\",\n"
-               "            int w = -1> : Parent1,\n"
-               "                          Parent2<x, y> {\n"
+  verifyFormat("class Class<int x, int y = 1, string z = \"z\", int w = -1>\n"
+               "    : Parent1,\n"
+               "      Parent2<x, y> {\n"
                "  int Item1 = 1;\n"
                "  int Item2;\n"
                "  code Item3 = [{ Item3 }];\n"
@@ -313,7 +313,7 @@ TEST_F(FormatTestTableGen, DefAlignment) {
                "def DefDef : Parent {}\n"
                "def DefDefDef : Parent {}\n",
                Style);
-  Style.AlignConsecutiveTableGenDefinitions.Enabled = true;
+  Style.AlignConsecutiveTableGenDefinitionColons.Enabled = true;
   verifyFormat("def Def       : Parent {}\n"
                "def DefDef    : Parent {}\n"
                "def DefDefDef : Parent {}\n",

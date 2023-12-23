@@ -5907,16 +5907,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return !Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator,
                            TT_TableGenParamAngleCloser);
     }
-    if (Right.is(tok::colon))
-      return Style.TableGenAllowBreakBeforeInheritColon;
     if (Right.isOneOf(tok::semi, tok::l_brace)) {
       // Avoid to break before "{"" or ";" in TableGen.
       return false;
     }
     if (Left.is(TT_TableGenValueSuffix))
       return false;
-    if (Left.is(tok::colon) && Right.is(tok::identifier))
-      return Style.TableGenAllowBreakAfterInheritColon;
     if (Left.is(tok::hash) || Right.is(tok::hash))
       return false;
   }

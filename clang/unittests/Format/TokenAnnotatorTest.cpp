@@ -2174,7 +2174,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
     auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);
     return decltype(Result){Result.begin() + 6, Result.end() - 3};
   };
-  // Both of bang/cond operators
+  // Both of bang/cond operators.
   auto Tokens = AnnotateValue("!cond(!eq(x, 0): 1, true: x)");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);

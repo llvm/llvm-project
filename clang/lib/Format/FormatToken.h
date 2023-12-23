@@ -700,12 +700,8 @@ public:
       return true;
     if (is(TT_DictLiteral) && is(tok::greater))
       return true;
-    if (is(TT_TableGenParamAngleCloser))
-      return true;
-    if (is(TT_TableGenListCloser))
-      return true;
-    return isOneOf(tok::r_paren, tok::r_brace, tok::r_square,
-                   TT_TemplateCloser);
+    return isOneOf(tok::r_paren, tok::r_brace, tok::r_square, TT_TemplateCloser,
+                   TT_TableGenParamAngleCloser, TT_TableGenListCloser);
   }
 
   /// Returns \c true if this is a "." or "->" accessing a member.

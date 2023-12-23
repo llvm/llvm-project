@@ -238,7 +238,7 @@ private:
   void alignConsecutiveTableGenCondOperatorColons();
 
   /// Align consecutive TableGen DAGArg colon over all \c Changes.
-  void AlignConsecutiveTableGenBreakingDAGArgColons();
+  void alignConsecutiveTableGenBreakingDAGArgColons();
 
   /// Align consecutive TableGen definition over all \c Changes.
   void alignConsecutiveTableGenDefinition();

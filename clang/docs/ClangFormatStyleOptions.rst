@@ -146,7 +146,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BasedOnStyle:
 
-**BasedOnStyle** (``String``) :ref:`¶ <BasedOnStyle>`
+**BasedOnStyle** (``String``) :ref:`ﾂｶ <BasedOnStyle>`
   The style used for all options not specifically set in the configuration.
 
   This option is supported only in the :program:`clang-format` configuration
@@ -885,6 +885,378 @@ the configuration (without a prefix: ``Auto``).
       case log::warning: return "warning:";
       default:           return "";
       }
+
+
+.. _AlignConsecutiveTableGenBreakingDAGArgColons:
+
+**AlignConsecutiveTableGenBreakingDAGArgColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 18` :ref:`¶ <AlignConsecutiveTableGenBreakingDAGArgColons>`
+  Style of aligning consecutive TableGen DAGArg operator colons.
+  This works only when TableGenBreakInsideDAGArgList is true and the DAGArg is not excepted by TableGenBreakingDAGArgOperators's effect.
+  Align the colon inside DAGArg which have line break inside.
+
+  .. code-block:: ablegen
+
+    let dagarg = (ins
+        a  :$src1,
+        aa :$src2,
+        aaa:$src3
+    )
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveMacros: AcrossEmptyLines
+
+    AlignConsecutiveMacros:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
+.. _AlignConsecutiveTableGenCondOperatorColons:
+
+**AlignConsecutiveTableGenCondOperatorColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 18` :ref:`¶ <AlignConsecutiveTableGenCondOperatorColons>`
+  Style of aligning consecutive TableGen cond operator colons.
+  Align the colons of each case inside !cond operators.
+
+  .. code-block:: c++
+
+    !cond(!eq(size, 1) : 1,
+          !eq(size, 16): 1,
+          true         : 0)
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveMacros: AcrossEmptyLines
+
+    AlignConsecutiveMacros:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
+.. _AlignConsecutiveTableGenDefinitions:
+
+**AlignConsecutiveTableGenDefinitions** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 18` :ref:`¶ <AlignConsecutiveTableGenDefinitions>`
+  Style of aligning consecutive TableGen def colons.
+  This aligns the inherits colons of consecutive definitions.
+
+  .. code-block:: c++
+
+    def Def       : Parent {}
+    def DefDef    : Parent {}
+    def DefDefDef : Parent {}
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveMacros: AcrossEmptyLines
+
+    AlignConsecutiveMacros:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
 
 
 .. _AlignEscapedNewlines:
@@ -5755,6 +6127,80 @@ the configuration (without a prefix: ``Auto``).
 
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
+
+.. _TableGenBreakInsideCondOperator:
+
+**TableGenBreakInsideCondOperator** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <TableGenBreakInsideCondOperator>`
+  Insert the line break after each case of !cond operator in TableGen.
+
+  .. code-block:: c++
+
+    let CondOpe1 = !cond(!eq(size, 1): 1,
+                         !eq(size, 16): 1,
+                         true: 0);
+  By default this is true.
+
+.. _TableGenBreakInsideDAGArgList:
+
+**TableGenBreakInsideDAGArgList** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <TableGenBreakInsideDAGArgList>`
+  Insert the line break after each element of DAGArg list in TableGen.
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+
+.. _TableGenBreakingDAGArgOperators:
+
+**TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 18` :ref:`¶ <TableGenBreakingDAGArgOperators>`
+  Works only when TableGenBreakInsideDAGArgList is true.
+  The list needs to be consists of identifiers in TableGen.
+  If any identifier is specified, this limits the effect of
+  TableGenBreakInsideDAGArgList only on DAGArgs beginning with the specified
+  identifiers. For example the configuration,
+
+
+  .. code-block:: c++
+
+    TableGenBreakingDAGArgOperators: ['ins', 'outs']
+
+  makes the line break only occurs inside DAGArgs beginning with the
+  specified identifiers 'ins' and 'outs'.
+
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+    let DAGArgOthers = (others i32:$other1, i32:$other2);
+    let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+
+.. _TableGenPreferBreakInsideSquareBracket:
+
+**TableGenPreferBreakInsideSquareBracket** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <TableGenPreferBreakInsideSquareBracket>`
+  Tend to break inside square bracket in TableGen.
+  For whom likes such a style.
+
+  .. code-block:: c++
+
+    def Def : Parent<"Def",[
+        a, b, c
+    ]> {
+      ...
+    }
+
+.. _TableGenSpaceAroundDAGArgColon:
+
+**TableGenSpaceAroundDAGArgColon** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <TableGenSpaceAroundDAGArgColon>`
+  Insert the space around the colon inside a DAGArg list in TableGen.
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins i32 : $src1, i32 : $src2);
 
 .. _TypeNames:
 

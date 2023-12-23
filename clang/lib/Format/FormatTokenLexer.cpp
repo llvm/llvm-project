@@ -282,11 +282,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->Tok.setKind(tok::string_literal);
       return;
     }
-    if (Tokens.size() > 1 && Tokens.end()[-2]->is(tok::exclaim)) {
-      if (Tokens.back()->is(tok::identifier) ||
-          (Tokens.back()->is(tok::kw_if) && Tokens.back())) {
-      }
-    }
     if (tryMergeTokens({tok::exclaim, tok::identifier},
                        TT_TableGenBangOperator)) {
       Tokens.back()->Tok.setKind(tok::identifier);

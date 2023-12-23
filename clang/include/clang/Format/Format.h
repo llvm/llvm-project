@@ -396,18 +396,10 @@ struct FormatStyle {
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
 
-  /// Style of aligning consecutive TableGen cond operator colons.
-  /// \code
-  ///   !cond(!eq(size, 1) : 1,
-  ///         !eq(size, 16): 1,
-  ///         true         : 0)
-  /// \endcode
-  /// \version 18
-  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
-
   /// Style of aligning consecutive TableGen DAGArg operator colons.
-  /// Intended to be used with TableGenBreakInsideDAGArgList
-  /// \code
+  /// This works only when TableGenBreakInsideDAGArgList is true and the DAGArg
+  /// is not excepted by TableGenBreakingDAGArgOperators's effect. Align the
+  /// colon inside DAGArg which have line break inside. \code{tablegen}
   ///   let dagarg = (ins
   ///       a  :$src1,
   ///       aa :$src2,
@@ -417,14 +409,25 @@ struct FormatStyle {
   /// \version 18
   AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
 
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// Align the colons of each case inside !cond operators.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 18
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
   /// Style of aligning consecutive TableGen def colons.
+  /// This aligns the inherits colons of consecutive definitions.
   /// \code
   ///   def Def       : Parent {}
   ///   def DefDef    : Parent {}
   ///   def DefDefDef : Parent {}
   /// \endcode
   /// \version 18
-  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitions;
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
 
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
@@ -4687,14 +4690,68 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
-  /// Tablegen
-  bool TableGenAllowBreakBeforeInheritColon;
-  bool TableGenAllowBreakAfterInheritColon;
-  bool TableGenBreakInsideCondOperator;
-  bool TableGenBreakInsideDAGArgList;
-  bool TableGenPreferBreakInsideSquareBracket;
-  bool TableGenSpaceAroundDAGArgColon;
+  /// Works only when TableGenBreakInsideDAGArgList is true.
+  /// The list needs to be consists of identifiers in TableGen.
+  /// If any identifier is specified, this limits the effect of
+  /// TableGenBreakInsideDAGArgList only on DAGArgs beginning with the specified
+  /// identifiers. For example the configuration,
+  ///
+  /// \code
+  ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
+  /// \endcode
+  ///
+  /// makes the line break only occurs inside DAGArgs beginning with the
+  /// specified identifiers 'ins' and 'outs'.
+  ///
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  ///   let DAGArgOthers = (others i32:$other1, i32:$other2);
+  ///   let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+  /// \endcode
+  /// \version 18
   std::vector<std::string> TableGenBreakingDAGArgOperators;
+
+  /// Insert the line break after each case of !cond operator in TableGen.
+  /// \code
+  ///   let CondOpe1 = !cond(!eq(size, 1): 1,
+  ///                        !eq(size, 16): 1,
+  ///                        true: 0);
+  /// \endcode
+  /// By default this is true.
+  /// \version 18
+  bool TableGenBreakInsideCondOperator;
+
+  /// Insert the line break after each element of DAGArg list in TableGen.
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  /// \endcode
+  /// \version 18
+  bool TableGenBreakInsideDAGArgList;
+
+  /// Tend to break inside square bracket in TableGen.
+  /// For whom likes such a style.
+  /// \code
+  ///   def Def : Parent<"Def",[
+  ///       a, b, c
+  ///   ]> {
+  ///     ...
+  ///   }
+  /// \endcode
+  /// \version 18
+  bool TableGenPreferBreakInsideSquareBracket;
+
+  /// Insert the space around the colon inside a DAGArg list in TableGen.
+  /// \code
+  ///   let DAGArgIns = (ins i32 : $src1, i32 : $src2);
+  /// \endcode
+  /// \version 18
+  bool TableGenSpaceAroundDAGArgColon;
 
   /// The number of columns used for tab stops.
   /// \version 3.7
@@ -4793,13 +4850,12 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
-           AlignConsecutiveTableGenCondOperatorColons ==
-               R.AlignConsecutiveTableGenCondOperatorColons &&
            AlignConsecutiveTableGenBreakingDAGArgColons ==
                R.AlignConsecutiveTableGenBreakingDAGArgColons &&
-           AlignConsecutiveTableGenDefinitions ==
-               R.AlignConsecutiveTableGenDefinitions &&
-           AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
@@ -4949,9 +5005,17 @@ struct FormatStyle {
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
-           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           StatementMacros == R.StatementMacros &&
+           TableGenBreakingDAGArgOperators ==
+               R.TableGenBreakingDAGArgOperators &&
+           TableGenBreakInsideCondOperator ==
+               R.TableGenBreakInsideCondOperator &&
+           TableGenBreakInsideDAGArgList == R.TableGenBreakInsideDAGArgList &&
+           TableGenPreferBreakInsideSquareBracket ==
+               R.TableGenPreferBreakInsideSquareBracket &&
+           TableGenSpaceAroundDAGArgColon == R.TableGenSpaceAroundDAGArgColon &&
+           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
+           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

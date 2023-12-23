@@ -111,9 +111,11 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
-  alignConsecutiveTableGenCondOperatorColons();
-  AlignConsecutiveTableGenBreakingDAGArgColons();
-  alignConsecutiveTableGenDefinition();
+  if (Style.isTableGen()) {
+    alignConsecutiveTableGenCondOperatorColons();
+    alignConsecutiveTableGenBreakingDAGArgColons();
+    alignConsecutiveTableGenDefinition();
+  }
   alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
@@ -881,13 +883,13 @@ void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
                          TT_TableGenCondOperatorColon);
 }
 
-void WhitespaceManager::AlignConsecutiveTableGenBreakingDAGArgColons() {
+void WhitespaceManager::alignConsecutiveTableGenBreakingDAGArgColons() {
   alignConsecutiveColons(Style.AlignConsecutiveTableGenBreakingDAGArgColons,
                          TT_TableGenDAGArgListColonToAlign);
 }
 
 void WhitespaceManager::alignConsecutiveTableGenDefinition() {
-  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitions,
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitionColons,
                          TT_InheritanceColon);
 }
 
