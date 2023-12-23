@@ -96,11 +96,11 @@ public:
         os << numerators[i][j] << ",";
       os << numerators[i].back() << "]/";
 
-      for (Point den : denominators[i]) {
+      for (const Point &den : denominators[i]) {
         os << "(x^[";
         for (unsigned j = 0, e = den.size(); j < e - 1; j++)
           os << den[j] << ",";
-        os << den[den.size() - 1] << "])";
+        os << den.back() << "])";
       }
     }
     return os;
