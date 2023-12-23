@@ -7,9 +7,10 @@
 ; RUN: not llvm-lto %t/asm_global.bc %t/fn_global.bc -o %to1.o --save-linked-module --exported-symbol=foo 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not llvm-lto %t/fn_global.bc %t/asm_global.bc -o %to1.o --save-linked-module --exported-symbol=foo 2>&1 | FileCheck %s --check-prefix=ERR
 
-; FIXME: We want to drop the weak function.
-; RUN: not llvm-lto %t/asm_global.bc %t/fn_weak.bc -o %to2.o --save-linked-module --exported-symbol=foo 2>&1 | FileCheck %s --check-prefix=ERR
-; RUN: not llvm-lto %t/fn_weak.bc %t/asm_global.bc -o %to2.o --save-linked-module --exported-symbol=foo 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: llvm-lto %t/asm_global.bc %t/fn_weak.bc -o %to2.o --save-linked-module --exported-symbol=foo
+; RUN: llvm-dis < %to2.o.linked.bc | FileCheck %s --check-prefix=ASM_GLOBAL
+; RUN: llvm-lto %t/fn_weak.bc %t/asm_global.bc -o %to2.o --save-linked-module --exported-symbol=foo
+; RUN: llvm-dis < %to2.o.linked.bc | FileCheck %s --check-prefix=ASM_GLOBAL
 
 ; FIXME: We want to drop the weak asm symbol.
 ; RUN: not llvm-lto %t/asm_global.bc %t/asm_weak.bc -o %to3.o --save-linked-module --exported-symbol=foo 2>&1 | FileCheck %s --check-prefix=ERR
@@ -32,6 +33,9 @@
 ; ERR2: error: <unknown>:0: foo changed binding to STB_GLOBAL
 
 ; FN_GLOBAL: define i32 @foo(i32 %i)
+
+; ASM_GLOBAL: module asm ".global foo"
+; ASM_GLOBAL-NOT: define i32 @foo(i32 %i)
 
 ;--- asm_global.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

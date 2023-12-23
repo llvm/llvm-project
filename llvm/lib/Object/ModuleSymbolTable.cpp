@@ -140,6 +140,13 @@ initializeRecordStreamer(const Module &M,
   Init(Streamer);
 }
 
+bool ModuleSymbolTable::canParseInlineASM(const Module &M) {
+  std::string Err;
+  const Triple TT(M.getTargetTriple());
+  const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
+  return T && T->hasMCAsmParser();
+}
+
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
     function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {

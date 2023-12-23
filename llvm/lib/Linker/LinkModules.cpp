@@ -18,6 +18,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
 using namespace llvm;
 
@@ -32,6 +33,7 @@ class ModuleLinker {
   std::unique_ptr<Module> SrcM;
 
   SetVector<GlobalValue *> ValuesToLink;
+  StringSet<> DstGlobalAsmSymbols;
 
   /// For symbol clashes, prefer those from Src.
   unsigned Flags;
@@ -79,14 +81,17 @@ class ModuleLinker {
   /// Given a global in the source module, return the global in the
   /// destination module that is being linked to, if any.
   GlobalValue *getLinkedToGlobal(const GlobalValue *SrcGV) {
-    Module &DstM = Mover.getModule();
     // If the source has no name it can't link.  If it has local linkage,
     // there is no name match-up going on.
     if (!SrcGV->hasName() || GlobalValue::isLocalLinkage(SrcGV->getLinkage()))
       return nullptr;
+    return getLinkedToGlobal(SrcGV->getName());
+  }
 
+  GlobalValue *getLinkedToGlobal(StringRef Name) {
+    Module &DstM = Mover.getModule();
     // Otherwise see if we have a match in the destination module's symtab.
-    GlobalValue *DGV = DstM.getNamedValue(SrcGV->getName());
+    GlobalValue *DGV = DstM.getNamedValue(Name);
     if (!DGV)
       return nullptr;
 
@@ -105,6 +110,9 @@ class ModuleLinker {
                           const DenseSet<const Comdat *> &ReplacedDstComdats);
 
   bool linkIfNeeded(GlobalValue &GV, SmallVectorImpl<GlobalValue *> &GVToClone);
+
+  // Drop GV if it is a weak linkage and the asm symbol is not weak.
+  void dropWeakGVForAsm();
 
 public:
   ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
@@ -126,6 +134,29 @@ getMinVisibility(GlobalValue::VisibilityTypes A,
       B == GlobalValue::ProtectedVisibility)
     return GlobalValue::ProtectedVisibility;
   return GlobalValue::DefaultVisibility;
+}
+
+static void changeDefToDecl(GlobalValue &GV) {
+  if (auto *F = dyn_cast<Function>(&GV)) {
+    F->deleteBody();
+  } else if (auto *Var = dyn_cast<GlobalVariable>(&GV)) {
+    Var->setInitializer(nullptr);
+  } else {
+    auto &Alias = cast<GlobalAlias>(GV);
+    Module &M = *Alias.getParent();
+    GlobalValue *Declaration;
+    if (auto *FTy = dyn_cast<FunctionType>(Alias.getValueType())) {
+      Declaration = Function::Create(FTy, GlobalValue::ExternalLinkage, "", &M);
+    } else {
+      Declaration =
+          new GlobalVariable(M, Alias.getValueType(), /*isConstant*/ false,
+                             GlobalValue::ExternalLinkage,
+                             /*Initializer*/ nullptr);
+    }
+    Declaration->takeName(&Alias);
+    Alias.replaceAllUsesWith(Declaration);
+    Alias.eraseFromParent();
+  }
 }
 
 bool ModuleLinker::getComdatLeader(Module &M, StringRef ComdatName,
@@ -325,6 +356,34 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
                    "': symbol multiply defined!");
 }
 
+void ModuleLinker::dropWeakGVForAsm() {
+  Module &DstM = Mover.getModule();
+  if (!ModuleSymbolTable::canParseInlineASM(DstM))
+    return;
+  ModuleSymbolTable::CollectAsmSymbols(
+      DstM, [&](StringRef Name, object::BasicSymbolRef::Flags Flags) {
+        if (Flags & object::BasicSymbolRef::SF_Global &&
+            !(Flags & object::BasicSymbolRef::SF_Weak))
+          DstGlobalAsmSymbols.insert(Name);
+      });
+
+  if (!ModuleSymbolTable::canParseInlineASM(*SrcM))
+    return;
+  ModuleSymbolTable::CollectAsmSymbols(
+      *SrcM, [&](StringRef Name, object::BasicSymbolRef::Flags Flags) {
+        if (Flags & object::BasicSymbolRef::SF_Global &&
+            !(Flags & object::BasicSymbolRef::SF_Weak)) {
+          auto *DstGV = getLinkedToGlobal(Name);
+          if (DstGV && DstGV->hasWeakLinkage()) {
+            if (DstGV->use_empty())
+              DstGV->eraseFromParent();
+            else
+              changeDefToDecl(*DstGV);
+          }
+        }
+      });
+}
+
 bool ModuleLinker::linkIfNeeded(GlobalValue &GV,
                                 SmallVectorImpl<GlobalValue *> &GVToClone) {
   GlobalValue *DGV = getLinkedToGlobal(&GV);
@@ -394,8 +453,14 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV,
     return true;
   if (DGV && ComdatFrom == LinkFrom::Both)
     GVToClone.push_back(LinkFromSrc ? DGV : &GV);
-  if (LinkFromSrc)
+  if (!DGV && GV.hasWeakLinkage() &&
+      DstGlobalAsmSymbols.contains(GV.getName())) {
+    changeDefToDecl(GV);
+    LinkFromSrc = false;
+  }
+  if (LinkFromSrc) {
     ValuesToLink.insert(&GV);
+  }
   return false;
 }
 
@@ -436,27 +501,7 @@ void ModuleLinker::dropReplacedComdat(
     GV.eraseFromParent();
     return;
   }
-
-  if (auto *F = dyn_cast<Function>(&GV)) {
-    F->deleteBody();
-  } else if (auto *Var = dyn_cast<GlobalVariable>(&GV)) {
-    Var->setInitializer(nullptr);
-  } else {
-    auto &Alias = cast<GlobalAlias>(GV);
-    Module &M = *Alias.getParent();
-    GlobalValue *Declaration;
-    if (auto *FTy = dyn_cast<FunctionType>(Alias.getValueType())) {
-      Declaration = Function::Create(FTy, GlobalValue::ExternalLinkage, "", &M);
-    } else {
-      Declaration =
-          new GlobalVariable(M, Alias.getValueType(), /*isConstant*/ false,
-                             GlobalValue::ExternalLinkage,
-                             /*Initializer*/ nullptr);
-    }
-    Declaration->takeName(&Alias);
-    Alias.replaceAllUsesWith(Declaration);
-    Alias.eraseFromParent();
-  }
+  changeDefToDecl(GV);
 }
 
 bool ModuleLinker::run() {
@@ -533,6 +578,7 @@ bool ModuleLinker::run() {
       if (const Comdat *SC = GA.getComdat())
         LazyComdatMembers[SC].push_back(&GA);
 
+  dropWeakGVForAsm();
   // Insert all of the globals in src into the DstM module... without linking
   // initializers (which could refer to functions not yet mapped over).
   SmallVector<GlobalValue *, 0> GVToClone;
