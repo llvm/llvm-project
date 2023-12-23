@@ -19,7 +19,6 @@
 #define MLIR_ANALYSIS_PRESBURGER_QUASIPOLYNOMIAL_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 
 namespace mlir {

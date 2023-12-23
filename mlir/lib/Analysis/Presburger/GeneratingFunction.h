@@ -24,7 +24,7 @@ namespace presburger {
 // is an affine function of n parameters. Each row
 // in the matrix represents the affine function and
 // has n+1 elements.
-using ParamPoint = Matrix<Fraction>;
+using ParamPoint = FracMatrix;
 
 // A point is simply a vector.
 using Point = SmallVector<Fraction>;

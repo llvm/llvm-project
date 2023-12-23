@@ -8,12 +8,8 @@
 
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LogicalResult.h"
-#include <optional>
 
 using namespace mlir;
 using namespace presburger;
