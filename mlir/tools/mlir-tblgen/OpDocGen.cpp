@@ -126,7 +126,7 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
 /// Place `text` between backticks so that the Markdown processor renders it as
 /// inline code.
 static std::string backticks(const std::string &text) {
-    return '`' + text + '`';
+  return '`' + text + '`';
 }
 
 static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
