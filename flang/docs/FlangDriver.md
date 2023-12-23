@@ -204,7 +204,7 @@ a code that has a Fortran program unit with a C/C++ code that also defines a
 libraries at link time (e.g., via `-lstdc++` for STL)
 
 If the code is C/C++ based and invokes Fortran routines, one can either use Clang
-for Flang as the linker driver.  If Clang is used, it will automatically all
+or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
 In this case, one has to explicitly provide the Fortran runtime libraries
 `FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link

@@ -7,7 +7,7 @@
 ! RUN:     --implicit-check-not=GNU-LINKER-OPTIONS-NOT %s
 ! RUN: %flang -### --target=x86_64-windows-msvc -rpath /path/to/dir -shared \
 ! RUN:     -static %s 2>&1 | FileCheck \
-! RUN:     --check-prefixes=MSVC-LINKER-OPTIONS %s
+! RUN:     --check-prefixes=MSVC-LINKER-OPTIONS \
 ! RUN:     --implicit-check-not=MSVC-LINKER-OPTIONS-NOT %s
 ! RUN: %flang -### --target=aarch64-linux-none -rdynamic %s 2>&1 | FileCheck --check-prefixes=RDYNAMIC-LINKER-OPTION %s
 
