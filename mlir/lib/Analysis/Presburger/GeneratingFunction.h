@@ -86,10 +86,15 @@ public:
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
     for (unsigned i = 0, e = signs.size(); i < e; i++) {
-      if (signs[i] == 1)
-        os << " + ";
-      else
-        os << " - ";
+      if (i == 0) {
+        if (signs[i] == -1)
+          os << "- ";
+      } else {
+        if (signs[i] == 1)
+          os << " + ";
+        else
+          os << " - ";
+      }
 
       os << "x^[";
       for (unsigned j = 0, e = numerators[i].size(); j < e - 1; j++)
