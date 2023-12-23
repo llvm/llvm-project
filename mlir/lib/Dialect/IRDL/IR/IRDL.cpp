@@ -117,6 +117,15 @@ LogicalResult AttributesOp::verify() {
   return success();
 }
 
+LogicalResult BaseOp::verify() {
+  std::optional<StringRef> baseName = getBaseName();
+  std::optional<SymbolRefAttr> base = getBaseRef();
+  if (baseName.has_value() == base.has_value())
+    return emitOpError() << "the base type or attribute should be specified by "
+                            "either a name or a reference";
+  return success();
+}
+
 /// Parse a value with its variadicity first. By default, the variadicity is
 /// single.
 ///

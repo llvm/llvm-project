@@ -124,20 +124,20 @@ func.func @succeededAnyConstraint() {
 //===----------------------------------------------------------------------===//
 
 func.func @succeededDynBaseConstraint() {
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i32>
-  "testd.dynbase"() : () -> !testd.parametric<i32>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i64>
-  "testd.dynbase"() : () -> !testd.parametric<i64>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
-  "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<i32>
+  "testd.dyn_type_base"() : () -> !testd.parametric<i32>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<i64>
+  "testd.dyn_type_base"() : () -> !testd.parametric<i64>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<!testd.parametric<i64>>
+  "testd.dyn_type_base"() : () -> !testd.parametric<!testd.parametric<i64>>
   return
 }
 
 // -----
 
 func.func @failedDynBaseConstraint() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got 'i32'}}
-  "testd.dynbase"() : () -> i32
+  // expected-error@+1 {{expected base type 'testd.parametric' but got 'builtin.integer'}}
+  "testd.dyn_type_base"() : () -> i32
   return
 }
 

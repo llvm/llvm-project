@@ -451,6 +451,37 @@ def IRDL_IsOp : IRDL_ConstraintOp<"is",
   let assemblyFormat = " $expected ` ` attr-dict ";
 }
 
+def IRDL_BaseOp : IRDL_ConstraintOp<"base",
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>]> {
+  let summary = "Constraints an attribute/type base";
+  let description = [{
+    `irdl.base` defines a constraint that accepts only a single type
+    or attribute base, e.g. an `IntegerType`. The attribute base is defined
+    either by a simpolic reference to the corresponding IRDL definition,
+    or by the name of the base. Named bases are prefixed with `!` or `#`
+    depending on whether they are types or attributes.
+
+    Example:
+
+    ```mlir
+    irdl.type @complex {
+      %0 = irdl.base "!builtin.integer"
+      irdl.parameters(%0)
+    }
+    ```
+
+    The above program defines a `complex` type that expects a single parameter,
+    which is a type with base name `builtin.integer`, which is the name of
+    an `IntegerType` type.
+  }];
+
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$base_ref,
+                       OptionalAttr<StrAttr>:$base_name);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = " ($base_ref^)? ($base_name^)? ` ` attr-dict";
+  let hasVerifier = 1;
+}
+
 def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
   let summary = "Constraints an attribute/type base and its parameters";

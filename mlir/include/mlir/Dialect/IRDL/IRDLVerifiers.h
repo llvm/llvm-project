@@ -100,6 +100,48 @@ private:
 };
 
 /// A constraint that checks that an attribute is of a
+/// specific attribute definition.
+class BaseAttrConstraint : public Constraint {
+public:
+  BaseAttrConstraint(TypeID baseTypeID, StringRef baseName)
+      : baseTypeID(baseTypeID), baseName(baseName) {}
+
+  virtual ~BaseAttrConstraint() = default;
+
+  LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute attr,
+                       ConstraintVerifier &context) const override;
+
+private:
+  /// The expected base attribute typeID.
+  TypeID baseTypeID;
+
+  /// The base attribute name, which is only used for error reporting.
+  StringRef baseName;
+};
+
+/// A constraint that checks that an attribute is of a
+/// specific type definition.
+class BaseTypeConstraint : public Constraint {
+public:
+  BaseTypeConstraint(TypeID baseTypeID, StringRef baseName)
+      : baseTypeID(baseTypeID), baseName(baseName) {}
+
+  virtual ~BaseTypeConstraint() = default;
+
+  LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute attr,
+                       ConstraintVerifier &context) const override;
+
+private:
+  /// The expected base type typeID.
+  TypeID baseTypeID;
+
+  /// The base type name, which is only used for error reporting.
+  StringRef baseName;
+};
+
+/// A constraint that checks that an attribute is of a
 /// specific dynamic attribute definition, and that all of its parameters
 /// satisfy the given constraints.
 class DynParametricAttrConstraint : public Constraint {
