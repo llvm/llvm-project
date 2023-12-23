@@ -31,9 +31,9 @@ class T_MAP4 { Map OpMap = T_MAP4; }
 class T_MAP5 { Map OpMap = T_MAP5; }
 class T_MAP6 { Map OpMap = T_MAP6; }
 class T_MAP7 { Map OpMap = T_MAP7; }
-class XOP8   { Map OpMap = XOP8; Prefix OpPrefix = PS; }
-class XOP9   { Map OpMap = XOP9; Prefix OpPrefix = PS; }
-class XOPA   { Map OpMap = XOPA; Prefix OpPrefix = PS; }
+class XOP8   { Map OpMap = XOP8; }
+class XOP9   { Map OpMap = XOP9; }
+class XOPA   { Map OpMap = XOPA; }
 class ThreeDNow { Map OpMap = ThreeDNow; }
 class PS { Prefix OpPrefix = PS; }
 class PD { Prefix OpPrefix = PD; }
@@ -79,7 +79,7 @@ class AVX512XDIi8Base : TB, XD {
   Domain ExeDomain = SSEPackedInt;
   ImmType ImmT = Imm8;
 }
-class AVX512PSIi8Base : TB, PS {
+class AVX512PSIi8Base : TB {
   Domain ExeDomain = SSEPackedSingle;
   ImmType ImmT = Imm8;
 }
@@ -574,11 +574,11 @@ class SSIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
       : Ii8<o, F, outs, ins, asm, pattern>, TB, XS, Requires<[UseSSE1]>;
 class PSI<bits<8> o, Format F, dag outs, dag ins, string asm,
           list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern, SSEPackedSingle>, TB, PS,
+      : I<o, F, outs, ins, asm, pattern, SSEPackedSingle>, TB,
         Requires<[UseSSE1]>;
 class PSIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern, SSEPackedSingle>, TB, PS,
+      : Ii8<o, F, outs, ins, asm, pattern, SSEPackedSingle>, TB,
         Requires<[UseSSE1]>;
 class VSSI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
@@ -587,7 +587,7 @@ class VSSI<bits<8> o, Format F, dag outs, dag ins, string asm,
 class VPSI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
       : I<o, F, outs, ins, !strconcat("v", asm), pattern, SSEPackedSingle>,
-        TB, PS, Requires<[HasAVX]>;
+        TB, Requires<[HasAVX]>;
 
 // SSE2 Instruction Templates:
 //
@@ -694,11 +694,11 @@ class SS3AI<bits<8> o, Format F, dag outs, dag ins, string asm,
         Requires<[UseSSSE3]>;
 class MMXSS38I<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern, SSEPackedInt>, T8, PS,
+      : I<o, F, outs, ins, asm, pattern, SSEPackedInt>, T8,
         Requires<[HasMMX, HasSSSE3]>;
 class MMXSS3AI<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern, SSEPackedInt>, TA, PS,
+      : Ii8<o, F, outs, ins, asm, pattern, SSEPackedInt>, TA,
         Requires<[HasMMX, HasSSSE3]>;
 
 // SSE4.1 Instruction Templates:
@@ -824,7 +824,7 @@ class AVX512PDI<bits<8> o, Format F, dag outs, dag ins, string asm,
         Requires<[HasAVX512]>;
 class AVX512PSI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern, SSEPackedSingle>, TB, PS,
+      : I<o, F, outs, ins, asm, pattern, SSEPackedSingle>, TB,
         Requires<[HasAVX512]>;
 class AVX512PIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
               list<dag> pattern, Domain d>
@@ -947,14 +947,14 @@ class VRS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
 // MMXIi8 - MMX instructions with ImmT == Imm8 and PS prefix.
 class MMXI<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, TB, PS, Requires<[HasMMX]>;
+      : I<o, F, outs, ins, asm, pattern>, TB, Requires<[HasMMX]>;
 class MMXRI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, TB, PS, REX_W,
+      : I<o, F, outs, ins, asm, pattern>, TB, REX_W,
         Requires<[HasMMX,In64BitMode]>;
 class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
              list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, TB, PS, Requires<[HasMMX]>;
+      : Ii8<o, F, outs, ins, asm, pattern>, TB, Requires<[HasMMX]>;
 
 /// ITy - This instruction base class takes the type info for the instruction.
 /// Using this, it:

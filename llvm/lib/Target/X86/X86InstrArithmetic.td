@@ -1117,8 +1117,8 @@ let Predicates = [HasBMI, HasEGPR, In64BitMode] in {
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let Defs = [EFLAGS], AddedComplexity = -6 in {
-  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8, PS;
-  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8, PS, REX_W;
+  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8;
+  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8, REX_W;
 }
 
 let Predicates = [HasBMI], AddedComplexity = -6 in {
