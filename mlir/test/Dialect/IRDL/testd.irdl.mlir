@@ -86,29 +86,29 @@ irdl.dialect @testd {
 
   // CHECK: irdl.operation @dyn_attr_base {
   // CHECK:   %[[v1:[^ ]*]] = irdl.base @parametric_attr
-  // CHECK:   irdl.results(%[[v1]])
+  // CHECK:   irdl.attributes {"attr1" = %[[v1]]}
   // CHECK: }
   irdl.operation @dyn_attr_base {
     %0 = irdl.base @parametric_attr
-    irdl.results(%0)
+    irdl.attributes {"attr1" = %0}
   }
 
-  // CHECK: irdl.operation @type_base {
+  // CHECK: irdl.operation @named_type_base {
   // CHECK:   %[[v1:[^ ]*]] = irdl.base "!builtin.integer"
   // CHECK:   irdl.results(%[[v1]])
   // CHECK: }
-  irdl.operation @type_base {
+  irdl.operation @named_type_base {
     %0 = irdl.base "!builtin.integer"
     irdl.results(%0)
   }
 
-  // CHECK: irdl.operation @attr_base {
+  // CHECK: irdl.operation @named_attr_base {
   // CHECK:   %[[v1:[^ ]*]] = irdl.base "#builtin.integer"
-  // CHECK:   irdl.results(%[[v1]])
+  // CHECK:   irdl.attributes {"attr1" = %[[v1]]}
   // CHECK: }
-  irdl.operation @attr_base {
+  irdl.operation @named_attr_base {
     %0 = irdl.base "#builtin.integer"
-    irdl.results(%0)
+    irdl.attributes {"attr1" = %0}
   }
 
   // CHECK: irdl.operation @dynparams {
