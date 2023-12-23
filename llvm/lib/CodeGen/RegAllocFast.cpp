@@ -81,8 +81,9 @@ public:
   /// instructions index has been reassigned.
   bool getIndex(const MachineInstr &MI, uint64_t &Index) {
     assert(MI.getParent() == CurMBB && "MI is not in CurMBB");
-    if (Instr2PosIndex.count(&MI)) {
-      Index = Instr2PosIndex[&MI];
+    auto It = Instr2PosIndex.find(&MI);
+    if (It != Instr2PosIndex.end()) {
+      Index = It->second;
       return false;
     }
 

@@ -6443,7 +6443,7 @@ bool BoUpSLP::areAllUsersVectorized(
     Instruction *I, const SmallDenseSet<Value *> *VectorizedVals) const {
   return (I->hasOneUse() && (!VectorizedVals || VectorizedVals->contains(I))) ||
          all_of(I->users(), [this](User *U) {
-           return ScalarToTreeEntry.count(U) > 0 ||
+           return ScalarToTreeEntry.contains(U) ||
                   isVectorLikeInstWithConstOps(U) ||
                   (isa<ExtractElementInst>(U) && MustGather.contains(U));
          });
