@@ -21,9 +21,12 @@
 #include "__ranges/size.h"
 #include "__ranges/stride_view.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "test_range.h"
 #include <iterator>
 #include <ranges>
+#include <type_traits>
+#include <utility>
 
 template <typename I, std::ranges::range_difference_t<I> D>
 concept CanStrideView = requires {
@@ -284,5 +287,16 @@ struct SizedForwardIterator {
 };
 static_assert(std::input_iterator<SizedForwardIterator>);
 static_assert(std::sized_sentinel_for<SizedForwardIterator, SizedForwardIterator>);
+
+struct SimpleView : std::ranges::view_base {
+  int* begin_;
+  int* end_;
+
+  constexpr SimpleView(int* b, int* e) : begin_(b), end_(e) {}
+
+  constexpr const int* begin() const { return begin_; }
+  constexpr const int* end() const { return end_; }
+};
+LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleView>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
