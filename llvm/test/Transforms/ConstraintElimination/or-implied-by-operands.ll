@@ -181,9 +181,8 @@ define i1 @test_remove_variables(i1 %c, ptr %A, i64 %B, ptr %C) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[TMP0]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[ELSE_2:%.*]]
 ; CHECK:       then.2:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sgt i64 [[B:%.*]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 true, [[C_3]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ; CHECK:       else.2:
 ; CHECK-NEXT:    ret i1 false
