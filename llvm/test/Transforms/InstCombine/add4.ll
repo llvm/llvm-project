@@ -135,9 +135,8 @@ define i32 @fold_add_udiv_urem(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[DIV]], 4
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[SHL]], [[REM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[DIV]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -151,9 +150,8 @@ define i32 @fold_add_sdiv_srem(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_sdiv_srem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[DIV]], 4
-; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], [[REM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i32 [[DIV]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -166,11 +164,7 @@ entry:
 define i32 @fold_add_udiv_urem_to_mul(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_to_mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 7
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[DIV]], 21
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 7
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[REM]], 3
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[ADD:%.*]] = mul i32 [[VAL:%.*]], 3
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -184,12 +178,9 @@ entry:
 define i32 @fold_add_udiv_urem_to_mul_multiuse(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_to_mul_multiuse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 7
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[DIV]], 21
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 7
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL:%.*]], 7
 ; CHECK-NEXT:    call void @use(i32 [[REM]])
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[REM]], 3
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[ADD:%.*]] = mul i32 [[VAL]], 3
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -205,9 +196,8 @@ define i32 @fold_add_udiv_urem_commuted(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_commuted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[DIV]], 4
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[REM]], [[SHL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[DIV]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -221,9 +211,8 @@ define i32 @fold_add_udiv_urem_or_disjoint(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_or_disjoint(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[DIV]], 4
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[SHL]], [[REM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[DIV]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
