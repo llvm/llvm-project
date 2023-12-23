@@ -497,8 +497,7 @@ body:  |
 
   std::pair<FuncValueTable, FuncValueTable>
   allocValueTables(unsigned Blocks, unsigned Locs) {
-    return {FuncValueTable(Blocks, ValueTable(Locs)),
-            FuncValueTable(Blocks, ValueTable(Locs))};
+    return {FuncValueTable(Blocks, Locs), FuncValueTable(Blocks, Locs)};
   }
 };
 
@@ -917,8 +916,7 @@ TEST_F(InstrRefLDVTest, MLocSingleBlock) {
 
   // Set up live-in and live-out tables for this function: two locations (we
   // add one later) in a single block.
-  FuncValueTable MOutLocs, MInLocs;
-  std::tie(MOutLocs, MInLocs) = allocValueTables(1, 2);
+  auto [MOutLocs, MInLocs] = allocValueTables(1, 2);
 
   // Transfer function: nothing.
   SmallVector<MLocTransferMap, 1> TransferFunc;
@@ -983,8 +981,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondBlocks) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(4, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(4, 2);
 
   // Transfer function: start with nothing.
   SmallVector<MLocTransferMap, 1> TransferFunc;
@@ -1137,8 +1134,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // There are other locations, for things like xmm0, which we're going to
   // ignore here.
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(4, 11);
+  auto [MInLocs, MOutLocs] = allocValueTables(4, 11);
 
   // Transfer function: start with nothing.
   SmallVector<MLocTransferMap, 1> TransferFunc;
@@ -1199,8 +1195,7 @@ TEST_F(InstrRefLDVTest, MLocSimpleLoop) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(3, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(3, 2);
 
   SmallVector<MLocTransferMap, 1> TransferFunc;
   TransferFunc.resize(3);
@@ -1298,8 +1293,7 @@ TEST_F(InstrRefLDVTest, MLocNestedLoop) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(5, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
   SmallVector<MLocTransferMap, 1> TransferFunc;
   TransferFunc.resize(5);
@@ -1500,8 +1494,7 @@ TEST_F(InstrRefLDVTest, MLocNoDominatingLoop) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(5, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
   SmallVector<MLocTransferMap, 1> TransferFunc;
   TransferFunc.resize(5);
@@ -1656,8 +1649,7 @@ TEST_F(InstrRefLDVTest, MLocBadlyNestedLoops) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(5, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
   SmallVector<MLocTransferMap, 1> TransferFunc;
   TransferFunc.resize(5);
@@ -1789,8 +1781,7 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(4, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(4, 2);
 
   initValueArray(MOutLocs, 4, 2);
 
@@ -1986,8 +1977,7 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(3, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(3, 2);
 
   initValueArray(MOutLocs, 3, 2);
 
@@ -2117,8 +2107,7 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   Register RBX = getRegByName("RBX");
   LocIdx RbxLoc = MTracker->lookupOrTrackRegister(RBX);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(5, 3);
+  auto [MInLocs, MOutLocs] = allocValueTables(5, 3);
 
   initValueArray(MOutLocs, 5, 3);
 
@@ -2635,8 +2624,7 @@ TEST_F(InstrRefLDVTest, VLocSingleBlock) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(1, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(1, 2);
 
   ValueIDNum LiveInRsp = ValueIDNum(0, 0, RspLoc);
   DbgOpID LiveInRspID = addValueDbgOp(LiveInRsp);
@@ -2699,8 +2687,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   DbgOpID LiveInRaxID = addValueDbgOp(LiveInRax);
   DbgOpID RspPHIInBlk3ID = addValueDbgOp(RspPHIInBlk3);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(4, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(4, 2);
 
   initValueArray(MInLocs, 4, 2);
   initValueArray(MOutLocs, 4, 2);
@@ -2921,8 +2908,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   DbgOpID RspDefInBlk1ID = addValueDbgOp(RspDefInBlk1);
   DbgOpID RaxPHIInBlk1ID = addValueDbgOp(RaxPHIInBlk1);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(3, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(3, 2);
 
   initValueArray(MInLocs, 3, 2);
   initValueArray(MOutLocs, 3, 2);
@@ -3200,8 +3186,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   DbgOpID RspPHIInBlk2ID = addValueDbgOp(RspPHIInBlk2);
   DbgOpID RspDefInBlk2ID = addValueDbgOp(RspDefInBlk2);
 
-  FuncValueTable MInLocs, MOutLocs;
-  std::tie(MInLocs, MOutLocs) = allocValueTables(5, 2);
+  auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
   initValueArray(MInLocs, 5, 2);
   initValueArray(MOutLocs, 5, 2);
