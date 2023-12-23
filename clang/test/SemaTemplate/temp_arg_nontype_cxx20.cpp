@@ -8,8 +8,8 @@ namespace std {
 
 // floating-point arguments
 template<float> struct Float {};
-using F1 = Float<1.0f>; // FIXME expected-error {{sorry}}
-using F1 = Float<2.0f / 2>; // FIXME expected-error {{sorry}}
+using F1 = Float<1.0f>; // FIXME expected-error {{non-type template argument of type}}
+using F1 = Float<2.0f / 2>; // FIXME expected-error {{non-type template argument of type}}
 
 struct S { int n[3]; } s; // expected-note 1+{{here}}
 union U { int a, b; } u;
@@ -48,12 +48,12 @@ using U1 = Union<U{.b = 1}>; // expected-error {{different types}}
 
 // miscellaneous scalar types
 template<_Complex int> struct ComplexInt {};
-using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{sorry}}
-using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{sorry}}
+using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{non-type template argument of type}}
+using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{non-type template argument of type}}
 
 template<_Complex float> struct ComplexFloat {};
-using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{sorry}}
-using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{sorry}}
+using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{non-type template argument of type}}
+using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{non-type template argument of type}}
 
 namespace ClassNTTP {
   struct A { // expected-note 2{{candidate}}
