@@ -275,10 +275,11 @@ public:
   ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
     auto &Value2Index = getValue2Index(false);
-    for (Value *V : FunctionArgs) {
+    // Add Arg > -1 constraints to unsigned system for all function arguments.
+    for (Value *Arg : FunctionArgs) {
       ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
                           false, false, false);
-      VarPos.Coefficients[Value2Index[V]] = -1;
+      VarPos.Coefficients[Value2Index[Arg]] = -1;
       UnsignedCS.addVariableRow(VarPos.Coefficients);
     }
   }
