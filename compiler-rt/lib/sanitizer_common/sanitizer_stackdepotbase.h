@@ -171,8 +171,7 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAll() {
   for (int i = 0; i < kTabSize; ++i) {
     atomic_uint32_t *p = &tab[i];
     uptr s = atomic_load(p, memory_order_relaxed);
-    if (s & kLockMask)
-      unlock(p, s & kUnlockMask);
+    unlock(p, s & kUnlockMask);
   }
 }
 

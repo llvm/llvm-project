@@ -31,15 +31,10 @@ u32 ChainedOriginDepotGet(u32 id, u32 *other) {
   return chainedOriginDepot.Get(id, other);
 }
 
-void ChainedOriginDepotBeforeFork() {
-  // Don't `chainedOriginDepot.LockAll()`, see `StackDepotLockBeforeFork`.
-}
+void ChainedOriginDepotBeforeFork() { chainedOriginDepot.LockAll(); }
 
 void ChainedOriginDepotAfterFork(bool fork_child) {
-  // See `StackDepotUnlockAfterFork`.
-  if (fork_child) {
-    chainedOriginDepot.UnlockAll();
-  }
+  chainedOriginDepot.UnlockAll();
 }
 
 } // namespace __msan
