@@ -19,9 +19,13 @@ static ChainedOriginDepot chainedOriginDepot;
 
 ChainedOriginDepot* GetChainedOriginDepot() { return &chainedOriginDepot; }
 
-void ChainedOriginDepotLockBeforeFork() { chainedOriginDepot.LockAll(); }
+void ChainedOriginDepotLockBeforeFork() {
+  // TODO: Consider same optimization as `StackDepotLockBeforeFork`.
+  chainedOriginDepot.LockAll();
+}
 
 void ChainedOriginDepotUnlockAfterFork(bool fork_child) {
+  // TODO: Consider same optimization as `StackDepotUnlockAfterFork`.
   chainedOriginDepot.UnlockAll();
 }
 
