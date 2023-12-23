@@ -24,7 +24,6 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Utils.h"
-#include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
@@ -4028,15 +4027,17 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     }
   }
 
+  void checkInvalidImage(__tgt_image_info *Info,
+                              __tgt_device_image *TgtImage) override final {
+
+    utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
+                                                      IsXnackEnabled());
+  }
+
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isELFCompatible(StringRef Image) const override {
-    // Get the associated architecture and flags from the ELF.
-    auto ElfOrErr =
-        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
-                                  /*InitContent=*/false);
-    if (!ElfOrErr)
-      return ElfOrErr.takeError();
-    std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
+  Expected<bool>
+  isImageCompatible(__tgt_image_info *Info,
+                    __tgt_device_image *TgtImage) const override {
 
     for (hsa_agent_t Agent : KernelAgents) {
       std::string Target;
@@ -4060,16 +4061,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (Err)
         return std::move(Err);
 
-      if (utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
-                                           ElfOrErr->getPlatformFlags(),
-                                           Target))
+      if (utils::isImageCompatibleWithEnv(Info, Target))
         return true;
     }
-
-    // Check if the system's XNACK mode matches the one required by the
-    // image. Print a warning if not.
-    // utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
-    //                                                   IsXnackEnabled());
 
     return false;
   }

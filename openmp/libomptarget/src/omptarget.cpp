@@ -320,9 +320,14 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (!PM->getNumUsedPlugins())
+      if (!PM->getNumUsedPlugins()) {
+        llvm::SmallVector<llvm::StringRef> Archs;
+        llvm::transform(PM->deviceImages(), std::back_inserter(Archs),
+                        [](const auto &X) { return X.getArch("empty"); });
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
+        fprintf(stderr, "Found (%s)\n", llvm::join(Archs, ",").c_str());
+      }
 
       SourceInfo Info(Loc);
       if (Info.isAvailible())
