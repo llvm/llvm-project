@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTestBase.h"
+#include "gmock/gmock.h"
 
 #define DEBUG_TYPE "format-test"
 
@@ -8497,7 +8498,10 @@ TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
                "    __attribute__((unused));");
 
   Style = getGoogleStyle();
-  Style.AttributeMacros.push_back("GUARDED_BY");
+  ASSERT_THAT(Style.AttributeMacros,
+              testing::AllOf(testing::Contains("GUARDED_BY"),
+                             testing::Contains("ABSL_GUARDED_BY")));
+
   verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    GUARDED_BY(aaaaaaaaaaaa);",
@@ -8512,6 +8516,23 @@ TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
       Style);
   verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa GUARDED_BY(aaaaaaaaaaaa) =\n"
+      "    aaaaaaaaaaaaaaaaaaaaaaaaa;",
+      Style);
+
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    ABSL_GUARDED_BY(aaaaaaaaaaaa);",
+      Style);
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    ABSL_GUARDED_BY(aaaaaaaaaaaa);",
+      Style);
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ABSL_GUARDED_BY(aaaaaaaaaaaa) =\n"
+      "    aaaaaaaa::aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+      Style);
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ABSL_GUARDED_BY(aaaaaaaaaaaa) =\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaa;",
       Style);
 }
@@ -10072,11 +10093,11 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                getGoogleStyleWithColumns(40));
   verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
                "    ABSL_GUARDED_BY(mutex1)\n"
-               "        ABSL_GUARDED_BY(mutex2);",
+               "    ABSL_GUARDED_BY(mutex2);",
                getGoogleStyleWithColumns(40));
   verifyFormat("Tttttt f(int a, int b)\n"
                "    ABSL_GUARDED_BY(mutex1)\n"
-               "        ABSL_GUARDED_BY(mutex2);",
+               "    ABSL_GUARDED_BY(mutex2);",
                getGoogleStyleWithColumns(40));
   // * typedefs
   verifyGoogleFormat("typedef ATTR(X) char x;");
