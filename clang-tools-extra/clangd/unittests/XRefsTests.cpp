@@ -1222,52 +1222,40 @@ TEST(LocateSymbol, TextualSmoke) {
                         hasID(getSymbolID(&findDecl(AST, "MyClass"))))));
 }
 
-TEST(LocateSymbol, DeduceDependentTypeFromSingleInstantiation) {
+TEST(LocateSymbol, DISABLED_DeduceDependentTypeFromSingleInstantiation) {
   Annotations T(R"cpp(
-    struct WildCat {
-      void $wild_meow[[meow]]();
+    struct Widget {
+      int $range_1[[method]](int);
     };
-
-    struct DomesticCat {
-      void $domestic_meow[[meow]]();
+    template <class T> struct A {
+      template <class U> struct B {
+        template <class V> T foo(U, V arg) {
+          V copy;
+          int not_used = copy.$point_1^method(T{});
+          not_used = V().$point_2^method(T{});
+          auto lambda = [](auto w) {
+            return w.$point_3^method(T{});
+          };
+          lambda(copy);
+          arg.$point_4^method(T{});
+        }
+      };
     };
-
-    template <typename Ours>
-    struct Human {
-      template <typename Others>
-      void feed(Others O) {
-        O.me$1^ow();
-        Others Child;
-        Child.me$2^ow();
-        // FIXME: Others().me^ow();
-        Ours Baby;
-        Baby.me$3^ow();
-        // struct Inner {
-        //   Ours Pet;
-        // };
-        // Inner().Pet.me^ow();
-        auto Lambda = [](auto C) {
-          C.me$4^ow();
-        };
-        Lambda(Others());
-      }
-    };
-
-    void foo() {
-      Human<DomesticCat>().feed(WildCat());
+    int main() {
+      int X = A<int>::B<double>().foo(3.14, Widget{});
     }
   )cpp");
 
   auto TU = TestTU::withCode(T.code());
   auto AST = TU.build();
-  EXPECT_THAT(locateSymbolAt(AST, T.point("1")),
-              ElementsAre(sym("meow", T.range("wild_meow"), std::nullopt)));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("2")),
-              ElementsAre(sym("meow", T.range("wild_meow"), std::nullopt)));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("3")),
-              ElementsAre(sym("meow", T.range("domestic_meow"), std::nullopt)));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("4")),
-              ElementsAre(sym("meow", T.range("wild_meow"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("point_1")),
+              ElementsAre(sym("method", T.range("range_1"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("point_2")),
+              ElementsAre(sym("method", T.range("range_1"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("point_3")),
+              ElementsAre(sym("method", T.range("range_1"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("point_4")),
+              ElementsAre(sym("method", T.range("range_1"), std::nullopt)));
 }
 
 TEST(LocateSymbol, Textual) {

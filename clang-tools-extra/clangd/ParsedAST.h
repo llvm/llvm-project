@@ -30,6 +30,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -118,8 +119,9 @@ public:
   /// AST. Might be std::nullopt if no Preamble is used.
   std::optional<llvm::StringRef> preambleVersion() const;
 
-  const HeuristicResolver *getHeuristicResolver() const {
-    return Resolver.get();
+  HeuristicResolver
+  getHeuristicResolver(const DeclContext *EnclosingDecl = nullptr) const {
+    return HeuristicResolver(getASTContext(), EnclosingDecl);
   }
 
 private:
@@ -159,7 +161,6 @@ private:
   // top-level decls from the preamble.
   std::vector<Decl *> LocalTopLevelDecls;
   IncludeStructure Includes;
-  std::unique_ptr<HeuristicResolver> Resolver;
 };
 
 } // namespace clangd

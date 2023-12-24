@@ -627,7 +627,7 @@ public:
         isa<UserDefinedLiteral>(E))
       return true;
 
-    auto CalleeDecls = Resolver->resolveCalleeOfCallExpr(E);
+    auto CalleeDecls = Resolver.resolveCalleeOfCallExpr(E);
     if (CalleeDecls.size() != 1)
       return true;
 
@@ -1274,7 +1274,7 @@ private:
   std::optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
-  const HeuristicResolver *Resolver;
+  HeuristicResolver Resolver;
   PrintingPolicy TypeHintPolicy;
 };
 

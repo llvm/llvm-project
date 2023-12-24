@@ -45,7 +45,8 @@ namespace clangd {
 // not a specialization. More advanced heuristics may be added in the future.
 class HeuristicResolver {
 public:
-  HeuristicResolver(ASTContext &Ctx) : Ctx(Ctx) {}
+  HeuristicResolver(const ASTContext &Ctx, const DeclContext *EnclosingDecl = nullptr)
+      : Ctx(Ctx), EnclosingDecl(EnclosingDecl) {}
 
   // Try to heuristically resolve certain types of expressions, declarations, or
   // types to one or more likely-referenced declarations.
@@ -76,7 +77,8 @@ public:
   const Type *getPointeeType(const Type *T) const;
 
 private:
-  ASTContext &Ctx;
+  const ASTContext &Ctx;
+  const DeclContext *EnclosingDecl;
 
   // Given a tag-decl type and a member name, heuristically resolve the
   // name to one or more declarations.

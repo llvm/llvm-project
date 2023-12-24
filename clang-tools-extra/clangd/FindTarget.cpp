@@ -133,7 +133,7 @@ struct TargetFinder {
   using Rel = DeclRelation;
 
 private:
-  const HeuristicResolver *Resolver;
+  const HeuristicResolver &Resolver;
   llvm::SmallDenseMap<const NamedDecl *,
                       std::pair<RelSet, /*InsertionOrder*/ size_t>>
       Decls;
@@ -153,7 +153,7 @@ private:
   }
 
 public:
-  TargetFinder(const HeuristicResolver *Resolver) : Resolver(Resolver) {}
+  TargetFinder(const HeuristicResolver &Resolver) : Resolver(Resolver) {}
 
   llvm::SmallVector<std::pair<const NamedDecl *, RelSet>, 1> takeDecls() const {
     using ValTy = std::pair<const NamedDecl *, RelSet>;
@@ -197,10 +197,8 @@ public:
       Flags |= Rel::Alias; // continue with the alias
     } else if (const UnresolvedUsingValueDecl *UUVD =
                    dyn_cast<UnresolvedUsingValueDecl>(D)) {
-      if (Resolver) {
-        for (const NamedDecl *Target : Resolver->resolveUsingValueDecl(UUVD)) {
-          add(Target, Flags); // no Underlying as this is a non-renaming alias
-        }
+      for (const NamedDecl *Target : Resolver.resolveUsingValueDecl(UUVD)) {
+        add(Target, Flags); // no Underlying as this is a non-renaming alias
       }
       Flags |= Rel::Alias; // continue with the alias
     } else if (isa<UnresolvedUsingTypenameDecl>(D)) {
@@ -304,17 +302,13 @@ public:
       }
       void
       VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
-        if (Outer.Resolver) {
-          for (const NamedDecl *D : Outer.Resolver->resolveMemberExpr(E)) {
-            Outer.add(D, Flags);
-          }
+        for (const NamedDecl *D : Outer.Resolver.resolveMemberExpr(E)) {
+          Outer.add(D, Flags);
         }
       }
       void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) {
-        if (Outer.Resolver) {
-          for (const NamedDecl *D : Outer.Resolver->resolveDeclRefExpr(E)) {
-            Outer.add(D, Flags);
-          }
+        for (const NamedDecl *D : Outer.Resolver.resolveDeclRefExpr(E)) {
+          Outer.add(D, Flags);
         }
       }
       void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *OIRE) {
@@ -407,20 +401,16 @@ public:
           Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
       }
       void VisitDependentNameType(const DependentNameType *DNT) {
-        if (Outer.Resolver) {
-          for (const NamedDecl *ND :
-               Outer.Resolver->resolveDependentNameType(DNT)) {
-            Outer.add(ND, Flags);
-          }
+        for (const NamedDecl *ND :
+             Outer.Resolver.resolveDependentNameType(DNT)) {
+          Outer.add(ND, Flags);
         }
       }
       void VisitDependentTemplateSpecializationType(
           const DependentTemplateSpecializationType *DTST) {
-        if (Outer.Resolver) {
-          for (const NamedDecl *ND :
-               Outer.Resolver->resolveTemplateSpecializationType(DTST)) {
-            Outer.add(ND, Flags);
-          }
+        for (const NamedDecl *ND :
+             Outer.Resolver.resolveTemplateSpecializationType(DTST)) {
+          Outer.add(ND, Flags);
         }
       }
       void VisitTypedefType(const TypedefType *TT) {
@@ -488,10 +478,7 @@ public:
       add(NNS->getAsNamespaceAlias(), Flags);
       return;
     case NestedNameSpecifier::Identifier:
-      if (Resolver) {
-        add(QualType(Resolver->resolveNestedNameSpecifierToType(NNS), 0),
-            Flags);
-      }
+      add(QualType(Resolver.resolveNestedNameSpecifierToType(NNS), 0), Flags);
       return;
     case NestedNameSpecifier::TypeSpec:
     case NestedNameSpecifier::TypeSpecWithTemplate:
@@ -542,7 +529,7 @@ public:
 } // namespace
 
 llvm::SmallVector<std::pair<const NamedDecl *, DeclRelationSet>, 1>
-allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
+allTargetDecls(const DynTypedNode &N, const HeuristicResolver &Resolver) {
   dlog("allTargetDecls({0})", nodeToString(N));
   TargetFinder Finder(Resolver);
   DeclRelationSet Flags;
@@ -573,7 +560,7 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
 
 llvm::SmallVector<const NamedDecl *, 1>
 targetDecl(const DynTypedNode &N, DeclRelationSet Mask,
-           const HeuristicResolver *Resolver) {
+           const HeuristicResolver &Resolver) {
   llvm::SmallVector<const NamedDecl *, 1> Result;
   for (const auto &Entry : allTargetDecls(N, Resolver)) {
     if (!(Entry.second & ~Mask))
@@ -584,7 +571,7 @@ targetDecl(const DynTypedNode &N, DeclRelationSet Mask,
 
 llvm::SmallVector<const NamedDecl *, 1>
 explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask,
-                         const HeuristicResolver *Resolver) {
+                         const HeuristicResolver &Resolver) {
   assert(!(Mask & (DeclRelation::TemplatePattern |
                    DeclRelation::TemplateInstantiation)) &&
          "explicitReferenceTargets handles templates on its own");
@@ -616,11 +603,11 @@ explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask,
 
 namespace {
 llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
-                                          const HeuristicResolver *Resolver) {
+                                          const HeuristicResolver &Resolver) {
   struct Visitor : ConstDeclVisitor<Visitor> {
-    Visitor(const HeuristicResolver *Resolver) : Resolver(Resolver) {}
+    Visitor(const HeuristicResolver &Resolver) : Resolver(Resolver) {}
 
-    const HeuristicResolver *Resolver;
+    const HeuristicResolver &Resolver;
     llvm::SmallVector<ReferenceLoc> Refs;
 
     void VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -741,11 +728,11 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
 }
 
 llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
-                                          const HeuristicResolver *Resolver) {
+                                          const HeuristicResolver &Resolver) {
   struct Visitor : ConstStmtVisitor<Visitor> {
-    Visitor(const HeuristicResolver *Resolver) : Resolver(Resolver) {}
+    Visitor(const HeuristicResolver &Resolver) : Resolver(Resolver) {}
 
-    const HeuristicResolver *Resolver;
+    const HeuristicResolver &Resolver;
     // FIXME: handle more complicated cases: more ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc> Refs;
 
@@ -852,11 +839,11 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
 }
 
 llvm::SmallVector<ReferenceLoc>
-refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
+refInTypeLoc(TypeLoc L, const HeuristicResolver &Resolver) {
   struct Visitor : TypeLocVisitor<Visitor> {
-    Visitor(const HeuristicResolver *Resolver) : Resolver(Resolver) {}
+    Visitor(const HeuristicResolver &Resolver) : Resolver(Resolver) {}
 
-    const HeuristicResolver *Resolver;
+    const HeuristicResolver &Resolver;
     llvm::SmallVector<ReferenceLoc> Refs;
 
     void VisitElaboratedTypeLoc(ElaboratedTypeLoc L) {
@@ -966,7 +953,7 @@ class ExplicitReferenceCollector
     : public RecursiveASTVisitor<ExplicitReferenceCollector> {
 public:
   ExplicitReferenceCollector(llvm::function_ref<void(ReferenceLoc)> Out,
-                             const HeuristicResolver *Resolver)
+                             const HeuristicResolver &Resolver)
       : Out(Out), Resolver(Resolver) {
     assert(Out);
   }
@@ -1144,7 +1131,7 @@ private:
   }
 
   llvm::function_ref<void(ReferenceLoc)> Out;
-  const HeuristicResolver *Resolver;
+  const HeuristicResolver &Resolver;
   /// TypeLocs starting at these locations must be skipped, see
   /// TraverseElaboratedTypeSpecifierLoc for details.
   llvm::DenseSet<SourceLocation> TypeLocsToSkip;
@@ -1153,19 +1140,19 @@ private:
 
 void findExplicitReferences(const Stmt *S,
                             llvm::function_ref<void(ReferenceLoc)> Out,
-                            const HeuristicResolver *Resolver) {
+                            const HeuristicResolver &Resolver) {
   assert(S);
   ExplicitReferenceCollector(Out, Resolver).TraverseStmt(const_cast<Stmt *>(S));
 }
 void findExplicitReferences(const Decl *D,
                             llvm::function_ref<void(ReferenceLoc)> Out,
-                            const HeuristicResolver *Resolver) {
+                            const HeuristicResolver &Resolver) {
   assert(D);
   ExplicitReferenceCollector(Out, Resolver).TraverseDecl(const_cast<Decl *>(D));
 }
 void findExplicitReferences(const ASTContext &AST,
                             llvm::function_ref<void(ReferenceLoc)> Out,
-                            const HeuristicResolver *Resolver) {
+                            const HeuristicResolver &Resolver) {
   ExplicitReferenceCollector(Out, Resolver)
       .TraverseAST(const_cast<ASTContext &>(AST));
 }

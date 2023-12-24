@@ -1358,8 +1358,9 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
         SelectionTree::createRight(AST.getASTContext(), TB, Offset, Offset);
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       // FIXME: Fill in HighlightRange with range coming from N->ASTNode.
-      auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
-                                            AST.getHeuristicResolver());
+      auto Decls = explicitReferenceTargets(
+          N->ASTNode, DeclRelation::Alias,
+          AST.getHeuristicResolver(&N->getDeclContext()));
       if (const auto *DeclToUse = pickDeclToUse(Decls)) {
         HoverCountMetric.record(1, "decl");
         HI = getHoverContents(DeclToUse, PP, Index, TB);

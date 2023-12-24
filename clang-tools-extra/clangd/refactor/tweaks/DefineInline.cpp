@@ -123,7 +123,7 @@ bool checkDeclsAreVisible(const llvm::DenseSet<const Decl *> &DeclRefs,
 // still valid in context of Target.
 llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
                                             const FunctionDecl *Target,
-                                            const HeuristicResolver *Resolver) {
+                                            const HeuristicResolver &Resolver) {
   // There are three types of spellings that needs to be qualified in a function
   // body:
   // - Types:       Foo                 -> ns::Foo
@@ -221,7 +221,7 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
 /// \p Dest to be the same as in \p Source.
 llvm::Expected<tooling::Replacements>
 renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source,
-                 const HeuristicResolver *Resolver) {
+                 const HeuristicResolver &Resolver) {
   llvm::DenseMap<const Decl *, std::string> ParamToNewName;
   llvm::DenseMap<const NamedDecl *, std::vector<SourceLocation>> RefLocs;
   auto HandleParam = [&](const NamedDecl *DestParam,

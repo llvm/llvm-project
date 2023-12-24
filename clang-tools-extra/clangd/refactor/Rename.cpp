@@ -168,7 +168,7 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   for (const NamedDecl *D :
        targetDecl(SelectedNode->ASTNode,
                   DeclRelation::Alias | DeclRelation::TemplatePattern,
-                  AST.getHeuristicResolver())) {
+                  AST.getHeuristicResolver(&SelectedNode->getDeclContext()))) {
     D = pickInterestingTarget(D);
     Result.insert(canonicalRenameDecl(D));
   }

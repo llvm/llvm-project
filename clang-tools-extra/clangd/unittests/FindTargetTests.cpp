@@ -86,8 +86,8 @@ protected:
     EXPECT_EQ(N->kind(), NodeType) << Selection;
 
     std::vector<PrintedDecl> ActualDecls;
-    for (const auto &Entry :
-         allTargetDecls(N->ASTNode, AST.getHeuristicResolver()))
+    for (const auto &Entry : allTargetDecls(
+             N->ASTNode, AST.getHeuristicResolver(&N->getDeclContext())))
       ActualDecls.emplace_back(Entry.first, Entry.second);
     return ActualDecls;
   }

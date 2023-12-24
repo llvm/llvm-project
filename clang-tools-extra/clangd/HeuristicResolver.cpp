@@ -9,6 +9,7 @@
 #include "HeuristicResolver.h"
 #include "AST.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -38,7 +39,7 @@ const auto TemplateFilter = [](const NamedDecl *D) {
 namespace {
 
 const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
-                               ASTContext &Ctx) {
+                               const ASTContext &Ctx) {
   if (Decls.size() != 1) // Names an overload set -- just bail.
     return nullptr;
   if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
@@ -93,7 +94,19 @@ struct InstantiatedDeclVisitor : RecursiveASTVisitor<InstantiatedDeclVisitor> {
 /// Attempt to resolve the dependent type from the surrounding context for which
 /// a single instantiation is available.
 const Type *
-resolveTypeFromInstantiatedTemplate(const CXXDependentScopeMemberExpr *Expr) {
+resolveTypeFromInstantiatedTemplate(const DeclContext *DC,
+                                    const CXXDependentScopeMemberExpr *Expr) {
+
+  std::optional<DynTypedNode> Node =
+      getOnlyInstantiatedNode(DC, DynTypedNode::create(*Expr));
+  if (!Node)
+    return nullptr;
+
+  if (auto *ME = Node->get<MemberExpr>())
+    return ME->getBase()->getType().getTypePtrOrNull();
+
+  return nullptr;
+
   if (Expr->isImplicitAccess())
     return nullptr;
 
@@ -247,7 +260,7 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
     return {};
 
   if (BaseType->isDependentType())
-    if (auto *MaybeResolved = resolveTypeFromInstantiatedTemplate(ME))
+    if (auto *MaybeResolved = resolveTypeFromInstantiatedTemplate(EnclosingDecl, ME))
       BaseType = MaybeResolved;
 
   if (const auto *BT = BaseType->getAs<BuiltinType>()) {

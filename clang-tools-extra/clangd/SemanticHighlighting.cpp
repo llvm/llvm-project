@@ -95,9 +95,9 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
 }
 
 std::optional<HighlightingKind> kindForType(const Type *TP,
-                                            const HeuristicResolver *Resolver);
+                                            const HeuristicResolver &Resolver);
 std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
-                                            const HeuristicResolver *Resolver) {
+                                            const HeuristicResolver &Resolver) {
   if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
     if (auto *Target = USD->getTargetDecl())
       D = Target;
@@ -169,7 +169,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   if (isa<LabelDecl>(D))
     return HighlightingKind::Label;
   if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(D)) {
-    auto Targets = Resolver->resolveUsingValueDecl(UUVD);
+    auto Targets = Resolver.resolveUsingValueDecl(UUVD);
     if (!Targets.empty() && Targets[0] != UUVD) {
       return kindForDecl(Targets[0], Resolver);
     }
@@ -178,7 +178,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   return std::nullopt;
 }
 std::optional<HighlightingKind> kindForType(const Type *TP,
-                                            const HeuristicResolver *Resolver) {
+                                            const HeuristicResolver &Resolver) {
   if (!TP)
     return std::nullopt;
   if (TP->isBuiltinType()) // Builtins are special, they do not have decls.
@@ -416,9 +416,11 @@ private:
 /// Consumes source locations and maps them to text ranges for highlightings.
 class HighlightingsBuilder {
 public:
-  HighlightingsBuilder(const ParsedAST &AST, const HighlightingFilter &Filter)
+  HighlightingsBuilder(const ParsedAST &AST, const HighlightingFilter &Filter,
+                       const HeuristicResolver &Resolver)
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
-        LangOpts(AST.getLangOpts()), Filter(Filter) {}
+        LangOpts(AST.getLangOpts()), Filter(Filter),
+        Resolver(Resolver) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     auto Range = getRangeForSourceLocation(Loc);
@@ -567,7 +569,7 @@ public:
     return WithInactiveLines;
   }
 
-  const HeuristicResolver *getResolver() const { return Resolver; }
+  const HeuristicResolver &getResolver() const { return Resolver; }
 
 private:
   std::optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
@@ -589,7 +591,7 @@ private:
   HighlightingFilter Filter;
   std::vector<HighlightingToken> Tokens;
   std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
-  const HeuristicResolver *Resolver = nullptr;
+  const HeuristicResolver &Resolver;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
 };
@@ -1150,7 +1152,7 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
   if (!IncludeInactiveRegionTokens)
     Filter.disableKind(HighlightingKind::InactiveCode);
   // Add highlightings for AST nodes.
-  HighlightingsBuilder Builder(AST, Filter);
+  HighlightingsBuilder Builder(AST, Filter, AST.getHeuristicResolver());
   // Highlight 'decltype' and 'auto' as their underlying types.
   CollectExtraHighlightings(Builder).TraverseAST(C);
   // Highlight all decls and references coming from the AST.

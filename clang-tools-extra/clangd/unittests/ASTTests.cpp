@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringRef.h"
@@ -315,6 +316,90 @@ TEST(ClangdAST, GetOnlyInstantiation) {
 
     if (Case.Name)
       EXPECT_EQ(Case.Name, Name);
+    else
+      EXPECT_THAT(Name, IsEmpty());
+  }
+}
+
+TEST(ClangdAST, DISABLED_GetOnlyInstantiationForMemberFunction) {
+  struct {
+    const char *Code;
+    const char *MemberTemplate;
+    const char *ExpectedInstantiation;
+  } Cases[] = {
+      {
+          R"cpp(
+      template <class T> struct Foo {
+        template <class U> struct Bar {
+          U Baz(T);
+        };
+      };
+      double X = Foo<int>::Bar<double>().Baz(3);
+      )cpp",
+          "Baz",
+          "double Baz(int)",
+      },
+      {
+          R"cpp(
+      template <class T> struct Foo {
+        struct Bar {
+          template <class U> U Baz(T);
+        };
+      };
+      double X = Foo<int>::Bar().Baz<double>(3);
+      )cpp",
+          "Baz",
+          "template<> double Baz<double>(int)",
+      },
+      {
+          R"cpp(
+      struct Foo {
+        struct Bar {
+          template <class T> T Baz(T);
+        };
+      };
+      int X = Foo::Bar().Baz(3);
+      )cpp",
+          "Baz",
+          "template<> int Baz<int>(int)",
+      },
+      {
+          R"cpp(
+      struct Foo {
+        template <class T> struct Bar {
+          template <class U> static U Baz(T);
+        };
+      };
+      int X = Foo::Bar<int>::Baz<double>(3);
+      )cpp",
+          "Baz",
+          "template<> static double Baz<double>(int)",
+      },
+
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    auto TU = TestTU::withCode(Case.Code);
+    TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    PrintingPolicy PP = AST.getASTContext().getPrintingPolicy();
+    PP.TerseOutput = true;
+    std::string Name;
+    if (auto *Result = getOnlyInstantiationForMemberFunction(
+            dyn_cast_if_present<CXXMethodDecl>(
+                &findDecl(AST, [&](const NamedDecl &D) {
+                  auto *MD = dyn_cast<CXXMethodDecl>(&D);
+                  IdentifierInfo *Id = D.getIdentifier();
+                  if (!MD || !Id)
+                    return false;
+                  return MD->isDependentContext() &&
+                         Id->getName() == Case.MemberTemplate;
+                })))) {
+      llvm::raw_string_ostream OS(Name);
+      Result->print(OS, PP);
+    }
+    if (Case.ExpectedInstantiation)
+      EXPECT_EQ(Case.ExpectedInstantiation, Name);
     else
       EXPECT_THAT(Name, IsEmpty());
   }

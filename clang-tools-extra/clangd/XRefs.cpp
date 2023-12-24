@@ -188,7 +188,8 @@ getDeclAtPositionWithRelations(ParsedAST &AST, SourceLocation Pos,
       // This makes the `override` hack work.
       if (N->ASTNode.get<Attr>() && N->Parent)
         N = N->Parent;
-      llvm::copy_if(allTargetDecls(N->ASTNode, AST.getHeuristicResolver()),
+      llvm::copy_if(allTargetDecls(N->ASTNode, AST.getHeuristicResolver(
+                                                   &N->getDeclContext())),
                     std::back_inserter(Result),
                     [&](auto &Entry) { return !(Entry.second & ~Relations); });
     }
@@ -1243,7 +1244,8 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
       DeclRelationSet Relations =
           DeclRelation::TemplatePattern | DeclRelation::Alias;
       auto TargetDecls =
-          targetDecl(N->ASTNode, Relations, AST.getHeuristicResolver());
+          targetDecl(N->ASTNode, Relations,
+                     AST.getHeuristicResolver(&N->getDeclContext()));
       if (!TargetDecls.empty()) {
         // FIXME: we may get multiple DocumentHighlights with the same location
         // and different kinds, deduplicate them.
@@ -2014,8 +2016,8 @@ static QualType typeForNode(const SelectionTree::Node *N) {
 
 // Given a type targeted by the cursor, return one or more types that are more interesting
 // to target.
-static void unwrapFindType(
-    QualType T, const HeuristicResolver* H, llvm::SmallVector<QualType>& Out) {
+static void unwrapFindType(QualType T, const HeuristicResolver &H,
+                           llvm::SmallVector<QualType> &Out) {
   if (T.isNull())
     return;
 
@@ -2043,18 +2045,18 @@ static void unwrapFindType(
   }
 
   // For smart pointer types, add the underlying type
-  if (H)
-    if (const auto* PointeeType = H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
-        unwrapFindType(QualType(PointeeType, 0), H, Out);
-        return Out.push_back(T);
-    }
+  if (const auto *PointeeType =
+          H.getPointeeType(T.getNonReferenceType().getTypePtr())) {
+    unwrapFindType(QualType(PointeeType, 0), H, Out);
+    return Out.push_back(T);
+  }
 
   return Out.push_back(T);
 }
 
 // Convenience overload, to allow calling this without the out-parameter
-static llvm::SmallVector<QualType> unwrapFindType(
-    QualType T, const HeuristicResolver* H) {
+static llvm::SmallVector<QualType> unwrapFindType(QualType T,
+                                                  const HeuristicResolver &H) {
   llvm::SmallVector<QualType> Result;
   unwrapFindType(T, H, Result);
   return Result;
@@ -2076,10 +2078,11 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     std::vector<LocatedSymbol> LocatedSymbols;
 
     // NOTE: unwrapFindType might return duplicates for something like
-    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
-    // information about the type you may have not known before
-    // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
-    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you
+    // some information about the type you may have not known before (since
+    // unique_ptr<unique_ptr<T>> != unique_ptr<T>).
+    for (const QualType &Type : unwrapFindType(
+             typeForNode(N), AST.getHeuristicResolver(&N->getDeclContext())))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 

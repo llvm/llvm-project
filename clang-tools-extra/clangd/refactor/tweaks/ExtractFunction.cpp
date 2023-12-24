@@ -176,7 +176,7 @@ struct ExtractionZone {
   // This performs a partial AST traversal proportional to the size of the
   // enclosing function, so it is possibly expensive.
   bool requiresHoisting(const SourceManager &SM,
-                        const HeuristicResolver *Resolver) const {
+                        const HeuristicResolver &Resolver) const {
     // First find all the declarations that happened inside extraction zone.
     llvm::SmallSet<const Decl *, 1> DeclsInExtZone;
     for (auto *RootStmt : RootStmts) {
