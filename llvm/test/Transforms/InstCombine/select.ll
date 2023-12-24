@@ -1735,10 +1735,11 @@ define float @copysign_type_mismatch(double %x) {
 
 ; Negative test
 
-; FIXME: It is a miscompilation.
 define <2 x float> @copysign_type_mismatch2(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_type_mismatch2(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to i64
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> <float -1.000000e+00, float -1.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to i64
