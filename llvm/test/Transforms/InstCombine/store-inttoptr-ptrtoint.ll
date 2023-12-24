@@ -8,8 +8,7 @@ declare void @useptr(ptr)
 define void @test_inttoptr(ptr %p, i64 %x) {
 ; CHECK-LABEL: define void @test_inttoptr(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = inttoptr i64 [[X]] to ptr
-; CHECK-NEXT:    store ptr [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %y = inttoptr i64 %x to ptr
@@ -21,7 +20,7 @@ define void @test_inttoptr_multiuse(ptr %p, i64 %x) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = inttoptr i64 [[X]] to ptr
 ; CHECK-NEXT:    call void @useptr(ptr [[Y]])
-; CHECK-NEXT:    store ptr [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %y = inttoptr i64 %x to ptr
@@ -32,7 +31,7 @@ define void @test_inttoptr_multiuse(ptr %p, i64 %x) {
 define void @test_inttoptr_constant_expr(ptr %p) {
 ; CHECK-LABEL: define void @test_inttoptr_constant_expr(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    store ptr inttoptr (i64 65 to ptr), ptr [[P]], align 8
+; CHECK-NEXT:    store i64 65, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store ptr inttoptr (i64 65 to ptr), ptr %p, align 8
@@ -41,8 +40,7 @@ define void @test_inttoptr_constant_expr(ptr %p) {
 define void @test_ptrtoint(ptr %p, ptr %x) {
 ; CHECK-LABEL: define void @test_ptrtoint(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    store i64 [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    store ptr [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %y = ptrtoint ptr %x to i64
@@ -54,7 +52,7 @@ define void @test_ptrtoint_multiuse(ptr %p, ptr %x) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[X:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[Y]])
-; CHECK-NEXT:    store i64 [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    store ptr [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %y = ptrtoint ptr %x to i64
@@ -67,8 +65,7 @@ define void @test_inttoptr_mismatched_size(ptr %p, i32 %x) {
 ; CHECK-LABEL: define void @test_inttoptr_mismatched_size(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[Y:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    store ptr [[Y]], ptr [[P]], align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %y = inttoptr i32 %x to ptr

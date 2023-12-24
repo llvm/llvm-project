@@ -1209,6 +1209,20 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
       return true;
     }
 
+  // Fold away inttoptr/ptrtoint of the stored value by storing the original
+  // type.
+  Value *X;
+  if (match(V, m_IntToPtr(m_Value(X))) || match(V, m_PtrToInt(m_Value(X)))) {
+    const DataLayout &DL = IC.getDataLayout();
+    if (DL.getTypeStoreSize(V->getType()->getScalarType()) !=
+        DL.getTypeStoreSize(X->getType()->getScalarType()))
+      return false;
+    if (!SI.isAtomic() || isSupportedAtomicType(X->getType())) {
+      combineStoreToNewValue(IC, SI, X);
+      return true;
+    }
+  }
+
   // FIXME: We should also canonicalize stores of vectors when their elements
   // are cast to other types.
   return false;
