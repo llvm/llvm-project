@@ -175,8 +175,6 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #include <__availability>
 #include <__config>
 #include <__exception/operations.h>
-#include <__format/format_args.h>
-#include <__format/format_functions.h>
 #include <__fwd/ostream.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
@@ -188,6 +186,7 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #include <__utility/declval.h>
 #include <bitset>
 #include <cstdio>
+#include <format>
 #include <ios>
 #include <locale>
 #include <new>
