@@ -34,7 +34,7 @@ __riscv_ctz_32(uint32_t __x) {
 
 static __inline__ unsigned __attribute__((__always_inline__, __nodebug__))
 __riscv_cpop_32(uint32_t __x) {
-  return __builtin_riscv_cpop_32(__x);
+  return __builtin_popcount(__x);
 }
 
 #if __riscv_xlen == 64
@@ -55,7 +55,7 @@ __riscv_ctz_64(uint64_t __x) {
 
 static __inline__ unsigned __attribute__((__always_inline__, __nodebug__))
 __riscv_cpop_64(uint64_t __x) {
-  return __builtin_riscv_cpop_64(__x);
+  return __builtin_popcountll(__x);
 }
 #endif
 #endif // defined(__riscv_zbb)
