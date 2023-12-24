@@ -16,6 +16,7 @@
 #define LLVM_PASSES_PASSBUILDER_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/Error.h"
@@ -164,6 +165,14 @@ public:
   /// with all registered loop analyses. Callers can still manually register any
   /// additional analyses.
   void registerLoopAnalyses(LoopAnalysisManager &LAM);
+
+  /// Registers all available machine function analysis passes.
+  ///
+  /// This is an interface that can be used to populate a \c
+  /// MachineFunctionAnalysisManager with all registered function analyses.
+  /// Callers can still manually register any additional analyses. Callers can
+  /// also pre-register analyses and this will not override those.
+  void registerMachineFunctionAnalyses(MachineFunctionAnalysisManager &MFAM);
 
   /// Construct the core LLVM function canonicalization and simplification
   /// pipeline.
@@ -352,6 +361,18 @@ public:
   Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText);
   /// @}}
 
+  /// Parse a textual MIR pipeline into the provided \c MachineFunctionPass
+  /// manager.
+  /// The format of the textual machine pipeline is a comma separated list of
+  /// machine pass names:
+  ///
+  ///   machine-funciton-pass,machine-module-pass,...
+  ///
+  /// There is no need to specify the pass nesting, and this function
+  /// currently cannot handle the pass nesting.
+  Error parsePassPipeline(MachineFunctionPassManager &MFPM,
+                          StringRef PipelineText);
+
   /// Parse a textual alias analysis pipeline into the provided AA manager.
   ///
   /// The format of the textual AA pipeline is a comma separated list of AA
@@ -520,6 +541,10 @@ public:
       const std::function<void(ModuleAnalysisManager &)> &C) {
     ModuleAnalysisRegistrationCallbacks.push_back(C);
   }
+  void registerAnalysisRegistrationCallback(
+      const std::function<void(MachineFunctionAnalysisManager &)> &C) {
+    MachineFunctionAnalysisRegistrationCallbacks.push_back(C);
+  }
   /// @}}
 
   /// {{@ Register pipeline parsing callbacks with this pass builder instance.
@@ -545,6 +570,11 @@ public:
       const std::function<bool(StringRef Name, ModulePassManager &,
                                ArrayRef<PipelineElement>)> &C) {
     ModulePipelineParsingCallbacks.push_back(C);
+  }
+  void registerPipelineParsingCallback(
+      const std::function<bool(StringRef Name, MachineFunctionPassManager &)>
+          &C) {
+    MachinePipelineParsingCallbacks.push_back(C);
   }
   /// @}}
 
@@ -616,8 +646,12 @@ private:
   Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E);
   Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E);
   Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E);
+  Error parseMachinePass(MachineFunctionPassManager &MFPM,
+                         const PipelineElement &E);
   bool parseAAPassName(AAManager &AA, StringRef Name);
 
+  Error parseMachinePassPipeline(MachineFunctionPassManager &MFPM,
+                                 ArrayRef<PipelineElement> Pipeline);
   Error parseLoopPassPipeline(LoopPassManager &LPM,
                               ArrayRef<PipelineElement> Pipeline);
   Error parseFunctionPassPipeline(FunctionPassManager &FPM,
@@ -699,6 +733,11 @@ private:
   // AA callbacks
   SmallVector<std::function<bool(StringRef Name, AAManager &AA)>, 2>
       AAParsingCallbacks;
+  // Machine pass callbackcs
+  SmallVector<std::function<void(MachineFunctionAnalysisManager &)>, 2>
+      MachineFunctionAnalysisRegistrationCallbacks;
+  SmallVector<std::function<bool(StringRef, MachineFunctionPassManager &)>, 2>
+      MachinePipelineParsingCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>
