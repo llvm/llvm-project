@@ -13,7 +13,8 @@
 
 namespace clang::tidy::readability {
 
-/// Looks for statements returning expressions of type `void`.
+/// Finds return statements with `void` values used within functions with `void`
+/// result types.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-return-with-void-value.html

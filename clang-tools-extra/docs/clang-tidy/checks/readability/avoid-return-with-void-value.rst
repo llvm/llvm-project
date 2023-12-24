@@ -3,6 +3,9 @@
 readability-avoid-return-with-void-value
 ========================================
 
+Finds return statements with ``void`` values used within functions with
+``void`` result types.
+
 A function with a ``void`` return type is intended to perform a task without
 producing a return value. Return statements with expressions could lead
 to confusion and may miscommunicate the function's intended behavior.
