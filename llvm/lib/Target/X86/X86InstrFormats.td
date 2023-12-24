@@ -180,7 +180,7 @@ class OperandSize<bits<2> val> {
   bits<2> Value = val;
 }
 def OpSizeFixed  : OperandSize<0>; // Never needs a 0x66 prefix.
-def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
+def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32/64-bit mode.
 def OpSize32     : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
 
 // Address size for encodings that change based on mode.
