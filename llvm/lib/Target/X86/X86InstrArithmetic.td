@@ -47,7 +47,7 @@ def PLEA64r   : PseudoI<(outs GR64:$dst), (ins anymem:$src), []>;
 // BinOpRR - Instructions that read "reg, reg".
 class BinOpRR<bits<8> o, string m, X86TypeInfo t, dag out, list<dag> p>
   : ITy<o, MRMDestReg, t, out, (ins t.RegClass:$src1, t.RegClass:$src2), m,
-        "{$src2, $src1|$src1, $src2}", p>, Sched<[WriteALU]>;
+        binop_args, p>, Sched<[WriteALU]>;
 // BinOpRR_F - Instructions that read "reg, reg" and write EFLAGS only.
 class BinOpRR_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
   : BinOpRR<o, m, t, (outs),
@@ -86,7 +86,7 @@ class BinOpRRF_RF_Rev<bits<8> o, string m, X86TypeInfo t>
 // BinOpRM - Instructions that read "reg, [mem]".
 class BinOpRM<bits<8> o, string m, X86TypeInfo t, dag out, list<dag> p>
   : ITy<o, MRMSrcMem, t, out, (ins t.RegClass:$src1, t.MemOperand:$src2), m,
-        "{$src2, $src1|$src1, $src2}", p>,
+        binop_args, p>,
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]> {
   let mayLoad = 1;
 }
@@ -117,7 +117,7 @@ class BinOpRMF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
 // BinOpRI - Instructions that read "reg, imm".
 class BinOpRI<bits<8> o, string m, X86TypeInfo t, Format f, dag out, list<dag> p>
   : ITy<o, f, t, out, (ins t.RegClass:$src1, t.ImmOperand:$src2), m,
-        "{$src2, $src1|$src1, $src2}", p>, Sched<[WriteALU]> {
+        binop_args, p>, Sched<[WriteALU]> {
   let ImmT = t.ImmEncoding;
 }
 // BinOpRI_F - Instructions that read "reg, imm" and write EFLAGS only.
@@ -143,7 +143,7 @@ class BinOpRIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
 // BinOpRI8 - Instructions that read "reg, imm8".
 class BinOpRI8<bits<8> o, string m, X86TypeInfo t, Format f, dag out>
   : ITy<o, f, t, out, (ins t.RegClass:$src1, t.Imm8Operand:$src2), m,
-        "{$src2, $src1|$src1, $src2}", []>, Sched<[WriteALU]> {
+        binop_args, []>, Sched<[WriteALU]> {
   let ImmT = Imm8;
 }
 // BinOpRI8_F - Instructions that read "reg, imm8" and write EFLAGS only.
@@ -161,20 +161,20 @@ class BinOpRI8F_RF<bits<8> o, string m, X86TypeInfo t, Format f>
 
 // BinOpMR - Instructions that read "[mem], reg".
 class BinOpMR<bits<8> o, string m, X86TypeInfo t, list<dag> p>
-  : ITy<o, MRMDestMem, t, (outs), (ins t.MemOperand:$dst, t.RegClass:$src), m,
-        "{$src, $dst|$dst, $src}", p> {
+  : ITy<o, MRMDestMem, t, (outs), (ins t.MemOperand:$src1, t.RegClass:$src2), m,
+        binop_args, p> {
   let mayLoad = 1;
 }
 // BinOpMR_F - Instructions that read "[mem], imm8" and write EFLAGS only.
 class BinOpMR_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
   : BinOpMR<o, m, t,
-            [(set EFLAGS, (node (t.LoadNode addr:$dst), t.RegClass:$src))]>,
+            [(set EFLAGS, (node (t.LoadNode addr:$src1), t.RegClass:$src2))]>,
     Sched<[WriteALU.Folded, ReadDefault, ReadDefault, ReadDefault,
             ReadDefault, ReadDefault, WriteALU.ReadAfterFold]>, DefEFLAGS;
 // BinOpMR_MF - Instructions that read "[mem], reg" and write "[mem]", EFLAGS.
 class BinOpMR_MF<bits<8> o, string m, X86TypeInfo t, SDNode node>
   : BinOpMR<o, m, t,
-            [(store (node (load addr:$dst), t.RegClass:$src), addr:$dst),
+            [(store (node (load addr:$src1), t.RegClass:$src2), addr:$src1),
              (implicit EFLAGS)]>,
     Sched<[WriteALURMW,
            // base, scale, index, offset, segment
@@ -187,8 +187,8 @@ class BinOpMR_MF<bits<8> o, string m, X86TypeInfo t, SDNode node>
 // read/write EFLAGS.
 class BinOpMRF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node>
   : BinOpMR<o, m, t,
-            [(store (node (load addr:$dst), t.RegClass:$src, EFLAGS),
-             addr:$dst), (implicit EFLAGS)]>,
+            [(store (node (load addr:$src1), t.RegClass:$src2, EFLAGS),
+             addr:$src1), (implicit EFLAGS)]>,
     Sched<[WriteADCRMW,
           // base, scale, index, offset, segment
           ReadDefault, ReadDefault, ReadDefault,
@@ -201,8 +201,8 @@ class BinOpMRF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node>
 
 // BinOpMI - Instructions that read "[mem], imm".
 class BinOpMI<bits<8> o, string m, X86TypeInfo t, Format f, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.MemOperand:$dst, t.ImmOperand:$src), m,
-        "{$src, $dst|$dst, $src}", p> {
+  : ITy<o, f, t, (outs), (ins t.MemOperand:$src1, t.ImmOperand:$src2), m,
+        binop_args, p> {
   let ImmT = t.ImmEncoding;
   let mayLoad = 1;
 }
@@ -210,13 +210,13 @@ class BinOpMI<bits<8> o, string m, X86TypeInfo t, Format f, list<dag> p>
 class BinOpMI_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                 Format f>
   : BinOpMI<o, m, t, f,
-            [(set EFLAGS, (node (t.LoadNode addr:$dst), t.ImmOperator:$src))]>,
+            [(set EFLAGS, (node (t.LoadNode addr:$src1), t.ImmOperator:$src2))]>,
     Sched<[WriteALU.Folded]>, DefEFLAGS;
 // BinOpMI_MF - Instructions that read "[mem], imm" and write "[mem]", EFLAGS.
 class BinOpMI_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
   : BinOpMI<o, m, t, f,
-            [(store (node (t.VT (load addr:$dst)),
-             t.ImmOperator:$src), addr:$dst), (implicit EFLAGS)]>,
+            [(store (node (t.VT (load addr:$src1)),
+             t.ImmOperator:$src2), addr:$src1), (implicit EFLAGS)]>,
     Sched<[WriteALURMW]>, DefEFLAGS {
   let mayStore = 1;
 }
@@ -224,16 +224,16 @@ class BinOpMI_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
 // read/write EFLAGS.
 class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
   : BinOpMI<o, m, t, f,
-            [(store (node (t.VT (load addr:$dst)),
-             t.ImmOperator:$src, EFLAGS), addr:$dst), (implicit EFLAGS)]>,
+            [(store (node (t.VT (load addr:$src1)),
+             t.ImmOperator:$src2, EFLAGS), addr:$src1), (implicit EFLAGS)]>,
     Sched<[WriteADCRMW]>, DefEFLAGS, UseEFLAGS {
   let mayStore = 1;
 }
 
 // BinOpMI8 - Instructions that read "[mem], imm8".
 class BinOpMI8<string m, X86TypeInfo t, Format f>
-  : ITy<0x83, f, t, (outs), (ins t.MemOperand:$dst, t.Imm8Operand:$src), m,
-        "{$src, $dst|$dst, $src}", []> {
+  : ITy<0x83, f, t, (outs), (ins t.MemOperand:$src1, t.Imm8Operand:$src2), m,
+        binop_args, []> {
   let ImmT = Imm8;
   let mayLoad = 1;
 }
