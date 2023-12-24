@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "mlir/IR/BuiltinOps.h"
@@ -41,6 +42,7 @@ void FuncDialect::initialize() {
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
   declarePromisedInterface<FuncDialect, DialectInlinerInterface>();
+  declarePromisedInterface<FuncDialect, ConvertToLLVMPatternInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
