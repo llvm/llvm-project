@@ -20,7 +20,7 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
         Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
     def LDTILECFG : I <0x49, MRM0m, (outs), (ins opaquemem:$src),
                        "ldtilecfg\t$src",
-                       [(int_x86_ldtilecfg addr:$src)]>, VEX, T8, PS;
+                       [(int_x86_ldtilecfg addr:$src)]>, VEX, T8;
     let hasSideEffects = 1 in
     def STTILECFG : I <0x49, MRM0m, (outs), (ins opaquemem:$src),
                        "sttilecfg\t$src",
@@ -37,7 +37,7 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                         VEX, T8, PD;
     let Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
     def TILERELEASE : I<0x49, MRM_C0, (outs), (ins),
-                        "tilerelease", [(int_x86_tilerelease)]>, VEX, T8, PS;
+                        "tilerelease", [(int_x86_tilerelease)]>, VEX, T8;
     let mayStore = 1 in
     def TILESTORED : I<0x4b, MRMDestMemFSIB, (outs),
                        (ins sibmem:$dst, TILE:$src),
@@ -103,7 +103,7 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
       def TDPBUUD : I<0x5e, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbuud\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      VEX, VVVV, T8, PS;
+                      VEX, VVVV, T8;
     }
 
     // Pseduo instruction for RA.
@@ -226,7 +226,7 @@ let Predicates = [HasAMXCOMPLEX, In64BitMode] in {
       def TCMMRLFP16PS : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
                             (ins TILE:$src1, TILE:$src2, TILE:$src3),
                             "tcmmrlfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
-                            []>, VEX, VVVV, WIG, T8, PS;
+                            []>, VEX, VVVV, WIG, T8;
 
     } // Constraints = "$src1 = $dst"
 
