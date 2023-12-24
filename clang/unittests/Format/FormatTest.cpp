@@ -26492,6 +26492,10 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   verifyFormat("[[nodiscard]]\n"
                "Foo& operator-(Foo&);",
                Style);
+
+  verifyFormat("[[maybe_unused]]\n"
+               "foo<int> f;",
+               Style);
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {
