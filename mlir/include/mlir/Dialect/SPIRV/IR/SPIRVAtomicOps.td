@@ -18,8 +18,9 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class PointeeTypeMatchTrait<string pointer, string name>
-    : TypesMatchWith<"$" # name # " type matches pointee type of " # "$" # pointer, pointer,
-                     name, "$_self.cast<PointerType>().getPointeeType()">;
+    : TypesMatchWith<
+      "$" # name # " type matches pointee type of " # "$" # pointer, pointer,
+      name, "llvm::cast<PointerType>($_self).getPointeeType()">;
 
 // -----
 
@@ -27,12 +28,15 @@ class SPIRV_AtomicUpdateOp<string mnemonic, list<Trait> traits = []>
     : SPIRV_Op<mnemonic,
                !listconcat(traits,
                            [PointeeTypeMatchTrait<"pointer", "result">])> {
-  let arguments = (ins SPIRV_AnyPtr
-                   : $pointer, SPIRV_ScopeAttr
-                   : $memory_scope, SPIRV_MemorySemanticsAttr
-                   : $semantics);
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics
+  );
 
-  let results = (outs SPIRV_Integer : $result);
+  let results = (outs
+    SPIRV_Integer:$result
+  );
 
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
@@ -44,13 +48,16 @@ class SPIRV_AtomicUpdateWithValueOp<string mnemonic, list<Trait> traits = []>
                  PointeeTypeMatchTrait<"pointer", "value">,
                  PointeeTypeMatchTrait<"pointer", "result">,
                ])> {
-  let arguments = (ins SPIRV_AnyPtr
-                   : $pointer, SPIRV_ScopeAttr
-                   : $memory_scope, SPIRV_MemorySemanticsAttr
-                   : $semantics, SPIRV_Integer
-                   : $value);
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics,
+    SPIRV_Integer:$value
+  );
 
-  let results = (outs SPIRV_Integer : $result);
+  let results = (outs
+    SPIRV_Integer:$result
+  );
 
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
@@ -62,7 +69,7 @@ class SPIRV_AtomicUpdateWithValueOp<string mnemonic, list<Trait> traits = []>
 def SPIRV_AtomicAndOp : SPIRV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -111,7 +118,7 @@ def SPIRV_AtomicCompareExchangeOp : SPIRV_Op<"AtomicCompareExchange", [
 ]> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -159,19 +166,22 @@ def SPIRV_AtomicCompareExchangeOp : SPIRV_Op<"AtomicCompareExchange", [
     ```
   }];
 
-  let arguments = (ins SPIRV_AnyPtr
-                   : $pointer, SPIRV_ScopeAttr
-                   : $memory_scope, SPIRV_MemorySemanticsAttr
-                   : $equal_semantics, SPIRV_MemorySemanticsAttr
-                   : $unequal_semantics, SPIRV_Integer
-                   : $value, SPIRV_Integer
-                   : $comparator);
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$equal_semantics,
+    SPIRV_MemorySemanticsAttr:$unequal_semantics,
+    SPIRV_Integer:$value,
+    SPIRV_Integer:$comparator
+  );
 
-  let results = (outs SPIRV_Integer : $result);
+  let results = (outs
+    SPIRV_Integer:$result
+  );
 
   let assemblyFormat = [{
     $memory_scope $equal_semantics $unequal_semantics operands attr-dict `:`
-    type($pointer)
+      type($pointer)
   }];
 }
 
@@ -208,23 +218,28 @@ def SPIRV_AtomicCompareExchangeWeakOp : SPIRV_Op<"AtomicCompareExchangeWeak", [
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>, MaxVersion<SPIRV_V_1_3>, Extension<[]>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_3>,
+    Extension<[]>,
     Capability<[SPIRV_C_Kernel]>
   ];
 
-  let arguments = (ins SPIRV_AnyPtr
-                   : $pointer, SPIRV_ScopeAttr
-                   : $memory_scope, SPIRV_MemorySemanticsAttr
-                   : $equal_semantics, SPIRV_MemorySemanticsAttr
-                   : $unequal_semantics, SPIRV_Integer
-                   : $value, SPIRV_Integer
-                   : $comparator);
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$equal_semantics,
+    SPIRV_MemorySemanticsAttr:$unequal_semantics,
+    SPIRV_Integer:$value,
+    SPIRV_Integer:$comparator
+  );
 
-  let results = (outs SPIRV_Integer : $result);
+  let results = (outs
+    SPIRV_Integer:$result
+  );
 
   let assemblyFormat = [{
     $memory_scope $equal_semantics $unequal_semantics operands attr-dict `:`
-    type($pointer)
+      type($pointer)
   }];
 }
 
@@ -236,7 +251,7 @@ def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", [
 ]> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -271,13 +286,16 @@ def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", [
     ```
   }];
 
-  let arguments = (ins SPIRV_AnyPtr
-                   : $pointer, SPIRV_ScopeAttr
-                   : $memory_scope, SPIRV_MemorySemanticsAttr
-                   : $semantics, SPIRV_Numerical
-                   : $value);
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics,
+    SPIRV_Numerical:$value
+  );
 
-  let results = (outs SPIRV_Numerical : $result);
+  let results = (outs
+    SPIRV_Numerical:$result
+  );
 
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
@@ -330,20 +348,22 @@ def SPIRV_EXTAtomicFAddOp : SPIRV_ExtVendorOp<"AtomicFAdd", [
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>, MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPV_EXT_shader_atomic_float_add]>, Capability<[
-      SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_AtomicFloat32AddEXT,
-      SPIRV_C_AtomicFloat64AddEXT
-    ]>
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_shader_atomic_float_add]>,
+    Capability<[SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_AtomicFloat32AddEXT, SPIRV_C_AtomicFloat64AddEXT]>
   ];
 
-  let arguments = (ins SPIRV_AnyPtr
-                   : $pointer, SPIRV_ScopeAttr
-                   : $memory_scope, SPIRV_MemorySemanticsAttr
-                   : $semantics, SPIRV_Float
-                   : $value);
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics,
+    SPIRV_Float:$value
+  );
 
-  let results = (outs SPIRV_Float : $result);
+  let results = (outs
+    SPIRV_Float:$result
+  );
 
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
@@ -355,7 +375,7 @@ def SPIRV_EXTAtomicFAddOp : SPIRV_ExtVendorOp<"AtomicFAdd", [
 def SPIRV_AtomicIAddOp : SPIRV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -396,7 +416,7 @@ def SPIRV_AtomicIAddOp : SPIRV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
 def SPIRV_AtomicIDecrementOp : SPIRV_AtomicUpdateOp<"AtomicIDecrement", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -436,7 +456,7 @@ def SPIRV_AtomicIDecrementOp : SPIRV_AtomicUpdateOp<"AtomicIDecrement", []> {
 def SPIRV_AtomicIIncrementOp : SPIRV_AtomicUpdateOp<"AtomicIIncrement", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -475,7 +495,7 @@ def SPIRV_AtomicIIncrementOp : SPIRV_AtomicUpdateOp<"AtomicIIncrement", []> {
 def SPIRV_AtomicISubOp : SPIRV_AtomicUpdateWithValueOp<"AtomicISub", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -517,7 +537,7 @@ def SPIRV_AtomicISubOp : SPIRV_AtomicUpdateWithValueOp<"AtomicISub", []> {
 def SPIRV_AtomicOrOp : SPIRV_AtomicUpdateWithValueOp<"AtomicOr", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -558,7 +578,7 @@ def SPIRV_AtomicOrOp : SPIRV_AtomicUpdateWithValueOp<"AtomicOr", []> {
 def SPIRV_AtomicSMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -600,7 +620,7 @@ def SPIRV_AtomicSMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
 def SPIRV_AtomicSMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -639,11 +659,10 @@ def SPIRV_AtomicSMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
 
 // -----
 
-def SPIRV_AtomicUMaxOp
-    : SPIRV_AtomicUpdateWithValueOp<"AtomicUMax", [UnsignedOp]> {
+def SPIRV_AtomicUMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicUMax", [UnsignedOp]> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -682,11 +701,10 @@ def SPIRV_AtomicUMaxOp
 
 // -----
 
-def SPIRV_AtomicUMinOp
-    : SPIRV_AtomicUpdateWithValueOp<"AtomicUMin", [UnsignedOp]> {
+def SPIRV_AtomicUMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicUMin", [UnsignedOp]> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
@@ -728,7 +746,7 @@ def SPIRV_AtomicUMinOp
 def SPIRV_AtomicXorOp : SPIRV_AtomicUpdateWithValueOp<"AtomicXor", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
-        accesses within Scope to the same location:
+    accesses within Scope to the same location:
   }];
 
   let description = [{
