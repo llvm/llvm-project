@@ -180,7 +180,7 @@ class OperandSize<bits<2> val> {
   bits<2> Value = val;
 }
 def OpSizeFixed  : OperandSize<0>; // Never needs a 0x66 prefix.
-def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
+def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32/64-bit mode.
 def OpSize32     : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
 
 // Address size for encodings that change based on mode.
@@ -234,7 +234,9 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                 // based on address size of the mode?
   bits<2> AdSizeBits = AdSize.Value;
 
-  Prefix OpPrefix = NoPrfx; // Which prefix byte does this inst have?
+  Encoding OpEnc = EncNormal; // Encoding used by this instruction
+  // Which prefix byte does this inst have?
+  Prefix OpPrefix = !if(!eq(OpEnc, EncNormal), NoPrfx, PS);
   bits<3> OpPrefixBits = OpPrefix.Value;
   Map OpMap = OB;           // Which opcode map does this inst have?
   bits<4> OpMapBits = OpMap.Value;
@@ -243,7 +245,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasLockPrefix = 0;    // Does this inst have a 0xF0 prefix?
   Domain ExeDomain = d;
   bit hasREPPrefix = 0;     // Does this inst have a REP prefix?
-  Encoding OpEnc = EncNormal; // Encoding used by this instruction
   bits<2> OpEncBits = OpEnc.Value;
   bit IgnoresW = 0;         // Does this inst ignore REX_W field?
   bit EVEX_W1_VEX_W0 = 0;   // This EVEX inst with VEX.W==1 can become a VEX
