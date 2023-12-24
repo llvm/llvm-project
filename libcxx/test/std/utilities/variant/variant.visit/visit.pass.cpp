@@ -22,10 +22,22 @@
 #include "test_macros.h"
 #include "variant_test_helpers.h"
 
+#if _LIBCPP_STD_VER >= 26
+#  define TEST_VISIT(object, variants, expectedValue, type, ...)                                                       \
+    std::visit(object, variants);                                                                                      \
+    assert(Fn::check_call<type __VA_OPT__(, ) __VA_ARGS__>(expectedValue));                                            \
+    variants.visit(object);                                                                                            \
+    assert(Fn::check_call<type __VA_OPT__(, ) __VA_ARGS__>(expectedValue));
+#else
+#  define TEST_VISIT(object, variants, expectedValue, type, ...)                                                       \
+    std::visit(object, variants);                                                                                      \
+    assert(Fn::check_call<type __VA_OPT__(, ) __VA_ARGS__>(expectedValue));
+#endif
+
 void test_call_operator_forwarding() {
   using Fn = ForwardingCallObject;
   Fn obj{};
-  const Fn &cobj = obj;
+  const Fn& cobj = obj;
   { // test call operator forwarding - no variant
     std::visit(obj);
     assert(Fn::check_call<>(CT_NonConst | CT_LValue));
@@ -39,67 +51,108 @@ void test_call_operator_forwarding() {
   { // test call operator forwarding - single variant, single arg
     using V = std::variant<int>;
     V v(42);
-    std::visit(obj, v);
-    assert(Fn::check_call<int &>(CT_NonConst | CT_LValue));
-    std::visit(cobj, v);
-    assert(Fn::check_call<int &>(CT_Const | CT_LValue));
-    std::visit(std::move(obj), v);
-    assert(Fn::check_call<int &>(CT_NonConst | CT_RValue));
-    std::visit(std::move(cobj), v);
-    assert(Fn::check_call<int &>(CT_Const | CT_RValue));
 
+    // non-member
+    std::visit(obj, v);
+    assert(Fn::check_call<int&>(CT_NonConst | CT_LValue));
+    std::visit(cobj, v);
+    assert(Fn::check_call<int&>(CT_Const | CT_LValue));
+    std::visit(std::move(obj), v);
+    assert(Fn::check_call<int&>(CT_NonConst | CT_RValue));
+    std::visit(std::move(cobj), v);
+    assert(Fn::check_call<int&>(CT_Const | CT_RValue));
+
+    // member
+#if _LIBCPP_STD_VER >= 26
     v.visit(obj);
-    assert(Fn::check_call<int &>(CT_NonConst | CT_LValue));
+    assert(Fn::check_call<int&>(CT_NonConst | CT_LValue));
+    v.visit(cobj);
+    assert(Fn::check_call<int&>(CT_Const | CT_LValue));
+    v.visit(std::move(obj));
+    assert(Fn::check_call<int&>(CT_NonConst | CT_RValue));
+    v.visit(std::move(cobj));
+    assert(Fn::check_call<int&>(CT_Const | CT_RValue));
+#endif
+
+#define TEST_VISIT1(type, object, variants, expectedValue)                                                             \
+  std::visit(object, variants);                                                                                        \
+  assert(Fn::check_call<type&>(expectedValue));                                                                        \
+  variants.visit(object);                                                                                              \
+  assert(Fn::check_call<type&>(expectedValue));
+
+    TEST_VISIT1(int, obj, v, (CT_NonConst | CT_LValue));
+    TEST_VISIT1(int, cobj, v, (CT_Const | CT_LValue));
+    TEST_VISIT1(int, std::move(obj), v, (CT_NonConst | CT_RValue));
+    TEST_VISIT1(int, std::move(cobj), v, (CT_Const | CT_RValue));
+
+    TEST_VISIT(obj, v, (CT_NonConst | CT_LValue), int&);
+    TEST_VISIT(cobj, v, (CT_Const | CT_LValue), int&);
+    TEST_VISIT(std::move(obj), v, (CT_NonConst | CT_RValue), int&);
+    TEST_VISIT(std::move(cobj), v, (CT_Const | CT_RValue), int&);
+
+    // TEST_VISIT2(td::move(cobj), v, (CT_Const | CT_RValue), int&, long&, float&);
   }
   { // test call operator forwarding - single variant, multi arg
     using V = std::variant<int, long, double>;
     V v(42l);
     std::visit(obj, v);
-    assert(Fn::check_call<long &>(CT_NonConst | CT_LValue));
+    assert(Fn::check_call<long&>(CT_NonConst | CT_LValue));
     std::visit(cobj, v);
-    assert(Fn::check_call<long &>(CT_Const | CT_LValue));
+    assert(Fn::check_call<long&>(CT_Const | CT_LValue));
     std::visit(std::move(obj), v);
-    assert(Fn::check_call<long &>(CT_NonConst | CT_RValue));
+    assert(Fn::check_call<long&>(CT_NonConst | CT_RValue));
     std::visit(std::move(cobj), v);
-    assert(Fn::check_call<long &>(CT_Const | CT_RValue));
+    assert(Fn::check_call<long&>(CT_Const | CT_RValue));
+
+    TEST_VISIT(obj, v, (CT_NonConst | CT_LValue), long&);
+    TEST_VISIT(cobj, v, (CT_Const | CT_LValue), long&);
+    TEST_VISIT(std::move(obj), v, (CT_NonConst | CT_RValue), long&);
+    TEST_VISIT(std::move(cobj), v, (CT_Const | CT_RValue), long&);
   }
   { // test call operator forwarding - multi variant, multi arg
-    using V = std::variant<int, long, double>;
-    using V2 = std::variant<int *, std::string>;
+    using V  = std::variant<int, long, double>;
+    using V2 = std::variant<int*, std::string>;
     V v(42l);
     V2 v2("hello");
     std::visit(obj, v, v2);
-    assert((Fn::check_call<long &, std::string &>(CT_NonConst | CT_LValue)));
+    assert((Fn::check_call<long&, std::string&>(CT_NonConst | CT_LValue)));
     std::visit(cobj, v, v2);
-    assert((Fn::check_call<long &, std::string &>(CT_Const | CT_LValue)));
+    assert((Fn::check_call<long&, std::string&>(CT_Const | CT_LValue)));
     std::visit(std::move(obj), v, v2);
-    assert((Fn::check_call<long &, std::string &>(CT_NonConst | CT_RValue)));
+    assert((Fn::check_call<long&, std::string&>(CT_NonConst | CT_RValue)));
     std::visit(std::move(cobj), v, v2);
-    assert((Fn::check_call<long &, std::string &>(CT_Const | CT_RValue)));
+    assert((Fn::check_call<long&, std::string&>(CT_Const | CT_RValue)));
+
+    TEST_VISIT(obj, v, v2, CT_NonConst | CT_LValue)));
+    TEST_VISIT(cobj, v, v2, (CT_Const | CT_LValue)));
+    TEST_VISIT(std::move(obj), v, v2);
+    assert((Fn::check_call<long&, std::string&>(CT_NonConst | CT_RValue)));
+    TEST_VISIT(std::move(cobj), v, v2);
+    assert((Fn::check_call<long&, std::string&>(CT_Const | CT_RValue)));
   }
   {
     using V = std::variant<int, long, double, std::string>;
     V v1(42l), v2("hello"), v3(101), v4(1.1);
     std::visit(obj, v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int &, double &>(CT_NonConst | CT_LValue)));
+    assert((Fn::check_call<long&, std::string&, int&, double&>(CT_NonConst | CT_LValue)));
     std::visit(cobj, v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int &, double &>(CT_Const | CT_LValue)));
+    assert((Fn::check_call<long&, std::string&, int&, double&>(CT_Const | CT_LValue)));
     std::visit(std::move(obj), v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int &, double &>(CT_NonConst | CT_RValue)));
+    assert((Fn::check_call<long&, std::string&, int&, double&>(CT_NonConst | CT_RValue)));
     std::visit(std::move(cobj), v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int &, double &>(CT_Const | CT_RValue)));
+    assert((Fn::check_call<long&, std::string&, int&, double&>(CT_Const | CT_RValue)));
   }
   {
     using V = std::variant<int, long, double, int*, std::string>;
     V v1(42l), v2("hello"), v3(nullptr), v4(1.1);
     std::visit(obj, v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int *&, double &>(CT_NonConst | CT_LValue)));
+    assert((Fn::check_call<long&, std::string&, int*&, double&>(CT_NonConst | CT_LValue)));
     std::visit(cobj, v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int *&, double &>(CT_Const | CT_LValue)));
+    assert((Fn::check_call<long&, std::string&, int*&, double&>(CT_Const | CT_LValue)));
     std::visit(std::move(obj), v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int *&, double &>(CT_NonConst | CT_RValue)));
+    assert((Fn::check_call<long&, std::string&, int*&, double&>(CT_NonConst | CT_RValue)));
     std::visit(std::move(cobj), v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int *&, double &>(CT_Const | CT_RValue)));
+    assert((Fn::check_call<long&, std::string&, int*&, double&>(CT_Const | CT_RValue)));
   }
 }
 
@@ -110,76 +163,76 @@ void test_argument_forwarding() {
   { // single argument - value type
     using V = std::variant<int>;
     V v(42);
-    const V &cv = v;
+    const V& cv = v;
     std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
     std::visit(obj, cv);
-    assert(Fn::check_call<const int &>(Val));
+    assert(Fn::check_call<const int&>(Val));
     std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &&>(Val));
+    assert(Fn::check_call<int&&>(Val));
     std::visit(obj, std::move(cv));
-    assert(Fn::check_call<const int &&>(Val));
+    assert(Fn::check_call<const int&&>(Val));
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   { // single argument - lvalue reference
-    using V = std::variant<int &>;
-    int x = 42;
+    using V = std::variant<int&>;
+    int x   = 42;
     V v(x);
-    const V &cv = v;
+    const V& cv = v;
     std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
     std::visit(obj, cv);
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
     std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
     std::visit(obj, std::move(cv));
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
   }
   { // single argument - rvalue reference
-    using V = std::variant<int &&>;
-    int x = 42;
+    using V = std::variant<int&&>;
+    int x   = 42;
     V v(std::move(x));
-    const V &cv = v;
+    const V& cv = v;
     std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
     std::visit(obj, cv);
-    assert(Fn::check_call<int &>(Val));
+    assert(Fn::check_call<int&>(Val));
     std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &&>(Val));
+    assert(Fn::check_call<int&&>(Val));
     std::visit(obj, std::move(cv));
-    assert(Fn::check_call<int &&>(Val));
+    assert(Fn::check_call<int&&>(Val));
   }
 #endif
   { // multi argument - multi variant
     using V = std::variant<int, std::string, long>;
     V v1(42), v2("hello"), v3(43l);
     std::visit(obj, v1, v2, v3);
-    assert((Fn::check_call<int &, std::string &, long &>(Val)));
+    assert((Fn::check_call<int&, std::string&, long&>(Val)));
     std::visit(obj, std::as_const(v1), std::as_const(v2), std::move(v3));
-    assert((Fn::check_call<const int &, const std::string &, long &&>(Val)));
+    assert((Fn::check_call<const int&, const std::string&, long&&>(Val)));
   }
   {
     using V = std::variant<int, long, double, std::string>;
     V v1(42l), v2("hello"), v3(101), v4(1.1);
     std::visit(obj, v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int &, double &>(Val)));
+    assert((Fn::check_call<long&, std::string&, int&, double&>(Val)));
     std::visit(obj, std::as_const(v1), std::as_const(v2), std::move(v3), std::move(v4));
-    assert((Fn::check_call<const long &, const std::string &, int &&, double &&>(Val)));
+    assert((Fn::check_call<const long&, const std::string&, int&&, double&&>(Val)));
   }
   {
     using V = std::variant<int, long, double, int*, std::string>;
     V v1(42l), v2("hello"), v3(nullptr), v4(1.1);
     std::visit(obj, v1, v2, v3, v4);
-    assert((Fn::check_call<long &, std::string &, int *&, double &>(Val)));
+    assert((Fn::check_call<long&, std::string&, int*&, double&>(Val)));
     std::visit(obj, std::as_const(v1), std::as_const(v2), std::move(v3), std::move(v4));
-    assert((Fn::check_call<const long &, const std::string &, int *&&, double &&>(Val)));
+    assert((Fn::check_call<const long&, const std::string&, int*&&, double&&>(Val)));
   }
 }
 
 void test_return_type() {
   using Fn = ForwardingCallObject;
   Fn obj{};
-  const Fn &cobj = obj;
+  const Fn& cobj = obj;
   { // test call operator forwarding - no variant
     static_assert(std::is_same_v<decltype(std::visit(obj)), Fn&>);
     static_assert(std::is_same_v<decltype(std::visit(cobj)), const Fn&>);
@@ -203,8 +256,8 @@ void test_return_type() {
     static_assert(std::is_same_v<decltype(std::visit(std::move(cobj), v)), const Fn&&>);
   }
   { // test call operator forwarding - multi variant, multi arg
-    using V = std::variant<int, long, double>;
-    using V2 = std::variant<int *, std::string>;
+    using V  = std::variant<int, long, double>;
+    using V2 = std::variant<int*, std::string>;
     V v(42l);
     V2 v2("hello");
     static_assert(std::is_same_v<decltype(std::visit(obj, v, v2)), Fn&>);
@@ -245,7 +298,7 @@ void test_constexpr() {
   }
   {
     using V1 = std::variant<int>;
-    using V2 = std::variant<int, char *, long long>;
+    using V2 = std::variant<int, char*, long long>;
     using V3 = std::variant<bool, int, int>;
     constexpr V1 v1;
     constexpr V2 v2(nullptr);
@@ -254,20 +307,20 @@ void test_constexpr() {
   }
   {
     using V1 = std::variant<int>;
-    using V2 = std::variant<int, char *, long long>;
-    using V3 = std::variant<void *, int, int>;
+    using V2 = std::variant<int, char*, long long>;
+    using V3 = std::variant<void*, int, int>;
     constexpr V1 v1;
     constexpr V2 v2(nullptr);
     constexpr V3 v3;
     static_assert(std::visit(aobj, v1, v2, v3) == 3, "");
   }
   {
-    using V = std::variant<int, long, double, int *>;
+    using V = std::variant<int, long, double, int*>;
     constexpr V v1(42l), v2(101), v3(nullptr), v4(1.1);
     static_assert(std::visit(aobj, v1, v2, v3, v4) == 4, "");
   }
   {
-    using V = std::variant<int, long, double, long long, int *>;
+    using V = std::variant<int, long, double, long long, int*>;
     constexpr V v1(42l), v2(101), v3(nullptr), v4(1.1);
     static_assert(std::visit(aobj, v1, v2, v3, v4) == 4, "");
   }
@@ -276,10 +329,10 @@ void test_constexpr() {
 void test_exceptions() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   ReturnArity obj{};
-  auto test = [&](auto &&... args) {
+  auto test = [&](auto&&... args) {
     try {
       std::visit(obj, args...);
-    } catch (const std::bad_variant_access &) {
+    } catch (const std::bad_variant_access&) {
       return true;
     } catch (...) {
     }
@@ -292,24 +345,24 @@ void test_exceptions() {
     assert(test(v));
   }
   {
-    using V = std::variant<int, MakeEmptyT>;
-    using V2 = std::variant<long, std::string, void *>;
+    using V  = std::variant<int, MakeEmptyT>;
+    using V2 = std::variant<long, std::string, void*>;
     V v;
     makeEmpty(v);
     V2 v2("hello");
     assert(test(v, v2));
   }
   {
-    using V = std::variant<int, MakeEmptyT>;
-    using V2 = std::variant<long, std::string, void *>;
+    using V  = std::variant<int, MakeEmptyT>;
+    using V2 = std::variant<long, std::string, void*>;
     V v;
     makeEmpty(v);
     V2 v2("hello");
     assert(test(v2, v));
   }
   {
-    using V = std::variant<int, MakeEmptyT>;
-    using V2 = std::variant<long, std::string, void *, MakeEmptyT>;
+    using V  = std::variant<int, MakeEmptyT>;
+    using V2 = std::variant<long, std::string, void*, MakeEmptyT>;
     V v;
     makeEmpty(v);
     V2 v2;
@@ -354,7 +407,7 @@ void get(const MyVariant&) {
 } // namespace std
 
 void test_derived_from_variant() {
-  auto v1 = MyVariant{42};
+  auto v1        = MyVariant{42};
   const auto cv1 = MyVariant{142};
   std::visit([](auto x) { assert(x == 42); }, v1);
   std::visit([](auto x) { assert(x == 142); }, cv1);
@@ -368,9 +421,7 @@ void test_derived_from_variant() {
     char valueless_by_exception;
   };
 
-  struct EvilVariant1 : std::variant<int, long, double>,
-                        std::tuple<int>,
-                        EvilVariantBase {
+  struct EvilVariant1 : std::variant<int, long, double>, std::tuple<int>, EvilVariantBase {
     using std::variant<int, long, double>::variant;
   };
 
@@ -380,7 +431,10 @@ void test_derived_from_variant() {
   // Check that visit unambiguously picks the variant, even if the other base has __impl member.
   struct ImplVariantBase {
     struct Callable {
-      bool operator()() const { assert(false); return false; }
+      bool operator()() const {
+        assert(false);
+        return false;
+      }
     };
 
     Callable __impl;
@@ -399,8 +453,7 @@ struct any_visitor {
   void operator()(const T&) const {}
 };
 
-template <typename T, typename = decltype(std::visit(
-                          std::declval<any_visitor&>(), std::declval<T>()))>
+template <typename T, typename = decltype(std::visit(std::declval<any_visitor&>(), std::declval<T>()))>
 constexpr bool has_visit(int) {
   return true;
 }

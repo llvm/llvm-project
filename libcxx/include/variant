@@ -1283,16 +1283,10 @@ public:
 #  if _LIBCPP_STD_VER >= 26
   // [variant.visit], visitation
   template <class _Self, class _Visitor>
-  constexpr decltype(auto) visit(this _Self&& __self, _Visitor&& __visitor) {
-    using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
-    return std::visit(std::forward<_Visitor>(__visitor), (_V)__self);
-  }
+  constexpr decltype(auto) visit(this _Self&& __self, _Visitor&& __visitor);
 
   template <class _R, class _Self, class _Visitor>
-  constexpr _R visit(this _Self&& __self, _Visitor&& __visitor) {
-    using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
-    return std::visit<_R>(std::forward<_Visitor>(__visitor), (_V)__self);
-  }
+  constexpr _R visit(this _Self&& __self, _Visitor&& __visitor);
 #  endif
 
 private:
@@ -1551,6 +1545,24 @@ visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
   return __variant::__visit_value<_Rp>(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+}
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+// [variant.visit], visitation
+
+template <class... _Types>
+template <class _Self, class _Visitor>
+constexpr decltype(auto) variant<_Types...>::visit(this _Self&& __self, _Visitor&& __visitor) {
+  using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
+  return std::visit(std::forward<_Visitor>(__visitor), (_V)__self);
+}
+
+template <class... _Types>
+template <class _Rp, class _Self, class _Visitor>
+constexpr _Rp variant<_Types...>::visit(this _Self&& __self, _Visitor&& __visitor) {
+  using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
+  return std::visit<_Rp>(std::forward<_Visitor>(__visitor), (_V)__self);
 }
 #  endif
 
