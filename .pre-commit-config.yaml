@@ -1,0 +1,5 @@
+repos:
+- repo: https://github.com/vmiheer/pre-commit-hooks.git
+  rev: 1504fb3144866f775c13f06acdd139150238ca57
+  hooks:
+    - id: clang-format-diff
