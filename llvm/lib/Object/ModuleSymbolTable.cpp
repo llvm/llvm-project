@@ -72,7 +72,8 @@ initializeRecordStreamer(const Module &M,
   // This function may be called twice, once for ModuleSummaryIndexAnalysis and
   // the other when writing the IR symbol table. If parsing inline assembly has
   // caused errors in the first run, suppress the second run.
-  if (M.getContext().getDiagHandlerPtr()->HasErrors)
+  if (M.getContext().getDiagHandlerPtr() &&
+      M.getContext().getDiagHandlerPtr()->HasErrors)
     return;
   StringRef InlineAsm = M.getModuleInlineAsm();
   if (InlineAsm.empty())
