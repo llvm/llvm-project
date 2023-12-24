@@ -69,8 +69,8 @@ using PrefetchHints = SampleRecord::CallTargetMap;
 
 // Return any prefetching hints for the specified MachineInstruction. The hints
 // are returned as pairs (name, delta).
-ErrorOr<PrefetchHints> getPrefetchHints(const FunctionSamples *TopSamples,
-                                        const MachineInstr &MI) {
+ErrorOr<const PrefetchHints &>
+getPrefetchHints(const FunctionSamples *TopSamples, const MachineInstr &MI) {
   if (const auto &Loc = MI.getDebugLoc())
     if (const auto *Samples = TopSamples->findFunctionSamples(Loc))
       return Samples->findCallTargetMapAt(FunctionSamples::getOffset(Loc),
@@ -123,7 +123,7 @@ bool X86InsertPrefetch::findPrefetchInfo(const FunctionSamples *TopSamples,
   };
   static const char *SerializedPrefetchPrefix = "__prefetch";
 
-  const ErrorOr<PrefetchHints> T = getPrefetchHints(TopSamples, MI);
+  auto T = getPrefetchHints(TopSamples, MI);
   if (!T)
     return false;
   int16_t max_index = -1;
