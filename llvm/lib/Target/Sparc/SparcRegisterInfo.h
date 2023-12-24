@@ -31,8 +31,6 @@ struct SparcRegisterInfo : public SparcGenRegisterInfo {
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
-  bool isAnyArgRegReserved(const MachineFunction &MF) const;
-  void emitReservedArgRegCallError(const MachineFunction &MF) const;
 
   const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
                                                 unsigned Kind) const override;
