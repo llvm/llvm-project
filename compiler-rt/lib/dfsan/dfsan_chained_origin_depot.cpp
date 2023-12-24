@@ -19,14 +19,10 @@ static ChainedOriginDepot chainedOriginDepot;
 
 ChainedOriginDepot* GetChainedOriginDepot() { return &chainedOriginDepot; }
 
-void ChainedOriginDepotLockBeforeFork() {
-  // TODO: Consider same optimization as `StackDepotLockBeforeFork`.
-  chainedOriginDepot.LockAll();
-}
+void ChainedOriginDepotLockBeforeFork() { chainedOriginDepot.LockBeforeFork(); }
 
 void ChainedOriginDepotUnlockAfterFork(bool fork_child) {
-  // TODO: Consider same optimization as `StackDepotUnlockAfterFork`.
-  chainedOriginDepot.UnlockAll();
+  chainedOriginDepot.UnlockAfterFork(fork_child);
 }
 
 }  // namespace __dfsan
