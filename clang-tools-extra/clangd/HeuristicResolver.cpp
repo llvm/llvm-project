@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeuristicResolver.h"
+#include "AST.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -44,6 +48,94 @@ const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
     return VD->getType().getTypePtrOrNull();
   }
   return nullptr;
+}
+
+// Visitor that helps to extract deduced type from instantiated entities.
+// This merely performs the source location comparison against each Decl
+// until it finds a Decl with the same location as the
+// dependent one. Its associated type will then be extracted.
+struct InstantiatedDeclVisitor : RecursiveASTVisitor<InstantiatedDeclVisitor> {
+
+  InstantiatedDeclVisitor(NamedDecl *DependentDecl)
+      : DependentDecl(DependentDecl) {}
+
+  bool shouldVisitTemplateInstantiations() const { return true; }
+
+  bool shouldVisitLambdaBody() const { return true; }
+
+  bool shouldVisitImplicitCode() const { return true; }
+
+  template <typename D> bool onDeclVisited(D *MaybeInstantiated) {
+    if (MaybeInstantiated->getDeclContext()->isDependentContext())
+      return true;
+    auto *Dependent = dyn_cast<D>(DependentDecl);
+    if (!Dependent)
+      return true;
+    auto LHS = MaybeInstantiated->getTypeSourceInfo(),
+         RHS = Dependent->getTypeSourceInfo();
+    if (!LHS || !RHS)
+      return true;
+    if (LHS->getTypeLoc().getSourceRange() !=
+        RHS->getTypeLoc().getSourceRange())
+      return true;
+    DeducedType = MaybeInstantiated->getType();
+    return false;
+  }
+
+  bool VisitFieldDecl(FieldDecl *FD) { return onDeclVisited(FD); }
+
+  bool VisitVarDecl(VarDecl *VD) { return onDeclVisited(VD); }
+
+  NamedDecl *DependentDecl;
+  QualType DeducedType;
+};
+
+/// Attempt to resolve the dependent type from the surrounding context for which
+/// a single instantiation is available.
+const Type *
+resolveTypeFromInstantiatedTemplate(const CXXDependentScopeMemberExpr *Expr) {
+  if (Expr->isImplicitAccess())
+    return nullptr;
+
+  auto *Base = Expr->getBase();
+  NamedDecl *ND = nullptr;
+  if (auto *CXXMember = dyn_cast<MemberExpr>(Base))
+    ND = CXXMember->getMemberDecl();
+
+  if (auto *DRExpr = dyn_cast<DeclRefExpr>(Base))
+    ND = DRExpr->getFoundDecl();
+
+  // FIXME: Handle CXXUnresolvedConstructExpr. This kind of type doesn't have
+  // available Decls to be matched against. Which inhibits the current heuristic
+  // from resolving expressions such as `T().fo^o()`, where T is a
+  // single-instantiated template parameter.
+  if (!ND)
+    return nullptr;
+
+  NamedDecl *Instantiation = nullptr;
+
+  // Find out a single instantiation that we can start with. The enclosing
+  // context for the current Decl might not be a templated entity (e.g. a member
+  // function inside a class template), hence we shall walk up the decl
+  // contexts first.
+  for (auto *EnclosingContext = ND->getDeclContext(); EnclosingContext;
+       EnclosingContext = EnclosingContext->getParent()) {
+    if (auto *ND = dyn_cast<NamedDecl>(EnclosingContext)) {
+      Instantiation = getOnlyInstantiation(ND);
+      if (Instantiation)
+        break;
+    }
+  }
+
+  if (!Instantiation)
+    return nullptr;
+
+  // This will traverse down the instantiation entity, visit each Decl, and
+  // extract the deduced type for the undetermined Decl `ND`.
+  InstantiatedDeclVisitor Visitor(ND);
+  Visitor.TraverseDecl(Instantiation);
+
+  return Visitor.DeducedType.getTypePtrOrNull();
 }
 
 } // namespace
@@ -150,8 +242,14 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
   if (ME->isArrow()) {
     BaseType = getPointeeType(BaseType);
   }
+
   if (!BaseType)
     return {};
+
+  if (BaseType->isDependentType())
+    if (auto *MaybeResolved = resolveTypeFromInstantiatedTemplate(ME))
+      BaseType = MaybeResolved;
+
   if (const auto *BT = BaseType->getAs<BuiltinType>()) {
     // If BaseType is the type of a dependent expression, it's just
     // represented as BuiltinType::Dependent which gives us no information. We

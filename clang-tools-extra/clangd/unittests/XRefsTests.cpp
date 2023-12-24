@@ -1222,6 +1222,54 @@ TEST(LocateSymbol, TextualSmoke) {
                         hasID(getSymbolID(&findDecl(AST, "MyClass"))))));
 }
 
+TEST(LocateSymbol, DeduceDependentTypeFromSingleInstantiation) {
+  Annotations T(R"cpp(
+    struct WildCat {
+      void $wild_meow[[meow]]();
+    };
+
+    struct DomesticCat {
+      void $domestic_meow[[meow]]();
+    };
+
+    template <typename Ours>
+    struct Human {
+      template <typename Others>
+      void feed(Others O) {
+        O.me$1^ow();
+        Others Child;
+        Child.me$2^ow();
+        // FIXME: Others().me^ow();
+        Ours Baby;
+        Baby.me$3^ow();
+        // struct Inner {
+        //   Ours Pet;
+        // };
+        // Inner().Pet.me^ow();
+        auto Lambda = [](auto C) {
+          C.me$4^ow();
+        };
+        Lambda(Others());
+      }
+    };
+
+    void foo() {
+      Human<DomesticCat>().feed(WildCat());
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(T.code());
+  auto AST = TU.build();
+  EXPECT_THAT(locateSymbolAt(AST, T.point("1")),
+              ElementsAre(sym("meow", T.range("wild_meow"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("2")),
+              ElementsAre(sym("meow", T.range("wild_meow"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("3")),
+              ElementsAre(sym("meow", T.range("domestic_meow"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("4")),
+              ElementsAre(sym("meow", T.range("wild_meow"), std::nullopt)));
+}
+
 TEST(LocateSymbol, Textual) {
   const char *Tests[] = {
       R"cpp(// Comment
