@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 
 using namespace mlir;
 using namespace mlir::index;
