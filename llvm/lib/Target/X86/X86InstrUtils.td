@@ -967,3 +967,5 @@ class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
   let hasSideEffects = 0;
   let hasREX_W  = typeinfo.HasREX_W;
 }
+
+defvar binop_args = "{$src2, $src1|$src1, $src2}";
