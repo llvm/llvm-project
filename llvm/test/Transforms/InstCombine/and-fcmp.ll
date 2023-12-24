@@ -4794,8 +4794,7 @@ define i1 @clang_builtin_isnormal_inf_check_ord(half %x) {
 
 define i1 @clang_builtin_isnormal_inf_check_oge(half %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_oge(
-; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[TMP1]], 0xH7C00
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 516)
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -4807,8 +4806,7 @@ define i1 @clang_builtin_isnormal_inf_check_oge(half %x) {
 
 define i1 @clang_builtin_isnormal_inf_check_olt(half %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_olt(
-; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp one half [[TMP1]], 0xH7C00
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 504)
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -4835,8 +4833,7 @@ define i1 @clang_builtin_isnormal_inf_check_ole(half %x) {
 
 define i1 @clang_builtin_isnormal_inf_check_oeq(half %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_oeq(
-; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[TMP1]], 0xH7C00
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 516)
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs.x = call half @llvm.fabs.f16(half %x)

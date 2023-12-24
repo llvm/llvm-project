@@ -4,9 +4,8 @@
 // CHECK-LABEL: define dso_local i1 @check_isfpclass_finite
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-// CHECK-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], 0x7FF0000000000000
-// CHECK-NEXT:    ret i1 [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 504)
+// CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfpclass_finite(float x) {
   return __builtin_isfpclass(x, 504 /*Finite*/);
@@ -15,7 +14,7 @@ _Bool check_isfpclass_finite(float x) {
 // CHECK-LABEL: define dso_local i1 @check_isfpclass_finite_strict
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 504) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 504) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfpclass_finite_strict(float x) {
@@ -36,7 +35,7 @@ _Bool check_isfpclass_nan_f32(float x) {
 // CHECK-LABEL: define dso_local i1 @check_isfpclass_nan_f32_strict
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 3) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 3) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfpclass_nan_f32_strict(float x) {
@@ -57,7 +56,7 @@ _Bool check_isfpclass_snan_f64(double x) {
 // CHECK-LABEL: define dso_local i1 @check_isfpclass_snan_f64_strict
 // CHECK-SAME: (double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X]], i32 1) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X]], i32 1) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfpclass_snan_f64_strict(double x) {
@@ -78,7 +77,7 @@ _Bool check_isfpclass_zero_f16(_Float16 x) {
 // CHECK-LABEL: define dso_local i1 @check_isfpclass_zero_f16_strict
 // CHECK-SAME: (half noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f16(half [[X]], i32 96) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f16(half [[X]], i32 96) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfpclass_zero_f16_strict(_Float16 x) {
@@ -89,7 +88,7 @@ _Bool check_isfpclass_zero_f16_strict(_Float16 x) {
 // CHECK-LABEL: define dso_local i1 @check_isnan
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 3) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 3) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isnan(float x) {
@@ -100,7 +99,7 @@ _Bool check_isnan(float x) {
 // CHECK-LABEL: define dso_local i1 @check_isinf
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 516) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 516) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isinf(float x) {
@@ -111,7 +110,7 @@ _Bool check_isinf(float x) {
 // CHECK-LABEL: define dso_local i1 @check_isfinite
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 504) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 504) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isfinite(float x) {
@@ -122,7 +121,7 @@ _Bool check_isfinite(float x) {
 // CHECK-LABEL: define dso_local i1 @check_isnormal
 // CHECK-SAME: (float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 264) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], i32 264) #[[ATTR5]]
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 _Bool check_isnormal(float x) {
@@ -150,7 +149,7 @@ int4 check_isfpclass_nan_v4f32(float4 x) {
 // CHECK-LABEL: define dso_local <4 x i32> @check_isfpclass_nan_strict_v4f32
 // CHECK-SAME: (<4 x float> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[X]], i32 3) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[X]], i32 3) #[[ATTR5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
