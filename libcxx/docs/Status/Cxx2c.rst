@@ -40,6 +40,8 @@ Paper Status
 .. note::
 
    .. [#note-P2510R3] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
+   .. [#note-P2637R3] P2637R3: Implemented `variant` member `visit`
+
 
 .. _issues-status-cxx2c:
 
