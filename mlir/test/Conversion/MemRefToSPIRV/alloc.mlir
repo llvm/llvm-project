@@ -48,8 +48,8 @@ module attributes {
 //       CHECK:   %{{.+}} = spirv.Load "Workgroup" %[[PTR]] : i32
 //       CHECK:   %[[LOC:.+]] = spirv.SDiv
 //       CHECK:   %[[PTR:.+]] = spirv.AccessChain %[[VAR]][%{{.+}}, %[[LOC]]]
-//       CHECK:   %{{.+}} = spirv.AtomicAnd "Workgroup" "AcquireRelease" %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
-//       CHECK:   %{{.+}} = spirv.AtomicOr "Workgroup" "AcquireRelease" %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
+//       CHECK:   %{{.+}} = spirv.AtomicAnd <Workgroup> <AcquireRelease> %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
+//       CHECK:   %{{.+}} = spirv.AtomicOr <Workgroup> <AcquireRelease> %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
 
 // -----
 
