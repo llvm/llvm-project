@@ -1113,9 +1113,9 @@ const DeclContext &SelectionTree::Node::getDeclContext() const {
           return *DC;
       return *Current->getLexicalDeclContext();
     }
-    if (auto *LE = CurrentNode->ASTNode.get<LambdaExpr>())
+    if (const auto *LE = CurrentNode->ASTNode.get<LambdaExpr>())
       if (CurrentNode != this)
-        return *LE->getLambdaClass();
+        return *LE->getCallOperator();
   }
   llvm_unreachable("A tree must always be rooted at TranslationUnitDecl.");
 }
