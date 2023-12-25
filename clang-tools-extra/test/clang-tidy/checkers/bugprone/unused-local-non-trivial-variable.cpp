@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-unused-local-non-trivial-variable %t -- \
 // RUN:       -config="{CheckOptions: {bugprone-unused-local-non-trivial-variable.IncludeTypes: '::async::Future;::async::Foo.*', bugprone-unused-local-non-trivial-variable.ExcludeTypes: '::async::FooBar'}}"
-
+// RUN:       -- -fexceptions
 
 namespace async {
 template <typename T>
@@ -19,7 +19,7 @@ class Ptr {
 
 template<typename T>
 class Future {
-public:    
+public:
     T get() {
         return Pending;
     }
