@@ -79,15 +79,56 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse);
 
+static Value *simplifySelectWithAndOR(Value *Cond, Value *TrueVal,
+                                      Value *FalseVal,
+                                      CmpInst::Predicate ExpectedPred,
+                                      BinaryOperator::BinaryOps BinOpCode,
+                                      unsigned int MaxRecurse) {
+  assert(
+      (BinOpCode == BinaryOperator::And || BinOpCode == BinaryOperator::Or) &&
+      "Binary Operator should be And or Or");
+
+  assert(
+      (BinOpCode == BinaryOperator::And && ExpectedPred == ICmpInst::ICMP_EQ) ||
+      (BinOpCode == BinaryOperator::Or && ExpectedPred == ICmpInst::ICMP_NE));
+
+  if (!MaxRecurse)
+    return nullptr;
+
+  auto getSimplifiedValue = [](BinaryOperator::BinaryOps BinOpCode,
+                               Value *TrueVal, Value *FalseVal) {
+    return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
+  };
+
+  CmpInst::Predicate Pred;
+  if (match(Cond, m_c_ICmp(Pred, m_Specific(TrueVal), m_Specific(FalseVal))) &&
+      Pred == ExpectedPred)
+    return getSimplifiedValue(BinOpCode, TrueVal, FalseVal);
+
+  Value *X, *Y;
+  if (match(Cond, m_c_BinOp(BinOpCode, m_Value(X), m_Value(Y)))) {
+
+    auto matchBinOpCode = [&](Value *V) {
+      return simplifySelectWithAndOR(V, TrueVal, FalseVal, ExpectedPred,
+                                     BinOpCode, MaxRecurse - 1);
+    };
+
+    if (matchBinOpCode(X) || matchBinOpCode(Y))
+      return getSimplifiedValue(BinOpCode, TrueVal, FalseVal);
+  }
+
+  return nullptr;
+}
+
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
-                                     Value *FalseVal) {
+                                     Value *FalseVal, unsigned int MaxRecurse) {
   BinaryOperator::BinaryOps BinOpCode;
   if (auto *BO = dyn_cast<BinaryOperator>(Cond))
     BinOpCode = BO->getOpcode();
   else
     return nullptr;
 
-  CmpInst::Predicate ExpectedPred, Pred1, Pred2;
+  CmpInst::Predicate ExpectedPred;
   if (BinOpCode == BinaryOperator::Or) {
     ExpectedPred = ICmpInst::ICMP_NE;
   } else if (BinOpCode == BinaryOperator::And) {
@@ -95,30 +136,8 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   } else
     return nullptr;
 
-  // %A = icmp eq %TV, %FV
-  // %B = icmp eq %X, %Y (and one of these is a select operand)
-  // %C = and %A, %B
-  // %D = select %C, %TV, %FV
-  // -->
-  // %FV
-
-  // %A = icmp ne %TV, %FV
-  // %B = icmp ne %X, %Y (and one of these is a select operand)
-  // %C = or %A, %B
-  // %D = select %C, %TV, %FV
-  // -->
-  // %TV
-  Value *X, *Y;
-  if (!match(Cond, m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal),
-                                      m_Specific(FalseVal)),
-                             m_ICmp(Pred2, m_Value(X), m_Value(Y)))) ||
-      Pred1 != Pred2 || Pred1 != ExpectedPred)
-    return nullptr;
-
-  if (X == TrueVal || X == FalseVal || Y == TrueVal || Y == FalseVal)
-    return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
-
-  return nullptr;
+  return simplifySelectWithAndOR(Cond, TrueVal, FalseVal, ExpectedPred,
+                                 BinOpCode, MaxRecurse);
 }
 
 /// For a boolean type or a vector of boolean type, return false or a vector
@@ -4906,7 +4925,7 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q))
     return V;
 
-  if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal))
+  if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal, MaxRecurse))
     return V;
 
   std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
