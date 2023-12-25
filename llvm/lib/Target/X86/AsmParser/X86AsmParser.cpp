@@ -263,8 +263,7 @@ private:
         return 0;
 
       SmallVector<ICToken, 16> OperandStack;
-      for (unsigned i = 0, e = PostfixStack.size(); i != e; ++i) {
-        ICToken Op = PostfixStack[i];
+      for (const ICToken &Op : PostfixStack) {
         if (Op.first == IC_IMM || Op.first == IC_REGISTER) {
           OperandStack.push_back(Op);
         } else if (isUnaryOperator(Op.first)) {
@@ -1731,8 +1730,8 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
       OrigOperands.pop_back();
   }
   // OrigOperands.append(FinalOperands.begin(), FinalOperands.end());
-  for (unsigned int i = 0; i < FinalOperands.size(); ++i)
-    OrigOperands.push_back(std::move(FinalOperands[i]));
+  for (auto &Op : FinalOperands)
+    OrigOperands.push_back(std::move(Op));
 
   return false;
 }
