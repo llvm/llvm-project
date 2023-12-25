@@ -1,5 +1,0 @@
-# RUN: llvm-mc -triple x86_64 --show-encoding %s | FileCheck %s
-
-# CHECK: sttilecfg	291(%r28,%r29,4)
-# CHECK: encoding: [0x62,0x9a,0x79,0x08,0x49,0x84,0xac,0x23,0x01,0x00,0x00]
-         sttilecfg	291(%r28,%r29,4)
