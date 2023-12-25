@@ -52,16 +52,15 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
   Alias  |= AS.Alias;
 
   if (Alias == SetMustAlias) {
-    // Check that these two merged sets really are must aliases.
-    // If the pointers are not a must-alias pair, this set becomes a may alias.
-    [&] {
-      for (const MemoryLocation &MemLoc : *this)
-        for (const MemoryLocation &ASMemLoc : AS)
-          if (!BatchAA.isMustAlias(MemLoc, ASMemLoc)) {
-            Alias = SetMayAlias;
-            return;
-          }
-    }();
+    // Check that these two merged sets really are must aliases. If we cannot
+    // find a must-alias pair between them, this set becomes a may alias.
+    if (!llvm::any_of(MemoryLocs, [&](const MemoryLocation &MemLoc) {
+          return llvm::any_of(AS.MemoryLocs,
+                              [&](const MemoryLocation &ASMemLoc) {
+                                return BatchAA.isMustAlias(MemLoc, ASMemLoc);
+                              });
+        }))
+      Alias = SetMayAlias;
   }
 
   // Merge the list of constituent pointers...
@@ -113,13 +112,14 @@ void AliasSet::removeFromTracker(AliasSetTracker &AST) {
 
 void AliasSet::addPointer(AliasSetTracker &AST, const MemoryLocation &MemLoc,
                           bool KnownMustAlias) {
-  // Check to see if we have to downgrade to _may_ alias.
-  if (isMustAlias() && !KnownMustAlias)
-    for (const MemoryLocation &ASMemLoc : MemoryLocs)
-      if (!AST.getAliasAnalysis().isMustAlias(ASMemLoc, MemLoc)) {
-        Alias = SetMayAlias;
-        break;
-      }
+  if (isMustAlias() && !KnownMustAlias) {
+    // If we cannot find a must-alias with any of the existing MemoryLocs, we
+    // must downgrade to may-alias.
+    if (!llvm::any_of(MemoryLocs, [&](const MemoryLocation &ASMemLoc) {
+          return AST.getAliasAnalysis().isMustAlias(MemLoc, ASMemLoc);
+        }))
+      Alias = SetMayAlias;
+  }
 
   // Add it to the end of the list...
   MemoryLocs.push_back(MemLoc);
