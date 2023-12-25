@@ -1133,6 +1133,16 @@ static bool isWholeArchivePresent(const ArgList &Args) {
   return WholeArchiveActive;
 }
 
+/// Determine if driver is invoked to create a shared object library (-static)
+static bool isSharedLinkage(const ArgList &Args) {
+  return Args.hasArg(options::OPT_shared);
+}
+
+/// Determine if driver is invoked to create a static object library (-shared)
+static bool isStaticLinkage(const ArgList &Args) {
+  return Args.hasArg(options::OPT_static);
+}
+
 /// Add Fortran runtime libs for MSVC
 static void addFortranRuntimeLibsMSVC(const ArgList &Args,
                                       llvm::opt::ArgStringList &CmdArgs) {
@@ -1164,6 +1174,16 @@ static void addFortranRuntimeLibsMSVC(const ArgList &Args,
 // Add FortranMain runtime lib
 static void addFortranMain(const ToolChain &TC, const ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) {
+  // 0. Shared-library linkage
+  // If we are attempting to link a library, we should not add
+  // -lFortran_main.a to the link line, as the `main` symbol is not
+  // required for a library and should also be provided by one of
+  // the translation units of the code that this shared library
+  // will be linked against eventually.
+  if (isSharedLinkage(Args) || isStaticLinkage(Args)) {
+    return;
+  }
+
   // 1. MSVC
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     addFortranRuntimeLibsMSVC(Args, CmdArgs);
