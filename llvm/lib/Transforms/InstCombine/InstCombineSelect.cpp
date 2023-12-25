@@ -2363,6 +2363,9 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   Value *FVal = Sel.getFalseValue();
   Type *SelType = Sel.getType();
 
+  if (ICmpInst::makeCmpResultType(TVal->getType()) != Cond->getType())
+    return nullptr;
+
   // Match select ?, TC, FC where the constants are equal but negated.
   // TODO: Generalize to handle a negated variable operand?
   const APFloat *TC, *FC;
