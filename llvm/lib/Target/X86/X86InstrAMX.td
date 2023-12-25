@@ -15,8 +15,7 @@
 // AMX instructions
 
 multiclass AMX_TILE_COMMON<string Suffix, Predicate HasEGPR> {
-let Predicates = [HasAMXTILE, HasEGPR, In64BitMode],
-    OpEnc = !if(!eq(Suffix, ""), EncVEX, EncEVEX), CD8_Scale = 0 in {
+let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
   let hasSideEffects = 1,
       Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
   def LDTILECFG#Suffix : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
@@ -47,8 +46,8 @@ let Predicates = [HasAMXTILE, HasEGPR, In64BitMode],
 }
 
 let SchedRW = [WriteSystem] in {
-  defm "" : AMX_TILE_COMMON<"", NoEGPR>;
-  defm "" : AMX_TILE_COMMON<"_EVEX", HasEGPR>;
+  defm "" : AMX_TILE_COMMON<"", NoEGPR>, VEX;
+  defm "" : AMX_TILE_COMMON<"_EVEX", HasEGPR>, EVEX, NoCD8;
 
   let Predicates = [HasAMXTILE, In64BitMode] in {
     let Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
@@ -93,7 +92,7 @@ let SchedRW = [WriteSystem] in {
       def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
                               [(int_x86_tilezero timm:$src)]>;
     }
-  } // HasAMXTILE
+  } // Predicates
 } // SchedRW
 
 let Predicates = [HasAMXINT8, In64BitMode] in {
