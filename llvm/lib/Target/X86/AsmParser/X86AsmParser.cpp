@@ -2312,8 +2312,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
 
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
-  if (DotDispStr.starts_with("."))
-    DotDispStr = DotDispStr.drop_front(1);
+  DotDispStr.consume_front(".");
   StringRef TrailingDot;
 
   // .Imm gets lexed as a real.

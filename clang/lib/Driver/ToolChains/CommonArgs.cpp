@@ -2388,8 +2388,7 @@ static void GetSDLFromOffloadArchive(
       FoundAOB = true;
     }
   } else {
-    if (Lib.starts_with("-l"))
-      Lib = Lib.drop_front(2);
+    Lib.consume_front("-l");
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
       auto LibFile = (Lib.starts_with(":") ? Lib.drop_front()
