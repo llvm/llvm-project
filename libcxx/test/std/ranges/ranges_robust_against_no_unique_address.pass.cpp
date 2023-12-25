@@ -14,6 +14,8 @@
 #include <cassert>
 #include <ranges>
 
+#include "test_macros.h"
+
 struct Pred {
   alignas(128) bool a{};
 
@@ -49,11 +51,14 @@ constexpr void testOne() {
 constexpr bool test() {
   testOne<std::ranges::transform_view<View, Pred>>();
   testOne<std::ranges::filter_view<View, Pred>>();
-  testOne<std::ranges::chunk_by_view<View, Pred>>();
   testOne<std::ranges::drop_while_view<View, Pred>>();
   testOne<std::ranges::take_while_view<View, Pred>>();
-  testOne<std::ranges::repeat_view<Pred>>();
   testOne<std::ranges::single_view<Pred>>();
+
+#if TEST_STD_VER >= 23
+  testOne<std::ranges::chunk_by_view<View, Pred>>();
+  testOne<std::ranges::repeat_view<Pred>>();
+#endif
   return true;
 }
 

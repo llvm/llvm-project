@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // XFAIL: msvc
 
 // This test ensures that we use `[[no_unique_address]]` in `chunk_by_view`.
