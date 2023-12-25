@@ -262,10 +262,8 @@ exit:
 ; for.latch
 ; for.check
 ; test1
-; test2
 ; test3
 ; test4
-; optional1
 ; optional2
 ; optional3
 ; optional4
@@ -282,9 +280,6 @@ exit:
 ;CHECK: lwz [[TAGREG:[0-9]+]], 0([[TAGPTRREG]])
 ;CHECK-O3: .[[CHECKLABEL:[._0-9A-Za-z]+]]: # %for.check
 ;CHECK: # %bb.{{[0-9]+}}: # %test1
-;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
-;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[._0-9A-Za-z]+]]
-;CHECK-NEXT: # %test2
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: bne 0, .[[OPT2LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[TEST3LABEL:[._0-9A-Za-z]+]]: # %test3
@@ -294,10 +289,7 @@ exit:
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 8
 ;CHECK-NEXT: beq 0, .[[LATCHLABEL]]
 ;CHECK-NEXT: b .[[OPT4LABEL:[._0-9A-Za-z]+]]
-;CHECK: [[OPT1LABEL]]
-;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
-;CHECK-NEXT: beq 0, .[[TEST3LABEL]]
-;CHECK-NEXT: .[[OPT2LABEL]]
+;CHECK: .[[OPT2LABEL]]
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: beq 0, .[[TEST4LABEL]]
 ;CHECK-NEXT: .[[OPT3LABEL]]

@@ -250,10 +250,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_swapped_256_239_gap_in_mask_fail(i3
 define i1 @icmp_power2_and_icmp_shifted_mask_8_112_mask_to_left_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_8_112_mask_to_left_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 112
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 112
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 112
@@ -265,10 +262,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_8_112_mask_to_left_fail(i32 %x) {
 define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_112_mask_to_left_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_swapped_8_112_mask_to_left_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 112
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 112
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T3]], [[T1]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 112
@@ -281,10 +275,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_112_mask_to_left_fail(i32
 define i1 @icmp_power2_and_icmp_shifted_mask_8_56_mask_overlap_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_8_56_mask_overlap_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 56
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 56
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 56
@@ -296,10 +287,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_8_56_mask_overlap_fail(i32 %x) {
 define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_56_mask_overlap_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_swapped_8_56_mask_overlap_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 56
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 56
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T3]], [[T1]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 56
@@ -312,10 +300,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_56_mask_overlap_fail(i32 
 define i1 @icmp_power2_and_icmp_shifted_mask_8_24_mask_overlap_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_8_24_mask_overlap_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 24
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 24
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 24
@@ -327,10 +312,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_8_24_mask_overlap_fail(i32 %x) {
 define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_24_mask_overlap_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_swapped_8_24_mask_overlap_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 24
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 24
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T3]], [[T1]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 24
@@ -343,10 +325,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_24_mask_overlap_fail(i32 
 define i1 @icmp_power2_and_icmp_shifted_mask_8_12_mask_overlap_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_8_12_mask_overlap_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 12
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 12
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 12
@@ -358,10 +337,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_8_12_mask_overlap_fail(i32 %x) {
 define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_12_mask_overlap_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_swapped_8_12_mask_overlap_fail(
 ; CHECK-NEXT:    [[T1:%.*]] = icmp ult i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[X]], 12
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[T2]], 12
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T3]], [[T1]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    ret i1 [[T1]]
 ;
   %t1 = icmp ult i32 %x, 8
   %t2 = and i32 %x, 12

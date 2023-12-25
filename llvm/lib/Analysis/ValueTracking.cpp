@@ -8288,6 +8288,20 @@ isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
   return std::nullopt;
 }
 
+/// Return true if `X in DomCR` implies `X in CR` is true.
+/// Return false if `X in DomCR` implies `X in CR` is false.
+/// Otherwise, return std::nullopt if we can't infer anything.
+static std::optional<bool> isImpliedCondWithRange(const ConstantRange &DomCR,
+                                                  const ConstantRange &CR) {
+  ConstantRange Intersection = DomCR.intersectWith(CR);
+  ConstantRange Difference = DomCR.difference(CR);
+  if (Intersection.isEmptySet())
+    return false;
+  if (Difference.isEmptySet())
+    return true;
+  return std::nullopt;
+}
+
 /// Return true if "icmp LPred X, LC" implies "icmp RPred X, RC" is true.
 /// Return false if "icmp LPred X, LC" implies "icmp RPred X, RC" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
@@ -8296,13 +8310,7 @@ static std::optional<bool> isImpliedCondCommonOperandWithConstants(
     const APInt &RC) {
   ConstantRange DomCR = ConstantRange::makeExactICmpRegion(LPred, LC);
   ConstantRange CR = ConstantRange::makeExactICmpRegion(RPred, RC);
-  ConstantRange Intersection = DomCR.intersectWith(CR);
-  ConstantRange Difference = DomCR.difference(CR);
-  if (Intersection.isEmptySet())
-    return false;
-  if (Difference.isEmptySet())
-    return true;
-  return std::nullopt;
+  return isImpliedCondWithRange(DomCR, CR);
 }
 
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
@@ -8324,8 +8332,36 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // Can we infer anything when the 0-operands match and the 1-operands are
   // constants (not necessarily matching)?
   const APInt *LC, *RC;
-  if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
-    return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
+  if (match(L1, m_APInt(LC)) && match(R1, m_APInt(RC))) {
+    if (L0 == R0)
+      return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
+
+    // handle R0 = L0 binop V and R0 = V binop L0
+    Value *R0Op1 = nullptr;
+    if (match(R0, m_c_BinOp(m_Specific(L0), m_Value(R0Op1)))) {
+      ConstantRange LHSRange = ConstantRange::makeExactICmpRegion(LPred, *LC);
+      ConstantRange CR = ConstantRange::makeExactICmpRegion(RPred, *RC);
+      // TODO: use contextual information from SimplifyQuery
+      ConstantRange RHSRange =
+          computeConstantRange(R0Op1, ICmpInst::isSigned(RPred),
+                               /*UseInstrInfo*/ true, /*AC*/ nullptr,
+                               /*CtxI*/ nullptr, /*DT*/ nullptr, Depth);
+      auto *BO = cast<BinaryOperator>(R0);
+      if (BO->getOperand(0) != L0)
+        std::swap(LHSRange, RHSRange);
+      unsigned NoWrapKind = 0;
+      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO)) {
+        if (OBO->hasNoUnsignedWrap())
+          NoWrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
+        if (OBO->hasNoSignedWrap())
+          NoWrapKind |= OverflowingBinaryOperator::NoSignedWrap;
+      }
+      ConstantRange Range =
+          LHSRange.overflowingBinaryOp(BO->getOpcode(), RHSRange, NoWrapKind);
+      if (auto Res = isImpliedCondWithRange(Range, CR))
+        return Res;
+    }
+  }
 
   // Can we infer anything when the two compares have matching operands?
   bool AreSwappedOps;
