@@ -213,7 +213,7 @@ and use the `-fno-fortran-main` flag.  This flag removes
 translation units to provide a definition of the `main` function. In this case,
 it may be required to explicitly supply C++ runtime libraries as mentioned above.
 
-When creating shared or static libraries using Flang with -shared or -static
+When creating shared or static libraries using Flang with `-shared` or `-static`
 flag, Fortran_main is automatically removed from the linker stage (i.e.,
 `-fno-fortran-main` is on by default).  It is assumed that when creating a
 static or shared library, the generated library does not need a `main`
