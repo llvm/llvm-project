@@ -168,6 +168,11 @@ New checks
   extracted from an optional-like type and then used to create a new instance
   of the same optional-like type.
 
+- New :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check.
+
+  Warns when a local non trivial variable is unused within a function.
+
 - New :doc:`cppcoreguidelines-no-suspend-with-lock
   <clang-tidy/checks/cppcoreguidelines/no-suspend-with-lock>` check.
 

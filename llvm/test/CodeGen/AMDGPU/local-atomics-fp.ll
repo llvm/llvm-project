@@ -182,10 +182,7 @@ define amdgpu_kernel void @lds_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3) %
 ; VI-NEXT:    ; implicit-def: $vgpr0
 ; VI-NEXT:  .LBB2_5: ; %ComputeLoop
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    s_ff1_i32_b32 s3, s5
-; VI-NEXT:    s_ff1_i32_b32 s6, s4
-; VI-NEXT:    s_add_i32 s3, s3, 32
-; VI-NEXT:    s_min_u32 s3, s6, s3
+; VI-NEXT:    s_ff1_i32_b64 s3, s[4:5]
 ; VI-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; VI-NEXT:    v_readfirstlane_b32 s8, v1
 ; VI-NEXT:    v_readlane_b32 s9, v2, s3
@@ -268,10 +265,7 @@ define amdgpu_kernel void @lds_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3) %
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB2_5: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s5
-; GFX9-NEXT:    s_ff1_i32_b32 s6, s4
-; GFX9-NEXT:    s_add_i32 s3, s3, 32
-; GFX9-NEXT:    s_min_u32 s3, s6, s3
+; GFX9-NEXT:    s_ff1_i32_b64 s3, s[4:5]
 ; GFX9-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX9-NEXT:    v_readlane_b32 s9, v2, s3
@@ -543,10 +537,7 @@ define amdgpu_kernel void @lds_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrspa
 ; VI-NEXT:    ; implicit-def: $vgpr0
 ; VI-NEXT:  .LBB3_5: ; %ComputeLoop
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    s_ff1_i32_b32 s3, s5
-; VI-NEXT:    s_ff1_i32_b32 s6, s4
-; VI-NEXT:    s_add_i32 s3, s3, 32
-; VI-NEXT:    s_min_u32 s3, s6, s3
+; VI-NEXT:    s_ff1_i32_b64 s3, s[4:5]
 ; VI-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; VI-NEXT:    v_readfirstlane_b32 s8, v1
 ; VI-NEXT:    v_readlane_b32 s9, v2, s3
@@ -625,10 +616,7 @@ define amdgpu_kernel void @lds_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrspa
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB3_5: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s5
-; GFX9-NEXT:    s_ff1_i32_b32 s6, s4
-; GFX9-NEXT:    s_add_i32 s3, s3, 32
-; GFX9-NEXT:    s_min_u32 s3, s6, s3
+; GFX9-NEXT:    s_ff1_i32_b64 s3, s[4:5]
 ; GFX9-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX9-NEXT:    v_readlane_b32 s9, v2, s3
