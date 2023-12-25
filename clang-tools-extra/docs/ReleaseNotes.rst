@@ -88,6 +88,8 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved `--fix` to properly apply corrections on files that are symlinked.
+
 New checks
 ^^^^^^^^^^
 
