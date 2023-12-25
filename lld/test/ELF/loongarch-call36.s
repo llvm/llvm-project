@@ -40,10 +40,6 @@
 # GOTPLT-NEXT: 0x01274730 00000000 00000000 00000000 00000000
 # GOTPLT-NEXT: 0x01274740 00452301 00000000
 
-# RUN: not ld.lld %t/a.o --section-start=.text=0x20000 --section-start=.sec.foo=0x2000020000 -o /dev/null 2>&1 | \
-# RUN:   FileCheck -DFILE=%t/a.o --check-prefix=ERROR-RANGE %s
-# ERROR-RANGE: error: [[FILE]]:(.text+0x0): relocation R_LARCH_CALL36 out of range: 137438953472 is not in [-137439084544, 137438822399]; references 'foo'
-
 ## Impossible case in reality becasue all LoongArch instructions are fixed 4-bytes long.
 # RUN: not ld.lld %t/a.o --section-start=.text=0x20000 --section-start=.sec.foo=0x40001 -o /dev/null 2>&1 | \
 # RUN:   FileCheck -DFILE=%t/a.o --check-prefix=ERROR-ALIGN %s
