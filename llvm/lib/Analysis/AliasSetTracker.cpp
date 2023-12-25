@@ -228,8 +228,6 @@ AliasSet::PointerVector AliasSet::getPointers() const {
 
 void AliasSetTracker::clear() {
   PointerMap.clear();
-  UndefPointerSets.clear();
-  UndefPointerSetsVector.clear();
   AliasSets.clear();
 }
 
@@ -285,47 +283,16 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   // The alias sets are indexed with a map from the memory locations' pointer
   // values. If the memory location is already registered, we can find it in the
   // alias set associated with its pointer.
-  //
-  // The PointerMap structure requires that all memory locations for the same
-  // value will be in the same alias set, which does not hold for undef values.
-  // So we keep UndefValue pointers associated with the nullptr in the pointer
-  // map, and instead keep a collection with the alias sets that contain memory
-  // locations with undef pointer values.
-  auto [It, Inserted] = PointerMap.insert({MemLoc.Ptr, nullptr});
-  AliasSet *&MapEntry = It->second;
-  if (!Inserted) {
-    if (!isa<UndefValue>(MemLoc.Ptr)) {
-      AliasSet *AS = MapEntry->getForwardedTarget(*this);
-      if (llvm::find(AS->MemoryLocs, MemLoc) != AS->MemoryLocs.end()) {
-        if (AS != MapEntry) {
-          AS->addRef();
-          MapEntry->dropRef(*this);
-          MapEntry = AS;
-        }
-        return *AS;
+  AliasSet *&MapEntry = PointerMap[MemLoc.Ptr];
+  if (MapEntry) {
+    AliasSet *AS = MapEntry->getForwardedTarget(*this);
+    if (llvm::is_contained(AS->MemoryLocs, MemLoc)) {
+      if (AS != MapEntry) {
+        AS->addRef();
+        MapEntry->dropRef(*this);
+        MapEntry = AS;
       }
-    } else {
-      // Take opportunity to remove refs to forwarding alias sets from UndefPointerSets.
-      llvm::erase_if(UndefPointerSetsVector, [this](AliasSet *&AS) {
-        if (AS->Forward) {
-          AliasSet *NewAS = AS->getForwardedTarget(*this);
-          UndefPointerSets.erase(AS);
-          AS->dropRef(*this);
-          // Replace earlier entry in UndefPointerSetsVector with forwarded
-          // target, but only if it is new.
-          if (UndefPointerSets.insert(NewAS).second) {
-            NewAS->addRef();
-            AS = NewAS;
-            return false;
-          } else
-            return true;
-        }
-        return false;
-      });
-      // Scan UndefPointerSets for MemLoc.
-      for (AliasSet *AS : UndefPointerSetsVector)
-        if (llvm::find(AS->MemoryLocs, MemLoc) != AS->MemoryLocs.end())
-          return *AS;
+      return *AS;
     }
   }
 
@@ -342,6 +309,14 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
                  mergeAliasSetsForPointer(MemLoc, MustAliasAll)) {
     // Add it to the alias set it aliases.
     AS = AliasAS;
+  } else if (MapEntry) {
+    // Although we have an independent memory location, forgo creating a new
+    // alias set to retain the implementation invariant that all memory
+    // locations with the same pointer value are in the same alias set.
+    // (This is only known to occur for undef pointer values, which AA treats as
+    // noalias.)
+    AS = MapEntry->getForwardedTarget(*this);
+    AS->Alias = AliasSet::SetMayAlias;
   } else {
     // Otherwise create a new alias set to hold the loaded pointer.
     AliasSets.push_back(AS = new AliasSet());
@@ -352,26 +327,18 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   AS->addPointer(*this, MemLoc, MustAliasAll);
   // Register selected alias set in pointer map (or ensure it is consistent with
   // earlier map entry after taking into account new merging).
-  if (!isa<UndefValue>(MemLoc.Ptr)) {
-    if (MapEntry) {
-      if (MapEntry->Forward) {
-        AliasSet *NewAS = MapEntry->getForwardedTarget(*this);
-        NewAS->addRef();
-        MapEntry->dropRef(*this);
-        MapEntry = NewAS;
-      }
-      assert(MapEntry == AS &&
-             "Memory locations with same pointer value cannot "
-             "be in different alias sets");
-    } else {
-      AS->addRef();
-      MapEntry = AS;
+  if (MapEntry) {
+    if (MapEntry->Forward) {
+      AliasSet *NewAS = MapEntry->getForwardedTarget(*this);
+      NewAS->addRef();
+      MapEntry->dropRef(*this);
+      MapEntry = NewAS;
     }
+    assert(MapEntry == AS && "Memory locations with same pointer value cannot "
+                             "be in different alias sets");
   } else {
-    if (UndefPointerSets.insert(AS).second) {
-      UndefPointerSetsVector.push_back(AS);
-      AS->addRef();
-    }
+    AS->addRef();
+    MapEntry = AS;
   }
   return *AS;
 }

@@ -184,10 +184,6 @@ class AliasSetTracker {
   // Map from pointers to their node
   PointerMapType PointerMap;
 
-  // Collection of alias sets that contain undef pointer values
-  DenseSet<AliasSet *> UndefPointerSets;
-  std::vector<AliasSet *> UndefPointerSetsVector;
-
 public:
   /// Create an empty collection of AliasSets, and use the specified alias
   /// analysis object to disambiguate load and store addresses.
