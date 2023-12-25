@@ -39,6 +39,7 @@
 #endif
 
 #ifdef __linux__
+#include <asm/prctl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -907,9 +908,62 @@ void ExegesisX86Target::decrementLoopCounterAndJump(
       .addImm(X86::COND_NE);
 }
 
+void generateRegisterStackPush(unsigned int Register,
+                               std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(MCInstBuilder(X86::PUSH64r).addReg(Register));
+}
+
+void generateRegisterStackPop(unsigned int Register,
+                              std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(MCInstBuilder(X86::POP64r).addReg(Register));
+}
+
+void generateSyscall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(
+      loadImmediate(X86::RAX, 64, APInt(64, SyscallNumber)));
+  GeneratedCode.push_back(MCInstBuilder(X86::SYSCALL));
+}
+
+static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
+                                                        const APInt &Value) {
+  assert(Value.getBitWidth() <= 64 && "Value must fit in the register.");
+  std::vector<MCInst> loadSegmentRegisterCode;
+  // Preserve RCX and R11 (clobbered by the system call), and RAX, RDI, and RSI
+  // (used to make the system call). Preserve the registers here as we don't
+  // want to make any assumptions about the ordering of what registers are
+  // loaded in first, and we might have already loaded in registers that we are
+  // going to be clobbering here.
+  generateRegisterStackPush(X86::RAX, loadSegmentRegisterCode);
+  generateRegisterStackPush(X86::RDI, loadSegmentRegisterCode);
+  generateRegisterStackPush(X86::RSI, loadSegmentRegisterCode);
+  generateRegisterStackPush(X86::RCX, loadSegmentRegisterCode);
+  generateRegisterStackPush(X86::R11, loadSegmentRegisterCode);
+  // Generate the instructions to make the arch_prctl system call to set
+  // the registers.
+  assert(Reg == X86::FS ||
+         Reg == X86::GS &&
+             "Only the segment registers GS and FS are supported");
+  int SyscallCode = 0;
+  SyscallCode = Reg == X86::FS ? SyscallCode | ARCH_SET_FS : SyscallCode;
+  SyscallCode = Reg == X86::GS ? SyscallCode | ARCH_SET_GS : SyscallCode;
+  loadSegmentRegisterCode.push_back(
+      loadImmediate(X86::RDI, 64, APInt(64, SyscallCode)));
+  loadSegmentRegisterCode.push_back(loadImmediate(X86::RSI, 64, Value));
+  generateSyscall(SYS_arch_prctl, loadSegmentRegisterCode);
+  // Restore the registers in reverse order
+  generateRegisterStackPop(X86::R11, loadSegmentRegisterCode);
+  generateRegisterStackPop(X86::RCX, loadSegmentRegisterCode);
+  generateRegisterStackPop(X86::RSI, loadSegmentRegisterCode);
+  generateRegisterStackPop(X86::RDI, loadSegmentRegisterCode);
+  generateRegisterStackPop(X86::RAX, loadSegmentRegisterCode);
+  return loadSegmentRegisterCode;
+}
+
 std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
                                                 unsigned Reg,
                                                 const APInt &Value) const {
+  if (X86::SEGMENT_REGRegClass.contains(Reg))
+    return loadImmediateSegmentRegister(Reg, Value);
   if (X86::GR8RegClass.contains(Reg))
     return {loadImmediate(Reg, 8, Value)};
   if (X86::GR16RegClass.contains(Reg))
@@ -991,12 +1045,6 @@ static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
 static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
-
-void generateSyscall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
-  GeneratedCode.push_back(
-      loadImmediate(X86::RAX, 64, APInt(64, SyscallNumber)));
-  GeneratedCode.push_back(MCInstBuilder(X86::SYSCALL));
-}
 
 void generateRoundToNearestPage(unsigned int Register,
                                 std::vector<MCInst> &GeneratedCode) {
@@ -1155,16 +1203,6 @@ intptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
   // Return the second to last page in the virtual address space to try and
   // prevent interference with memory annotations in the snippet
   return VAddressSpaceCeiling - 2 * getpagesize();
-}
-
-void generateRegisterStackPush(unsigned int Register,
-                               std::vector<MCInst> &GeneratedCode) {
-  GeneratedCode.push_back(MCInstBuilder(X86::PUSH64r).addReg(Register));
-}
-
-void generateRegisterStackPop(unsigned int Register,
-                              std::vector<MCInst> &GeneratedCode) {
-  GeneratedCode.push_back(MCInstBuilder(X86::POP64r).addReg(Register));
 }
 
 std::vector<MCInst>
