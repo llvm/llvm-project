@@ -3810,6 +3810,36 @@ struct WhileRemoveUnusedArgs : public OpRewritePattern<WhileOp> {
   }
 };
 
+/// Simple Loop Invariant Code Motion pattern for `scf.while` op.
+/// `scf.while` to `scf.for` uplifting expects `before` block consisting of
+/// single `cmp` op.
+/// Pattern moves ops from `before` block, doesn't visit nested regions.
+struct SCFWhileLICM : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp loop,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+
+    DominanceInfo dom;
+    Block *body = loop.getBeforeBody();
+    for (Operation &op :
+         llvm::make_early_inc_range(body->without_terminator())) {
+      if (llvm::any_of(op.getOperands(), [&](Value arg) {
+            return !dom.properlyDominates(arg, loop);
+          }))
+        continue;
+
+      if (!isMemoryEffectFree(&op))
+        continue;
+
+      rewriter.updateRootInPlace(&op, [&]() { op.moveBefore(loop); });
+      changed = true;
+    }
+    return success(changed);
+  }
+};
+
 /// Remove duplicated ConditionOp args.
 struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -3879,7 +3909,7 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<RemoveLoopInvariantArgsFromBeforeBlock,
               RemoveLoopInvariantValueYielded, WhileConditionTruth,
               WhileCmpCond, WhileUnusedResult, WhileRemoveDuplicatedResults,
-              WhileRemoveUnusedArgs>(context);
+              SCFWhileLICM, WhileRemoveUnusedArgs>(context);
 }
 
 //===----------------------------------------------------------------------===//
