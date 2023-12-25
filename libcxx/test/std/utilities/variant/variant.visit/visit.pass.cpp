@@ -562,6 +562,38 @@ void test_sfinae() {
   static_assert(has_visit<GoodVariant2>(0));
 }
 
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+void test_overload_ambiguity() {
+#if _LIBCPP_STD_VER >= 26
+  using V = std::variant<float, long, std::string>;
+  using namespace std::string_literals;
+  V v{"baba"s};
+
+  // member
+  v.visit(
+      overloaded{[]([[maybe_unused]] auto x) { assert(false); }, [](const std::string& x) { assert(x == "baba"s); }});
+  assert(std::get<std::string>(v) == "baba"s);
+
+  // `constexpr decltype(auto) visit(this _Self&& __self, _Visitor&& __visitor);`
+  //    vs
+  // `constexpr _R visit(this _Self&& __self, _Visitor&& __visitor);`
+  v = std::move(v).visit<V>(overloaded{
+      []([[maybe_unused]] auto x) {
+        assert(false);
+        return 0;
+      },
+      [](const std::string& x) {
+        assert(x == "baba"s);
+        return x + " zmt"s;
+      }});
+  assert(std::get<std::string>(v) == "baba zmt"s);
+#endif
+}
+
 int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
@@ -571,6 +603,7 @@ int main(int, char**) {
   test_caller_accepts_nonconst();
   test_derived_from_variant();
   test_sfinae();
+  test_overload_ambiguity();
 
   return 0;
 }
