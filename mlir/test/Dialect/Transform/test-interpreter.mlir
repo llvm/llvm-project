@@ -2513,3 +2513,220 @@ module attributes { transform.with_named_sequence } {
     transform.yield %arg0 : !transform.any_op
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @scope_before(
+//  CHECK-SAME:                         %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: i32) -> (i32, i32) {
+//       CHECK:   %[[VAL_5:.*]] = arith.muli %[[VAL_3]], %[[VAL_3]] : i32
+//       CHECK:   %[[VAL_6:.*]] = arith.subi %[[VAL_0]], %[[VAL_1]] : i32
+//       CHECK:   %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] : i32
+//       CHECK:   %[[VAL_8:.*]] = arith.divui %[[VAL_5]], %[[VAL_4]] : i32
+//       CHECK:   return %[[VAL_7]], %[[VAL_8]] : i32, i32
+//       CHECK: }
+module attributes { transform.with_named_sequence } {
+  func.func @scope_before(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : i32) -> (i32, i32) {
+    %sub = arith.subi %arg0, %arg1 : i32
+    %add = arith.addi %sub, %arg2 : i32
+    %mul = arith.muli %arg3, %arg3 : i32
+    %div = arith.divui %mul, %arg4 : i32
+    return %add, %div : i32, i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %subi = transform.structured.match ops{["arith.subi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %where = transform.structured.match ops{["arith.divui"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %what = transform.merge_handles %subi, %addi : !transform.any_op
+    transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> () {
+      ^bb2(%s: !transform.any_op):
+        transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @scope_after(
+//  CHECK-SAME:                        %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: i32) -> (i32, i32) {
+//       CHECK:   %[[VAL_7:.*]] = arith.muli %[[VAL_3]], %[[VAL_3]] : i32
+//       CHECK:   %[[VAL_5:.*]] = arith.subi %[[VAL_0]], %[[VAL_1]] : i32
+//       CHECK:   %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] : i32
+//       CHECK:   %[[VAL_8:.*]] = arith.divui %[[VAL_7]], %[[VAL_4]] : i32
+//       CHECK:   return %[[VAL_6]], %[[VAL_8]] : i32, i32
+//       CHECK: }
+module attributes { transform.with_named_sequence } {
+  func.func @scope_after(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : i32) -> (i32, i32) {
+    %sub = arith.subi %arg0, %arg1 : i32
+    %add = arith.addi %sub, %arg2 : i32
+    %mul = arith.muli %arg3, %arg3 : i32
+    %div = arith.divui %mul, %arg4 : i32
+    return %add, %div : i32, i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %subi = transform.structured.match ops{["arith.subi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %where = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %what = transform.merge_handles %subi, %addi : !transform.any_op
+    transform.as_scope %what after %where : (!transform.any_op, !transform.any_op) -> () {
+      ^bb2(%s: !transform.any_op):
+        transform.yield
+    }
+    transform.yield
+  }
+}
+// -----
+
+// CHECK-LABEL: func.func @scope_partial_folding() -> i32 {
+//       CHECK:   %[[VAL_0:.*]] = arith.constant 17 : i32
+//       CHECK:   %[[VAL_1:.*]] = arith.constant 33 : i32
+//       CHECK:   %[[VAL_2:.*]] = arith.constant 99 : i32
+//       CHECK:   %[[VAL_3:.*]] = arith.constant 46 : i32
+//       CHECK:   %[[VAL_4:.*]] = arith.addi %[[VAL_0]], %[[VAL_3]] : i32
+//       CHECK:   %[[VAL_5:.*]] = arith.muli %[[VAL_1]], %[[VAL_4]] : i32
+//       CHECK:   %[[VAL_6:.*]] = arith.divui %[[VAL_5]], %[[VAL_2]] : i32
+//       CHECK:   return %[[VAL_6]] : i32
+//       CHECK: }
+module attributes { transform.with_named_sequence } {
+  func.func @scope_partial_folding() -> i32 {
+    %c17 = arith.constant 17 : i32
+    %c33 = arith.constant 33 : i32
+    %c75 = arith.constant 75 : i32
+    %c29 = arith.constant 29 : i32
+    %sub = arith.subi %c75, %c29 : i32
+    %add = arith.addi %sub, %c17 : i32
+    %c99 = arith.constant 99 : i32
+    %mul = arith.muli %c33, %add : i32
+    %div = arith.divui %mul, %c99 : i32
+    return %div : i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %subi = transform.get_producer_of_operand %addi[0] : (!transform.any_op) -> !transform.any_op
+    %const0 = transform.get_producer_of_operand %subi[0] : (!transform.any_op) -> !transform.any_op
+    %const1 = transform.get_producer_of_operand %subi[1] : (!transform.any_op) -> !transform.any_op
+    %what = transform.merge_handles %const1, %const0, %subi, %addi : !transform.any_op
+    %where = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
+    transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> () {
+      ^bb2(%s: !transform.any_op):
+        transform.apply_patterns to %s {
+          transform.apply_patterns.canonicalization
+        } : !transform.any_op
+        transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @scope_interval() -> i32 {
+//       CHECK:   %[[VAL_0:.*]] = arith.constant 17 : i32
+//       CHECK:   %[[VAL_2:.*]] = arith.constant 46 : i32
+//       CHECK:   %[[VAL_3:.*]] = arith.addi %[[VAL_0]], %[[VAL_2]] : i32
+//       CHECK:   return %[[VAL_3]] : i32
+//       CHECK: }
+module attributes { transform.with_named_sequence } {
+  func.func @scope_interval() -> i32 {
+    %c17 = arith.constant 17 : i32
+    %c75 = arith.constant 75 : i32
+    %c29 = arith.constant 29 : i32
+    %sub = arith.subi %c75, %c29 : i32
+    %add = arith.addi %sub, %c17 : i32
+    return %add : i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %subi = transform.get_producer_of_operand %addi[0] : (!transform.any_op) -> !transform.any_op
+    %const0 = transform.get_producer_of_operand %subi[0] : (!transform.any_op) -> !transform.any_op
+    %const1 = transform.get_producer_of_operand %subi[1] : (!transform.any_op) -> !transform.any_op
+    %what = transform.merge_handles %const1, %const0, %subi, %addi : !transform.any_op
+    transform.as_scope %what : (!transform.any_op) -> () {
+      ^bb2(%s: !transform.any_op):
+        transform.apply_patterns to %s {
+          transform.apply_patterns.canonicalization
+        } : !transform.any_op
+        transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  func.func @scope_not_an_interval(%a: i32, %b: i32, %c: i32) -> (i32, i32) {
+    %sub = arith.subi %a, %b : i32
+    %mul = arith.muli %a, %b : i32
+    %add = arith.addi %sub, %c : i32
+    return %add, %mul : i32, i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %subi = transform.get_producer_of_operand %addi[0] : (!transform.any_op) -> !transform.any_op
+    // expected-note @below {{not an interval}}
+    %what = transform.merge_handles %subi, %addi : !transform.any_op
+    // expected-error @below {{payload ops must form an interval unless insertion point is specified}}
+    transform.as_scope %what : (!transform.any_op) -> () {
+      ^bb2(%s: !transform.any_op):
+        transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @scope_with_alternatives() -> i32 {
+//       CHECK:   %[[VAL_0:.*]] = arith.constant 17 : i32
+//       CHECK:   %[[VAL_1:.*]] = arith.constant 33 : i32
+//       CHECK:   %[[VAL_2:.*]] = arith.constant 46 : i32
+//       CHECK:   %[[VAL_3:.*]] = arith.addi %[[VAL_0]], %[[VAL_2]] : i32
+//       CHECK:   %[[VAL_4:.*]] = arith.muli %[[VAL_1]], %[[VAL_3]] : i32
+//       CHECK:   return %[[VAL_4]] : i32
+//       CHECK: }
+module attributes { transform.with_named_sequence } {
+  func.func @scope_with_alternatives() -> i32 {
+    %c17 = arith.constant 17 : i32
+    %c33 = arith.constant 33 : i32
+    %c75 = arith.constant 75 : i32
+    %c29 = arith.constant 29 : i32
+    %sub = arith.subi %c75, %c29 : i32
+    %add = arith.addi %sub, %c17 : i32
+    %mul = arith.muli %c33, %add : i32
+    return %mul : i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %subi = transform.get_producer_of_operand %addi[0] : (!transform.any_op) -> !transform.any_op
+    %const0 = transform.get_producer_of_operand %subi[0] : (!transform.any_op) -> !transform.any_op
+    %const1 = transform.get_producer_of_operand %subi[1] : (!transform.any_op) -> !transform.any_op
+    %where = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %what = transform.merge_handles %const1, %const0, %subi, %addi : !transform.any_op
+    transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> () {
+    ^bb2(%s: !transform.any_op):
+      transform.alternatives %s : !transform.any_op {
+      ^bb2(%arg2: !transform.any_op):
+        %1 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+        // This operation fails, which triggers the next alternative without
+        // reporting the error.
+        transform.test_consume_operand_of_op_kind_or_fail %1, "transform.sequence" : !transform.any_op
+        transform.yield
+      }, {
+      ^bb2(%arg2: !transform.any_op):
+        transform.apply_patterns to %arg2 {
+          transform.apply_patterns.canonicalization
+        } : !transform.any_op
+        transform.yield
+      }
+      transform.yield
+    }
+    transform.yield
+  }
+}

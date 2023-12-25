@@ -782,3 +782,33 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  %1 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  %what = transform.merge_handles %0, %1 : !transform.any_op
+  %where = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{expects terminator operands to have the same type as results of the operation}}
+  %2:2 = transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op) {
+  ^bb2(%arg2: !transform.any_op):
+    // expected-note @below {{terminator}}
+    transform.yield
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  // expected-error @below {{result #0 has more than one potential consumer}}
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-note @below {{used here as operand #1}}
+  // expected-note @below {{used here as operand #0}}
+  transform.as_scope %0 before %0 : (!transform.any_op, !transform.any_op) -> () {
+  ^bb2(%arg2: !transform.any_op):
+    transform.yield
+  }
+}

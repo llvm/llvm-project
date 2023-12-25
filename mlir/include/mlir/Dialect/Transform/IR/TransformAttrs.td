@@ -33,4 +33,13 @@ def MatchCmpIPredicateAttr : I32EnumAttr<
   let cppNamespace = "::mlir::transform";
 }
 
+def BeforeCase : I32EnumAttrCase<"Before", 1, "before">;
+def AfterCase : I32EnumAttrCase<"After", 2, "after">;
+
+def RelativeLocation : I32EnumAttr<
+    "RelativeLocation", "Relative location specifier",
+    [BeforeCase, AfterCase]> {
+  let cppNamespace = "::mlir::transform";
+}
+
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS

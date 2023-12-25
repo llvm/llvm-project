@@ -434,6 +434,72 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
   }];
 }
 
+def AsScopeOp : TransformDialectOp<"as_scope", [
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     IsolatedFromAbove,
+     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
+  let summary = "Attempts sequences of transforms until one succeeds";
+  let description = [{
+    The purpose of this op is to provide an ad-hoc scope for transformations,
+    in order to narrow their impact to specific ops.
+
+    This op creates a temporary scf.scope containing clones of its first operand
+    and applies the transformations within its body to that scope. If
+    successful, the scope's results replace all uses of any original operation
+    outside the scope, the scope is inlined and the original operations are
+    erased. On failure, the scf.scope is erased, leaving payload IR unmodified.
+
+    The operation takes as arguments a handle whose payload ops are to be
+    scoped in the order they are listed, and and optional pair of attribute,
+    handle defining an insertion point for the scf.scope. If specified, the
+    insertion point handle must hold a single payload op. If omitted, the
+    payload ops must form an interval. It is the user's responsibility to make
+    sure that the payload ops can be moved to the designated location in the
+    designated order.
+
+    This operation is useful for narrowing the scope of ops affected by the some
+    transformation, either for functional reasons, e.g.
+
+    ```mlir
+    transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> (), !transform.any_op {
+    ^bb2(%s: !transform.any_op):
+      transform.apply_patterns to %s {
+        transform.apply_patterns.canonicalization
+      } : !transform.any_op
+      transform.yield
+    }
+    ```
+
+    or for saving on compile time/memory by minimizing cloning, e.g.
+
+    ```mlir
+    transform.as_scope %what after %where : (!transform.any_op, !transform.any_op) -> (), !transform.any_op {
+    ^bb2(%s: !transform.any_op):
+      transform.alternatives %s : !transform.any_op {
+      ^bb2(%arg2: !transform.any_op):
+        // ...
+      }, {
+      ^bb2(%arg2: !transform.any_op):
+        // ...
+      }
+    }
+    ```
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$what,
+                       OptionalAttr<RelativeLocation>:$where,
+                       Optional<TransformHandleTypeInterface>:$whereOp);
+  let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let regions = (region SizedRegion<1>:$body);
+
+  let assemblyFormat = [{
+    $what ($where $whereOp^)? `:` functional-type(operands, results)
+    attr-dict-with-keyword $body
+  }];
+  let hasVerifier = 1;
+}
+
 def CastOp : TransformDialectOp<"cast",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<CastOpInterface>,
