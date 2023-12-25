@@ -1419,6 +1419,32 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
   }
 
+  // Canonicalize the range check idiom:
+  // and (fcmp olt/ole/ult/ule x, C), (fcmp ogt/oge/ugt/uge x, -C)
+  // --> fabs(x) olt/ole/ult/ule C
+  // or  (fcmp ogt/oge/ugt/uge x, C), (fcmp olt/ole/ult/ule x, -C)
+  // --> fabs(x) ogt/oge/ugt/uge C
+  // TODO: Generalize to handle a negated variable operand?
+  const APFloat *LHSC, *RHSC;
+  if (LHS->hasOneUse() && RHS->hasOneUse() && LHS0 == RHS0 &&
+      FCmpInst::getSwappedPredicate(PredL) == PredR &&
+      match(LHS1, m_APFloatAllowUndef(LHSC)) &&
+      match(RHS1, m_APFloatAllowUndef(RHSC)) &&
+      LHSC->bitwiseIsEqual(neg(*RHSC))) {
+    auto IsLessThanOrLessEqual = [](FCmpInst::Predicate Pred) {
+      return (getFCmpCode(Pred) & 0b0110) == 0b0100;
+    };
+    if (IsLessThanOrLessEqual(IsAnd ? PredR : PredL)) {
+      std::swap(LHSC, RHSC);
+      std::swap(PredL, PredR);
+    }
+    if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
+      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
+      return Builder.CreateFCmp(PredL, FAbs,
+                                ConstantFP::get(LHS0->getType(), *LHSC));
+    }
+  }
+
   return nullptr;
 }
 

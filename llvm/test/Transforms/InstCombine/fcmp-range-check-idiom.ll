@@ -6,9 +6,8 @@ declare void @use(i1)
 define i1 @test_and_olt(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -19,9 +18,8 @@ define i1 @test_and_olt(float %x) {
 define i1 @test_and_ole(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ole(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ole float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oge float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ole float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ole float %x, 0x3C00000000000000
@@ -32,9 +30,8 @@ define i1 @test_and_ole(float %x) {
 define i1 @test_or_ogt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_ogt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ogt float %x, 0x3C00000000000000
@@ -45,9 +42,8 @@ define i1 @test_or_ogt(float %x) {
 define i1 @test_or_oge(float %x) {
 ; CHECK-LABEL: define i1 @test_or_oge(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oge float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oge float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp oge float %x, 0x3C00000000000000
@@ -58,9 +54,8 @@ define i1 @test_or_oge(float %x) {
 define i1 @test_and_ult(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ult(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ult float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ugt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ult float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ult float %x, 0x3C00000000000000
@@ -71,9 +66,8 @@ define i1 @test_and_ult(float %x) {
 define i1 @test_and_ule(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ule(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uge float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ule float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ule float %x, 0x3C00000000000000
@@ -84,9 +78,8 @@ define i1 @test_and_ule(float %x) {
 define i1 @test_or_ugt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_ugt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ult float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ugt float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ugt float %x, 0x3C00000000000000
@@ -97,9 +90,8 @@ define i1 @test_or_ugt(float %x) {
 define i1 @test_or_uge(float %x) {
 ; CHECK-LABEL: define i1 @test_or_uge(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uge float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ule float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp uge float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp uge float %x, 0x3C00000000000000
@@ -110,9 +102,8 @@ define i1 @test_or_uge(float %x) {
 define i1 @test_and_olt_commuted(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_commuted(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP2]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -123,9 +114,8 @@ define i1 @test_and_olt_commuted(float %x) {
 define i1 @test_and_olt_subnormal(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_subnormal(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x36A0000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xB6A0000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x36A0000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x36A0000000000000
@@ -169,9 +159,8 @@ define i1 @test_and_ole_zero(float %x) {
 define i1 @test_and_olt_logical(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_logical(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -182,9 +171,8 @@ define i1 @test_and_olt_logical(float %x) {
 define <2 x i1> @test_and_olt_undef(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i1> @test_and_olt_undef(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt <2 x float> [[X]], <float 0x3C00000000000000, float undef>
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt <2 x float> [[X]], <float 0xBC00000000000000, float undef>
-; CHECK-NEXT:    [[COND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt <2 x float> [[TMP1]], <float 0x3C00000000000000, float 0x3C00000000000000>
 ; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
   %cmp1 = fcmp olt <2 x float> %x, <float 0x3C00000000000000, float undef>
@@ -205,10 +193,7 @@ define i1 @test_and_olt_nan(float %x) {
 define i1 @test_and_ogt(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ogt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp1 = fcmp ogt float %x, 0x3C00000000000000
   %cmp2 = fcmp olt float %x, 0xBC00000000000000
@@ -218,9 +203,8 @@ define i1 @test_and_ogt(float %x) {
 define i1 @test_or_olt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_olt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xBC00000000000000
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[TMP1]], 0xBC00000000000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
