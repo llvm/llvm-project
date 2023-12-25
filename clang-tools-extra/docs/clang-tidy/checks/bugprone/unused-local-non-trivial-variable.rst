@@ -38,19 +38,18 @@ Options
 .. option:: IncludeTypes
 
    Semicolon-separated list of regular expressions matching types of variables
-   to check. 
-   By default the following types are checked: 
+   to check. By default the following types are checked:
 
    * `::std::.*mutex`
    * `::std::future`
-   * `::std::string`
+   * `::std::basic_string`
    * `::std::basic_regex`
    * `::std::basic_istringstream`
    * `::std::basic_stringstream`
    * `::std::bitset`
-   * `::std::path`
+   * `::std::filesystem::path`
 
 .. option:: ExcludeTypes
 
-   A semicolon-separated list of regular expressions matching types that are 
+   A semicolon-separated list of regular expressions matching types that are
    excluded from the `IncludeTypes` matches. By default it is an empty list.
