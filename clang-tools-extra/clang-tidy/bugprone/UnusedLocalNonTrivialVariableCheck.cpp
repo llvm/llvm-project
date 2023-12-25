@@ -24,7 +24,7 @@ namespace clang::tidy::bugprone {
 namespace {
 static constexpr StringRef DefaultIncludeTypeRegex =
     "::std::.*mutex;::std::future;::std::basic_string;::std::basic_regex;"
-    "::std::base_istringstream;::std::base_stringstream;::std::bitset;"
+    "::std::basic_istringstream;::std::basic_stringstream;::std::bitset;"
     "::std::filesystem::path";
 
 AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
