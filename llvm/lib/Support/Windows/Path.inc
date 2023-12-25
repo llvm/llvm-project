@@ -157,7 +157,7 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
 
   SmallString<256> RealPath;
   sys::fs::real_path(PathNameUTF8, RealPath);
-  return RealPath.str().str();
+  return std::string(RealPath);
 }
 
 UniqueID file_status::getUniqueID() const {
