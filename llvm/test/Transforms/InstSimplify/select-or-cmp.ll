@@ -78,6 +78,28 @@ define i32 @select_or_inv_icmp_alt(i32 %x, i32 %y, i32 %z) {
   ret i32 %D
 }
 
+define i32 @select_or_icmp_eq(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_or_icmp_eq(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %A = icmp ne i32 %x, %z
+  %B = icmp eq i32 %y, %z
+  %C = or i1 %A, %B
+  %D = select i1 %C, i32 %x, i32 %z
+  ret i32 %D
+}
+
+define i32 @select_or_icmp_eq_alt(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_or_icmp_eq_alt(
+; CHECK-NEXT:    ret i32 [[Z:%.*]]
+;
+  %A = icmp ne i32 %x, %z
+  %B = icmp eq i32 %y, %z
+  %C = or i1 %A, %B
+  %D = select i1 %C, i32 %z, i32 %x
+  ret i32 %D
+}
+
 define <2 x i8> @select_or_icmp_alt_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_or_icmp_alt_vec(
 ; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
@@ -129,21 +151,6 @@ define i32 @select_and_icmp_pred_bad_1(i32 %x, i32 %y, i32 %z) {
 
 define i32 @select_and_icmp_pred_bad_2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_and_icmp_pred_bad_2(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[Z]], i32 [[X]]
-; CHECK-NEXT:    ret i32 [[D]]
-;
-  %A = icmp ne i32 %x, %z
-  %B = icmp eq i32 %y, %z
-  %C = or i1 %A, %B
-  %D = select i1 %C, i32 %z, i32 %x
-  ret i32 %D
-}
-
-define i32 @select_and_icmp_pred_bad_3(i32 %x, i32 %y, i32 %z) {
-; CHECK-LABEL: @select_and_icmp_pred_bad_3(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
@@ -157,8 +164,8 @@ define i32 @select_and_icmp_pred_bad_3(i32 %x, i32 %y, i32 %z) {
   ret i32 %D
 }
 
-define i32 @select_and_icmp_pred_bad_4(i32 %x, i32 %y, i32 %z) {
-; CHECK-LABEL: @select_and_icmp_pred_bad_4(
+define i32 @select_and_icmp_pred_bad_3(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_and_icmp_pred_bad_3(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
@@ -250,21 +257,6 @@ define i32 @select_or_icmp_alt_bad_1(i32 %x, i32 %y, i32 %z) {
 
 define i32 @select_or_icmp_alt_bad_2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_or_icmp_alt_bad_2(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Z]]
-; CHECK-NEXT:    ret i32 [[D]]
-;
-  %A = icmp ne i32 %x, %z
-  %B = icmp eq i32 %y, %z
-  %C = or i1 %A, %B
-  %D = select i1 %C, i32 %x, i32 %z
-  ret i32 %D
-}
-
-define i32 @select_or_icmp_alt_bad_3(i32 %x, i32 %y, i32 %z) {
-; CHECK-LABEL: @select_or_icmp_alt_bad_3(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
@@ -278,8 +270,8 @@ define i32 @select_or_icmp_alt_bad_3(i32 %x, i32 %y, i32 %z) {
   ret i32 %D
 }
 
-define i32 @select_or_icmp_alt_bad_4(i32 %x, i32 %y, i32 %z) {
-; CHECK-LABEL: @select_or_icmp_alt_bad_4(
+define i32 @select_or_icmp_alt_bad_3(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_or_icmp_alt_bad_3(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
@@ -293,8 +285,8 @@ define i32 @select_or_icmp_alt_bad_4(i32 %x, i32 %y, i32 %z) {
   ret i32 %D
 }
 
-define i32 @select_or_icmp_alt_bad_5(i32 %x, i32 %y, i32 %z, i32 %k) {
-; CHECK-LABEL: @select_or_icmp_alt_bad_5(
+define i32 @select_or_icmp_alt_bad_4(i32 %x, i32 %y, i32 %z, i32 %k) {
+; CHECK-LABEL: @select_or_icmp_alt_bad_4(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], [[K:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
