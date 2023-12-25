@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - -O1 %s | \
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -union-tbaa -emit-llvm -o - -O1 %s | \
 // RUN:     FileCheck -check-prefixes=CHECK,CHECK-OLD %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -new-struct-path-tbaa \
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -union-tbaa -new-struct-path-tbaa \
 // RUN:     -emit-llvm -o - -O1 %s | \
 // RUN:     FileCheck -check-prefixes=CHECK,CHECK-NEW %s
 //
@@ -122,7 +122,8 @@ void copy7(A *a1, AA *a2) {
 // CHECK-NEW-DAG: [[TAG_A]] = !{[[TYPE_A]], [[TYPE_A]], i64 0, i64 16}
 // CHECK-NEW-DAG: [[TYPE_B:!.*]] = !{[[TYPE_char]], i64 24, !"_ZTS1B", [[TYPE_char]], i64 0, i64 1, [[TYPE_A]], i64 4, i64 16, [[TYPE_int]], i64 20, i64 4}
 // CHECK-NEW-DAG: [[TAG_B]] = !{[[TYPE_B]], [[TYPE_B]], i64 0, i64 24}
-// CHECK-NEW-DAG: [[TAG_U]] = !{[[TYPE_char]], [[TYPE_char]], i64 0, i64 12}
+// CHECK-NEW-DAG: [[TAG_U]] = !{[[TYPE_U:!.*]], [[TYPE_U]], i64 0, i64 12}
+// CHECK-NEW-DAG: [[TYPE_U]] = !{[[TYPE_char]], i64 12, !"_ZTS1U", [[TYPE_char]], i64 0, i64 8, {{.*}}, i64 0, i64 12}
 // CHECK-NEW-DAG: [[TYPE_C:!.*]] = !{[[TYPE_char]], i64 3, !"_ZTS1C", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 1, i64 1, [[TYPE_char]], i64 2, i64 1}
 // CHECK-NEW-DAG: [[TAG_C]] = !{[[TYPE_C]], [[TYPE_C]], i64 0, i64 3}
 // CHECK-NEW-DAG: [[TYPE_D:!.*]] = !{[[TYPE_char]], i64 6, !"_ZTS1D", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 4, i64 1, [[TYPE_char]], i64 5, i64 1}

@@ -6835,6 +6835,15 @@ def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"StructPathTBAA">>;
+def union_tbaa : Flag<["-"], "union-tbaa">,
+  HelpText<"Turn on struct-path aware Type Based Alias Analysis for unions">,
+  MarshallingInfoFlag<CodeGenOpts<"UnionTBAA">>;
+def no_pointer_tbaa : Flag<["-"], "no-pointer-tbaa">,
+  HelpText<"Turn off Type Based Alias Analysis for pointer types">,
+  MarshallingInfoNegativeFlag<CodeGenOpts<"PointerTBAA">>;
+def no_array_tbaa : Flag<["-"], "no-array-tbaa">,
+  HelpText<"Turn off Type Based Alias Analysis for array types">,
+  MarshallingInfoNegativeFlag<CodeGenOpts<"ArrayTBAA">>;
 def new_struct_path_tbaa : Flag<["-"], "new-struct-path-tbaa">,
   HelpText<"Enable enhanced struct-path aware Type Based Alias Analysis">;
 def mdebug_pass : Separate<["-"], "mdebug-pass">,

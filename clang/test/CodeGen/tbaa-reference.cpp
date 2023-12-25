@@ -14,19 +14,14 @@ struct B {
 B::B(S &s) : s(s) {
 // CHECK-LABEL: _ZN1BC2ER1S
 // Check initialization of the reference parameter.
-// CHECK: store ptr {{.*}}, ptr {{.*}}, !tbaa [[TAG_pointer:!.*]]
+// CHECK: store ptr %s, ptr {{.*}}, !tbaa [[TAG_pointer:!.*]]
 
-// Check loading of the reference parameter.
-// CHECK: load ptr, ptr {{.*}}, !tbaa [[TAG_pointer]]
-
-// Check initialization of the reference member.
-// CHECK: store ptr {{.*}}, ptr {{.*}}, !tbaa [[TAG_pointer]]
 }
 
 S &B::get() {
 // CHECK-LABEL: _ZN1B3getEv
 // Check that we access the reference as a structure member.
-// CHECK: load ptr, ptr {{.*}}, !tbaa [[TAG_B_s:!.*]]
+// CHECK: load ptr, ptr %s, align 8, !tbaa [[TAG_B_s:!.*]]
   return s;
 }
 
@@ -34,12 +29,14 @@ S &B::get() {
 // OLD-PATH-DAG: [[TAG_B_s]] = !{[[TYPE_B:!.*]], [[TYPE_pointer]], i64 0}
 //
 // OLD-PATH-DAG: [[TYPE_B]] = !{!"_ZTS1B", [[TYPE_pointer]], i64 0}
-// OLD-PATH-DAG: [[TYPE_pointer]] = !{!"any pointer", [[TYPE_char:!.*]], i64 0}
+// OLD-PATH-DAG: [[TYPE_pointer]] = !{!"p1 struct S", [[TYPE_any_pointer:!.*]], i64 0}
+// OLD-PATH-DAG: [[TYPE_any_pointer]] = !{!"any pointer", [[TYPE_char:!.*]], i64 0}
 // OLD-PATH-DAG: [[TYPE_char]] = !{!"omnipotent char", {{!.*}}, i64 0}
 
 // NEW-PATH-DAG: [[TAG_pointer]] = !{[[TYPE_pointer:!.*]], [[TYPE_pointer]], i64 0, i64 8}
 // NEW-PATH-DAG: [[TAG_B_s]] = !{[[TYPE_B:!.*]], [[TYPE_pointer]], i64 0, i64 8}
 //
 // NEW-PATH-DAG: [[TYPE_B]] = !{[[TYPE_char:!.*]], i64 8, !"_ZTS1B", [[TYPE_pointer]], i64 0, i64 8}
-// NEW-PATH-DAG: [[TYPE_pointer]] = !{[[TYPE_char:!.*]], i64 8, !"any pointer"}
+// NEW-PATH-DAG: [[TYPE_pointer]] = !{[[TYPE_any_pointer:!.*]], i64 8, !"p1 struct S"}
+// NEW-PATH-DAG: [[TYPE_any_pointer]] = !{[[TYPE_char:!.*]], i64 8, !"any pointer"}
 // NEW-PATH-DAG: [[TYPE_char]] = !{{{!.*}}, i64 1, !"omnipotent char"}
