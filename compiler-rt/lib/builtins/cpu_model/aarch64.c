@@ -133,7 +133,6 @@ struct {
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/freebsd.inc"
 #elif defined(__Fuchsia__)
-#include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/fuchsia.inc"
 #elif defined(__ANDROID__)
 #include "aarch64/fmv/mrs.inc"
