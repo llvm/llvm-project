@@ -45,6 +45,7 @@ enum class errc
     identifier_removed,                 // EIDRM
     illegal_byte_sequence,              // EILSEQ
     inappropriate_io_control_operation, // ENOTTY
+    integrity_check_failed,             // EINTEGRITY
     interrupted,                        // EINTR
     invalid_argument,                   // EINVAL
     invalid_seek,                       // ESPIPE
@@ -141,19 +142,22 @@ _LIBCPP_DECLARE_STRONG_ENUM(errc){
     identifier_removed                 = EIDRM,
     illegal_byte_sequence              = EILSEQ,
     inappropriate_io_control_operation = ENOTTY,
-    interrupted                        = EINTR,
-    invalid_argument                   = EINVAL,
-    invalid_seek                       = ESPIPE,
-    io_error                           = EIO,
-    is_a_directory                     = EISDIR,
-    message_size                       = EMSGSIZE,
-    network_down                       = ENETDOWN,
-    network_reset                      = ENETRESET,
-    network_unreachable                = ENETUNREACH,
-    no_buffer_space                    = ENOBUFS,
-    no_child_process                   = ECHILD,
-    no_link                            = ENOLINK,
-    no_lock_available                  = ENOLCK,
+#ifdef EINTEGRITY
+    integrity_check_failed = EINTEGRITY,
+#endif
+    interrupted         = EINTR,
+    invalid_argument    = EINVAL,
+    invalid_seek        = ESPIPE,
+    io_error            = EIO,
+    is_a_directory      = EISDIR,
+    message_size        = EMSGSIZE,
+    network_down        = ENETDOWN,
+    network_reset       = ENETRESET,
+    network_unreachable = ENETUNREACH,
+    no_buffer_space     = ENOBUFS,
+    no_child_process    = ECHILD,
+    no_link             = ENOLINK,
+    no_lock_available   = ENOLCK,
 #ifdef ENODATA
     no_message_available = ENODATA,
 #else
