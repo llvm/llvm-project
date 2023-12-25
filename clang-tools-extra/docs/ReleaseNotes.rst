@@ -136,6 +136,12 @@ New checks
 
   Detects unsafe or redundant two-step casting operations involving ``void*``.
 
+- New :doc:`bugprone-chained-comparison
+  <clang-tidy/checks/bugprone/chained-comparison>` check.
+
+  Check detects chained comparison operators that can lead to unintended
+  behavior or logical errors in C++ code.
+
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.
 
