@@ -14,8 +14,3 @@ define i32 @icmp_i8_shift_and_cmp(i8 %a, i8 %b) {
   ret i32 %conv
 }
 
-define dso_local i32 @main() local_unnamed_addr #0 {
-  %1 = tail call i32 @icmp_i8_shift_and_cmp(i32 noundef 170, i32 noundef 200)
-  ret i32 %1
-}
-
