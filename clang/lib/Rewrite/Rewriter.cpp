@@ -14,6 +14,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
@@ -412,16 +413,19 @@ bool Rewriter::overwriteChangedFiles() {
   unsigned OverwriteFailure = Diag.getCustomDiagID(
       DiagnosticsEngine::Error, "unable to overwrite file %0: %1");
   for (buffer_iterator I = buffer_begin(), E = buffer_end(); I != E; ++I) {
-    OptionalFileEntryRef Entry = getSourceMgr().getFileEntryRefForID(I->first);
-    llvm::SmallString<128> Path(Entry->getName());
-    getSourceMgr().getFileManager().makeAbsolutePath(Path);
-    if (auto Error = llvm::writeToOutput(Path, [&](llvm::raw_ostream &OS) {
-          I->second.write(OS);
-          return llvm::Error::success();
-        })) {
-      Diag.Report(OverwriteFailure)
-          << Entry->getName() << llvm::toString(std::move(Error));
-      AllWritten = false;
+    if (OptionalFileEntryRef fileEntry =
+            getSourceMgr().getFileEntryRefForID(I->first)) {
+      llvm::StringRef FileName =
+          getSourceMgr().getFileManager().getCanonicalName(*fileEntry);
+      if (auto Error =
+              llvm::writeToOutput(FileName, [&](llvm::raw_ostream &OS) {
+                I->second.write(OS);
+                return llvm::Error::success();
+              })) {
+        Diag.Report(OverwriteFailure)
+            << FileName << llvm::toString(std::move(Error));
+        AllWritten = false;
+      }
     }
   }
   return !AllWritten;

@@ -119,6 +119,8 @@ Improvements to clang-tidy
 
 - Improved `--dump-config` to print check options in alphabetical order.
 
+- Improved `--fix` to properly apply corrections on files that are symlinked.
+
 - Improved :program:`clang-tidy-diff.py` script. It now returns exit code `1`
   if any :program:`clang-tidy` subprocess exits with a non-zero code or if
   exporting fixes fails. It now accepts a directory as a value for

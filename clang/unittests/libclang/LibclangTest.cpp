@@ -16,6 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -1378,4 +1379,28 @@ TEST_F(LibclangRewriteTest, RewriteRemove) {
 
   ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
   EXPECT_EQ(getFileContent(Filename), "int () { return 0; }");
+}
+
+TEST_F(LibclangRewriteTest, Symlink) {
+  std::filesystem::path Symlink = "link.cpp";
+  std::filesystem::create_symlink(Filename, Symlink);
+  ASSERT_TRUE(std::filesystem::exists(Symlink));
+  FilesAndDirsToRemove.emplace(Symlink);
+
+  CXTranslationUnit SymTu = clang_parseTranslationUnit(
+      Index, Symlink.c_str(), nullptr, 0, nullptr, 0, TUFlags);
+  CXFile SymlinkFile = clang_getFile(SymTu, Symlink.c_str());
+  CXRewriter SymRew = clang_CXRewriter_create(SymTu);
+
+  CXSourceLocation B = clang_getLocation(SymTu, SymlinkFile, 1, 5);
+  CXSourceLocation E = clang_getLocation(SymTu, SymlinkFile, 1, 9);
+  CXSourceRange Rng = clang_getRange(B, E);
+
+  clang_CXRewriter_removeText(SymRew, Rng);
+
+  ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(SymRew), 0);
+  EXPECT_EQ(getFileContent(Filename), "int () { return 0; }");
+  EXPECT_TRUE(std::filesystem::is_symlink(Symlink));
+
+  clang_CXRewriter_dispose(SymRew);
 }
