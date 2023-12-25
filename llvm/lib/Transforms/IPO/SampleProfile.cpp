@@ -794,10 +794,9 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
     return R;
 
   auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
-  auto T = FS->findCallTargetMapAt(CallSite);
   Sum = 0;
-  if (T)
-    for (const auto &T_C : T.get())
+  if (auto T = FS->findCallTargetMapAt(CallSite))
+    for (const auto &T_C : *T)
       Sum += T_C.second;
   if (const FunctionSamplesMap *M = FS->findFunctionSamplesMapAt(CallSite)) {
     if (M->empty())
@@ -1679,7 +1678,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (!FS)
             continue;
           auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
-          auto T = FS->findCallTargetMapAt(CallSite);
+          ErrorOr<SampleRecord::CallTargetMap> T =
+              FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
             continue;
           if (FunctionSamples::ProfileIsProbeBased) {
@@ -2261,9 +2261,8 @@ void SampleProfileMatcher::countProfileCallsiteMismatches(
 
     // Compute number of samples in the original profile.
     uint64_t CallsiteSamples = 0;
-    auto CTM = FS.findCallTargetMapAt(Loc);
-    if (CTM) {
-      for (const auto &I : CTM.get())
+    if (auto CTM = FS.findCallTargetMapAt(Loc)) {
+      for (const auto &I : *CTM)
         CallsiteSamples += I.second;
     }
     const auto *FSMap = FS.findFunctionSamplesMapAt(Loc);
