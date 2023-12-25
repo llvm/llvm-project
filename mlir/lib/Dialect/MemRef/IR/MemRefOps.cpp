@@ -2206,6 +2206,17 @@ FailureOr<MemRefType> ExpandShapeOp::computeExpandedType(
                          srcType.getMemorySpace());
 }
 
+LogicalResult ExpandShapeOp::inferOutputShape(
+    OpBuilder &b, Location loc, MemRefType expandedType,
+    ArrayRef<ReassociationIndices> reassociation,
+    ArrayRef<OpFoldResult> inputShape,
+    std::pair<SmallVector<int64_t>, SmallVector<Value>> &outputShape) {
+  auto expandedTensorType =
+      getTensorTypeFromMemRefType(expandedType).cast<RankedTensorType>();
+  return inferExpandShapeOutputShape(b, loc, expandedTensorType, reassociation,
+                                     inputShape, outputShape);
+}
+
 void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
                           ArrayRef<int64_t> resultShape, Value src,
                           ArrayRef<ReassociationIndices> reassociation) {
@@ -2216,7 +2227,9 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
   // Failure of this assertion usually indicates a problem with the source
   // type, e.g., could not get strides/offset.
   assert(succeeded(resultType) && "could not compute layout");
-  build(builder, result, *resultType, src, reassociation);
+  SmallVector<OpFoldResult> outputShape(
+      getMixedValues(resultShape, ValueRange{}, builder));
+  build(builder, result, *resultType, src, reassociation, outputShape);
 }
 
 LogicalResult ExpandShapeOp::verify() {
@@ -2245,14 +2258,28 @@ LogicalResult ExpandShapeOp::verify() {
     return emitOpError("expected expanded type to be ")
            << *expectedResultType << " but found " << resultType;
 
+  if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
+    return emitOpError("expected number of static shape bounds to be equal to "
+                       "the output rank (")
+           << resultType.getRank() << ") but found "
+           << getStaticOutputShape().size() << " inputs instead";
+
+  if ((int64_t)getOutputShape().size() !=
+      llvm::count(getStaticOutputShape(), ShapedType::kDynamic))
+    return emitOpError("mismatch in dynamic dims in output_shape and "
+                       "static_output_shape: static_output_shape has ")
+           << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
+           << " dynamic dims while output_shape has " << getOutputShape().size()
+           << " values";
+
   return success();
 }
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<ExpandShapeOp>,
-              ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(
-      context);
+  results.add<
+      ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
 /// Compute the layout map after collapsing a given source MemRef type with the
@@ -2449,9 +2476,11 @@ public:
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
-              ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp>,
-              CollapseShapeOpMemRefCastFolder>(context);
+  results.add<
+      ComposeReassociativeReshapeOps<CollapseShapeOp, ReshapeOpKind::kCollapse>,
+      ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp,
+                                memref::DimOp, MemRefType>,
+      CollapseShapeOpMemRefCastFolder>(context);
 }
 
 OpFoldResult ExpandShapeOp::fold(FoldAdaptor adaptor) {

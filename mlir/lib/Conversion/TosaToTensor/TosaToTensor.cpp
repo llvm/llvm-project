@@ -194,6 +194,7 @@ Value createExpand(ConversionPatternRewriter &rewriter, Location loc,
         loc, "tosa.reshape Cannot expand into given shape");
     return {};
   }
+
   return rewriter.create<tensor::ExpandShapeOp>(loc, resultTy, operand,
                                                 reassociationMap);
 }
