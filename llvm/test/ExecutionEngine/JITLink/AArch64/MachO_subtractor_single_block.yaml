@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-jitlink -noexec %t
+# RUN: llvm-jitlink -noexec -phony-externals %t
 #
 # Check that MachO::ARM64_RELOC_SUBTRACTOR relocations work when the fixup
 # location and target are in the same block (in this case in the __eh_frame
