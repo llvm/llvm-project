@@ -7562,8 +7562,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   } else
     DstVec = DAG.getUNDEF(VT);
 
-  for (unsigned i = 0, e = NonConstIdx.size(); i != e; ++i) {
-    unsigned InsertIdx = NonConstIdx[i];
+  for (unsigned InsertIdx : NonConstIdx) {
     DstVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, DstVec,
                          Op.getOperand(InsertIdx),
                          DAG.getIntPtrConstant(InsertIdx, dl));
