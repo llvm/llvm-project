@@ -66,6 +66,8 @@ namespace {
 /// can be used to determine dominance between instructions in same MBB.
 class InstrPosIndexes {
 public:
+  void unsetInitialized() { IsInitialized = false; }
+
   void init(const MachineBasicBlock &MBB) {
     CurMBB = &MBB;
     Instr2PosIndex.clear();
@@ -80,6 +82,13 @@ public:
   /// index without affecting existing instruction's index. Return true if all
   /// instructions index has been reassigned.
   bool getIndex(const MachineInstr &MI, uint64_t &Index) {
+    if (!IsInitialized) {
+      init(*MI.getParent());
+      IsInitialized = true;
+      Index = Instr2PosIndex.at(&MI);
+      return true;
+    }
+
     assert(MI.getParent() == CurMBB && "MI is not in CurMBB");
     auto It = Instr2PosIndex.find(&MI);
     if (It != Instr2PosIndex.end()) {
@@ -159,6 +168,7 @@ public:
   }
 
 private:
+  bool IsInitialized = false;
   enum { InstrDist = 1024 };
   const MachineBasicBlock *CurMBB = nullptr;
   DenseMap<const MachineInstr *, uint64_t> Instr2PosIndex;
@@ -1665,7 +1675,7 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   this->MBB = &MBB;
   LLVM_DEBUG(dbgs() << "\nAllocating " << MBB);
 
-  PosIndexes.init(MBB);
+  PosIndexes.unsetInitialized();
   RegUnitStates.assign(TRI->getNumRegUnits(), regFree);
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
