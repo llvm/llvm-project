@@ -959,8 +959,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // N is the number of elements of the vector.
   Type *Ty;
 
-  if (TypeStr.starts_with("atomic_"))
-    TypeStr = TypeStr.substr(strlen("atomic_"));
+  TypeStr.consume_front("atomic_");
 
   if (TypeStr.starts_with("void")) {
     Ty = Type::getVoidTy(Ctx);
@@ -1007,8 +1006,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // Handle "typeN*" or  "type vector[N]*".
   bool IsPtrToVec = TypeStr.consume_back("*");
 
-  if (TypeStr.starts_with(" vector[")) {
-    TypeStr = TypeStr.substr(strlen(" vector["));
+  if (TypeStr.consume_front(" vector[")) {
     TypeStr = TypeStr.substr(0, TypeStr.find(']'));
   }
   TypeStr.getAsInteger(10, VecElts);
