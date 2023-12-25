@@ -144,6 +144,7 @@ constexpr bool test() {
       assert(range_moved == 0);    // ...nor move the element.
       assert(element_copied == 1); // The element is copied into the argument...
 #ifndef TEST_COMPILER_GCC
+      //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98995
       assert(element_moved == 1); // ...and moved into the member variable.
 #endif
     }
@@ -158,7 +159,10 @@ constexpr bool test() {
       assert(range_copied == 0);
       assert(range_moved == 1); // `owning_view` moves the given argument.
       assert(element_copied == 0);
+#ifndef TEST_COMPILER_GCC
+      //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98995
       assert(element_moved == 1);
+#endif
     }
   }
 
