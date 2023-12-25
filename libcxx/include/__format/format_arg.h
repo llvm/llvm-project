@@ -93,7 +93,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __arg_t __get_packed_type(uint64_t __types, size
 
 } // namespace __format
 
-// This function is not user obervable, so it can directly use the non-standard
+// This function is not user observable, so it can directly use the non-standard
 // types of the "variant". See __arg_t for more details.
 template <class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
@@ -227,6 +227,20 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
+#  if __LIBCPP_VERSION >= 26
+  template <class _Visitor>
+  _LIBCPP_HIDE_FROM_ABI decltype(auto) visit(this basic_format_arg __arg, _Visitor&& __vis) {
+    // TODO: use __visit_format_arg
+    return __arg.__value_.visit(std::forward<_Visitor>(__vis));
+  }
+
+  template <class _Rp, class _Visitor>
+  _LIBCPP_HIDE_FROM_ABI _Rp visit(this basic_format_arg __arg, _Visitor&& __vis) {
+    // TODO:: use __visit_format_arg
+    return __arg.__value_.visit<_Rp>(std::forward<_Visitor>(__vis));
+  }
+#  endif
+
 private:
   using char_type = typename _Context::char_type;
 
@@ -267,7 +281,8 @@ private:
 // This function is user facing, so it must wrap the non-standard types of
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
-_LIBCPP_HIDE_FROM_ABI decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+_LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_HIDE_FROM_ABI decltype(auto)
+visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
 #  ifndef _LIBCPP_HAS_NO_INT128
   case __format::__arg_t::__i128: {
