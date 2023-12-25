@@ -14,40 +14,41 @@
 //===----------------------------------------------------------------------===//
 // AMX instructions
 
-multiclass AMX_TILE_COMMON<string Suffix>{
+multiclass AMX_TILE_COMMON<string Suffix, Predicate HasEGPR> {
+let Predicates = [HasAMXTILE, HasEGPR, In64BitMode],
+    OpEnc = !if(!eq(Suffix, ""), EncVEX, EncEVEX), CD8_Scale = 0 in {
   let hasSideEffects = 1,
       Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
   def LDTILECFG#Suffix : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
                            "ldtilecfg\t$src",
                            [(int_x86_ldtilecfg addr:$src)]>,
-                         VEX, T8, PS;
+                         T8, PS;
   let hasSideEffects = 1 in
   def STTILECFG#Suffix : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
                            "sttilecfg\t$src",
                            [(int_x86_sttilecfg addr:$src)]>,
-                         VEX, T8, PD;
+                         T8, PD;
   let mayLoad = 1 in
   def TILELOADD#Suffix : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
                            (ins sibmem:$src),
                            "tileloadd\t{$src, $dst|$dst, $src}", []>,
-                         VEX, T8, XD;
+                         T8, XD;
   let mayLoad = 1 in
   def TILELOADDT1#Suffix : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
                              (ins sibmem:$src),
                              "tileloaddt1\t{$src, $dst|$dst, $src}", []>,
-                           VEX, T8, PD;
+                           T8, PD;
   let mayStore = 1 in
   def TILESTORED#Suffix : I<0x4b, MRMDestMemFSIB, (outs),
                             (ins sibmem:$dst, TILE:$src),
                             "tilestored\t{$src, $dst|$dst, $src}", []>,
-                          VEX, T8, XS;
+                          T8, XS;
+}
 }
 
 let SchedRW = [WriteSystem] in {
-  let Predicates = [HasAMXTILE, NoEGPR, In64BitMode] in
-  defm "" : AMX_TILE_COMMON<"">;
-  let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in
-  defm "" : AMX_TILE_COMMON<"_EVEX">, EVEX, NoCD8;
+  defm "" : AMX_TILE_COMMON<"", NoEGPR>;
+  defm "" : AMX_TILE_COMMON<"_EVEX", HasEGPR>;
 
   let Predicates = [HasAMXTILE, In64BitMode] in {
     let Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
