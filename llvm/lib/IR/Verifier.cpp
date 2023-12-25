@@ -6969,48 +6969,56 @@ bool TBAAVerifier::isValidScalarTBAANode(const MDNode *MD) {
   return Result;
 }
 
-/// Returns the field node at the offset \p Offset in \p BaseNode.  Update \p
-/// Offset in place to be the offset within the field node returned.
+/// Returns one or several field nodes at the offset \p Offset in \p BaseNode.
+/// Returns empty vector if \p BaseNode has no fields with specified offset.
+/// Update \p Offset in place to be the offset within the field node returned.
 ///
 /// We assume we've okayed \p BaseNode via \c verifyTBAABaseNode.
-MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
-                                                   const MDNode *BaseNode,
-                                                   APInt &Offset,
-                                                   bool IsNewFormat) {
+std::vector<MDNode *> TBAAVerifier::getFieldNodeFromTBAABaseNode(
+    Instruction &I, const MDNode *BaseNode, APInt &Offset, bool IsNewFormat) {
   assert(BaseNode->getNumOperands() >= 2 && "Invalid base node!");
 
   // Scalar nodes have only one possible "field" -- their parent in the access
   // hierarchy.  Offset must be zero at this point, but our caller is supposed
   // to check that.
   if (BaseNode->getNumOperands() == 2)
-    return cast<MDNode>(BaseNode->getOperand(1));
+    return {cast<MDNode>(BaseNode->getOperand(1))};
 
   unsigned FirstFieldOpNo = IsNewFormat ? 3 : 1;
   unsigned NumOpsPerField = IsNewFormat ? 3 : 2;
+
+  unsigned LastIdx = BaseNode->getNumOperands() - NumOpsPerField;
   for (unsigned Idx = FirstFieldOpNo; Idx < BaseNode->getNumOperands();
            Idx += NumOpsPerField) {
     auto *OffsetEntryCI =
         mdconst::extract<ConstantInt>(BaseNode->getOperand(Idx + 1));
     if (OffsetEntryCI->getValue().ugt(Offset)) {
       if (Idx == FirstFieldOpNo) {
-        CheckFailed("Could not find TBAA parent in struct type node", &I,
-                    BaseNode, &Offset);
-        return nullptr;
+        return {};
       }
 
-      unsigned PrevIdx = Idx - NumOpsPerField;
-      auto *PrevOffsetEntryCI =
-          mdconst::extract<ConstantInt>(BaseNode->getOperand(PrevIdx + 1));
-      Offset -= PrevOffsetEntryCI->getValue();
-      return cast<MDNode>(BaseNode->getOperand(PrevIdx));
+      LastIdx = Idx - NumOpsPerField;
+      break;
     }
   }
 
-  unsigned LastIdx = BaseNode->getNumOperands() - NumOpsPerField;
   auto *LastOffsetEntryCI = mdconst::extract<ConstantInt>(
       BaseNode->getOperand(LastIdx + 1));
-  Offset -= LastOffsetEntryCI->getValue();
-  return cast<MDNode>(BaseNode->getOperand(LastIdx));
+  auto LastOffsetVal = LastOffsetEntryCI->getValue();
+  Offset -= LastOffsetVal;
+
+  std::vector<MDNode *> Ret;
+  Ret.emplace_back(cast<MDNode>(BaseNode->getOperand(LastIdx)));
+  while (LastIdx > FirstFieldOpNo) {
+    LastIdx -= NumOpsPerField;
+    LastOffsetEntryCI =
+        mdconst::extract<ConstantInt>(BaseNode->getOperand(LastIdx + 1));
+    if (LastOffsetEntryCI->getValue() != LastOffsetVal)
+      break;
+    Ret.emplace_back(cast<MDNode>(BaseNode->getOperand(LastIdx)));
+  }
+
+  return Ret;
 }
 
 static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
@@ -7087,47 +7095,84 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
   CheckTBAA(OffsetCI, "Offset must be constant integer", &I, MD);
 
   APInt Offset = OffsetCI->getValue();
-  bool SeenAccessTypeInPath = false;
 
-  SmallPtrSet<MDNode *, 4> StructPath;
+  SmallPtrSet<const MDNode *, 4> StructPath;
 
-  for (/* empty */; BaseNode && !IsRootTBAANode(BaseNode);
-       BaseNode = getFieldNodeFromTBAABaseNode(I, BaseNode, Offset,
-                                               IsNewFormat)) {
-    if (!StructPath.insert(BaseNode).second) {
-      CheckFailed("Cycle detected in struct path", &I, MD);
-      return false;
-    }
+  auto &&[Invalid, BaseNodeBitWidth] =
+      verifyTBAABaseNode(I, BaseNode, IsNewFormat);
 
-    bool Invalid;
-    unsigned BaseNodeBitWidth;
-    std::tie(Invalid, BaseNodeBitWidth) = verifyTBAABaseNode(I, BaseNode,
-                                                             IsNewFormat);
+  // If the base node is invalid in itself, then we've already printed all the
+  // errors we wanted to print.
+  if (Invalid)
+    return false;
 
-    // If the base node is invalid in itself, then we've already printed all the
-    // errors we wanted to print.
-    if (Invalid)
-      return false;
-
-    SeenAccessTypeInPath |= BaseNode == AccessType;
-
-    if (isValidScalarTBAANode(BaseNode) || BaseNode == AccessType)
-      CheckTBAA(Offset == 0, "Offset not zero at the point of scalar access",
-                &I, MD, &Offset);
-
-    CheckTBAA(BaseNodeBitWidth == Offset.getBitWidth() ||
-                  (BaseNodeBitWidth == 0 && Offset == 0) ||
-                  (IsNewFormat && BaseNodeBitWidth == ~0u),
-              "Access bit-width not the same as description bit-width", &I, MD,
-              BaseNodeBitWidth, Offset.getBitWidth());
-
-    if (IsNewFormat && SeenAccessTypeInPath)
-      break;
+  bool SeenAccessTypeInPath = BaseNode == AccessType;
+  if (SeenAccessTypeInPath) {
+    CheckTBAA(Offset == 0, "Offset not zero at the point of scalar access", &I,
+              MD, &Offset);
+    if (IsNewFormat)
+      return true;
   }
 
-  CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", &I,
-            MD);
+  CheckTBAA(findAccessTypeNode(I, StructPath, Offset, IsNewFormat, AccessType,
+                               BaseNode, MD) ||
+                SeenAccessTypeInPath,
+            "Did not see access type in access path!", &I, MD);
   return true;
+}
+
+bool TBAAVerifier::findAccessTypeNode(
+    Instruction &I, SmallPtrSetImpl<const MDNode *> &StructPath, APInt Offset,
+    bool IsNewFormat, const MDNode *AccessType, const MDNode *BaseNode,
+    const MDNode *MD) {
+  if (!BaseNode || IsRootTBAANode(BaseNode))
+    return false;
+
+  auto &&[Invalid, BaseNodeBitWidth] =
+      verifyTBAABaseNode(I, BaseNode, IsNewFormat);
+
+  // If the base node is invalid in itself, then we've already printed all the
+  // errors we wanted to print.
+  if (Invalid)
+    return false;
+
+  // Offset at point of scalar access must be zero. Skip mismatched nodes.
+  if ((isValidScalarTBAANode(BaseNode) || BaseNode == AccessType) &&
+      Offset != 0)
+    return false;
+
+  CheckTBAA(BaseNodeBitWidth == Offset.getBitWidth() ||
+                (BaseNodeBitWidth == 0 && Offset == 0) ||
+                (IsNewFormat && BaseNodeBitWidth == ~0u),
+            "Access bit-width not the same as description bit-width", &I, MD,
+            BaseNodeBitWidth, Offset.getBitWidth());
+
+  bool SeenAccessTypeInPath = (BaseNode == AccessType && Offset == 0);
+
+  if (IsNewFormat && SeenAccessTypeInPath)
+    return true;
+
+  auto ProbableNodes =
+      getFieldNodeFromTBAABaseNode(I, BaseNode, Offset, IsNewFormat);
+
+  if (!StructPath.insert(BaseNode).second) {
+    CheckFailed("Cycle detected in struct path", &I, MD);
+    return false;
+  }
+
+  for (auto *PN : ProbableNodes) {
+    if (!PN || IsRootTBAANode(PN))
+      continue;
+
+    SmallPtrSet<const MDNode *, 4> StructPathCopy;
+    StructPathCopy.insert(StructPath.begin(), StructPath.end());
+
+    if (findAccessTypeNode(I, StructPathCopy, Offset, IsNewFormat, AccessType,
+                           PN, MD))
+      return true;
+  }
+
+  return SeenAccessTypeInPath;
 }
 
 char VerifierLegacyPass::ID = 0;

@@ -59,8 +59,15 @@ class TBAAVerifier {
 
   /// \name Helper functions used by \c visitTBAAMetadata.
   /// @{
-  MDNode *getFieldNodeFromTBAABaseNode(Instruction &I, const MDNode *BaseNode,
-                                       APInt &Offset, bool IsNewFormat);
+  std::vector<MDNode *> getFieldNodeFromTBAABaseNode(Instruction &I,
+                                                     const MDNode *BaseNode,
+                                                     APInt &Offset,
+                                                     bool IsNewFormat);
+  bool findAccessTypeNode(Instruction &I,
+                          SmallPtrSetImpl<const MDNode *> &StructPath,
+                          APInt Offset, bool IsNewFormat,
+                          const MDNode *AccessType, const MDNode *BaseNode,
+                          const MDNode *MD);
   TBAAVerifier::TBAABaseNodeSummary verifyTBAABaseNode(Instruction &I,
                                                        const MDNode *BaseNode,
                                                        bool IsNewFormat);
