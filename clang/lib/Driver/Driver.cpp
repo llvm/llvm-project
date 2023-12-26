@@ -673,7 +673,10 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ArchName = tools::riscv::getRISCVArch(Args, Target);
       auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
           ArchName, /*EnableExperimentalExtensions=*/true);
-      if (ISAInfo) {
+      if (!ISAInfo) {
+        // Ignore any error here, we assume it will be handled in another place.
+        consumeError(ISAInfo.takeError());
+      } else {
         unsigned XLen = (*ISAInfo)->getXLen();
         if (XLen == 32)
           Target.setArch(llvm::Triple::riscv32);
