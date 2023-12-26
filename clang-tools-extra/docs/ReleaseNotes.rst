@@ -454,7 +454,10 @@ Changes in existing checks
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
   Added support for C++20 ``concept`` declarations. ``Camel_Snake_Case`` and
-  ``camel_Snake_Case`` now detect more invalid identifier names.
+  ``camel_Snake_Case`` now detect more invalid identifier names. Fields in
+  anonymous records (i.e. anonymous structs and unions) now can be checked with
+  the naming rules associated with their enclosing scopes rather than the naming
+  rules of public struct/union members.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
