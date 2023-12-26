@@ -133,9 +133,6 @@ def FeatureVPOPCNTDQ : SubtargetFeature<"avx512vpopcntdq", "HasVPOPCNTDQ",
 def FeaturePREFETCHI  : SubtargetFeature<"prefetchi", "HasPREFETCHI",
                                    "true",
                                    "Prefetch instruction with T0 or T1 Hint">;
-def FeaturePREFETCHWT1  : SubtargetFeature<"prefetchwt1", "HasPREFETCHWT1",
-                                   "true",
-                                   "Prefetch with Intent to Write and T1 Hint">;
 def FeatureDQI     : SubtargetFeature<"avx512dq", "HasDQI", "true",
                       "Enable AVX-512 Doubleword and Quadword Instructions",
                                       [FeatureAVX512]>;

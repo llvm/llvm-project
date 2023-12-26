@@ -108,7 +108,6 @@ def NoSSEPrefetch : Predicate<"!Subtarget->hasSSEPrefetch()">;
 def HasPRFCHW    : Predicate<"Subtarget->hasPRFCHW()">;
 def HasPREFETCHI : Predicate<"Subtarget->hasPREFETCHI()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPrefetchW()">;
-def HasPREFETCHWT1 : Predicate<"Subtarget->hasPREFETCHWT1()">;
 def HasLAHFSAHF  : Predicate<"Subtarget->hasLAHFSAHF()">;
 def HasLAHFSAHF64 : Predicate<"Subtarget->hasLAHFSAHF64()">;
 def HasMWAITX    : Predicate<"Subtarget->hasMWAITX()">;

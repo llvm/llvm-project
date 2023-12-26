@@ -81,11 +81,6 @@
 // SGX: "-target-feature" "+sgx"
 // NO-SGX: "-target-feature" "-sgx"
 
-// RUN: %clang --target=i386 -march=i386 -mprefetchwt1 %s -### 2>&1 | FileCheck -check-prefix=PREFETCHWT1 %s
-// RUN: %clang --target=i386 -march=i386 -mno-prefetchwt1 %s -### 2>&1 | FileCheck -check-prefix=NO-PREFETCHWT1 %s
-// PREFETCHWT1: "-target-feature" "+prefetchwt1"
-// NO-PREFETCHWT1: "-target-feature" "-prefetchwt1"
-
 // RUN: %clang --target=i386 -march=i386 -mprefetchi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PREFETCHI %s
 // RUN: %clang --target=i386 -march=i386 -mno-prefetchi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-PREFETCHI %s
 // PREFETCHI: "-target-feature" "+prefetchi"
