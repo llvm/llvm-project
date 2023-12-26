@@ -20,7 +20,6 @@ namespace clang::tidy::modernize {
 class UseUsingCheck : public ClangTidyCheck {
 
   const bool IgnoreMacros;
-  const bool IgnoreExternC;
   SourceLocation LastReplacementEnd;
   llvm::DenseMap<const Decl *, SourceRange> LastTagDeclRanges;
 
