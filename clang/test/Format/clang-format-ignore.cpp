@@ -24,7 +24,7 @@
 // RUN: grep "Formatting \[1/2] foo.c" %t.stderr
 // RUN: grep "Formatting \[2/2] foo.js" %t.stderr
 
-// RUN: printf "%%s\n" "*.js" > .clang-format-ignore
+// RUN: echo "*.js" > .clang-format-ignore
 // RUN: clang-format -verbose foo.c foo.js 2> %t.stderr
 // RUN: grep "Formatting \[1/2] foo.c" %t.stderr
 // RUN: not grep "Formatting \[2/2] foo.js" %t.stderr
