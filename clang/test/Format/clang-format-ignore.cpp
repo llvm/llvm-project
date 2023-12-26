@@ -2,7 +2,9 @@
 // RUN: mkdir -p %t.dir/level1/level2
 
 // RUN: cd %t.dir
-// RUN: printf "%%s\n" "\*" "level*/*.c*" "*/*2/foo.*" > .clang-format-ignore
+// RUN: echo "*" > .clang-format-ignore
+// RUN: echo "level*/*.c*" >> .clang-format-ignore
+// RUN: echo "*/*2/foo.*" >> .clang-format-ignore
 // RUN: touch foo.cc
 // RUN: clang-format -verbose .clang-format-ignore foo.cc 2> %t.stderr
 // RUN: not grep Formatting %t.stderr
