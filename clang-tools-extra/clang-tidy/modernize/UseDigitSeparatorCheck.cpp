@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <iomanip>
 #include <numeric>
 #include <regex>
-#include <sstream>
 
 #include "UseDigitSeparatorCheck.h"
 #include "clang/AST/ASTContext.h"
@@ -99,23 +97,13 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString,
     return getFormatedScientificFloatString(OriginalLiteralString);
   }
 
-  // Configure formatting
+  // Configure formatting and get precision
   std::string Postfix;
+  int Precision = 0;
   for (const char &Character : OriginalLiteralString) {
     if (!std::isdigit(Character) && Character != '.' && Character != '\'') {
       Postfix += Character;
-    }
-  }
-
-  // Get precision
-  const std::string::size_type OriginalDotPosition =
-      OriginalLiteralString.find('.');
-  const llvm::StringRef OriginalFractionalSubString =
-      OriginalLiteralString.substr(OriginalDotPosition + 1,
-                                   OriginalLiteralString.size());
-  int Precision = 0;
-  for (const char &Character : OriginalFractionalSubString) {
-    if (std::isdigit(Character)) {
+    } else if (std::isdigit(Character)) {
       Precision++;
     }
   }
@@ -123,23 +111,21 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString,
   // Get formatting literal text
 
   // Get string representation of float value
-  std::ostringstream StringStream;
-  StringStream << std::fixed << std::setprecision(Precision)
-               << FloatValue.convertToDouble();
-  const std::string FloatString = StringStream.str();
+  llvm::SmallString<128> FloatString;
+  FloatValue.toString(FloatString, Precision);
 
   // Get integer and fractional parts of float number
   const std::string::size_type DotPosition = FloatString.find('.');
-  const std::string IntegerSubString = FloatString.substr(0, DotPosition);
-  std::string FractionalSubString =
+  const llvm::SmallString<128> IntegerSubString = FloatString.substr(0, DotPosition);
+  llvm::SmallString<128> FractionalSubString =
       FloatString.substr(DotPosition + 1, FloatString.size());
   std::reverse(FractionalSubString.begin(), FractionalSubString.end());
 
   // Get formatting literal text
   const std::string FormatedIntegerSubString = getFormatedIntegerString(
-      IntegerSubString, llvm::APInt(128, std::stoll(IntegerSubString)));
+      IntegerSubString, llvm::APInt(128, std::stoll(IntegerSubString.str().str())));
   std::string FormatedFractionalSubString = getFormatedIntegerString(
-      FractionalSubString, llvm::APInt(128, std::stoll(FractionalSubString)));
+      FractionalSubString, llvm::APInt(128, std::stoll(FractionalSubString.str().str())));
   std::reverse(FormatedFractionalSubString.begin(),
                FormatedFractionalSubString.end());
 
