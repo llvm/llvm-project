@@ -856,49 +856,66 @@ TEST(IOApiTests, FormatIntegerValues) {
 
 // Ensure double input values correctly map to raw uint64 values
 TEST(IOApiTests, EditDoubleInputValues) {
-  using TestCaseTy = std::tuple<const char *, const char *, std::uint64_t>;
+  using TestCaseTy = std::tuple<const char *, const char *, std::uint64_t, int>;
+  int ovf{IostatRealInputOverflow};
   static const std::vector<TestCaseTy> testCases{
-      {"(F18.0)", "                 0", 0x0},
-      {"(F18.0)", "                  ", 0x0},
-      {"(F18.0)", "                -0", 0x8000000000000000},
-      {"(F18.0)", "                01", 0x3ff0000000000000},
-      {"(F18.0)", "                 1", 0x3ff0000000000000},
-      {"(F18.0)", "              125.", 0x405f400000000000},
-      {"(F18.0)", "              12.5", 0x4029000000000000},
-      {"(F18.0)", "              1.25", 0x3ff4000000000000},
-      {"(F18.0)", "             01.25", 0x3ff4000000000000},
-      {"(F18.0)", "              .125", 0x3fc0000000000000},
-      {"(F18.0)", "             0.125", 0x3fc0000000000000},
-      {"(F18.0)", "             .0625", 0x3fb0000000000000},
-      {"(F18.0)", "            0.0625", 0x3fb0000000000000},
-      {"(F18.0)", "               125", 0x405f400000000000},
-      {"(F18.1)", "               125", 0x4029000000000000},
-      {"(F18.2)", "               125", 0x3ff4000000000000},
-      {"(F18.3)", "               125", 0x3fc0000000000000},
-      {"(-1P,F18.0)", "               125", 0x4093880000000000}, // 1250
-      {"(1P,F18.0)", "               125", 0x4029000000000000}, // 12.5
-      {"(BZ,F18.0)", "              125 ", 0x4093880000000000}, // 1250
-      {"(BZ,F18.0)", "       125 . e +1 ", 0x42a6bcc41e900000}, // 1.25e13
-      {"(BZ,F18.0)", "           .      ", 0x0},
-      {"(BZ,F18.0)", "           . e +1 ", 0x0},
-      {"(DC,F18.0)", "              12,5", 0x4029000000000000},
-      {"(EX22.0)", "0X0P0                 ", 0x0}, // +0.
-      {"(EX22.0)", "-0X0P0                ", 0x8000000000000000}, // -0.
-      {"(EX22.0)", "0X.8P1                ", 0x3ff0000000000000}, // 1.0
-      {"(EX22.0)", "0X8.P-3               ", 0x3ff0000000000000}, // 1.0
-      {"(EX22.0)", "0X.1P4                ", 0x3ff0000000000000}, // 1.0
-      {"(EX22.0)", "0X10.P-4              ", 0x3ff0000000000000}, // 1.0
-      {"(EX22.0)", "0X8.00P-3             ", 0x3ff0000000000000}, // 1.0
-      {"(EX22.0)", "0X80.0P-6             ", 0x4000000000000000}, // 2.0
-      {"(EX22.0)", "0XC.CCCCCCCCCCCDP-7   ", 0x3fb999999999999a}, // 0.1
-      {"(EX22.0)", "0X.8P-1021            ", 0x0010000000000000}, // min normal
-      {"(EX22.0)", "0X.8P-1022            ", 0x0008000000000000}, // subnormal
-      {"(EX22.0)", "0X.8P-1073            ", 0x0000000000000001}, // min subn.
-      {"(EX22.0)", "0X.FFFFFFFFFFFFF8P1024", 0x7fefffffffffffff}, // max finite
-      {"(EX22.0)", "0X.8P1025             ", 0x7ff0000000000000}, // +Inf
-      {"(EX22.0)", "-0X.8P1025            ", 0xfff0000000000000}, // -Inf
+      {"(F18.0)", "                 0", 0x0, 0},
+      {"(F18.0)", "                  ", 0x0, 0},
+      {"(F18.0)", "                -0", 0x8000000000000000, 0},
+      {"(F18.0)", "                01", 0x3ff0000000000000, 0},
+      {"(F18.0)", "                 1", 0x3ff0000000000000, 0},
+      {"(F18.0)", "              125.", 0x405f400000000000, 0},
+      {"(F18.0)", "              12.5", 0x4029000000000000, 0},
+      {"(F18.0)", "              1.25", 0x3ff4000000000000, 0},
+      {"(F18.0)", "             01.25", 0x3ff4000000000000, 0},
+      {"(F18.0)", "              .125", 0x3fc0000000000000, 0},
+      {"(F18.0)", "             0.125", 0x3fc0000000000000, 0},
+      {"(F18.0)", "             .0625", 0x3fb0000000000000, 0},
+      {"(F18.0)", "            0.0625", 0x3fb0000000000000, 0},
+      {"(F18.0)", "               125", 0x405f400000000000, 0},
+      {"(F18.1)", "               125", 0x4029000000000000, 0},
+      {"(F18.2)", "               125", 0x3ff4000000000000, 0},
+      {"(F18.3)", "               125", 0x3fc0000000000000, 0},
+      {"(-1P,F18.0)", "               125", 0x4093880000000000, 0}, // 1250
+      {"(1P,F18.0)", "               125", 0x4029000000000000, 0}, // 12.5
+      {"(BZ,F18.0)", "              125 ", 0x4093880000000000, 0}, // 1250
+      {"(BZ,F18.0)", "       125 . e +1 ", 0x42a6bcc41e900000, 0}, // 1.25e13
+      {"(BZ,F18.0)", "           .      ", 0x0, 0},
+      {"(BZ,F18.0)", "           . e +1 ", 0x0, 0},
+      {"(DC,F18.0)", "              12,5", 0x4029000000000000, 0},
+      {"(EX22.0)", "0X0P0                 ", 0x0, 0}, // +0.
+      {"(EX22.0)", "-0X0P0                ", 0x8000000000000000, 0}, // -0.
+      {"(EX22.0)", "0X.8P1                ", 0x3ff0000000000000, 0}, // 1.0
+      {"(EX22.0)", "0X8.P-3               ", 0x3ff0000000000000, 0}, // 1.0
+      {"(EX22.0)", "0X.1P4                ", 0x3ff0000000000000, 0}, // 1.0
+      {"(EX22.0)", "0X10.P-4              ", 0x3ff0000000000000, 0}, // 1.0
+      {"(EX22.0)", "0X8.00P-3             ", 0x3ff0000000000000, 0}, // 1.0
+      {"(EX22.0)", "0X80.0P-6             ", 0x4000000000000000, 0}, // 2.0
+      {"(EX22.0)", "0XC.CCCCCCCCCCCDP-7   ", 0x3fb999999999999a, 0}, // 0.1
+      {"(EX22.0)", "0X.8P-1021            ", 0x0010000000000000,
+          0}, // min normal
+      {"(EX22.0)", "0X.8P-1022            ", 0x0008000000000000,
+          0}, // subnormal
+      {"(EX22.0)", "0X.8P-1073            ", 0x0000000000000001,
+          0}, // min subn.
+      {"(EX22.0)", "0X.FFFFFFFFFFFFF8P1024", 0x7fefffffffffffff,
+          0}, // max finite
+      {"(EX22.0)", "0X.8P1025             ", 0x7ff0000000000000, ovf}, // +Inf
+      {"(EX22.0)", "-0X.8P1025            ", 0xfff0000000000000, ovf}, // -Inf
+      {"(RZ,F7.0)", " 2.e308", 0x7fefffffffffffff, 0}, // +HUGE()
+      {"(RD,F7.0)", " 2.e308", 0x7fefffffffffffff, 0}, // +HUGE()
+      {"(RU,F7.0)", " 2.e308", 0x7ff0000000000000, ovf}, // +Inf
+      {"(RZ,F7.0)", "-2.e308", 0xffefffffffffffff, 0}, // -HUGE()
+      {"(RD,F7.0)", "-2.e308", 0xfff0000000000000, ovf}, // -Inf
+      {"(RU,F7.0)", "-2.e308", 0xffefffffffffffff, 0}, // -HUGE()
+      {"(RZ,F7.0)", " 1.e999", 0x7fefffffffffffff, 0}, // +HUGE()
+      {"(RD,F7.0)", " 1.e999", 0x7fefffffffffffff, 0}, // +HUGE()
+      {"(RU,F7.0)", " 1.e999", 0x7ff0000000000000, ovf}, // +Inf
+      {"(RZ,F7.0)", "-1.e999", 0xffefffffffffffff, 0}, // -HUGE()
+      {"(RD,F7.0)", "-1.e999", 0xfff0000000000000, ovf}, // -Inf
+      {"(RU,F7.0)", "-1.e999", 0xffefffffffffffff, 0}, // -HUGE()
   };
-  for (auto const &[format, data, want] : testCases) {
+  for (auto const &[format, data, want, iostat] : testCases) {
     auto cookie{IONAME(BeginInternalFormattedInput)(
         data, std::strlen(data), format, std::strlen(format))};
     union {
@@ -915,12 +932,14 @@ TEST(IOApiTests, EditDoubleInputValues) {
     char iomsg[bufferSize];
     std::memset(iomsg, '\0', bufferSize - 1);
 
-    // Ensure no errors were encountered reading input buffer into union value
+    // Ensure no unexpected errors were encountered reading input buffer into
+    // union value
     IONAME(GetIoMsg)(cookie, iomsg, bufferSize - 1);
     auto status{IONAME(EndIoStatement)(cookie)};
-    ASSERT_EQ(status, 0) << '\'' << format << "' failed reading '" << data
-                         << "', status " << static_cast<int>(status)
-                         << " iomsg '" << iomsg << "'";
+    ASSERT_EQ(status, iostat)
+        << '\'' << format << "' failed reading '" << data << "', status "
+        << static_cast<int>(status) << " != expected " << iostat << " iomsg '"
+        << iomsg << "'";
 
     // Ensure raw uint64 value matches expected conversion from double
     ASSERT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
