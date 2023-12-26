@@ -6,15 +6,10 @@ declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)
 define i1 @a(i32 %x)  nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    suba.l #20, %sp
-; CHECK-NEXT:    move.l #3, (12,%sp)
-; CHECK-NEXT:    move.l #0, (8,%sp)
-; CHECK-NEXT:    move.l (24,%sp), (4,%sp)
-; CHECK-NEXT:    move.l #0, (%sp)
-; CHECK-NEXT:    jsr __muldi3@PLT
-; CHECK-NEXT:    cmpi.l #0, %d0
-; CHECK-NEXT:    sne %d0
-; CHECK-NEXT:    adda.l #20, %sp
+; CHECK-NEXT:    move.l #3, %d0
+; CHECK-NEXT:    move.l (4,%sp), %d1
+; CHECK-NEXT:    mulu.l %d0, %d1
+; CHECK-NEXT:    svs %d0
 ; CHECK-NEXT:    rts
   %res = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 3)
   %obil = extractvalue {i32, i1} %res, 1
@@ -42,7 +37,8 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (8,%sp), %d0
 ; CHECK-NEXT:    add.l (4,%sp), %d0
-; CHECK-NEXT:    lsl.l #2, %d0
+; CHECK-NEXT:    move.l #4, %d1
+; CHECK-NEXT:    mulu.l %d1, %d0
 ; CHECK-NEXT:    rts
 entry:
 	%tmp0 = add i32 %b, %a
