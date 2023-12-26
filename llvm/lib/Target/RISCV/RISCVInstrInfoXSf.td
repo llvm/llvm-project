@@ -356,7 +356,7 @@ multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
 }
 
 multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
-  foreach i = [0, 1, 2, 3] in
+  foreach i = 0-3 in
     let VLMul = MxListVF4[i].value in
     defm NAME : VPseudoSiFiveVMACC<MxListVF4[i].MX, MxListVF8[i].vrclass,
                                    MxListVF4[i].vrclass, Constraint>;
@@ -560,17 +560,15 @@ class GetFTypeInfo<int Sew> {
 }
 
 multiclass VPatVMACC<string intrinsic, string instruction, string kind,
-                     list<VTypeInfoToWide> info_pairs, ValueType vec_m1,
-                     bit lmul_follows_vd = 0> {
+                     list<VTypeInfoToWide> info_pairs, ValueType vec_m1> {
   foreach pair = info_pairs in {
     defvar VdInfo = pair.Wti;
     defvar Vs2Info = pair.Vti;
-    defvar LMul = !if(!eq(lmul_follows_vd, 1), VdInfo.LMul, Vs2Info.LMul);
     let Predicates = [HasVInstructions] in
     def : VPatTernaryNoMaskWithPolicy<"int_riscv_sf_" # intrinsic,
                                       "Pseudo" # instruction, kind, VdInfo.Vector,
                                       vec_m1, Vs2Info.Vector,
-                                      Vs2Info.Log2SEW, LMul,
+                                      Vs2Info.Log2SEW, Vs2Info.LMul,
                                       VdInfo.RegClass, VR, Vs2Info.RegClass>;
   }
 }
@@ -590,7 +588,7 @@ defset list<VTypeInfoToWide> VQMACCQOQInfoPairs = {
 }
 
 multiclass VPatVQMACCDOD<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, VQMACCDODInfoPairs, vint8m1_t, 1>;
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCDODInfoPairs, vint8m1_t>;
 
 multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
