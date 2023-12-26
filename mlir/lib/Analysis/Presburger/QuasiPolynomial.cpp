@@ -30,6 +30,7 @@ QuasiPolynomial::QuasiPolynomial(
       assert(aff.size() == getNumInputs() + 1 &&
              "dimensionality of affine functions does not match number of "
              "symbols!");
+      (void) aff;
     }
   }
 }
