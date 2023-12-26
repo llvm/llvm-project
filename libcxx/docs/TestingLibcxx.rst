@@ -359,6 +359,7 @@ Test Filenames`_ when determining the names for new test files.
 
    * - ``FOO.verify.cpp``
      - Compiles with clang-verify. This type of test is automatically marked as UNSUPPORTED if the compiler does not support clang-verify.
+       For additional information about how to write tests using ``clang-verify``, see the `Internals Manual <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_.
 
    * - ``FOO.link.pass.cpp``
      - Checks that the C++ code in the file compiles and links successfully -- no run attempted.
