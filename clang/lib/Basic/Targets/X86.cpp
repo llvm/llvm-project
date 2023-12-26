@@ -369,9 +369,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasWBNOINVD = true;
     } else if (Feature == "+prefetchi") {
       HasPREFETCHI = true;
-    } else if (Feature == "+prefetchwt1") {
-      HasPREFETCHWT1 = true;
-      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
     } else if (Feature == "+cldemote") {
@@ -887,8 +884,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SM4__");
   if (HasPREFETCHI)
     Builder.defineMacro("__PREFETCHI__");
-  if (HasPREFETCHWT1)
-    Builder.defineMacro("__PREFETCHWT1__");
   if (HasCLZERO)
     Builder.defineMacro("__CLZERO__");
   if (HasKL)
@@ -1122,7 +1117,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pku", true)
       .Case("popcnt", true)
       .Case("prefetchi", true)
-      .Case("prefetchwt1", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
       .Case("raoint", true)
@@ -1239,7 +1233,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
       .Case("prefetchi", HasPREFETCHI)
-      .Case("prefetchwt1", HasPREFETCHWT1)
       .Case("prfchw", HasPRFCHW)
       .Case("ptwrite", HasPTWRITE)
       .Case("raoint", HasRAOINT)
