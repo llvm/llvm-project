@@ -67,6 +67,9 @@ template <class T>
 concept is_minus_minusable_pre = requires(T& t) { --t; };
 
 template <class T>
+concept is_indexable = requires(T& t) { t[5]; };
+
+template <class T>
 concept can_calculate_distance_between_non_sentinel = requires(T& t) { t - t; };
 
 constexpr bool operator_tests() {
@@ -86,6 +89,7 @@ constexpr bool operator_tests() {
     static_assert(!is_difference_plusable<StrideViewIterator>);
     static_assert(!is_difference_minusable<StrideViewIterator>);
     static_assert(!is_relationally_comparable<StrideViewIterator>);
+    static_assert(!is_indexable<StrideViewIterator>);
   }
   {
     // What operators are valid for an iterator derived from a stride view
@@ -103,6 +107,7 @@ constexpr bool operator_tests() {
     static_assert(!is_difference_plusable<StrideViewIterator>);
     static_assert(!is_difference_minusable<StrideViewIterator>);
     static_assert(!is_relationally_comparable<StrideViewIterator>);
+    static_assert(!is_indexable<StrideViewIterator>);
   }
   {
     // What operators are valid for an iterator derived from a stride view
@@ -120,6 +125,7 @@ constexpr bool operator_tests() {
     static_assert(!is_difference_plusable<StrideViewIterator>);
     static_assert(!is_difference_minusable<StrideViewIterator>);
     static_assert(!is_relationally_comparable<StrideViewIterator>);
+    static_assert(!is_indexable<StrideViewIterator>);
   }
   {
     // What operators are valid for an iterator derived from a stride view
@@ -137,6 +143,7 @@ constexpr bool operator_tests() {
     static_assert(!is_difference_plusable<StrideViewIterator>);
     static_assert(!is_difference_minusable<StrideViewIterator>);
     static_assert(!is_relationally_comparable<StrideViewIterator>);
+    static_assert(!is_indexable<StrideViewIterator>);
   }
   {
     // What operators are valid for an iterator derived from a stride view
@@ -154,6 +161,7 @@ constexpr bool operator_tests() {
     static_assert(!is_difference_plusable<StrideViewIterator>);
     static_assert(!is_difference_minusable<StrideViewIterator>);
     static_assert(!is_relationally_comparable<StrideViewIterator>);
+    static_assert(!is_indexable<StrideViewIterator>);
   }
   {
     // What operators are valid for an iterator derived from a stride view
@@ -171,6 +179,7 @@ constexpr bool operator_tests() {
     static_assert(is_difference_plusable<StrideViewIterator>);
     static_assert(is_difference_minusable<StrideViewIterator>);
     static_assert(is_relationally_comparable<StrideViewIterator>);
+    static_assert(is_indexable<StrideViewIterator>);
   }
   {
     using Base = InputView<SizedForwardIterator, SizedForwardIterator>;
