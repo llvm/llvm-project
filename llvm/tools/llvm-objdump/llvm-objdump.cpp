@@ -1264,10 +1264,53 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
     return SymbolInfoTy(Addr, Name, Type);
 }
 
-static void
-collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAddrMap,
-                       uint64_t SectionAddr, uint64_t Start, uint64_t End,
-                       std::unordered_map<uint64_t, std::vector<std::string>> &Labels) {
+struct BBAddrMapLabel {
+  std::string BlockLabel;
+  std::string PGOAnalysis;
+};
+
+static void constructPGOLabelString(std::string &PGOString,
+                                    const PGOAnalysisMap &PGOMap,
+                                    size_t BBEntryIndex) {
+  raw_string_ostream PGOSS(PGOString);
+
+  PGOSS << " (";
+  if (PGOMap.FeatEnable.FuncEntryCount && BBEntryIndex == 0) {
+    PGOSS << "Entry count: " << Twine(PGOMap.FuncEntryCount);
+    if (PGOMap.FeatEnable.BBFreq || PGOMap.FeatEnable.BrProb) {
+      PGOSS << ", ";
+    }
+  }
+
+  if (PGOMap.FeatEnable.BBFreq || PGOMap.FeatEnable.BrProb) {
+    const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
+        PGOMap.BBEntries[BBEntryIndex];
+
+    if (PGOMap.FeatEnable.BBFreq) {
+      PGOSS << "Frequency: " << Twine(PGOBBEntry.BlockFreq.getFrequency());
+      if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+        PGOSS << ", ";
+      }
+    }
+    if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+      PGOSS << "Successors: ";
+      interleaveComma(
+          PGOBBEntry.Successors, PGOSS,
+          [&PGOSS](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
+            PGOSS << "BB" << SE.ID << ":";
+            PGOSS.write_hex(SE.Prob.getNumerator());
+          });
+    }
+  }
+  PGOSS << ")";
+}
+
+static void collectBBAddrMapLabels(
+    const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAddrMap,
+    const std::unordered_map<uint64_t, PGOAnalysisMap> &AddrToPGOAnalysisMap,
+    uint64_t SectionAddr, uint64_t Start, uint64_t End,
+    std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> &Labels,
+    const StringRef FileName) {
   if (AddrToBBAddrMap.empty())
     return;
   Labels.clear();
@@ -1276,11 +1319,27 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   auto Iter = AddrToBBAddrMap.find(StartAddress);
   if (Iter == AddrToBBAddrMap.end())
     return;
-  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.getBBEntries()) {
+  auto PGOIter = AddrToPGOAnalysisMap.find(StartAddress);
+  if (!AddrToPGOAnalysisMap.empty() && PGOIter == AddrToPGOAnalysisMap.end())
+    reportWarning("Expected BBAddrMap and PGOAnalysisMap to have information "
+                  "on the same basic blocks",
+                  FileName);
+
+  for (size_t I = 0; I < Iter->second.getBBEntries().size(); ++I) {
+    const BBAddrMap::BBEntry &BBEntry = Iter->second.getBBEntries()[I];
     uint64_t BBAddress = BBEntry.Offset + Iter->second.getFunctionAddress();
     if (BBAddress >= EndAddress)
       continue;
-    Labels[BBAddress].push_back(("BB" + Twine(BBEntry.ID)).str());
+
+    std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
+    std::string PGOString;
+
+    if (!AddrToPGOAnalysisMap.empty() &&
+        PGOIter != AddrToPGOAnalysisMap.end() &&
+        PGOIter->second.FeatEnable.anyEnabled())
+      constructPGOLabelString(PGOString, PGOIter->second, I);
+
+    Labels[BBAddress].push_back({LabelString, PGOString});
   }
 }
 
@@ -1638,18 +1697,25 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   LLVM_DEBUG(LVP.dump());
 
   std::unordered_map<uint64_t, BBAddrMap> AddrToBBAddrMap;
+  std::unordered_map<uint64_t, PGOAnalysisMap> AddrToPGOAnalysisMap;
   auto ReadBBAddrMap = [&](std::optional<unsigned> SectionIndex =
                                std::nullopt) {
     AddrToBBAddrMap.clear();
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj)) {
-      auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex);
+      std::vector<PGOAnalysisMap> PGOAnalyses;
+      auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex, &PGOAnalyses);
       if (!BBAddrMapsOrErr) {
         reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
         return;
       }
-      for (auto &FunctionBBAddrMap : *BBAddrMapsOrErr)
-        AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr,
-                                std::move(FunctionBBAddrMap));
+      for (size_t I = 0; I < (*BBAddrMapsOrErr).size(); ++I) {
+        uint64_t BBAddrMapAddr = (*BBAddrMapsOrErr)[I].Addr;
+        AddrToBBAddrMap.emplace(BBAddrMapAddr,
+                                std::move((*BBAddrMapsOrErr)[I]));
+        if (PGOAnalyses.size() > 0)
+          AddrToPGOAnalysisMap.emplace(BBAddrMapAddr,
+                                       std::move(PGOAnalyses[I]));
+      }
     }
   };
 
@@ -1978,14 +2044,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         FOS.SetUnbuffered();
 
       std::unordered_map<uint64_t, std::string> AllLabels;
-      std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
+      std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
       if (SymbolizeOperands) {
         collectLocalBranchTargets(Bytes, DT->InstrAnalysis.get(),
                                   DT->DisAsm.get(), DT->InstPrinter.get(),
                                   PrimaryTarget.SubtargetInfo.get(),
                                   SectionAddr, Index, End, AllLabels);
-        collectBBAddrMapLabels(AddrToBBAddrMap, SectionAddr, Index, End,
-                               BBAddrMapLabels);
+        collectBBAddrMapLabels(AddrToBBAddrMap, AddrToPGOAnalysisMap,
+                               SectionAddr, Index, End, BBAddrMapLabels,
+                               FileName);
       }
 
       if (DT->InstrAnalysis)
@@ -2083,8 +2150,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // Print local label if there's any.
           auto Iter1 = BBAddrMapLabels.find(SectionAddr + Index);
           if (Iter1 != BBAddrMapLabels.end()) {
-            for (StringRef Label : Iter1->second)
-              FOS << "<" << Label << ">:\n";
+            for (const auto &BBLabel : Iter1->second)
+              FOS << "<" << BBLabel.BlockLabel << ">" << BBLabel.PGOAnalysis
+                  << ":\n";
           } else {
             auto Iter2 = AllLabels.find(SectionAddr + Index);
             if (Iter2 != AllLabels.end())
@@ -2261,7 +2329,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 } else if (!Disp) {
                   *TargetOS << TargetName;
                 } else if (BBAddrMapLabelAvailable) {
-                  *TargetOS << BBAddrMapLabels[Target].front();
+                  *TargetOS << BBAddrMapLabels[Target].front().BlockLabel;
                 } else if (LabelAvailable) {
                   *TargetOS << AllLabels[Target];
                 } else {
@@ -2277,7 +2345,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 }
 
               } else if (BBAddrMapLabelAvailable) {
-                *TargetOS << " <" << BBAddrMapLabels[Target].front() << ">";
+                *TargetOS << " <" << BBAddrMapLabels[Target].front().BlockLabel
+                          << ">";
               } else if (LabelAvailable) {
                 *TargetOS << " <" << AllLabels[Target] << ">";
               }
