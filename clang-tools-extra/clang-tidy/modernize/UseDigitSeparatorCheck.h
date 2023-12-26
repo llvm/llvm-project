@@ -24,6 +24,8 @@ namespace clang::tidy::modernize {
 ///     - floating-point constants, group into 3 digits on either side of the
 ///     decimal point, e.g. float x = 3'456.001'25f;
 ///
+/// Requires c++ version 14 or later
+///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-digit-separator.html
 class UseDigitSeparatorCheck : public ClangTidyCheck {
