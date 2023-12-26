@@ -23,9 +23,12 @@
 // friend constexpr bool operator>=(__iterator const& __x, __iterator const& __y)
 // friend constexpr bool operator<=>(__iterator const& __x, __iterator const& __y)
 
+#include <iterator>
 #include <ranges>
 
 #include "../types.h"
+#include "__ranges/concepts.h"
+#include "__ranges/stride_view.h"
 #include "test_iterators.h"
 
 template <class T>
@@ -257,6 +260,39 @@ constexpr bool operator_tests() {
     // Check negative __n with non-exact multiple of left's stride.
     assert(stride_zoff_one - stride_ooff_two == -1);
     assert(stride_zoff_one - stride_ooff_five == -2);
+  }
+  {
+    // Check whether __missing_ gets handled properly.
+    using Base = SimpleView;
+    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    auto base    = Base(arr, arr + 10);
+    auto strider = std::ranges::stride_view<Base>(base, 7);
+
+    auto strider_iter = strider.end();
+
+    strider_iter--;
+    assert(*strider_iter == 8);
+
+    // Now that we are back among the valid, we should
+    // have a normal stride length back (i.e., __missing_
+    // should be equal to 0).
+    strider_iter--;
+    assert(*strider_iter == 1);
+
+    strider_iter++;
+    assert(*strider_iter == 8);
+
+    // By striding past the end, we are going to generate
+    // another __missing_ != 0 value. Let's make sure
+    // that it gets generated and used.
+    strider_iter++;
+    assert(strider_iter == strider.end());
+
+    strider_iter--;
+    assert(*strider_iter == 8);
+
+    strider_iter--;
+    assert(*strider_iter == 1);
   }
   {
     using EqualableView = InputView<cpp17_input_iterator<int*>>;
