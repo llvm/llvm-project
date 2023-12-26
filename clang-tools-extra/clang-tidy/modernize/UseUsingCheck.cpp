@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 namespace {
 
 AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
-  return Node.getLanguage() == clang::LinkageSpecDecl::lang_c;
+  return Node.getLanguage() == clang::LinkageSpecLanguageIDs::C;
 }
 } // namespace
 
