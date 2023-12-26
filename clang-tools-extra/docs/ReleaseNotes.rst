@@ -119,14 +119,21 @@ Improvements to clang-tidy
 
 - Improved `--dump-config` to print check options in alphabetical order.
 
-- Improved :program:`clang-tidy-diff.py` script. It now returns exit code `1`
-  if any :program:`clang-tidy` subprocess exits with a non-zero code or if
-  exporting fixes fails. It now accepts a directory as a value for
-  `-export-fixes` to export individual yaml files for each compilation unit.
+- Improved :program:`clang-tidy-diff.py` script. 
+    * Return exit code `1` if any :program:`clang-tidy` subprocess exits with
+      a non-zero code or if exporting fixes fails.
+
+    * Accept a directory as a value for `-export-fixes` to export individual
+      yaml files for each compilation unit.
+
+    * Introduce a `-config-file` option that forwards a configuration file to
+      :program:`clang-tidy`. Corresponds to the `--config-file` option in
+      :program:`clang-tidy`.
 
 - Improved :program:`run-clang-tidy.py` script. It now accepts a directory
   as a value for `-export-fixes` to export individual yaml files for each
   compilation unit.
+
 
 New checks
 ^^^^^^^^^^
