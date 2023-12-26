@@ -196,6 +196,8 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zicfilp", RISCVExtensionVersion{0, 4}},
     {"zicond", RISCVExtensionVersion{1, 0}},
 
+    {"zimop", RISCVExtensionVersion{0, 1}},
+
     {"ztso", RISCVExtensionVersion{0, 1}},
 
     {"zvfbfmin", RISCVExtensionVersion{0, 8}},
@@ -1007,7 +1009,7 @@ static const char *ImpliedExtsZcd[] = {"d", "zca"};
 static const char *ImpliedExtsZce[] = {"zcb", "zcmp", "zcmt"};
 static const char *ImpliedExtsZcf[] = {"f", "zca"};
 static const char *ImpliedExtsZcmp[] = {"zca"};
-static const char *ImpliedExtsZcmt[] = {"zca"};
+static const char *ImpliedExtsZcmt[] = {"zca", "zicsr"};
 static const char *ImpliedExtsZdinx[] = {"zfinx"};
 static const char *ImpliedExtsZfa[] = {"f"};
 static const char *ImpliedExtsZfbfmin[] = {"f"};

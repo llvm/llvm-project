@@ -45,9 +45,9 @@ static bool isValidKind(bool isInt, vector::CombiningKind kind) {
   enum class KindType { FLOAT, INT, INVALID };
   KindType type{KindType::INVALID};
   switch (kind) {
-  case CombiningKind::MINF:
+  case CombiningKind::MINNUMF:
   case CombiningKind::MINIMUMF:
-  case CombiningKind::MAXF:
+  case CombiningKind::MAXNUMF:
   case CombiningKind::MAXIMUMF:
     type = KindType::FLOAT;
     break;

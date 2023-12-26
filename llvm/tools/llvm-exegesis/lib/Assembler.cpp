@@ -97,7 +97,7 @@ static bool generateSnippetSetupCode(
       // Load in the stack register now as we're done using it elsewhere
       // and need to set the value in preparation for executing the
       // snippet.
-      if (RV.Register == StackPointerRegister)
+      if (RV.Register != StackPointerRegister)
         continue;
       const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
       if (SetRegisterCode.empty())

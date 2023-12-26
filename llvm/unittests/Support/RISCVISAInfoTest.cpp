@@ -519,8 +519,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV32IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV32IZce =
       (*MaybeRV32IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV32IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV32IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV32IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zce"), 1U);
@@ -562,8 +563,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV64IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV64IZce =
       (*MaybeRV64IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV64IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV64IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV64IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zce"), 1U);
@@ -754,6 +756,7 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp             0.4       This is a long dummy description
     zicond              1.0
+    zimop               0.1
     zacas               1.0
     zfbfmin             0.8
     ztso                0.1
