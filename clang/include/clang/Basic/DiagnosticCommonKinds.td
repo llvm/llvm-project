@@ -350,7 +350,7 @@ def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
 def warn_knl_knm_target_support_removed : Warning<
-  "KNL/KNM's feature support will be removed in LLVM 19.">;
+  "KNL, KNM related Intel Xeon Phi CPU's supports will be removed in LLVM 19.">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
