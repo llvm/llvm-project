@@ -873,12 +873,28 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     llvm::SmallVector<mlir::Type, 8> llvmResults;
     auto cirResults = op.getResultTypes();
+    auto* converter = getTypeConverter();
 
-    if (getTypeConverter()->convertTypes(cirResults, llvmResults).failed())
+    if (converter->convertTypes(cirResults, llvmResults).failed())
       return mlir::failure();
 
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+    if (auto callee = op.getCalleeAttr()) { // direct call      
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, llvmResults, op.getCalleeAttr(), adaptor.getOperands());
+    } else { // indirect call
+      assert(op.getOperands().size() 
+        && "operands list must no be empty for the indirect call");
+      auto typ = op.getOperands().front().getType();      
+      assert(isa<mlir::cir::PointerType>(typ) && "expected pointer type");
+      auto ptyp = dyn_cast<mlir::cir::PointerType>(typ);
+      auto ftyp = dyn_cast<mlir::cir::FuncType>(ptyp.getPointee());
+      assert(ftyp && "expected a pointer to a function as the first operand");
+     
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+          op,
+          dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp)),
+          adaptor.getOperands());
+    }
     return mlir::success();
   }
 };
