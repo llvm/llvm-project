@@ -116,16 +116,19 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString,
 
   // Get integer and fractional parts of float number
   const std::string::size_type DotPosition = FloatString.find('.');
-  const llvm::SmallString<128> IntegerSubString = FloatString.substr(0, DotPosition);
+  const llvm::SmallString<128> IntegerSubString =
+      FloatString.substr(0, DotPosition);
   llvm::SmallString<128> FractionalSubString =
       FloatString.substr(DotPosition + 1, FloatString.size());
   std::reverse(FractionalSubString.begin(), FractionalSubString.end());
 
   // Get formatting literal text
   const std::string FormatedIntegerSubString = getFormatedIntegerString(
-      IntegerSubString, llvm::APInt(128, std::stoll(IntegerSubString.str().str())));
+      IntegerSubString,
+      llvm::APInt(128, std::stoll(IntegerSubString.str().str())));
   std::string FormatedFractionalSubString = getFormatedIntegerString(
-      FractionalSubString, llvm::APInt(128, std::stoll(FractionalSubString.str().str())));
+      FractionalSubString,
+      llvm::APInt(128, std::stoll(FractionalSubString.str().str())));
   std::reverse(FormatedFractionalSubString.begin(),
                FormatedFractionalSubString.end());
 
