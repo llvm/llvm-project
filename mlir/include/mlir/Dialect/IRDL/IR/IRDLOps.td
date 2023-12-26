@@ -489,6 +489,16 @@ def IRDL_BaseOp : IRDL_ConstraintOp<"base",
                        OptionalAttr<StrAttr>:$base_name);
   let results = (outs IRDL_AttributeType:$output);
   let assemblyFormat = " ($base_ref^)? ($base_name^)? ` ` attr-dict";
+  
+  let builders = [
+    OpBuilder<(ins "SymbolRefAttr":$base_ref), [{
+      build($_builder, $_state, base_ref, {});
+    }]>,
+    OpBuilder<(ins "StringAttr":$base_name), [{
+      build($_builder, $_state, {}, base_name);
+    }]>,
+  ];
+
   let hasVerifier = 1;
 }
 
