@@ -210,11 +210,6 @@
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
-    defined(__AVX512PF__)
-#include <avx512pfintrin.h>
-#endif
-
-#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__AVX512FP16__)
 #include <avx512fp16intrin.h>
 #endif

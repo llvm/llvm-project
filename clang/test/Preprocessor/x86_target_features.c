@@ -90,22 +90,6 @@
 // AVX512CD: #define __SSE__ 1
 // AVX512CD: #define __SSSE3__ 1
 
-// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512pf -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512PF %s
-
-// AVX512PF: #define __AVX2__ 1
-// AVX512PF: #define __AVX512F__ 1
-// AVX512PF: #define __AVX512PF__ 1
-// AVX512PF: #define __AVX__ 1
-// AVX512PF: #define __EVEX512__ 1
-// AVX512PF: #define __SSE2_MATH__ 1
-// AVX512PF: #define __SSE2__ 1
-// AVX512PF: #define __SSE3__ 1
-// AVX512PF: #define __SSE4_1__ 1
-// AVX512PF: #define __SSE4_2__ 1
-// AVX512PF: #define __SSE_MATH__ 1
-// AVX512PF: #define __SSE__ 1
-// AVX512PF: #define __SSSE3__ 1
-
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512dq -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512DQ %s
 
 // AVX512DQ: #define __AVX2__ 1
@@ -154,22 +138,6 @@
 // AVX512VL: #define __SSE_MATH__ 1
 // AVX512VL: #define __SSE__ 1
 // AVX512VL: #define __SSSE3__ 1
-
-// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512pf -mno-avx512f -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512F2 %s
-
-// AVX512F2: #define __AVX2__ 1
-// AVX512F2-NOT: #define __AVX512F__ 1
-// AVX512F2-NOT: #define __AVX512PF__ 1
-// AVX512F2-NOT: #define __EVEX512__ 1
-// AVX512F2: #define __AVX__ 1
-// AVX512F2: #define __SSE2_MATH__ 1
-// AVX512F2: #define __SSE2__ 1
-// AVX512F2: #define __SSE3__ 1
-// AVX512F2: #define __SSE4_1__ 1
-// AVX512F2: #define __SSE4_2__ 1
-// AVX512F2: #define __SSE_MATH__ 1
-// AVX512F2: #define __SSE__ 1
-// AVX512F2: #define __SSSE3__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512ifma -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512IFMA %s
 

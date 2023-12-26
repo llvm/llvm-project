@@ -10338,7 +10338,7 @@ defm VPSCATTER : avx512_scatter_q_pd<0xA0, 0xA1, avx512vl_i64_info, "vpscatter",
 // prefetch
 multiclass avx512_gather_scatter_prefetch<bits<8> opc, Format F, string OpcodeStr,
                        RegisterClass KRC, X86MemOperand memop> {
-  let Predicates = [HasPFI], mayLoad = 1, mayStore = 1 in
+  let mayLoad = 1, mayStore = 1 in
   def m  : AVX5128I<opc, F, (outs), (ins KRC:$mask, memop:$src),
             !strconcat(OpcodeStr, "\t{$src {${mask}}|{${mask}}, $src}"), []>,
             EVEX, EVEX_K, Sched<[WriteLoad]>;

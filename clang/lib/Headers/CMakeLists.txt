@@ -155,7 +155,6 @@ set(x86_files
   avx512fp16intrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h
-  avx512pfintrin.h
   avx512vbmi2intrin.h
   avx512vbmiintrin.h
   avx512vbmivlintrin.h

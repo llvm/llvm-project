@@ -130,9 +130,6 @@ def FeatureCDI      : SubtargetFeature<"avx512cd", "HasCDI", "true",
 def FeatureVPOPCNTDQ : SubtargetFeature<"avx512vpopcntdq", "HasVPOPCNTDQ",
                        "true", "Enable AVX-512 Population Count Instructions",
                                       [FeatureAVX512]>;
-def FeaturePFI      : SubtargetFeature<"avx512pf", "HasPFI", "true",
-                      "Enable AVX-512 PreFetch Instructions",
-                                      [FeatureAVX512]>;
 def FeaturePREFETCHI  : SubtargetFeature<"prefetchi", "HasPREFETCHI",
                                    "true",
                                    "Prefetch instruction with T0 or T1 Hint">;
