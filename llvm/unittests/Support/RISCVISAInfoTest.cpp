@@ -756,6 +756,7 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp             0.4       This is a long dummy description
     zicond              1.0
+    zimop               0.1
     zacas               1.0
     zfbfmin             0.8
     ztso                0.1
