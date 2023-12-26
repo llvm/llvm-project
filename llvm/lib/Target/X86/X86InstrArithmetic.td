@@ -1135,53 +1135,48 @@ let Predicates = [HasBMI], AddedComplexity = -6 in {
 //===----------------------------------------------------------------------===//
 // MULX Instruction
 //
-multiclass bmi_mulx<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
-                    X86FoldableSchedWrite sched> {
-let hasSideEffects = 0 in {
-let Predicates = [HasBMI2, NoEGPR] in {
-  def rr : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
-             !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8, XD, VEX, VVVV, Sched<[WriteIMulH, sched]>;
+multiclass MulX<X86TypeInfo t, X86FoldableSchedWrite sched> {
+  defvar mulx_args = "{$src, $dst2, $dst1|$dst1, $dst2, $src}";
+  defvar mulx_rm_sched =
+    [WriteIMulHLd, sched.Folded,
+     // Memory operand.
+     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+     // Implicit read of EDX/RDX
+     sched.ReadAfterFold];
 
+  def rr : ITy<0xF6, MRMSrcReg, t, (outs t.RegClass:$dst1, t.RegClass:$dst2),
+               (ins t.RegClass:$src), "mulx", mulx_args, []>, T8, XD, VEX,
+           VVVV, Sched<[WriteIMulH, sched]>;
   let mayLoad = 1 in
-  def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
-             !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8, XD, VEX, VVVV,
-             Sched<[WriteIMulHLd, sched.Folded,
-                    // Memory operand.
-                    ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                    // Implicit read of EDX/RDX
-                    sched.ReadAfterFold]>;
+  def rm : ITy<0xF6, MRMSrcMem, t, (outs t.RegClass:$dst1, t.RegClass:$dst2),
+               (ins t.MemOperand:$src), "mulx", mulx_args, []>, T8, XD, VEX,
+               VVVV, Sched<mulx_rm_sched>;
 
+  let Predicates = [In64BitMode] in {
+  def rr_EVEX : ITy<0xF6, MRMSrcReg, t,
+                    (outs t.RegClass:$dst1, t.RegClass:$dst2),
+                    (ins t.RegClass:$src), "mulx", mulx_args, []>, T8, XD,
+                EVEX, VVVV, Sched<[WriteIMulH, sched]>;
+    let mayLoad = 1 in
+    def rm_EVEX : ITy<0xF6, MRMSrcMem, t,
+                      (outs t.RegClass:$dst1, t.RegClass:$dst2),
+                      (ins t.MemOperand:$src), "mulx", mulx_args, []>, T8, XD,
+                  EVEX, VVVV, Sched<mulx_rm_sched>;
+  }
   // Pseudo instructions to be used when the low result isn't used. The
   // instruction is defined to keep the high if both destinations are the same.
-  def Hrr : PseudoI<(outs RC:$dst), (ins RC:$src),
-                    []>, Sched<[sched]>;
-
+  def Hrr : PseudoI<(outs t.RegClass:$dst), (ins t.RegClass:$src), []>,
+            Sched<[sched]>;
   let mayLoad = 1 in
-  def Hrm : PseudoI<(outs RC:$dst), (ins x86memop:$src),
-                    []>, Sched<[sched.Folded]>;
-}
-let Predicates = [HasBMI2, HasEGPR, In64BitMode] in
-  def rr#_EVEX : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
-                   !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-                   []>, T8, XD, EVEX, VVVV, Sched<[WriteIMulH, sched]>;
-let Predicates = [HasBMI2, HasEGPR, In64BitMode], mayLoad = 1 in
-  def rm#_EVEX : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
-                   !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-                   []>, T8, XD, EVEX, VVVV,
-                 Sched<[WriteIMulHLd, sched.Folded,
-                        // Memory operand.
-                        ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                        // Implicit read of EDX/RDX
-                        sched.ReadAfterFold]>;
-}
+  def Hrm : PseudoI<(outs t.RegClass:$dst), (ins t.MemOperand:$src), []>,
+            Sched<[sched.Folded]>;
 }
 
 let Uses = [EDX] in
-  defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteMULX32>;
+defm MULX32 : MulX<Xi32, WriteMULX32>;
+
 let Uses = [RDX] in
-  defm MULX64 : bmi_mulx<"mulx{q}", GR64, i64mem, WriteMULX64>, REX_W;
+defm MULX64 : MulX<Xi64, WriteMULX64>, REX_W;
 
 //===----------------------------------------------------------------------===//
 // ADCX and ADOX Instructions
