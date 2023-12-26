@@ -145,7 +145,6 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_
 }
 
 #  if _LIBCPP_STD_VER >= 26
-#    if 1
 template <class _Rp, class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
@@ -194,56 +193,6 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
 
   __libcpp_unreachable();
 }
-#    else
-template <class _Rp, class _Visitor, class _Context>
-_LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
-  switch (__arg.__type_) {
-  case __format::__arg_t::__none:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__monostate_));
-  case __format::__arg_t::__boolean:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__boolean_));
-  case __format::__arg_t::__char_type:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__char_type_));
-  case __format::__arg_t::__int:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__int_));
-  case __format::__arg_t::__long_long:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__long_long_));
-  case __format::__arg_t::__i128:
-#      ifndef _LIBCPP_HAS_NO_INT128
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__i128_));
-#      else
-    __libcpp_unreachable();
-#      endif
-  case __format::__arg_t::__unsigned:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__unsigned_));
-  case __format::__arg_t::__unsigned_long_long:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__unsigned_long_long_));
-  case __format::__arg_t::__u128:
-#      ifndef _LIBCPP_HAS_NO_INT128
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__u128_));
-#      else
-    __libcpp_unreachable();
-#      endif
-  case __format::__arg_t::__float:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__float_));
-  case __format::__arg_t::__double:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__double_));
-  case __format::__arg_t::__long_double:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__long_double_));
-  case __format::__arg_t::__const_char_type_ptr:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__const_char_type_ptr_));
-  case __format::__arg_t::__string_view:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__string_view_));
-  case __format::__arg_t::__ptr:
-    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), std::move(__arg.__value_.__ptr_));
-  case __format::__arg_t::__handle:
-    return std::invoke_r<_Rp>(
-        std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__arg.__value_.__handle_});
-  }
-
-  __libcpp_unreachable();
-}
-#    endif //
 #  endif
 
 /// Contains the values used in basic_format_arg.

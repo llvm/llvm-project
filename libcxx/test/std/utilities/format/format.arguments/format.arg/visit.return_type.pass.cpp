@@ -12,8 +12,6 @@
 
 // class basic_format_arg;
 
-// template<class Visitor>
-//   decltype(auto) visit(this basic_format_arg arg, Visitor&& vis);
 // template<class R, class Visitor>
 //   R visit(this basic_format_arg arg, Visitor&& vis);
 
@@ -77,6 +75,13 @@ void test() {
 
   test<Context, bool, long>(true, 192812079084L);
   test<Context, bool, long>(false, 192812079084L);
+
+  // Test CharT types.
+
+  test<Context, CharT, std::string, CharT>('a', "visited");
+  test<Context, CharT, std::string, CharT>('z', "visited");
+  test<Context, CharT, std::string, CharT>('0', "visited");
+  test<Context, CharT, std::string, CharT>('9', "visited");
 }
 
 int main(int, char**) {

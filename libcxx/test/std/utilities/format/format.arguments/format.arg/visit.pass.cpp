@@ -10,8 +10,13 @@
 
 // <format>
 
+// class basic_format_arg;
+
+// template<class Visitor>
+//   decltype(auto) visit(this basic_format_arg arg, Visitor&& vis);  // since C++26
+
 // template<class Visitor, class Context>
-//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
+//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // deprecated in C++26
 
 #include <algorithm>
 #include <cassert>
