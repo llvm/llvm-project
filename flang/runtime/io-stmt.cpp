@@ -1219,6 +1219,7 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("SIZE"):
     result = -1;
     if (unit().IsConnected()) {
+      unit().FlushOutput(*this);
       if (auto size{unit().knownSize()}) {
         result = *size;
       }
