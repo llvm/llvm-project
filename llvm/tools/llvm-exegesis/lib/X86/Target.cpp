@@ -924,38 +924,61 @@ void generateSyscall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
   GeneratedCode.push_back(MCInstBuilder(X86::SYSCALL));
 }
 
+constexpr std::array<unsigned, 6> SyscallArgumentRegisters{
+    X86::RDI, X86::RSI, X86::RDX, X86::R10, X86::R8, X86::R9};
+
+static void saveSyscallRegisters(std::vector<MCInst> &GeneratedCode,
+                                 unsigned ArgumentCount) {
+  assert(ArgumentCount < 6 &&
+         "System calls only X86-64 Linux can only take six arguments");
+  // Preserve RCX and R11 (Clobbered by the system call).
+  generateRegisterStackPush(X86::RCX, GeneratedCode);
+  generateRegisterStackPush(X86::R11, GeneratedCode);
+  // Preserve RAX (used for the syscall number/return value).
+  generateRegisterStackPush(X86::RAX, GeneratedCode);
+  // Preserve the registers used to pass arguments to the system call.
+  for (unsigned I = 0; I < ArgumentCount; ++I)
+    generateRegisterStackPush(SyscallArgumentRegisters[I], GeneratedCode);
+}
+
+static void restoreSyscallRegisters(std::vector<MCInst> &GeneratedCode,
+                                    unsigned ArgumentCount) {
+  assert(ArgumentCount < 6 &&
+         "System calls only X86-64 Linux can only take six arguments");
+  // Restore the argument registers, in the opposite order of the way they are
+  // saved.
+  for (unsigned I = ArgumentCount; I > 0; --I) {
+    generateRegisterStackPop(SyscallArgumentRegisters[I - 1], GeneratedCode);
+  }
+  generateRegisterStackPop(X86::RAX, GeneratedCode);
+  generateRegisterStackPop(X86::R11, GeneratedCode);
+  generateRegisterStackPop(X86::RCX, GeneratedCode);
+}
+
 static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
                                                         const APInt &Value) {
   assert(Value.getBitWidth() <= 64 && "Value must fit in the register.");
   std::vector<MCInst> loadSegmentRegisterCode;
-  // Preserve RCX and R11 (clobbered by the system call), and RAX, RDI, and RSI
-  // (used to make the system call). Preserve the registers here as we don't
+  // Preserve the syscall registers here as we don't
   // want to make any assumptions about the ordering of what registers are
   // loaded in first, and we might have already loaded in registers that we are
   // going to be clobbering here.
-  generateRegisterStackPush(X86::RAX, loadSegmentRegisterCode);
-  generateRegisterStackPush(X86::RDI, loadSegmentRegisterCode);
-  generateRegisterStackPush(X86::RSI, loadSegmentRegisterCode);
-  generateRegisterStackPush(X86::RCX, loadSegmentRegisterCode);
-  generateRegisterStackPush(X86::R11, loadSegmentRegisterCode);
+  saveSyscallRegisters(loadSegmentRegisterCode, 2);
   // Generate the instructions to make the arch_prctl system call to set
   // the registers.
-  assert(Reg == X86::FS ||
-         Reg == X86::GS &&
-             "Only the segment registers GS and FS are supported");
   int SyscallCode = 0;
-  SyscallCode = Reg == X86::FS ? SyscallCode | ARCH_SET_FS : SyscallCode;
-  SyscallCode = Reg == X86::GS ? SyscallCode | ARCH_SET_GS : SyscallCode;
+  if (Reg == X86::FS)
+    SyscallCode = ARCH_SET_FS;
+  else if (Reg == X86::GS)
+    SyscallCode = ARCH_SET_GS;
+  else
+    llvm_unreachable("Only the segment registers GS and FS are supported");
   loadSegmentRegisterCode.push_back(
       loadImmediate(X86::RDI, 64, APInt(64, SyscallCode)));
   loadSegmentRegisterCode.push_back(loadImmediate(X86::RSI, 64, Value));
   generateSyscall(SYS_arch_prctl, loadSegmentRegisterCode);
   // Restore the registers in reverse order
-  generateRegisterStackPop(X86::R11, loadSegmentRegisterCode);
-  generateRegisterStackPop(X86::RCX, loadSegmentRegisterCode);
-  generateRegisterStackPop(X86::RSI, loadSegmentRegisterCode);
-  generateRegisterStackPop(X86::RDI, loadSegmentRegisterCode);
-  generateRegisterStackPop(X86::RAX, loadSegmentRegisterCode);
+  restoreSyscallRegisters(loadSegmentRegisterCode, 2);
   return loadSegmentRegisterCode;
 }
 
@@ -1208,16 +1231,8 @@ intptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
 std::vector<MCInst>
 ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
-  if(SaveRegisters) {
-    // Preserve RAX, RDI, and RSI by pushing them to the stack.
-    generateRegisterStackPush(X86::RAX, ConfigurePerfCounterCode);
-    generateRegisterStackPush(X86::RDI, ConfigurePerfCounterCode);
-    generateRegisterStackPush(X86::RSI, ConfigurePerfCounterCode);
-    // RCX and R11 will get clobbered by the syscall instruction, so save them
-    // as well.
-    generateRegisterStackPush(X86::RCX, ConfigurePerfCounterCode);
-    generateRegisterStackPush(X86::R11, ConfigurePerfCounterCode);
-  }
+  if (SaveRegisters)
+    saveSyscallRegisters(ConfigurePerfCounterCode, 2);
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
   ConfigurePerfCounterCode.push_back(MCInstBuilder(X86::MOV32rm)
@@ -1230,15 +1245,8 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RSI, 64, APInt(64, Request)));
   generateSyscall(SYS_ioctl, ConfigurePerfCounterCode);
-  if(SaveRegisters) {
-    // Restore R11 then RCX
-    generateRegisterStackPop(X86::R11, ConfigurePerfCounterCode);
-    generateRegisterStackPop(X86::RCX, ConfigurePerfCounterCode);
-    // Restore RAX, RDI, and RSI, in reverse order.
-    generateRegisterStackPop(X86::RSI, ConfigurePerfCounterCode);
-    generateRegisterStackPop(X86::RDI, ConfigurePerfCounterCode);
-    generateRegisterStackPop(X86::RAX, ConfigurePerfCounterCode);
-  }
+  if (SaveRegisters)
+    restoreSyscallRegisters(ConfigurePerfCounterCode, 2);
   return ConfigurePerfCounterCode;
 }
 
