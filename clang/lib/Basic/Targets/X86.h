@@ -103,7 +103,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512VNNI = false;
   bool HasAVX512FP16 = false;
   bool HasAVX512BF16 = false;
-  bool HasAVX512PF = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
   bool HasAVX512BW = false;
