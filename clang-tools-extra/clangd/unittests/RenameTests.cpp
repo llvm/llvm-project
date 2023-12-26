@@ -926,12 +926,38 @@ TEST(RenameTest, Renameable) {
         void f(X x) {x+^+;})cpp",
           "no symbol", HeaderFile},
 
-      {R"cpp(// disallow rename on non-normal identifiers.
+      {R"cpp(
          @interface Foo {}
-         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         - (int)[[fo^o]]:(int)x;
          @end
        )cpp",
-       "not a supported kind", HeaderFile},
+       nullptr, HeaderFile, "newName:"},
+      {R"cpp(//disallow as : count must match
+         @interface Foo {}
+         - (int)fo^o:(int)x;
+         @end
+       )cpp",
+       "invalid name: the chosen name \"MockName\" is not a valid identifier",
+       HeaderFile},
+      {R"cpp(
+         @interface Foo {}
+         - (int)[[o^ne]]:(int)one two:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "a:two:"},
+      {R"cpp(
+         @interface Foo {}
+         - (int)[[o^ne]]:(int)one [[two]]:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "a:b:"},
+      {R"cpp(
+         @interface Foo {}
+         - (int)o^ne:(int)one [[two]]:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "one:three:"},
+
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -1137,7 +1163,7 @@ TEST(RenameTest, Renameable) {
           int [[V^ar]];
         }
       )cpp",
-        nullptr, !HeaderFile},
+       nullptr, !HeaderFile},
   };
 
   for (const auto& Case : Cases) {
@@ -1778,8 +1804,8 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
   Annotations Code("[[😂]]");
   auto LSPRange = Code.range();
   llvm::StringRef FilePath = "/test/TestTU.cpp";
-  llvm::StringRef NewName = "abc";
-  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
+  llvm::SmallVector<llvm::StringRef, 2> NewNames = {"abc"};
+  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   ASSERT_EQ(1UL, Edit->Replacements.size());
   EXPECT_EQ(FilePath, Edit->Replacements.begin()->getFilePath());
@@ -1787,7 +1813,7 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
 
   // Test invalid range.
   LSPRange.end = {10, 0}; // out of range
-  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
+  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewNames);
   EXPECT_FALSE(Edit);
   EXPECT_THAT(llvm::toString(Edit.takeError()),
               testing::HasSubstr("fail to convert"));
@@ -1798,10 +1824,11 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
               [[range]]
       [[range]]
   )cpp");
-  Edit = buildRenameEdit(FilePath, T.code(), T.ranges(), NewName);
+  Edit =
+      buildRenameEdit(FilePath, T.code(), symbolRanges(T.ranges()), NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
-            expectedResult(T, NewName));
+            expectedResult(T, NewNames[0]));
 }
 
 TEST(CrossFileRenameTests, adjustRenameRanges) {
@@ -1855,8 +1882,9 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
-    auto ActualRanges = adjustRenameRanges(
-        Draft.code(), "x", Annotations(T.IndexedCode).ranges(), LangOpts);
+    auto ActualRanges = adjustRenameRanges(Draft.code(), "x",
+                                           Annotations(T.IndexedCode).ranges(),
+                                           LangOpts, std::nullopt);
     if (!ActualRanges)
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
     else
@@ -1970,11 +1998,11 @@ TEST(RangePatchingHeuristic, GetMappedRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.IndexedCode);
     auto Lexed = Annotations(T.LexedCode);
-    auto LexedRanges = Lexed.ranges();
-    std::vector<Range> ExpectedMatches;
+    auto LexedRanges = symbolRanges(Lexed.ranges());
+    std::vector<SymbolRange> ExpectedMatches;
     for (auto P : Lexed.points()) {
-      auto Match = llvm::find_if(LexedRanges, [&P](const Range& R) {
-        return R.start == P;
+      auto Match = llvm::find_if(LexedRanges, [&P](const SymbolRange &R) {
+        return R.range().start == P;
       });
       ASSERT_NE(Match, LexedRanges.end());
       ExpectedMatches.push_back(*Match);
@@ -2093,8 +2121,8 @@ TEST(CrossFileRenameTests, adjustmentCost) {
     std::vector<size_t> MappedIndex;
     for (size_t I = 0; I < C.ranges("lex").size(); ++I)
       MappedIndex.push_back(I);
-    EXPECT_EQ(renameRangeAdjustmentCost(C.ranges("idx"), C.ranges("lex"),
-                                        MappedIndex),
+    EXPECT_EQ(renameRangeAdjustmentCost(
+                  C.ranges("idx"), symbolRanges(C.ranges("lex")), MappedIndex),
               T.ExpectedCost);
   }
 }

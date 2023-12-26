@@ -565,7 +565,7 @@ TEST_F(SymbolCollectorTest, ObjCRefs) {
                             ElementsAre(isSpelled()))));
   EXPECT_THAT(Refs,
               Contains(Pair(findSymbol(Symbols, "Person::multiArg:method:").ID,
-                            ElementsAre(Not(isSpelled())))));
+                            ElementsAre(isSpelled()))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {

@@ -1436,6 +1436,14 @@ struct RenameParams {
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
 
+struct PrepareRenameResult {
+  /// Range of the string to rename.
+  Range range;
+  /// Placeholder text to use in the editor if non-empty.
+  std::string placeholder;
+};
+llvm::json::Value toJSON(const PrepareRenameResult &PRR);
+
 enum class DocumentHighlightKind { Text = 1, Read = 2, Write = 3 };
 
 /// A document highlight is a range inside a text document which deserves
