@@ -54,9 +54,11 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       break;
     case RISCV::VSLIDEUP_VI:
     case RISCV::VSLIDEDOWN_VI:
+      Cost += TLI->getVSlideVICost(VT);
+      break;
     case RISCV::VSLIDEUP_VX:
     case RISCV::VSLIDEDOWN_VX:
-      Cost += TLI->getVSlideCost(VT);
+      Cost += TLI->getVSlideVXCost(VT);
       break;
     case RISCV::VREDMAX_VS:
     case RISCV::VREDMIN_VS:
@@ -489,13 +491,17 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return LT.first *
            getRISCVInstructionCost(RISCV::VRGATHER_VI, LT.second, CostKind);
   }
-  case TTI::SK_Splice:
+  case TTI::SK_Splice: {
     // vslidedown+vslideup.
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
-    return LT.first *
-           getRISCVInstructionCost({RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VX},
-                                   LT.second, CostKind);
+    ArrayRef<unsigned> Opcodes;
+    if (Index >= 0)
+      Opcodes = {RISCV::VSLIDEDOWN_VI, RISCV::VSLIDEUP_VX};
+    else
+      Opcodes = {RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VI};
+    return LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+  }
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
     // * Illegal vector types
