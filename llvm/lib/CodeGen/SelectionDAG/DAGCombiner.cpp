@@ -26141,14 +26141,16 @@ SDValue DAGCombiner::visitFP_TO_FP16(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
+  auto Op = N->getOpcode();
+  assert((Op == ISD::FP16_TO_FP || Op == ISD::BF16_TO_FP) &&
+         "opcode should be FP16_TO_FP or BF16_TO_FP.");
   SDValue N0 = N->getOperand(0);
 
   // fold fp16_to_fp(op & 0xffff) -> fp16_to_fp(op)
   if (!TLI.shouldKeepZExtForFP16Conv() && N0->getOpcode() == ISD::AND) {
     ConstantSDNode *AndConst = getAsNonOpaqueConstant(N0.getOperand(1));
     if (AndConst && AndConst->getAPIntValue() == 0xffff) {
-      return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
-                         N0.getOperand(0));
+      return DAG.getNode(Op, SDLoc(N), N->getValueType(0), N0.getOperand(0));
     }
   }
 
