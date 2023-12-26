@@ -74,7 +74,7 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
 
 // Check the coefficients (in order) of two quasipolynomials.
 // Note that this is not a true equality check.
-inline void EXPECT_EQ_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
+inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
   EXPECT_EQ(a.getNumInputs(), b.getNumInputs());
 
   SmallVector<Fraction> aCoeffs = a.getCoefficients(),
