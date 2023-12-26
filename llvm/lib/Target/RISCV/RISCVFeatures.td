@@ -79,13 +79,6 @@ def HasStdExtZihintntl : Predicate<"Subtarget->hasStdExtZihintntl()">,
                                     AssemblerPredicate<(all_of FeatureStdExtZihintntl),
                                     "'Zihintntl' (Non-Temporal Locality Hints)">;
 
-def FeatureStdExtZicfiss
-    : SubtargetFeature<"experimental-zicfiss", "HasStdExtZicfiss", "true",
-                       "'Zicfiss' (Shadow stack)">;
-def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZicfiss),
-                                 "'Zicfiss' (Shadow stack)">;
-
 def FeatureStdExtZifencei
     : SubtargetFeature<"zifencei", "HasStdExtZifencei", "true",
                        "'Zifencei' (fence.i)">;
@@ -706,6 +699,14 @@ def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop"
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
                                AssemblerPredicate<(all_of FeatureStdExtZcmop),
                                "'Zcmop' (Compressed May-Be-Operations)">;
+
+def FeatureStdExtZicfiss
+    : SubtargetFeature<"experimental-zicfiss", "HasStdExtZicfiss", "true",
+                       "'Zicfiss' (Shadow stack)",
+                       [FeatureStdExtZicsr, FeatureStdExtZimop, FeatureStdExtZcmop]>;
+def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZicfiss),
+                                 "'Zicfiss' (Shadow stack)">;
 
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
