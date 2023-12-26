@@ -560,10 +560,12 @@ TEST_F(SymbolCollectorTest, ObjCRefs) {
                                   haveRanges(Main.ranges("talk")))));
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Person::say:").ID,
                                   haveRanges(Main.ranges("say")))));
-  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Person::categoryMethod").ID,
-                                  ElementsAre(isSpelled()))));
-  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Person::multiArg:method:").ID,
-                                  ElementsAre(Not(isSpelled())))));
+  EXPECT_THAT(Refs,
+              Contains(Pair(findSymbol(Symbols, "Person::categoryMethod").ID,
+                            ElementsAre(isSpelled()))));
+  EXPECT_THAT(Refs,
+              Contains(Pair(findSymbol(Symbols, "Person::multiArg:method:").ID,
+                            ElementsAre(Not(isSpelled())))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {
