@@ -929,7 +929,7 @@ constexpr std::array<unsigned, 6> SyscallArgumentRegisters{
 
 static void saveSyscallRegisters(std::vector<MCInst> &GeneratedCode,
                                  unsigned ArgumentCount) {
-  assert(ArgumentCount < 6 &&
+  assert(ArgumentCount <= 6 &&
          "System calls only X86-64 Linux can only take six arguments");
   // Preserve RCX and R11 (Clobbered by the system call).
   generateRegisterStackPush(X86::RCX, GeneratedCode);
@@ -943,7 +943,7 @@ static void saveSyscallRegisters(std::vector<MCInst> &GeneratedCode,
 
 static void restoreSyscallRegisters(std::vector<MCInst> &GeneratedCode,
                                     unsigned ArgumentCount) {
-  assert(ArgumentCount < 6 &&
+  assert(ArgumentCount <= 6 &&
          "System calls only X86-64 Linux can only take six arguments");
   // Restore the argument registers, in the opposite order of the way they are
   // saved.
