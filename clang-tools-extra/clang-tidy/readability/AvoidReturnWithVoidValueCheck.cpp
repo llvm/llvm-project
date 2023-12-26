@@ -24,6 +24,8 @@ void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
 void AvoidReturnWithVoidValueCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
+  if (IgnoreMacros && VoidReturn->getBeginLoc().isMacroID())
+    return;
   diag(VoidReturn->getBeginLoc(), "return statement within a void function "
                                   "should not have a specified return value");
 }

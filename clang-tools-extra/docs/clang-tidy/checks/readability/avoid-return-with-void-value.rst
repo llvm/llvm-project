@@ -34,3 +34,11 @@ returns (nothing).
 
 In C, the same issue is detected by the compiler if the ``-Wpedantic`` mode
 is enabled.
+
+Options
+-------
+
+.. option::  IgnoreMacros
+
+  The value ``false`` specifies that return statements expanded
+  from macros are not checked. The default value is ``true``.

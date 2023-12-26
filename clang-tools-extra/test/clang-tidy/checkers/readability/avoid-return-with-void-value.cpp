@@ -1,4 +1,7 @@
 // RUN: %check_clang_tidy %s readability-avoid-return-with-void-value %t
+// RUN: %check_clang_tidy -check-suffixes=,INCLUDE-MACROS %s readability-avoid-return-with-void-value %t \
+// RUN:     -- -config="{CheckOptions: [{key: readability-avoid-return-with-void-value.IgnoreMacros, value: false}]}" \
+// RUN:     --
 
 void f1();
 
@@ -31,4 +34,11 @@ int f8() { return f7(); }
 void f9() {
     return (void)f7();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+}
+
+#define RETURN_VOID return (void)1
+
+void f10() {
+    RETURN_VOID;
+    // CHECK-MESSAGES-INCLUDE-MACROS: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
 }
