@@ -649,7 +649,7 @@ auto RealOutputEditing<KIND>::ConvertToHexadecimal(
     // x_.binaryPrecision is constant, so / can be used for readability.
     int shift{x_.binaryPrecision - 4};
     typename BinaryFloatingPoint::RawType one{1};
-    auto remaining{(one << shift) - one};
+    auto remaining{(one << x_.binaryPrecision) - one};
     for (int digits{0}; digits < significantDigits; ++digits) {
       if ((flags & decimal::Minimize) && !(fraction & remaining)) {
         break;
@@ -682,7 +682,8 @@ bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
     flags |= decimal::AlwaysSign;
   }
   int editWidth{edit.width.value_or(0)}; // 'w' field
-  if (editWidth == 0 && !edit.digits) { // EX0 (no .d)
+  if ((editWidth == 0 && !edit.digits) || editDigits == 0) {
+    // EX0 or EXw.0
     flags |= decimal::Minimize;
     significantDigits = 28; // enough for 128-bit F.P.
   }

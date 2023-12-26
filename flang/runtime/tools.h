@@ -94,6 +94,31 @@ static inline RT_API_ATTRS std::int64_t GetInt64(
   }
 }
 
+static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
+    const char *p, std::size_t bytes, Terminator &terminator) {
+  switch (bytes) {
+  case 1:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(p);
+  case 2:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 2> *>(p);
+  case 4:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 4> *>(p);
+  case 8:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(p);
+  case 16: {
+    using Int128 = CppTypeFor<TypeCategory::Integer, 16>;
+    auto n{*reinterpret_cast<const Int128 *>(p)};
+    std::int64_t result = n;
+    if (result == n) {
+      return result;
+    }
+    return std::nullopt;
+  }
+  default:
+    terminator.Crash("GetInt64Safe: no case for %zd bytes", bytes);
+  }
+}
+
 template <typename INT>
 inline RT_API_ATTRS bool SetInteger(INT &x, int kind, std::int64_t value) {
   switch (kind) {
