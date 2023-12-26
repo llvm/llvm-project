@@ -14,25 +14,20 @@
 #include "check_assertion.h"
 #include <ranges>
 
-void cannot_dereference_at_the_end_iterator() {
-  int range[]   = {1, 2, 3};
-  auto striv    = std::ranges::views::stride(range, 3);
-  auto striv_it = striv.begin();
-  striv_it++;
-  TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
-}
-
-void cannot_dereference_past_the_end_iterator() {
-  int range[]   = {1, 2, 3};
-  auto striv    = std::ranges::views::stride(range, 4);
-  auto striv_it = striv.begin();
-  striv_it++;
-  TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
-}
-
 int main(int, char**) {
-  cannot_dereference_at_the_end_iterator();
-  cannot_dereference_past_the_end_iterator();
-
+  {
+    int range[]   = {1, 2, 3};
+    auto striv    = std::ranges::views::stride(range, 3);
+    auto striv_it = striv.begin();
+    striv_it++;
+    TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
+  }
+  {
+    int range[]   = {1, 2, 3};
+    auto striv    = std::ranges::views::stride(range, 4);
+    auto striv_it = striv.begin();
+    striv_it++;
+    TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
+  }
   return 0;
 }
