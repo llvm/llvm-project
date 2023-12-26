@@ -14,14 +14,14 @@
 //   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
 
 #include <algorithm>
-#include <format>
 #include <cassert>
+#include <format>
 #include <type_traits>
 
 #include "constexpr_char_traits.h"
-#include "test_macros.h"
 #include "make_string.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
 
