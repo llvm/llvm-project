@@ -174,7 +174,9 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
   const auto NameKind = Name.getNameKind();
   if (NameKind != DeclarationName::Identifier &&
-      NameKind != DeclarationName::CXXConstructorName)
+      NameKind != DeclarationName::CXXConstructorName &&
+      NameKind != DeclarationName::ObjCZeroArgSelector &&
+      NameKind != DeclarationName::ObjCOneArgSelector)
     return false;
   const auto &AST = ND.getASTContext();
   const auto &SM = AST.getSourceManager();
@@ -183,6 +185,8 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   if (clang::Lexer::getRawToken(Loc, Tok, SM, LO))
     return false;
   auto StrName = Name.getAsString();
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+    StrName = MD->getSelector().getNameForSlot(0).str();
   return clang::Lexer::getSpelling(Tok, SM, LO) == StrName;
 }
 } // namespace
