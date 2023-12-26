@@ -256,12 +256,17 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   if (guard != 0) {
     flags |= Inexact;
   }
-  if (fraction == 0 && guard <= oneHalf) {
-    if ((!isNegative && rounding == RoundUp) ||
-        (isNegative && rounding == RoundDown)) {
-      // round to minimum nonzero value
-    } else {
-      return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
+  if (fraction == 0) {
+    if (guard <= oneHalf) {
+      if ((!isNegative && rounding == RoundUp) ||
+          (isNegative && rounding == RoundDown)) {
+        // round to minimum nonzero value
+      } else { // round to zero
+        if (guard != 0) {
+          flags |= Underflow;
+        }
+        return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
+      }
     }
   } else {
     // The value is nonzero; normalize it.
@@ -301,8 +306,10 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   }
   if (expo == 1 && fraction < topBit) {
     expo = 0; // subnormal
-  }
-  if (expo >= Binary::maxExponent) {
+    flags |= Underflow;
+  } else if (expo == 0) {
+    flags |= Underflow;
+  } else if (expo >= Binary::maxExponent) {
     expo = Binary::maxExponent; // Inf
     flags |= Overflow;
     if constexpr (Binary::bits == 80) { // x87
@@ -338,11 +345,15 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   // Sanity checks for ridiculous exponents
   static constexpr int crazy{2 * Real::decimalRange + log10Radix};
   if (exponent_ < -crazy) {
+    enum ConversionResultFlags flags {
+      static_cast<enum ConversionResultFlags>(Inexact | Underflow)
+    };
     if ((!isNegative_ && rounding_ == RoundUp) ||
         (isNegative_ && rounding_ == RoundDown)) {
-      return {Real{Raw{1} | SignBit()}}; // return least nonzero value
+      // return least nonzero value
+      return {Real{Raw{1} | SignBit()}, flags};
     } else { // underflow to +/-0.
-      return {Real{SignBit()}, Inexact};
+      return {Real{SignBit()}, flags};
     }
   } else if (exponent_ > crazy) { // overflow to +/-Inf.
     return {Real{Infinity()}, Overflow};
