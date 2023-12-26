@@ -17,7 +17,9 @@ namespace clang::tidy::readability {
 
 void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      returnStmt(hasReturnValue(hasType(voidType()))).bind("void_return"),
+      returnStmt(hasReturnValue(hasType(voidType())),
+                 optionally(hasParent(compoundStmt().bind("compound_parent"))))
+          .bind("void_return"),
       this);
 }
 
@@ -25,6 +27,8 @@ void AvoidReturnWithVoidValueCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
   if (IgnoreMacros && VoidReturn->getBeginLoc().isMacroID())
+    return;
+  if (!StrictMode && !Result.Nodes.getNodeAs<CompoundStmt>("compound_parent"))
     return;
   diag(VoidReturn->getBeginLoc(), "return statement within a void function "
                                   "should not have a specified return value");
