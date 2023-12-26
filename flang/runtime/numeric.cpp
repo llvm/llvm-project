@@ -261,12 +261,10 @@ template <int PREC, typename T> inline RT_API_ATTRS T Spacing(T x) {
 // NEAREST (16.9.139)
 template <int PREC, typename T>
 inline RT_API_ATTRS T Nearest(T x, bool positive) {
-  auto spacing{Spacing<PREC>(x)};
-  if (x == 0) {
-    auto least{std::numeric_limits<T>::denorm_min()};
-    return positive ? least : -least;
+  if (positive) {
+    return std::nextafter(x, std::numeric_limits<T>::infinity());
   } else {
-    return positive ? x + spacing : x - spacing;
+    return std::nextafter(x, -std::numeric_limits<T>::infinity());
   }
 }
 
