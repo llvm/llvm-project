@@ -437,7 +437,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v0, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_pk_sub_u16 v0, v0, 1 op_sel_hi:[1,0]
+; GFX9-NEXT:    v_pk_add_u16 v0, v0, -1
 ; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -449,7 +449,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_pk_sub_u16 v0, v0, 1 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, -1
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -460,7 +460,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_pk_sub_u16 v0, v0, 1 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, -1
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -566,8 +566,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v0, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s2, 1.0
-; GFX9-NEXT:    v_pk_add_u16 v0, v0, s2
+; GFX9-NEXT:    v_pk_add_u16 v0, v0, 1.0
 ; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -579,7 +578,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_pk_add_u16 v0, 0x3f80, v0 op_sel:[1,0] op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, 1.0
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -590,7 +589,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_pk_add_u16 v0, 0x3f80, v0 op_sel:[1,0] op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, 1.0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1020,7 +1019,6 @@ define <2 x i16> @add_inline_imm_neg1_0(<2 x i16> %x) {
   ret <2 x i16> %y
 }
 
-; TODO: Translating this to v_pk_sub_u16 v0, v0, -1 is incorrect!
 define <2 x i16> @add_inline_imm_1_0(<2 x i16> %x) {
 ; VI-LABEL: add_inline_imm_1_0:
 ; VI:       ; %bb.0:
@@ -1033,19 +1031,19 @@ define <2 x i16> @add_inline_imm_1_0(<2 x i16> %x) {
 ; GFX9-LABEL: add_inline_imm_1_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_sub_u16 v0, v0, -1
+; GFX9-NEXT:    v_pk_add_u16 v0, v0, 1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: add_inline_imm_1_0:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_sub_u16 v0, v0, -1
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, 1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: add_inline_imm_1_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_sub_u16 v0, v0, -1
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, 1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %y = add <2 x i16> %x, <i16 1, i16 0>
   ret <2 x i16> %y
