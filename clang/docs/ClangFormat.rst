@@ -144,6 +144,7 @@ names. It has the following format:
 - Patterns follow the rules specified in POSIX 2.13.1, 2.13.2, and Rule 1 of
 2.13.3.
 - A pattern is negated if it starts with a bang (``!``).
+
 To match all files in a directory, use e.g. ``foo/bar/*``. To match all files in
 the directory of the ``.clang-format-ignore`` file, use ``*``.
 Multiple ``.clang-format-ignore`` files are supported similar to the

@@ -581,14 +581,15 @@ static int dumpConfig(bool IsSTDIN) {
 // - A pattern is relative to the directory of the .clang-format-ignore file (or
 //   the root directory if the pattern starts with a slash).
 // - A pattern is negated if it starts with a bang (`!`).
-static bool isIgnored(const StringRef FilePath) {
-  if (!llvm::sys::fs::is_regular_file(FilePath))
+static bool isIgnored(StringRef FilePath) {
+  using namespace llvm::sys::fs;
+  if (!is_regular_file(FilePath))
     return false;
 
   using namespace llvm::sys::path;
-  SmallString<128> Path, AbsPath{convert_to_slash(FilePath)};
+  SmallString<128> Path, AbsPath{FilePath};
 
-  llvm::vfs::getRealFileSystem()->makeAbsolute(AbsPath);
+  make_absolute(AbsPath);
   remove_dots(AbsPath, /*remove_dot_dot=*/true);
 
   StringRef IgnoreDir{AbsPath};
@@ -599,11 +600,13 @@ static bool isIgnored(const StringRef FilePath) {
 
     Path = IgnoreDir;
     append(Path, ".clang-format-ignore");
-  } while (!llvm::sys::fs::is_regular_file(Path));
+  } while (!is_regular_file(Path));
 
   std::ifstream IgnoreFile{Path.c_str()};
   if (!IgnoreFile.good())
     return false;
+
+  AbsPath = convert_to_slash(AbsPath);
 
   bool HasMatch = false;
   for (std::string Pattern; std::getline(IgnoreFile, Pattern);) {
@@ -623,7 +626,7 @@ static bool isIgnored(const StringRef FilePath) {
       Path = IgnoreDir;
       append(Path, Pattern);
       remove_dots(Path, /*remove_dot_dot=*/true);
-      Pattern = Path.str();
+      Pattern = convert_to_slash(Path);
     }
 
     if (clang::format::matchFilePath(Pattern, AbsPath.str()) == !IsNegated) {
