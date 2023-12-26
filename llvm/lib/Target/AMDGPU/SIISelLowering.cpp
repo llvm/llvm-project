@@ -540,10 +540,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        MVT::f16, Custom);
 
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
-
-    setOperationAction(
-        {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP},
-        MVT::f16, Promote);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
 
     // F16 - VOP2 Actions.
     setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, MVT::f16, Expand);
@@ -762,6 +759,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
+
+  if (Subtarget->hasPrefetch())
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget->hasIEEEMinMax())
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
@@ -1046,12 +1046,20 @@ static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
 MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
   if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
     return MVT::v5i32;
+  if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+      DL.getPointerSizeInBits(AS) == 192)
+    return MVT::v6i32;
   return AMDGPUTargetLowering::getPointerTy(DL, AS);
 }
 /// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
 /// v8i32 when padding is added.
+/// The in-memory representation of a p9 is {p8, i32, i32}, which is
+/// also v8i32 with padding.
 MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
-  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+  if ((AMDGPUAS::BUFFER_FAT_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 160) ||
+      (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 192))
     return MVT::v8i32;
   return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
 }
@@ -1134,11 +1142,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
-      // XXX - Should this be volatile without known ordering?
-      Info.flags |= MachineMemOperand::MOVolatile;
-
       switch (IntrID) {
       default:
+        // XXX - Should this be volatile without known ordering?
+        Info.flags |= MachineMemOperand::MOVolatile;
         break;
       case Intrinsic::amdgcn_raw_buffer_load_lds:
       case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
@@ -1146,6 +1153,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
         unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
         Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
+        Info.ptrVal = CI.getArgOperand(1);
         return true;
       }
       }
@@ -1230,9 +1238,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fadd:
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1274,8 +1286,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_VOID;
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
     Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
-                  MachineMemOperand::MOVolatile;
+    Info.ptrVal = CI.getArgOperand(1);
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
@@ -1315,6 +1327,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_global_atomic_csub: {
@@ -1412,7 +1426,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE) {
+      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
+      AS == AMDGPUAS::BUFFER_STRIDED_POINTER) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -3869,6 +3884,23 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
   return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
 }
 
+SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  if (Op->isDivergent())
+    return SDValue();
+
+  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
+  case AMDGPUAS::FLAT_ADDRESS:
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    break;
+  default:
+    return SDValue();
+  }
+
+  return Op;
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5417,6 +5449,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
+  case ISD::PREFETCH:
+    return lowerPREFETCH(Op, DAG);
   }
   return SDValue();
 }
@@ -8642,8 +8676,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax: {
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     MemSDNode *M = cast<MemSDNode>(Op);
     SDValue Ops[] = {
       M->getOperand(0), // Chain
@@ -8653,12 +8691,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Opcode = 0;
     switch (IntrID) {
     case Intrinsic::amdgcn_global_atomic_fmin:
-    case Intrinsic::amdgcn_flat_atomic_fmin: {
+    case Intrinsic::amdgcn_global_atomic_fmin_num:
+    case Intrinsic::amdgcn_flat_atomic_fmin:
+    case Intrinsic::amdgcn_flat_atomic_fmin_num: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMIN;
       break;
     }
     case Intrinsic::amdgcn_global_atomic_fmax:
-    case Intrinsic::amdgcn_flat_atomic_fmax: {
+    case Intrinsic::amdgcn_global_atomic_fmax_num:
+    case Intrinsic::amdgcn_flat_atomic_fmax:
+    case Intrinsic::amdgcn_flat_atomic_fmax_num: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMAX;
       break;
     }
@@ -9186,7 +9228,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
 
     MachinePointerInfo StorePtrI = LoadPtrI;
-    StorePtrI.V = nullptr;
+    LoadPtrI.V = PoisonValue::get(
+        PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
+    LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
 
     auto F = LoadMMO->getFlags() &
@@ -9264,6 +9308,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
     LoadPtrI.Offset = Op->getConstantOperandVal(5);
     MachinePointerInfo StorePtrI = LoadPtrI;
+    LoadPtrI.V = PoisonValue::get(
+        PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
     LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
     auto F = LoadMMO->getFlags() &

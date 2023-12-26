@@ -833,6 +833,8 @@ public:
 
   bool hasInstPrefetch() const { return getGeneration() >= GFX10; }
 
+  bool hasPrefetch() const { return GFX12Insts; }
+
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 

@@ -1978,6 +1978,18 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     TypeAliasTemplateDecl *D1,
+                                     TypeAliasTemplateDecl *D2) {
+  // Check template parameters.
+  if (!IsTemplateDeclCommonStructurallyEquivalent(Context, D1, D2))
+    return false;
+
+  // Check the templated declaration.
+  return IsStructurallyEquivalent(Context, D1->getTemplatedDecl(),
+                                  D2->getTemplatedDecl());
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      ConceptDecl *D1,
                                      ConceptDecl *D2) {
   // Check template parameters.

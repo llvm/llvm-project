@@ -168,6 +168,11 @@ New checks
   extracted from an optional-like type and then used to create a new instance
   of the same optional-like type.
 
+- New :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check.
+
+  Warns when a local non trivial variable is unused within a function.
+
 - New :doc:`cppcoreguidelines-no-suspend-with-lock
   <clang-tidy/checks/cppcoreguidelines/no-suspend-with-lock>` check.
 
@@ -452,6 +457,10 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
+
+- Improved :doc:`readability-simplify-subscript-expr
+  <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
+  the default value of the `Types` option to include ``std::span``.
 
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to

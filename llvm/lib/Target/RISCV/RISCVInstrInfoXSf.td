@@ -349,22 +349,31 @@ multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
       : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
 }
 
-multiclass VPseudoSiFiveVQMACC<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
   foreach m = MxListVF8 in
+    let VLMul = m.value in
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
 }
 
+multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
+  foreach i = 0-3 in
+    let VLMul = MxListVF4[i].value in
+    defm NAME : VPseudoSiFiveVMACC<MxListVF4[i].MX, MxListVF8[i].vrclass,
+                                   MxListVF4[i].vrclass, Constraint>;
+}
+
 multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
-  foreach m = MxListFW in
+  foreach m = MxListVF2 in
+    let VLMul = m.value in
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
 }
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
-  foreach m = MxListVF4 in
+  foreach i = [0, 1, 2, 3, 4] in
     let hasSideEffects = 0 in
-      defm "Pseudo" # NAME : VPseudoBinaryRoundingMode<!if(!eq(m.vrclass, VRM8),
-                                                           VRM2, VR),
-                                                       m.vrclass, FPR32, m,
+      defm "Pseudo" # NAME : VPseudoBinaryRoundingMode<MxListW[i].vrclass,
+                                                       MxListVF4[i].vrclass,
+                                                       FPR32, MxListW[i],
                                                        Constraint, /*sew*/0,
                                                        UsesVXRM=0>;
 }
@@ -398,17 +407,17 @@ let Predicates = [HasVendorXSfvcp] in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod] in {
-  defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACC;
-  defm VQMACC_2x8x2   : VPseudoSiFiveVQMACC;
-  defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACC;
-  defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACC;
+  defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACCDOD;
+  defm VQMACC_2x8x2   : VPseudoSiFiveVQMACCDOD;
+  defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACCDOD;
+  defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACCDOD;
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq] in {
-  defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACC;
-  defm VQMACC_4x8x4   : VPseudoSiFiveVQMACC;
-  defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACC;
-  defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACC;
+  defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACCQOQ;
+  defm VQMACC_4x8x4   : VPseudoSiFiveVQMACCQOQ;
+  defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACCQOQ;
+  defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACCQOQ;
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq] in {
@@ -564,16 +573,25 @@ multiclass VPatVMACC<string intrinsic, string instruction, string kind,
   }
 }
 
-defset list<VTypeInfoToWide> VQMACCInfoPairs = {
+defset list<VTypeInfoToWide> VQMACCDODInfoPairs = {
   def : VTypeInfoToWide<VI8M1, VI32M1>;
   def : VTypeInfoToWide<VI8M2, VI32M2>;
   def : VTypeInfoToWide<VI8M4, VI32M4>;
   def : VTypeInfoToWide<VI8M8, VI32M8>;
 }
 
-multiclass VPatVQMACC<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, VQMACCInfoPairs, vint8m1_t>;
+defset list<VTypeInfoToWide> VQMACCQOQInfoPairs = {
+   def : VTypeInfoToWide<VI8MF2, VI32M1>;
+   def : VTypeInfoToWide<VI8M1, VI32M2>;
+   def : VTypeInfoToWide<VI8M2, VI32M4>;
+   def : VTypeInfoToWide<VI8M4, VI32M8>;
+}
 
+multiclass VPatVQMACCDOD<string intrinsic, string instruction, string kind>
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCDODInfoPairs, vint8m1_t>;
+
+multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
 
 multiclass VPatVFWMACC<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, AllWidenableBFloatToFloatVectors,
@@ -592,7 +610,7 @@ multiclass VPatVFNRCLIP<string intrinsic, string instruction> {
     defvar Vti = pair.Vti;
     defvar Wti = pair.Wti;
     defm : VPatBinaryRoundingMode<"int_riscv_sf_" # intrinsic,
-                                  "Pseudo" # instruction # "_" # Wti.LMul.MX,
+                                  "Pseudo" # instruction # "_" # Vti.LMul.MX,
                                   Vti.Vector, Wti.Vector, Wti.Scalar, Vti.Mask,
                                   Vti.Log2SEW, Vti.RegClass,
                                   Wti.RegClass, Wti.ScalarRegClass>;
@@ -635,17 +653,17 @@ let Predicates = [HasVendorXSfvcp] in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod] in {
-  defm : VPatVQMACC<"vqmaccu_2x8x2", "VQMACCU", "2x8x2">;
-  defm : VPatVQMACC<"vqmacc_2x8x2", "VQMACC", "2x8x2">;
-  defm : VPatVQMACC<"vqmaccus_2x8x2", "VQMACCUS", "2x8x2">;
-  defm : VPatVQMACC<"vqmaccsu_2x8x2", "VQMACCSU", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccu_2x8x2", "VQMACCU", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmacc_2x8x2", "VQMACC", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccus_2x8x2", "VQMACCUS", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccsu_2x8x2", "VQMACCSU", "2x8x2">;
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq] in {
-  defm : VPatVQMACC<"vqmaccu_4x8x4", "VQMACCU", "4x8x4">;
-  defm : VPatVQMACC<"vqmacc_4x8x4", "VQMACC", "4x8x4">;
-  defm : VPatVQMACC<"vqmaccus_4x8x4", "VQMACCUS", "4x8x4">;
-  defm : VPatVQMACC<"vqmaccsu_4x8x4", "VQMACCSU", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccu_4x8x4", "VQMACCU", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmacc_4x8x4", "VQMACC", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccus_4x8x4", "VQMACCUS", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccsu_4x8x4", "VQMACCSU", "4x8x4">;
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq] in {

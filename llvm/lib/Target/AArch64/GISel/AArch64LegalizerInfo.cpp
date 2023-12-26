@@ -758,18 +758,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
       .customIf([](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() == 128;
       })
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
        G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
        G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({p0});
 

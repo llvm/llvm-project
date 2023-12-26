@@ -198,4 +198,3 @@ subroutine acc_data
 ! CHECK-NOT: acc.data
 
 end subroutine acc_data
-

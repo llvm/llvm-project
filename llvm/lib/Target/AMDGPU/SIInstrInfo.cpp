@@ -245,6 +245,10 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
   if (!get(Opc0).mayLoad() || !get(Opc1).mayLoad())
     return false;
 
+  // A mayLoad instruction without a def is not a load. Likely a prefetch.
+  if (!get(Opc0).getNumDefs() || !get(Opc1).getNumDefs())
+    return false;
+
   if (isDS(Opc0) && isDS(Opc1)) {
 
     // FIXME: Handle this case:
@@ -484,6 +488,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     Offset = OffsetOp ? OffsetOp->getImm() : 0;
     // Get appropriate operand, and compute width accordingly.
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst);
+    if (DataOpIdx == -1)
+      return false;
     Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
@@ -3652,6 +3658,9 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (isLDSDMA(MIa) || isLDSDMA(MIb))
+    return false;
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,
@@ -4970,6 +4979,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand *Offset = getNamedOperand(MI, AMDGPU::OpName::offset);
     if (Offset->getImm() != 0) {
       ErrInfo = "subtarget does not support offsets in flat instructions";
+      return false;
+    }
+  }
+
+  if (isDS(MI) && !ST.hasGDS()) {
+    const MachineOperand *GDSOp = getNamedOperand(MI, AMDGPU::OpName::gds);
+    if (GDSOp && GDSOp->getImm() != 0) {
+      ErrInfo = "GDS is not supported on this subtarget";
       return false;
     }
   }
@@ -6895,6 +6912,15 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     Inst.eraseFromParent();
     return;
 
+  case AMDGPU::S_FLBIT_I32_B64:
+    splitScalar64BitCountOp(Worklist, Inst, AMDGPU::V_FFBH_U32_e32);
+    Inst.eraseFromParent();
+    return;
+  case AMDGPU::S_FF1_I32_B64:
+    splitScalar64BitCountOp(Worklist, Inst, AMDGPU::V_FFBL_B32_e32);
+    Inst.eraseFromParent();
+    return;
+
   case AMDGPU::S_LSHL_B32:
     if (ST.hasOnlyRevVALUShifts()) {
       NewOpcode = AMDGPU::V_LSHLREV_B32_e64;
@@ -7828,6 +7854,61 @@ void SIInstrInfo::splitScalar64BitBFE(SIInstrWorklist &Worklist,
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
+void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
+                                          MachineInstr &Inst, unsigned Opcode,
+                                          MachineDominatorTree *MDT) const {
+  //  (S_FLBIT_I32_B64 hi:lo) ->
+  // -> (umin (V_FFBH_U32_e32 hi), (uaddsat (V_FFBH_U32_e32 lo), 32))
+  //  (S_FF1_I32_B64 hi:lo) ->
+  // ->(umin (uaddsat (V_FFBL_B32_e32 hi), 32) (V_FFBL_B32_e32 lo))
+
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineBasicBlock::iterator MII = Inst;
+  const DebugLoc &DL = Inst.getDebugLoc();
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src = Inst.getOperand(1);
+
+  const MCInstrDesc &InstDesc = get(Opcode);
+
+  bool IsCtlz = Opcode == AMDGPU::V_FFBH_U32_e32;
+  unsigned OpcodeAdd =
+      ST.hasAddNoCarry() ? AMDGPU::V_ADD_U32_e64 : AMDGPU::V_ADD_CO_U32_e32;
+
+  const TargetRegisterClass *SrcRC =
+      Src.isReg() ? MRI.getRegClass(Src.getReg()) : &AMDGPU::SGPR_32RegClass;
+  const TargetRegisterClass *SrcSubRC =
+      RI.getSubRegisterClass(SrcRC, AMDGPU::sub0);
+
+  MachineOperand SrcRegSub0 =
+      buildExtractSubRegOrImm(MII, MRI, Src, SrcRC, AMDGPU::sub0, SrcSubRC);
+  MachineOperand SrcRegSub1 =
+      buildExtractSubRegOrImm(MII, MRI, Src, SrcRC, AMDGPU::sub1, SrcSubRC);
+
+  Register MidReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register MidReg2 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register MidReg3 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register MidReg4 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  BuildMI(MBB, MII, DL, InstDesc, MidReg1).add(SrcRegSub0);
+
+  BuildMI(MBB, MII, DL, InstDesc, MidReg2).add(SrcRegSub1);
+
+  BuildMI(MBB, MII, DL, get(OpcodeAdd), MidReg3)
+      .addReg(IsCtlz ? MidReg1 : MidReg2)
+      .addImm(32)
+      .addImm(1); // enable clamp
+
+  BuildMI(MBB, MII, DL, get(AMDGPU::V_MIN_U32_e64), MidReg4)
+      .addReg(MidReg3)
+      .addReg(IsCtlz ? MidReg2 : MidReg1);
+
+  MRI.replaceRegWith(Dest.getReg(), MidReg4);
+
+  addUsersToMoveToVALUWorklist(MidReg4, MRI, Worklist);
+}
+
 void SIInstrInfo::addUsersToMoveToVALUWorklist(
     Register DstReg, MachineRegisterInfo &MRI,
     SIInstrWorklist &Worklist) const {
@@ -8689,16 +8770,13 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
        AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
     return false;
 
-  bool AllowNegative = FlatVariant != SIInstrFlags::FLAT;
-  if (ST.hasNegativeScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch)
-    AllowNegative = false;
   if (ST.hasNegativeUnalignedScratchOffsetBug() &&
       FlatVariant == SIInstrFlags::FlatScratch && Offset < 0 &&
       (Offset % 4) != 0) {
     return false;
   }
 
+  bool AllowNegative = allowNegativeFlatOffset(FlatVariant);
   unsigned N = AMDGPU::getNumFlatOffsetBits(ST);
   return isIntN(N, Offset) && (AllowNegative || Offset >= 0);
 }
@@ -8709,12 +8787,10 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
                              uint64_t FlatVariant) const {
   int64_t RemainderOffset = COffsetVal;
   int64_t ImmField = 0;
-  bool AllowNegative = FlatVariant != SIInstrFlags::FLAT;
-  if (ST.hasNegativeScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch)
-    AllowNegative = false;
 
+  bool AllowNegative = allowNegativeFlatOffset(FlatVariant);
   const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(ST) - 1;
+
   if (AllowNegative) {
     // Use signed division by a power of two to truncate towards 0.
     int64_t D = 1LL << NumBits;
@@ -8736,6 +8812,14 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
   assert(isLegalFLATOffset(ImmField, AddrSpace, FlatVariant));
   assert(RemainderOffset + ImmField == COffsetVal);
   return {ImmField, RemainderOffset};
+}
+
+bool SIInstrInfo::allowNegativeFlatOffset(uint64_t FlatVariant) const {
+  if (ST.hasNegativeScratchOffsetBug() &&
+      FlatVariant == SIInstrFlags::FlatScratch)
+    return false;
+
+  return FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
 }
 
 static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {

@@ -61,7 +61,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Hard to round value(s).
   using fputil::round_result_slightly_up;
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   // log2(1.0f) = 0.0f.
   if (LIBC_UNLIKELY(x_u == 0x3f80'0000U))

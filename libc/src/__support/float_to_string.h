@@ -382,10 +382,10 @@ LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
                                (1000000000 * shifted));
 }
 
-LIBC_INLINE uint32_t mul_shift_mod_1e9(const FloatProp::UIntType mantissa,
+LIBC_INLINE uint32_t mul_shift_mod_1e9(const FloatProp::StorageType mantissa,
                                        const cpp::UInt<MID_INT_SIZE> &large,
                                        const int32_t shift_amount) {
-  cpp::UInt<MID_INT_SIZE + FloatProp::UINTTYPE_BITS> val(large);
+  cpp::UInt<MID_INT_SIZE + FloatProp::STORAGE_LEN> val(large);
   val = (val * mantissa) >> shift_amount;
   return static_cast<uint32_t>(
       val.div_uint32_times_pow_2(1000000000, 0).value());
@@ -414,10 +414,10 @@ class FloatToString {
   fputil::FPBits<T> float_bits;
   bool is_negative;
   int exponent;
-  FloatProp::UIntType mantissa;
+  FloatProp::StorageType mantissa;
 
-  static constexpr int MANT_WIDTH = fputil::FPBits<T>::MANTISSA_WIDTH;
-  static constexpr int EXP_BIAS = fputil::FPBits<T>::EXPONENT_BIAS;
+  static constexpr int FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
+  static constexpr int EXP_BIAS = fputil::FPBits<T>::EXP_BIAS;
 
 public:
   LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
@@ -426,7 +426,7 @@ public:
     mantissa = float_bits.get_explicit_mantissa();
 
     // Adjust for the width of the mantissa.
-    exponent -= MANT_WIDTH;
+    exponent -= FRACTION_LEN;
 
     // init_convert();
   }
@@ -440,7 +440,7 @@ public:
   // get_block returns an integer that represents the digits in the requested
   // block.
   LIBC_INLINE constexpr BlockInt get_positive_block(int block_index) {
-    if (exponent >= -MANT_WIDTH) {
+    if (exponent >= -FRACTION_LEN) {
       // idx is ceil(exponent/16) or 0 if exponent is negative. This is used to
       // find the coarse section of the POW10_SPLIT table that will be used to
       // calculate the 9 digit window, as well as some other related values.
@@ -567,12 +567,13 @@ public:
   }
 
   LIBC_INLINE constexpr size_t get_positive_blocks() {
-    if (exponent >= -MANT_WIDTH) {
+    if (exponent >= -FRACTION_LEN) {
       const uint32_t idx =
           exponent < 0
               ? 0
               : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-      const uint32_t len = internal::length_for_num(idx * IDX_SIZE, MANT_WIDTH);
+      const uint32_t len =
+          internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
       return len;
     } else {
       return 0;
@@ -608,12 +609,12 @@ public:
 
 template <>
 LIBC_INLINE constexpr size_t FloatToString<long double>::get_positive_blocks() {
-  if (exponent >= -MANT_WIDTH) {
+  if (exponent >= -FRACTION_LEN) {
     const uint32_t idx =
         exponent < 0
             ? 0
             : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-    const uint32_t len = internal::length_for_num(idx * IDX_SIZE, MANT_WIDTH);
+    const uint32_t len = internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
     return len;
   } else {
     return 0;
@@ -639,7 +640,7 @@ LIBC_INLINE constexpr bool FloatToString<long double>::is_lowest_block(size_t) {
 template <>
 LIBC_INLINE constexpr BlockInt
 FloatToString<long double>::get_positive_block(int block_index) {
-  if (exponent >= -MANT_WIDTH) {
+  if (exponent >= -FRACTION_LEN) {
 
     // idx is ceil(exponent/16) or 0 if exponent is negative. This is used to
     // find the coarse section of the POW10_SPLIT table that will be used to

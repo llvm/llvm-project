@@ -84,7 +84,7 @@ static bool isStdTemplate(ConstString type_name, llvm::StringRef type) {
   // The type name may be prefixed with `std::__<inline-namespace>::`.
   if (name.consume_front("std::"))
     consumeInlineNamespace(name);
-  return name.consume_front(type) && name.startswith("<");
+  return name.consume_front(type) && name.starts_with("<");
 }
 
 static bool isUnorderedMap(ConstString type_name) {

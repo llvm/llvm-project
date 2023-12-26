@@ -1772,6 +1772,23 @@ define <2 x i64> @cmltz2xi64(<2 x i64> %A) {
   ret <2 x i64> %tmp4
 }
 
+define <8 x i1> @not_cmle8xi8(<8 x i8> %0) {
+; CHECK-SD-LABEL: not_cmle8xi8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v1.2s, #1
+; CHECK-SD-NEXT:    cmgt v0.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: not_cmle8xi8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI133_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI133_0]
+; CHECK-GI-NEXT:    cmgt v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
+  %cmp.i = icmp slt <8 x i8> %0, <i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0>
+  ret <8 x i1> %cmp.i
+}
+
 define <8 x i8> @cmltz8xi8_alt(<8 x i8> %A) {
 ; CHECK-SD-LABEL: cmltz8xi8_alt:
 ; CHECK-SD:       // %bb.0:
@@ -2065,8 +2082,8 @@ define <2 x i64> @cmhsz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmhsz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI153_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI153_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI154_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI154_0]
 ; CHECK-GI-NEXT:    cmhs v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp uge <2 x i64> %A, <i64 2, i64 2>
@@ -2151,8 +2168,8 @@ define <2 x i64> @cmhiz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmhiz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI160_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI160_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI161_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI161_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp ugt <2 x i64> %A, <i64 1, i64 1>
@@ -2327,8 +2344,8 @@ define <2 x i64> @cmloz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmloz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI174_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI174_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI175_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI175_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp ult <2 x i64> %A, <i64 2, i64 2>

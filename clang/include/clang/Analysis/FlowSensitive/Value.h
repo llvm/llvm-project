@@ -63,7 +63,11 @@ public:
 
   /// Assigns `Val` as the value of the synthetic property with the given
   /// `Name`.
+  ///
+  /// Properties may not be set on `RecordValue`s; use synthetic fields instead
+  /// (for details, see documentation for `RecordStorageLocation`).
   void setProperty(llvm::StringRef Name, Value &Val) {
+    assert(getKind() != Kind::Record);
     Properties.insert_or_assign(Name, &Val);
   }
 
@@ -184,33 +188,23 @@ private:
 /// In C++, prvalues of class type serve only a limited purpose: They can only
 /// be used to initialize a result object. It is not possible to access member
 /// variables or call member functions on a prvalue of class type.
-/// Correspondingly, `RecordValue` also serves only two limited purposes:
-/// - It conveys a prvalue of class type from the place where the object is
-///   constructed to the result object that it initializes.
+/// Correspondingly, `RecordValue` also serves only a limited purpose: It
+/// conveys a prvalue of class type from the place where the object is
+/// constructed to the result object that it initializes.
 ///
-///   When creating a prvalue of class type, we already need a storage location
-///   for `this`, even though prvalues are otherwise not associated with storage
-///   locations. `RecordValue` is therefore essentially a wrapper for a storage
-///   location, which is then used to set the storage location for the result
-///   object when we process the AST node for that result object.
+/// When creating a prvalue of class type, we already need a storage location
+/// for `this`, even though prvalues are otherwise not associated with storage
+/// locations. `RecordValue` is therefore essentially a wrapper for a storage
+/// location, which is then used to set the storage location for the result
+/// object when we process the AST node for that result object.
 ///
-///   For example:
-///      MyStruct S = MyStruct(3);
+/// For example:
+///    MyStruct S = MyStruct(3);
 ///
-///   In this example, `MyStruct(3) is a prvalue, which is modeled as a
-///   `RecordValue` that wraps a `RecordStorageLocation`. This
-//    `RecordStorageLocation` is then used as the storage location for `S`.
+/// In this example, `MyStruct(3) is a prvalue, which is modeled as a
+/// `RecordValue` that wraps a `RecordStorageLocation`. This
+/// `RecordStorageLocation` is then used as the storage location for `S`.
 ///
-/// - It allows properties to be associated with an object of class type.
-///   Note that when doing so, you should avoid mutating the properties of an
-///   existing `RecordValue` in place, as these changes would be visible to
-///   other `Environment`s that share the same `RecordValue`. Instead, associate
-///   a new `RecordValue` with the `RecordStorageLocation` and set the
-///   properties on this new `RecordValue`. (See also `refreshRecordValue()` in
-///   DataflowEnvironment.h, which makes this easy.)
-///   Note also that this implies that it is common for the same
-///   `RecordStorageLocation` to be associated with different `RecordValue`s
-///   in different environments.
 /// Over time, we may eliminate `RecordValue` entirely. See also the discussion
 /// here: https://reviews.llvm.org/D155204#inline-1503204
 class RecordValue final : public Value {

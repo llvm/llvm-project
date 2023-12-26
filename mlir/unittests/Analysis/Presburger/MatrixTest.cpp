@@ -378,3 +378,51 @@ TEST(MatrixTest, gramSchmidt) {
 
   EXPECT_EQ_FRAC_MATRIX(gs, FracMatrix::identity(10));
 }
+
+void checkReducedBasis(FracMatrix mat, Fraction delta) {
+  FracMatrix gsOrth = mat.gramSchmidt();
+
+  // Size-reduced check.
+  for (unsigned i = 0, e = mat.getNumRows(); i < e; i++) {
+    for (unsigned j = 0; j < i; j++) {
+      Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(j)) /
+                    dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      EXPECT_TRUE(abs(mu) <= Fraction(1, 2));
+    }
+  }
+
+  // Lovasz condition check.
+  for (unsigned i = 1, e = mat.getNumRows(); i < e; i++) {
+    Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(i - 1)) /
+                  dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1));
+    EXPECT_TRUE(dotProduct(mat.getRow(i), mat.getRow(i)) >
+                (delta - mu * mu) *
+                    dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1)));
+  }
+}
+
+TEST(MatrixTest, LLL) {
+  FracMatrix mat =
+      makeFracMatrix(3, 3,
+                     {{Fraction(1, 1), Fraction(1, 1), Fraction(1, 1)},
+                      {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)},
+                      {Fraction(3, 1), Fraction(5, 1), Fraction(6, 1)}});
+  mat.LLL(Fraction(3, 4));
+
+  checkReducedBasis(mat, Fraction(3, 4));
+
+  mat = makeFracMatrix(
+      2, 2,
+      {{Fraction(12, 1), Fraction(2, 1)}, {Fraction(13, 1), Fraction(4, 1)}});
+  mat.LLL(Fraction(3, 4));
+
+  checkReducedBasis(mat, Fraction(3, 4));
+
+  mat = makeFracMatrix(3, 3,
+                       {{Fraction(1, 1), Fraction(0, 1), Fraction(2, 1)},
+                        {Fraction(0, 1), Fraction(1, 3), -Fraction(5, 3)},
+                        {Fraction(0, 1), Fraction(0, 1), Fraction(1, 1)}});
+  mat.LLL(Fraction(3, 4));
+
+  checkReducedBasis(mat, Fraction(3, 4));
+}

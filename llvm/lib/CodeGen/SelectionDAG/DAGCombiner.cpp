@@ -13703,8 +13703,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::AND &&
       N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
-      (!TLI.isTruncateFree(N0.getOperand(0).getOperand(0).getValueType(),
-                           N0.getValueType()) ||
+      (!TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType()) ||
        !TLI.isZExtFree(N0.getValueType(), VT))) {
     SDValue X = N0.getOperand(0).getOperand(0);
     X = DAG.getAnyExtOrTrunc(X, SDLoc(X), VT);
@@ -13935,8 +13934,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::AND &&
       N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
-      !TLI.isTruncateFree(N0.getOperand(0).getOperand(0).getValueType(),
-                          N0.getValueType())) {
+      !TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType())) {
     SDLoc DL(N);
     SDValue X = DAG.getAnyExtOrTrunc(N0.getOperand(0).getOperand(0), DL, VT);
     SDValue Y = DAG.getNode(ISD::ANY_EXTEND, DL, VT, N0.getOperand(1));
@@ -14759,6 +14757,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
+      N0.hasOneUse() &&
       TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()) &&
       // Avoid creating illegal types if running after type legalizer.
       (!LegalTypes || TLI.isTypeLegal(VT.getScalarType()))) {
@@ -14818,11 +14817,11 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
-    // Handle the case where the load remains an extending load even
-    // after truncation.
+    // Handle the case where the truncated result is at least as wide as the
+    // loaded type.
     if (N0.hasOneUse() && ISD::isUNINDEXEDLoad(N0.getNode())) {
       auto *LN0 = cast<LoadSDNode>(N0);
-      if (LN0->isSimple() && LN0->getMemoryVT().bitsLT(VT)) {
+      if (LN0->isSimple() && LN0->getMemoryVT().bitsLE(VT)) {
         SDValue NewLoad = DAG.getExtLoad(
             LN0->getExtensionType(), SDLoc(LN0), VT, LN0->getChain(),
             LN0->getBasePtr(), LN0->getMemoryVT(), LN0->getMemOperand());
@@ -15165,8 +15164,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
                                     *LN0->getMemOperand())) {
       SDValue Load =
           DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
-                      LN0->getPointerInfo(), LN0->getAlign(),
-                      LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
+                      LN0->getMemOperand());
       DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
       return Load;
     }
@@ -18855,8 +18853,7 @@ struct LoadedSlice {
     void addSliceGain(const LoadedSlice &LS) {
       // Each slice saves a truncate.
       const TargetLowering &TLI = LS.DAG->getTargetLoweringInfo();
-      if (!TLI.isTruncateFree(LS.Inst->getOperand(0).getValueType(),
-                              LS.Inst->getValueType(0)))
+      if (!TLI.isTruncateFree(LS.Inst->getOperand(0), LS.Inst->getValueType(0)))
         ++Truncates;
       // If there is a shift amount, this slice gets rid of it.
       if (LS.Shift)
@@ -24178,6 +24175,10 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
 
   unsigned Index = Extract->getConstantOperandVal(1);
   unsigned NumElts = VT.getVectorMinNumElements();
+  // A fixed length vector being extracted from a scalable vector
+  // may not be any *smaller* than the scalable one.
+  if (Index == 0 && NumElts >= Ld->getValueType(0).getVectorMinNumElements())
+    return SDValue();
 
   // The definition of EXTRACT_SUBVECTOR states that the index must be a
   // multiple of the minimum number of elements in the result type.

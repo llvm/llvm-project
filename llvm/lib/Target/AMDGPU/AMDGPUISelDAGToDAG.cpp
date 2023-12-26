@@ -1166,6 +1166,11 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Addr) const {
   if (isNoUnsignedWrap(Addr))
     return true;
 
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(*Subtarget))
+    return true;
+
   auto LHS = Addr.getOperand(0);
   auto RHS = Addr.getOperand(1);
 
@@ -1701,7 +1706,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
   }
 
   VAddr = Addr;
-  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i16);
+  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1769,7 +1774,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
               CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
           VOffset = SDValue(VMov, 0);
           SAddr = LHS;
-          Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+          Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
           return true;
         }
       }
@@ -1809,7 +1814,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     }
 
     if (SAddr) {
-      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
       return true;
     }
   }
@@ -1825,7 +1830,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
       CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, SDLoc(Addr), MVT::i32,
                              CurDAG->getTargetConstant(0, SDLoc(), MVT::i32));
   VOffset = SDValue(VMov, 0);
-  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
   return true;
 }
 

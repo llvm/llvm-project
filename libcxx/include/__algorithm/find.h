@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_H
 #define _LIBCPP___ALGORITHM_FIND_H
 
+#include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__bit/countr.h>
@@ -18,8 +19,13 @@
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__fwd/bit_reference.h>
+#include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_signed.h>
+#include <__utility/move.h>
+#include <limits>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
@@ -73,6 +79,22 @@ __find_impl(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
+// TODO: This should also be possible to get right with different signedness
+// cast integral types to allow vectorization
+template <class _Tp,
+          class _Up,
+          class _Proj,
+          __enable_if_t<__is_identity<_Proj>::value && !__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
+                            is_integral<_Tp>::value && is_integral<_Up>::value &&
+                            is_signed<_Tp>::value == is_signed<_Up>::value,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp*
+__find_impl(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
+  if (__value < numeric_limits<_Tp>::min() || __value > numeric_limits<_Tp>::max())
+    return __last;
+  return std::__find_impl(__first, __last, _Tp(__value), __proj);
+}
+
 // __bit_iterator implementation
 template <bool _ToFind, class _Cp, bool _IsConst>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
@@ -118,6 +140,34 @@ __find_impl(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst>
   return std::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
 
+// segmented iterator implementation
+
+template <class>
+struct __find_segment;
+
+template <class _SegmentedIterator,
+          class _Tp,
+          class _Proj,
+          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
+__find_impl(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
+  return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);
+}
+
+template <class _Tp>
+struct __find_segment {
+  const _Tp& __value_;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __find_segment(const _Tp& __value) : __value_(__value) {}
+
+  template <class _InputIterator, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _InputIterator
+  operator()(_InputIterator __first, _InputIterator __last, _Proj& __proj) const {
+    return std::__find_impl(__first, __last, __value_, __proj);
+  }
+};
+
+// public API
 template <class _InputIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
