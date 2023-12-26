@@ -408,8 +408,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to fix function pointer and
-  forward declared ``typedef`` correctly. Added option `IgnoreExternC` to ignore ``typedef``
-  declaration in ``extern "C"`` scope.
+  forward declared ``typedef`` correctly.
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
