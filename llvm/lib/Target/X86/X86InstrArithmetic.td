@@ -1188,25 +1188,17 @@ let Uses = [RDX] in
 //
 // We don't have patterns for these as there is no advantage over ADC for
 // most code.
-class ADCOXOpRR <string m, X86TypeInfo t>
-  : BinOpRRF_RF<0xF6, m, t, null_frag> {
-  let Form = MRMSrcReg;
-  let isCommutable = 1;
-}
-
-class ADCOXOpRM <string m, X86TypeInfo t>
-  : BinOpRMF_RF<0xF6, m, t, null_frag> {
-  let Form = MRMSrcMem;
-}
-
-let OpSize = OpSizeFixed, Constraints = "$src1 = $dst",
-    Predicates = [HasADX] in {
-def ADCX32rr : ADCOXOpRR<"adcx", Xi32>, T8, PD;
-def ADCX64rr : ADCOXOpRR<"adcx", Xi64>, T8, PD;
-def ADOX32rr : ADCOXOpRR<"adox", Xi32>, T8, XS;
-def ADOX64rr : ADCOXOpRR<"adox", Xi64>, T8, XS;
-def ADCX32rm : ADCOXOpRM<"adcx", Xi32>, T8, PD;
-def ADCX64rm : ADCOXOpRM<"adcx", Xi64>, T8, PD;
-def ADOX32rm : ADCOXOpRM<"adox", Xi32>, T8, XS;
-def ADOX64rm : ADCOXOpRM<"adox", Xi64>, T8, XS;
+let Constraints = "$src1 = $dst" in {
+  let Form = MRMSrcReg in {
+  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
+  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
+  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
+  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+  }
+  let Form = MRMSrcMem in {
+  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
+  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
+  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
+  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+  }
 }
