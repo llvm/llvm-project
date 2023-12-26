@@ -410,6 +410,27 @@ class RVInstIUnary<bits<12> imm12, bits<3> funct3, RISCVOpcode opcode,
   let Inst{31-20} = imm12;
 }
 
+class RVInstIMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3, RISCVOpcode opcode,
+                   dag outs, dag ins, string opcodestr, string argstr>
+    : RVInstIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
+  let Inst{31} = imm7{6};
+  let Inst{30} = imm5{4};
+  let Inst{29-28} = imm7{5-4};
+  let Inst{27-26} = imm5{3-2};
+  let Inst{25-22} = imm7{3-0};
+  let Inst{21-20} = imm5{1-0};
+}
+
+class RVInstRMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3, RISCVOpcode opcode,
+                   dag outs, dag ins, string opcodestr, string argstr>
+    : RVInstRBase<funct3, opcode, outs, ins, opcodestr, argstr> {
+  let Inst{31} = imm4{3};
+  let Inst{30} = imm3{2};
+  let Inst{29-28} = imm4{2-1};
+  let Inst{27-26} = imm3{1-0};
+  let Inst{25} = imm4{0};
+}
+
 class RVInstS<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
               string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatS> {

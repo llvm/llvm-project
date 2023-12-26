@@ -602,7 +602,7 @@ py::object PyMlirContext::createFromCapsule(py::object capsule) {
   MlirContext rawContext = mlirPythonCapsuleToContext(capsule.ptr());
   if (mlirContextIsNull(rawContext))
     throw py::error_already_set();
-  return stealExternalContext(rawContext).releaseObject();
+  return forContext(rawContext).releaseObject();
 }
 
 PyMlirContext *PyMlirContext::createNewContextForInit() {
@@ -615,33 +615,16 @@ PyMlirContextRef PyMlirContext::forContext(MlirContext context) {
   auto &liveContexts = getLiveContexts();
   auto it = liveContexts.find(context.ptr);
   if (it == liveContexts.end()) {
-    throw std::runtime_error(
-        "Cannot use a context that is not owned by the Python bindings.");
+    // Create.
+    PyMlirContext *unownedContextWrapper = new PyMlirContext(context);
+    py::object pyRef = py::cast(unownedContextWrapper);
+    assert(pyRef && "cast to py::object failed");
+    liveContexts[context.ptr] = unownedContextWrapper;
+    return PyMlirContextRef(unownedContextWrapper, std::move(pyRef));
   }
-
   // Use existing.
   py::object pyRef = py::cast(it->second);
   return PyMlirContextRef(it->second, std::move(pyRef));
-}
-
-PyMlirContextRef PyMlirContext::stealExternalContext(MlirContext context) {
-  py::gil_scoped_acquire acquire;
-  auto &liveContexts = getLiveContexts();
-  auto it = liveContexts.find(context.ptr);
-  if (it != liveContexts.end()) {
-    throw std::runtime_error(
-        "Cannot transfer ownership of the context to Python "
-        "as it is already owned by Python.");
-  }
-
-  PyMlirContext *unownedContextWrapper = new PyMlirContext(context);
-  // Note that the default return value policy on cast is automatic_reference,
-  // which does not take ownership (delete will not be called).
-  // Just be explicit.
-  py::object pyRef =
-      py::cast(unownedContextWrapper, py::return_value_policy::take_ownership);
-  assert(pyRef && "cast to py::object failed");
-  return PyMlirContextRef(unownedContextWrapper, std::move(pyRef));
 }
 
 PyMlirContext::LiveContextMap &PyMlirContext::getLiveContexts() {
@@ -1162,18 +1145,6 @@ PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
   return PyOperationRef(existing, std::move(pyRef));
 }
 
-PyOperationRef PyOperation::stealExternalOperation(PyMlirContextRef contextRef,
-                                                   MlirOperation operation) {
-  auto &liveOperations = contextRef->liveOperations;
-  auto it = liveOperations.find(operation.ptr);
-  if (it != liveOperations.end()) {
-    throw std::runtime_error(
-        "Cannot transfer ownership of the operation to Python "
-        "as it is already owned by Python.");
-  }
-  return createInstance(std::move(contextRef), operation, py::none());
-}
-
 PyOperationRef PyOperation::createDetached(PyMlirContextRef contextRef,
                                            MlirOperation operation,
                                            py::object parentKeepAlive) {
@@ -1345,8 +1316,7 @@ py::object PyOperation::createFromCapsule(py::object capsule) {
   if (mlirOperationIsNull(rawOperation))
     throw py::error_already_set();
   MlirContext rawCtxt = mlirOperationGetContext(rawOperation);
-  return stealExternalOperation(PyMlirContext::forContext(rawCtxt),
-                                rawOperation)
+  return forOperation(PyMlirContext::forContext(rawCtxt), rawOperation)
       .releaseObject();
 }
 
@@ -2578,16 +2548,6 @@ void mlir::python::populateIRCore(py::module &m) {
       .def("_get_live_operation_count", &PyMlirContext::getLiveOperationCount)
       .def("_clear_live_operations", &PyMlirContext::clearLiveOperations)
       .def("_get_live_module_count", &PyMlirContext::getLiveModuleCount)
-      .def_static("_testing_create_raw_context_capsule",
-                  []() {
-                    // Creates an MlirContext not known to the Python bindings
-                    // and puts it in a capsule. Used to test interop. Using
-                    // this without passing it back to the capsule creation
-                    // API will leak.
-                    return py::reinterpret_steal<py::object>(
-                        mlirPythonContextToCapsule(
-                            mlirContextCreateWithThreading(false)));
-                  })
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyMlirContext::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyMlirContext::createFromCapsule)
@@ -3013,7 +2973,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            py::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
-                             bool, py::object, bool>(&PyOperationBase::print),
+                             bool, py::object, bool>(
+               &PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
            py::arg("large_elements_limit") = py::none(),
            py::arg("enable_debug_info") = false,
@@ -3085,25 +3046,6 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyOperation::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
-      .def_static(
-          "_testing_create_raw_capsule",
-          [](std::string sourceStr) {
-            // Creates a raw context and an operation via parsing the given
-            // source and returns them in a capsule. Error handling is
-            // minimal as this is purely intended for testing interop with
-            // operation creation from capsule functions.
-            MlirContext context = mlirContextCreateWithThreading(false);
-            MlirOperation op = mlirOperationCreateParse(
-                context, toMlirStringRef(sourceStr), toMlirStringRef("temp"));
-            if (mlirOperationIsNull(op)) {
-              mlirContextDestroy(context);
-              throw std::invalid_argument("Failed to parse");
-            }
-            return py::make_tuple(py::reinterpret_steal<py::object>(
-                                      mlirPythonContextToCapsule(context)),
-                                  py::reinterpret_steal<py::object>(
-                                      mlirPythonOperationToCapsule(op)));
-          })
       .def_property_readonly("operation", [](py::object self) { return self; })
       .def_property_readonly("opview", &PyOperation::createOpView)
       .def_property_readonly(

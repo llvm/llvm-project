@@ -52,8 +52,8 @@ class StackDepotBase {
     };
   }
 
-  void LockAll();
-  void UnlockAll();
+  void LockBeforeFork();
+  void UnlockAfterFork(bool fork_child);
   void PrintAll();
 
   void TestOnlyUnmap() {
@@ -160,14 +160,15 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Get(u32 id) {
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
-void StackDepotBase<Node, kReservedBits, kTabSizeLog>::LockAll() {
+void StackDepotBase<Node, kReservedBits, kTabSizeLog>::LockBeforeFork() {
   for (int i = 0; i < kTabSize; ++i) {
     lock(&tab[i]);
   }
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
-void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAll() {
+void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAfterFork(
+    bool fork_child) {
   for (int i = 0; i < kTabSize; ++i) {
     atomic_uint32_t *p = &tab[i];
     uptr s = atomic_load(p, memory_order_relaxed);
