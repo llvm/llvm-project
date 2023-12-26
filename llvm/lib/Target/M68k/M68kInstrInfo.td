@@ -55,15 +55,6 @@ def MxSDT_BiArithCCRInOut : SDTypeProfile<2, 3, [
   /*   CCR */ SDTCisSameAs<1, 4>
 ]>;
 
-// RES1, RES2, CCR <- op LHS, RHS
-def MxSDT_2BiArithCCROut : SDTypeProfile<3, 2, [
-  /* RES 1 */ SDTCisInt<0>,
-  /* RES 2 */ SDTCisSameAs<0, 1>,
-  /*   CCR */ SDTCisVT<1, i8>,
-  /*   LHS */ SDTCisSameAs<0, 2>,
-  /*   RHS */ SDTCisSameAs<0, 3>
-]>;
-
 def MxSDT_CmpTest : SDTypeProfile<1, 2, [
    /* CCR */ SDTCisVT<0, i8>,
    /* Ops */ SDTCisSameAs<1, 2>
@@ -134,7 +125,7 @@ def MxAddX : SDNode<"M68kISD::ADDX", MxSDT_BiArithCCRInOut>;
 def MxSubX : SDNode<"M68kISD::SUBX", MxSDT_BiArithCCRInOut>;
 
 def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
-def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_2BiArithCCROut, [SDNPCommutative]>;
+def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
 def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
