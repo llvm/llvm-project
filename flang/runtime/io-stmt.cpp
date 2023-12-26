@@ -189,6 +189,17 @@ InternalListIoStatementState<DIR>::InternalListIoStatementState(
     : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
       ioStatementState_{*this} {}
 
+template <Direction DIR>
+int InternalListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return InternalIoStatementState<DIR>::EndIoStatement();
+}
+
 ExternalIoStatementBase::ExternalIoStatementBase(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
@@ -707,6 +718,13 @@ ListDirectedStatementState<Direction::Output>::GetNextDataEdit(
   return edit;
 }
 
+int ListDirectedStatementState<Direction::Input>::EndIoStatement() {
+  if (repeatPosition_) {
+    repeatPosition_->Cancel();
+  }
+  return IostatOk;
+}
+
 std::optional<DataEdit>
 ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
@@ -819,6 +837,17 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
 }
 
 template <Direction DIR>
+int ExternalListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (auto status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return ExternalIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR>
 bool ExternalUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Output) {
@@ -908,6 +937,16 @@ template <Direction DIR>
 bool ChildUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   return this->child().parent().Receive(data, bytes, elementBytes);
+}
+
+template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return ChildIoStatementState<DIR>::EndIoStatement();
 }
 
 template class InternalIoStatementState<Direction::Output>;
