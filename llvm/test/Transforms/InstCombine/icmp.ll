@@ -856,9 +856,7 @@ define i1 @PR32949(i32 %X, i32 %Y, i32 %Z) {
 
 define i1 @test_sdiv_pos_slt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_slt(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -869,9 +867,7 @@ define i1 @test_sdiv_pos_slt(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_sle(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_sle(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -882,9 +878,7 @@ define i1 @test_sdiv_pos_sle(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_sgt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_sgt(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -895,9 +889,7 @@ define i1 @test_sdiv_pos_sgt(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_sge(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_sge(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -908,9 +900,7 @@ define i1 @test_sdiv_pos_sge(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_ult(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_ult(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -921,9 +911,7 @@ define i1 @test_sdiv_pos_ult(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_ule(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_ule(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -934,9 +922,7 @@ define i1 @test_sdiv_pos_ule(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_ugt(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
@@ -947,9 +933,7 @@ define i1 @test_sdiv_pos_ugt(i32 %x, i32 %y) {
 
 define i1 @test_sdiv_pos_uge(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sdiv_pos_uge(
-; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], 40
-; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], 40
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, 40
