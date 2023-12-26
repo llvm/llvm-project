@@ -270,6 +270,7 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
       if ((!isNegative && rounding == RoundUp) ||
           (isNegative && rounding == RoundDown)) {
         // round to least nonzero value
+        expo = 0;
       } else { // round to zero
         if (guard != 0) {
           flags |= Underflow;
