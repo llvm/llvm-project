@@ -260,16 +260,15 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         Printf("Cause: %s\n", cause);
         Printf("%s", d.Default());
         Printf("%s", d.Location());
-        Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
-               untagged_addr, offset, whence, local_end - local_beg, local_beg,
-               local_end);
-        Printf("%s", d.Allocation());
         StackTracePrinter::GetOrInit()->RenderSourceLocation(
             &location, local.decl_file, local.decl_line, /* column= */ 0,
             common_flags()->symbolize_vs_style,
             common_flags()->strip_path_prefix);
-        Printf("  %s in %s %s\n", local.name, local.function_name,
-               location.data());
+        Printf(
+            "%p is located %zd bytes %s a %zd-byte local variable %s [%p,%p) "
+            "in %s %s\n",
+            untagged_addr, offset, whence, local_end - local_beg, local.name,
+            local_beg, local_end, local.function_name, location.data());
         location.clear();
         Printf("%s\n", d.Default());
       }
