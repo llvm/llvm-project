@@ -221,6 +221,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
+``experimental-zimop``
+  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions

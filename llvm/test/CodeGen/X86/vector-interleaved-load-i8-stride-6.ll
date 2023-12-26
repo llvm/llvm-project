@@ -1181,13 +1181,13 @@ define void @load_i8_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pandn %xmm9, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm9, %xmm11
-; SSE-NEXT:    pand %xmm1, %xmm11
-; SSE-NEXT:    movdqa %xmm1, %xmm4
+; SSE-NEXT:    pand %xmm10, %xmm11
+; SSE-NEXT:    movdqa %xmm10, %xmm4
 ; SSE-NEXT:    pandn %xmm0, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 96(%rdi), %xmm13
 ; SSE-NEXT:    movdqa %xmm13, %xmm4
-; SSE-NEXT:    pand %xmm1, %xmm4
+; SSE-NEXT:    pand %xmm10, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 176(%rdi), %xmm4
 ; SSE-NEXT:    movdqa %xmm4, %xmm10
