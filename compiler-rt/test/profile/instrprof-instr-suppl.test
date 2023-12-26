@@ -12,8 +12,12 @@
 // ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
 // UNSUPPORTED: ppc
 
-// This compiler-rt test and test llvm/test/tools/llvm-profdata/suppl-instr-with-sample-static-func.test are
-// complementary to each other.
+// This compiler-rt test aims to have test coverage for the IRPGO name format
+// of local-linkage functions during raw profile generation. The C++ functions
+// are simple with little optimization space so test outputs are more stable.
+// On the other hand, LLVM tests (like tools/llvm-profdata/suppl-instr-with-sample-static-func.test
+// or other suppl* test under tools/llvm-profdata dir) are more suitable for
+// more sophisticated cases (e.g., pseudo hot functions or profiles with discriminiators, etc).
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -27,8 +31,12 @@
 // The function counters are not scaled up.
 // RUN: llvm-profdata show -all-functions -counts main.profdata | FileCheck %s --check-prefix=INSTR
 
-// The function counter for static function foo should be scaled up.
-// RUN: llvm-profdata merge -supplement-instr-with-sample=sampleprof.proftext -suppl-min-size-threshold=0 -instr-prof-cold-threshold=1 main.profdata -o merge.profdata
+// The instrPGO profile counter of function foo should be scaled up. Note the
+// scaling factor of a function is computed based on instrPGO profiles and
+// invariant to samplePGO profile counters.
+// RUN: llvm-profdata merge -supplement-instr-with-sample=sampleprof.proftext \
+// RUN:               -suppl-min-size-threshold=0 -instr-prof-cold-threshold=1 \
+// RUN:               main.profdata -o merge.profdata
 // RUN: llvm-profdata show -all-functions -counts merge.profdata | FileCheck %s --check-prefix=SUPPL
 
 // INSTR: Counters:
@@ -74,7 +82,5 @@ int main() {
 }
 
 //--- sampleprof.proftext
-// Function name is uniqufied by `-funique-internal-linkage-names`.
 _ZL3foov.__uniq.23343505234642233139497840575431302970:5:5
   1: 5
-
