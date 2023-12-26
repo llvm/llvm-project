@@ -623,10 +623,10 @@ static bool isIgnored(StringRef FilePath) {
 
     Pattern = StringRef(Pattern).ltrim();
     if (Pattern[0] != '/') {
-      Path = IgnoreDir;
-      append(Path, Pattern);
-      remove_dots(Path, /*remove_dot_dot=*/true);
-      Pattern = convert_to_slash(Path);
+      Path = convert_to_slash(IgnoreDir);
+      append(Path, Style::posix, Pattern);
+      remove_dots(Path, /*remove_dot_dot=*/true, Style::posix);
+      Pattern = Path.str();
     }
 
     if (clang::format::matchFilePath(Pattern, AbsPath.str()) == !IsNegated) {
