@@ -227,11 +227,12 @@ For example:
       };
     };
 
-If CheckAnonFieldInParent is `false`, you may get warnings that ``iv_`` and
-``fv_`` are not coherent to public member names, because ``iv_`` and ``fv_``
-are public members of the anonymous union. When CheckAnonFieldInParent is
-`true`, ``iv_`` and ``fv_`` will be treated as private data members of ``Foo``
-for the purpose of name checking and thus no warnings will be emitted.
+If :option:`CheckAnonFieldInParent` is `false`, you may get warnings
+that ``iv_`` and ``fv_`` are not coherent to public member names, because
+``iv_`` and ``fv_`` are public members of the anonymous union. When
+:option:`CheckAnonFieldInParent` is `true`, ``iv_`` and ``fv_`` will be
+treated as private data members of ``Foo`` for the purpose of name checking
+and thus no warnings will be emitted.
 
 .. option:: ClassCase
 
