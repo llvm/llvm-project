@@ -819,8 +819,7 @@ define i1 @test46_multiuse1(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @test46_multiuse1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = ashr exact i32 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = ashr exact i32 %X, %Z
@@ -832,10 +831,9 @@ define i1 @test46_multiuse1(i32 %X, i32 %Y, i32 %Z) {
 
 define i1 @test46_multiuse2(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @test46_multiuse2(
-; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = ashr exact i32 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[B:%.*]] = ashr exact i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = ashr exact i32 %X, %Z
