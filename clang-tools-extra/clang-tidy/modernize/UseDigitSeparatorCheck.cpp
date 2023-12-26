@@ -154,21 +154,25 @@ getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString) {
   const llvm::StringRef ExponentSubString = OriginalLiteralString.substr(
       EPosition + SignSymbol.size() + 1, OriginalLiteralString.size());
   std::string MantissaSubStringWithoutBraces = MantissaSubString.str();
-  MantissaSubStringWithoutBraces.erase(std::remove_if(MantissaSubStringWithoutBraces.begin(),
-                                                      MantissaSubStringWithoutBraces.end(),
-                            [](unsigned char Char) { return Char == '\''; }),
-                                       MantissaSubStringWithoutBraces.end());
+  MantissaSubStringWithoutBraces.erase(
+      std::remove_if(MantissaSubStringWithoutBraces.begin(),
+                     MantissaSubStringWithoutBraces.end(),
+                     [](unsigned char Char) { return Char == '\''; }),
+      MantissaSubStringWithoutBraces.end());
   std::string ExponentSubStringWithoutBraces = ExponentSubString.str();
-  ExponentSubStringWithoutBraces.erase(std::remove_if(ExponentSubStringWithoutBraces.begin(),
-                                                      ExponentSubStringWithoutBraces.end(),
-                                                      [](unsigned char Char) { return Char == '\''; }),
-                                       ExponentSubStringWithoutBraces.end());
+  ExponentSubStringWithoutBraces.erase(
+      std::remove_if(ExponentSubStringWithoutBraces.begin(),
+                     ExponentSubStringWithoutBraces.end(),
+                     [](unsigned char Char) { return Char == '\''; }),
+      ExponentSubStringWithoutBraces.end());
 
   // Get formatting literal text
   const std::string FormatedMantissaString = getFormatedFloatString(
-      MantissaSubString, llvm::APFloat(std::stod(MantissaSubStringWithoutBraces)));
+      MantissaSubString,
+      llvm::APFloat(std::stod(MantissaSubStringWithoutBraces)));
   const std::string FormatedExponentString = getFormatedIntegerString(
-      ExponentSubString, llvm::APInt(128, std::stoll(ExponentSubStringWithoutBraces)));
+      ExponentSubString,
+      llvm::APInt(128, std::stoll(ExponentSubStringWithoutBraces)));
   return FormatedMantissaString + EChar + SignSymbol + FormatedExponentString;
 }
 } // namespace
