@@ -6300,15 +6300,9 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvttph2udq512_mask:
   case X86::BI__builtin_ia32_vcvttph2qq512_mask:
   case X86::BI__builtin_ia32_vcvttph2uqq512_mask:
-  case X86::BI__builtin_ia32_exp2pd_mask:
-  case X86::BI__builtin_ia32_exp2ps_mask:
   case X86::BI__builtin_ia32_getexppd512_mask:
   case X86::BI__builtin_ia32_getexpps512_mask:
   case X86::BI__builtin_ia32_getexpph512_mask:
-  case X86::BI__builtin_ia32_rcp28pd_mask:
-  case X86::BI__builtin_ia32_rcp28ps_mask:
-  case X86::BI__builtin_ia32_rsqrt28pd_mask:
-  case X86::BI__builtin_ia32_rsqrt28ps_mask:
   case X86::BI__builtin_ia32_vcomisd:
   case X86::BI__builtin_ia32_vcomiss:
   case X86::BI__builtin_ia32_vcomish:
@@ -6335,16 +6329,12 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_minsd_round_mask:
   case X86::BI__builtin_ia32_minss_round_mask:
   case X86::BI__builtin_ia32_minsh_round_mask:
-  case X86::BI__builtin_ia32_rcp28sd_round_mask:
-  case X86::BI__builtin_ia32_rcp28ss_round_mask:
   case X86::BI__builtin_ia32_reducepd512_mask:
   case X86::BI__builtin_ia32_reduceps512_mask:
   case X86::BI__builtin_ia32_reduceph512_mask:
   case X86::BI__builtin_ia32_rndscalepd_mask:
   case X86::BI__builtin_ia32_rndscaleps_mask:
   case X86::BI__builtin_ia32_rndscaleph_mask:
-  case X86::BI__builtin_ia32_rsqrt28sd_round_mask:
-  case X86::BI__builtin_ia32_rsqrt28ss_round_mask:
     ArgNum = 4;
     break;
   case X86::BI__builtin_ia32_fixupimmpd512_mask:

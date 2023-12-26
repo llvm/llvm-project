@@ -124,9 +124,6 @@ def FeatureEVEX512  : SubtargetFeature<"evex512", "HasEVEX512", "true",
 def FeatureAVX512   : SubtargetFeature<"avx512f", "X86SSELevel", "AVX512",
                                       "Enable AVX-512 instructions",
                                       [FeatureAVX2, FeatureFMA, FeatureF16C]>;
-def FeatureERI      : SubtargetFeature<"avx512er", "HasERI", "true",
-                      "Enable AVX-512 Exponential and Reciprocal Instructions",
-                                      [FeatureAVX512]>;
 def FeatureCDI      : SubtargetFeature<"avx512cd", "HasCDI", "true",
                       "Enable AVX-512 Conflict Detection Instructions",
                                       [FeatureAVX512]>;

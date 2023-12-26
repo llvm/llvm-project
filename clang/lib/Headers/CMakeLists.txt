@@ -151,7 +151,6 @@ set(x86_files
   avx512bwintrin.h
   avx512cdintrin.h
   avx512dqintrin.h
-  avx512erintrin.h
   avx512fintrin.h
   avx512fp16intrin.h
   avx512ifmaintrin.h

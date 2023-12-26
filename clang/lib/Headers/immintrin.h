@@ -175,11 +175,6 @@
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
-    defined(__AVX512ER__)
-#include <avx512erintrin.h>
-#endif
-
-#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__AVX512IFMA__)
 #include <avx512ifmaintrin.h>
 #endif
