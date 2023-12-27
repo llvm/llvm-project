@@ -581,10 +581,10 @@ defset list<VTypeInfoToWide> VQMACCDODInfoPairs = {
 }
 
 defset list<VTypeInfoToWide> VQMACCQOQInfoPairs = {
-   def : VTypeInfoToWide<VI8MF2, VI32M1>;
-   def : VTypeInfoToWide<VI8M1, VI32M2>;
-   def : VTypeInfoToWide<VI8M2, VI32M4>;
-   def : VTypeInfoToWide<VI8M4, VI32M8>;
+  def : VTypeInfoToWide<VI8MF2, VI32M1>;
+  def : VTypeInfoToWide<VI8M1, VI32M2>;
+  def : VTypeInfoToWide<VI8M2, VI32M4>;
+  def : VTypeInfoToWide<VI8M4, VI32M8>;
 }
 
 multiclass VPatVQMACCDOD<string intrinsic, string instruction, string kind>
