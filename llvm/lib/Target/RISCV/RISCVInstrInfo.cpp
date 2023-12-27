@@ -2194,6 +2194,71 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       .setMIFlags(MemI.getFlags());
 }
 
+bool RISCVInstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
+                                             int64_t &Offset1,
+                                             int64_t &Offset2) const {
+  if (!Load1->isMachineOpcode() || !Load2->isMachineOpcode())
+    return false;
+
+  auto IsLoadOpcode = [&](unsigned Opcode) {
+    switch (Opcode) {
+    case RISCV::LB:
+    case RISCV::LBU:
+    case RISCV::LH:
+    case RISCV::LHU:
+    case RISCV::FLH:
+    case RISCV::LW:
+    case RISCV::LWU:
+    case RISCV::FLW:
+    case RISCV::LD:
+    case RISCV::FLD:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  if (!IsLoadOpcode(Load1->getMachineOpcode()) ||
+      !IsLoadOpcode(Load2->getMachineOpcode()))
+    return false;
+
+  // Check if base address and chain operands match.
+  if (Load1->getOperand(0) != Load2->getOperand(0))
+    if (Load1->getOperand(0) != Load2->getOperand(0) ||
+        Load1->getOperand(2) != Load2->getOperand(2))
+      return false;
+
+  // Determine the offsets.
+  if (isa<ConstantSDNode>(Load1->getOperand(1)) &&
+      isa<ConstantSDNode>(Load2->getOperand(1))) {
+    Offset1 = cast<ConstantSDNode>(Load1->getOperand(1))->getSExtValue();
+    Offset2 = cast<ConstantSDNode>(Load2->getOperand(1))->getSExtValue();
+    return true;
+  }
+
+  return false;
+}
+
+bool RISCVInstrInfo::shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2,
+                                             int64_t Offset1, int64_t Offset2,
+                                             unsigned NumLoads) const {
+  assert(Offset2 > Offset1);
+
+  if ((Offset2 - Offset1) / 8 > 64)
+    return false;
+
+  // Check if the machine opcodes are different. If they are different
+  // then we consider them to not be of the same base address,
+  if ((Load1->getMachineOpcode() != Load2->getMachineOpcode()))
+    return false; // FIXME: overly conservative?
+
+  // Four loads in a row should be sufficient.
+  if (NumLoads >= 3)
+    return false;
+
+  return true;
+}
+
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
@@ -2282,9 +2347,13 @@ bool RISCVInstrInfo::shouldClusterMemOps(
     return false;
   }
 
-  // TODO: Use a more carefully chosen heuristic, e.g. only cluster if offsets
-  // indicate they likely share a cache line.
-  return ClusterSize <= 4;
+  unsigned CacheLineSize =
+      BaseOps1.front()->getParent()->getMF()->getSubtarget().getCacheLineSize();
+  // Assume a cache line size of 64 bytes if no size is set in RISCVSubtarget.
+  CacheLineSize = CacheLineSize ? CacheLineSize : 64;
+  // Cluster if the memory operations are on the same or a neighbouring cache
+  // line.
+  return std::abs(Offset1 - Offset2) < CacheLineSize;
 }
 
 // Set BaseReg (the base register operand), Offset (the byte offset being

@@ -85,50 +85,49 @@ define i32 @load_i32(ptr %p) {
 define i64 @load_i64(ptr %p) {
 ; RV32I-LABEL: load_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 1(a0)
-; RV32I-NEXT:    lbu a2, 0(a0)
+; RV32I-NEXT:    lbu a1, 0(a0)
+; RV32I-NEXT:    lbu a2, 1(a0)
 ; RV32I-NEXT:    lbu a3, 2(a0)
 ; RV32I-NEXT:    lbu a4, 3(a0)
-; RV32I-NEXT:    slli a1, a1, 8
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    lbu a5, 4(a0)
+; RV32I-NEXT:    lbu a6, 5(a0)
+; RV32I-NEXT:    lbu a7, 6(a0)
+; RV32I-NEXT:    lbu t0, 7(a0)
+; RV32I-NEXT:    slli a2, a2, 8
+; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    slli a3, a3, 16
 ; RV32I-NEXT:    slli a4, a4, 24
-; RV32I-NEXT:    or a2, a4, a3
-; RV32I-NEXT:    or a2, a2, a1
-; RV32I-NEXT:    lbu a1, 5(a0)
-; RV32I-NEXT:    lbu a3, 4(a0)
-; RV32I-NEXT:    lbu a4, 6(a0)
-; RV32I-NEXT:    lbu a0, 7(a0)
-; RV32I-NEXT:    slli a1, a1, 8
-; RV32I-NEXT:    or a1, a1, a3
-; RV32I-NEXT:    slli a4, a4, 16
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a0, a0, a4
-; RV32I-NEXT:    or a1, a0, a1
-; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    or a0, a4, a3
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    slli a6, a6, 8
+; RV32I-NEXT:    or a1, a6, a5
+; RV32I-NEXT:    slli a7, a7, 16
+; RV32I-NEXT:    slli t0, t0, 24
+; RV32I-NEXT:    or a2, t0, a7
+; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a1, 1(a0)
-; RV64I-NEXT:    lbu a2, 0(a0)
+; RV64I-NEXT:    lbu a1, 0(a0)
+; RV64I-NEXT:    lbu a2, 1(a0)
 ; RV64I-NEXT:    lbu a3, 2(a0)
 ; RV64I-NEXT:    lbu a4, 3(a0)
-; RV64I-NEXT:    slli a1, a1, 8
-; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    lbu a5, 4(a0)
+; RV64I-NEXT:    lbu a6, 5(a0)
+; RV64I-NEXT:    lbu a7, 6(a0)
+; RV64I-NEXT:    lbu a0, 7(a0)
+; RV64I-NEXT:    slli a2, a2, 8
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    slli a3, a3, 16
 ; RV64I-NEXT:    slli a4, a4, 24
 ; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    or a1, a3, a1
-; RV64I-NEXT:    lbu a2, 5(a0)
-; RV64I-NEXT:    lbu a3, 4(a0)
-; RV64I-NEXT:    lbu a4, 6(a0)
-; RV64I-NEXT:    lbu a0, 7(a0)
-; RV64I-NEXT:    slli a2, a2, 8
-; RV64I-NEXT:    or a2, a2, a3
-; RV64I-NEXT:    slli a4, a4, 16
+; RV64I-NEXT:    slli a6, a6, 8
+; RV64I-NEXT:    or a2, a6, a5
+; RV64I-NEXT:    slli a7, a7, 16
 ; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a4
+; RV64I-NEXT:    or a0, a0, a7
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    or a0, a0, a1

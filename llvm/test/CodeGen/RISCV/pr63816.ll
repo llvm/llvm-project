@@ -4,17 +4,20 @@
 define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs2, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs3, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs4, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs6, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs1, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs2, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs3, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs4, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs5, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs6, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    lhu a0, 12(a0)
@@ -30,19 +33,19 @@ define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.s fs2, fa0
 ; CHECK-NEXT:    lhu a0, 6(s1)
+; CHECK-NEXT:    lhu s2, 0(s1)
+; CHECK-NEXT:    lhu s3, 2(s1)
+; CHECK-NEXT:    lhu s4, 4(s1)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.s fs3, fa0
-; CHECK-NEXT:    lhu a0, 4(s1)
-; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.s fs4, fa0
-; CHECK-NEXT:    lhu a0, 2(s1)
-; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.s fs5, fa0
-; CHECK-NEXT:    lhu a0, 0(s1)
-; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fcvt.d.s fs6, fa0
 ; CHECK-NEXT:    fcvt.d.s fs5, fs5
@@ -63,17 +66,20 @@ define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    fsd fs4, 16(s0)
 ; CHECK-NEXT:    fsd fs5, 8(s0)
 ; CHECK-NEXT:    fsd fs6, 0(s0)
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs2, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs3, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs1, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs2, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs3, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs4, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs5, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs6, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
   %V1 = load <8 x half>, ptr %0
   %V2 = fpext <8 x half> %V1 to <8 x double>

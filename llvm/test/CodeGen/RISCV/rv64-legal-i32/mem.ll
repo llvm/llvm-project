@@ -36,9 +36,9 @@ define void @lbu(ptr %a, ptr %b) nounwind {
 define void @lh(ptr %a, ptr %b) nounwind {
 ; RV64I-LABEL: lh:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lh a2, 2(a0)
 ; RV64I-NEXT:    lh zero, 0(a0)
-; RV64I-NEXT:    sw a2, 0(a1)
+; RV64I-NEXT:    lh a0, 2(a0)
+; RV64I-NEXT:    sw a0, 0(a1)
 ; RV64I-NEXT:    ret
   %1 = getelementptr i16, ptr %a, i32 1
   %2 = load i16, ptr %1
@@ -65,9 +65,9 @@ define void @lhu(ptr %a, ptr %b) nounwind {
 define void @lw(ptr %a, ptr %b) nounwind {
 ; RV64I-LABEL: lw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lw a2, 4(a0)
 ; RV64I-NEXT:    lw zero, 0(a0)
-; RV64I-NEXT:    sd a2, 0(a1)
+; RV64I-NEXT:    lw a0, 4(a0)
+; RV64I-NEXT:    sd a0, 0(a1)
 ; RV64I-NEXT:    ret
   %1 = getelementptr i32, ptr %a, i64 1
   %2 = load i32, ptr %1

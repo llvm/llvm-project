@@ -907,54 +907,54 @@ define void @test_nontemporal_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64-NEXT:    .cfi_offset s1, -16
-; CHECK-RV64-NEXT:    lbu a2, 0(a1)
-; CHECK-RV64-NEXT:    lbu a3, 8(a1)
-; CHECK-RV64-NEXT:    lbu a4, 16(a1)
-; CHECK-RV64-NEXT:    lbu a5, 24(a1)
-; CHECK-RV64-NEXT:    lbu a6, 32(a1)
-; CHECK-RV64-NEXT:    lbu a7, 40(a1)
-; CHECK-RV64-NEXT:    lbu t0, 48(a1)
-; CHECK-RV64-NEXT:    lbu t1, 56(a1)
-; CHECK-RV64-NEXT:    lbu t2, 64(a1)
-; CHECK-RV64-NEXT:    lbu t3, 72(a1)
-; CHECK-RV64-NEXT:    lbu t4, 80(a1)
-; CHECK-RV64-NEXT:    lbu t5, 88(a1)
-; CHECK-RV64-NEXT:    lbu t6, 120(a1)
-; CHECK-RV64-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64-NEXT:    lbu a2, 104(a1)
+; CHECK-RV64-NEXT:    lbu a3, 112(a1)
+; CHECK-RV64-NEXT:    lbu a4, 120(a1)
+; CHECK-RV64-NEXT:    lbu a5, 0(a1)
+; CHECK-RV64-NEXT:    lbu a6, 8(a1)
+; CHECK-RV64-NEXT:    lbu a7, 16(a1)
+; CHECK-RV64-NEXT:    lbu t0, 24(a1)
+; CHECK-RV64-NEXT:    lbu t1, 32(a1)
+; CHECK-RV64-NEXT:    lbu t2, 40(a1)
+; CHECK-RV64-NEXT:    lbu t3, 48(a1)
+; CHECK-RV64-NEXT:    lbu t4, 56(a1)
+; CHECK-RV64-NEXT:    lbu t5, 64(a1)
+; CHECK-RV64-NEXT:    lbu t6, 72(a1)
+; CHECK-RV64-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t6, 15(a0)
+; CHECK-RV64-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb s0, 14(a0)
+; CHECK-RV64-NEXT:    sb a3, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb s1, 13(a0)
+; CHECK-RV64-NEXT:    sb a2, 13(a0)
 ; CHECK-RV64-NEXT:    ntl.all
 ; CHECK-RV64-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t5, 11(a0)
+; CHECK-RV64-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t4, 10(a0)
+; CHECK-RV64-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t3, 9(a0)
+; CHECK-RV64-NEXT:    sb t6, 9(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t2, 8(a0)
+; CHECK-RV64-NEXT:    sb t5, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t1, 7(a0)
+; CHECK-RV64-NEXT:    sb t4, 7(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t0, 6(a0)
+; CHECK-RV64-NEXT:    sb t3, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a7, 5(a0)
+; CHECK-RV64-NEXT:    sb t2, 5(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a6, 4(a0)
+; CHECK-RV64-NEXT:    sb t1, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a5, 3(a0)
+; CHECK-RV64-NEXT:    sb t0, 3(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a4, 2(a0)
+; CHECK-RV64-NEXT:    sb a7, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a3, 1(a0)
+; CHECK-RV64-NEXT:    sb a6, 1(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a2, 0(a0)
+; CHECK-RV64-NEXT:    sb a5, 0(a0)
 ; CHECK-RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
@@ -968,54 +968,54 @@ define void @test_nontemporal_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32-NEXT:    .cfi_offset s1, -8
-; CHECK-RV32-NEXT:    lbu a2, 0(a1)
-; CHECK-RV32-NEXT:    lbu a3, 4(a1)
-; CHECK-RV32-NEXT:    lbu a4, 8(a1)
-; CHECK-RV32-NEXT:    lbu a5, 12(a1)
-; CHECK-RV32-NEXT:    lbu a6, 16(a1)
-; CHECK-RV32-NEXT:    lbu a7, 20(a1)
-; CHECK-RV32-NEXT:    lbu t0, 24(a1)
-; CHECK-RV32-NEXT:    lbu t1, 28(a1)
-; CHECK-RV32-NEXT:    lbu t2, 32(a1)
-; CHECK-RV32-NEXT:    lbu t3, 36(a1)
-; CHECK-RV32-NEXT:    lbu t4, 40(a1)
-; CHECK-RV32-NEXT:    lbu t5, 44(a1)
-; CHECK-RV32-NEXT:    lbu t6, 60(a1)
-; CHECK-RV32-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32-NEXT:    lbu a2, 52(a1)
+; CHECK-RV32-NEXT:    lbu a3, 56(a1)
+; CHECK-RV32-NEXT:    lbu a4, 60(a1)
+; CHECK-RV32-NEXT:    lbu a5, 0(a1)
+; CHECK-RV32-NEXT:    lbu a6, 4(a1)
+; CHECK-RV32-NEXT:    lbu a7, 8(a1)
+; CHECK-RV32-NEXT:    lbu t0, 12(a1)
+; CHECK-RV32-NEXT:    lbu t1, 16(a1)
+; CHECK-RV32-NEXT:    lbu t2, 20(a1)
+; CHECK-RV32-NEXT:    lbu t3, 24(a1)
+; CHECK-RV32-NEXT:    lbu t4, 28(a1)
+; CHECK-RV32-NEXT:    lbu t5, 32(a1)
+; CHECK-RV32-NEXT:    lbu t6, 36(a1)
+; CHECK-RV32-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t6, 15(a0)
+; CHECK-RV32-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb s0, 14(a0)
+; CHECK-RV32-NEXT:    sb a3, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb s1, 13(a0)
+; CHECK-RV32-NEXT:    sb a2, 13(a0)
 ; CHECK-RV32-NEXT:    ntl.all
 ; CHECK-RV32-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t5, 11(a0)
+; CHECK-RV32-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t4, 10(a0)
+; CHECK-RV32-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t3, 9(a0)
+; CHECK-RV32-NEXT:    sb t6, 9(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t2, 8(a0)
+; CHECK-RV32-NEXT:    sb t5, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t1, 7(a0)
+; CHECK-RV32-NEXT:    sb t4, 7(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t0, 6(a0)
+; CHECK-RV32-NEXT:    sb t3, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a7, 5(a0)
+; CHECK-RV32-NEXT:    sb t2, 5(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a6, 4(a0)
+; CHECK-RV32-NEXT:    sb t1, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a5, 3(a0)
+; CHECK-RV32-NEXT:    sb t0, 3(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a4, 2(a0)
+; CHECK-RV32-NEXT:    sb a7, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a3, 1(a0)
+; CHECK-RV32-NEXT:    sb a6, 1(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a2, 0(a0)
+; CHECK-RV32-NEXT:    sb a5, 0(a0)
 ; CHECK-RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
@@ -1029,44 +1029,44 @@ define void @test_nontemporal_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64C-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64C-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64C-NEXT:    .cfi_offset s1, -16
+; CHECK-RV64C-NEXT:    lbu t3, 104(a1)
+; CHECK-RV64C-NEXT:    lbu t6, 112(a1)
+; CHECK-RV64C-NEXT:    lbu a4, 120(a1)
 ; CHECK-RV64C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV64C-NEXT:    lbu a7, 8(a1)
 ; CHECK-RV64C-NEXT:    lbu t0, 16(a1)
 ; CHECK-RV64C-NEXT:    lbu t1, 24(a1)
 ; CHECK-RV64C-NEXT:    lbu t2, 32(a1)
-; CHECK-RV64C-NEXT:    lbu t3, 40(a1)
-; CHECK-RV64C-NEXT:    lbu t4, 48(a1)
-; CHECK-RV64C-NEXT:    lbu t5, 56(a1)
-; CHECK-RV64C-NEXT:    lbu t6, 64(a1)
+; CHECK-RV64C-NEXT:    lbu t4, 40(a1)
+; CHECK-RV64C-NEXT:    lbu t5, 48(a1)
+; CHECK-RV64C-NEXT:    lbu a5, 56(a1)
+; CHECK-RV64C-NEXT:    lbu a2, 64(a1)
 ; CHECK-RV64C-NEXT:    lbu a3, 72(a1)
-; CHECK-RV64C-NEXT:    lbu a4, 80(a1)
-; CHECK-RV64C-NEXT:    lbu a5, 88(a1)
-; CHECK-RV64C-NEXT:    lbu a2, 120(a1)
-; CHECK-RV64C-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64C-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64C-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64C-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64C-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb a2, 15(a0)
+; CHECK-RV64C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb s0, 14(a0)
+; CHECK-RV64C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb s1, 13(a0)
+; CHECK-RV64C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb a5, 11(a0)
+; CHECK-RV64C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb a4, 10(a0)
+; CHECK-RV64C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t6, 8(a0)
+; CHECK-RV64C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t5, 7(a0)
+; CHECK-RV64C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t4, 6(a0)
+; CHECK-RV64C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t3, 5(a0)
+; CHECK-RV64C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
@@ -1090,44 +1090,44 @@ define void @test_nontemporal_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32C-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32C-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32C-NEXT:    .cfi_offset s1, -8
+; CHECK-RV32C-NEXT:    lbu t3, 52(a1)
+; CHECK-RV32C-NEXT:    lbu t6, 56(a1)
+; CHECK-RV32C-NEXT:    lbu a4, 60(a1)
 ; CHECK-RV32C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV32C-NEXT:    lbu a7, 4(a1)
 ; CHECK-RV32C-NEXT:    lbu t0, 8(a1)
 ; CHECK-RV32C-NEXT:    lbu t1, 12(a1)
 ; CHECK-RV32C-NEXT:    lbu t2, 16(a1)
-; CHECK-RV32C-NEXT:    lbu t3, 20(a1)
-; CHECK-RV32C-NEXT:    lbu t4, 24(a1)
-; CHECK-RV32C-NEXT:    lbu t5, 28(a1)
-; CHECK-RV32C-NEXT:    lbu t6, 32(a1)
+; CHECK-RV32C-NEXT:    lbu t4, 20(a1)
+; CHECK-RV32C-NEXT:    lbu t5, 24(a1)
+; CHECK-RV32C-NEXT:    lbu a5, 28(a1)
+; CHECK-RV32C-NEXT:    lbu a2, 32(a1)
 ; CHECK-RV32C-NEXT:    lbu a3, 36(a1)
-; CHECK-RV32C-NEXT:    lbu a4, 40(a1)
-; CHECK-RV32C-NEXT:    lbu a5, 44(a1)
-; CHECK-RV32C-NEXT:    lbu a2, 60(a1)
-; CHECK-RV32C-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32C-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32C-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32C-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32C-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb a2, 15(a0)
+; CHECK-RV32C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb s0, 14(a0)
+; CHECK-RV32C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb s1, 13(a0)
+; CHECK-RV32C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb a5, 11(a0)
+; CHECK-RV32C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb a4, 10(a0)
+; CHECK-RV32C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t6, 8(a0)
+; CHECK-RV32C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t5, 7(a0)
+; CHECK-RV32C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t4, 6(a0)
+; CHECK-RV32C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t3, 5(a0)
+; CHECK-RV32C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
@@ -1163,112 +1163,112 @@ define void @test_nontemporal_store_v16i8(ptr %p, <16 x i8> %v) {
 define void @test_nontemporal_store_v8i16(ptr %p, <8 x i16> %v) {
 ; CHECK-RV64-LABEL: test_nontemporal_store_v8i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lh a2, 0(a1)
-; CHECK-RV64-NEXT:    lh a3, 8(a1)
-; CHECK-RV64-NEXT:    lh a4, 16(a1)
-; CHECK-RV64-NEXT:    lh a5, 24(a1)
-; CHECK-RV64-NEXT:    lh a6, 56(a1)
-; CHECK-RV64-NEXT:    lh a7, 48(a1)
-; CHECK-RV64-NEXT:    lh t0, 40(a1)
+; CHECK-RV64-NEXT:    lh a2, 40(a1)
+; CHECK-RV64-NEXT:    lh a3, 48(a1)
+; CHECK-RV64-NEXT:    lh a4, 56(a1)
+; CHECK-RV64-NEXT:    lh a5, 0(a1)
+; CHECK-RV64-NEXT:    lh a6, 8(a1)
+; CHECK-RV64-NEXT:    lh a7, 16(a1)
+; CHECK-RV64-NEXT:    lh t0, 24(a1)
 ; CHECK-RV64-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a6, 14(a0)
+; CHECK-RV64-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a7, 12(a0)
+; CHECK-RV64-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh t0, 10(a0)
+; CHECK-RV64-NEXT:    sh a2, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.all
 ; CHECK-RV64-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a5, 6(a0)
+; CHECK-RV64-NEXT:    sh t0, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a4, 4(a0)
+; CHECK-RV64-NEXT:    sh a7, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a3, 2(a0)
+; CHECK-RV64-NEXT:    sh a6, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a2, 0(a0)
+; CHECK-RV64-NEXT:    sh a5, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_store_v8i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    lh a2, 0(a1)
-; CHECK-RV32-NEXT:    lh a3, 4(a1)
-; CHECK-RV32-NEXT:    lh a4, 8(a1)
-; CHECK-RV32-NEXT:    lh a5, 12(a1)
-; CHECK-RV32-NEXT:    lh a6, 28(a1)
-; CHECK-RV32-NEXT:    lh a7, 24(a1)
-; CHECK-RV32-NEXT:    lh t0, 20(a1)
+; CHECK-RV32-NEXT:    lh a2, 20(a1)
+; CHECK-RV32-NEXT:    lh a3, 24(a1)
+; CHECK-RV32-NEXT:    lh a4, 28(a1)
+; CHECK-RV32-NEXT:    lh a5, 0(a1)
+; CHECK-RV32-NEXT:    lh a6, 4(a1)
+; CHECK-RV32-NEXT:    lh a7, 8(a1)
+; CHECK-RV32-NEXT:    lh t0, 12(a1)
 ; CHECK-RV32-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a6, 14(a0)
+; CHECK-RV32-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a7, 12(a0)
+; CHECK-RV32-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh t0, 10(a0)
+; CHECK-RV32-NEXT:    sh a2, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.all
 ; CHECK-RV32-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a5, 6(a0)
+; CHECK-RV32-NEXT:    sh t0, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a4, 4(a0)
+; CHECK-RV32-NEXT:    sh a7, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a3, 2(a0)
+; CHECK-RV32-NEXT:    sh a6, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a2, 0(a0)
+; CHECK-RV32-NEXT:    sh a5, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_store_v8i16:
 ; CHECK-RV64C:       # %bb.0:
-; CHECK-RV64C-NEXT:    lh a6, 0(a1)
-; CHECK-RV64C-NEXT:    lh a7, 8(a1)
-; CHECK-RV64C-NEXT:    lh t0, 16(a1)
-; CHECK-RV64C-NEXT:    lh a5, 24(a1)
-; CHECK-RV64C-NEXT:    lh a2, 56(a1)
+; CHECK-RV64C-NEXT:    lh a7, 40(a1)
 ; CHECK-RV64C-NEXT:    lh a3, 48(a1)
-; CHECK-RV64C-NEXT:    lh a4, 40(a1)
+; CHECK-RV64C-NEXT:    lh a4, 56(a1)
+; CHECK-RV64C-NEXT:    lh a6, 0(a1)
+; CHECK-RV64C-NEXT:    lh t0, 8(a1)
+; CHECK-RV64C-NEXT:    lh a2, 16(a1)
+; CHECK-RV64C-NEXT:    lh a5, 24(a1)
 ; CHECK-RV64C-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh a2, 14(a0)
+; CHECK-RV64C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh a4, 10(a0)
+; CHECK-RV64C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh t0, 4(a0)
+; CHECK-RV64C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh a7, 2(a0)
+; CHECK-RV64C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_store_v8i16:
 ; CHECK-RV32C:       # %bb.0:
-; CHECK-RV32C-NEXT:    lh a6, 0(a1)
-; CHECK-RV32C-NEXT:    lh a7, 4(a1)
-; CHECK-RV32C-NEXT:    lh t0, 8(a1)
-; CHECK-RV32C-NEXT:    lh a5, 12(a1)
-; CHECK-RV32C-NEXT:    lh a2, 28(a1)
+; CHECK-RV32C-NEXT:    lh a7, 20(a1)
 ; CHECK-RV32C-NEXT:    lh a3, 24(a1)
-; CHECK-RV32C-NEXT:    lh a4, 20(a1)
+; CHECK-RV32C-NEXT:    lh a4, 28(a1)
+; CHECK-RV32C-NEXT:    lh a6, 0(a1)
+; CHECK-RV32C-NEXT:    lh t0, 4(a1)
+; CHECK-RV32C-NEXT:    lh a2, 8(a1)
+; CHECK-RV32C-NEXT:    lh a5, 12(a1)
 ; CHECK-RV32C-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh a2, 14(a0)
+; CHECK-RV32C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh a4, 10(a0)
+; CHECK-RV32C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh t0, 4(a0)
+; CHECK-RV32C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh a7, 2(a0)
+; CHECK-RV32C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
@@ -2321,54 +2321,54 @@ define void @test_nontemporal_P1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64-NEXT:    .cfi_offset s1, -16
-; CHECK-RV64-NEXT:    lbu a2, 0(a1)
-; CHECK-RV64-NEXT:    lbu a3, 8(a1)
-; CHECK-RV64-NEXT:    lbu a4, 16(a1)
-; CHECK-RV64-NEXT:    lbu a5, 24(a1)
-; CHECK-RV64-NEXT:    lbu a6, 32(a1)
-; CHECK-RV64-NEXT:    lbu a7, 40(a1)
-; CHECK-RV64-NEXT:    lbu t0, 48(a1)
-; CHECK-RV64-NEXT:    lbu t1, 56(a1)
-; CHECK-RV64-NEXT:    lbu t2, 64(a1)
-; CHECK-RV64-NEXT:    lbu t3, 72(a1)
-; CHECK-RV64-NEXT:    lbu t4, 80(a1)
-; CHECK-RV64-NEXT:    lbu t5, 88(a1)
-; CHECK-RV64-NEXT:    lbu t6, 120(a1)
-; CHECK-RV64-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64-NEXT:    lbu a2, 104(a1)
+; CHECK-RV64-NEXT:    lbu a3, 112(a1)
+; CHECK-RV64-NEXT:    lbu a4, 120(a1)
+; CHECK-RV64-NEXT:    lbu a5, 0(a1)
+; CHECK-RV64-NEXT:    lbu a6, 8(a1)
+; CHECK-RV64-NEXT:    lbu a7, 16(a1)
+; CHECK-RV64-NEXT:    lbu t0, 24(a1)
+; CHECK-RV64-NEXT:    lbu t1, 32(a1)
+; CHECK-RV64-NEXT:    lbu t2, 40(a1)
+; CHECK-RV64-NEXT:    lbu t3, 48(a1)
+; CHECK-RV64-NEXT:    lbu t4, 56(a1)
+; CHECK-RV64-NEXT:    lbu t5, 64(a1)
+; CHECK-RV64-NEXT:    lbu t6, 72(a1)
+; CHECK-RV64-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t6, 15(a0)
+; CHECK-RV64-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb s0, 14(a0)
+; CHECK-RV64-NEXT:    sb a3, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb s1, 13(a0)
+; CHECK-RV64-NEXT:    sb a2, 13(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
 ; CHECK-RV64-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t5, 11(a0)
+; CHECK-RV64-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t4, 10(a0)
+; CHECK-RV64-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t3, 9(a0)
+; CHECK-RV64-NEXT:    sb t6, 9(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t2, 8(a0)
+; CHECK-RV64-NEXT:    sb t5, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t1, 7(a0)
+; CHECK-RV64-NEXT:    sb t4, 7(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb t0, 6(a0)
+; CHECK-RV64-NEXT:    sb t3, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb a7, 5(a0)
+; CHECK-RV64-NEXT:    sb t2, 5(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb a6, 4(a0)
+; CHECK-RV64-NEXT:    sb t1, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb a5, 3(a0)
+; CHECK-RV64-NEXT:    sb t0, 3(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb a4, 2(a0)
+; CHECK-RV64-NEXT:    sb a7, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb a3, 1(a0)
+; CHECK-RV64-NEXT:    sb a6, 1(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sb a2, 0(a0)
+; CHECK-RV64-NEXT:    sb a5, 0(a0)
 ; CHECK-RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
@@ -2382,54 +2382,54 @@ define void @test_nontemporal_P1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32-NEXT:    .cfi_offset s1, -8
-; CHECK-RV32-NEXT:    lbu a2, 0(a1)
-; CHECK-RV32-NEXT:    lbu a3, 4(a1)
-; CHECK-RV32-NEXT:    lbu a4, 8(a1)
-; CHECK-RV32-NEXT:    lbu a5, 12(a1)
-; CHECK-RV32-NEXT:    lbu a6, 16(a1)
-; CHECK-RV32-NEXT:    lbu a7, 20(a1)
-; CHECK-RV32-NEXT:    lbu t0, 24(a1)
-; CHECK-RV32-NEXT:    lbu t1, 28(a1)
-; CHECK-RV32-NEXT:    lbu t2, 32(a1)
-; CHECK-RV32-NEXT:    lbu t3, 36(a1)
-; CHECK-RV32-NEXT:    lbu t4, 40(a1)
-; CHECK-RV32-NEXT:    lbu t5, 44(a1)
-; CHECK-RV32-NEXT:    lbu t6, 60(a1)
-; CHECK-RV32-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32-NEXT:    lbu a2, 52(a1)
+; CHECK-RV32-NEXT:    lbu a3, 56(a1)
+; CHECK-RV32-NEXT:    lbu a4, 60(a1)
+; CHECK-RV32-NEXT:    lbu a5, 0(a1)
+; CHECK-RV32-NEXT:    lbu a6, 4(a1)
+; CHECK-RV32-NEXT:    lbu a7, 8(a1)
+; CHECK-RV32-NEXT:    lbu t0, 12(a1)
+; CHECK-RV32-NEXT:    lbu t1, 16(a1)
+; CHECK-RV32-NEXT:    lbu t2, 20(a1)
+; CHECK-RV32-NEXT:    lbu t3, 24(a1)
+; CHECK-RV32-NEXT:    lbu t4, 28(a1)
+; CHECK-RV32-NEXT:    lbu t5, 32(a1)
+; CHECK-RV32-NEXT:    lbu t6, 36(a1)
+; CHECK-RV32-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t6, 15(a0)
+; CHECK-RV32-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb s0, 14(a0)
+; CHECK-RV32-NEXT:    sb a3, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb s1, 13(a0)
+; CHECK-RV32-NEXT:    sb a2, 13(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
 ; CHECK-RV32-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t5, 11(a0)
+; CHECK-RV32-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t4, 10(a0)
+; CHECK-RV32-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t3, 9(a0)
+; CHECK-RV32-NEXT:    sb t6, 9(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t2, 8(a0)
+; CHECK-RV32-NEXT:    sb t5, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t1, 7(a0)
+; CHECK-RV32-NEXT:    sb t4, 7(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb t0, 6(a0)
+; CHECK-RV32-NEXT:    sb t3, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb a7, 5(a0)
+; CHECK-RV32-NEXT:    sb t2, 5(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb a6, 4(a0)
+; CHECK-RV32-NEXT:    sb t1, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb a5, 3(a0)
+; CHECK-RV32-NEXT:    sb t0, 3(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb a4, 2(a0)
+; CHECK-RV32-NEXT:    sb a7, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb a3, 1(a0)
+; CHECK-RV32-NEXT:    sb a6, 1(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sb a2, 0(a0)
+; CHECK-RV32-NEXT:    sb a5, 0(a0)
 ; CHECK-RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
@@ -2443,44 +2443,44 @@ define void @test_nontemporal_P1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64C-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64C-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64C-NEXT:    .cfi_offset s1, -16
+; CHECK-RV64C-NEXT:    lbu t3, 104(a1)
+; CHECK-RV64C-NEXT:    lbu t6, 112(a1)
+; CHECK-RV64C-NEXT:    lbu a4, 120(a1)
 ; CHECK-RV64C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV64C-NEXT:    lbu a7, 8(a1)
 ; CHECK-RV64C-NEXT:    lbu t0, 16(a1)
 ; CHECK-RV64C-NEXT:    lbu t1, 24(a1)
 ; CHECK-RV64C-NEXT:    lbu t2, 32(a1)
-; CHECK-RV64C-NEXT:    lbu t3, 40(a1)
-; CHECK-RV64C-NEXT:    lbu t4, 48(a1)
-; CHECK-RV64C-NEXT:    lbu t5, 56(a1)
-; CHECK-RV64C-NEXT:    lbu t6, 64(a1)
+; CHECK-RV64C-NEXT:    lbu t4, 40(a1)
+; CHECK-RV64C-NEXT:    lbu t5, 48(a1)
+; CHECK-RV64C-NEXT:    lbu a5, 56(a1)
+; CHECK-RV64C-NEXT:    lbu a2, 64(a1)
 ; CHECK-RV64C-NEXT:    lbu a3, 72(a1)
-; CHECK-RV64C-NEXT:    lbu a4, 80(a1)
-; CHECK-RV64C-NEXT:    lbu a5, 88(a1)
-; CHECK-RV64C-NEXT:    lbu a2, 120(a1)
-; CHECK-RV64C-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64C-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64C-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64C-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64C-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb a2, 15(a0)
+; CHECK-RV64C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb s0, 14(a0)
+; CHECK-RV64C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb s1, 13(a0)
+; CHECK-RV64C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb a5, 11(a0)
+; CHECK-RV64C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb a4, 10(a0)
+; CHECK-RV64C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb t6, 8(a0)
+; CHECK-RV64C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb t5, 7(a0)
+; CHECK-RV64C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb t4, 6(a0)
+; CHECK-RV64C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sb t3, 5(a0)
+; CHECK-RV64C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
@@ -2504,44 +2504,44 @@ define void @test_nontemporal_P1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32C-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32C-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32C-NEXT:    .cfi_offset s1, -8
+; CHECK-RV32C-NEXT:    lbu t3, 52(a1)
+; CHECK-RV32C-NEXT:    lbu t6, 56(a1)
+; CHECK-RV32C-NEXT:    lbu a4, 60(a1)
 ; CHECK-RV32C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV32C-NEXT:    lbu a7, 4(a1)
 ; CHECK-RV32C-NEXT:    lbu t0, 8(a1)
 ; CHECK-RV32C-NEXT:    lbu t1, 12(a1)
 ; CHECK-RV32C-NEXT:    lbu t2, 16(a1)
-; CHECK-RV32C-NEXT:    lbu t3, 20(a1)
-; CHECK-RV32C-NEXT:    lbu t4, 24(a1)
-; CHECK-RV32C-NEXT:    lbu t5, 28(a1)
-; CHECK-RV32C-NEXT:    lbu t6, 32(a1)
+; CHECK-RV32C-NEXT:    lbu t4, 20(a1)
+; CHECK-RV32C-NEXT:    lbu t5, 24(a1)
+; CHECK-RV32C-NEXT:    lbu a5, 28(a1)
+; CHECK-RV32C-NEXT:    lbu a2, 32(a1)
 ; CHECK-RV32C-NEXT:    lbu a3, 36(a1)
-; CHECK-RV32C-NEXT:    lbu a4, 40(a1)
-; CHECK-RV32C-NEXT:    lbu a5, 44(a1)
-; CHECK-RV32C-NEXT:    lbu a2, 60(a1)
-; CHECK-RV32C-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32C-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32C-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32C-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32C-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb a2, 15(a0)
+; CHECK-RV32C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb s0, 14(a0)
+; CHECK-RV32C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb s1, 13(a0)
+; CHECK-RV32C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb a5, 11(a0)
+; CHECK-RV32C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb a4, 10(a0)
+; CHECK-RV32C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb t6, 8(a0)
+; CHECK-RV32C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb t5, 7(a0)
+; CHECK-RV32C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb t4, 6(a0)
+; CHECK-RV32C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sb t3, 5(a0)
+; CHECK-RV32C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
@@ -2577,112 +2577,112 @@ define void @test_nontemporal_P1_store_v16i8(ptr %p, <16 x i8> %v) {
 define void @test_nontemporal_P1_store_v8i16(ptr %p, <8 x i16> %v) {
 ; CHECK-RV64-LABEL: test_nontemporal_P1_store_v8i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lh a2, 0(a1)
-; CHECK-RV64-NEXT:    lh a3, 8(a1)
-; CHECK-RV64-NEXT:    lh a4, 16(a1)
-; CHECK-RV64-NEXT:    lh a5, 24(a1)
-; CHECK-RV64-NEXT:    lh a6, 56(a1)
-; CHECK-RV64-NEXT:    lh a7, 48(a1)
-; CHECK-RV64-NEXT:    lh t0, 40(a1)
+; CHECK-RV64-NEXT:    lh a2, 40(a1)
+; CHECK-RV64-NEXT:    lh a3, 48(a1)
+; CHECK-RV64-NEXT:    lh a4, 56(a1)
+; CHECK-RV64-NEXT:    lh a5, 0(a1)
+; CHECK-RV64-NEXT:    lh a6, 8(a1)
+; CHECK-RV64-NEXT:    lh a7, 16(a1)
+; CHECK-RV64-NEXT:    lh t0, 24(a1)
 ; CHECK-RV64-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh a6, 14(a0)
+; CHECK-RV64-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh a7, 12(a0)
+; CHECK-RV64-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh t0, 10(a0)
+; CHECK-RV64-NEXT:    sh a2, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
 ; CHECK-RV64-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh a5, 6(a0)
+; CHECK-RV64-NEXT:    sh t0, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh a4, 4(a0)
+; CHECK-RV64-NEXT:    sh a7, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh a3, 2(a0)
+; CHECK-RV64-NEXT:    sh a6, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.p1
-; CHECK-RV64-NEXT:    sh a2, 0(a0)
+; CHECK-RV64-NEXT:    sh a5, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_P1_store_v8i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    lh a2, 0(a1)
-; CHECK-RV32-NEXT:    lh a3, 4(a1)
-; CHECK-RV32-NEXT:    lh a4, 8(a1)
-; CHECK-RV32-NEXT:    lh a5, 12(a1)
-; CHECK-RV32-NEXT:    lh a6, 28(a1)
-; CHECK-RV32-NEXT:    lh a7, 24(a1)
-; CHECK-RV32-NEXT:    lh t0, 20(a1)
+; CHECK-RV32-NEXT:    lh a2, 20(a1)
+; CHECK-RV32-NEXT:    lh a3, 24(a1)
+; CHECK-RV32-NEXT:    lh a4, 28(a1)
+; CHECK-RV32-NEXT:    lh a5, 0(a1)
+; CHECK-RV32-NEXT:    lh a6, 4(a1)
+; CHECK-RV32-NEXT:    lh a7, 8(a1)
+; CHECK-RV32-NEXT:    lh t0, 12(a1)
 ; CHECK-RV32-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh a6, 14(a0)
+; CHECK-RV32-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh a7, 12(a0)
+; CHECK-RV32-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh t0, 10(a0)
+; CHECK-RV32-NEXT:    sh a2, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
 ; CHECK-RV32-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh a5, 6(a0)
+; CHECK-RV32-NEXT:    sh t0, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh a4, 4(a0)
+; CHECK-RV32-NEXT:    sh a7, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh a3, 2(a0)
+; CHECK-RV32-NEXT:    sh a6, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.p1
-; CHECK-RV32-NEXT:    sh a2, 0(a0)
+; CHECK-RV32-NEXT:    sh a5, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_P1_store_v8i16:
 ; CHECK-RV64C:       # %bb.0:
-; CHECK-RV64C-NEXT:    lh a6, 0(a1)
-; CHECK-RV64C-NEXT:    lh a7, 8(a1)
-; CHECK-RV64C-NEXT:    lh t0, 16(a1)
-; CHECK-RV64C-NEXT:    lh a5, 24(a1)
-; CHECK-RV64C-NEXT:    lh a2, 56(a1)
+; CHECK-RV64C-NEXT:    lh a7, 40(a1)
 ; CHECK-RV64C-NEXT:    lh a3, 48(a1)
-; CHECK-RV64C-NEXT:    lh a4, 40(a1)
+; CHECK-RV64C-NEXT:    lh a4, 56(a1)
+; CHECK-RV64C-NEXT:    lh a6, 0(a1)
+; CHECK-RV64C-NEXT:    lh t0, 8(a1)
+; CHECK-RV64C-NEXT:    lh a2, 16(a1)
+; CHECK-RV64C-NEXT:    lh a5, 24(a1)
 ; CHECK-RV64C-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sh a2, 14(a0)
+; CHECK-RV64C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sh a4, 10(a0)
+; CHECK-RV64C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sh t0, 4(a0)
+; CHECK-RV64C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
-; CHECK-RV64C-NEXT:    sh a7, 2(a0)
+; CHECK-RV64C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.p1
 ; CHECK-RV64C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_P1_store_v8i16:
 ; CHECK-RV32C:       # %bb.0:
-; CHECK-RV32C-NEXT:    lh a6, 0(a1)
-; CHECK-RV32C-NEXT:    lh a7, 4(a1)
-; CHECK-RV32C-NEXT:    lh t0, 8(a1)
-; CHECK-RV32C-NEXT:    lh a5, 12(a1)
-; CHECK-RV32C-NEXT:    lh a2, 28(a1)
+; CHECK-RV32C-NEXT:    lh a7, 20(a1)
 ; CHECK-RV32C-NEXT:    lh a3, 24(a1)
-; CHECK-RV32C-NEXT:    lh a4, 20(a1)
+; CHECK-RV32C-NEXT:    lh a4, 28(a1)
+; CHECK-RV32C-NEXT:    lh a6, 0(a1)
+; CHECK-RV32C-NEXT:    lh t0, 4(a1)
+; CHECK-RV32C-NEXT:    lh a2, 8(a1)
+; CHECK-RV32C-NEXT:    lh a5, 12(a1)
 ; CHECK-RV32C-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sh a2, 14(a0)
+; CHECK-RV32C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sh a4, 10(a0)
+; CHECK-RV32C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sh t0, 4(a0)
+; CHECK-RV32C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
-; CHECK-RV32C-NEXT:    sh a7, 2(a0)
+; CHECK-RV32C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.p1
 ; CHECK-RV32C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
@@ -3735,54 +3735,54 @@ define void @test_nontemporal_PALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64-NEXT:    .cfi_offset s1, -16
-; CHECK-RV64-NEXT:    lbu a2, 0(a1)
-; CHECK-RV64-NEXT:    lbu a3, 8(a1)
-; CHECK-RV64-NEXT:    lbu a4, 16(a1)
-; CHECK-RV64-NEXT:    lbu a5, 24(a1)
-; CHECK-RV64-NEXT:    lbu a6, 32(a1)
-; CHECK-RV64-NEXT:    lbu a7, 40(a1)
-; CHECK-RV64-NEXT:    lbu t0, 48(a1)
-; CHECK-RV64-NEXT:    lbu t1, 56(a1)
-; CHECK-RV64-NEXT:    lbu t2, 64(a1)
-; CHECK-RV64-NEXT:    lbu t3, 72(a1)
-; CHECK-RV64-NEXT:    lbu t4, 80(a1)
-; CHECK-RV64-NEXT:    lbu t5, 88(a1)
-; CHECK-RV64-NEXT:    lbu t6, 120(a1)
-; CHECK-RV64-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64-NEXT:    lbu a2, 104(a1)
+; CHECK-RV64-NEXT:    lbu a3, 112(a1)
+; CHECK-RV64-NEXT:    lbu a4, 120(a1)
+; CHECK-RV64-NEXT:    lbu a5, 0(a1)
+; CHECK-RV64-NEXT:    lbu a6, 8(a1)
+; CHECK-RV64-NEXT:    lbu a7, 16(a1)
+; CHECK-RV64-NEXT:    lbu t0, 24(a1)
+; CHECK-RV64-NEXT:    lbu t1, 32(a1)
+; CHECK-RV64-NEXT:    lbu t2, 40(a1)
+; CHECK-RV64-NEXT:    lbu t3, 48(a1)
+; CHECK-RV64-NEXT:    lbu t4, 56(a1)
+; CHECK-RV64-NEXT:    lbu t5, 64(a1)
+; CHECK-RV64-NEXT:    lbu t6, 72(a1)
+; CHECK-RV64-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t6, 15(a0)
+; CHECK-RV64-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb s0, 14(a0)
+; CHECK-RV64-NEXT:    sb a3, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb s1, 13(a0)
+; CHECK-RV64-NEXT:    sb a2, 13(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
 ; CHECK-RV64-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t5, 11(a0)
+; CHECK-RV64-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t4, 10(a0)
+; CHECK-RV64-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t3, 9(a0)
+; CHECK-RV64-NEXT:    sb t6, 9(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t2, 8(a0)
+; CHECK-RV64-NEXT:    sb t5, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t1, 7(a0)
+; CHECK-RV64-NEXT:    sb t4, 7(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb t0, 6(a0)
+; CHECK-RV64-NEXT:    sb t3, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb a7, 5(a0)
+; CHECK-RV64-NEXT:    sb t2, 5(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb a6, 4(a0)
+; CHECK-RV64-NEXT:    sb t1, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb a5, 3(a0)
+; CHECK-RV64-NEXT:    sb t0, 3(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb a4, 2(a0)
+; CHECK-RV64-NEXT:    sb a7, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb a3, 1(a0)
+; CHECK-RV64-NEXT:    sb a6, 1(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sb a2, 0(a0)
+; CHECK-RV64-NEXT:    sb a5, 0(a0)
 ; CHECK-RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
@@ -3796,54 +3796,54 @@ define void @test_nontemporal_PALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32-NEXT:    .cfi_offset s1, -8
-; CHECK-RV32-NEXT:    lbu a2, 0(a1)
-; CHECK-RV32-NEXT:    lbu a3, 4(a1)
-; CHECK-RV32-NEXT:    lbu a4, 8(a1)
-; CHECK-RV32-NEXT:    lbu a5, 12(a1)
-; CHECK-RV32-NEXT:    lbu a6, 16(a1)
-; CHECK-RV32-NEXT:    lbu a7, 20(a1)
-; CHECK-RV32-NEXT:    lbu t0, 24(a1)
-; CHECK-RV32-NEXT:    lbu t1, 28(a1)
-; CHECK-RV32-NEXT:    lbu t2, 32(a1)
-; CHECK-RV32-NEXT:    lbu t3, 36(a1)
-; CHECK-RV32-NEXT:    lbu t4, 40(a1)
-; CHECK-RV32-NEXT:    lbu t5, 44(a1)
-; CHECK-RV32-NEXT:    lbu t6, 60(a1)
-; CHECK-RV32-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32-NEXT:    lbu a2, 52(a1)
+; CHECK-RV32-NEXT:    lbu a3, 56(a1)
+; CHECK-RV32-NEXT:    lbu a4, 60(a1)
+; CHECK-RV32-NEXT:    lbu a5, 0(a1)
+; CHECK-RV32-NEXT:    lbu a6, 4(a1)
+; CHECK-RV32-NEXT:    lbu a7, 8(a1)
+; CHECK-RV32-NEXT:    lbu t0, 12(a1)
+; CHECK-RV32-NEXT:    lbu t1, 16(a1)
+; CHECK-RV32-NEXT:    lbu t2, 20(a1)
+; CHECK-RV32-NEXT:    lbu t3, 24(a1)
+; CHECK-RV32-NEXT:    lbu t4, 28(a1)
+; CHECK-RV32-NEXT:    lbu t5, 32(a1)
+; CHECK-RV32-NEXT:    lbu t6, 36(a1)
+; CHECK-RV32-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t6, 15(a0)
+; CHECK-RV32-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb s0, 14(a0)
+; CHECK-RV32-NEXT:    sb a3, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb s1, 13(a0)
+; CHECK-RV32-NEXT:    sb a2, 13(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
 ; CHECK-RV32-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t5, 11(a0)
+; CHECK-RV32-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t4, 10(a0)
+; CHECK-RV32-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t3, 9(a0)
+; CHECK-RV32-NEXT:    sb t6, 9(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t2, 8(a0)
+; CHECK-RV32-NEXT:    sb t5, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t1, 7(a0)
+; CHECK-RV32-NEXT:    sb t4, 7(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb t0, 6(a0)
+; CHECK-RV32-NEXT:    sb t3, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb a7, 5(a0)
+; CHECK-RV32-NEXT:    sb t2, 5(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb a6, 4(a0)
+; CHECK-RV32-NEXT:    sb t1, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb a5, 3(a0)
+; CHECK-RV32-NEXT:    sb t0, 3(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb a4, 2(a0)
+; CHECK-RV32-NEXT:    sb a7, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb a3, 1(a0)
+; CHECK-RV32-NEXT:    sb a6, 1(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sb a2, 0(a0)
+; CHECK-RV32-NEXT:    sb a5, 0(a0)
 ; CHECK-RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
@@ -3857,44 +3857,44 @@ define void @test_nontemporal_PALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64C-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64C-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64C-NEXT:    .cfi_offset s1, -16
+; CHECK-RV64C-NEXT:    lbu t3, 104(a1)
+; CHECK-RV64C-NEXT:    lbu t6, 112(a1)
+; CHECK-RV64C-NEXT:    lbu a4, 120(a1)
 ; CHECK-RV64C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV64C-NEXT:    lbu a7, 8(a1)
 ; CHECK-RV64C-NEXT:    lbu t0, 16(a1)
 ; CHECK-RV64C-NEXT:    lbu t1, 24(a1)
 ; CHECK-RV64C-NEXT:    lbu t2, 32(a1)
-; CHECK-RV64C-NEXT:    lbu t3, 40(a1)
-; CHECK-RV64C-NEXT:    lbu t4, 48(a1)
-; CHECK-RV64C-NEXT:    lbu t5, 56(a1)
-; CHECK-RV64C-NEXT:    lbu t6, 64(a1)
+; CHECK-RV64C-NEXT:    lbu t4, 40(a1)
+; CHECK-RV64C-NEXT:    lbu t5, 48(a1)
+; CHECK-RV64C-NEXT:    lbu a5, 56(a1)
+; CHECK-RV64C-NEXT:    lbu a2, 64(a1)
 ; CHECK-RV64C-NEXT:    lbu a3, 72(a1)
-; CHECK-RV64C-NEXT:    lbu a4, 80(a1)
-; CHECK-RV64C-NEXT:    lbu a5, 88(a1)
-; CHECK-RV64C-NEXT:    lbu a2, 120(a1)
-; CHECK-RV64C-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64C-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64C-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64C-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64C-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb a2, 15(a0)
+; CHECK-RV64C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb s0, 14(a0)
+; CHECK-RV64C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb s1, 13(a0)
+; CHECK-RV64C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb a5, 11(a0)
+; CHECK-RV64C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb a4, 10(a0)
+; CHECK-RV64C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb t6, 8(a0)
+; CHECK-RV64C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb t5, 7(a0)
+; CHECK-RV64C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb t4, 6(a0)
+; CHECK-RV64C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sb t3, 5(a0)
+; CHECK-RV64C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
@@ -3918,44 +3918,44 @@ define void @test_nontemporal_PALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32C-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32C-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32C-NEXT:    .cfi_offset s1, -8
+; CHECK-RV32C-NEXT:    lbu t3, 52(a1)
+; CHECK-RV32C-NEXT:    lbu t6, 56(a1)
+; CHECK-RV32C-NEXT:    lbu a4, 60(a1)
 ; CHECK-RV32C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV32C-NEXT:    lbu a7, 4(a1)
 ; CHECK-RV32C-NEXT:    lbu t0, 8(a1)
 ; CHECK-RV32C-NEXT:    lbu t1, 12(a1)
 ; CHECK-RV32C-NEXT:    lbu t2, 16(a1)
-; CHECK-RV32C-NEXT:    lbu t3, 20(a1)
-; CHECK-RV32C-NEXT:    lbu t4, 24(a1)
-; CHECK-RV32C-NEXT:    lbu t5, 28(a1)
-; CHECK-RV32C-NEXT:    lbu t6, 32(a1)
+; CHECK-RV32C-NEXT:    lbu t4, 20(a1)
+; CHECK-RV32C-NEXT:    lbu t5, 24(a1)
+; CHECK-RV32C-NEXT:    lbu a5, 28(a1)
+; CHECK-RV32C-NEXT:    lbu a2, 32(a1)
 ; CHECK-RV32C-NEXT:    lbu a3, 36(a1)
-; CHECK-RV32C-NEXT:    lbu a4, 40(a1)
-; CHECK-RV32C-NEXT:    lbu a5, 44(a1)
-; CHECK-RV32C-NEXT:    lbu a2, 60(a1)
-; CHECK-RV32C-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32C-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32C-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32C-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32C-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb a2, 15(a0)
+; CHECK-RV32C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb s0, 14(a0)
+; CHECK-RV32C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb s1, 13(a0)
+; CHECK-RV32C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb a5, 11(a0)
+; CHECK-RV32C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb a4, 10(a0)
+; CHECK-RV32C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb t6, 8(a0)
+; CHECK-RV32C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb t5, 7(a0)
+; CHECK-RV32C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb t4, 6(a0)
+; CHECK-RV32C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sb t3, 5(a0)
+; CHECK-RV32C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
@@ -3991,112 +3991,112 @@ define void @test_nontemporal_PALL_store_v16i8(ptr %p, <16 x i8> %v) {
 define void @test_nontemporal_PALL_store_v8i16(ptr %p, <8 x i16> %v) {
 ; CHECK-RV64-LABEL: test_nontemporal_PALL_store_v8i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lh a2, 0(a1)
-; CHECK-RV64-NEXT:    lh a3, 8(a1)
-; CHECK-RV64-NEXT:    lh a4, 16(a1)
-; CHECK-RV64-NEXT:    lh a5, 24(a1)
-; CHECK-RV64-NEXT:    lh a6, 56(a1)
-; CHECK-RV64-NEXT:    lh a7, 48(a1)
-; CHECK-RV64-NEXT:    lh t0, 40(a1)
+; CHECK-RV64-NEXT:    lh a2, 40(a1)
+; CHECK-RV64-NEXT:    lh a3, 48(a1)
+; CHECK-RV64-NEXT:    lh a4, 56(a1)
+; CHECK-RV64-NEXT:    lh a5, 0(a1)
+; CHECK-RV64-NEXT:    lh a6, 8(a1)
+; CHECK-RV64-NEXT:    lh a7, 16(a1)
+; CHECK-RV64-NEXT:    lh t0, 24(a1)
 ; CHECK-RV64-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh a6, 14(a0)
+; CHECK-RV64-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh a7, 12(a0)
+; CHECK-RV64-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh t0, 10(a0)
+; CHECK-RV64-NEXT:    sh a2, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
 ; CHECK-RV64-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh a5, 6(a0)
+; CHECK-RV64-NEXT:    sh t0, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh a4, 4(a0)
+; CHECK-RV64-NEXT:    sh a7, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh a3, 2(a0)
+; CHECK-RV64-NEXT:    sh a6, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.pall
-; CHECK-RV64-NEXT:    sh a2, 0(a0)
+; CHECK-RV64-NEXT:    sh a5, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_PALL_store_v8i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    lh a2, 0(a1)
-; CHECK-RV32-NEXT:    lh a3, 4(a1)
-; CHECK-RV32-NEXT:    lh a4, 8(a1)
-; CHECK-RV32-NEXT:    lh a5, 12(a1)
-; CHECK-RV32-NEXT:    lh a6, 28(a1)
-; CHECK-RV32-NEXT:    lh a7, 24(a1)
-; CHECK-RV32-NEXT:    lh t0, 20(a1)
+; CHECK-RV32-NEXT:    lh a2, 20(a1)
+; CHECK-RV32-NEXT:    lh a3, 24(a1)
+; CHECK-RV32-NEXT:    lh a4, 28(a1)
+; CHECK-RV32-NEXT:    lh a5, 0(a1)
+; CHECK-RV32-NEXT:    lh a6, 4(a1)
+; CHECK-RV32-NEXT:    lh a7, 8(a1)
+; CHECK-RV32-NEXT:    lh t0, 12(a1)
 ; CHECK-RV32-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh a6, 14(a0)
+; CHECK-RV32-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh a7, 12(a0)
+; CHECK-RV32-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh t0, 10(a0)
+; CHECK-RV32-NEXT:    sh a2, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
 ; CHECK-RV32-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh a5, 6(a0)
+; CHECK-RV32-NEXT:    sh t0, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh a4, 4(a0)
+; CHECK-RV32-NEXT:    sh a7, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh a3, 2(a0)
+; CHECK-RV32-NEXT:    sh a6, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.pall
-; CHECK-RV32-NEXT:    sh a2, 0(a0)
+; CHECK-RV32-NEXT:    sh a5, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_PALL_store_v8i16:
 ; CHECK-RV64C:       # %bb.0:
-; CHECK-RV64C-NEXT:    lh a6, 0(a1)
-; CHECK-RV64C-NEXT:    lh a7, 8(a1)
-; CHECK-RV64C-NEXT:    lh t0, 16(a1)
-; CHECK-RV64C-NEXT:    lh a5, 24(a1)
-; CHECK-RV64C-NEXT:    lh a2, 56(a1)
+; CHECK-RV64C-NEXT:    lh a7, 40(a1)
 ; CHECK-RV64C-NEXT:    lh a3, 48(a1)
-; CHECK-RV64C-NEXT:    lh a4, 40(a1)
+; CHECK-RV64C-NEXT:    lh a4, 56(a1)
+; CHECK-RV64C-NEXT:    lh a6, 0(a1)
+; CHECK-RV64C-NEXT:    lh t0, 8(a1)
+; CHECK-RV64C-NEXT:    lh a2, 16(a1)
+; CHECK-RV64C-NEXT:    lh a5, 24(a1)
 ; CHECK-RV64C-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sh a2, 14(a0)
+; CHECK-RV64C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sh a4, 10(a0)
+; CHECK-RV64C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sh t0, 4(a0)
+; CHECK-RV64C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
-; CHECK-RV64C-NEXT:    sh a7, 2(a0)
+; CHECK-RV64C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.pall
 ; CHECK-RV64C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_PALL_store_v8i16:
 ; CHECK-RV32C:       # %bb.0:
-; CHECK-RV32C-NEXT:    lh a6, 0(a1)
-; CHECK-RV32C-NEXT:    lh a7, 4(a1)
-; CHECK-RV32C-NEXT:    lh t0, 8(a1)
-; CHECK-RV32C-NEXT:    lh a5, 12(a1)
-; CHECK-RV32C-NEXT:    lh a2, 28(a1)
+; CHECK-RV32C-NEXT:    lh a7, 20(a1)
 ; CHECK-RV32C-NEXT:    lh a3, 24(a1)
-; CHECK-RV32C-NEXT:    lh a4, 20(a1)
+; CHECK-RV32C-NEXT:    lh a4, 28(a1)
+; CHECK-RV32C-NEXT:    lh a6, 0(a1)
+; CHECK-RV32C-NEXT:    lh t0, 4(a1)
+; CHECK-RV32C-NEXT:    lh a2, 8(a1)
+; CHECK-RV32C-NEXT:    lh a5, 12(a1)
 ; CHECK-RV32C-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sh a2, 14(a0)
+; CHECK-RV32C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sh a4, 10(a0)
+; CHECK-RV32C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sh t0, 4(a0)
+; CHECK-RV32C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
-; CHECK-RV32C-NEXT:    sh a7, 2(a0)
+; CHECK-RV32C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.pall
 ; CHECK-RV32C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
@@ -5149,54 +5149,54 @@ define void @test_nontemporal_S1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64-NEXT:    .cfi_offset s1, -16
-; CHECK-RV64-NEXT:    lbu a2, 0(a1)
-; CHECK-RV64-NEXT:    lbu a3, 8(a1)
-; CHECK-RV64-NEXT:    lbu a4, 16(a1)
-; CHECK-RV64-NEXT:    lbu a5, 24(a1)
-; CHECK-RV64-NEXT:    lbu a6, 32(a1)
-; CHECK-RV64-NEXT:    lbu a7, 40(a1)
-; CHECK-RV64-NEXT:    lbu t0, 48(a1)
-; CHECK-RV64-NEXT:    lbu t1, 56(a1)
-; CHECK-RV64-NEXT:    lbu t2, 64(a1)
-; CHECK-RV64-NEXT:    lbu t3, 72(a1)
-; CHECK-RV64-NEXT:    lbu t4, 80(a1)
-; CHECK-RV64-NEXT:    lbu t5, 88(a1)
-; CHECK-RV64-NEXT:    lbu t6, 120(a1)
-; CHECK-RV64-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64-NEXT:    lbu a2, 104(a1)
+; CHECK-RV64-NEXT:    lbu a3, 112(a1)
+; CHECK-RV64-NEXT:    lbu a4, 120(a1)
+; CHECK-RV64-NEXT:    lbu a5, 0(a1)
+; CHECK-RV64-NEXT:    lbu a6, 8(a1)
+; CHECK-RV64-NEXT:    lbu a7, 16(a1)
+; CHECK-RV64-NEXT:    lbu t0, 24(a1)
+; CHECK-RV64-NEXT:    lbu t1, 32(a1)
+; CHECK-RV64-NEXT:    lbu t2, 40(a1)
+; CHECK-RV64-NEXT:    lbu t3, 48(a1)
+; CHECK-RV64-NEXT:    lbu t4, 56(a1)
+; CHECK-RV64-NEXT:    lbu t5, 64(a1)
+; CHECK-RV64-NEXT:    lbu t6, 72(a1)
+; CHECK-RV64-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t6, 15(a0)
+; CHECK-RV64-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb s0, 14(a0)
+; CHECK-RV64-NEXT:    sb a3, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb s1, 13(a0)
+; CHECK-RV64-NEXT:    sb a2, 13(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
 ; CHECK-RV64-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t5, 11(a0)
+; CHECK-RV64-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t4, 10(a0)
+; CHECK-RV64-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t3, 9(a0)
+; CHECK-RV64-NEXT:    sb t6, 9(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t2, 8(a0)
+; CHECK-RV64-NEXT:    sb t5, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t1, 7(a0)
+; CHECK-RV64-NEXT:    sb t4, 7(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb t0, 6(a0)
+; CHECK-RV64-NEXT:    sb t3, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb a7, 5(a0)
+; CHECK-RV64-NEXT:    sb t2, 5(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb a6, 4(a0)
+; CHECK-RV64-NEXT:    sb t1, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb a5, 3(a0)
+; CHECK-RV64-NEXT:    sb t0, 3(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb a4, 2(a0)
+; CHECK-RV64-NEXT:    sb a7, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb a3, 1(a0)
+; CHECK-RV64-NEXT:    sb a6, 1(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sb a2, 0(a0)
+; CHECK-RV64-NEXT:    sb a5, 0(a0)
 ; CHECK-RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
@@ -5210,54 +5210,54 @@ define void @test_nontemporal_S1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32-NEXT:    .cfi_offset s1, -8
-; CHECK-RV32-NEXT:    lbu a2, 0(a1)
-; CHECK-RV32-NEXT:    lbu a3, 4(a1)
-; CHECK-RV32-NEXT:    lbu a4, 8(a1)
-; CHECK-RV32-NEXT:    lbu a5, 12(a1)
-; CHECK-RV32-NEXT:    lbu a6, 16(a1)
-; CHECK-RV32-NEXT:    lbu a7, 20(a1)
-; CHECK-RV32-NEXT:    lbu t0, 24(a1)
-; CHECK-RV32-NEXT:    lbu t1, 28(a1)
-; CHECK-RV32-NEXT:    lbu t2, 32(a1)
-; CHECK-RV32-NEXT:    lbu t3, 36(a1)
-; CHECK-RV32-NEXT:    lbu t4, 40(a1)
-; CHECK-RV32-NEXT:    lbu t5, 44(a1)
-; CHECK-RV32-NEXT:    lbu t6, 60(a1)
-; CHECK-RV32-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32-NEXT:    lbu a2, 52(a1)
+; CHECK-RV32-NEXT:    lbu a3, 56(a1)
+; CHECK-RV32-NEXT:    lbu a4, 60(a1)
+; CHECK-RV32-NEXT:    lbu a5, 0(a1)
+; CHECK-RV32-NEXT:    lbu a6, 4(a1)
+; CHECK-RV32-NEXT:    lbu a7, 8(a1)
+; CHECK-RV32-NEXT:    lbu t0, 12(a1)
+; CHECK-RV32-NEXT:    lbu t1, 16(a1)
+; CHECK-RV32-NEXT:    lbu t2, 20(a1)
+; CHECK-RV32-NEXT:    lbu t3, 24(a1)
+; CHECK-RV32-NEXT:    lbu t4, 28(a1)
+; CHECK-RV32-NEXT:    lbu t5, 32(a1)
+; CHECK-RV32-NEXT:    lbu t6, 36(a1)
+; CHECK-RV32-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t6, 15(a0)
+; CHECK-RV32-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb s0, 14(a0)
+; CHECK-RV32-NEXT:    sb a3, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb s1, 13(a0)
+; CHECK-RV32-NEXT:    sb a2, 13(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
 ; CHECK-RV32-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t5, 11(a0)
+; CHECK-RV32-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t4, 10(a0)
+; CHECK-RV32-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t3, 9(a0)
+; CHECK-RV32-NEXT:    sb t6, 9(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t2, 8(a0)
+; CHECK-RV32-NEXT:    sb t5, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t1, 7(a0)
+; CHECK-RV32-NEXT:    sb t4, 7(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb t0, 6(a0)
+; CHECK-RV32-NEXT:    sb t3, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb a7, 5(a0)
+; CHECK-RV32-NEXT:    sb t2, 5(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb a6, 4(a0)
+; CHECK-RV32-NEXT:    sb t1, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb a5, 3(a0)
+; CHECK-RV32-NEXT:    sb t0, 3(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb a4, 2(a0)
+; CHECK-RV32-NEXT:    sb a7, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb a3, 1(a0)
+; CHECK-RV32-NEXT:    sb a6, 1(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sb a2, 0(a0)
+; CHECK-RV32-NEXT:    sb a5, 0(a0)
 ; CHECK-RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
@@ -5271,44 +5271,44 @@ define void @test_nontemporal_S1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64C-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64C-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64C-NEXT:    .cfi_offset s1, -16
+; CHECK-RV64C-NEXT:    lbu t3, 104(a1)
+; CHECK-RV64C-NEXT:    lbu t6, 112(a1)
+; CHECK-RV64C-NEXT:    lbu a4, 120(a1)
 ; CHECK-RV64C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV64C-NEXT:    lbu a7, 8(a1)
 ; CHECK-RV64C-NEXT:    lbu t0, 16(a1)
 ; CHECK-RV64C-NEXT:    lbu t1, 24(a1)
 ; CHECK-RV64C-NEXT:    lbu t2, 32(a1)
-; CHECK-RV64C-NEXT:    lbu t3, 40(a1)
-; CHECK-RV64C-NEXT:    lbu t4, 48(a1)
-; CHECK-RV64C-NEXT:    lbu t5, 56(a1)
-; CHECK-RV64C-NEXT:    lbu t6, 64(a1)
+; CHECK-RV64C-NEXT:    lbu t4, 40(a1)
+; CHECK-RV64C-NEXT:    lbu t5, 48(a1)
+; CHECK-RV64C-NEXT:    lbu a5, 56(a1)
+; CHECK-RV64C-NEXT:    lbu a2, 64(a1)
 ; CHECK-RV64C-NEXT:    lbu a3, 72(a1)
-; CHECK-RV64C-NEXT:    lbu a4, 80(a1)
-; CHECK-RV64C-NEXT:    lbu a5, 88(a1)
-; CHECK-RV64C-NEXT:    lbu a2, 120(a1)
-; CHECK-RV64C-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64C-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64C-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64C-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64C-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb a2, 15(a0)
+; CHECK-RV64C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb s0, 14(a0)
+; CHECK-RV64C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb s1, 13(a0)
+; CHECK-RV64C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb a5, 11(a0)
+; CHECK-RV64C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb a4, 10(a0)
+; CHECK-RV64C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb t6, 8(a0)
+; CHECK-RV64C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb t5, 7(a0)
+; CHECK-RV64C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb t4, 6(a0)
+; CHECK-RV64C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sb t3, 5(a0)
+; CHECK-RV64C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
@@ -5332,44 +5332,44 @@ define void @test_nontemporal_S1_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32C-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32C-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32C-NEXT:    .cfi_offset s1, -8
+; CHECK-RV32C-NEXT:    lbu t3, 52(a1)
+; CHECK-RV32C-NEXT:    lbu t6, 56(a1)
+; CHECK-RV32C-NEXT:    lbu a4, 60(a1)
 ; CHECK-RV32C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV32C-NEXT:    lbu a7, 4(a1)
 ; CHECK-RV32C-NEXT:    lbu t0, 8(a1)
 ; CHECK-RV32C-NEXT:    lbu t1, 12(a1)
 ; CHECK-RV32C-NEXT:    lbu t2, 16(a1)
-; CHECK-RV32C-NEXT:    lbu t3, 20(a1)
-; CHECK-RV32C-NEXT:    lbu t4, 24(a1)
-; CHECK-RV32C-NEXT:    lbu t5, 28(a1)
-; CHECK-RV32C-NEXT:    lbu t6, 32(a1)
+; CHECK-RV32C-NEXT:    lbu t4, 20(a1)
+; CHECK-RV32C-NEXT:    lbu t5, 24(a1)
+; CHECK-RV32C-NEXT:    lbu a5, 28(a1)
+; CHECK-RV32C-NEXT:    lbu a2, 32(a1)
 ; CHECK-RV32C-NEXT:    lbu a3, 36(a1)
-; CHECK-RV32C-NEXT:    lbu a4, 40(a1)
-; CHECK-RV32C-NEXT:    lbu a5, 44(a1)
-; CHECK-RV32C-NEXT:    lbu a2, 60(a1)
-; CHECK-RV32C-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32C-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32C-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32C-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32C-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb a2, 15(a0)
+; CHECK-RV32C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb s0, 14(a0)
+; CHECK-RV32C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb s1, 13(a0)
+; CHECK-RV32C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb a5, 11(a0)
+; CHECK-RV32C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb a4, 10(a0)
+; CHECK-RV32C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb t6, 8(a0)
+; CHECK-RV32C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb t5, 7(a0)
+; CHECK-RV32C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb t4, 6(a0)
+; CHECK-RV32C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sb t3, 5(a0)
+; CHECK-RV32C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
@@ -5405,112 +5405,112 @@ define void @test_nontemporal_S1_store_v16i8(ptr %p, <16 x i8> %v) {
 define void @test_nontemporal_S1_store_v8i16(ptr %p, <8 x i16> %v) {
 ; CHECK-RV64-LABEL: test_nontemporal_S1_store_v8i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lh a2, 0(a1)
-; CHECK-RV64-NEXT:    lh a3, 8(a1)
-; CHECK-RV64-NEXT:    lh a4, 16(a1)
-; CHECK-RV64-NEXT:    lh a5, 24(a1)
-; CHECK-RV64-NEXT:    lh a6, 56(a1)
-; CHECK-RV64-NEXT:    lh a7, 48(a1)
-; CHECK-RV64-NEXT:    lh t0, 40(a1)
+; CHECK-RV64-NEXT:    lh a2, 40(a1)
+; CHECK-RV64-NEXT:    lh a3, 48(a1)
+; CHECK-RV64-NEXT:    lh a4, 56(a1)
+; CHECK-RV64-NEXT:    lh a5, 0(a1)
+; CHECK-RV64-NEXT:    lh a6, 8(a1)
+; CHECK-RV64-NEXT:    lh a7, 16(a1)
+; CHECK-RV64-NEXT:    lh t0, 24(a1)
 ; CHECK-RV64-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh a6, 14(a0)
+; CHECK-RV64-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh a7, 12(a0)
+; CHECK-RV64-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh t0, 10(a0)
+; CHECK-RV64-NEXT:    sh a2, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
 ; CHECK-RV64-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh a5, 6(a0)
+; CHECK-RV64-NEXT:    sh t0, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh a4, 4(a0)
+; CHECK-RV64-NEXT:    sh a7, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh a3, 2(a0)
+; CHECK-RV64-NEXT:    sh a6, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.s1
-; CHECK-RV64-NEXT:    sh a2, 0(a0)
+; CHECK-RV64-NEXT:    sh a5, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_S1_store_v8i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    lh a2, 0(a1)
-; CHECK-RV32-NEXT:    lh a3, 4(a1)
-; CHECK-RV32-NEXT:    lh a4, 8(a1)
-; CHECK-RV32-NEXT:    lh a5, 12(a1)
-; CHECK-RV32-NEXT:    lh a6, 28(a1)
-; CHECK-RV32-NEXT:    lh a7, 24(a1)
-; CHECK-RV32-NEXT:    lh t0, 20(a1)
+; CHECK-RV32-NEXT:    lh a2, 20(a1)
+; CHECK-RV32-NEXT:    lh a3, 24(a1)
+; CHECK-RV32-NEXT:    lh a4, 28(a1)
+; CHECK-RV32-NEXT:    lh a5, 0(a1)
+; CHECK-RV32-NEXT:    lh a6, 4(a1)
+; CHECK-RV32-NEXT:    lh a7, 8(a1)
+; CHECK-RV32-NEXT:    lh t0, 12(a1)
 ; CHECK-RV32-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh a6, 14(a0)
+; CHECK-RV32-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh a7, 12(a0)
+; CHECK-RV32-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh t0, 10(a0)
+; CHECK-RV32-NEXT:    sh a2, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
 ; CHECK-RV32-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh a5, 6(a0)
+; CHECK-RV32-NEXT:    sh t0, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh a4, 4(a0)
+; CHECK-RV32-NEXT:    sh a7, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh a3, 2(a0)
+; CHECK-RV32-NEXT:    sh a6, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.s1
-; CHECK-RV32-NEXT:    sh a2, 0(a0)
+; CHECK-RV32-NEXT:    sh a5, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_S1_store_v8i16:
 ; CHECK-RV64C:       # %bb.0:
-; CHECK-RV64C-NEXT:    lh a6, 0(a1)
-; CHECK-RV64C-NEXT:    lh a7, 8(a1)
-; CHECK-RV64C-NEXT:    lh t0, 16(a1)
-; CHECK-RV64C-NEXT:    lh a5, 24(a1)
-; CHECK-RV64C-NEXT:    lh a2, 56(a1)
+; CHECK-RV64C-NEXT:    lh a7, 40(a1)
 ; CHECK-RV64C-NEXT:    lh a3, 48(a1)
-; CHECK-RV64C-NEXT:    lh a4, 40(a1)
+; CHECK-RV64C-NEXT:    lh a4, 56(a1)
+; CHECK-RV64C-NEXT:    lh a6, 0(a1)
+; CHECK-RV64C-NEXT:    lh t0, 8(a1)
+; CHECK-RV64C-NEXT:    lh a2, 16(a1)
+; CHECK-RV64C-NEXT:    lh a5, 24(a1)
 ; CHECK-RV64C-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sh a2, 14(a0)
+; CHECK-RV64C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sh a4, 10(a0)
+; CHECK-RV64C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sh t0, 4(a0)
+; CHECK-RV64C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
-; CHECK-RV64C-NEXT:    sh a7, 2(a0)
+; CHECK-RV64C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.s1
 ; CHECK-RV64C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_S1_store_v8i16:
 ; CHECK-RV32C:       # %bb.0:
-; CHECK-RV32C-NEXT:    lh a6, 0(a1)
-; CHECK-RV32C-NEXT:    lh a7, 4(a1)
-; CHECK-RV32C-NEXT:    lh t0, 8(a1)
-; CHECK-RV32C-NEXT:    lh a5, 12(a1)
-; CHECK-RV32C-NEXT:    lh a2, 28(a1)
+; CHECK-RV32C-NEXT:    lh a7, 20(a1)
 ; CHECK-RV32C-NEXT:    lh a3, 24(a1)
-; CHECK-RV32C-NEXT:    lh a4, 20(a1)
+; CHECK-RV32C-NEXT:    lh a4, 28(a1)
+; CHECK-RV32C-NEXT:    lh a6, 0(a1)
+; CHECK-RV32C-NEXT:    lh t0, 4(a1)
+; CHECK-RV32C-NEXT:    lh a2, 8(a1)
+; CHECK-RV32C-NEXT:    lh a5, 12(a1)
 ; CHECK-RV32C-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sh a2, 14(a0)
+; CHECK-RV32C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sh a4, 10(a0)
+; CHECK-RV32C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sh t0, 4(a0)
+; CHECK-RV32C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
-; CHECK-RV32C-NEXT:    sh a7, 2(a0)
+; CHECK-RV32C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.s1
 ; CHECK-RV32C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
@@ -6563,54 +6563,54 @@ define void @test_nontemporal_ALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64-NEXT:    .cfi_offset s1, -16
-; CHECK-RV64-NEXT:    lbu a2, 0(a1)
-; CHECK-RV64-NEXT:    lbu a3, 8(a1)
-; CHECK-RV64-NEXT:    lbu a4, 16(a1)
-; CHECK-RV64-NEXT:    lbu a5, 24(a1)
-; CHECK-RV64-NEXT:    lbu a6, 32(a1)
-; CHECK-RV64-NEXT:    lbu a7, 40(a1)
-; CHECK-RV64-NEXT:    lbu t0, 48(a1)
-; CHECK-RV64-NEXT:    lbu t1, 56(a1)
-; CHECK-RV64-NEXT:    lbu t2, 64(a1)
-; CHECK-RV64-NEXT:    lbu t3, 72(a1)
-; CHECK-RV64-NEXT:    lbu t4, 80(a1)
-; CHECK-RV64-NEXT:    lbu t5, 88(a1)
-; CHECK-RV64-NEXT:    lbu t6, 120(a1)
-; CHECK-RV64-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64-NEXT:    lbu a2, 104(a1)
+; CHECK-RV64-NEXT:    lbu a3, 112(a1)
+; CHECK-RV64-NEXT:    lbu a4, 120(a1)
+; CHECK-RV64-NEXT:    lbu a5, 0(a1)
+; CHECK-RV64-NEXT:    lbu a6, 8(a1)
+; CHECK-RV64-NEXT:    lbu a7, 16(a1)
+; CHECK-RV64-NEXT:    lbu t0, 24(a1)
+; CHECK-RV64-NEXT:    lbu t1, 32(a1)
+; CHECK-RV64-NEXT:    lbu t2, 40(a1)
+; CHECK-RV64-NEXT:    lbu t3, 48(a1)
+; CHECK-RV64-NEXT:    lbu t4, 56(a1)
+; CHECK-RV64-NEXT:    lbu t5, 64(a1)
+; CHECK-RV64-NEXT:    lbu t6, 72(a1)
+; CHECK-RV64-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t6, 15(a0)
+; CHECK-RV64-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb s0, 14(a0)
+; CHECK-RV64-NEXT:    sb a3, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb s1, 13(a0)
+; CHECK-RV64-NEXT:    sb a2, 13(a0)
 ; CHECK-RV64-NEXT:    ntl.all
 ; CHECK-RV64-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t5, 11(a0)
+; CHECK-RV64-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t4, 10(a0)
+; CHECK-RV64-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t3, 9(a0)
+; CHECK-RV64-NEXT:    sb t6, 9(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t2, 8(a0)
+; CHECK-RV64-NEXT:    sb t5, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t1, 7(a0)
+; CHECK-RV64-NEXT:    sb t4, 7(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb t0, 6(a0)
+; CHECK-RV64-NEXT:    sb t3, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a7, 5(a0)
+; CHECK-RV64-NEXT:    sb t2, 5(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a6, 4(a0)
+; CHECK-RV64-NEXT:    sb t1, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a5, 3(a0)
+; CHECK-RV64-NEXT:    sb t0, 3(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a4, 2(a0)
+; CHECK-RV64-NEXT:    sb a7, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a3, 1(a0)
+; CHECK-RV64-NEXT:    sb a6, 1(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sb a2, 0(a0)
+; CHECK-RV64-NEXT:    sb a5, 0(a0)
 ; CHECK-RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
@@ -6624,54 +6624,54 @@ define void @test_nontemporal_ALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32-NEXT:    .cfi_offset s1, -8
-; CHECK-RV32-NEXT:    lbu a2, 0(a1)
-; CHECK-RV32-NEXT:    lbu a3, 4(a1)
-; CHECK-RV32-NEXT:    lbu a4, 8(a1)
-; CHECK-RV32-NEXT:    lbu a5, 12(a1)
-; CHECK-RV32-NEXT:    lbu a6, 16(a1)
-; CHECK-RV32-NEXT:    lbu a7, 20(a1)
-; CHECK-RV32-NEXT:    lbu t0, 24(a1)
-; CHECK-RV32-NEXT:    lbu t1, 28(a1)
-; CHECK-RV32-NEXT:    lbu t2, 32(a1)
-; CHECK-RV32-NEXT:    lbu t3, 36(a1)
-; CHECK-RV32-NEXT:    lbu t4, 40(a1)
-; CHECK-RV32-NEXT:    lbu t5, 44(a1)
-; CHECK-RV32-NEXT:    lbu t6, 60(a1)
-; CHECK-RV32-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32-NEXT:    lbu a2, 52(a1)
+; CHECK-RV32-NEXT:    lbu a3, 56(a1)
+; CHECK-RV32-NEXT:    lbu a4, 60(a1)
+; CHECK-RV32-NEXT:    lbu a5, 0(a1)
+; CHECK-RV32-NEXT:    lbu a6, 4(a1)
+; CHECK-RV32-NEXT:    lbu a7, 8(a1)
+; CHECK-RV32-NEXT:    lbu t0, 12(a1)
+; CHECK-RV32-NEXT:    lbu t1, 16(a1)
+; CHECK-RV32-NEXT:    lbu t2, 20(a1)
+; CHECK-RV32-NEXT:    lbu t3, 24(a1)
+; CHECK-RV32-NEXT:    lbu t4, 28(a1)
+; CHECK-RV32-NEXT:    lbu t5, 32(a1)
+; CHECK-RV32-NEXT:    lbu t6, 36(a1)
+; CHECK-RV32-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t6, 15(a0)
+; CHECK-RV32-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb s0, 14(a0)
+; CHECK-RV32-NEXT:    sb a3, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb s1, 13(a0)
+; CHECK-RV32-NEXT:    sb a2, 13(a0)
 ; CHECK-RV32-NEXT:    ntl.all
 ; CHECK-RV32-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t5, 11(a0)
+; CHECK-RV32-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t4, 10(a0)
+; CHECK-RV32-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t3, 9(a0)
+; CHECK-RV32-NEXT:    sb t6, 9(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t2, 8(a0)
+; CHECK-RV32-NEXT:    sb t5, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t1, 7(a0)
+; CHECK-RV32-NEXT:    sb t4, 7(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb t0, 6(a0)
+; CHECK-RV32-NEXT:    sb t3, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a7, 5(a0)
+; CHECK-RV32-NEXT:    sb t2, 5(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a6, 4(a0)
+; CHECK-RV32-NEXT:    sb t1, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a5, 3(a0)
+; CHECK-RV32-NEXT:    sb t0, 3(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a4, 2(a0)
+; CHECK-RV32-NEXT:    sb a7, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a3, 1(a0)
+; CHECK-RV32-NEXT:    sb a6, 1(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sb a2, 0(a0)
+; CHECK-RV32-NEXT:    sb a5, 0(a0)
 ; CHECK-RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
@@ -6685,44 +6685,44 @@ define void @test_nontemporal_ALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV64C-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64C-NEXT:    .cfi_offset s0, -8
 ; CHECK-RV64C-NEXT:    .cfi_offset s1, -16
+; CHECK-RV64C-NEXT:    lbu t3, 104(a1)
+; CHECK-RV64C-NEXT:    lbu t6, 112(a1)
+; CHECK-RV64C-NEXT:    lbu a4, 120(a1)
 ; CHECK-RV64C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV64C-NEXT:    lbu a7, 8(a1)
 ; CHECK-RV64C-NEXT:    lbu t0, 16(a1)
 ; CHECK-RV64C-NEXT:    lbu t1, 24(a1)
 ; CHECK-RV64C-NEXT:    lbu t2, 32(a1)
-; CHECK-RV64C-NEXT:    lbu t3, 40(a1)
-; CHECK-RV64C-NEXT:    lbu t4, 48(a1)
-; CHECK-RV64C-NEXT:    lbu t5, 56(a1)
-; CHECK-RV64C-NEXT:    lbu t6, 64(a1)
+; CHECK-RV64C-NEXT:    lbu t4, 40(a1)
+; CHECK-RV64C-NEXT:    lbu t5, 48(a1)
+; CHECK-RV64C-NEXT:    lbu a5, 56(a1)
+; CHECK-RV64C-NEXT:    lbu a2, 64(a1)
 ; CHECK-RV64C-NEXT:    lbu a3, 72(a1)
-; CHECK-RV64C-NEXT:    lbu a4, 80(a1)
-; CHECK-RV64C-NEXT:    lbu a5, 88(a1)
-; CHECK-RV64C-NEXT:    lbu a2, 120(a1)
-; CHECK-RV64C-NEXT:    lbu s0, 112(a1)
-; CHECK-RV64C-NEXT:    lbu s1, 104(a1)
+; CHECK-RV64C-NEXT:    lbu s0, 80(a1)
+; CHECK-RV64C-NEXT:    lbu s1, 88(a1)
 ; CHECK-RV64C-NEXT:    lbu a1, 96(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb a2, 15(a0)
+; CHECK-RV64C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb s0, 14(a0)
+; CHECK-RV64C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb s1, 13(a0)
+; CHECK-RV64C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb a5, 11(a0)
+; CHECK-RV64C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb a4, 10(a0)
+; CHECK-RV64C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t6, 8(a0)
+; CHECK-RV64C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t5, 7(a0)
+; CHECK-RV64C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t4, 6(a0)
+; CHECK-RV64C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sb t3, 5(a0)
+; CHECK-RV64C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
@@ -6746,44 +6746,44 @@ define void @test_nontemporal_ALL_store_v16i8(ptr %p, <16 x i8> %v) {
 ; CHECK-RV32C-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32C-NEXT:    .cfi_offset s0, -4
 ; CHECK-RV32C-NEXT:    .cfi_offset s1, -8
+; CHECK-RV32C-NEXT:    lbu t3, 52(a1)
+; CHECK-RV32C-NEXT:    lbu t6, 56(a1)
+; CHECK-RV32C-NEXT:    lbu a4, 60(a1)
 ; CHECK-RV32C-NEXT:    lbu a6, 0(a1)
 ; CHECK-RV32C-NEXT:    lbu a7, 4(a1)
 ; CHECK-RV32C-NEXT:    lbu t0, 8(a1)
 ; CHECK-RV32C-NEXT:    lbu t1, 12(a1)
 ; CHECK-RV32C-NEXT:    lbu t2, 16(a1)
-; CHECK-RV32C-NEXT:    lbu t3, 20(a1)
-; CHECK-RV32C-NEXT:    lbu t4, 24(a1)
-; CHECK-RV32C-NEXT:    lbu t5, 28(a1)
-; CHECK-RV32C-NEXT:    lbu t6, 32(a1)
+; CHECK-RV32C-NEXT:    lbu t4, 20(a1)
+; CHECK-RV32C-NEXT:    lbu t5, 24(a1)
+; CHECK-RV32C-NEXT:    lbu a5, 28(a1)
+; CHECK-RV32C-NEXT:    lbu a2, 32(a1)
 ; CHECK-RV32C-NEXT:    lbu a3, 36(a1)
-; CHECK-RV32C-NEXT:    lbu a4, 40(a1)
-; CHECK-RV32C-NEXT:    lbu a5, 44(a1)
-; CHECK-RV32C-NEXT:    lbu a2, 60(a1)
-; CHECK-RV32C-NEXT:    lbu s0, 56(a1)
-; CHECK-RV32C-NEXT:    lbu s1, 52(a1)
+; CHECK-RV32C-NEXT:    lbu s0, 40(a1)
+; CHECK-RV32C-NEXT:    lbu s1, 44(a1)
 ; CHECK-RV32C-NEXT:    lbu a1, 48(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb a2, 15(a0)
+; CHECK-RV32C-NEXT:    sb a4, 15(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb s0, 14(a0)
+; CHECK-RV32C-NEXT:    sb t6, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb s1, 13(a0)
+; CHECK-RV32C-NEXT:    sb t3, 13(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sb a1, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb a5, 11(a0)
+; CHECK-RV32C-NEXT:    sb s1, 11(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb a4, 10(a0)
+; CHECK-RV32C-NEXT:    sb s0, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sb a3, 9(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t6, 8(a0)
+; CHECK-RV32C-NEXT:    sb a2, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t5, 7(a0)
+; CHECK-RV32C-NEXT:    sb a5, 7(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t4, 6(a0)
+; CHECK-RV32C-NEXT:    sb t5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sb t3, 5(a0)
+; CHECK-RV32C-NEXT:    sb t4, 5(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sb t2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
@@ -6819,112 +6819,112 @@ define void @test_nontemporal_ALL_store_v16i8(ptr %p, <16 x i8> %v) {
 define void @test_nontemporal_ALL_store_v8i16(ptr %p, <8 x i16> %v) {
 ; CHECK-RV64-LABEL: test_nontemporal_ALL_store_v8i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lh a2, 0(a1)
-; CHECK-RV64-NEXT:    lh a3, 8(a1)
-; CHECK-RV64-NEXT:    lh a4, 16(a1)
-; CHECK-RV64-NEXT:    lh a5, 24(a1)
-; CHECK-RV64-NEXT:    lh a6, 56(a1)
-; CHECK-RV64-NEXT:    lh a7, 48(a1)
-; CHECK-RV64-NEXT:    lh t0, 40(a1)
+; CHECK-RV64-NEXT:    lh a2, 40(a1)
+; CHECK-RV64-NEXT:    lh a3, 48(a1)
+; CHECK-RV64-NEXT:    lh a4, 56(a1)
+; CHECK-RV64-NEXT:    lh a5, 0(a1)
+; CHECK-RV64-NEXT:    lh a6, 8(a1)
+; CHECK-RV64-NEXT:    lh a7, 16(a1)
+; CHECK-RV64-NEXT:    lh t0, 24(a1)
 ; CHECK-RV64-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a6, 14(a0)
+; CHECK-RV64-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a7, 12(a0)
+; CHECK-RV64-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh t0, 10(a0)
+; CHECK-RV64-NEXT:    sh a2, 10(a0)
 ; CHECK-RV64-NEXT:    ntl.all
 ; CHECK-RV64-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a5, 6(a0)
+; CHECK-RV64-NEXT:    sh t0, 6(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a4, 4(a0)
+; CHECK-RV64-NEXT:    sh a7, 4(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a3, 2(a0)
+; CHECK-RV64-NEXT:    sh a6, 2(a0)
 ; CHECK-RV64-NEXT:    ntl.all
-; CHECK-RV64-NEXT:    sh a2, 0(a0)
+; CHECK-RV64-NEXT:    sh a5, 0(a0)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; CHECK-RV32-LABEL: test_nontemporal_ALL_store_v8i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    lh a2, 0(a1)
-; CHECK-RV32-NEXT:    lh a3, 4(a1)
-; CHECK-RV32-NEXT:    lh a4, 8(a1)
-; CHECK-RV32-NEXT:    lh a5, 12(a1)
-; CHECK-RV32-NEXT:    lh a6, 28(a1)
-; CHECK-RV32-NEXT:    lh a7, 24(a1)
-; CHECK-RV32-NEXT:    lh t0, 20(a1)
+; CHECK-RV32-NEXT:    lh a2, 20(a1)
+; CHECK-RV32-NEXT:    lh a3, 24(a1)
+; CHECK-RV32-NEXT:    lh a4, 28(a1)
+; CHECK-RV32-NEXT:    lh a5, 0(a1)
+; CHECK-RV32-NEXT:    lh a6, 4(a1)
+; CHECK-RV32-NEXT:    lh a7, 8(a1)
+; CHECK-RV32-NEXT:    lh t0, 12(a1)
 ; CHECK-RV32-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a6, 14(a0)
+; CHECK-RV32-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a7, 12(a0)
+; CHECK-RV32-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh t0, 10(a0)
+; CHECK-RV32-NEXT:    sh a2, 10(a0)
 ; CHECK-RV32-NEXT:    ntl.all
 ; CHECK-RV32-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a5, 6(a0)
+; CHECK-RV32-NEXT:    sh t0, 6(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a4, 4(a0)
+; CHECK-RV32-NEXT:    sh a7, 4(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a3, 2(a0)
+; CHECK-RV32-NEXT:    sh a6, 2(a0)
 ; CHECK-RV32-NEXT:    ntl.all
-; CHECK-RV32-NEXT:    sh a2, 0(a0)
+; CHECK-RV32-NEXT:    sh a5, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64C-LABEL: test_nontemporal_ALL_store_v8i16:
 ; CHECK-RV64C:       # %bb.0:
-; CHECK-RV64C-NEXT:    lh a6, 0(a1)
-; CHECK-RV64C-NEXT:    lh a7, 8(a1)
-; CHECK-RV64C-NEXT:    lh t0, 16(a1)
-; CHECK-RV64C-NEXT:    lh a5, 24(a1)
-; CHECK-RV64C-NEXT:    lh a2, 56(a1)
+; CHECK-RV64C-NEXT:    lh a7, 40(a1)
 ; CHECK-RV64C-NEXT:    lh a3, 48(a1)
-; CHECK-RV64C-NEXT:    lh a4, 40(a1)
+; CHECK-RV64C-NEXT:    lh a4, 56(a1)
+; CHECK-RV64C-NEXT:    lh a6, 0(a1)
+; CHECK-RV64C-NEXT:    lh t0, 8(a1)
+; CHECK-RV64C-NEXT:    lh a2, 16(a1)
+; CHECK-RV64C-NEXT:    lh a5, 24(a1)
 ; CHECK-RV64C-NEXT:    lh a1, 32(a1)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh a2, 14(a0)
+; CHECK-RV64C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh a4, 10(a0)
+; CHECK-RV64C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh t0, 4(a0)
+; CHECK-RV64C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
-; CHECK-RV64C-NEXT:    sh a7, 2(a0)
+; CHECK-RV64C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV64C-NEXT:    c.ntl.all
 ; CHECK-RV64C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV64C-NEXT:    ret
 ;
 ; CHECK-RV32C-LABEL: test_nontemporal_ALL_store_v8i16:
 ; CHECK-RV32C:       # %bb.0:
-; CHECK-RV32C-NEXT:    lh a6, 0(a1)
-; CHECK-RV32C-NEXT:    lh a7, 4(a1)
-; CHECK-RV32C-NEXT:    lh t0, 8(a1)
-; CHECK-RV32C-NEXT:    lh a5, 12(a1)
-; CHECK-RV32C-NEXT:    lh a2, 28(a1)
+; CHECK-RV32C-NEXT:    lh a7, 20(a1)
 ; CHECK-RV32C-NEXT:    lh a3, 24(a1)
-; CHECK-RV32C-NEXT:    lh a4, 20(a1)
+; CHECK-RV32C-NEXT:    lh a4, 28(a1)
+; CHECK-RV32C-NEXT:    lh a6, 0(a1)
+; CHECK-RV32C-NEXT:    lh t0, 4(a1)
+; CHECK-RV32C-NEXT:    lh a2, 8(a1)
+; CHECK-RV32C-NEXT:    lh a5, 12(a1)
 ; CHECK-RV32C-NEXT:    lh a1, 16(a1)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh a2, 14(a0)
+; CHECK-RV32C-NEXT:    sh a4, 14(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a3, 12(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh a4, 10(a0)
+; CHECK-RV32C-NEXT:    sh a7, 10(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a1, 8(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a5, 6(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh t0, 4(a0)
+; CHECK-RV32C-NEXT:    sh a2, 4(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
-; CHECK-RV32C-NEXT:    sh a7, 2(a0)
+; CHECK-RV32C-NEXT:    sh t0, 2(a0)
 ; CHECK-RV32C-NEXT:    c.ntl.all
 ; CHECK-RV32C-NEXT:    sh a6, 0(a0)
 ; CHECK-RV32C-NEXT:    ret
