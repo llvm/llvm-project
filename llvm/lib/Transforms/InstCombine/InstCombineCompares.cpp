@@ -2650,7 +2650,7 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   //   icmp ugt (sdiv exact X, C2), (sdiv signed_max, C2) --> icmp slt X, 0
   //   icmp ult (sdiv exact X, C2), (sdiv signed_max, C2) + 1 --> icmp sgt X, -1
   // where C2 is positive.
-  if (DivIsSigned && Div->isExact() &&
+  if (DivIsSigned && Div->hasOneUse() && Div->isExact() &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT) &&
       C2->isStrictlyPositive() &&
       APInt::getSignedMaxValue(C2->getBitWidth()).sdiv(*C2) +

@@ -5232,3 +5232,16 @@ define i1 @icmp_ugt_sdiv_by_negative_constant(i64 %x) {
   %cmp = icmp ugt i64 %sdiv, -384307168202282326
   ret i1 %cmp
 }
+
+define i1 @icmp_ugt_sdiv_by_constant_multiuse(i64 %x) {
+; CHECK-LABEL: @icmp_ugt_sdiv_by_constant_multiuse(
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[X:%.*]], 24
+; CHECK-NEXT:    call void @use_i64(i64 [[SDIV]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SDIV]], 384307168202282325
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sdiv = sdiv exact i64 %x, 24
+  call void @use_i64(i64 %sdiv)
+  %cmp = icmp ugt i64 %sdiv, 384307168202282325
+  ret i1 %cmp
+}
