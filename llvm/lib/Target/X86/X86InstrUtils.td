@@ -99,17 +99,6 @@ class DisassembleOnly {
   bit ForceDisassemble = 1;
 }
 
-
-// SchedModel info for instruction that loads one value and gets the second
-// (and possibly third) value from a register.
-// This is used for instructions that put the memory operands before other
-// uses.
-class SchedLoadReg<X86FoldableSchedWrite Sched> : Sched<[Sched.Folded,
-  // Memory operand.
-  ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-  // Register reads (implicit or explicit).
-  Sched.ReadAfterFold, Sched.ReadAfterFold]>;
-
 //===----------------------------------------------------------------------===//
 // X86 Type infomation definitions
 //===----------------------------------------------------------------------===//
@@ -957,16 +946,15 @@ class MMXIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 /// 2. Infers whether the instruction should have a 0x40 REX_W prefix.
 /// 3. Infers whether the low bit of the opcode should be 0 (for i8 operations)
 ///    or 1 (for i16,i32,i64 operations).
-class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
-          string mnemonic, string args, list<dag> pattern>
-  : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
-       opcode{3}, opcode{2}, opcode{1},
-       !if(!eq(typeinfo.HasEvenOpcode, 1), 0, opcode{0})}, f, outs, ins,
-      !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
-
+class ITy<bits<8> o, Format f, X86TypeInfo t, dag outs, dag ins, string m,
+          string args, list<dag> p>
+  : I<{o{7}, o{6}, o{5}, o{4}, o{3}, o{2}, o{1},
+       !if(!eq(t.HasEvenOpcode, 1), 0, o{0})}, f, outs, ins,
+      !strconcat(m, "{", t.InstrSuffix, "}\t", args), p> {
   let hasSideEffects = 0;
-  let hasREX_W  = typeinfo.HasREX_W;
+  let hasREX_W  = t.HasREX_W;
 }
 
+defvar unaryop_args = "$src";
 defvar binop_args = "{$src2, $src1|$src1, $src2}";
 defvar binop_ndd_args = "{$src2, $src1, $dst|$dst, $src1, $src2}";
