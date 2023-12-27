@@ -16,12 +16,26 @@
 // In those situations, one may want to deactivate annotations for a specific allocator.
 // It's possible with __asan_annotate_container_with_allocator template class.
 // This test confirms that those allocators work after turning off annotations.
+//
+// A context to this test is a situations when memory is repurposed and destructors are not called.
+//   Related issue: https://github.com/llvm/llvm-project/issues/60384
+//
+// That issue appeared in the past and was addressed here: https://reviews.llvm.org/D145628
+//
+// There is also a question, if it's UB. And it's not clear.
+//   Related discussion: https://reviews.llvm.org/D136765#4155262
+//   Related notes: https://eel.is/c++draft/basic.life#6
+//
+// Even if it is UB, we want to make sure that it works that way, because people rely on this behavior.
+// In similar situations. a user explicitly turns off annotations for a specific allocator.
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string>
 #include <new>
 
+// Allocator with pre-allocated (with malloc in constructor) buffers.
+// Memory may be freed without calling destructors.
 struct reuse_allocator {
   static size_t const N = 100;
   reuse_allocator() {
@@ -50,10 +64,15 @@ struct user_allocator {
   friend bool operator==(user_allocator, user_allocator) { return true; }
   friend bool operator!=(user_allocator x, user_allocator y) { return !(x == y); }
 
-  T* allocate(size_t) { return (T*)reuse_buffers.alloc(); }
+  T* allocate(size_t n) {
+    if (n * sizeof(T) > 8 * 1024)
+      throw std::bad_array_new_length();
+    return (T*)reuse_buffers.alloc();
+  }
   void deallocate(T*, size_t) noexcept {}
 };
 
+// Turn off annotations for user_allocator:
 template <class T>
 struct std::__asan_annotate_container_with_allocator<user_allocator<T>> {
   static bool const value = false;
@@ -63,15 +82,20 @@ int main() {
   using S = std::basic_string<char, std::char_traits<char>, user_allocator<char>>;
 
   {
+    // Create a string with a buffer from reuse allocator object:
     S* s = new (reuse_buffers.alloc()) S();
-    for (int i = 0; i < 100; i++)
+    // Use string, so it's poisoned, if container annotations for that allocator are not turned off:
+    for (int i = 0; i < 40; i++)
       s->push_back('a');
   }
+  // Reset the state of the allocator, don't call destructors, allow memory to be reused:
   reuse_buffers.reset();
   {
+    // Create a next string with the same allocator, so the same buffer due to the reset:
     S s;
-    for (int i = 0; i < 1000; i++)
-      s.push_back('b');
+    // Use memory inside the string again, if it's poisoned, an error will be raised:
+    for (int i = 0; i < 60; i++)
+      s.push_back('a');
   }
 
   return 0;

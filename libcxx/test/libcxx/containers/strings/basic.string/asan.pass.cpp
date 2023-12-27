@@ -47,8 +47,8 @@ int main(int, char**) {
     assert(is_string_asan_correct(c));
     assert(__sanitizer_verify_contiguous_container(c.data(), c.data() + c.size() + 1, c.data() + c.capacity() + 1) !=
            0);
-    volatile T foo = c[c.size() + 1]; // should trigger ASAN. Use volatile to prevent being optimized away.
-    assert(false);                    // if we got here, ASAN didn't trigger
+    T foo = c[c.size() + 1]; // should trigger ASAN and call do_exit().
+    assert(false);           // if we got here, ASAN didn't trigger
     ((void)foo);
   }
 }
