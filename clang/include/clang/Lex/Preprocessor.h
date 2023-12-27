@@ -2689,6 +2689,9 @@ private:
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
   void HandleMicrosoftImportDirective(Token &Tok);
+  void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
+                            ConstSearchDirIterator LookupFrom = nullptr,
+                            const FileEntry *LookupFromFile = nullptr);
 
 public:
   /// Check that the given module is available, producing a diagnostic if not.

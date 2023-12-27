@@ -113,6 +113,9 @@ PPKEYWORD(defined)
 PPKEYWORD(include)
 PPKEYWORD(__include_macros)
 
+// C23 6.10.2 - Binary resource inclusion
+PPKEYWORD(embed)
+
 // C99 6.10.3 - Macro Replacement.
 PPKEYWORD(define)
 PPKEYWORD(undef)

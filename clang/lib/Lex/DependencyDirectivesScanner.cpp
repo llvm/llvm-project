@@ -91,6 +91,9 @@ private:
   dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
                                                         const char *const End);
 
+  dependency_directives_scan::Token &lexEmbedFilename(const char *&First,
+                                                      const char *const End);
+
   void skipLine(const char *&First, const char *const End);
   void skipDirective(StringRef Name, const char *&First, const char *const End);
 
@@ -541,6 +544,11 @@ Scanner::lexIncludeFilename(const char *&First, const char *const End) {
   return CurDirToks.back();
 }
 
+dependency_directives_scan::Token &
+Scanner::lexEmbedFilename(const char *&First, const char *const End) {
+  return lexIncludeFilename(First, End);
+}
+
 void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
   while (true) {
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
@@ -875,6 +883,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   auto Kind = llvm::StringSwitch<DirectiveKind>(Id)
                   .Case("include", pp_include)
                   .Case("__include_macros", pp___include_macros)
+                  .Case("embed", pp_embed)
                   .Case("define", pp_define)
                   .Case("undef", pp_undef)
                   .Case("import", pp_import)
@@ -902,6 +911,9 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   case pp_include_next:
   case pp_import:
     lexIncludeFilename(First, End);
+    break;
+  case pp_embed:
+    lexEmbedFilename(First, End);
     break;
   default:
     break;

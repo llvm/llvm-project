@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticLex.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -20,10 +22,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -39,16 +40,15 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <new>
 #include <optional>
 #include <string>
 #include <utility>
@@ -1242,6 +1242,11 @@ void Preprocessor::HandleDirective(Token &Result) {
       // Handle -imacros.
       return HandleIncludeMacrosDirective(SavedHash.getLocation(), Result);
 
+    // C23 6.10.2 - Binary resource inclusion
+    case tok::pp_embed:
+      // Handle #embed.
+      return HandleEmbedDirective(SavedHash.getLocation(), Result);
+
     // C99 6.10.3 - Macro Replacement.
     case tok::pp_define:
       return HandleDefineDirective(Result, ImmediatelyAfterTopLevelIfndef);
@@ -2012,6 +2017,214 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     CurLexer->cutOffLexing();
     return;
   }
+}
+
+void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
+                                        ConstSearchDirIterator LookupFrom,
+                                        const FileEntry *LookupFromFile) {
+  if (!getLangOpts().C23) {
+    Diag(EmbedTok, diag::ext_c23_feature)
+        << EmbedTok.getIdentifierInfo()->getNameStart();
+  }
+
+  Token FilenameTok;
+  if (LexHeaderName(FilenameTok))
+    return;
+
+  if (FilenameTok.isNot(tok::header_name)) {
+    Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
+    if (FilenameTok.isNot(tok::eod))
+      DiscardUntilEndOfDirective();
+    return;
+  }
+
+  // FIXME: Add support for embed parameter sequence.
+  CheckEndOfDirective(EmbedTok.getIdentifierInfo()->getNameStart());
+
+  SmallString<128> FilenameBuffer;
+  StringRef Filename = getSpelling(FilenameTok, FilenameBuffer);
+  SourceLocation CharEnd = FilenameTok.getEndLoc();
+
+  CharSourceRange FilenameRange =
+      CharSourceRange::getCharRange(FilenameTok.getLocation(), CharEnd);
+  bool isAngled =
+      GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+
+  // If GetIncludeFilenameSpelling set the start ptr to null, there was an
+  // error.
+  if (Filename.empty())
+    return;
+
+  // Search include directories.
+  bool IsMapped = false;
+  bool IsFrameworkFound = false;
+  ConstSearchDirIterator CurDir = nullptr;
+  SmallString<1024> SearchPath;
+  SmallString<1024> RelativePath;
+  // We get the raw path only if we have 'Callbacks' to which we later pass
+  // the path.
+  ModuleMap::KnownHeader SuggestedModule;
+  SourceLocation FilenameLoc = FilenameTok.getLocation();
+  StringRef LookupFilename = Filename;
+
+  // Normalize slashes when compiling with -fms-extensions on non-Windows. This
+  // is unnecessary on Windows since the filesystem there handles backslashes.
+  SmallString<128> NormalizedPath;
+  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::native;
+  if (is_style_posix(BackslashStyle) && LangOpts.MicrosoftExt) {
+    NormalizedPath = Filename.str();
+    llvm::sys::path::native(NormalizedPath);
+    LookupFilename = NormalizedPath;
+    BackslashStyle = llvm::sys::path::Style::windows;
+  }
+
+  OptionalFileEntryRef File = LookupHeaderIncludeOrImport(
+      &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
+      IsFrameworkFound, false, IsMapped, LookupFrom, LookupFromFile,
+      LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
+  if (!File)
+    return;
+
+  // The #embed file will be considered to be a system header if either it is
+  // in a system include directory, or if the #embeder is a system include
+  // header.
+  SrcMgr::CharacteristicKind FileCharacter = HeaderInfo.getFileDirFlavor(*File);
+
+  // Issue a diagnostic if the name of the file on disk has a different case
+  // than the one we're about to open.
+  const bool CheckIncludePathPortability =
+      !IsMapped && !File->getFileEntry().tryGetRealPathName().empty();
+
+  if (CheckIncludePathPortability) {
+    StringRef Name = LookupFilename;
+    StringRef NameWithoriginalSlashes = Filename;
+#if defined(_WIN32)
+    // Skip UNC prefix if present. (tryGetRealPathName() always
+    // returns a path with the prefix skipped.)
+    bool NameWasUNC = Name.consume_front("\\\\?\\");
+    NameWithoriginalSlashes.consume_front("\\\\?\\");
+#endif
+    StringRef RealPathName = File->getFileEntry().tryGetRealPathName();
+    SmallVector<StringRef, 16> Components(llvm::sys::path::begin(Name),
+                                          llvm::sys::path::end(Name));
+#if defined(_WIN32)
+    // -Wnonportable-include-path is designed to diagnose includes using
+    // case even on systems with a case-insensitive file system.
+    // On Windows, RealPathName always starts with an upper-case drive
+    // letter for absolute paths, but Name might start with either
+    // case depending on if `cd c:\foo` or `cd C:\foo` was used in the shell.
+    // ("foo" will always have on-disk case, no matter which case was
+    // used in the cd command). To not emit this warning solely for
+    // the drive letter, whose case is dependent on if `cd` is used
+    // with upper- or lower-case drive letters, always consider the
+    // given drive letter case as correct for the purpose of this warning.
+    SmallString<128> FixedDriveRealPath;
+    if (llvm::sys::path::is_absolute(Name) &&
+        llvm::sys::path::is_absolute(RealPathName) &&
+        toLowercase(Name[0]) == toLowercase(RealPathName[0]) &&
+        isLowercase(Name[0]) != isLowercase(RealPathName[0])) {
+      assert(Components.size() >= 3 && "should have drive, backslash, name");
+      assert(Components[0].size() == 2 && "should start with drive");
+      assert(Components[0][1] == ':' && "should have colon");
+      FixedDriveRealPath = (Name.substr(0, 1) + RealPathName.substr(1)).str();
+      RealPathName = FixedDriveRealPath;
+    }
+#endif
+
+    if (trySimplifyPath(Components, RealPathName, BackslashStyle)) {
+      SmallString<128> Path;
+      Path.reserve(Name.size() + 2);
+      Path.push_back(isAngled ? '<' : '"');
+
+      const auto IsSep = [BackslashStyle](char c) {
+        return llvm::sys::path::is_separator(c, BackslashStyle);
+      };
+
+      for (auto Component : Components) {
+        // On POSIX, Components will contain a single '/' as first element
+        // exactly if Name is an absolute path.
+        // On Windows, it will contain "C:" followed by '\' for absolute paths.
+        // The drive letter is optional for absolute paths on Windows, but
+        // clang currently cannot process absolute paths in #embed lines that
+        // don't have a drive.
+        // If the first entry in Components is a directory separator,
+        // then the code at the bottom of this loop that keeps the original
+        // directory separator style copies it. If the second entry is
+        // a directory separator (the C:\ case), then that separator already
+        // got copied when the C: was processed and we want to skip that entry.
+        if (!(Component.size() == 1 && IsSep(Component[0])))
+          Path.append(Component);
+        else if (Path.size() != 1)
+          continue;
+
+        // Append the separator(s) the user used, or the close quote
+        if (Path.size() > NameWithoriginalSlashes.size()) {
+          Path.push_back(isAngled ? '>' : '"');
+          continue;
+        }
+        assert(IsSep(NameWithoriginalSlashes[Path.size() - 1]));
+        do
+          Path.push_back(NameWithoriginalSlashes[Path.size() - 1]);
+        while (Path.size() <= NameWithoriginalSlashes.size() &&
+               IsSep(NameWithoriginalSlashes[Path.size() - 1]));
+      }
+
+#if defined(_WIN32)
+      // Restore UNC prefix if it was there.
+      if (NameWasUNC)
+        Path = (Path.substr(0, 1) + "\\\\?\\" + Path.substr(1)).str();
+#endif
+
+      // For user files and known standard headers, issue a diagnostic.
+      // For other system headers, don't. They can be controlled separately.
+      auto DiagId =
+          (FileCharacter == SrcMgr::C_User || warnByDefaultOnWrongCase(Name))
+              ? diag::pp_nonportable_path
+              : diag::pp_nonportable_system_path;
+      Diag(FilenameTok, DiagId)
+          << Path << FixItHint::CreateReplacement(FilenameRange, Path);
+    }
+  }
+
+  // Look up the file, create a File ID for it.
+  SourceLocation EmbedPos = FilenameTok.getLocation();
+  // If the filename string was the result of macro expansions, set the embed
+  // position on the file where it will be embedded and after the expansions.
+  if (EmbedPos.isMacroID())
+    EmbedPos = SourceMgr.getExpansionRange(EmbedPos).getEnd();
+  FileID FID = SourceMgr.createFileID(*File, EmbedPos, FileCharacter);
+  if (!FID.isValid()) {
+    TheModuleLoader.HadFatalFailure = true;
+    assert(TheModuleLoader.HadFatalFailure &&
+           "This should be an early exit only to a fatal error");
+    TheModuleLoader.HadFatalFailure = true;
+    EmbedTok.setKind(tok::eof);
+    CurLexer->cutOffLexing();
+    return;
+  }
+
+  const auto FileBuffer = getFileManager().getBufferForFile(*File);
+  if (!FileBuffer)
+    return;
+  const auto Buffer = FileBuffer.get()->getBuffer();
+  if (Buffer.empty())
+    return;
+
+  std::string ProcessedBuffer = R"(
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wc++11-narrowing"
+  )";
+  for (size_t i = 0; i < Buffer.size(); ++i) {
+    auto c = Buffer[i];
+    ProcessedBuffer += "0x" + llvm::toHex(c) + ",";
+    if ((i + 1) % 16 == 0)
+      ProcessedBuffer += "\n";
+  }
+  ProcessedBuffer += "\n#pragma clang diagnostic pop\n";
+  llvm::MemoryBufferRef Buf(
+      StringRef(ProcessedBuffer).copy(getPreprocessorAllocator()), Filename);
+  EnterSourceFile(SourceMgr.createFileID(Buf), CurDir,
+                  FilenameTok.getLocation());
 }
 
 OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(

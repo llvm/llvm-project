@@ -4541,6 +4541,7 @@ bool Lexer::LexDependencyDirectiveTokenWhileSkipping(Token &Result) {
       llvm_unreachable("unexpected 'pp_none'");
     case pp_include:
     case pp___include_macros:
+    case pp_embed:
     case pp_define:
     case pp_undef:
     case pp_import:
