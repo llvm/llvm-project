@@ -2470,20 +2470,18 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
 
       bool Matched = false;
-      uint64_t C;
       Value *V = nullptr;
       if (TyAllocSize == 1) {
         V = GEP.getOperand(1);
         Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_AShr(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == 1ULL << C)
-          Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_SDiv(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == C)
-          Matched = true;
-      }
+      } else if (has_single_bit(TyAllocSize) &&
+                 match(GEP.getOperand(1),
+                       m_Exact(m_AShr(m_Value(V), m_SpecificInt(countr_zero(
+                                                      TyAllocSize))))))
+        Matched = true;
+      else if (match(GEP.getOperand(1),
+                     m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize)))))
+        Matched = true;
 
       // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
       // only if both point to the same underlying object (otherwise provenance
@@ -2494,6 +2492,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
           getUnderlyingObject(X) == getUnderlyingObject(Y))
         return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
+
+      // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
+      if (Matched && TyAllocSize != 1) {
+        GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+            Builder.getInt8Ty(), GEP.getPointerOperand(), V);
+        NewGEP->setIsInBounds(GEP.isInBounds());
+        return NewGEP;
+      }
     }
   }
   // We do not handle pointer-vector geps here.

@@ -1455,8 +1455,7 @@ define ptr @const_gep_chain(ptr %p, i64 %a) {
 
 define ptr @gep_sdiv(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_sdiv(
-; CHECK-NEXT:    [[INDEX:%.*]] = sdiv exact i64 [[OFF:%.*]], 7
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %index = sdiv exact i64 %off, 7
@@ -1466,8 +1465,7 @@ define ptr @gep_sdiv(ptr %p, i64 %off) {
 
 define <2 x ptr> @gep_sdiv_vec(<2 x ptr> %p, <2 x i64> %off) {
 ; CHECK-LABEL: @gep_sdiv_vec(
-; CHECK-NEXT:    [[INDEX:%.*]] = sdiv exact <2 x i64> [[OFF:%.*]], <i64 7, i64 7>
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], <2 x ptr> [[P:%.*]], <2 x i64> [[INDEX]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, <2 x ptr> [[P:%.*]], <2 x i64> [[OFF:%.*]]
 ; CHECK-NEXT:    ret <2 x ptr> [[PTR]]
 ;
   %index = sdiv exact <2 x i64> %off, <i64 7, i64 7>
@@ -1477,8 +1475,7 @@ define <2 x ptr> @gep_sdiv_vec(<2 x ptr> %p, <2 x i64> %off) {
 
 define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_sdiv_inbounds(
-; CHECK-NEXT:    [[INDEX:%.*]] = sdiv exact i64 [[OFF:%.*]], 7
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %index = sdiv exact i64 %off, 7
@@ -1488,8 +1485,7 @@ define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
 
 define ptr @gep_ashr(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_ashr(
-; CHECK-NEXT:    [[INDEX:%.*]] = ashr exact i64 [[OFF:%.*]], 2
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %index = ashr exact i64 %off, 2
