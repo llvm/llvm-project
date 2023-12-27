@@ -76,75 +76,75 @@ unsigned long MinusUnsignedLongNotFormattedInteger1 = -12345678910111213Ul;
 // CHECK-FIXES: 12'345'678'910'111'213Ul
 
 float NotFormattedFloat = 1234.56789;
-// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: unformatted representation of float literal '1234.56789' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: unformatted representation of floating literal '1234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.567'89
 
 float MinusNotFormattedFloat = -1234.56789;
-// CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unformatted representation of float literal '1234.56789' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unformatted representation of floating literal '1234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.567'89
 
 double PostfixNotFormattedFloat = 1234.569F;
-// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of float literal '1234.569F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of floating literal '1234.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569F
 
 double MinusPostfixNotFormattedFloat = -1234.569F;
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of float literal '1234.569F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of floating literal '1234.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569F
 
 double PostfixNotFormattedFloat1 = 1234.569f;
-// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: unformatted representation of floating literal '1234.569f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569f
 
 double MinusPostfixNotFormattedFloat1 = -1234.569f;
-// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: unformatted representation of floating literal '1234.569f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569f
 
 double ScientificNotFormattedFloat = 1.2345678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of floating literal '1.2345678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10
 
 double MinusScientificNotFormattedFloat = -1.2345678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: unformatted representation of floating literal '1.2345678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10
 
 double ScientificNotFormattedFloat1 = 1.2345678e10;
-// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of floating literal '1.2345678e10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10
 
 double MinusScientificNotFormattedFloat1 = -1.2345678e10;
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of floating literal '1.2345678e10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10
 
 double ScientificNotFormattedFloat2 = 1.2345678E+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of floating literal '1.2345678E+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10
 
 double MinusScientificNotFormattedFloat2 = -1.2345678E+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of floating literal '1.2345678E+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10
 
 double ScientificNotFormattedFloat3 = 1.2345678e+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678e+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of floating literal '1.2345678e+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e+10
 
 double MinusScientificNotFormattedFloat3 = -1.2345678e+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678e+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of floating literal '1.2345678e+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e+10
 
 double PostfixScientificNotFormattedFloat = 1.2345678E10F;
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678E10F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of floating literal '1.2345678E10F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10F
 
 double PostfixScientificNotFormattedFloat1 = 1.2345678e10f;
-// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: unformatted representation of float literal '1.2345678e10f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: unformatted representation of floating literal '1.2345678e10f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10f
 
 double PostfixScientificNotFormattedFloat2 = -1.2345678E+10f;
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of float literal '1.2345678E+10f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of floating literal '1.2345678E+10f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10f
 
 double PostfixScientificNotFormattedFloat4 = -1.2345678e-10F;
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of float literal '1.2345678e-10F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of floating literal '1.2345678e-10F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e-10F
 
 
@@ -307,75 +307,75 @@ unsigned long MinusUnsignedLongWrongFormattedInteger1 = -1'2'34'567'89'10'11'12'
 // CHECK-FIXES: 12'345'678'910'111'213Ul
 
 float WrongFormattedFloat = 1'234.56789;
-// CHECK-MESSAGES: :[[@LINE-1]]:29: warning: unformatted representation of float literal '1'234.56789' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:29: warning: unformatted representation of floating literal '1'234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.567'89
 
 float MinusWrongFormattedFloat = -1234.56'789;
-// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of float literal '1234.56'789' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of floating literal '1234.56'789' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.567'89
 
 double PostfixWrongFormattedFloat = 123'4.5'69F;
-// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: unformatted representation of float literal '123'4.5'69F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: unformatted representation of floating literal '123'4.5'69F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569F
 
 double MinusPostfixWrongFormattedFloat = -12'34.569F;
-// CHECK-MESSAGES: :[[@LINE-1]]:43: warning: unformatted representation of float literal '12'34.569F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:43: warning: unformatted representation of floating literal '12'34.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569F
 
 double PostfixWrongFormattedFloat1 = 1'2'34.569f;
-// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of float literal '1'2'34.569f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of floating literal '1'2'34.569f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569f
 
 double MinusPostfixWrongFormattedFloat1 = -12'3'4.5'69f;
-// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: unformatted representation of float literal '12'3'4.5'69f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: unformatted representation of floating literal '12'3'4.5'69f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569f
 
 double ScientificWrongFormattedFloat = 1.23'456'78E1'0;
-// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of float literal '1.23'456'78E1'0' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of floating literal '1.23'456'78E1'0' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10
 
 double MinusScientificWrongFormattedFloat = -1.234'5678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: unformatted representation of float literal '1.234'5678E10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: unformatted representation of floating literal '1.234'5678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10
 
 double ScientificWrongFormattedFloat1 = 1.234'5'67'8e10;
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of float literal '1.234'5'67'8e10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of floating literal '1.234'5'67'8e10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10
 
 double MinusScientificWrongFormattedFloat1 = -1.2345678e1'0;
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of float literal '1.2345678e1'0' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of floating literal '1.2345678e1'0' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10
 
 double ScientificWrongFormattedFloat2 = 1.23456'78E+1'0;
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of float literal '1.23456'78E+1'0' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of floating literal '1.23456'78E+1'0' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10
 
 double MinusScientificWrongFormattedFloat2 = -1.23'456'78E+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of float literal '1.23'456'78E+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of floating literal '1.23'456'78E+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10
 
 double ScientificWrongFormattedFloat3 = 1.234'56'78e+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of float literal '1.234'56'78e+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of floating literal '1.234'56'78e+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e+10
 
 double MinusScientificWrongFormattedFloat3 = -1.2'3'4'5'678e+1'0;
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of float literal '1.2'3'4'5'678e+1'0' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of floating literal '1.2'3'4'5'678e+1'0' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e+10
 
 double PostfixScientificWrongFormattedFloat = 1.23456'78E1'0F;
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of float literal '1.23456'78E1'0F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: unformatted representation of floating literal '1.23456'78E1'0F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10F
 
 double PostfixScientificWrongFormattedFloat1 = 1.23'45'6'7'8e10f;
-// CHECK-MESSAGES: :[[@LINE-1]]:48: warning: unformatted representation of float literal '1.23'45'6'7'8e10f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:48: warning: unformatted representation of floating literal '1.23'45'6'7'8e10f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10f
 
 double PostfixScientificWrongFormattedFloat2 = -1.2'34'56'7'8E+10f;
-// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of float literal '1.2'34'56'7'8E+10f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of floating literal '1.2'34'56'7'8E+10f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10f
 
 double PostfixScientificWrongFormattedFloat4 = -1.23'456'78e-1'0F;
-// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of float literal '1.23'456'78e-1'0F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of floating literal '1.23'456'78e-1'0F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e-10F
 
 
@@ -454,73 +454,73 @@ unsigned long AssignmentMinusUnsignedLongNotFormattedInteger1 = -123456789101112
 // CHECK-FIXES: {{^}}unsigned long AssignmentMinusUnsignedLongNotFormattedInteger1 = -12'345'678'910'111'213Ul;{{$}}
 
 float AssignmentNotFormattedFloat = 1234.56789;
-// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: unformatted representation of float literal '1234.56789' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: unformatted representation of floating literal '1234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}float AssignmentNotFormattedFloat = 1'234.567'89;{{$}}
 
 float AssignmentMinusNotFormattedFloat = -1234.56789;
-// CHECK-MESSAGES: :[[@LINE-1]]:43: warning: unformatted representation of float literal '1234.56789' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:43: warning: unformatted representation of floating literal '1234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}float AssignmentMinusNotFormattedFloat = -1'234.567'89;{{$}}
 
 double AssignmentPostfixNotFormattedFloat = 1234.569F;
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1234.569F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of floating literal '1234.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixNotFormattedFloat = 1'234.569F;{{$}}
 
 double AssignmentMinusPostfixNotFormattedFloat = -1234.569F;
-// CHECK-MESSAGES: :[[@LINE-1]]:51: warning: unformatted representation of float literal '1234.569F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:51: warning: unformatted representation of floating literal '1234.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentMinusPostfixNotFormattedFloat = -1'234.569F;{{$}}
 
 double AssignmentPostfixNotFormattedFloat1 = 1234.569f;
-// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: unformatted representation of floating literal '1234.569f' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixNotFormattedFloat1 = 1'234.569f;{{$}}
 
 double AssignmentMinusPostfixNotFormattedFloat1 = -1234.569f;
-// CHECK-MESSAGES: :[[@LINE-1]]:52: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:52: warning: unformatted representation of floating literal '1234.569f' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentMinusPostfixNotFormattedFloat1 = -1'234.569f;{{$}}
 
 double AssignmentScientificNotFormattedFloat = 1.2345678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:48: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:48: warning: unformatted representation of floating literal '1.2345678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentScientificNotFormattedFloat = 1.234'567'8E10;{{$}}
 
 double AssignmentMinusScientificNotFormattedFloat = -1.2345678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:54: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:54: warning: unformatted representation of floating literal '1.2345678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentMinusScientificNotFormattedFloat = -1.234'567'8E10;{{$}}
 
 double AssignmentScientificNotFormattedFloat1 = 1.2345678e10;
-// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of floating literal '1.2345678e10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentScientificNotFormattedFloat1 = 1.234'567'8e10;{{$}}
 
 double AssignmentMinusScientificNotFormattedFloat1 = -1.2345678e10;
-// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of floating literal '1.2345678e10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentMinusScientificNotFormattedFloat1 = -1.234'567'8e10;{{$}}
 
 double AssignmentScientificNotFormattedFloat2 = 1.2345678E+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of floating literal '1.2345678E+10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentScientificNotFormattedFloat2 = 1.234'567'8E+10;{{$}}
 
 double AssignmentMinusScientificNotFormattedFloat2 = -1.2345678E+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of floating literal '1.2345678E+10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentMinusScientificNotFormattedFloat2 = -1.234'567'8E+10;{{$}}
 
 double AssignmentScientificNotFormattedFloat3 = 1.2345678e+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of float literal '1.2345678e+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: unformatted representation of floating literal '1.2345678e+10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentScientificNotFormattedFloat3 = 1.234'567'8e+10;{{$}}
 
 double AssignmentMinusScientificNotFormattedFloat3 = -1.2345678e+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of float literal '1.2345678e+10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of floating literal '1.2345678e+10' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentMinusScientificNotFormattedFloat3 = -1.234'567'8e+10;{{$}}
 
 double AssignmentPostfixScientificNotFormattedFloat = 1.2345678E10F;
-// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of float literal '1.2345678E10F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:55: warning: unformatted representation of floating literal '1.2345678E10F' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixScientificNotFormattedFloat = 1.234'567'8E10F;{{$}}
 
 double AssignmentPostfixScientificNotFormattedFloat1 = 1.2345678e10f;
-// CHECK-MESSAGES: :[[@LINE-1]]:56: warning: unformatted representation of float literal '1.2345678e10f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:56: warning: unformatted representation of floating literal '1.2345678e10f' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixScientificNotFormattedFloat1 = 1.234'567'8e10f;{{$}}
 
 double AssignmentPostfixScientificNotFormattedFloat2 = -1.2345678E+10f;
-// CHECK-MESSAGES: :[[@LINE-1]]:57: warning: unformatted representation of float literal '1.2345678E+10f' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:57: warning: unformatted representation of floating literal '1.2345678E+10f' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixScientificNotFormattedFloat2 = -1.234'567'8E+10f;{{$}}
 
 double AssignmentPostfixScientificNotFormattedFloat4 = -1.2345678e-10F;
-// CHECK-MESSAGES: :[[@LINE-1]]:57: warning: unformatted representation of float literal '1.2345678e-10F' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:57: warning: unformatted representation of floating literal '1.2345678e-10F' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixScientificNotFormattedFloat4 = -1.234'567'8e-10F;{{$}}
