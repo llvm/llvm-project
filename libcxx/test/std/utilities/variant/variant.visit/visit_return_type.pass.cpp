@@ -11,8 +11,6 @@
 // <variant>
 
 // class variant;
-// template<class Self, class Visitor>
-//   constexpr decltype(auto) visit(this Self&&, Visitor&&); //since C++26
 // template<class R, class Self, class Visitor>
 //   constexpr R visit(this Self&&, Visitor&&);              // since C++26
 
