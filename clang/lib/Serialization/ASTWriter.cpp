@@ -5293,8 +5293,10 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT:
-        Record.AddStmt(const_cast<Expr *>(
-            cast<ParmVarDecl>(Update.getDecl())->getDefaultArg()));
+        // Do not use ParmVarDecl::getDefaultArg(): It strips the outermost
+        // FullExpr, such as ExprWithCleanups.
+        Record.AddStmt(
+            const_cast<Expr *>(cast<ParmVarDecl>(Update.getDecl())->getInit()));
         break;
 
       case UPD_CXX_INSTANTIATED_DEFAULT_MEMBER_INITIALIZER:
