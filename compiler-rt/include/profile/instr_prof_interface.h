@@ -55,8 +55,8 @@ int __llvm_orderfile_dump(void);
 
 #else
 #define __llvm_profile_reset_counters()
-#define __llvm_profile_dump()
-#define __llvm_orderfile_dump()
+#define __llvm_profile_dump() (0)
+#define __llvm_orderfile_dump() (0)
 #endif
 
 #ifdef __cplusplus

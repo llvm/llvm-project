@@ -12,8 +12,18 @@
 #include "InstrProfilingPort.h"
 #include <stdio.h>
 
+// Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
+// including instr_prof_interface.h so the interface functions are
+// declared correctly for the runtime. Additionally, make sure
+// that __LLVM_INSTR_PROFILE_GENERATE is undefined only when it is
+// not explicitly defined somewhere else.
+#ifndef __LLVM_INSTR_PROFILE_GENERATE
 #define __LLVM_INSTR_PROFILE_GENERATE
 #include "profile/instr_prof_interface.h"
+#undef __LLVM_INSTR_PROFILE_GENERATE
+#else
+#include "profile/instr_prof_interface.h"
+#endif
 
 #define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "profile/InstrProfData.inc"
