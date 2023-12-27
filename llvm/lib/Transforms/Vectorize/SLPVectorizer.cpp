@@ -11920,9 +11920,9 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       assert((ExternallyUsedValues.count(Scalar) ||
               any_of(Scalar->users(),
-                     [this, Scalar](llvm::User *U) {
+                     [&](llvm::User *U) {
                        TreeEntry *UseEntry = getTreeEntry(U);
-                       return UseEntry &&
+                       return UseEntry && UseEntry->State == TreeEntry::Vectorize &&
                               doesInTreeUserNeedToExtract(
                                   Scalar,
                                   cast<Instruction>(UseEntry->Scalars.front()),
