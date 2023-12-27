@@ -54,11 +54,16 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
   const RISCVSubtarget *STI;
+  std::unique_ptr<MCSubtargetInfo> CommonSTI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer)) {
+    std::unique_ptr<MCSubtargetInfo> STIPtr(
+        TM.getTarget().createMCSubtargetInfo("", "", ""));
+    CommonSTI = std::move(STIPtr);
+  }
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -70,6 +75,8 @@ public:
 
   void LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                        const MachineInstr &MI);
+
+  bool doInitialization(Module &M) override;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -363,12 +370,22 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   return false;
 }
 
+bool RISCVAsmPrinter::doInitialization(Module &M) {
+
+  CommonSTI->setFeatureBits(TM.getMCSubtargetInfo()->getFeatureBits());
+  return AsmPrinter::doInitialization(M);
+}
+
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
   bool EmittedOptionArch = emitDirectiveOptionArch();
+
+  // Collect flags from this function.
+  CommonSTI->setFeatureBits(CommonSTI->getFeatureBits() |
+                            STI->getFeatureBits());
 
   SetupMachineFunction(MF);
   emitFunctionBody();
@@ -384,26 +401,25 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const MDString *ModuleTargetABI =
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
-  if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes();
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    emitAttributes();
     RTS.finishAttributeSection();
+  }
+
   EmitHwasanMemaccessSymbols(M);
 }
 
 void RISCVAsmPrinter::emitAttributes() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  // Use MCSubtargetInfo from TargetMachine. Individual functions may have
-  // attributes that differ from other functions in the module and we have no
-  // way to know which function is correct.
-  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo(), /*EmitStackAlign*/ true);
+  // Use MCSubtargetInfo with flags collected from all functions.
+  RTS.emitTargetAttributes(*CommonSTI.get(), /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
