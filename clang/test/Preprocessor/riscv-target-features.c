@@ -1085,7 +1085,7 @@
 // RUN: -march=rv32i_zcmop0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZCMOP-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv32i_zcmop0p2 -x c -E -dM %s \
+// RUN: -march=rv64i_zcmop0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZCMOP-EXT %s
 // CHECK-ZCMOP-EXT: __riscv_zcmop  2000{{$}}
 
