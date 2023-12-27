@@ -560,8 +560,7 @@ static bool canSimplifyBranchOnCond(VPInstruction *Term) {
   if (!Not || Not->getOpcode() != VPInstruction::Not)
     return false;
 
-  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
-  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
+  return dyn_cast<VPActiveLaneMaskRecipe>(Not->getOperand(0));
 }
 
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -1095,9 +1094,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
-  auto *EntryALM =
-      Builder.createNaryOp(VPInstruction::ActiveLaneMask, {EntryIncrement, TC},
-                           DL, "active.lane.mask.entry");
+  auto *EntryALM = Builder.createGetActiveLaneMask(EntryIncrement, TC, DL,
+                                                   "active.lane.mask.entry");
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
@@ -1111,9 +1109,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   auto *InLoopIncrement =
       Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
                                   {IncrementValue}, {false, false}, DL);
-  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                   {InLoopIncrement, TripCount}, DL,
-                                   "active.lane.mask.next");
+  auto *ALM = Builder.createGetActiveLaneMask(InLoopIncrement, TripCount, DL,
+                                              "active.lane.mask.next");
   LaneMaskPhi->addOperand(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
@@ -1144,9 +1141,8 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
+    LaneMask = new VPActiveLaneMaskRecipe(WideCanonicalIV, Plan.getTripCount(),
+                                          nullptr, "active.lane.mask");
     LaneMask->insertAfter(WideCanonicalIV);
   }
 

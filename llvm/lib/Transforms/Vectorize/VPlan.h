@@ -232,15 +232,16 @@ struct VPIteration {
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
-                   DominatorTree *DT, IRBuilderBase &Builder,
+  VPTransformState(ElementCount VF, unsigned UF, ElementCount MaxPred,
+                   LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan, LLVMContext &Ctx)
-      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
-        LVer(nullptr), TypeAnalysis(Ctx) {}
+      : VF(VF), UF(UF), MaxPred(MaxPred), LI(LI), DT(DT), Builder(Builder),
+        ILV(ILV), Plan(Plan), LVer(nullptr), TypeAnalysis(Ctx) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
   unsigned UF;
+  ElementCount MaxPred;
 
   /// Hold the indices to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
@@ -1177,7 +1178,6 @@ public:
     switch (getOpcode()) {
     default:
       return false;
-    case VPInstruction::ActiveLaneMask:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::BranchOnCount:
@@ -1199,6 +1199,35 @@ public:
       return true;
     };
     llvm_unreachable("switch should return");
+  }
+};
+
+class VPActiveLaneMaskRecipe : public VPRecipeWithIRFlags, public VPValue {
+  const std::string Name;
+  ElementCount MaxLength;
+
+public:
+  VPActiveLaneMaskRecipe(VPValue *IV, VPValue *TC, // ElementCount MaxLength,
+                         DebugLoc DL = {}, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPActiveLaneMaskSC,
+                            std::initializer_list<VPValue *>{IV, TC}, DL),
+        VPValue(this), Name(Name.str()) {} //, MaxLength(MaxLength) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskSC)
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+
+    return getOperand(0) == Op;
   }
 };
 

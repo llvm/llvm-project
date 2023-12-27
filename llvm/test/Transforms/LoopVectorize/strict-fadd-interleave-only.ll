@@ -49,12 +49,12 @@ define float @pr70988() {
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX1]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX1]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP0]], i32 1021)
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP1]], i32 1021)
-; CHECK-ALM-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK]], i32 0
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP1]], i32 1021)
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP0]], i32 1021)
+; CHECK-ALM-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK2]], i32 0
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP4:%.*]] = fadd contract float [[VEC_PHI]], [[TMP3]]
-; CHECK-ALM-NEXT:    [[TMP5:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK2]], i32 0
+; CHECK-ALM-NEXT:    [[TMP5:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; CHECK-ALM-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP7]] = fadd contract float [[TMP4]], [[TMP6]]
 ; CHECK-ALM-NEXT:    [[INDEX_NEXT3]] = add i32 [[INDEX1]], 2
@@ -160,9 +160,9 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[PRED_LOAD_CONTINUE3]] ]
 ; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP0]], i32 15)
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP1]], i32 15)
-; CHECK-ALM-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK]], i32 0
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP1]], i32 15)
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = call <1 x i1> @llvm.get.active.lane.mask.v1i1.i32(i32 [[TMP0]], i32 15)
+; CHECK-ALM-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK1]], i32 0
 ; CHECK-ALM-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-ALM:       pred.load.if:
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP0]]
@@ -170,7 +170,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK-ALM:       pred.load.continue:
 ; CHECK-ALM-NEXT:    [[TMP5:%.*]] = phi float [ poison, [[VECTOR_BODY]] ], [ [[TMP4]], [[PRED_LOAD_IF]] ]
-; CHECK-ALM-NEXT:    [[TMP6:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK1]], i32 0
+; CHECK-ALM-NEXT:    [[TMP6:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; CHECK-ALM-NEXT:    br i1 [[TMP6]], label [[PRED_LOAD_IF2:%.*]], label [[PRED_LOAD_CONTINUE3]]
 ; CHECK-ALM:       pred.load.if2:
 ; CHECK-ALM-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP1]]
@@ -178,10 +178,10 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    br label [[PRED_LOAD_CONTINUE3]]
 ; CHECK-ALM:       pred.load.continue3:
 ; CHECK-ALM-NEXT:    [[TMP9:%.*]] = phi float [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], [[PRED_LOAD_IF2]] ]
-; CHECK-ALM-NEXT:    [[TMP10:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK]], i32 0
+; CHECK-ALM-NEXT:    [[TMP10:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK1]], i32 0
 ; CHECK-ALM-NEXT:    [[TMP11:%.*]] = select contract i1 [[TMP10]], float [[TMP5]], float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP12:%.*]] = fadd contract float [[VEC_PHI]], [[TMP11]]
-; CHECK-ALM-NEXT:    [[TMP13:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK1]], i32 0
+; CHECK-ALM-NEXT:    [[TMP13:%.*]] = extractelement <1 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; CHECK-ALM-NEXT:    [[TMP14:%.*]] = select contract i1 [[TMP13]], float [[TMP9]], float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP15]] = fadd contract float [[TMP12]], [[TMP14]]
 ; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
