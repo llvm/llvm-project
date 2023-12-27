@@ -992,6 +992,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   bool HasEVEX_K = TSFlags & X86II::EVEX_K;
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
+  bool IsND = X86II::hasNewDataDest(TSFlags); // IsND implies HasVEX_4V
   bool HasEVEX_RC = TSFlags & X86II::EVEX_RC;
 
   switch (TSFlags & X86II::OpMapMask) {
@@ -1051,7 +1052,6 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
-  bool IsND = X86II::hasNewDataDest(TSFlags);
 
   unsigned CurOp = X86II::getOperandBias(Desc);
 
