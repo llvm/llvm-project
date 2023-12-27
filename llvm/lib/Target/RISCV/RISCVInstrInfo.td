@@ -597,18 +597,6 @@ class Priv_rr<string opcodestr, bits<7> funct7>
   let rd = 0;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,
-             RISCVOpcode opcode, string opcodestr>
-    : RVInstIMopr<imm7, imm5, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
-                   opcodestr, "$rd, $rs1">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3,
-             RISCVOpcode opcode, string opcodestr>
-    : RVInstRMoprr<imm4, imm3, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                   opcodestr, "$rd, $rs1, $rs2">;
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -797,22 +785,6 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // IsSignExtendingOpW = 1
 } // Predicates = [IsRV64]
-
-// Zimop instructions
-
-foreach i = 0...31 in {
-    let Predicates = [HasStdExtZimop] in {
-    def MOPR#i : RVMopr<0b1000111, i, 0b100, OPC_SYSTEM, "mop.r."#i>,
-                 Sched<[]>;
-    } // Predicates = [HasStdExtZimop]
-}
-
-foreach i = 0...7 in {
-    let Predicates = [HasStdExtZimop] in {
-    def MOPRR#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
-                  Sched<[]>;
-    } // Predicates = [HasStdExtZimop]
-}
 
 //===----------------------------------------------------------------------===//
 // Privileged instructions
@@ -2140,6 +2112,7 @@ include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
 // Integer
+include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 
