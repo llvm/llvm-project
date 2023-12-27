@@ -75,7 +75,7 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     func.func @foo(%arg0: !fir.ref<!fir.array<?x?x!fir.char<1,?>>>, %arg1: !fir.ref<i64>) {
       %c10 = arith.constant 10 : index
       %c20 = arith.constant 20 : index
-      %1 = fir.load %ag1 : fir.ref<i64>
+      %1 = fir.load %arg1 : fir.ref<i64>
       %2 = fir.shape_shift %c10, %1, %c20, %1 : (index, index, index, index) -> !fir.shapeshift<2>
       %3 = hfir.declare %arg0(%2) typeparams %1 {uniq_name = "c"} (fir.ref<!fir.array<?x?x!fir.char<1,?>>>, fir.shapeshift<2>, index) -> (fir.box<!fir.array<?x?x!fir.char<1,?>>>, fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
       // ... uses %3#0 as "c"

@@ -397,4 +397,24 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
   let constructor = "::fir::createFunctionAttrPass()";
 }
 
+def DoConcurrentConversionPass : Pass<"fopenmp-do-concurrent-conversion", "mlir::func::FuncOp"> {
+  let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
+
+  let description = [{ This is an experimental pass to map `DO CONCURRENR` loops
+     to their correspnding equivalent OpenMP worksharing constructs.
+
+     For now the following is supported:
+       - Mapping simple loops to `parallel do`.
+
+     Still to TODO:
+       - More extensive testing.
+       - Mapping to `target teams distribute parallel do`.
+       - Allowing the user to control mapping behavior: either to the host or
+         target.
+  }];
+
+  let constructor = "::fir::createDoConcurrentConversionPass()";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
