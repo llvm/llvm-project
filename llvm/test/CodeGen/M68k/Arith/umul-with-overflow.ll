@@ -4,18 +4,27 @@
 define zeroext i8 @umul_i8(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-LABEL: umul_i8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.b (11,%sp), %d1
+; CHECK-NEXT:    move.b (11,%sp), %d0
+; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    move.b (7,%sp), %d1
 ; CHECK-NEXT:    and.l #255, %d1
-; CHECK-NEXT:    move.b (7,%sp), %d0
+; CHECK-NEXT:    muls %d0, %d1
+; CHECK-NEXT:    move.l %d1, %d0
+; CHECK-NEXT:    and.l #65535, %d0
 ; CHECK-NEXT:    and.l #255, %d0
-; CHECK-NEXT:    muls %d1, %d0
-; CHECK-NEXT:    move.b #0, %d1
-; CHECK-NEXT:    move.w %d1, %ccr
-; CHECK-NEXT:    bvs .LBB0_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    move.b #42, %d0
-; CHECK-NEXT:  .LBB0_2: ; %entry
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    rts
+entry:
+  %umul = tail call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 %b)
+  %cmp = extractvalue { i8, i1 } %umul, 1
+  %umul.result = extractvalue { i8, i1 } %umul, 0
+  %X = select i1 %cmp, i8 42, i8 %umul.result
+  ret i8 %X
+}
+
+define zeroext i8 @umul_i8_no_ovf(i8 signext %a, i8 signext %b) nounwind ssp {
+; CHECK-LABEL: umul_i8_no_ovf:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    move.l #42, %d0
 ; CHECK-NEXT:    rts
 entry:
   %umul = tail call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 %b)
@@ -33,19 +42,13 @@ define zeroext i16 @umul_i16(i16 signext %a, i16 signext %b) nounwind ssp {
 ; CHECK-NEXT:    move.w (6,%sp), %d0
 ; CHECK-NEXT:    move.w (10,%sp), %d1
 ; CHECK-NEXT:    muls %d1, %d0
-; CHECK-NEXT:    move.b #0, %d1
-; CHECK-NEXT:    move.w %d1, %ccr
-; CHECK-NEXT:    bvs .LBB1_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    move.w #42, %d0
-; CHECK-NEXT:  .LBB1_2: ; %entry
 ; CHECK-NEXT:    and.l #65535, %d0
 ; CHECK-NEXT:    rts
 entry:
   %umul = tail call { i16, i1 } @llvm.umul.with.overflow.i16(i16 %a, i16 %b)
   %cmp = extractvalue { i16, i1 } %umul, 1
   %umul.result = extractvalue { i16, i1 } %umul, 0
-  %X = select i1 %cmp, i16 %umul.result, i16 42
+  %X = select i1 %cmp, i16 42, i16 %umul.result
   ret i16 %X
 }
 
