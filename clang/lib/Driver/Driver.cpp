@@ -2164,6 +2164,12 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_library_module_manifest_path)) {
+    llvm::outs() << "module: ="
+                 << GetModuleManifestPath(C, C.getDefaultToolChain()) << '\n';
+    return false;
+  }
+
   if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
     if (std::optional<std::string> RuntimePath = TC.getRuntimePath())
       llvm::outs() << *RuntimePath << '\n';
@@ -6133,6 +6139,40 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   }
 
   return std::string(Name);
+}
+
+std::string Driver::GetModuleManifestPath(const Compilation &C,
+                                          const ToolChain &TC) const {
+
+  switch (TC.GetCXXStdlibType(C.getArgs())) {
+  case ToolChain::CST_Libcxx: {
+    std::string lib = "libc++.so";
+    std::string path = GetFilePath(lib, TC);
+
+    // Note when there are multiple flavours of libc++ the module json needs to
+    // look at the command-line arguments for the proper json.
+
+    // For example
+    /*
+        const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+        if (Sanitize.needsAsanRt())
+          return path.replace(path.size() - lib.size(), lib.size(),
+                              "modules-asan.json");
+    */
+
+    path = path.replace(path.size() - lib.size(), lib.size(), "modules.json");
+    if (TC.getVFS().exists(path))
+      return path;
+
+    return "";
+  }
+
+  case ToolChain::CST_Libstdcxx:
+    // libstdc++ does not provide Standard library modules yet.
+    return "";
+  }
+
+  return "";
 }
 
 std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
