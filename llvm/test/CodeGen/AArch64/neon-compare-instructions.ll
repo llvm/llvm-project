@@ -1789,6 +1789,26 @@ define <8 x i1> @not_cmle8xi8(<8 x i8> %0) {
   ret <8 x i1> %cmp.i
 }
 
+define <4 x i1> @not_cmle16xi8(<4 x i32> %0) {
+; CHECK-SD-LABEL: not_cmle16xi8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    cmle v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: not_cmle16xi8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    adrp x8, .LCPI134_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI134_0]
+; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    ret
+entry:
+  %bc = bitcast <16 x i8> <i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0> to <4 x i32>
+  %cmp.i = icmp slt <4 x i32> %0, %bc
+  ret <4 x i1> %cmp.i
+}
+
 define <8 x i8> @cmltz8xi8_alt(<8 x i8> %A) {
 ; CHECK-SD-LABEL: cmltz8xi8_alt:
 ; CHECK-SD:       // %bb.0:
@@ -2082,8 +2102,8 @@ define <2 x i64> @cmhsz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmhsz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI154_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI154_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI155_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI155_0]
 ; CHECK-GI-NEXT:    cmhs v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp uge <2 x i64> %A, <i64 2, i64 2>
@@ -2168,8 +2188,8 @@ define <2 x i64> @cmhiz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmhiz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI161_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI161_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI162_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI162_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp ugt <2 x i64> %A, <i64 1, i64 1>
@@ -2344,8 +2364,8 @@ define <2 x i64> @cmloz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmloz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI175_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI175_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI176_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI176_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp ult <2 x i64> %A, <i64 2, i64 2>
