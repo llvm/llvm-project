@@ -208,7 +208,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
       diag(MatchedInteger->getLocation(),
            "unformatted representation of integer literal '%0'")
           << OriginalLiteralString
-          << FixItHint::CreateInsertion(MatchedInteger->getLocation(),
+          << FixItHint::CreateReplacement(MatchedInteger->getLocation(),
                                         FormatedLiteralString);
     }
   } else if (MatchedFloat != nullptr) {
@@ -227,7 +227,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
       diag(MatchedFloat->getLocation(),
            "unformatted representation of float literal '%0'")
           << OriginalLiteralString
-          << FixItHint::CreateInsertion(MatchedFloat->getLocation(),
+          << FixItHint::CreateReplacement(MatchedFloat->getLocation(),
                                         FormatedLiteralString);
     }
   } else {
