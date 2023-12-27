@@ -1284,9 +1284,8 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
 
 MCOperand AMDGPUDisassembler::createVGPR16Operand(unsigned RegIdx,
                                                   bool IsHi) const {
-  unsigned RCID =
-      IsHi ? AMDGPU::VGPR_HI16RegClassID : AMDGPU::VGPR_LO16RegClassID;
-  return createRegOperand(RCID, RegIdx);
+  unsigned RegIdxInVGPR16 = RegIdx * 2 + (IsHi ? 1 : 0);
+  return createRegOperand(AMDGPU::VGPR_16RegClassID, RegIdxInVGPR16);
 }
 
 // Decode Literals for insts which always have a literal in the encoding
