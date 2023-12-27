@@ -1346,7 +1346,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("SEQUENTIAL"):
   case HashInquiryKeyword("STREAM"):
   case HashInquiryKeyword("UNFORMATTED"):
-    str = "UNKNONN";
+    str = "UNKNOWN";
     break;
   case HashInquiryKeyword("READ"):
     str =
