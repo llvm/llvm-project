@@ -214,7 +214,6 @@ void test_argument_forwarding() {
       assert(false);
     }
 #  endif
-
     // non-member
     {
       std::visit(obj, v);
@@ -416,7 +415,6 @@ void test_constexpr() {
     // member
     { static_assert(v.visit(obj) == 42); }
 #endif
-
     // non-member
     { static_assert(std::visit(obj, v) == 42, ""); }
   }

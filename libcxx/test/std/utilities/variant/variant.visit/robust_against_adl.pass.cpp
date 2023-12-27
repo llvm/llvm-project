@@ -42,7 +42,6 @@ constexpr bool test(bool do_it) {
       v.visit<void*>([](auto) -> Holder<Incomplete>* { return nullptr; });
     }
 #endif
-
     // non-member
     {
       std::visit([](auto) {}, v);

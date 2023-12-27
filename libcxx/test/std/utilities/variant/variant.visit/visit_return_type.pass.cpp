@@ -124,7 +124,6 @@ void test_call_operator_forwarding() {
       assert(Fn::check_call<long&>(CT_Const | CT_RValue));
     }
 #endif
-
     // non-member
     {
       std::visit<ReturnType>(obj, v);
@@ -213,7 +212,6 @@ void test_argument_forwarding() {
       assert(Fn::check_call<const int&&>(val));
     }
 #endif
-
     // non-member
     {
       std::visit<ReturnType>(obj, v);
@@ -246,7 +244,6 @@ void test_argument_forwarding() {
       assert(Fn::check_call<int&>(val));
     }
 #  endif
-
     // non-member
     {
       std::visit<ReturnType>(obj, v);
@@ -278,7 +275,6 @@ void test_argument_forwarding() {
       assert(Fn::check_call<int&&>(val));
     }
 #  endif
-
     // non-member
     {
       std::visit<ReturnType>(obj, v);
@@ -358,7 +354,6 @@ void test_return_type() {
       static_assert(std::is_same_v<decltype(v.visit<ReturnType>(std::move(cobj))), ReturnType>);
     }
 #endif
-
     // non-member
     {
       static_assert(std::is_same_v<decltype(std::visit<ReturnType>(obj, v)), ReturnType>);
@@ -380,7 +375,6 @@ void test_return_type() {
       static_assert(std::is_same_v<decltype(v.visit<ReturnType>(std::move(cobj))), ReturnType>);
     }
 #endif
-
     // non-member
     {
       static_assert(std::is_same_v<decltype(std::visit<ReturnType>(obj, v)), ReturnType>);
@@ -440,7 +434,6 @@ void test_constexpr_void() {
     // member
     { static_assert((v.visit<void>(obj), 42) == 42); }
 #endif
-
     // non-member
     { static_assert((std::visit<void>(obj, v), 42) == 42, ""); }
   }
@@ -452,7 +445,6 @@ void test_constexpr_void() {
     // member
     { static_assert((v.visit<void>(obj), 42) == 42); }
 #endif
-
     // non-member
     { static_assert((std::visit<void>(obj, v), 42) == 42, ""); }
   }
@@ -488,6 +480,7 @@ void test_constexpr_void() {
   {
     using V = std::variant<int, long, double, long long, int*>;
     constexpr V v1(42L), v2(101), v3(nullptr), v4(1.1);
+
     // non-member
     { static_assert((std::visit<void>(aobj, v1, v2, v3, v4), 4) == 4, ""); }
   }
@@ -505,7 +498,6 @@ void test_constexpr_int() {
     // member
     { static_assert(v.visit<int>(obj) == 42); }
 #endif
-
     // non-member
     { static_assert(std::visit<int>(obj, v) == 42, ""); }
   }
@@ -517,7 +509,6 @@ void test_constexpr_int() {
     // member
     { static_assert(v.visit<int>(obj) == 42); }
 #endif
-
     // non-member
     { static_assert(std::visit<int>(obj, v) == 42, ""); }
   }
@@ -576,7 +567,6 @@ void test_exceptions() {
     return false;
   };
 #  endif
-
   // non-member
   auto test_nonmember = [&](auto&&... args) {
     try {
@@ -630,14 +620,14 @@ void test_exceptions() {
   }
   {
     using V = std::variant<int, long, double, MakeEmptyT>;
-    V v1(42l), v2(101), v3(202), v4(1.1);
+    V v1(42L), v2(101), v3(202), v4(1.1);
     makeEmpty(v1);
 
     assert(test_nonmember(v1, v2, v3, v4));
   }
   {
     using V = std::variant<int, long, double, long long, MakeEmptyT>;
-    V v1(42l), v2(101), v3(202), v4(1.1);
+    V v1(42L), v2(101), v3(202), v4(1.1);
     makeEmpty(v1);
     makeEmpty(v2);
     makeEmpty(v3);
@@ -692,18 +682,34 @@ void test_constexpr_explicit_side_effect() {
 void test_derived_from_variant() {
   struct MyVariant : std::variant<short, long, float> {};
 
-  std::visit<bool>(
-      [](auto x) {
-        assert(x == 42);
-        return true;
-      },
-      MyVariant{42});
-  std::visit<bool>(
-      [](auto x) {
-        assert(x == -1.3f);
-        return true;
-      },
-      MyVariant{-1.3f});
+#if _LIBCPP_STD_VER >= 26
+  // member
+  {
+    MyVariant{42}.template visit<bool>([](auto x) {
+      assert(x == 42);
+      return true;
+    });
+    MyVariant{-1.3f}.template visit<bool>([](auto x) {
+      assert(x == -1.3f);
+      return true;
+    });
+  }
+#endif
+  // non-member
+  {
+    std::visit<bool>(
+        [](auto x) {
+          assert(x == 42);
+          return true;
+        },
+        MyVariant{42});
+    std::visit<bool>(
+        [](auto x) {
+          assert(x == -1.3f);
+          return true;
+        },
+        MyVariant{-1.3f});
+  }
 
   // Check that visit does not take index nor valueless_by_exception members from the base class.
   struct EvilVariantBase {
@@ -715,18 +721,34 @@ void test_derived_from_variant() {
     using std::variant<int, long, double>::variant;
   };
 
-  std::visit<bool>(
-      [](auto x) {
-        assert(x == 12);
-        return true;
-      },
-      EvilVariant1{12});
-  std::visit<bool>(
-      [](auto x) {
-        assert(x == 12.3);
-        return true;
-      },
-      EvilVariant1{12.3});
+#if _LIBCPP_STD_VER >= 26
+  // member
+  {
+    EvilVariant1{12}.template visit<bool>([](auto x) {
+      assert(x == 12);
+      return true;
+    });
+    EvilVariant1{12.3}.template visit<bool>([](auto x) {
+      assert(x == 12.3);
+      return true;
+    });
+  }
+#endif
+  // non-member
+  {
+    std::visit<bool>(
+        [](auto x) {
+          assert(x == 12);
+          return true;
+        },
+        EvilVariant1{12});
+    std::visit<bool>(
+        [](auto x) {
+          assert(x == 12.3);
+          return true;
+        },
+        EvilVariant1{12.3});
+  }
 
   // Check that visit unambiguously picks the variant, even if the other base has __impl member.
   struct ImplVariantBase {
@@ -744,18 +766,34 @@ void test_derived_from_variant() {
     using std::variant<int, long, double>::variant;
   };
 
-  std::visit<bool>(
-      [](auto x) {
-        assert(x == 12);
-        return true;
-      },
-      EvilVariant2{12});
-  std::visit<bool>(
-      [](auto x) {
-        assert(x == 12.3);
-        return true;
-      },
-      EvilVariant2{12.3});
+#if _LIBCPP_STD_VER >= 26
+  // member
+  {
+    EvilVariant2{12}.template visit<bool>([](auto x) {
+      assert(x == 12);
+      return true;
+    });
+    EvilVariant2{12.3}.template visit<bool>([](auto x) {
+      assert(x == 12.3);
+      return true;
+    });
+  }
+#endif
+  // non-member
+  {
+    std::visit<bool>(
+        [](auto x) {
+          assert(x == 12);
+          return true;
+        },
+        EvilVariant2{12});
+    std::visit<bool>(
+        [](auto x) {
+          assert(x == 12.3);
+          return true;
+        },
+        EvilVariant2{12.3});
+  }
 }
 
 struct any_visitor {
