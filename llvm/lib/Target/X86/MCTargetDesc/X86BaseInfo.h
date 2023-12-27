@@ -996,7 +996,7 @@ inline unsigned getOperandBias(const MCInstrDesc &Desc) {
 }
 
 /// \returns true if the instruction has a NDD (new data destination).
-inline bool isND(uint64_t TSFlags) {
+inline bool hasNewDataDestination(uint64_t TSFlags) {
   return (TSFlags & X86II::OpMapMask) == X86II::T_MAP4 &&
          (TSFlags & X86II::EVEX_B) && (TSFlags & X86II::VEX_4V);
 }
@@ -1027,7 +1027,7 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     return -1;
   case X86II::MRMDestMem:
   case X86II::MRMDestMemFSIB:
-    return isND(TSFlags);
+    return hasNewDataDestination(TSFlags);
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMemFSIB:
     // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a

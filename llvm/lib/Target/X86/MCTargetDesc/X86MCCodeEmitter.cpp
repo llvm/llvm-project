@@ -1051,7 +1051,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
-  bool IsND = X86II::isND(TSFlags);
+  bool IsND = X86II::hasNewDataDestination(TSFlags);
 
   unsigned CurOp = X86II::getOperandBias(Desc);
 
@@ -1078,7 +1078,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     //  MemAddr, src1(ModR/M), imm8
     //
     // NDD:
-    // dst(VEX_4V), MemAddr, src1(ModR/M)
+    //  dst(VEX_4V), MemAddr, src1(ModR/M)
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
@@ -1533,7 +1533,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   unsigned OpcodeOffset = 0;
 
-  bool IsND = X86II::isND(TSFlags);
+  bool IsND = X86II::hasNewDataDestination(TSFlags);
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
