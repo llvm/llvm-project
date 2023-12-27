@@ -28,6 +28,7 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
+// Deprecated `std::visit_format_arg` should be tested in C++26 or newer.
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
 
 template <class Context, class To, class From>
