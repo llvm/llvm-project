@@ -1051,7 +1051,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
-  bool IsND = X86II::hasNewDataDestination(TSFlags);
+  bool IsND = X86II::hasNewDataDest(TSFlags);
 
   unsigned CurOp = X86II::getOperandBias(Desc);
 
@@ -1533,7 +1533,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   unsigned OpcodeOffset = 0;
 
-  bool IsND = X86II::hasNewDataDestination(TSFlags);
+  bool IsND = X86II::hasNewDataDest(TSFlags);
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
