@@ -53,10 +53,12 @@ public:
                      std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
       : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
+#ifndef NDEBUG
     for (const ParamPoint &term : numerators)
       assert(term.getNumColumns() == numParam + 1 &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
+#endif // NDEBUG
   }
 
   unsigned getNumParams() { return numParam; }
