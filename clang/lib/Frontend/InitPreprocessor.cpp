@@ -1368,6 +1368,9 @@ static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
                                        MacroBuilder &Builder) {
   if (CodeGenOpts.hasProfileInstr())
     Builder.defineMacro("__LLVM_INSTR_PROFILE_GENERATE");
+
+  if (CodeGenOpts.hasProfileIRUse() || CodeGenOpts.hasProfileClangUse())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_USE");
 }
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
