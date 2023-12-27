@@ -5308,7 +5308,8 @@ def rewrite_objc : Flag<["-"], "rewrite-objc">, Flags<[NoXarchOption]>,
 def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
   Flags<[NoXarchOption]>,
   HelpText<"Rewrite Legacy Objective-C source to C++">;
-def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>;
+def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -6999,6 +7000,8 @@ def msign_return_address_key_EQ : Joined<["-"], "msign-return-address-key=">,
     Values<"a_key,b_key">;
 def mbranch_target_enforce : Flag<["-"], "mbranch-target-enforce">,
   MarshallingInfoFlag<LangOpts<"BranchTargetEnforcement">>;
+def mbranch_protection_pauth_lr : Flag<["-"], "mbranch-protection-pauth-lr">,
+  MarshallingInfoFlag<LangOpts<"BranchProtectionPAuthLR">>;
 def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">,
   MarshallingInfoNegativeFlag<LangOpts<"DllExportInlines">>;
 def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,

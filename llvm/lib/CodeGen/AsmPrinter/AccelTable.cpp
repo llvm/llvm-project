@@ -412,7 +412,7 @@ static uint32_t constructAbbreviationTag(
     const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet) {
   uint32_t AbbrvTag = 0;
   if (EntryRet)
-    AbbrvTag |= 1 << EntryRet->Endoding.Index;
+    AbbrvTag |= 1 << EntryRet->Encoding.Index;
   AbbrvTag |= 1 << dwarf::DW_IDX_die_offset;
   AbbrvTag |= Tag << LowerBitSize;
   return AbbrvTag;
@@ -429,7 +429,7 @@ void Dwarf5AccelTableWriter<DataT>::populateAbbrevsMap() {
         if (Abbreviations.count(AbbrvTag) == 0) {
           SmallVector<DWARF5AccelTableData::AttributeEncoding, 2> UA;
           if (EntryRet)
-            UA.push_back(EntryRet->Endoding);
+            UA.push_back(EntryRet->Encoding);
           UA.push_back({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
           Abbreviations.try_emplace(AbbrvTag, UA);
         }

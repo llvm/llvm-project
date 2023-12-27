@@ -1,4 +1,5 @@
 ; RUN: not --crash llc -march=amdgcn -mcpu=gfx90a < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -march=amdgcn -mcpu=gfx1200 < %s 2>&1 | FileCheck %s
 
 ; GDS is not supported on GFX90A+
 ; CHECK: LLVM ERROR: Cannot select: {{.*}} AtomicLoadAdd

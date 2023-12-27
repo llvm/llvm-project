@@ -702,6 +702,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                          AMDGPU::OpName::src2_modifiers);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::DS) &&
+      !AMDGPU::hasGDS(STI)) {
+    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::gds);
+  }
+
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
           (SIInstrFlags::MUBUF | SIInstrFlags::FLAT | SIInstrFlags::SMRD))) {
     int CPolPos = AMDGPU::getNamedOperandIdx(MI.getOpcode(),

@@ -472,7 +472,7 @@ def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
 def FeatureStdExtZvfbfmin
     : SubtargetFeature<"experimental-zvfbfmin", "HasStdExtZvfbfmin", "true",
                        "'Zvbfmin' (Vector BF16 Converts)",
-                       [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
+                       [FeatureStdExtZve32f]>;
 def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
                                   "'Zvfbfmin' (Vector BF16 Converts)">;
@@ -480,7 +480,7 @@ def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
 def FeatureStdExtZvfbfwma
     : SubtargetFeature<"experimental-zvfbfwma", "HasStdExtZvfbfwma", "true",
                        "'Zvfbfwma' (Vector BF16 widening mul-add)",
-                       [FeatureStdExtZvfbfmin]>;
+                       [FeatureStdExtZvfbfmin, FeatureStdExtZfbfmin]>;
 def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                                   "'Zvfbfwma' (Vector BF16 widening mul-add)">;
@@ -686,6 +686,12 @@ def FeatureStdExtZicond
 def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZicond),
                                 "'Zicond' (Integer Conditional Operations)">;
+
+def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+                                          "'Zimop' (May-Be-Operations)">;
+def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZimop),
+                               "'Zimop' (May-Be-Operations)">;
 
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
@@ -977,9 +983,19 @@ def TuneLUIADDIFusion
 def TuneAUIPCADDIFusion
     : SubtargetFeature<"auipc-addi-fusion", "HasAUIPCADDIFusion",
                        "true", "Enable AUIPC+ADDI macrofusion">;
-def TuneShiftedZExtFusion
-    : SubtargetFeature<"shifted-zext-fusion", "HasShiftedZExtFusion",
-                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension">;
+
+def TuneZExtHFusion
+    : SubtargetFeature<"zexth-fusion", "HasZExtHFusion",
+                       "true", "Enable SLLI+SRLI to be fused to zero extension of halfword">;
+
+def TuneZExtWFusion
+    : SubtargetFeature<"zextw-fusion", "HasZExtWFusion",
+                       "true", "Enable SLLI+SRLI to be fused to zero extension of word">;
+
+def TuneShiftedZExtWFusion
+    : SubtargetFeature<"shifted-zextw-fusion", "HasShiftedZExtWFusion",
+                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension of word">;
+
 def TuneLDADDFusion
     : SubtargetFeature<"ld-add-fusion", "HasLDADDFusion",
                        "true", "Enable LD+ADD macrofusion.">;
@@ -1001,12 +1017,8 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
 
-def TuneVeyronFusions : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [TuneLUIADDIFusion,
-                                          TuneAUIPCADDIFusion,
-                                          TuneShiftedZExtFusion,
-                                          TuneLDADDFusion]>;
+def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana Veyron-Series processors">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

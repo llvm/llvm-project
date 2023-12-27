@@ -1008,12 +1008,13 @@ public:
 
   /// Extract the original function name from a PGO function name.
   static StringRef extractName(StringRef Name) {
-    // We can have multiple :-separated pieces; there can be pieces both
-    // before and after the mangled name. Find the first part that starts
-    // with '_Z'; we'll assume that's the mangled name we want.
+    // We can have multiple pieces separated by kGlobalIdentifierDelimiter (
+    // semicolon now and colon in older profiles); there can be pieces both
+    // before and after the mangled name. Find the first part that starts with
+    // '_Z'; we'll assume that's the mangled name we want.
     std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
     while (true) {
-      Parts = Parts.second.split(':');
+      Parts = Parts.second.split(kGlobalIdentifierDelimiter);
       if (Parts.first.starts_with("_Z"))
         return Parts.first;
       if (Parts.second.empty())

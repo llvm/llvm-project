@@ -196,6 +196,8 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zicfilp", RISCVExtensionVersion{0, 4}},
     {"zicond", RISCVExtensionVersion{1, 0}},
 
+    {"zimop", RISCVExtensionVersion{0, 1}},
+
     {"ztso", RISCVExtensionVersion{0, 1}},
 
     {"zvfbfmin", RISCVExtensionVersion{0, 8}},
@@ -998,7 +1000,7 @@ static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXSfvcp[] = {"zve32x"};
 static const char *ImpliedExtsXSfvfnrclipxfqf[] = {"zve32f"};
-static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zve32f", "zvfbfmin"};
+static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zvfbfmin"};
 static const char *ImpliedExtsXSfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXSfvqmaccqoq[] = {"zve32x"};
 static const char *ImpliedExtsZacas[] = {"a"};
@@ -1007,7 +1009,7 @@ static const char *ImpliedExtsZcd[] = {"d", "zca"};
 static const char *ImpliedExtsZce[] = {"zcb", "zcmp", "zcmt"};
 static const char *ImpliedExtsZcf[] = {"f", "zca"};
 static const char *ImpliedExtsZcmp[] = {"zca"};
-static const char *ImpliedExtsZcmt[] = {"zca"};
+static const char *ImpliedExtsZcmt[] = {"zca", "zicsr"};
 static const char *ImpliedExtsZdinx[] = {"zfinx"};
 static const char *ImpliedExtsZfa[] = {"f"};
 static const char *ImpliedExtsZfbfmin[] = {"f"};
@@ -1028,8 +1030,8 @@ static const char *ImpliedExtsZve32x[] = {"zvl32b", "zicsr"};
 static const char *ImpliedExtsZve64d[] = {"zve64f", "d"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
 static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
-static const char *ImpliedExtsZvfbfmin[] = {"zve32f", "zfbfmin"};
-static const char *ImpliedExtsZvfbfwma[] = {"zvfbfmin"};
+static const char *ImpliedExtsZvfbfmin[] = {"zve32f"};
+static const char *ImpliedExtsZvfbfwma[] = {"zvfbfmin", "zfbfmin"};
 static const char *ImpliedExtsZvfh[] = {"zvfhmin", "zfhmin"};
 static const char *ImpliedExtsZvfhmin[] = {"zve32f"};
 static const char *ImpliedExtsZvkn[] = {"zvkb", "zvkned", "zvknhb", "zvkt"};
