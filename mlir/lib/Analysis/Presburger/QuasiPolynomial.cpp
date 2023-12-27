@@ -20,6 +20,7 @@ QuasiPolynomial::QuasiPolynomial(
     : PresburgerSpace(/*numDomain=*/numVars, /*numRange=*/1, /*numSymbols=*/0,
                       /*numLocals=*/0),
       coefficients(coeffs), affine(aff) {
+#ifndef NDEBUG
   // For each term which involves at least one affine function,
   for (const std::vector<SmallVector<Fraction>> &term : affine) {
     if (term.size() == 0)
@@ -32,6 +33,7 @@ QuasiPolynomial::QuasiPolynomial(
              "symbols!");
     }
   }
+#endif // NDEBUG
 }
 
 QuasiPolynomial QuasiPolynomial::operator+(const QuasiPolynomial &x) const {
