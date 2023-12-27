@@ -1364,6 +1364,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   TI.getTargetDefines(LangOpts, Builder);
 }
 
+static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
+                                       MacroBuilder &Builder) {
+  if (CodeGenOpts.hasProfileInstr())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_GENERATE");
+}
+
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
 void clang::InitializePreprocessor(Preprocessor &PP,
@@ -1417,8 +1423,10 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   InitializeStandardPredefinedMacros(PP.getTargetInfo(), PP.getLangOpts(),
                                      FEOpts, Builder);
 
-  if (CodeGenOpts.hasProfileIRInstr())
-    Builder.defineMacro("__LLVM_INSTR_PROFILE_GENERATE");
+  // The PGO instrumentation profile macros are driven by options
+  // -fprofile[-instr]-generate/-fcs-profile-generate/-fprofile[-instr]-use,
+  // hence they are not guarded by InitOpts.UsePredefines.
+  InitializePGOProfileMacros(CodeGenOpts, Builder);
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
   // that they come from the command line.
