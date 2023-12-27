@@ -12,6 +12,10 @@
 // FIXME: False stack overflow report
 // UNSUPPORTED: android && asan
 
+// FIXME: Requires `FutexWait` implementation. See __asan::InstallAtForkHandler.
+// UNSUPPORTED: target={{.*solaris.*}}
+// UNSUPPORTED: target={{.*netbsd.*}}
+
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
 // The test try to check two things:

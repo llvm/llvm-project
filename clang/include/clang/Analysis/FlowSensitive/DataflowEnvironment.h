@@ -325,7 +325,8 @@ public:
   ///
   /// Requirements:
   ///  `E` must be a prvalue of record type.
-  RecordStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
+  RecordStorageLocation &
+  getResultObjectLocation(const Expr &RecordPRValue) const;
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -434,24 +435,14 @@ public:
 
   /// Assigns `Val` as the value of the prvalue `E` in the environment.
   ///
-  /// If `E` is not yet associated with a storage location, associates it with
-  /// a newly created storage location. In any case, associates the storage
-  /// location of `E` with `Val`.
-  ///
-  /// Once the migration to strict handling of value categories is complete
-  /// (see https://discourse.llvm.org/t/70086), this function will be renamed to
-  /// `setValue()`. At this point, prvalue expressions will be associated
-  /// directly with `Value`s, and the legacy behavior of associating prvalue
-  /// expressions with storage locations (as described above) will be
-  /// eliminated.
-  ///
   /// Requirements:
   ///
-  ///  `E` must be a prvalue
-  ///  If `Val` is a `RecordValue`, its `RecordStorageLocation` must be the
-  ///  same as that of any `RecordValue` that has already been associated with
-  ///  `E`. This is to guarantee that the result object initialized by a prvalue
-  ///  `RecordValue` has a durable storage location.
+  ///  - `E` must be a prvalue
+  ///  - If `Val` is a `RecordValue`, its `RecordStorageLocation` must be
+  ///    `getResultObjectLocation(E)`. An exception to this is if `E` is an
+  ///    expression that originally creates a `RecordValue` (such as a
+  ///    `CXXConstructExpr` or `CallExpr`), as these establish the location of
+  ///    the result object in the first place.
   void setValue(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
@@ -607,14 +598,6 @@ public:
 private:
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
-
-  /// Internal version of `setStorageLocation()` that doesn't check if the
-  /// expression is a prvalue.
-  void setStorageLocationInternal(const Expr &E, StorageLocation &Loc);
-
-  /// Internal version of `getStorageLocation()` that doesn't check if the
-  /// expression is a prvalue.
-  StorageLocation *getStorageLocationInternal(const Expr &E) const;
 
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null.
