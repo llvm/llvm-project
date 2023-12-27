@@ -623,11 +623,9 @@ class MxDiMuOp_DI<string MN, bits<4> CMD, bit SIGNED = false,
 } // let Constraints
 } // Defs = [CCR]
 
-multiclass MxDiMuOp<string MN, bits<4> CMD, bit isComm = 0> {
-  let isCommutable = isComm in {
-    def "S"#NAME#"d32d16" : MxDiMuOp_DD<MN#"s", CMD, /*SIGNED*/true, MxDRD32, MxDRD16>;
-    def "U"#NAME#"d32d16" : MxDiMuOp_DD<MN#"u", CMD, /*SIGNED*/false, MxDRD32, MxDRD16>;
-  }
+multiclass MxDiMuOp<string MN, bits<4> CMD> {
+  def "S"#NAME#"d32d16" : MxDiMuOp_DD<MN#"s", CMD, /*SIGNED*/true, MxDRD32, MxDRD16>;
+  def "U"#NAME#"d32d16" : MxDiMuOp_DD<MN#"u", CMD, /*SIGNED*/false, MxDRD32, MxDRD16>;
 
   def "S"#NAME#"d32i16" : MxDiMuOp_DI<MN#"s", CMD, /*SIGNED*/true, MxDRD32, Mxi16imm>;
   def "U"#NAME#"d32i16" : MxDiMuOp_DI<MN#"u", CMD, /*SIGNED*/false, MxDRD32, Mxi16imm>;
@@ -729,7 +727,7 @@ def : Pat<(urem i16:$dst, MximmSExt16:$opd),
              MxSubRegIndex16Lo)>;
 
 
-defm MUL : MxDiMuOp<"mul", 0xC, 1>;
+defm MUL : MxDiMuOp<"mul", 0xC>;
 
 def SMULd32d32 : MxDiMuOp_DD_Long<"muls.l", MxSMul, 0x130, /*SIGNED*/true>;
 def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", MxUMul, 0x130, /*SIGNED*/false>;
