@@ -8428,6 +8428,25 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           Mask);
       VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
                                      FinalVecTy, Mask);
+      // Patterns like [fadd,fsub] can be combined into a single instruction
+      // in x86. Reordering them into [fsub,fadd] blocks this pattern. So we
+      // need to take into account their order when looking for the most used
+      // order.
+      unsigned Opcode0 = E->getOpcode();
+      unsigned Opcode1 = E->getAltOpcode();
+      // The opcode mask selects between the two opcodes.
+      SmallBitVector OpcodeMask(E->Scalars.size(), false);
+      for (unsigned Lane : seq<unsigned>(0, E->Scalars.size()))
+        if (cast<Instruction>(E->Scalars[Lane])->getOpcode() == Opcode1)
+          OpcodeMask.set(Lane);
+      // If this pattern is supported by the target then we consider the
+      // order.
+      if (TTI->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
+        InstructionCost AltVecCost =
+            TTI->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+        return AltVecCost < VecCost ? AltVecCost : VecCost;
+      }
+      // TODO: Check the reverse order too.
       return VecCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);

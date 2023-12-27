@@ -1243,6 +1243,18 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) const;
 
+  /// Returns the cost estimation for alternating opcode pattern that can be
+  /// lowered to a single instruction on the target. In X86 this is for the
+  /// addsub instruction which corrsponds to a Shuffle + Fadd + FSub pattern in
+  /// IR. This function expects two opcodes: \p Opcode1 and \p Opcode2 being
+  /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
+  /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
+  /// \p VecTy is the vector type of the instruction to be generated.
+  InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
   /// The exact mask may be passed as Mask, or else the array will be empty.
   /// The index and subtype parameters are used by the subvector insertion and
@@ -1944,6 +1956,10 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       OperandValueInfo Opd1Info, OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
+  virtual InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const = 0;
 
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                          ArrayRef<int> Mask,
@@ -2554,6 +2570,12 @@ public:
       const Instruction *CxtI = nullptr) override {
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Args, CxtI);
+  }
+  InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                                  unsigned Opcode1,
+                                  const SmallBitVector &OpcodeMask,
+                                  TTI::TargetCostKind CostKind) const override {
+    return Impl.getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
   }
 
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
