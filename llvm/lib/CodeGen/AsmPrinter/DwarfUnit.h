@@ -34,6 +34,8 @@ class MCSymbol;
 /// source file.
 class DwarfUnit : public DIEUnit {
 protected:
+  /// A numeric ID unique among all CUs in the module
+  unsigned UniqueID;
   /// MDNode for the compile unit.
   const DICompileUnit *CUNode;
 
@@ -42,6 +44,9 @@ protected:
 
   /// Target of Dwarf emission.
   AsmPrinter *Asm;
+
+  /// The start of the unit within its section.
+  MCSymbol *LabelBegin = nullptr;
 
   /// Emitted at the end of the CU and used to compute the CU Length field.
   MCSymbol *EndLabel = nullptr;
@@ -68,8 +73,8 @@ protected:
   /// corresponds to the MDNode mapped with the subprogram DIE.
   DenseMap<DIE *, const DINode *> ContainingTypeMap;
 
-  DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A, DwarfDebug *DW,
-            DwarfFile *DWU);
+  DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A,
+            DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID = 0);
 
   bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie, bool Minimal);
 
@@ -92,8 +97,15 @@ protected:
   }
 
 public:
+  /// Gets Unique ID for this unit.
+  unsigned getUniqueID() const { return UniqueID; }
   // Accessors.
   AsmPrinter* getAsmPrinter() const { return Asm; }
+  /// Get the the symbol for start of the section for this unit.
+  MCSymbol *getLabelBegin() const {
+    assert(LabelBegin && "LabelBegin is not initialized");
+    return LabelBegin;
+  }
   MCSymbol *getEndLabel() const { return EndLabel; }
   uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
   const DICompileUnit *getCUNode() const { return CUNode; }
@@ -369,9 +381,12 @@ class DwarfTypeUnit final : public DwarfUnit {
 
 public:
   DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A, DwarfDebug *DW,
-                DwarfFile *DWU, MCDwarfDwoLineTable *SplitLineTable = nullptr);
+                DwarfFile *DWU, unsigned UniqueID,
+                MCDwarfDwoLineTable *SplitLineTable = nullptr);
 
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
+  /// Returns Type Signature.
+  uint64_t getTypeSignature() const { return TypeSignature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
 
   /// Emit the header for this unit, not including the initial length field.

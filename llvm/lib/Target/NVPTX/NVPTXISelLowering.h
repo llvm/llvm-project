@@ -57,6 +57,7 @@ enum NodeType : unsigned {
   MUL_WIDE_UNSIGNED,
   IMAD,
   SETP_F16X2,
+  SETP_BF16X2,
   BFE,
   BFI,
   PRMT,

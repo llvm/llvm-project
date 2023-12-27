@@ -746,7 +746,7 @@ public:
   ASTReader *getChain() const { return Chain; }
 
   bool isWritingStdCXXNamedModules() const {
-    return WritingModule && WritingModule->isModulePurview();
+    return WritingModule && WritingModule->isNamedModule();
   }
 
 private:
@@ -828,6 +828,59 @@ public:
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
+};
+
+/// A simple helper class to pack several bits in order into (a) 32 bit
+/// integer(s).
+class BitsPacker {
+  constexpr static uint32_t BitIndexUpbound = 32u;
+
+public:
+  BitsPacker() = default;
+  BitsPacker(const BitsPacker &) = delete;
+  BitsPacker(BitsPacker &&) = delete;
+  BitsPacker operator=(const BitsPacker &) = delete;
+  BitsPacker operator=(BitsPacker &&) = delete;
+  ~BitsPacker() {
+    assert(!hasUnconsumedValues() && "There are unprocessed bits!");
+  }
+
+  void addBit(bool Value) { addBits(Value, 1); }
+  void addBits(uint32_t Value, uint32_t BitsWidth) {
+    assert(BitsWidth < BitIndexUpbound);
+    assert((Value < (1u << BitsWidth)) && "Passing narrower bit width!");
+
+    if (CurrentBitIndex + BitsWidth >= BitIndexUpbound) {
+      Values.push_back(0);
+      CurrentBitIndex = 0;
+    }
+
+    assert(CurrentBitIndex < BitIndexUpbound);
+    Values.back() |= Value << CurrentBitIndex;
+    CurrentBitIndex += BitsWidth;
+  }
+
+  bool hasUnconsumedValues() const {
+    return ConsumingValueIndex < Values.size();
+  }
+  uint32_t getNextValue() {
+    assert(hasUnconsumedValues());
+    return Values[ConsumingValueIndex++];
+  }
+
+  // We can convert the packer to an uint32_t if there is only one values.
+  operator uint32_t() {
+    assert(Values.size() == 1);
+    return getNextValue();
+  }
+
+private:
+  SmallVector<uint64_t, 4> Values;
+  uint16_t ConsumingValueIndex = 0;
+  // Initialize CurrentBitIndex with an invalid value
+  // to make it easier to update Values. See the implementation
+  // of `addBits` to see the details.
+  uint16_t CurrentBitIndex = BitIndexUpbound;
 };
 
 } // namespace clang

@@ -863,7 +863,8 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     outputShape.resize(multiples.size(), ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
-  }
+  } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
+    return failure();
 
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
@@ -875,6 +876,25 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult tosa::TileOp::verify() {
+  ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
+  ShapedType outputType = llvm::cast<ShapedType>(getType());
+  auto multiples = getMultiples();
+
+  if (inputType.hasRank()) {
+    if (static_cast<size_t>(inputType.getRank()) != multiples.size())
+      return emitOpError("expect 'multiples' array to have length ")
+             << inputType.getRank() << " but got " << multiples.size() << ".";
+    if (outputType.hasRank() && inputType.getRank() != outputType.getRank())
+      return emitOpError("expect same input and output tensor rank.");
+  } else if (outputType.hasRank() &&
+             static_cast<size_t>(outputType.getRank()) != multiples.size())
+    return emitOpError("expect 'multiples' array to have length ")
+           << outputType.getRank() << " but got " << multiples.size() << ".";
+
   return success();
 }
 
@@ -963,6 +983,10 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   ShapeAdaptor permsShape(adaptor.getPerms().getType());
 
+  // We cannot infer anything from a rank-0 "permutation" tensor.
+  if (permsShape.hasRank() && permsShape.getRank() == 0)
+    return failure();
+
   // If input rank and permutation length is unknown, the output rank is
   // unknown.
   if (!inputShape.hasRank() || !permsShape.hasRank() ||
@@ -977,15 +1001,7 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     return failure();
   }
 
-  // Without the input dims we cannot determine the output dim sizes but we
-  // can determine the output rank.
   SmallVector<int64_t> outputShape;
-  if (!inputShape.hasRank()) {
-    outputShape.resize(permsShape.getDimSize(0), ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
-    return success();
-  }
-
   // Rank-0 means no permutations matter.
   if (inputShape.getRank() == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
@@ -1016,6 +1032,18 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   if (matchPattern(adaptor.getPerms(), m_Constant(&attr)) &&
       attr.getType().getRank() == 1) {
     ShapeAdaptor permShape = attr;
+    // Constant permutation must be the same length as the input rank.
+    if (inputShape.getRank() != permShape.getRank())
+      return emitOptionalError(location,
+                               "constant permutation must be the same length"
+                               " as the input rank");
+
+    // Constant permutation values must be within the input rank.
+    for (int i = 0, e = inputShape.getRank(); i < e; i++) {
+      if (inputShape.getRank() <= permShape.getDimSize(i))
+        return failure();
+    }
+
     outputShape.reserve(inputShape.getRank());
     for (int i = 0, s = inputShape.getRank(); i < s; i++) {
       outputShape[i] = inputShape.getDimSize(permShape.getDimSize(i));
@@ -1766,6 +1794,35 @@ void IfOp::print(OpAsmPrinter &p) {
   }
 
   p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+LogicalResult ReverseOp::verify() {
+  TensorType inputType = getInput().getType();
+  TensorType outputType = getOutput().getType();
+  int32_t reverseAxis = getAxis();
+
+  if (reverseAxis < 0)
+    return emitOpError("expected non-negative reverse axis");
+  if (inputType.hasRank()) {
+    int64_t inputRank = inputType.getRank();
+    // We allow for a special case where the input/output shape has rank 0 and
+    // axis is also 0.
+    if (reverseAxis >= inputRank && !(reverseAxis == 0 && inputRank == 0))
+      return emitOpError("expect input tensor rank (")
+             << inputRank << ") to be larger than reverse axis (" << reverseAxis
+             << ")";
+  }
+  if (outputType.hasRank()) {
+    int64_t outputRank = outputType.getRank();
+    if (inputType.hasRank() && outputRank != inputType.getRank())
+      return emitOpError(
+          "expect output tensor rank to be equal to input tensor rank");
+    if (reverseAxis >= outputRank && !(reverseAxis == 0 && outputRank == 0))
+      return emitOpError("expect output tensor rank (")
+             << outputRank << ") to be larger than reverse axis ("
+             << reverseAxis << ")";
+  }
+  return success();
 }
 
 // parse and print of WhileOp refer to the implementation of SCF dialect.

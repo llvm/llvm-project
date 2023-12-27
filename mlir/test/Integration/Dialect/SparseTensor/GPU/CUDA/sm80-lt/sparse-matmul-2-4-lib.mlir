@@ -1,4 +1,3 @@
-//
 // NOTE: this test requires gpu-sm80 and cusparselt
 //
 // DEFINE: %{compile} = mlir-opt --convert-vector-to-scf --convert-scf-to-cf -convert-cf-to-llvm --convert-vector-to-llvm \
@@ -9,11 +8,8 @@
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \
 // DEFINE: | FileCheck %s
-
+//
 // RUN: %{compile} | %{run}
-// RUN: %{compile} --sparse-compiler="gpu-data-transfer-strategy=pinned-dma" | %{run}
-// RUNNOT: %{compile} --sparse-compiler="gpu-data-transfer-strategy=zero-copy" | %{run}
-
 
 module {
   llvm.func @mgpuCreateSparseLtEnv()

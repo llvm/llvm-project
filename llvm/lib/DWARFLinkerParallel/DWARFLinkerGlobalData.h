@@ -9,10 +9,10 @@
 #ifndef LLVM_LIB_DWARFLINKERPARALLEL_DWARFLINKERGLOBALDATA_H
 #define LLVM_LIB_DWARFLINKERPARALLEL_DWARFLINKERGLOBALDATA_H
 
+#include "TypePool.h"
 #include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DWARFLinkerParallel/StringPool.h"
 #include "llvm/Support/PerThreadBumpPtrAllocator.h"
-#include <map>
 
 namespace llvm {
 

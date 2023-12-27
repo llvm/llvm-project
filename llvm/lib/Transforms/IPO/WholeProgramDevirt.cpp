@@ -1003,7 +1003,7 @@ bool DevirtModule::runForTesting(
     ExitOnError ExitOnErr(
         "-wholeprogramdevirt-write-summary: " + ClWriteSummary + ": ");
     std::error_code EC;
-    if (StringRef(ClWriteSummary).endswith(".bc")) {
+    if (StringRef(ClWriteSummary).ends_with(".bc")) {
       raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_None);
       ExitOnErr(errorCodeToError(EC));
       writeIndexToFile(*Summary, OS);
@@ -1264,7 +1264,8 @@ static bool AddCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
   // to better ensure we have the opportunity to inline them.
   bool IsExported = false;
   auto &S = Callee.getSummaryList()[0];
-  CalleeInfo CI(CalleeInfo::HotnessType::Hot, /* RelBF = */ 0);
+  CalleeInfo CI(CalleeInfo::HotnessType::Hot, /* HasTailCall = */ false,
+                /* RelBF = */ 0);
   auto AddCalls = [&](CallSiteInfo &CSInfo) {
     for (auto *FS : CSInfo.SummaryTypeCheckedLoadUsers) {
       FS->addCall({Callee, CI});
@@ -1709,8 +1710,7 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
 }
 
 Constant *DevirtModule::getMemberAddr(const TypeMemberInfo *M) {
-  Constant *C = ConstantExpr::getBitCast(M->Bits->GV, Int8PtrTy);
-  return ConstantExpr::getGetElementPtr(Int8Ty, C,
+  return ConstantExpr::getGetElementPtr(Int8Ty, M->Bits->GV,
                                         ConstantInt::get(Int64Ty, M->Offset));
 }
 

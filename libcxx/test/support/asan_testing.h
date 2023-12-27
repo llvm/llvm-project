@@ -19,7 +19,7 @@ extern "C" int __sanitizer_verify_contiguous_container
 template <typename T, typename Alloc>
 TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &c )
 {
-    if (std::__libcpp_is_constant_evaluated())
+    if (TEST_IS_CONSTANT_EVALUATED)
         return true;
     if (std::is_same<Alloc, std::allocator<T> >::value && c.data() != NULL)
         return __sanitizer_verify_contiguous_container(
@@ -34,7 +34,7 @@ TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, 
 }
 #endif // TEST_HAS_FEATURE(address_sanitizer)
 
-#if TEST_HAS_FEATURE(address_sanitizer) && _LIBCPP_CLANG_VER >= 1600
+#if TEST_HAS_FEATURE(address_sanitizer)
 extern "C" int __sanitizer_verify_double_ended_contiguous_container(
     const void* beg, const void* con_beg, const void* con_end, const void* end);
 extern "C" bool __sanitizer_is_annotable(const void* address, const unsigned long size);

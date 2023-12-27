@@ -1,6 +1,6 @@
-// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
 
-// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1 use-opaque-pointers=1'  %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1'  %s | FileCheck %s --check-prefix=BAREPTR
 
 // RUN: mlir-opt -transform-interpreter %s | FileCheck %s --check-prefix=BAREPTR
 

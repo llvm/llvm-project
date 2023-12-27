@@ -123,7 +123,7 @@ static bool startsWith(StringRef Name, StringRef Needle, bool Strict,
 
   Consummed = 0;
   if (Strict) {
-    if (!Name.startswith(Needle))
+    if (!Name.starts_with(Needle))
       return false;
     Consummed = Needle.size();
     return true;

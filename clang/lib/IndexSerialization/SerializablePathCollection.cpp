@@ -45,8 +45,8 @@ SerializablePathCollection::SerializablePathCollection(
       SysRootPath(Paths.addDirPath(SysRoot)),
       OutputFilePath(Paths.addDirPath(OutputFile)) {}
 
-size_t SerializablePathCollection::tryStoreFilePath(const FileEntry &FE) {
-  auto FileIt = UniqueFiles.find(&FE);
+size_t SerializablePathCollection::tryStoreFilePath(FileEntryRef FE) {
+  auto FileIt = UniqueFiles.find(FE);
   if (FileIt != UniqueFiles.end())
     return FileIt->second;
 
@@ -54,7 +54,7 @@ size_t SerializablePathCollection::tryStoreFilePath(const FileEntry &FE) {
   const auto FileIdx =
       Paths.addFilePath(Dir.Root, Dir.Path, sys::path::filename(FE.getName()));
 
-  UniqueFiles.try_emplace(&FE, FileIdx);
+  UniqueFiles.try_emplace(FE, FileIdx);
   return FileIdx;
 }
 

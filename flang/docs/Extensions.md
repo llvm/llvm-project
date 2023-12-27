@@ -93,6 +93,9 @@ end
   non-global name in the same scope.  This is not conforming,
   but it is useful and unambiguous.
 * The argument to `RANDOM_NUMBER` may not be an assumed-size array.
+* `NULL()` without `MOLD=` is not allowed to be associated as an
+  actual argument corresponding to an assumed-rank dummy argument;
+  its rank in the called procedure would not be well-defined.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -177,7 +180,7 @@ end
    or `EXTENDEDTYPE(PARENTTYPE=PARENTTYPE(1,2,3))`).
 * Some intrinsic functions are specified in the standard as requiring the
   same type and kind for their arguments (viz., ATAN with two arguments,
-  ATAN2, DIM, HYPOT, MAX, MIN, MOD, and MODULO);
+  ATAN2, DIM, HYPOT, IAND, IEOR, IOR, MAX, MIN, MOD, and MODULO);
   we allow distinct types to be used, promoting
   the arguments as if they were operands to an intrinsic `+` operator,
   and defining the result type accordingly.
@@ -222,6 +225,8 @@ end
   we also treat scalars as being trivially contiguous, so that they
   can be used in contexts like data targets in pointer assignments
   with bounds remapping.
+* The `CONTIGUOUS` attribute can be redundantly applied to simply
+  contiguous objects, including scalars, with a portability warning.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.
@@ -288,7 +293,7 @@ end
   it's an error only if the resolution is ambiguous.
 * An entity may appear in a `DATA` statement before its explicit
   type declaration under `IMPLICIT NONE(TYPE)`.
-* INCLUDE lines can start in any column, can be preceded in
+* `INCLUDE` lines can start in any column, can be preceded in
   fixed form source by a '0' in column 6, can contain spaces
   between the letters of the word INCLUDE, and can have a
   numeric character literal kind prefix on the file name.
@@ -303,6 +308,13 @@ end
   compilers.
 * A `NULL()` pointer is treated as an unallocated allocatable
   when associated with an `INTENT(IN)` allocatable dummy argument.
+* `READ(..., SIZE=n)` is accepted with `NML=` and `FMT=*` with
+  a portability warning.
+  The Fortran standard doesn't allow `SIZE=` with formatted input
+  modes that might require look-ahead, perhaps to ease implementations.
+* When a file included via an `INCLUDE` line or `#include` directive
+  has a continuation marker at the end of its last line in free form,
+  Fortran line continuation works.
 
 ### Extensions supported when enabled by options
 
@@ -430,7 +442,7 @@ end
   This is especially desirable when two generics of the same
   name are combined due to USE association and the mixture may
   be inadvertent.
-* Since Fortran 90, INCLUDE lines have been allowed to have
+* Since Fortran 90, `INCLUDE` lines have been allowed to have
   a numeric kind parameter prefix on the file name.  No other
   Fortran compiler supports them that I can find.
 * A `SEQUENCE` derived type is required (F'2023 C745) to have

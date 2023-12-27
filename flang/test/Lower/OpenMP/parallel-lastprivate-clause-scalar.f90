@@ -16,7 +16,7 @@
 ! Check that we are accessing the clone inside the loop
 !CHECK-DAG: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 !CHECK-DAG: %[[NEG_ONE:.*]] = arith.constant -1 : i32
-!CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQcl.
+!CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
 !CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
 !CHECK-NEXT: %[[CALL_BEGIN_IO:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[NEG_ONE]], %[[CVT0]], %[[CNST]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>

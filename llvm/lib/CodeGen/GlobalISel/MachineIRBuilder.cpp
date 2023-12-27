@@ -1065,16 +1065,16 @@ void MachineIRBuilder::validateTruncExt(const LLT DstTy, const LLT SrcTy,
 #ifndef NDEBUG
   if (DstTy.isVector()) {
     assert(SrcTy.isVector() && "mismatched cast between vector and non-vector");
-    assert(SrcTy.getNumElements() == DstTy.getNumElements() &&
+    assert(SrcTy.getElementCount() == DstTy.getElementCount() &&
            "different number of elements in a trunc/ext");
   } else
     assert(DstTy.isScalar() && SrcTy.isScalar() && "invalid extend/trunc");
 
   if (IsExtend)
-    assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownGT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid narrowing extend");
   else
-    assert(DstTy.getSizeInBits() < SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownLT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid widening trunc");
 #endif
 }

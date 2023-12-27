@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Check that format functions aren't marked [[nodiscard]] when
-// _LIBCPP_DISBALE_NODISCARD_EXT is defined
+// _LIBCPP_DISABLE_NODISCARD_EXT is defined
 
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing

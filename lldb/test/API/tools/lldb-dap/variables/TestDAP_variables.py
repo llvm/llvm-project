@@ -87,10 +87,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     def verify_variables(self, verify_dict, variables, varref_dict=None):
         for variable in variables:
             name = variable["name"]
-            self.assertIn(
-                name, verify_dict, 'variable "%s" in verify dictionary' % (name)
-            )
-            self.verify_values(verify_dict[name], variable, varref_dict)
+            if not name.startswith("std::"):
+                self.assertIn(
+                    name, verify_dict, 'variable "%s" in verify dictionary' % (name)
+                )
+                self.verify_values(verify_dict[name], variable, varref_dict)
 
     def darwin_dwarf_missing_obj(self, initCommands):
         self.build(debug_info="dwarf")

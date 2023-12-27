@@ -146,7 +146,6 @@ template<class T>
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <cmath> // for isnormal
 #include <version>
 
 #include <__numeric/accumulate.h>
@@ -170,6 +169,7 @@ template<class T>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cmath>
 #  include <concepts>
 #  include <functional>
 #  include <iterator>

@@ -301,6 +301,35 @@ def Math_CosOp : Math_FloatUnaryOp<"cos"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AcosOp
+//===----------------------------------------------------------------------===//
+
+def Math_AcosOp : Math_FloatUnaryOp<"acos"> {
+  let summary = "arcus cosine of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.acos` ssa-use `:` type
+    ```
+
+    The `acos` operation computes the arcus cosine of a given value. It takes one
+    operand of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type.  It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar arcus cosine value.
+    %a = math.acos %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+
+
+//===----------------------------------------------------------------------===//
 // SinOp
 //===----------------------------------------------------------------------===//
 

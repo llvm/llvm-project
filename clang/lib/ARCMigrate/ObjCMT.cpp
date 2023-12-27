@@ -636,7 +636,7 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
     for (const auto *MD : PDecl->methods()) {
       if (MD->isImplicit())
         continue;
-      if (MD->getImplementationControl() == ObjCMethodDecl::Optional)
+      if (MD->getImplementationControl() == ObjCImplementationControl::Optional)
         continue;
       DeclContext::lookup_result R = ImpDecl->lookup(MD->getDeclName());
       if (R.empty())

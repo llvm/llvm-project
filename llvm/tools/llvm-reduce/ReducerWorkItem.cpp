@@ -19,8 +19,10 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -153,6 +155,23 @@ static void cloneFrameInfo(
   }
 }
 
+static void cloneJumpTableInfo(
+    MachineFunction &DstMF, const MachineJumpTableInfo &SrcJTI,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
+
+  auto *DstJTI = DstMF.getOrCreateJumpTableInfo(SrcJTI.getEntryKind());
+
+  std::vector<MachineBasicBlock *> DstBBs;
+
+  for (const MachineJumpTableEntry &Entry : SrcJTI.getJumpTables()) {
+    for (MachineBasicBlock *X : Entry.MBBs)
+      DstBBs.push_back(Src2DstMBB.find(X)->second);
+
+    DstJTI->createJumpTableIndex(DstBBs);
+    DstBBs.clear();
+  }
+}
+
 static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
                              MachineFunction &SrcMF, MachineFunction &DstMF) {
   // The new MachineMemOperands should be owned by the new function's
@@ -265,6 +284,10 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
   // Copy stack objects and other info
   cloneFrameInfo(DstMFI, SrcMFI, Src2DstMBB);
+
+  if (MachineJumpTableInfo *SrcJTI = SrcMF->getJumpTableInfo()) {
+    cloneJumpTableInfo(*DstMF, *SrcJTI, Src2DstMBB);
+  }
 
   // Remap the debug info frame index references.
   DstMF->VariableDbgInfos = SrcMF->VariableDbgInfos;

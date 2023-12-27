@@ -94,8 +94,8 @@ public:
 static system_clock::time_point __libcpp_system_clock_now() {
   // FILETIME is in 100ns units
   using filetime_duration =
-      _VSTD::chrono::duration<__int64,
-                              _VSTD::ratio_multiply<_VSTD::ratio<100, 1>,
+      std::chrono::duration<__int64,
+                              std::ratio_multiply<std::ratio<100, 1>,
                                                     nanoseconds::period>>;
 
   // The Windows epoch is Jan 1 1601, the Unix epoch Jan 1 1970.

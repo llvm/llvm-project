@@ -126,7 +126,7 @@ DoIOSInit::DoIOSInit()
     ostream* cerr_ptr = ::new(cerr) ostream(::new(__cerr) __stdoutbuf<char>(stderr, &mb_cerr));
                         ::new(clog) ostream(cerr_ptr->rdbuf());
     cin_ptr->tie(cout_ptr);
-    _VSTD::unitbuf(*cerr_ptr);
+    std::unitbuf(*cerr_ptr);
     cerr_ptr->tie(cout_ptr);
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -136,7 +136,7 @@ DoIOSInit::DoIOSInit()
                           ::new(wclog) wostream(wcerr_ptr->rdbuf());
 
     wcin_ptr->tie(wcout_ptr);
-    _VSTD::unitbuf(*wcerr_ptr);
+    std::unitbuf(*wcerr_ptr);
     wcerr_ptr->tie(wcout_ptr);
 #endif
 }

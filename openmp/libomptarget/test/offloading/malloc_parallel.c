@@ -1,5 +1,5 @@
-// RUN: %libomptarget-compile-generic && %libomptarget-run-generic
-// RUN: %libomptarget-compileopt-generic && %libomptarget-run-generic
+// RUN: %libomptarget-compile-run-and-check-generic
+// RUN: %libomptarget-compileopt-run-and-check-generic
 
 #include <omp.h>
 #include <stdio.h>

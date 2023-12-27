@@ -2670,6 +2670,12 @@ def : Pat<(f32 (vfp_f32f16imm:$imm)),
   let Predicates = [HasFullFP16];
 }
 
+// Floating-point environment management.
+def : Pat<(get_fpenv), (VMRS)>;
+def : Pat<(set_fpenv GPRnopc:$Rt), (VMSR GPRnopc:$Rt)>;
+def : Pat<(reset_fpenv), (VMSR (MOVi 0))>, Requires<[IsARM]>;
+def : Pat<(reset_fpenv), (VMSR (tMOVi8 0))>, Requires<[IsThumb]>;
+
 //===----------------------------------------------------------------------===//
 // Assembler aliases.
 //

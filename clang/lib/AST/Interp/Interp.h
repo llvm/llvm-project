@@ -770,9 +770,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (LHS.inArray() && LHS.isRoot())
+    if (LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (RHS.inArray() && RHS.isRoot())
+    if (RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1004,7 +1004,7 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Block *B = S.P.getGlobal(I);
   if (B->isExtern())
     return false;
   S.Stk.push<T>(B->deref<T>());
@@ -1453,7 +1453,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
       DiagInvalidOffset();
   }
 
-  if (Invalid && !Ptr.isDummy())
+  if (Invalid && !Ptr.isDummy() && S.getLangOpts().CPlusPlus)
     return false;
 
   // Offset is valid - compute it on unsigned.
@@ -1531,7 +1531,7 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
-  if (!Pointer::hasSameArray(LHS, RHS)) {
+  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
     // TODO: Diagnose.
     return false;
   }
@@ -1855,7 +1855,7 @@ inline bool CheckGlobalCtor(InterpState &S, CodePtr OpPC) {
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
   if (Func->hasThisPointer()) {
     size_t ThisOffset =
-        Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+        Func->getArgSize() - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
 
     const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
@@ -1904,7 +1904,7 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func->hasThisPointer());
   assert(Func->isVirtual());
   size_t ThisOffset =
-      Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+      Func->getArgSize() - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
   const CXXRecordDecl *DynamicDecl =

@@ -616,7 +616,7 @@ static unsigned getEntrySizeForKind(SectionKind Kind) {
 /// DataSections.
 static StringRef getSectionPrefixForGlobal(SectionKind Kind, bool IsLarge) {
   if (Kind.isText())
-    return ".text";
+    return IsLarge ? ".ltext" : ".text";
   if (Kind.isReadOnly())
     return IsLarge ? ".lrodata" : ".rodata";
   if (Kind.isBSS())
@@ -650,10 +650,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name = ".rodata.cst";
     Name += utostr(EntrySize);
   } else {
-    bool IsLarge = false;
-    if (auto *GV = dyn_cast<GlobalVariable>(GO))
-      IsLarge = TM.isLargeData(GV);
-    Name = getSectionPrefixForGlobal(Kind, IsLarge);
+    Name = getSectionPrefixForGlobal(Kind, TM.isLargeGlobalObject(GO));
   }
 
   bool HasPrefix = false;
@@ -773,12 +770,8 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
   }
-  if (auto *GV = dyn_cast<GlobalVariable>(GO)) {
-    if (TM.isLargeData(GV)) {
-      assert(TM.getTargetTriple().getArch() == Triple::x86_64);
-      Flags |= ELF::SHF_X86_64_LARGE;
-    }
-  }
+  if (TM.isLargeGlobalObject(GO))
+    Flags |= ELF::SHF_X86_64_LARGE;
   return {Group, IsComdat, Flags};
 }
 
@@ -2317,8 +2310,10 @@ bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
 
 MCSymbol *
 TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(const MachineFunction *MF) {
-  return MF->getMMI().getContext().getOrCreateSymbol(
+  MCSymbol *EHInfoSym = MF->getMMI().getContext().getOrCreateSymbol(
       "__ehinfo." + Twine(MF->getFunctionNumber()));
+  cast<MCSymbolXCOFF>(EHInfoSym)->setEHInfo();
+  return EHInfoSym;
 }
 
 MCSymbol *
@@ -2651,12 +2646,16 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym, const TargetMachine &TM) const {
   // Use TE storage-mapping class when large code model is enabled so that
-  // the chance of needing -bbigtoc is decreased.
+  // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
+  // EH info is never referenced directly using instructions so it can be
+  // allocated with TE storage-mapping class.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties(
-          TM.getCodeModel() == CodeModel::Large ? XCOFF::XMC_TE : XCOFF::XMC_TC,
-          XCOFF::XTY_SD));
+      XCOFF::CsectProperties((TM.getCodeModel() == CodeModel::Large ||
+                              cast<MCSymbolXCOFF>(Sym)->isEHInfo())
+                                 ? XCOFF::XMC_TE
+                                 : XCOFF::XMC_TC,
+                             XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

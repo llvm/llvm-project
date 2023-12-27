@@ -100,71 +100,78 @@ namespace clang {
     };
   }
 
-class DiagnosticMapping {
-  unsigned Severity : 3;
-  unsigned IsUser : 1;
-  unsigned IsPragma : 1;
-  unsigned HasNoWarningAsError : 1;
-  unsigned HasNoErrorAsFatal : 1;
-  unsigned WasUpgradedFromWarning : 1;
+  class DiagnosticMapping {
+    LLVM_PREFERRED_TYPE(diag::Severity)
+    unsigned Severity : 3;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsUser : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsPragma : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasNoWarningAsError : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasNoErrorAsFatal : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned WasUpgradedFromWarning : 1;
 
-public:
-  static DiagnosticMapping Make(diag::Severity Severity, bool IsUser,
-                                bool IsPragma) {
-    DiagnosticMapping Result;
-    Result.Severity = (unsigned)Severity;
-    Result.IsUser = IsUser;
-    Result.IsPragma = IsPragma;
-    Result.HasNoWarningAsError = 0;
-    Result.HasNoErrorAsFatal = 0;
-    Result.WasUpgradedFromWarning = 0;
-    return Result;
-  }
+  public:
+    static DiagnosticMapping Make(diag::Severity Severity, bool IsUser,
+                                  bool IsPragma) {
+      DiagnosticMapping Result;
+      Result.Severity = (unsigned)Severity;
+      Result.IsUser = IsUser;
+      Result.IsPragma = IsPragma;
+      Result.HasNoWarningAsError = 0;
+      Result.HasNoErrorAsFatal = 0;
+      Result.WasUpgradedFromWarning = 0;
+      return Result;
+    }
 
-  diag::Severity getSeverity() const { return (diag::Severity)Severity; }
-  void setSeverity(diag::Severity Value) { Severity = (unsigned)Value; }
+    diag::Severity getSeverity() const { return (diag::Severity)Severity; }
+    void setSeverity(diag::Severity Value) { Severity = (unsigned)Value; }
 
-  bool isUser() const { return IsUser; }
-  bool isPragma() const { return IsPragma; }
+    bool isUser() const { return IsUser; }
+    bool isPragma() const { return IsPragma; }
 
-  bool isErrorOrFatal() const {
-    return getSeverity() == diag::Severity::Error ||
-           getSeverity() == diag::Severity::Fatal;
-  }
+    bool isErrorOrFatal() const {
+      return getSeverity() == diag::Severity::Error ||
+             getSeverity() == diag::Severity::Fatal;
+    }
 
-  bool hasNoWarningAsError() const { return HasNoWarningAsError; }
-  void setNoWarningAsError(bool Value) { HasNoWarningAsError = Value; }
+    bool hasNoWarningAsError() const { return HasNoWarningAsError; }
+    void setNoWarningAsError(bool Value) { HasNoWarningAsError = Value; }
 
-  bool hasNoErrorAsFatal() const { return HasNoErrorAsFatal; }
-  void setNoErrorAsFatal(bool Value) { HasNoErrorAsFatal = Value; }
+    bool hasNoErrorAsFatal() const { return HasNoErrorAsFatal; }
+    void setNoErrorAsFatal(bool Value) { HasNoErrorAsFatal = Value; }
 
-  /// Whether this mapping attempted to map the diagnostic to a warning, but
-  /// was overruled because the diagnostic was already mapped to an error or
-  /// fatal error.
-  bool wasUpgradedFromWarning() const { return WasUpgradedFromWarning; }
-  void setUpgradedFromWarning(bool Value) { WasUpgradedFromWarning = Value; }
+    /// Whether this mapping attempted to map the diagnostic to a warning, but
+    /// was overruled because the diagnostic was already mapped to an error or
+    /// fatal error.
+    bool wasUpgradedFromWarning() const { return WasUpgradedFromWarning; }
+    void setUpgradedFromWarning(bool Value) { WasUpgradedFromWarning = Value; }
 
-  /// Serialize this mapping as a raw integer.
-  unsigned serialize() const {
-    return (IsUser << 7) | (IsPragma << 6) | (HasNoWarningAsError << 5) |
-           (HasNoErrorAsFatal << 4) | (WasUpgradedFromWarning << 3) | Severity;
-  }
-  /// Deserialize a mapping.
-  static DiagnosticMapping deserialize(unsigned Bits) {
-    DiagnosticMapping Result;
-    Result.IsUser = (Bits >> 7) & 1;
-    Result.IsPragma = (Bits >> 6) & 1;
-    Result.HasNoWarningAsError = (Bits >> 5) & 1;
-    Result.HasNoErrorAsFatal = (Bits >> 4) & 1;
-    Result.WasUpgradedFromWarning = (Bits >> 3) & 1;
-    Result.Severity = Bits & 0x7;
-    return Result;
-  }
+    /// Serialize this mapping as a raw integer.
+    unsigned serialize() const {
+      return (IsUser << 7) | (IsPragma << 6) | (HasNoWarningAsError << 5) |
+             (HasNoErrorAsFatal << 4) | (WasUpgradedFromWarning << 3) |
+             Severity;
+    }
+    /// Deserialize a mapping.
+    static DiagnosticMapping deserialize(unsigned Bits) {
+      DiagnosticMapping Result;
+      Result.IsUser = (Bits >> 7) & 1;
+      Result.IsPragma = (Bits >> 6) & 1;
+      Result.HasNoWarningAsError = (Bits >> 5) & 1;
+      Result.HasNoErrorAsFatal = (Bits >> 4) & 1;
+      Result.WasUpgradedFromWarning = (Bits >> 3) & 1;
+      Result.Severity = Bits & 0x7;
+      return Result;
+    }
 
-  bool operator==(DiagnosticMapping Other) const {
-    return serialize() == Other.serialize();
-  }
-};
+    bool operator==(DiagnosticMapping Other) const {
+      return serialize() == Other.serialize();
+    }
+  };
 
 /// Used for handling and querying diagnostic IDs.
 ///
@@ -172,18 +179,20 @@ public:
 class DiagnosticIDs : public RefCountedBase<DiagnosticIDs> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
-  enum Level : uint8_t {
-    Ignored, Note, Remark, Warning, Error, Fatal
-  };
+  enum Level : uint8_t { Ignored, Note, Remark, Warning, Error, Fatal };
 
   // Diagnostic classes.
   enum Class {
-    CLASS_NOTE       = 0x01,
-    CLASS_REMARK     = 0x02,
-    CLASS_WARNING    = 0x03,
-    CLASS_EXTENSION  = 0x04,
-    CLASS_ERROR      = 0x05
+    CLASS_NOTE = 0x01,
+    CLASS_REMARK = 0x02,
+    CLASS_WARNING = 0x03,
+    CLASS_EXTENSION = 0x04,
+    CLASS_ERROR = 0x05
   };
+
+  static bool IsCustomDiag(diag::kind Diag) {
+    return Diag >= diag::DIAG_UPPER_LIMIT;
+  }
 
   class CustomDiagDesc {
     diag::Severity DefaultSeverity : 3;
@@ -196,7 +205,7 @@ public:
 
     auto get_as_tuple() const {
       return std::tuple(Class, ShowInSystemHeader, ShowInSystemMacro, HasGroup,
-                      Group, std::string_view{Description});
+                        Group, std::string_view{Description});
     }
 
   public:
@@ -208,7 +217,19 @@ public:
         : DefaultSeverity(DefaultSeverity), Class(Class),
           ShowInSystemHeader(ShowInSystemHeader),
           ShowInSystemMacro(ShowInSystemMacro), HasGroup(Group != std::nullopt),
-          Group(Group.value_or(diag::Group{})) {}
+          Group(Group.value_or(diag::Group{})),
+          Description(std::move(Description)) {}
+
+    std::optional<diag::Group> GetGroup() const {
+      if (HasGroup)
+        return Group;
+      return std::nullopt;
+    }
+
+    diag::Severity GetDefaultSeverity() const { return DefaultSeverity; }
+    unsigned GetClass() const { return Class; }
+    std::string_view GetDescription() const { return Description; }
+    bool ShouldShowInSystemHeader() const { return ShowInSystemHeader; }
 
     friend bool operator==(const CustomDiagDesc &lhs,
                            const CustomDiagDesc &rhs) {
@@ -221,12 +242,16 @@ public:
     }
   };
 
+  struct GroupInfo {
+    diag::Severity Severity : 3 = {};
+    bool HasNoWarningAsError : 1 = false;
+  };
+
 private:
   /// Information for uniquing and looking up custom diags.
   std::unique_ptr<diag::CustomDiagInfo> CustomDiagInfo;
-  std::unique_ptr<diag::Severity[]> GroupSeverity =
-      std::make_unique<diag::Severity[]>(
-          static_cast<size_t>(diag::Group::NUM_GROUPS));
+  std::unique_ptr<GroupInfo[]> GroupInfos = std::make_unique<GroupInfo[]>(
+      static_cast<size_t>(diag::Group::NUM_GROUPS));
 
 public:
   DiagnosticIDs();
@@ -245,7 +270,7 @@ public:
 
   [[deprecated("Use a CustomDiagDesc instead of a Level")]] unsigned
   getCustomDiagID(Level Level, StringRef Message) {
-    return getCustomDiagID([&] -> CustomDiagDesc {
+    return getCustomDiagID([&]() -> CustomDiagDesc {
       switch (Level) {
       case DiagnosticIDs::Level::Ignored:
         return {diag::Severity::Ignored, std::string(Message), CLASS_WARNING};
@@ -283,6 +308,8 @@ public:
   /// Get the default mapping for this diagnostic.
   DiagnosticMapping getDefaultMapping(unsigned DiagID) const;
 
+  void initCustomDiagMapping(DiagnosticMapping &, unsigned DiagID);
+
   /// Determine whether the given diagnostic ID is a Note.
   bool isNote(unsigned DiagID) const;
 
@@ -311,6 +338,7 @@ public:
   static StringRef getWarningOptionDocumentation(diag::Group GroupID);
 
   void setGroupSeverity(StringRef Group, diag::Severity);
+  void setGroupNoWarningsAsError(StringRef Group, bool);
 
   /// Given a group ID, returns the flag that toggles the group.
   /// For example, for "deprecated-declarations", returns

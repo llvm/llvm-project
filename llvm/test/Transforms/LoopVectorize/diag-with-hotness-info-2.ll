@@ -21,11 +21,11 @@
 ;  19	  }
 ;  20	}
 
-; CHECK: remark: /tmp/s.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/s.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:3:16 (hotness: 300)
-; CHECK: remark: /tmp/s.c:10:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/s.c:10:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:10:16 (hotness: 5000)
-; CHECK: remark: /tmp/s.c:17:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/s.c:17:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:17:16{{$}}
 
 ; ModuleID = '/tmp/s.c'

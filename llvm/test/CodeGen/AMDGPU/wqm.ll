@@ -1536,7 +1536,7 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX9-W64-NEXT:  ; %bb.2: ; %Flow
 ; GFX9-W64-NEXT:    s_andn2_saveexec_b64 s[14:15], s[14:15]
 ; GFX9-W64-NEXT:  ; %bb.3: ; %IF
-; GFX9-W64-NEXT:    v_mul_lo_u32 v0, v5, 3
+; GFX9-W64-NEXT:    v_lshl_add_u32 v0, v5, 1, v5
 ; GFX9-W64-NEXT:  ; %bb.4: ; %END
 ; GFX9-W64-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[12:13]
@@ -1566,7 +1566,7 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX10-W32-NEXT:  ; %bb.2: ; %Flow
 ; GFX10-W32-NEXT:    s_andn2_saveexec_b32 s13, s13
 ; GFX10-W32-NEXT:  ; %bb.3: ; %IF
-; GFX10-W32-NEXT:    v_mul_lo_u32 v0, v5, 3
+; GFX10-W32-NEXT:    v_lshl_add_u32 v0, v5, 1, v5
 ; GFX10-W32-NEXT:  ; %bb.4: ; %END
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s13
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12

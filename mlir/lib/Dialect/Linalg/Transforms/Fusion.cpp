@@ -87,10 +87,10 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
                << "getShapeDefiningLoopRange map: " << map << "\n");
     SmallVector<Value, 8> shapeRanges(map.getNumResults(), nullptr);
     for (const auto &en : llvm::enumerate(map.getResults())) {
-      auto dimExpr = en.value().dyn_cast<AffineDimExpr>();
+      auto dimExpr = dyn_cast<AffineDimExpr>(en.value());
       if (!dimExpr)
         continue;
-      if (loopDepth == en.value().cast<AffineDimExpr>().getPosition()) {
+      if (loopDepth == cast<AffineDimExpr>(en.value()).getPosition()) {
         LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange loopDepth: "
                                 << loopDepth << "\n");
         LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange shape: "
@@ -196,7 +196,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producerOp, AffineMap producerMap,
   DenseMap<unsigned, Range> fusedLoopsAndRanges;
   Value shapedOperand = consumerOpOperand.get();
   for (const auto &en : llvm::enumerate(producerMap.getResults())) {
-    unsigned posInProducerLoop = en.value().cast<AffineDimExpr>().getPosition();
+    unsigned posInProducerLoop = cast<AffineDimExpr>(en.value()).getPosition();
     fusedLoopsAndRanges[posInProducerLoop] = getRangeFromOperandShape(
         b, consumerOpOperand.getOwner()->getLoc(), shapedOperand, en.index());
   }

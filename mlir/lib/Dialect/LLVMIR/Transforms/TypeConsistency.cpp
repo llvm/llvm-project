@@ -92,10 +92,6 @@ LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
     LoadOp load, PatternRewriter &rewriter) const {
   PatternRewriter::InsertionGuard guard(rewriter);
 
-  // Load from typed pointers are not supported.
-  if (!load.getAddr().getType().isOpaque())
-    return failure();
-
   Type inconsistentElementType =
       isElementTypeInconsistent(load.getAddr(), load.getType());
   if (!inconsistentElementType)
@@ -128,10 +124,6 @@ template <>
 LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
     StoreOp store, PatternRewriter &rewriter) const {
   PatternRewriter::InsertionGuard guard(rewriter);
-
-  // Store to typed pointers are not supported.
-  if (!store.getAddr().getType().isOpaque())
-    return failure();
 
   Type inconsistentElementType =
       isElementTypeInconsistent(store.getAddr(), store.getValue().getType());
@@ -172,9 +164,9 @@ static std::optional<uint64_t> gepToByteOffset(DataLayout &layout, GEPOp gep) {
     indices.push_back(indexInt.getInt());
   }
 
-  uint64_t offset = indices[0] * layout.getTypeSize(gep.getSourceElementType());
+  uint64_t offset = indices[0] * layout.getTypeSize(gep.getElemType());
 
-  Type currentType = gep.getSourceElementType();
+  Type currentType = gep.getElemType();
   for (uint32_t index : llvm::drop_begin(indices)) {
     bool shouldCancel =
         TypeSwitch<Type, bool>(currentType)
@@ -579,7 +571,7 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
         return failure();
 
       offset = *byteOffset;
-      typeHint = gepOp.getSourceElementType();
+      typeHint = gepOp.getElemType();
       address = gepOp.getBase();
     }
   }
@@ -661,8 +653,7 @@ LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
 
   // Split of the first GEP using the first two indices.
   auto subGepOp = rewriter.create<GEPOp>(
-      gepOp.getLoc(), gepOp.getType(), gepOp.getSourceElementType(),
-      gepOp.getBase(),
+      gepOp.getLoc(), gepOp.getType(), gepOp.getElemType(), gepOp.getBase(),
       llvm::map_to_vector(llvm::make_range(indices.begin(), splitIter),
                           indexToGEPArg),
       gepOp.getInbounds());

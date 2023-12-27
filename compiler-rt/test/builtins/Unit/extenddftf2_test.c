@@ -64,7 +64,11 @@ int main()
                           UINT64_C(0x3fd2edcba9876543),
                           UINT64_C(0x2000000000000000)))
         return 1;
-
+    // denormal
+    if (test__extenddftf2(1.8194069811494184E-308,
+                          UINT64_C(0x3c00a2a7757954b9),
+                          UINT64_C(0x6000000000000000)))
+        return 1;
 #else
     printf("skipped\n");
 

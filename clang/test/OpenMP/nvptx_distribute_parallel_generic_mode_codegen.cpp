@@ -25,8 +25,9 @@ int main(int argc, char **argv) {
 
 #endif
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19
-// CHECK4-SAME: (ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK4-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
+// CHECK4-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
@@ -35,6 +36,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[ARGC_CASTED:%.*]] = alloca i64, align 8
 // CHECK4-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK4-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK4-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK4-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
@@ -44,7 +46,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK4-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[D_ADDR]], align 8
-// CHECK4-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_kernel_environment)
+// CHECK4-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_kernel_environment, ptr [[DYN_PTR]])
 // CHECK4-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // CHECK4-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK4:       user_code.entry:
@@ -341,8 +343,9 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK5-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
@@ -351,6 +354,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[ARGC_CASTED:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK5-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK5-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK5-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -360,7 +364,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C_ADDR]], align 4
 // CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4
 // CHECK5-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[D_ADDR]], align 4
-// CHECK5-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_kernel_environment)
+// CHECK5-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_kernel_environment, ptr [[DYN_PTR]])
 // CHECK5-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // CHECK5-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK5:       user_code.entry:

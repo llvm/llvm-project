@@ -606,7 +606,7 @@ void ModuleSanitizerCoverage::instrumentFunction(
     return;
   if (F.getName().find(".module_ctor") != std::string::npos)
     return; // Should not instrument sanitizer init functions.
-  if (F.getName().startswith("__sanitizer_"))
+  if (F.getName().starts_with("__sanitizer_"))
     return; // Don't instrument __sanitizer_* callbacks.
   // Don't touch available_externally functions, their actual body is elewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)

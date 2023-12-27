@@ -408,7 +408,9 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
 // -2    => 0xfffffffe
 // -2^32 => 0xffffffff00000000
 static llvm::FormattedNumber printHex(const llvm::APSInt &V) {
-  uint64_t Bits = V.getZExtValue();
+  assert(V.getSignificantBits() <= 64 && "Can't print more than 64 bits.");
+  uint64_t Bits =
+      V.getBitWidth() > 64 ? V.trunc(64).getZExtValue() : V.getZExtValue();
   if (V.isNegative() && V.getSignificantBits() <= 32)
     return llvm::format_hex(uint32_t(Bits), 0);
   return llvm::format_hex(Bits, 0);
@@ -686,9 +688,9 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
     HI.Type = printType(Name->getType(), Ctx, PP);
   } else {
     // Inside templates, the approximate type `const char[]` is still useful.
-    QualType StringType = Ctx.getIncompleteArrayType(
-        Ctx.CharTy.withConst(), ArrayType::ArraySizeModifier::Normal,
-        /*IndexTypeQuals=*/0);
+    QualType StringType = Ctx.getIncompleteArrayType(Ctx.CharTy.withConst(),
+                                                     ArraySizeModifier::Normal,
+                                                     /*IndexTypeQuals=*/0);
     HI.Type = printType(StringType, Ctx, PP);
   }
   return HI;

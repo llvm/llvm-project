@@ -11,13 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
-#include "OmptCallback.h"
-#include "OmptInterface.h"
+#include "OffloadEntry.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Interface.h"
+#include "PluginManager.h"
+#include "Shared/APITypes.h"
+#include "Shared/Debug.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/EnvironmentVar.h"
+#include "llvm/Support/Error.h"
 
 #include <cassert>
 #include <climits>
@@ -34,7 +39,7 @@ using namespace llvm::omp::target::ompt;
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
-  if (!PM->UseEventsForAtomicTransfers)
+  if (!MappingConfig::get().UseEventsForAtomicTransfers)
     return OFFLOAD_SUCCESS;
 
   void *Event = getEvent();
@@ -58,9 +63,9 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(RTLInfoTy *RTL)
-    : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
-      HasPendingGlobals(false), PendingCtorsDtors(), PendingGlobalsMtx() {}
+DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
+      PendingCtorsDtors(), PendingGlobalsMtx() {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -280,7 +285,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
              !HasCloseModifier) {
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
@@ -444,7 +449,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -482,7 +487,8 @@ void *DeviceTy::getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
 int DeviceTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
                             HostDataToTargetTy *Entry, int64_t Size) {
   assert(Entry && "Trying to delete a null entry from the HDTT map.");
-  assert(Entry->getTotalRefCount() == 0 && Entry->getDataEndThreadCount() == 0 &&
+  assert(Entry->getTotalRefCount() == 0 &&
+         Entry->getDataEndThreadCount() == 0 &&
          "Trying to delete entry that is in use or owned by another thread.");
 
   INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
@@ -523,57 +529,38 @@ int DeviceTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry, int64_t Size) {
   return Ret;
 }
 
-/// Init device, should not be called directly.
-void DeviceTy::init() {
+llvm::Error DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
+  int32_t Ret = 0;
   if (RTL->init_requires)
-    RTL->init_requires(PM->RTLs.RequiresFlags);
-  int32_t Ret = RTL->init_device(RTLDeviceID);
+    Ret = RTL->init_requires(PM->getRequirements());
   if (Ret != OFFLOAD_SUCCESS)
-    return;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to initialize requirements for device %d\n", DeviceID);
+
+  Ret = RTL->init_device(RTLDeviceID);
+  if (Ret != OFFLOAD_SUCCESS)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to initialize device %d\n",
+                                   DeviceID);
 
   // Enables recording kernels if set.
-  llvm::omp::target::BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
+  BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
     // Enables saving the device memory kernel output post execution if set.
-    llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
-        "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
-    // Sets the maximum to pre-allocate device memory.
-    llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
-        "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
-    DP("Activating Record-Replay for Device %d with %lu GB memory\n",
-       RTLDeviceID, OMPX_DeviceMemorySize.get());
+    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
 
-    RTL->activate_record_replay(RTLDeviceID,
-                                OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
-                                true, OMPX_ReplaySaveOutput);
+    uint64_t ReqPtrArgOffset;
+    RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
+                                  OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
-  IsInit = true;
-}
-
-/// Thread-safe method to initialize the device only once.
-int32_t DeviceTy::initOnce() {
-  std::call_once(InitFlag, &DeviceTy::init, this);
-
-  // At this point, if IsInit is true, then either this thread or some other
-  // thread in the past successfully initialized the device, so we can return
-  // OFFLOAD_SUCCESS. If this thread executed init() via call_once() and it
-  // failed, return OFFLOAD_FAIL. If call_once did not invoke init(), it means
-  // that some other thread already attempted to execute init() and if IsInit
-  // is still false, return OFFLOAD_FAIL.
-  if (IsInit)
-    return OFFLOAD_SUCCESS;
-  return OFFLOAD_FAIL;
-}
-
-void DeviceTy::deinit() {
-  if (RTL->deinit_device)
-    RTL->deinit_device(RTLDeviceID);
+  return llvm::Error::success();
 }
 
 // Load binary to device.
-__tgt_target_table *DeviceTy::loadBinary(void *Img) {
+__tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
   std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);
   return RTL->load_binary(RTLDeviceID, Img);
 }
@@ -615,13 +602,14 @@ static void printCopyInfo(int DeviceId, bool H2D, void *SrcPtrBegin,
 
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                             AsyncInfoTy &AsyncInfo,
-                             HostDataToTargetTy *Entry) {
+                             AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+                             DeviceTy::HDTTMapAccessorTy *HDTTMapPtr) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor(Entry);
+    HDTTMapAccessorTy HDTTMap =
+        HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
     LookupResult LR;
     if (!Entry) {
-      LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+      LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
       Entry = LR.TPR.getEntry();
     }
     printCopyInfo(DeviceID, /* H2D */ true, HstPtrBegin, TgtPtrBegin, Size,
@@ -644,12 +632,14 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
-                               HostDataToTargetTy *Entry) {
+                               HostDataToTargetTy *Entry,
+                               DeviceTy::HDTTMapAccessorTy *HDTTMapPtr) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor(Entry);
+    HDTTMapAccessorTy HDTTMap =
+        HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
     LookupResult LR;
     if (!Entry) {
-      LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+      LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
       Entry = LR.TPR.getEntry();
     }
     printCopyInfo(DeviceID, /* H2D */ false, TgtPtrBegin, HstPtrBegin, Size,
@@ -710,18 +700,17 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                               ptrdiff_t *TgtOffsets,
-                               const KernelArgsTy &KernelArgs,
+                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                             &KernelArgs, AsyncInfo);
 }
 
 // Run region on device
-bool DeviceTy::printDeviceInfo(int32_t RTLDevId) {
+bool DeviceTy::printDeviceInfo() {
   if (!RTL->print_device_info)
     return false;
-  RTL->print_device_info(RTLDevId);
+  RTL->print_device_info(RTLDeviceID);
   return true;
 }
 
@@ -785,35 +774,51 @@ int32_t DeviceTy::destroyEvent(void *Event) {
   return OFFLOAD_SUCCESS;
 }
 
-/// Check whether a device has an associated RTL and initialize it if it's not
-/// already initialized.
-bool deviceIsReady(int DeviceNum) {
-  DP("Checking whether device %d is ready.\n", DeviceNum);
-  // Devices.size() can only change while registering a new
-  // library, so try to acquire the lock of RTLs' mutex.
-  size_t DevicesSize;
-  {
-    std::lock_guard<decltype(PM->RTLsMtx)> LG(PM->RTLsMtx);
-    DevicesSize = PM->Devices.size();
-  }
-  if (DevicesSize <= (size_t)DeviceNum) {
-    DP("Device ID  %d does not have a matching RTL\n", DeviceNum);
-    return false;
-  }
+void DeviceTy::addOffloadEntry(OffloadEntryTy &Entry) {
+  std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
+  DeviceOffloadEntries[Entry.getName()] = &Entry;
+  if (Entry.isGlobal())
+    return;
 
-  // Get device info
-  DeviceTy &Device = *PM->Devices[DeviceNum];
-
-  DP("Is the device %d (local ID %d) initialized? %d\n", DeviceNum,
-     Device.RTLDeviceID, Device.IsInit);
-
-  // Init the device if not done before
-  if (!Device.IsInit && Device.initOnce() != OFFLOAD_SUCCESS) {
-    DP("Failed to init device %d\n", DeviceNum);
-    return false;
+  if (Entry.isCTor()) {
+    DP("Adding ctor " DPxMOD " to the pending list.\n",
+       DPxPTR(Entry.getAddress()));
+    MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
+            "removed in a future release \n",
+            Entry.getNameAsCStr());
+    PendingCtorsDtors[Entry.getBinaryDescription()].PendingCtors.push_back(
+        Entry.getAddress());
+  } else if (Entry.isDTor()) {
+    // Dtors are pushed in reverse order so they are executed from end
+    // to beginning when unregistering the library!
+    DP("Adding dtor " DPxMOD " to the pending list.\n",
+       DPxPTR(Entry.getAddress()));
+    MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
+            "removed in a future release \n",
+            Entry.getNameAsCStr());
+    PendingCtorsDtors[Entry.getBinaryDescription()].PendingDtors.push_front(
+        Entry.getAddress());
   }
 
-  DP("Device %d is ready to use.\n", DeviceNum);
+  if (Entry.isLink()) {
+    MESSAGE(
+        "WARNING: The \"link\" attribute is not yet supported for entry: %s!\n",
+        Entry.getNameAsCStr());
+  }
+}
 
-  return true;
+void DeviceTy::dumpOffloadEntries() {
+  fprintf(stderr, "Device %i offload entries:\n", DeviceID);
+  for (auto &It : DeviceOffloadEntries) {
+    const char *Kind = "kernel";
+    if (It.second->isCTor())
+      Kind = "constructor";
+    else if (It.second->isDTor())
+      Kind = "destructor";
+    else if (It.second->isLink())
+      Kind = "link";
+    else if (It.second->isGlobal())
+      Kind = "global var.";
+    fprintf(stderr, "  %11s: %s\n", Kind, It.second->getNameAsCStr());
+  }
 }

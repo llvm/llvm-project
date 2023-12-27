@@ -1131,6 +1131,12 @@ public:
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
 
+  /// Enables the elision of large resources strings by omitting them from the
+  /// `dialect_resources` section. The `largeResourceLimit` is used to configure
+  /// what is considered to be a "large" resource by providing an upper limit to
+  /// the string size.
+  OpPrintingFlags &elideLargeResourceString(int64_t largeResourceLimit = 64);
+
   /// Enable or disable printing of debug information (based on `enable`). If
   /// 'prettyForm' is set to true, debug information is printed in a more
   /// readable 'pretty' form. Note: The IR generated with 'prettyForm' is not

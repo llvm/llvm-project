@@ -1440,7 +1440,8 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // are induction variable analysis (sometimes) and ADCE, which is only run
     // late.
     if (PHIUser->hasOneUse() &&
-        (isa<BinaryOperator>(PHIUser) || isa<GetElementPtrInst>(PHIUser)) &&
+        (isa<BinaryOperator>(PHIUser) || isa<UnaryOperator>(PHIUser) ||
+         isa<GetElementPtrInst>(PHIUser)) &&
         PHIUser->user_back() == &PN) {
       return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
     }
@@ -1459,13 +1460,16 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // icmp(or(phi)) can equally be replaced with any non-zero constant as the
   // "or" will only add bits.
   if (!PN.hasNUsesOrMore(3)) {
-    bool AllUsesOfPhiEndsInCmp = all_of(PN.users(), [&PN](User *U) {
+    SmallVector<Instruction *> DropPoisonFlags;
+    bool AllUsesOfPhiEndsInCmp = all_of(PN.users(), [&](User *U) {
       auto *CmpInst = dyn_cast<ICmpInst>(U);
       if (!CmpInst) {
         // This is always correct as OR only add bits and we are checking
         // against 0.
-        if (U->hasOneUse() && match(U, m_c_Or(m_Specific(&PN), m_Value())))
+        if (U->hasOneUse() && match(U, m_c_Or(m_Specific(&PN), m_Value()))) {
+          DropPoisonFlags.push_back(cast<Instruction>(U));
           CmpInst = dyn_cast<ICmpInst>(U->user_back());
+        }
       }
       if (!CmpInst || !isa<IntegerType>(PN.getType()) ||
           !CmpInst->isEquality() || !match(CmpInst->getOperand(1), m_Zero())) {
@@ -1485,6 +1489,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
             NonZeroConst = getAnyNonZeroConstInt(PN);
           if (NonZeroConst != VA) {
             replaceOperand(PN, I, NonZeroConst);
+            // The "disjoint" flag may no longer hold after the transform.
+            for (Instruction *I : DropPoisonFlags)
+              I->dropPoisonGeneratingFlags();
             MadeChange = true;
           }
         }

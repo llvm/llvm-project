@@ -513,9 +513,8 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   unsigned NonSystemRemoved = RemoveDuplicates(SearchList, NumQuoted, Verbose);
   NumAngled -= NonSystemRemoved;
 
-  bool DontSearchCurDir = false;  // TODO: set to true if -I- is set?
   Headers.SetSearchPaths(extractLookups(SearchList), NumQuoted, NumAngled,
-                         DontSearchCurDir, mapToUserEntries(SearchList));
+                         mapToUserEntries(SearchList));
 
   Headers.SetSystemHeaderPrefixes(SystemHeaderPrefixes);
 

@@ -189,7 +189,7 @@ static inline bool isCFStringType(QualType T, ASTContext &Ctx) {
     return false;
 
   const RecordDecl *RD = RT->getDecl();
-  if (RD->getTagKind() != TTK_Struct)
+  if (RD->getTagKind() != TagTypeKind::Struct)
     return false;
 
   return RD->getIdentifier() == &Ctx.Idents.get("__CFString");
@@ -1128,8 +1128,10 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() > 3) {
     if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
       return;
-    if (!S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(WarningGroup)) {
-      S.Diag(AL.getArgAsExpr(3)->getBeginLoc(), diag::err_diagnose_if_unknown_warning);
+    if (!S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
+            WarningGroup)) {
+      S.Diag(AL.getArgAsExpr(3)->getBeginLoc(),
+             diag::err_diagnose_if_unknown_warning);
       return;
     }
   }
@@ -3463,6 +3465,11 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unknown << Tune << ParsedAttrs.Tune << Target;
 
+  if (Context.getTargetInfo().getTriple().isRISCV() &&
+      ParsedAttrs.Duplicate != "")
+    return Diag(LiteralLoc, diag::err_duplicate_target_attribute)
+           << Duplicate << None << ParsedAttrs.Duplicate << Target;
+
   if (ParsedAttrs.Duplicate != "")
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Duplicate << None << ParsedAttrs.Duplicate << Target;
@@ -4873,7 +4880,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   QualType NewTy = NewElemTy;
   if (VectorSize.getBoolValue()) {
     NewTy = Context.getVectorType(NewTy, VectorSize.getZExtValue(),
-                                  VectorType::GenericVector);
+                                  VectorKind::Generic);
   } else if (const auto *OldVT = OldTy->getAs<VectorType>()) {
     // Complex machine mode does not support base vector types.
     if (ComplexMode) {
@@ -5939,28 +5946,6 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   assert(ParmTSI && "no type source info for attribute argument");
   S.RequireCompleteType(ParmTSI->getTypeLoc().getBeginLoc(), QT,
                         diag::err_incomplete_type);
-
-  if (QT->isEnumeralType()) {
-    auto IsCorrespondingType = [&](QualType LHS, QualType RHS) {
-      assert(LHS != RHS);
-      if (LHS->isSignedIntegerType())
-        return LHS == S.getASTContext().getCorrespondingSignedType(RHS);
-      return LHS == S.getASTContext().getCorrespondingUnsignedType(RHS);
-    };
-    QualType BitfieldType =
-        cast<FieldDecl>(D)->getType()->getCanonicalTypeUnqualified();
-    QualType EnumUnderlyingType = QT->getAs<EnumType>()
-                                      ->getDecl()
-                                      ->getIntegerType()
-                                      ->getCanonicalTypeUnqualified();
-    if (EnumUnderlyingType != BitfieldType &&
-        !IsCorrespondingType(EnumUnderlyingType, BitfieldType)) {
-      S.Diag(ParmTSI->getTypeLoc().getBeginLoc(),
-             diag::warn_attribute_underlying_type_mismatch)
-          << EnumUnderlyingType << QT << BitfieldType;
-      return;
-    }
-  }
 
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
 }
@@ -7340,6 +7325,36 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
     D->addAttr(NewAttr);
 }
 
+static void handleHLSLParamModifierAttr(Sema &S, Decl *D,
+                                        const ParsedAttr &AL) {
+  HLSLParamModifierAttr *NewAttr = S.mergeHLSLParamModifierAttr(
+      D, AL,
+      static_cast<HLSLParamModifierAttr::Spelling>(AL.getSemanticSpelling()));
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
+HLSLParamModifierAttr *
+Sema::mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
+                                 HLSLParamModifierAttr::Spelling Spelling) {
+  // We can only merge an `in` attribute with an `out` attribute. All other
+  // combinations of duplicated attributes are ill-formed.
+  if (HLSLParamModifierAttr *PA = D->getAttr<HLSLParamModifierAttr>()) {
+    if ((PA->isIn() && Spelling == HLSLParamModifierAttr::Keyword_out) ||
+        (PA->isOut() && Spelling == HLSLParamModifierAttr::Keyword_in)) {
+      D->dropAttr<HLSLParamModifierAttr>();
+      SourceRange AdjustedRange = {PA->getLocation(), AL.getRange().getEnd()};
+      return HLSLParamModifierAttr::Create(
+          Context, /*MergedSpelling=*/true, AdjustedRange,
+          HLSLParamModifierAttr::Keyword_inout);
+    }
+    Diag(AL.getLoc(), diag::err_hlsl_duplicate_parameter_modifier) << AL;
+    Diag(PA->getLocation(), diag::note_conflicting_attribute);
+    return nullptr;
+  }
+  return HLSLParamModifierAttr::Create(Context, AL);
+}
+
 static void handleMSInheritanceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.LangOpts.CPlusPlus) {
     S.Diag(AL.getLoc(), diag::err_attribute_not_supported_in_lang)
@@ -7369,6 +7384,28 @@ static void handleDeclspecThreadAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   D->addAttr(::new (S.Context) ThreadAttr(S.Context, AL));
+}
+
+static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!S.getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2022_3)) {
+    S.Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
+        << AL << AL.getRange();
+    return;
+  }
+  auto *FD = cast<FunctionDecl>(D);
+  if (FD->isConstexprSpecified() || FD->isConsteval()) {
+    S.Diag(AL.getLoc(), diag::err_ms_constexpr_cannot_be_applied)
+        << FD->isConsteval() << FD;
+    return;
+  }
+  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    if (!S.getLangOpts().CPlusPlus20 && MD->isVirtual()) {
+      S.Diag(AL.getLoc(), diag::err_ms_constexpr_cannot_be_applied)
+          << /*virtual*/ 2 << MD;
+      return;
+    }
+  }
+  D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8464,7 +8501,7 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
   }
 
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      Context.getLangOpts().getStrictFlexArraysLevel();
+      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
 
   if (!Decl::isFlexibleArrayMemberLike(Context, FD, FD->getType(),
                                        StrictFlexArraysLevel, true)) {
@@ -9035,6 +9072,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_BPFPreserveAccessIndex:
     handleBPFPreserveAccessIndexAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_BPFPreserveStaticOffset:
+    handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
     break;
@@ -9473,6 +9513,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Thread:
     handleDeclspecThreadAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_MSConstexpr:
+    handleMSConstexprAttr(S, D, AL);
+    break;
 
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
@@ -9489,6 +9532,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     handleHLSLResourceBindingAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLParamModifier:
+    handleHLSLParamModifierAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AbiTag:

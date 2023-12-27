@@ -23,7 +23,7 @@ namespace std {
   // [mdspan.layout], layout mapping
   struct layout_left;
   struct layout_right;
-  struct layout_stride; // not implemented yet
+  struct layout_stride;
 
   // [mdspan.accessor.default], class template default_accessor
   template<class ElementType>

@@ -437,6 +437,10 @@ public:
 
   virtual CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) = 0;
 
+  virtual CompilerType CreateGenericFunctionPrototype() {
+    return CompilerType();
+  }
+
   virtual CompilerType
   GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
                                       size_t bit_size) = 0;

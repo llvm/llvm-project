@@ -257,7 +257,7 @@ def main():
     parser.add_argument(
         "-allow-enabling-alpha-checkers",
         action="store_true",
-        help="allow alpha checkers from " "clang-analyzer.",
+        help="allow alpha checkers from clang-analyzer.",
     )
     parser.add_argument(
         "-clang-tidy-binary", metavar="PATH", help="path to clang-tidy binary"
@@ -270,7 +270,7 @@ def main():
     parser.add_argument(
         "-checks",
         default=None,
-        help="checks filter, when not specified, use clang-tidy " "default",
+        help="checks filter, when not specified, use clang-tidy default",
     )
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument(
@@ -303,7 +303,7 @@ def main():
     parser.add_argument(
         "-line-filter",
         default=None,
-        help="List of files with line ranges to filter the" "warnings.",
+        help="List of files with line ranges to filter the warnings.",
     )
     if yaml:
         parser.add_argument(
@@ -335,12 +335,12 @@ def main():
     )
     parser.add_argument("-fix", action="store_true", help="apply fix-its")
     parser.add_argument(
-        "-format", action="store_true", help="Reformat code " "after applying fixes"
+        "-format", action="store_true", help="Reformat code after applying fixes"
     )
     parser.add_argument(
         "-style",
         default="file",
-        help="The style of reformat " "code after applying fixes",
+        help="The style of reformat code after applying fixes",
     )
     parser.add_argument(
         "-use-color",
@@ -359,14 +359,14 @@ def main():
         dest="extra_arg",
         action="append",
         default=[],
-        help="Additional argument to append to the compiler " "command line.",
+        help="Additional argument to append to the compiler command line.",
     )
     parser.add_argument(
         "-extra-arg-before",
         dest="extra_arg_before",
         action="append",
         default=[],
-        help="Additional argument to prepend to the compiler " "command line.",
+        help="Additional argument to prepend to the compiler command line.",
     )
     parser.add_argument(
         "-quiet", action="store_true", help="Run clang-tidy in quiet mode"
@@ -381,7 +381,7 @@ def main():
     parser.add_argument(
         "-warnings-as-errors",
         default=None,
-        help="Upgrades warnings to errors. Same format as " "'-checks'",
+        help="Upgrades warnings to errors. Same format as '-checks'",
     )
     args = parser.parse_args()
 

@@ -5,17 +5,17 @@ Check that LLDB can read Scalable Matrix Extension (SME) data from core files.
 
 import lldb
 import itertools
-from enum import Enum
+from enum import IntEnum
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-class Mode(Enum):
+class Mode(IntEnum):
     SVE = 0
     SSVE = 1
 
 
-class ZA(Enum):
+class ZA(IntEnum):
     Disabled = 0
     Enabled = 1
 
@@ -56,7 +56,12 @@ class AArch64LinuxSMECoreFileTestCase(TestBase):
         svcr = 1 if sve_mode == Mode.SSVE else 0
         if za == ZA.Enabled:
             svcr |= 2
-        self.expect("register read svcr", substrs=["0x{:016x}".format(svcr)])
+
+        expected_svcr = ["0x{:016x}".format(svcr)]
+        if self.hasXMLSupport():
+            expected_svcr.append("(ZA = {:d}, SM = {})".format(za, sve_mode))
+
+        self.expect("register read svcr", substrs=expected_svcr)
 
         repeat_bytes = lambda v, n: " ".join(["0x{:02x}".format(v)] * n)
 
@@ -89,14 +94,19 @@ class AArch64LinuxSMECoreFileTestCase(TestBase):
             # Each row of ZA is set to the row number plus 1. For example:
             # za = {0x01 0x01 0x01 0x01 <repeat until end of row> 0x02 0x02 ...
             make_row = repeat_bytes
+            expected_zt0 = "{{{}}}".format(
+                " ".join(["0x{:02x}".format(i + 1) for i in range(512 // 8)])
+            )
         else:
             # When ZA is disabled lldb shows it as 0s.
             make_row = lambda _, n: repeat_bytes(0, n)
+            expected_zt0 = "{{{}}}".format(" ".join(["0x00" for i in range(512 // 8)]))
 
         expected_za = "{{{}}}".format(
             " ".join([make_row(i + 1, svl) for i in range(svl)])
         )
         self.expect("register read za", substrs=[expected_za])
+        self.expect("register read zt0", substrs=[expected_zt0])
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_sme_core_file_ssve_vl32_svl16_za_enabled(self):

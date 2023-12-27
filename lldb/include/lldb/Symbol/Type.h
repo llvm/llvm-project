@@ -420,6 +420,8 @@ public:
 
   void SetName(const char *type_name_cstr);
 
+  void SetName(llvm::StringRef name);
+
   void SetTypeSP(lldb::TypeSP type_sp);
 
   void SetCompilerType(CompilerType compiler_type);

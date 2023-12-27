@@ -1382,9 +1382,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-    ]) + [
-        "include/llvm/Transforms/Vectorize.h",
-    ],
+    ]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
@@ -1407,6 +1405,21 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+    ],
+)
+
+cc_library(
+    name = "FrontendDriver",
+    srcs = glob([
+        "lib/Frontend/Driver/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Driver/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Analysis",
+        ":TargetParser",
     ],
 )
 
@@ -3104,7 +3117,7 @@ cc_library(
         ":MC",
         ":MCA",
         ":MCDisassembler",
-        ":MCJIT",
+        ":OrcJIT",
         ":Object",
         ":ObjectYAML",
         ":Support",
@@ -5159,6 +5172,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "ReadTAPIOptsTableGen",
+    strip_include_prefix = "tools/llvm-readtapi",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-readtapi/TapiOpts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-readtapi/TapiOpts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-readtapi",
     testonly = True,
@@ -5170,6 +5195,8 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Object",
+        ":Option",
+        ":ReadTAPIOptsTableGen",
         ":Support",
         ":TextAPI",
     ],

@@ -1322,7 +1322,7 @@ static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
   // ensure all uses of alias instead use the new clone (casted if necessary).
   NewFn->setLinkage(GA->getLinkage());
   NewFn->setVisibility(GA->getVisibility());
-  GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewFn, GA->getType()));
+  GA->replaceAllUsesWith(NewFn);
   NewFn->takeName(GA);
   return NewFn;
 }

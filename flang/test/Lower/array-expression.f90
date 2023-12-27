@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest1
 subroutine test1(a,b,c,n)
@@ -902,7 +902,7 @@ end subroutine test19e
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 60 : index
 ! CHECK:         %[[VAL_8:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_9:.*]] = fir.array_load %[[VAL_3]](%[[VAL_8]]) typeparams %[[VAL_2]]#1 : (!fir.ref<!fir.array<60x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.array<60x!fir.char<1,?>>
-! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQcl.70726566697820) : !fir.ref<!fir.char<1,7>>
+! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQclX70726566697820) : !fir.ref<!fir.char<1,7>>
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 7 : index
 ! CHECK:         %[[VAL_12:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_13:.*]] = fir.array_load %[[VAL_6]](%[[VAL_12]]) typeparams %[[VAL_5]]#1 : (!fir.ref<!fir.array<60x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.array<60x!fir.char<1,?>>
@@ -1114,7 +1114,7 @@ end subroutine test19h
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 2 : index
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 10 : index
 ! CHECK:         %[[VAL_9:.*]] = arith.constant -1 : i32
-! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_12:.*]] = arith.constant {{.*}} : i32
 ! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_9]], %[[VAL_11]], %[[VAL_12]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>

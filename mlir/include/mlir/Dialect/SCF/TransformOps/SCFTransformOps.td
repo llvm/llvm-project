@@ -68,30 +68,6 @@ def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
 }
 
-def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
-    [NavigationTransformOpTrait, MemoryEffectsOpInterface,
-     DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let summary = "Gets a handle to the parent 'for' loop of the given operation";
-  let description = [{
-    Produces a handle to the n-th (default 1) parent `scf.for` or `affine.for`
-    (when the affine flag is true) loop for each Payload IR operation
-    associated with the operand. Fails if such a loop cannot be found. The list
-    of operations associated with the handle contains parent operations in the
-    same order as the list associated with the operand, except for operations
-    that are parents to more than one input which are only present once.
-  }];
-
-  let arguments =
-    (ins TransformHandleTypeInterface:$target,
-         DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
-                           "1">:$num_loops,
-         DefaultValuedAttr<BoolAttr, "false">:$affine);
-  let results = (outs TransformHandleTypeInterface : $parent);
-
-  let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
-}
-
 def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {

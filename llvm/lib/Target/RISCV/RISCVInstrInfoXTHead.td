@@ -886,9 +886,7 @@ defm : StoreUpdatePat<post_truncsti8, TH_SBIA>;
 defm : StoreUpdatePat<pre_truncsti8, TH_SBIB>;
 defm : StoreUpdatePat<post_truncsti16, TH_SHIA>;
 defm : StoreUpdatePat<pre_truncsti16, TH_SHIB>;
-}
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : StoreUpdatePat<post_store, TH_SWIA, i32>;
 defm : StoreUpdatePat<pre_store, TH_SWIB, i32>;
 }
@@ -899,3 +897,15 @@ defm : StoreUpdatePat<pre_truncsti32, TH_SWIB, i64>;
 defm : StoreUpdatePat<post_store, TH_SDIA, i64>;
 defm : StoreUpdatePat<pre_store, TH_SDIB, i64>;
 }
+
+//===----------------------------------------------------------------------===//
+// Experimental RV64 i32 legalization patterns.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+defm : StoreUpdatePat<post_truncsti8, TH_SBIA, i32>;
+defm : StoreUpdatePat<pre_truncsti8, TH_SBIB, i32>;
+defm : StoreUpdatePat<post_truncsti16, TH_SHIA, i32>;
+defm : StoreUpdatePat<pre_truncsti16, TH_SHIB, i32>;
+}
+

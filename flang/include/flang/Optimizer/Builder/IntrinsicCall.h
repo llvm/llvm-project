@@ -182,7 +182,6 @@ struct IntrinsicLibrary {
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genBesselYn(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  /// Lower a bitwise comparison intrinsic using the given comparator.
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genBitwiseCompare(mlir::Type resultType,
                                 llvm::ArrayRef<mlir::Value> args);
@@ -223,11 +222,11 @@ struct IntrinsicLibrary {
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
+  mlir::Value genGetPID(mlir::Type resultType,
+                        llvm::ArrayRef<mlir::Value> args);
   void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
-  /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIany(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -237,13 +236,32 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genFindloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeClass(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeCopySign(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue>);
+  void genIeeeGetHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
+  template <bool isGet>
+  void genIeeeGetOrSetModes(llvm::ArrayRef<fir::ExtendedValue>);
+  template <bool isGet>
+  void genIeeeGetOrSetStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNegative(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNormal(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeLogb(mlir::Type, mlir::ArrayRef<mlir::Value>);
+  template <bool isMax, bool isNum, bool isMag>
+  mlir::Value genIeeeMaxMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <mlir::arith::CmpFPredicate pred>
+  mlir::Value genIeeeQuietCompare(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value>);
+  template <bool isFlag>
+  void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeSetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::arith::CmpFPredicate pred>
+  mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeSupportFlagOrHalting(mlir::Type,
+                                          llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -330,6 +348,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
   /// is ignored because this is already reflected in the result type.
@@ -355,6 +374,10 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReduction(FN func, FD funcDim, llvm::StringRef errMsg,
                                   mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
+
+  /// Generate code to raise \p except if \p cond is absent,
+  /// or present and true.
+  void genRaiseExcept(int except, mlir::Value cond = {});
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -492,6 +515,7 @@ struct MathOperation {
 // Enum of most supported intrinsic argument or return types.
 enum class ParamTypeId {
   Void,
+  Address, // pointer (to an [array of] Integers of some kind)
   Integer,
   Real,
   Complex,
@@ -529,17 +553,19 @@ struct ParamType {
 namespace Ty {
 using Void = ParamType<ParamTypeId::Void, 0>;
 template <int k>
-using Real = ParamType<ParamTypeId::Real, k>;
+using Address = ParamType<ParamTypeId::Address, k>;
 template <int k>
 using Integer = ParamType<ParamTypeId::Integer, k>;
+template <int k>
+using Real = ParamType<ParamTypeId::Real, k>;
 template <int k>
 using Complex = ParamType<ParamTypeId::Complex, k>;
 template <int k>
 using IntegerVector = ParamType<ParamTypeId::IntegerVector, k>;
 template <int k>
-using RealVector = ParamType<ParamTypeId::RealVector, k>;
-template <int k>
 using UnsignedVector = ParamType<ParamTypeId::UnsignedVector, k>;
+template <int k>
+using RealVector = ParamType<ParamTypeId::RealVector, k>;
 } // namespace Ty
 
 // Helper function that generates most types that are supported for intrinsic
@@ -553,6 +579,11 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
   switch (typeId) {
   case ParamTypeId::Void:
     llvm::report_fatal_error("can not get type of void");
+    break;
+  case ParamTypeId::Address:
+    bits = builder.getKindMap().getIntegerBitsize(kind);
+    assert(bits != 0 && "failed to convert address kind to integer bitsize");
+    r = fir::ReferenceType::get(mlir::IntegerType::get(context, bits));
     break;
   case ParamTypeId::Integer:
   case ParamTypeId::IntegerVector:
@@ -574,23 +605,20 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
     break;
   }
 
-  mlir::Type fTy;
   switch (typeId) {
   case ParamTypeId::Void:
+  case ParamTypeId::Address:
   case ParamTypeId::Integer:
   case ParamTypeId::Real:
   case ParamTypeId::Complex:
-    // keep original type for void and non-vector
-    fTy = r;
     break;
   case ParamTypeId::IntegerVector:
   case ParamTypeId::UnsignedVector:
   case ParamTypeId::RealVector:
-    // convert to FIR vector type
-    fTy = fir::VectorType::get(getVecLen(r), r);
-    break;
+    // convert to vector type
+    r = fir::VectorType::get(getVecLen(r), r);
   }
-  return fTy;
+  return r;
 }
 
 // Generic function type generator that supports most of the function types

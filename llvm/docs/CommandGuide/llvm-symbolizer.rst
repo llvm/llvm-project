@@ -14,7 +14,7 @@ DESCRIPTION
 :program:`llvm-symbolizer` reads input names and addresses from the command-line
 and prints corresponding source code locations to standard output. It can also
 symbolize logs containing :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` via
-:option:`--filter-markup`.
+:option:`--filter-markup`. Addresses may be specified as numbers or symbol names.
 
 If no address is specified on the command-line, it reads the addresses from
 standard input. If no input name is specified on the command-line, but addresses
@@ -195,6 +195,17 @@ shows --relativenames.
   $ llvm-symbolizer --obj=test.elf 0x4004a0 --relativenames
   main
   foo/test.cpp:15:0
+
+Example 7 - Addresses as symbol names:
+
+.. code-block:: console
+
+  $ llvm-symbolizer --obj=test.elf main
+  main
+  /tmp/test.cpp:14:0
+  $ llvm-symbolizer --obj=test.elf "CODE foz"
+  foz
+  /tmp/test.h:1:0
 
 OPTIONS
 -------

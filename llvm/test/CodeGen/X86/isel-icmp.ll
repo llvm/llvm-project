@@ -168,12 +168,11 @@ define i32 @test_icmp_eq_i64(i64 %a, i64 %b) {
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    xorl %edx, %edx
 ; GISEL-X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    orl %eax, %ecx
 ; GISEL-X86-NEXT:    xorl %eax, %eax
-; GISEL-X86-NEXT:    cmpl %edx, %ecx
+; GISEL-X86-NEXT:    cmpl $0, %ecx
 ; GISEL-X86-NEXT:    sete %al
 ; GISEL-X86-NEXT:    andl $1, %eax
 ; GISEL-X86-NEXT:    retl

@@ -79,9 +79,7 @@ public:
     this->DiagEngine = DiagEngine;
   }
 
-  const DiagnosticsEngine* getDiagnosticsEngine() const {
-    return DiagEngine;
-  }
+  const DiagnosticsEngine *getDiagnosticsEngine() const { return DiagEngine; }
 
   ~ClangTidyContext();
 

@@ -264,6 +264,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case PS5: return "ps5";
   case RTEMS: return "rtems";
   case Solaris: return "solaris";
+  case Serenity: return "serenity";
   case TvOS: return "tvos";
   case UEFI: return "uefi";
   case WASI: return "wasi";
@@ -641,6 +642,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("emscripten", Triple::Emscripten)
     .StartsWith("shadermodel", Triple::ShaderModel)
     .StartsWith("liteos", Triple::LiteOS)
+    .StartsWith("serenity", Triple::Serenity)
     .Default(Triple::UnknownOS);
 }
 

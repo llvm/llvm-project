@@ -94,6 +94,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("kinetic", Distro::UbuntuKinetic)
                     .Case("lunar", Distro::UbuntuLunar)
                     .Case("mantic", Distro::UbuntuMantic)
+                    .Case("noble", Distro::UbuntuNoble)
                     .Default(Distro::UnknownDistro);
   return Version;
 }

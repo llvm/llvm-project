@@ -23,3 +23,15 @@ void test_xsfvqmaccdod() {
 void test_xsfvqmaccqoq() {
   __riscv_sf_vqmacc_4x8x4(); // expected-error {{call to undeclared function '__riscv_sf_vqmacc_4x8x4'}}
 }
+
+void test_xsfvfwmaccqqq() {
+  __riscv_sf_vfwmacc_4x4x4(); // expected-error {{call to undeclared function '__riscv_sf_vfwmacc_4x4x4'}}
+}
+
+void test_xsfvfnrclipxfqf() {
+  __riscv_sf_vfnrclip_x_f_qf(); // expected-error {{call to undeclared function '__riscv_sf_vfnrclip_x_f_qf'}}
+}
+
+void test_xsfvfnrclipxufqf() {
+  __riscv_sf_vfnrclip_xu_f_qf(); // expected-error {{call to undeclared function '__riscv_sf_vfnrclip_xu_f_qf'}}
+}

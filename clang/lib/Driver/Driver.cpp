@@ -1303,6 +1303,13 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
         Diag(diag::err_drv_invalid_directx_shader_module) << TargetProfile;
 
       A->claim();
+
+      // TODO: Specify Vulkan target environment somewhere in the triple.
+      if (Args.hasArg(options::OPT_spirv)) {
+        llvm::Triple T(TargetTriple);
+        T.setArch(llvm::Triple::spirv);
+        TargetTriple = T.str();
+      }
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
     }
@@ -1932,12 +1939,6 @@ int Driver::ExecuteCompilation(
 
 void Driver::PrintHelp(bool ShowHidden) const {
   llvm::opt::Visibility VisibilityMask = getOptionVisibilityMask();
-
-  // TODO: We're overriding the mask for flang here to keep this NFC for the
-  // option refactoring, but what we really need to do is annotate the flags
-  // that Flang uses.
-  if (IsFlangMode())
-    VisibilityMask = llvm::opt::Visibility(options::FlangOption);
 
   std::string Usage = llvm::formatv("{0} [options] file...", Name).str();
   getOpts().printHelp(llvm::outs(), Usage.c_str(), DriverTitle.c_str(),

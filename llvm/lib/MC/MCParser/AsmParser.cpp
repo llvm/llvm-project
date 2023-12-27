@@ -125,6 +125,7 @@ private:
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
   SMLoc StartTokLoc;
+  std::optional<SMLoc> CFIStartProcLoc;
 
   /// This is the current buffer index we're lexing from as managed by the
   /// SourceMgr object.
@@ -1948,6 +1949,11 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     if (getTok().is(AsmToken::EndOfStatement)) {
       Lex();
     }
+
+    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc && Sym->isExternal())
+      return Error(StartTokLoc, "non-private labels cannot appear between "
+                                ".cfi_startproc / .cfi_endproc pairs") &&
+             Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
 
     if (discardLTOSymbol(IDVal))
       return false;
@@ -4193,6 +4199,8 @@ bool AsmParser::parseDirectiveCFISections() {
 /// parseDirectiveCFIStartProc
 /// ::= .cfi_startproc [simple]
 bool AsmParser::parseDirectiveCFIStartProc() {
+  CFIStartProcLoc = StartTokLoc;
+
   StringRef Simple;
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     if (check(parseIdentifier(Simple) || Simple != "simple",
@@ -4213,8 +4221,11 @@ bool AsmParser::parseDirectiveCFIStartProc() {
 /// parseDirectiveCFIEndProc
 /// ::= .cfi_endproc
 bool AsmParser::parseDirectiveCFIEndProc() {
+  CFIStartProcLoc = std::nullopt;
+
   if (parseEOL())
     return true;
+
   getStreamer().emitCFIEndProc();
   return false;
 }

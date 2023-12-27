@@ -144,14 +144,8 @@ public:
     return SwiftBridge;
   }
 
-  void setSwiftBridge(const std::optional<std::string> &SwiftType) {
+  void setSwiftBridge(std::optional<std::string> SwiftType) {
     SwiftBridge = SwiftType;
-  }
-
-  void setSwiftBridge(const std::optional<llvm::StringRef> &SwiftType) {
-    SwiftBridge = SwiftType
-                      ? std::optional<std::string>(std::string(*SwiftType))
-                      : std::nullopt;
   }
 
   const std::optional<std::string> &getNSErrorDomain() const {
@@ -743,6 +737,9 @@ inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
   return !(LHS == RHS);
 }
 
+/// The file extension used for the source representation of API notes.
+static const constexpr char SOURCE_APINOTES_EXTENSION[] = "apinotes";
+
 /// Opaque context ID used to refer to an Objective-C class or protocol or a C++
 /// namespace.
 class ContextID {
@@ -772,6 +769,7 @@ struct Context {
 /// data they contain; it is up to the user to ensure that the data
 /// referenced by the identifier list persists.
 struct ObjCSelectorRef {
+  unsigned NumArgs;
   llvm::ArrayRef<llvm::StringRef> Identifiers;
 };
 } // namespace api_notes

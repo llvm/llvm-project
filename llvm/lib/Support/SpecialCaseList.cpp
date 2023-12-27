@@ -156,7 +156,7 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
   // regexes. If "#!special-case-list-v2" is the first line of the file, then
   // we will use the new behavior using globs. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
-  bool UseGlobs = MB->getBuffer().startswith("#!special-case-list-v2\n");
+  bool UseGlobs = MB->getBuffer().starts_with("#!special-case-list-v2\n");
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
@@ -166,8 +166,8 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
       continue;
 
     // Save section names
-    if (Line.startswith("[")) {
-      if (!Line.endswith("]")) {
+    if (Line.starts_with("[")) {
+      if (!Line.ends_with("]")) {
         Error =
             ("malformed section header on line " + Twine(LineNo) + ": " + Line)
                 .str();

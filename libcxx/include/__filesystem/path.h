@@ -36,7 +36,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -469,11 +469,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI path() noexcept {}
   _LIBCPP_HIDE_FROM_ABI path(const path& __p) : __pn_(__p.__pn_) {}
   _LIBCPP_HIDE_FROM_ABI path(path&& __p) noexcept
-      : __pn_(_VSTD::move(__p.__pn_)) {}
+      : __pn_(std::move(__p.__pn_)) {}
 
   _LIBCPP_HIDE_FROM_ABI
   path(string_type&& __s, format = format::auto_format) noexcept
-      : __pn_(_VSTD::move(__s)) {}
+      : __pn_(std::move(__s)) {}
 
   template <class _Source, class = _EnableIfPathable<_Source, void> >
   _LIBCPP_HIDE_FROM_ABI
@@ -511,19 +511,19 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   path& operator=(path&& __p) noexcept {
-    __pn_ = _VSTD::move(__p.__pn_);
+    __pn_ = std::move(__p.__pn_);
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI
   path& operator=(string_type&& __s) noexcept {
-    __pn_ = _VSTD::move(__s);
+    __pn_ = std::move(__s);
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI
   path& assign(string_type&& __s) noexcept {
-    __pn_ = _VSTD::move(__s);
+    __pn_ = std::move(__s);
     return *this;
   }
 
@@ -574,7 +574,7 @@ public:
     return *this;
   }
   template <class _Source>
-  _LIBCPP_INLINE_VISIBILITY _EnableIfPathable<_Source>
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source>
   operator/=(const _Source& __src) {
     return operator/=(path(__src));
   }
@@ -617,7 +617,7 @@ public:
   _EnableIfPathable<_Source> append(const _Source& __src) {
     using _Traits = __is_pathable<_Source>;
     using _CVT = _PathCVT<_SourceChar<_Source> >;
-    bool __source_is_absolute = _VSTD_FS::__is_separator(_Traits::__first_or_null(__src));
+    bool __source_is_absolute = filesystem::__is_separator(_Traits::__first_or_null(__src));
     if (__source_is_absolute)
       __pn_.clear();
     else if (has_filename())
@@ -632,7 +632,7 @@ public:
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
     using _CVT = _PathCVT<_ItVal>;
-    if (__first != __last && _VSTD_FS::__is_separator(*__first))
+    if (__first != __last && filesystem::__is_separator(*__first))
       __pn_.clear();
     else if (has_filename())
       __pn_ += preferred_separator;
@@ -709,7 +709,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   path& make_preferred() {
 #if defined(_LIBCPP_WIN32API)
-    _VSTD::replace(__pn_.begin(), __pn_.end(), L'/', L'\\');
+    std::replace(__pn_.begin(), __pn_.end(), L'/', L'\\');
 #endif
     return *this;
   }
@@ -778,13 +778,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return __pn_; }
 
 #if defined(_LIBCPP_WIN32API)
-  _LIBCPP_HIDE_FROM_ABI _VSTD::wstring wstring() const { return __pn_; }
+  _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return __pn_; }
 
   _LIBCPP_HIDE_FROM_ABI
-  _VSTD::wstring generic_wstring() const {
-    _VSTD::wstring __s;
+  std::wstring generic_wstring() const {
+    std::wstring __s;
     __s.resize(__pn_.size());
-    _VSTD::replace_copy(__pn_.begin(), __pn_.end(), __s.begin(), '\\', '/');
+    std::replace_copy(__pn_.begin(), __pn_.end(), __s.begin(), '\\', '/');
     return __s;
   }
 
@@ -801,7 +801,7 @@ public:
     return __s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _VSTD::string string() const {
+  _LIBCPP_HIDE_FROM_ABI std::string string() const {
     return string<char>();
   }
   _LIBCPP_HIDE_FROM_ABI __u8_string u8string() const {
@@ -812,10 +812,10 @@ public:
     return __s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u16string u16string() const {
+  _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const {
     return string<char16_t>();
   }
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u32string u32string() const {
+  _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const {
     return string<char32_t>();
   }
 
@@ -830,28 +830,28 @@ public:
     // Note: This (and generic_u8string below) is slightly suboptimal as
     // it iterates twice over the string; once to convert it to the right
     // character type, and once to replace path delimiters.
-    _VSTD::replace(__s.begin(), __s.end(),
+    std::replace(__s.begin(), __s.end(),
                    static_cast<_ECharT>('\\'), static_cast<_ECharT>('/'));
     return __s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _VSTD::string generic_string() const { return generic_string<char>(); }
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u16string generic_u16string() const { return generic_string<char16_t>(); }
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u32string generic_u32string() const { return generic_string<char32_t>(); }
+  _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return generic_string<char>(); }
+  _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return generic_string<char16_t>(); }
+  _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return generic_string<char32_t>(); }
   _LIBCPP_HIDE_FROM_ABI
   __u8_string generic_u8string() const {
     __u8_string __s = u8string();
-    _VSTD::replace(__s.begin(), __s.end(), '\\', '/');
+    std::replace(__s.begin(), __s.end(), '\\', '/');
     return __s;
   }
 #endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
 #else /* _LIBCPP_WIN32API */
 
-  _LIBCPP_HIDE_FROM_ABI _VSTD::string string() const { return __pn_; }
+  _LIBCPP_HIDE_FROM_ABI std::string string() const { return __pn_; }
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u8string u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
+  _LIBCPP_HIDE_FROM_ABI std::u8string u8string() const { return std::u8string(__pn_.begin(), __pn_.end()); }
 #else
-  _LIBCPP_HIDE_FROM_ABI _VSTD::string u8string() const { return __pn_; }
+  _LIBCPP_HIDE_FROM_ABI std::string u8string() const { return __pn_; }
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -869,24 +869,24 @@ public:
   }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  _LIBCPP_HIDE_FROM_ABI _VSTD::wstring wstring() const {
+  _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const {
     return string<wchar_t>();
   }
 #endif
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u16string u16string() const {
+  _LIBCPP_HIDE_FROM_ABI std::u16string u16string() const {
     return string<char16_t>();
   }
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u32string u32string() const {
+  _LIBCPP_HIDE_FROM_ABI std::u32string u32string() const {
     return string<char32_t>();
   }
 #endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
 
   // generic format observers
-  _LIBCPP_HIDE_FROM_ABI _VSTD::string generic_string() const { return __pn_; }
+  _LIBCPP_HIDE_FROM_ABI std::string generic_string() const { return __pn_; }
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u8string generic_u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
+  _LIBCPP_HIDE_FROM_ABI std::u8string generic_u8string() const { return std::u8string(__pn_.begin(), __pn_.end()); }
 #else
-  _LIBCPP_HIDE_FROM_ABI _VSTD::string generic_u8string() const { return __pn_; }
+  _LIBCPP_HIDE_FROM_ABI std::string generic_u8string() const { return __pn_; }
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -899,10 +899,10 @@ public:
   }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  _LIBCPP_HIDE_FROM_ABI _VSTD::wstring generic_wstring() const { return string<wchar_t>(); }
+  _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const { return string<wchar_t>(); }
 #endif
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u16string generic_u16string() const { return string<char16_t>(); }
-  _LIBCPP_HIDE_FROM_ABI _VSTD::u32string generic_u32string() const { return string<char32_t>(); }
+  _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return string<char16_t>(); }
+  _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return string<char32_t>(); }
 #endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
 #endif /* !_LIBCPP_WIN32API */
 
@@ -1039,7 +1039,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend
   basic_ostream<_CharT, _Traits>&
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << _VSTD::__quoted(__p.native());
+    __os << std::__quoted(__p.native());
     return __os;
   }
 
@@ -1048,7 +1048,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend
   basic_ostream<_CharT, _Traits>&
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << _VSTD::__quoted(__p.string<_CharT, _Traits>());
+    __os << std::__quoted(__p.string<_CharT, _Traits>());
     return __os;
   }
 
@@ -1056,7 +1056,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, path& __p) {
     basic_string<_CharT, _Traits> __tmp;
-    __is >> _VSTD::__quoted(__tmp);
+    __is >> std::__quoted(__tmp);
     __p = __tmp;
     return __is;
   }
@@ -1083,14 +1083,14 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <>
-struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<_VSTD_FS::path> : __unary_function<_VSTD_FS::path, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(_VSTD_FS::path const& __p) const noexcept {
-    return _VSTD_FS::hash_value(__p);
+struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<filesystem::path> : __unary_function<filesystem::path, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(filesystem::path const& __p) const noexcept {
+    return filesystem::hash_value(__p);
   }
 };
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_PATH_H

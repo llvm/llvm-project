@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"

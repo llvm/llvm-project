@@ -16,13 +16,23 @@
 // LINUX: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
 // LINUX: @__cpu_features2 = external dso_local global [3 x i32]
 
-// LINUX: @internal.ifunc = internal ifunc i32 (), ptr @internal.resolver
-// LINUX: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
-// LINUX: @foo_dupes.ifunc = weak_odr ifunc void (), ptr @foo_dupes.resolver
-// LINUX: @unused.ifunc = weak_odr ifunc void (), ptr @unused.resolver
-// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
-// LINUX: @foo_inline2.ifunc = weak_odr ifunc i32 (), ptr @foo_inline2.resolver
-// LINUX: @foo_used_no_defn.ifunc = weak_odr ifunc i32 (), ptr @foo_used_no_defn.resolver
+// LINUX: @internal.ifunc = internal alias i32 (), ptr @internal
+// LINUX: @foo.ifunc = weak_odr alias i32 (), ptr @foo
+// LINUX: @foo_dupes.ifunc = weak_odr alias void (), ptr @foo_dupes
+// LINUX: @unused.ifunc = weak_odr alias void (), ptr @unused
+// LINUX: @foo_inline.ifunc = weak_odr alias i32 (), ptr @foo_inline
+// LINUX: @foo_inline2.ifunc = weak_odr alias i32 (), ptr @foo_inline2
+// LINUX: @foo_used_no_defn.ifunc = weak_odr alias i32 (), ptr @foo_used_no_defn
+// LINUX: @isa_level.ifunc = weak_odr alias i32 (i32), ptr @isa_level
+
+// LINUX: @internal = internal ifunc i32 (), ptr @internal.resolver
+// LINUX: @foo = weak_odr ifunc i32 (), ptr @foo.resolver
+// LINUX: @foo_dupes = weak_odr ifunc void (), ptr @foo_dupes.resolver
+// LINUX: @unused = weak_odr ifunc void (), ptr @unused.resolver
+// LINUX: @foo_inline = weak_odr ifunc i32 (), ptr @foo_inline.resolver
+// LINUX: @foo_inline2 = weak_odr ifunc i32 (), ptr @foo_inline2.resolver
+// LINUX: @foo_used_no_defn = weak_odr ifunc i32 (), ptr @foo_used_no_defn.resolver
+// LINUX: @isa_level = weak_odr ifunc i32 (i32), ptr @isa_level.resolver
 
 static int __attribute__((target_clones("sse4.2, default"))) internal(void) { return 0; }
 int use(void) { return internal(); }
@@ -60,7 +70,7 @@ void bar2(void) {
   // LINUX: define {{.*}}void @bar2()
   // WINDOWS: define dso_local void @bar2()
   foo_dupes();
-  // LINUX: call void @foo_dupes.ifunc()
+  // LINUX: call void @foo_dupes()
   // WINDOWS: call void @foo_dupes()
 }
 
@@ -68,7 +78,7 @@ int bar(void) {
   // LINUX: define {{.*}}i32 @bar() #[[DEF:[0-9]+]]
   // WINDOWS: define dso_local i32 @bar() #[[DEF:[0-9]+]]
   return foo();
-  // LINUX: call i32 @foo.ifunc()
+  // LINUX: call i32 @foo()
   // WINDOWS: call i32 @foo()
 }
 
@@ -95,8 +105,8 @@ int bar3(void) {
   // LINUX: define {{.*}}i32 @bar3()
   // WINDOWS: define dso_local i32 @bar3()
   return foo_inline() + foo_inline2();
-  // LINUX: call i32 @foo_inline.ifunc()
-  // LINUX: call i32 @foo_inline2.ifunc()
+  // LINUX: call i32 @foo_inline()
+  // LINUX: call i32 @foo_inline2()
   // WINDOWS: call i32 @foo_inline()
   // WINDOWS: call i32 @foo_inline2()
 }
@@ -134,7 +144,7 @@ int test_foo_used_no_defn(void) {
   // LINUX: define {{.*}}i32 @test_foo_used_no_defn()
   // WINDOWS: define dso_local i32 @test_foo_used_no_defn()
   return foo_used_no_defn();
-  // LINUX: call i32 @foo_used_no_defn.ifunc()
+  // LINUX: call i32 @foo_used_no_defn()
   // WINDOWS: call i32 @foo_used_no_defn()
 }
 

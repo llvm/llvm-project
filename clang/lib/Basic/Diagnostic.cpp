@@ -166,8 +166,12 @@ DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
       DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
 
   // Initialize the entry if we added it.
-  if (Result.second)
+  if (Result.second) {
     Result.first->second = DiagIDs.getDefaultMapping(Diag);
+    if (DiagnosticIDs::IsCustomDiag(Diag)) {
+      DiagIDs.initCustomDiagMapping(Result.first->second, Diag);
+    }
+  }
 
   return Result.first->second;
 }

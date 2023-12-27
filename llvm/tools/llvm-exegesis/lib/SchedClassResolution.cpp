@@ -12,8 +12,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {

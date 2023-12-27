@@ -25,7 +25,9 @@ namespace llvm {
 class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
+
 namespace RISCVISD {
+// clang-format off
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET_GLUE,
@@ -119,7 +121,7 @@ enum NodeType : unsigned {
   // inserter.
   FROUND,
 
-  FPCLASS,
+  FCLASS,
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
@@ -421,6 +423,7 @@ enum NodeType : unsigned {
   TH_SWD,
   TH_SDD,
 };
+// clang-format on
 } // namespace RISCVISD
 
 class RISCVTargetLowering : public TargetLowering {
@@ -464,7 +467,7 @@ public:
                           SmallVectorImpl<Use *> &Ops) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
+  std::pair<int, bool> getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
@@ -486,6 +489,12 @@ public:
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
+
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
 
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
                                             EVT VT) const override;
@@ -895,6 +904,7 @@ private:
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
@@ -949,6 +959,14 @@ private:
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.
   unsigned combineRepeatedFPDivisors() const override;
+
+  SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                        SmallVectorImpl<SDNode *> &Created) const override;
+
+  bool shouldFoldSelectWithSingleBitTest(EVT VT,
+                                         const APInt &AndMask) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace RISCV {
@@ -968,6 +986,9 @@ bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                   CCState &State);
+
+ArrayRef<MCPhysReg> getArgGPRs();
+
 } // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {

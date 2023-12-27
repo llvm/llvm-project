@@ -52,6 +52,6 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: shrink_kimm32_mul_i32
-    ; GCN: $sgpr0 = S_MULK_I32 undef $sgpr0, -2048, implicit-def $scc
-    $sgpr0 = S_MUL_I32 undef $sgpr0, 4294965248, implicit-def $scc
+    ; GCN: $sgpr0 = S_MULK_I32 undef $sgpr0, -2048
+    $sgpr0 = S_MUL_I32 undef $sgpr0, 4294965248
 ...

@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/Dialect/SparseTensor.h"
 #include "mlir-c/IR.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
 #include <optional>
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <vector>
 
 namespace py = pybind11;
 using namespace llvm;
@@ -17,30 +23,30 @@ using namespace mlir;
 using namespace mlir::python::adaptors;
 
 static void populateDialectSparseTensorSubmodule(const py::module &m) {
-  py::enum_<MlirSparseTensorDimLevelType>(m, "DimLevelType", py::module_local())
-      .value("dense", MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE)
-      .value("compressed24", MLIR_SPARSE_TENSOR_DIM_LEVEL_TWO_OUT_OF_FOUR)
-      .value("compressed", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED)
-      .value("compressed_nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU)
-      .value("compressed_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO)
-      .value("compressed_nu_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO)
-      .value("singleton", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON)
-      .value("singleton_nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU)
-      .value("singleton_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO)
-      .value("singleton_nu_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO)
-      .value("loose_compressed", MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED)
+  py::enum_<MlirSparseTensorLevelType>(m, "LevelType", py::module_local())
+      .value("dense", MLIR_SPARSE_TENSOR_LEVEL_DENSE)
+      .value("compressed24", MLIR_SPARSE_TENSOR_LEVEL_TWO_OUT_OF_FOUR)
+      .value("compressed", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED)
+      .value("compressed_nu", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU)
+      .value("compressed_no", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO)
+      .value("compressed_nu_no", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU_NO)
+      .value("singleton", MLIR_SPARSE_TENSOR_LEVEL_SINGLETON)
+      .value("singleton_nu", MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU)
+      .value("singleton_no", MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NO)
+      .value("singleton_nu_no", MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU_NO)
+      .value("loose_compressed", MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED)
       .value("loose_compressed_nu",
-             MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NU)
+             MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU)
       .value("loose_compressed_no",
-             MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NO)
+             MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NO)
       .value("loose_compressed_nu_no",
-             MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NU_NO);
+             MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU_NO);
 
   mlir_attribute_subclass(m, "EncodingAttr",
                           mlirAttributeIsASparseTensorEncodingAttr)
       .def_classmethod(
           "get",
-          [](py::object cls, std::vector<MlirSparseTensorDimLevelType> lvlTypes,
+          [](py::object cls, std::vector<MlirSparseTensorLevelType> lvlTypes,
              std::optional<MlirAffineMap> dimToLvl,
              std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
              MlirContext context) {
@@ -58,7 +64,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           "lvl_types",
           [](MlirAttribute self) {
             const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
-            std::vector<MlirSparseTensorDimLevelType> ret;
+            std::vector<MlirSparseTensorLevelType> ret;
             ret.reserve(lvlRank);
             for (int l = 0; l < lvlRank; ++l)
               ret.push_back(mlirSparseTensorEncodingAttrGetLvlType(self, l));

@@ -27,7 +27,7 @@ struct test_alloc {
   using value_type = T;
 
   [[nodiscard]] constexpr T* allocate(std::size_t) { return nullptr; }
-  void deallocate(void*, unsigned) {}
+  void deallocate(void*, std::size_t) {}
 };
 
 template <class T>

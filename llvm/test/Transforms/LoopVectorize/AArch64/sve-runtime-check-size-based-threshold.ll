@@ -47,6 +47,8 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP16]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP49:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP50:%.*]] = mul i64 [[TMP49]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -90,8 +92,6 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP47:%.*]] = mul i64 [[TMP46]], 2
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i64, ptr [[TMP39]], i64 [[TMP47]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP36]], ptr [[TMP48]], align 8
-; CHECK-NEXT:    [[TMP49:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP50:%.*]] = mul i64 [[TMP49]], 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP50]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP51]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

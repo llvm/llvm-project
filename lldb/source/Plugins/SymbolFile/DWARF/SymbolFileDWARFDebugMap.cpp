@@ -1278,7 +1278,7 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
-    lldb_private::StructuredData::Dictionary &d) {
+    lldb_private::StructuredData::Dictionary &d, bool errors_only) {
   StructuredData::Array separate_debug_info_files;
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
@@ -1302,7 +1302,8 @@ bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
       oso_data->AddStringItem("error", info.oso_load_error.AsCString());
     }
     oso_data->AddBooleanItem("loaded", loaded_successfully);
-    separate_debug_info_files.AddItem(oso_data);
+    if (!errors_only || oso_data->HasKey("error"))
+      separate_debug_info_files.AddItem(oso_data);
   }
 
   d.AddStringItem("type", "oso");

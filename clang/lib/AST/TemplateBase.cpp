@@ -89,19 +89,20 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
       else if (T->isSpecificBuiltinType(BuiltinType::UChar))
         Out << "(unsigned char)";
     }
-    CharacterLiteral::print(Val.getZExtValue(), CharacterLiteral::Ascii, Out);
+    CharacterLiteral::print(Val.getZExtValue(), CharacterLiteralKind::Ascii,
+                            Out);
   } else if (T->isAnyCharacterType() && !Policy.MSVCFormatting) {
-    CharacterLiteral::CharacterKind Kind;
+    CharacterLiteralKind Kind;
     if (T->isWideCharType())
-      Kind = CharacterLiteral::Wide;
+      Kind = CharacterLiteralKind::Wide;
     else if (T->isChar8Type())
-      Kind = CharacterLiteral::UTF8;
+      Kind = CharacterLiteralKind::UTF8;
     else if (T->isChar16Type())
-      Kind = CharacterLiteral::UTF16;
+      Kind = CharacterLiteralKind::UTF16;
     else if (T->isChar32Type())
-      Kind = CharacterLiteral::UTF32;
+      Kind = CharacterLiteralKind::UTF32;
     else
-      Kind = CharacterLiteral::Ascii;
+      Kind = CharacterLiteralKind::Ascii;
     CharacterLiteral::print(Val.getExtValue(), Kind, Out);
   } else if (IncludeType) {
     if (const auto *BT = T->getAs<BuiltinType>()) {

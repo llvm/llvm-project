@@ -1427,6 +1427,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
   setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
   setLibcallName(RTLIB::FMA_F128, "fmaf128");
+  setLibcallName(RTLIB::FREXP_F128, "frexpf128");
 
   if (Subtarget.isAIXABI()) {
     setLibcallName(RTLIB::MEMCPY, isPPC64 ? "___memmove64" : "___memmove");
@@ -2971,7 +2972,7 @@ bool PPCTargetLowering::SelectAddressRegRegOnly(SDValue N, SDValue &Base,
 
 template <typename Ty> static bool isValidPCRelNode(SDValue N) {
   Ty *PCRelCand = dyn_cast<Ty>(N);
-  return PCRelCand && (PCRelCand->getTargetFlags() & PPCII::MO_PCREL_FLAG);
+  return PCRelCand && (PPCInstrInfo::hasPCRelFlag(PCRelCand->getTargetFlags()));
 }
 
 /// Returns true if this address is a PC Relative address.
@@ -3132,8 +3133,8 @@ static void getLabelAccessInfo(bool IsPIC, const PPCSubtarget &Subtarget,
 
   // Don't use the pic base if not in PIC relocation model.
   if (IsPIC) {
-    HiOpFlags |= PPCII::MO_PIC_FLAG;
-    LoOpFlags |= PPCII::MO_PIC_FLAG;
+    HiOpFlags = PPCII::MO_PIC_HA_FLAG;
+    LoOpFlags = PPCII::MO_PIC_LO_FLAG;
   }
 }
 
@@ -3452,8 +3453,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressLinux(SDValue Op,
   if (Model == TLSModel::LocalExec) {
     if (Subtarget.isUsingPCRelativeCalls()) {
       SDValue TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
-      SDValue TGA = DAG.getTargetGlobalAddress(
-          GV, dl, PtrVT, 0, (PPCII::MO_PCREL_FLAG | PPCII::MO_TPREL_FLAG));
+      SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                               PPCII::MO_TPREL_PCREL_FLAG);
       SDValue MatAddr =
           DAG.getNode(PPCISD::TLS_LOCAL_EXEC_MAT_ADDR, dl, PtrVT, TGA);
       return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, MatAddr);
@@ -3475,8 +3476,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressLinux(SDValue Op,
     SDValue TGA = DAG.getTargetGlobalAddress(
         GV, dl, PtrVT, 0, IsPCRel ? PPCII::MO_GOT_TPREL_PCREL_FLAG : 0);
     SDValue TGATLS = DAG.getTargetGlobalAddress(
-        GV, dl, PtrVT, 0,
-        IsPCRel ? (PPCII::MO_TLS | PPCII::MO_PCREL_FLAG) : PPCII::MO_TLS);
+        GV, dl, PtrVT, 0, IsPCRel ? PPCII::MO_TLS_PCREL_FLAG : PPCII::MO_TLS);
     SDValue TPOffset;
     if (IsPCRel) {
       SDValue MatPCRel = DAG.getNode(PPCISD::MAT_PCREL_ADDR, dl, PtrVT, TGA);
@@ -3572,8 +3572,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
       EVT Ty = getPointerTy(DAG.getDataLayout());
       if (isAccessedAsGotIndirect(Op)) {
         SDValue GA = DAG.getTargetGlobalAddress(GV, DL, Ty, GSDN->getOffset(),
-                                                PPCII::MO_PCREL_FLAG |
-                                                    PPCII::MO_GOT_FLAG);
+                                                PPCII::MO_GOT_PCREL_FLAG);
         SDValue MatPCRel = DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, GA);
         SDValue Load = DAG.getLoad(MVT::i64, DL, DAG.getEntryNode(), MatPCRel,
                                    MachinePointerInfo());
@@ -7253,7 +7252,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
         // be future work.
         SDValue Store = DAG.getStore(
             CopyFrom.getValue(1), dl, CopyFrom,
-            DAG.getObjectPtrOffset(dl, FIN, TypeSize::Fixed(Offset)),
+            DAG.getObjectPtrOffset(dl, FIN, TypeSize::getFixed(Offset)),
             MachinePointerInfo::getFixedStack(MF, FI, Offset));
 
         MemOps.push_back(Store);
@@ -7433,12 +7432,12 @@ SDValue PPCTargetLowering::LowerCall_AIX(
       }
 
       auto GetLoad = [&](EVT VT, unsigned LoadOffset) {
-        return DAG.getExtLoad(
-            ISD::ZEXTLOAD, dl, PtrVT, Chain,
-            (LoadOffset != 0)
-                ? DAG.getObjectPtrOffset(dl, Arg, TypeSize::Fixed(LoadOffset))
-                : Arg,
-            MachinePointerInfo(), VT);
+        return DAG.getExtLoad(ISD::ZEXTLOAD, dl, PtrVT, Chain,
+                              (LoadOffset != 0)
+                                  ? DAG.getObjectPtrOffset(
+                                        dl, Arg, TypeSize::getFixed(LoadOffset))
+                                  : Arg,
+                              MachinePointerInfo(), VT);
       };
 
       unsigned LoadOffset = 0;
@@ -7468,11 +7467,11 @@ SDValue PPCTargetLowering::LowerCall_AIX(
         // Only memcpy the bytes that don't pass in register.
         MemcpyFlags.setByValSize(ByValSize - LoadOffset);
         Chain = CallSeqStart = createMemcpyOutsideCallSeq(
-            (LoadOffset != 0)
-                ? DAG.getObjectPtrOffset(dl, Arg, TypeSize::Fixed(LoadOffset))
-                : Arg,
-            DAG.getObjectPtrOffset(dl, StackPtr,
-                                   TypeSize::Fixed(ByValVA.getLocMemOffset())),
+            (LoadOffset != 0) ? DAG.getObjectPtrOffset(
+                                    dl, Arg, TypeSize::getFixed(LoadOffset))
+                              : Arg,
+            DAG.getObjectPtrOffset(
+                dl, StackPtr, TypeSize::getFixed(ByValVA.getLocMemOffset())),
             CallSeqStart, MemcpyFlags, DAG, dl);
         continue;
       }
@@ -8080,7 +8079,8 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // For more information, see section F.3 of the 2.06 ISA specification.
   // With ISA 3.0
   if ((!DAG.getTarget().Options.NoInfsFPMath && !Flags.hasNoInfs()) ||
-      (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()))
+      (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
+      ResVT == MVT::f128)
     return Op;
 
   // If the RHS of the comparison is a 0.0, we don't need to do the
@@ -17501,7 +17501,7 @@ bool PPCTargetLowering::useLoadStackGuardNode() const {
 void PPCTargetLowering::insertSSPDeclarations(Module &M) const {
   if (Subtarget.isAIXABI()) {
     M.getOrInsertGlobal(AIXSSPCanaryWordName,
-                        Type::getInt8PtrTy(M.getContext()));
+                        PointerType::getUnqual(M.getContext()));
     return;
   }
   if (!Subtarget.isTargetLinux())

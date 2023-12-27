@@ -32,11 +32,17 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::AShr:
   case Instruction::LShr:
     return cast<PossiblyExactOperator>(this)->isExact();
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(this)->isDisjoint();
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
     return GEP->isInBounds() || GEP->getInRangeIndex() != std::nullopt;
   }
+  case Instruction::ZExt:
+    if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
+      return NNI->hasNonNeg();
+    return false;
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();

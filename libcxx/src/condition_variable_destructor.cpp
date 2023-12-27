@@ -14,10 +14,8 @@
 #include <__config>
 #include <__threading_support>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-# if _LIBCPP_ABI_VERSION == 1 || !defined(_LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION)
-#   define NEEDS_CONDVAR_DESTRUCTOR
-# endif
+#if _LIBCPP_ABI_VERSION == 1 || !defined(_LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION)
+#  define NEEDS_CONDVAR_DESTRUCTOR
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -28,7 +26,7 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable
 {
     __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr condition_variable() noexcept = default;
 
     ~condition_variable();

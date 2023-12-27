@@ -70,8 +70,10 @@ static void printDiagnosticOptions(raw_ostream &OS,
     // flag it as such. Note that diagnostics could also have been mapped by a
     // pragma, but we don't currently have a way to distinguish this.
     if (Level == DiagnosticsEngine::Error &&
-        Info.getDiags()->getDiagnosticIDs()->isWarningOrExtension(Info.getID()) &&
-        !Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(Info.getID())) {
+        Info.getDiags()->getDiagnosticIDs()->isWarningOrExtension(
+            Info.getID()) &&
+        !Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
+            Info.getID())) {
       OS << " [-Werror";
       Started = true;
     }

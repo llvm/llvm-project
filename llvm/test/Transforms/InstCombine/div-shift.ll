@@ -38,7 +38,7 @@ define <2 x i32> @t1vec(<2 x i16> %x, <2 x i32> %y) {
 ; rdar://11721329
 define i64 @t2(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
@@ -52,7 +52,7 @@ define i64 @t2(i64 %x, i32 %y) {
 define i64 @t3(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;

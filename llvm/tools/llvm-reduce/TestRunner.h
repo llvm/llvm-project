@@ -10,7 +10,6 @@
 #define LLVM_TOOLS_LLVM_REDUCE_TESTRUNNER_H
 
 #include "ReducerWorkItem.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"

@@ -506,7 +506,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add = add nuw nsw i32 %mul, %conv3
   %arrayidx4 = getelementptr inbounds i32, i32* %res, i32 %i.011
   store i32 %add, i32* %arrayidx4, align 4
-  %inc = or i32 %i.011, 1
+  %inc = or disjoint i32 %i.011, 1
   %arrayidx.1 = getelementptr inbounds i8, i8* %a, i32 %inc
   %18 = load i8, i8* %arrayidx.1, align 1
   %conv.1 = zext i8 %18 to i32
@@ -517,7 +517,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.1 = add nuw nsw i32 %mul.1, %conv3
   %arrayidx4.1 = getelementptr inbounds i32, i32* %res, i32 %inc
   store i32 %add.1, i32* %arrayidx4.1, align 4
-  %inc.1 = or i32 %i.011, 2
+  %inc.1 = or disjoint i32 %i.011, 2
   %arrayidx.2 = getelementptr inbounds i8, i8* %a, i32 %inc.1
   %20 = load i8, i8* %arrayidx.2, align 1
   %conv.2 = zext i8 %20 to i32
@@ -528,7 +528,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.2 = add nuw nsw i32 %mul.2, %conv3
   %arrayidx4.2 = getelementptr inbounds i32, i32* %res, i32 %inc.1
   store i32 %add.2, i32* %arrayidx4.2, align 4
-  %inc.2 = or i32 %i.011, 3
+  %inc.2 = or disjoint i32 %i.011, 3
   %arrayidx.3 = getelementptr inbounds i8, i8* %a, i32 %inc.2
   %22 = load i8, i8* %arrayidx.3, align 1
   %conv.3 = zext i8 %22 to i32
@@ -782,7 +782,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add = add nuw nsw i32 %mul, %conv3
   %arrayidx4 = getelementptr inbounds i32, i32* %res, i32 %i.011
   store i32 %add, i32* %arrayidx4, align 4
-  %inc = or i32 %i.011, 1
+  %inc = or disjoint i32 %i.011, 1
   %arrayidx.1 = getelementptr inbounds i8, i8* %a, i32 %inc
   %18 = load i8, i8* %arrayidx.1, align 1
   %conv.1 = zext i8 %18 to i32
@@ -793,7 +793,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.1 = add nuw nsw i32 %mul.1, %conv3
   %arrayidx4.1 = getelementptr inbounds i32, i32* %res, i32 %inc
   store i32 %add.1, i32* %arrayidx4.1, align 4
-  %inc.1 = or i32 %i.011, 2
+  %inc.1 = or disjoint i32 %i.011, 2
   %arrayidx.2 = getelementptr inbounds i8, i8* %a, i32 %inc.1
   %20 = load i8, i8* %arrayidx.2, align 1
   %conv.2 = zext i8 %20 to i32
@@ -804,7 +804,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.2 = add nuw nsw i32 %mul.2, %conv3
   %arrayidx4.2 = getelementptr inbounds i32, i32* %res, i32 %inc.1
   store i32 %add.2, i32* %arrayidx4.2, align 4
-  %inc.2 = or i32 %i.011, 3
+  %inc.2 = or disjoint i32 %i.011, 3
   %arrayidx.3 = getelementptr inbounds i8, i8* %a, i32 %inc.2
   %22 = load i8, i8* %arrayidx.3, align 1
   %conv.3 = zext i8 %22 to i32
@@ -1051,7 +1051,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add = add nsw i32 %mul, %c
   %arrayidx2 = getelementptr inbounds i32, i32* %res, i32 %i.09
   store i32 %add, i32* %arrayidx2, align 4
-  %inc = or i32 %i.09, 1
+  %inc = or disjoint i32 %i.09, 1
   %arrayidx.1 = getelementptr inbounds i32, i32* %a, i32 %inc
   %16 = load i32, i32* %arrayidx.1, align 4
   %arrayidx1.1 = getelementptr inbounds i32, i32* %b, i32 %inc
@@ -1060,7 +1060,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.1 = add nsw i32 %mul.1, %c
   %arrayidx2.1 = getelementptr inbounds i32, i32* %res, i32 %inc
   store i32 %add.1, i32* %arrayidx2.1, align 4
-  %inc.1 = or i32 %i.09, 2
+  %inc.1 = or disjoint i32 %i.09, 2
   %arrayidx.2 = getelementptr inbounds i32, i32* %a, i32 %inc.1
   %18 = load i32, i32* %arrayidx.2, align 4
   %arrayidx1.2 = getelementptr inbounds i32, i32* %b, i32 %inc.1
@@ -1069,7 +1069,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add.2 = add nsw i32 %mul.2, %c
   %arrayidx2.2 = getelementptr inbounds i32, i32* %res, i32 %inc.1
   store i32 %add.2, i32* %arrayidx2.2, align 4
-  %inc.2 = or i32 %i.09, 3
+  %inc.2 = or disjoint i32 %i.09, 3
   %arrayidx.3 = getelementptr inbounds i32, i32* %a, i32 %inc.2
   %20 = load i32, i32* %arrayidx.3, align 4
   %arrayidx1.3 = getelementptr inbounds i32, i32* %b, i32 %inc.2

@@ -1919,9 +1919,9 @@ define i32 @select_dominating_cond_inverted_multiple_duplicating_preds(i1 %cond,
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    switch i32 [[COND2:%.*]], label [[SWITCH_CASE_1:%.*]] [
-; CHECK-NEXT:    i32 1, label [[MERGE:%.*]]
-; CHECK-NEXT:    i32 2, label [[MERGE]]
-; CHECK-NEXT:    i32 3, label [[MERGE]]
+; CHECK-NEXT:      i32 1, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 2, label [[MERGE]]
+; CHECK-NEXT:      i32 3, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       switch.case.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -2172,13 +2172,13 @@ define i32 @test_invoke_neg(i32 %x, i32 %y) nounwind uwtable ssp personality ptr
 ; CHECK-LABEL: @test_invoke_neg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = invoke i1 @foo()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { i1, i32 }
-; CHECK-NEXT:    filter [0 x i1] zeroinitializer
+; CHECK-NEXT:            filter [0 x i1] zeroinitializer
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -2205,14 +2205,14 @@ define i32 @test_invoke_2_neg(i1 %cond, i32 %x, i32 %y) nounwind uwtable ssp per
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[RESULT:%.*]] = invoke i32 @bar()
-; CHECK-NEXT:    to label [[MERGE]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[MERGE]] unwind label [[LPAD:%.*]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ [[RESULT]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 1, i32 [[PHI]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { i1, i32 }
-; CHECK-NEXT:    filter [0 x i1] zeroinitializer
+; CHECK-NEXT:            filter [0 x i1] zeroinitializer
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -2242,8 +2242,8 @@ define i32 @select_phi_same_condition_switch(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 1, label [[MERGE:%.*]]
-; CHECK-NEXT:    i32 2, label [[MERGE]]
+; CHECK-NEXT:      i32 1, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 2, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -2901,6 +2901,30 @@ define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
   %gep = getelementptr inbounds i8, ptr %base, i64 %offset
   %sel = select i1 %cmp, ptr %base, ptr %gep
   ret ptr %sel
+}
+
+define i8 @replace_false_op_eq_shl_or_disjoint(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_shl_or_disjoint(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %eq0 = icmp eq i8 %x, -1
+  %shl = shl i8 %x, 3
+  %or = or disjoint i8 %x, %shl
+  %sel = select i1 %eq0, i8 -1, i8 %or
+  ret i8 %sel
+}
+
+define i8 @select_or_disjoint_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_or_disjoint_eq(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %or = or disjoint i8 %x, %y
+  %sel = select i1 %cmp, i8 %x, i8 %or
+  ret i8 %sel
 }
 
 define <2 x i1> @partial_true_undef_condval(<2 x i1> %x) {
@@ -3588,7 +3612,7 @@ define i32 @pr62088() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[NOT2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ -2, [[LOOP]] ]
 ; CHECK-NEXT:    [[H_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[LOOP]] ]
-; CHECK-NEXT:    [[XOR1:%.*]] = or i32 [[H_0]], [[NOT2]]
+; CHECK-NEXT:    [[XOR1:%.*]] = or disjoint i32 [[H_0]], [[NOT2]]
 ; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR1]]
 ; CHECK-NEXT:    [[XOR6:%.*]] = xor i32 [[SUB5]], -1260914025
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[XOR6]], 824855120

@@ -230,7 +230,7 @@ define <64 x i8> @f2(ptr %p0) {
 ; AVX512F-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; AVX512F-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm4, %zmm0
+; AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm4, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: f2:
@@ -517,7 +517,7 @@ define <64 x i8> @f4(ptr %p0) {
 ; AVX512F-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; AVX512F-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm4, %zmm0
+; AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm4, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: f4:

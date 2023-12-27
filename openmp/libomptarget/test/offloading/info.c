@@ -64,7 +64,7 @@ int main() {
   { val = 1; }
 
   __tgt_set_info_flag(0x0);
-// INFO-NOT: Libomptarget device 0 info: {{.*}}
+// INFO-NOT: omptarget device 0 info: {{.*}}
 #pragma omp target
   {}
 

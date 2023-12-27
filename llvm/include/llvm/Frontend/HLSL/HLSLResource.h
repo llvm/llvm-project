@@ -67,7 +67,7 @@ public:
 
   GlobalVariable *getGlobalVariable();
   StringRef getSourceType();
-  uint32_t getResourceKind();
+  ResourceKind getResourceKind();
   uint32_t getResourceIndex();
   uint32_t getSpace();
   MDNode *getMetadata() { return Entry; }

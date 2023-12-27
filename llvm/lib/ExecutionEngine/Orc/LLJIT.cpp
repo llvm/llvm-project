@@ -27,8 +27,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
 
-#include <map>
-
 #define DEBUG_TYPE "orc"
 
 using namespace llvm;

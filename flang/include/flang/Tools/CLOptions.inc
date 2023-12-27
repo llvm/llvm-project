@@ -158,10 +158,10 @@ inline void addDebugFoundationPass(mlir::PassManager &pm) {
 }
 
 inline void addFIRToLLVMPass(
-    mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
+    mlir::PassManager &pm, const MLIRToLLVMPassPipelineConfig &config) {
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
-  options.applyTBAA = optLevel.isOptimizingForSpeed();
+  options.applyTBAA = config.AliasAnalysis;
   options.forceUnifiedTBAATree = useOldAliasTags;
   addPassConditionally(pm, disableFirToLlvmIr,
       [&]() { return fir::createFIRToLLVMPass(options); });
@@ -274,10 +274,8 @@ inline void createHLFIRToFIRPassPipeline(
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
-  if (isTargetDevice) {
-    pm.addPass(fir::createOMPEarlyOutliningPass());
+  if (isTargetDevice)
     pm.addPass(fir::createOMPFunctionFilteringPass());
-  }
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
@@ -313,7 +311,7 @@ inline void createDefaultFIRCodeGenPassPipeline(
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
 
-  fir::addFIRToLLVMPass(pm, config.OptLevel);
+  fir::addFIRToLLVMPass(pm, config);
 }
 
 /// Create a pass pipeline for lowering from MLIR to LLVM IR

@@ -251,6 +251,6 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 6: @267
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     };
+// CHECK-NEXT:     }; // Size: 2144 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

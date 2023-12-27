@@ -311,7 +311,8 @@ LIBC_INLINE static double log_eval(double x) {
 
   // p1 is the leading 7 bits of mx, i.e.
   // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
-  int p1 = (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - 7));
+  int p1 = static_cast<int>(bs.get_mantissa() >>
+                            (FPB::FloatProp::MANTISSA_WIDTH - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
   bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;

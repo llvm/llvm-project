@@ -643,17 +643,63 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Conversions
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasFP16 &&
+               (Query.Types[1] == s16 || Query.Types[1] == v4s16 ||
+                Query.Types[1] == v8s16) &&
+               (Query.Types[0] == s32 || Query.Types[0] == s64 ||
+                Query.Types[0] == v4s16 || Query.Types[0] == v8s16);
+      })
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(1)
-      .clampScalar(1, s32, s64);
+      .clampScalarOrElt(1, MinFPScalar, s64)
+      .moreElementsToNextPow2(0)
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() >
+                   Query.Types[1].getScalarSizeInBits();
+          },
+          LegalizeMutations::changeElementSizeTo(1, 0))
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() <
+                   Query.Types[1].getScalarSizeInBits();
+          },
+          LegalizeMutations::changeElementSizeTo(0, 1))
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasFP16 &&
+               (Query.Types[0] == s16 || Query.Types[0] == v4s16 ||
+                Query.Types[0] == v8s16) &&
+               (Query.Types[1] == s32 || Query.Types[1] == s64 ||
+                Query.Types[1] == v4s16 || Query.Types[1] == v8s16);
+      })
+      .widenScalarToNextPow2(1)
       .clampScalar(1, s32, s64)
-      .minScalarSameAs(1, 0)
-      .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .clampScalarOrElt(0, MinFPScalar, s64)
+      .moreElementsToNextPow2(0)
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() <
+                   Query.Types[1].getScalarSizeInBits();
+          },
+          LegalizeMutations::changeElementSizeTo(0, 1))
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() >
+                   Query.Types[1].getScalarSizeInBits();
+          },
+          LegalizeMutations::changeElementSizeTo(1, 0))
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2);
 
   // Control-flow
   getActionDefinitionsBuilder(G_BRCOND)
@@ -884,15 +930,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}});
 
-  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({{p0}, {s64}});
+  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 
-  getActionDefinitionsBuilder(G_BRJT).legalIf([=](const LegalityQuery &Query) {
-    return Query.Types[0] == p0 && Query.Types[1] == s64;
-  });
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
 
-  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
-                               G_STACKSAVE,
-                               G_STACKRESTORE}).lower();
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
+
+  getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).lower();
 
   if (ST.hasMOPS()) {
     // G_BZERO is not supported. Currently it is only emitted by
@@ -926,11 +970,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(PackedVectorAllTypeList)
       .lowerIf(isScalar(0));
 
+  // For fadd reductions we have pairwise operations available. We treat the
+  // usual legal types as legal and handle the lowering to pairwise instructions
+  // later.
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
-      // We only have FADDP to do reduction-like operations. Lower the rest.
-      .legalFor({{s32, v2s32}, {s64, v2s64}})
+      .legalFor({{s32, v2s32}, {s32, v4s32}, {s64, v2s64}})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[1];
+        return (Ty == v4s16 || Ty == v8s16) && HasFP16;
+      })
+      .minScalarOrElt(0, MinFPScalar)
       .clampMaxNumElements(1, s64, 2)
-      .clampMaxNumElements(1, s32, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
@@ -964,6 +1016,21 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 2)
       .clampMaxNumElements(1, s16, 4)
       .clampMaxNumElements(1, s8, 8)
+      .scalarize(1)
+      .lower();
+
+  getActionDefinitionsBuilder(
+      {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX})
+      .legalFor({{s8, v8s8},
+                 {s8, v16s8},
+                 {s16, v4s16},
+                 {s16, v8s16},
+                 {s32, v2s32},
+                 {s32, v4s32}})
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s8, 16)
       .scalarize(1)
       .lower();
 
@@ -1058,6 +1125,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
       .libcall();
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -1105,6 +1174,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFCopySign(MI, Helper);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, Helper);
+  case TargetOpcode::G_DYN_STACKALLOC:
+    return legalizeDynStackAlloc(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1270,11 +1341,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_mops_memset_tag: {
     assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-    // Zext the value to 64 bit
+    // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
+    // the instruction).
     MachineIRBuilder MIB(MI);
     auto &Value = MI.getOperand(3);
-    Register ZExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
-    Value.setReg(ZExtValueReg);
+    Register ExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
+    Value.setReg(ExtValueReg);
     return true;
   }
   case Intrinsic::prefetch: {
@@ -1793,11 +1865,12 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
 
   // Tagged version MOPSMemorySetTagged is legalised in legalizeIntrinsic
   if (MI.getOpcode() == TargetOpcode::G_MEMSET) {
-    // Zext the value operand to 64 bit
+    // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
+    // the instruction).
     auto &Value = MI.getOperand(1);
-    Register ZExtValueReg =
+    Register ExtValueReg =
         MIRBuilder.buildAnyExt(LLT::scalar(64), Value).getReg(0);
-    Value.setReg(ZExtValueReg);
+    Value.setReg(ExtValueReg);
     return true;
   }
 
@@ -1873,4 +1946,43 @@ bool AArch64LegalizerInfo::legalizeExtractVectorElt(
     return true;
   return Helper.lowerExtractInsertVectorElt(MI) !=
          LegalizerHelper::LegalizeResult::UnableToLegalize;
+}
+
+bool AArch64LegalizerInfo::legalizeDynStackAlloc(
+    MachineInstr &MI, LegalizerHelper &Helper) const {
+  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // If stack probing is not enabled for this function, use the default
+  // lowering.
+  if (!MF.getFunction().hasFnAttribute("probe-stack") ||
+      MF.getFunction().getFnAttribute("probe-stack").getValueAsString() !=
+          "inline-asm") {
+    Helper.lowerDynStackAlloc(MI);
+    return true;
+  }
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register AllocSize = MI.getOperand(1).getReg();
+  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+  assert(MRI.getType(Dst) == LLT::pointer(0, 64) &&
+         "Unexpected type for dynamic alloca");
+  assert(MRI.getType(AllocSize) == LLT::scalar(64) &&
+         "Unexpected type for dynamic alloca");
+
+  LLT PtrTy = MRI.getType(Dst);
+  Register SPReg =
+      Helper.getTargetLowering().getStackPointerRegisterToSaveRestore();
+  Register SPTmp =
+      Helper.getDynStackAllocTargetPtr(SPReg, AllocSize, Alignment, PtrTy);
+  auto NewMI =
+      MIRBuilder.buildInstr(AArch64::PROBED_STACKALLOC_DYN, {}, {SPTmp});
+  MRI.setRegClass(NewMI.getReg(0), &AArch64::GPR64commonRegClass);
+  MIRBuilder.setInsertPt(*NewMI->getParent(), NewMI);
+  MIRBuilder.buildCopy(Dst, SPTmp);
+
+  MI.eraseFromParent();
+  return true;
 }

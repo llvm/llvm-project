@@ -32,7 +32,7 @@ struct convertible_sentinel_wrapper {
   T it_;
 };
 
-struct ConstConveritbleView : BufferView<BufferView<int*>*> {
+struct ConstConvertibleView : BufferView<BufferView<int*>*> {
   using BufferView<BufferView<int*>*>::BufferView;
 
   using sentinel = convertible_sentinel_wrapper<BufferView<int*>*>;
@@ -43,16 +43,16 @@ struct ConstConveritbleView : BufferView<BufferView<int*>*> {
   constexpr sentinel end() { return sentinel(data_ + size_); }
   constexpr const_sentinel end() const { return const_sentinel(data_ + size_); }
 };
-static_assert(!std::ranges::common_range<ConstConveritbleView>);
-static_assert(std::convertible_to<std::ranges::sentinel_t<ConstConveritbleView>,
-                                  std::ranges::sentinel_t<ConstConveritbleView const>>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<ConstConveritbleView>);
+static_assert(!std::ranges::common_range<ConstConvertibleView>);
+static_assert(std::convertible_to<std::ranges::sentinel_t<ConstConvertibleView>,
+                                  std::ranges::sentinel_t<ConstConvertibleView const>>);
+LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<ConstConvertibleView>);
 
 constexpr bool test() {
   int buffer[4][4] = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
   {
     BufferView<int*> inners[] = {buffer[0], buffer[1], buffer[2]};
-    ConstConveritbleView outer(inners);
+    ConstConvertibleView outer(inners);
     std::ranges::join_view jv(outer);
     auto sent1 = jv.end();
     std::ranges::sentinel_t<const decltype(jv)> sent2 = sent1;

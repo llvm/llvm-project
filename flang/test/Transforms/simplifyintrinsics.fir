@@ -9,7 +9,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F322E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F322E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -21,7 +21,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : i32
   }
   func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F322E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F322E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_2.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -70,7 +70,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F332E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F332E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -82,7 +82,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : i32
   }
   func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F332E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F332E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_3.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -134,7 +134,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -146,7 +146,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : f64
   }
   func.func private @_FortranASumReal8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_5.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -194,7 +194,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10xf32>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -206,7 +206,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : f32
   }
   func.func private @_FortranASumReal4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_5.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -255,7 +255,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %3 = fir.embox %arg0(%2) : (!fir.ref<!fir.array<10x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.complex<4>>>
     %4 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %5 = fir.address_of(@_QQcl.2E2F6973756D5F362E66393000) : !fir.ref<!fir.char<1,13>>
+    %5 = fir.address_of(@_QQclX2E2F6973756D5F362E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %6 = fir.convert %0 : (!fir.ref<!fir.complex<4>>) -> !fir.ref<complex<f32>>
     %7 = fir.convert %3 : (!fir.box<!fir.array<10x!fir.complex<4>>>) -> !fir.box<none>
@@ -269,7 +269,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %13 : !fir.complex<4>
   }
   func.func private @_FortranACppSumComplex4(!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F362E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F362E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_6.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -293,7 +293,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F372E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F372E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -311,7 +311,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<20xi32>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F372E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F372E66393000) : !fir.ref<!fir.char<1,13>>
     %c12_i32 = arith.constant 12 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<20xi32>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -323,7 +323,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : i32
   }
   func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F372E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F372E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_7.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -362,7 +362,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %6 = fir.embox %arg0(%4) [%5] : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
     %7 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %8 = fir.address_of(@_QQcl.2E2F6973756D5F382E66393000) : !fir.ref<!fir.char<1,13>>
+    %8 = fir.address_of(@_QQclX2E2F6973756D5F382E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %9 = fir.convert %6 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
     %10 = fir.convert %8 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -374,7 +374,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %14 : i32
   }
   func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F382E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F382E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_8.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -440,7 +440,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %0 = fir.alloca i32 {bindc_name = "test_sum_1", uniq_name = "_QFtest_sum_1Etest_sum_1"}
     %1 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %2 = fir.address_of(@_QQcl.2E2F696D61785F312E66393000) : !fir.ref<!fir.char<1,13>>
+    %2 = fir.address_of(@_QQclX2E2F696D61785F312E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %3 = fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
     %4 = fir.convert %2 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -452,7 +452,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %8 : i32
   }
   func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F696D61785F312E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F696D61785F312E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./imax_1.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -466,7 +466,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
@@ -516,7 +516,7 @@ func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %a
 
 func.func @dot_f64(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "b"}) -> f64 {
   %0 = fir.alloca f64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
@@ -527,7 +527,7 @@ func.func @dot_f64(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %a
   return %6 : f64
 }
 func.func private @_FortranADotProductReal8(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f64 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -543,7 +543,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_f80(%arg0: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "b"}) -> f80 {
   %0 = fir.alloca f80 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf80>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf80>>) -> !fir.box<none>
@@ -554,7 +554,7 @@ func.func @dot_f80(%arg0: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "a"}, %a
   return %6 : f80
 }
 func.func private @_FortranADotProductReal10(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f80 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -570,7 +570,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_f128(%arg0: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "b"}) -> f128 {
   %0 = fir.alloca f128 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf128>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf128>>) -> !fir.box<none>
@@ -581,7 +581,7 @@ func.func @dot_f128(%arg0: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "a"}, 
   return %6 : f128
 }
 func.func private @_FortranADotProductReal16(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f128 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -597,7 +597,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_i32(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) -> i32 {
   %0 = fir.alloca i32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
@@ -608,7 +608,7 @@ func.func @dot_i32(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %a
   return %6 : i32
 }
 func.func private @_FortranADotProductInteger4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i32 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -653,7 +653,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_i8(%arg0: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "b"}) -> i8 {
   %0 = fir.alloca i8 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
@@ -664,7 +664,7 @@ func.func @dot_i8(%arg0: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %arg
   return %6 : i8
 }
 func.func private @_FortranADotProductInteger1(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i8 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -680,7 +680,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_i16(%arg0: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "b"}) -> i16 {
   %0 = fir.alloca i16 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi16>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi16>>) -> !fir.box<none>
@@ -691,7 +691,7 @@ func.func @dot_i16(%arg0: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "a"}, %a
   return %6 : i16
 }
 func.func private @_FortranADotProductInteger2(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i16 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -707,7 +707,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_i64(%arg0: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "b"}) -> i64 {
   %0 = fir.alloca i64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi64>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi64>>) -> !fir.box<none>
@@ -718,7 +718,7 @@ func.func @dot_i64(%arg0: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "a"}, %a
   return %6 : i64
 }
 func.func private @_FortranADotProductInteger8(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i64 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -738,7 +738,7 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 
 func.func @dot_f64_f32(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f64 {
   %0 = fir.alloca f64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
@@ -749,7 +749,7 @@ func.func @dot_f64_f32(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}
   return %6 : f64
 }
 func.func private @_FortranADotProductReal4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -802,7 +802,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F696D61785F322E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F696D61785F322E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -814,7 +814,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : i32
   }
   func.func private @_FortranAMaxvalInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F696D61785F322E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F696D61785F322E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./imax_2.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -858,7 +858,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
     %3 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
-    %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+    %4 = fir.address_of(@_QQclX2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
     %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
     %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -870,7 +870,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return %10 : f64
   }
   func.func private @_FortranAMaxvalReal8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64 attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
+  fir.global linkonce @_QQclX2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./imaxval_5.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
@@ -932,7 +932,7 @@ func.func @sum_sliced_embox_i64(%arg0: !fir.ref<!fir.array<10x10x10xi64>> {fir.b
   %11 = fir.embox %arg0(%9) [%10] : (!fir.ref<!fir.array<10x10x10xi64>>, !fir.shape<3>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xi64>>
   %12 = fir.absent !fir.box<i1>
   %c0 = arith.constant 0 : index
-  %13 = fir.address_of(@_QQcl.2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
+  %13 = fir.address_of(@_QQclX2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
   %c3_i32 = arith.constant 3 : i32
   %14 = fir.convert %11 : (!fir.box<!fir.array<?x?xi64>>) -> !fir.box<none>
   %15 = fir.convert %13 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
@@ -944,7 +944,7 @@ func.func @sum_sliced_embox_i64(%arg0: !fir.ref<!fir.array<10x10x10xi64>> {fir.b
   return %19 : f32
 }
 func.func private @_FortranASumInteger8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
+fir.global linkonce @_QQclX2E2F746573742E66393000 constant : !fir.char<1,11> {
   %0 = fir.string_lit "./test.f90\00"(11) : !fir.char<1,11>
   fir.has_value %0 : !fir.char<1,11>
 }
@@ -979,7 +979,7 @@ func.func @_QPsum_sliced_rebox_i64(%arg0: !fir.box<!fir.array<?x?x?xi64>> {fir.b
   %12 = fir.rebox %arg0 [%11] : (!fir.box<!fir.array<?x?x?xi64>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xi64>>
   %13 = fir.absent !fir.box<i1>
   %c0_3 = arith.constant 0 : index
-  %14 = fir.address_of(@_QQcl.2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
+  %14 = fir.address_of(@_QQclX2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
   %c8_i32 = arith.constant 8 : i32
   %15 = fir.convert %12 : (!fir.box<!fir.array<?x?xi64>>) -> !fir.box<none>
   %16 = fir.convert %14 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
@@ -991,7 +991,7 @@ func.func @_QPsum_sliced_rebox_i64(%arg0: !fir.box<!fir.array<?x?x?xi64>> {fir.b
   return %20 : f32
 }
 func.func private @_FortranASumInteger8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
+fir.global linkonce @_QQclX2E2F746573742E66393000 constant : !fir.char<1,11> {
   %0 = fir.string_lit "./test.f90\00"(11) : !fir.char<1,11>
   fir.has_value %0 : !fir.char<1,11>
 }
@@ -1004,7 +1004,7 @@ fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
 
 func.func @dot_f32_contract_reassoc(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
@@ -1017,7 +1017,7 @@ func.func @dot_f32_contract_reassoc(%arg0: !fir.box<!fir.array<?xf32>> {fir.bind
 
 func.func @dot_f32_fast(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
-  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %1 = fir.address_of(@_QQclX2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
   %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
@@ -1029,7 +1029,7 @@ func.func @dot_f32_fast(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"
 }
 
 func.func private @_FortranADotProductReal4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
   %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
   fir.has_value %0 : !fir.char<1,10>
 }
@@ -1054,7 +1054,7 @@ func.func @sum_1d_real_contract_reassoc(%arg0: !fir.ref<!fir.array<10xf64>> {fir
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
   %3 = fir.absent !fir.box<i1>
   %c0 = arith.constant 0 : index
-  %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+  %4 = fir.address_of(@_QQclX2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
   %c5_i32 = arith.constant 5 : i32
   %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
   %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -1073,7 +1073,7 @@ func.func @sum_1d_real_fast(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name 
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
   %3 = fir.absent !fir.box<i1>
   %c0 = arith.constant 0 : index
-  %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+  %4 = fir.address_of(@_QQclX2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
   %c5_i32 = arith.constant 5 : i32
   %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
   %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
@@ -1086,7 +1086,7 @@ func.func @sum_1d_real_fast(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name 
 }
 
 func.func private @_FortranASumReal8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
+fir.global linkonce @_QQclX2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
   %0 = fir.string_lit "./isum_5.f90\00"(13) : !fir.char<1,13>
   fir.has_value %0 : !fir.char<1,13>
 }
@@ -1110,7 +1110,7 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<f32> {fir.bindc_name = "a
   %2 = fir.shape %c10 : (index) -> !fir.shape<1>
   %3 = fir.embox %1(%2) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
   %c0 = arith.constant 0 : index
-  %4 = fir.address_of(@_QQcl.2E2F746573746661696C2E66393000) : !fir.ref<!fir.char<1,15>>
+  %4 = fir.address_of(@_QQclX2E2F746573746661696C2E66393000) : !fir.ref<!fir.char<1,15>>
   %c10_i32 = arith.constant 10 : i32
   %5 = fir.convert %3 : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
   %6 = fir.convert %4 : (!fir.ref<!fir.char<1,15>>) -> !fir.ref<i8>
@@ -1122,7 +1122,7 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<f32> {fir.bindc_name = "a
   return %10 : i32
 }
 func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F746573746661696C2E66393000 constant : !fir.char<1,15> {
+fir.global linkonce @_QQclX2E2F746573746661696C2E66393000 constant : !fir.char<1,15> {
   %0 = fir.string_lit "./test.f90\00"(15) : !fir.char<1,15>
   fir.has_value %0 : !fir.char<1,15>
 }
@@ -1171,7 +1171,7 @@ func.func @_QPdiffkind(%arg0: !fir.ref<!fir.array<10x!fir.logical<2>>> {fir.bind
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<2>>>
   %c0 = arith.constant 0 : index
-  %3 = fir.address_of(@_QQcl.916d74b25894ddf7881ff7f913a677f5) : !fir.ref<!fir.char<1,52>>
+  %3 = fir.address_of(@_QQclX916d74b25894ddf7881ff7f913a677f5) : !fir.ref<!fir.char<1,52>>
   %c5_i32 = arith.constant 5 : i32
   %4 = fir.convert %2 : (!fir.box<!fir.array<10x!fir.logical<2>>>) -> !fir.box<none>
   %5 = fir.convert %3 : (!fir.ref<!fir.char<1,52>>) -> !fir.ref<i8>
@@ -1230,7 +1230,7 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.log
   %7 = fir.shape %c0 : (index) -> !fir.shape<1>
   %8 = fir.embox %6(%7) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %8 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %9 = fir.address_of(@_QQcl.2E2F746573746661696C2E66393000) : !fir.ref<!fir.char<1,15>>
+  %9 = fir.address_of(@_QQclX2E2F746573746661696C2E66393000) : !fir.ref<!fir.char<1,15>>
   %c11_i32 = arith.constant 11 : i32
   %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
@@ -1270,7 +1270,7 @@ func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i
 func.func @_QPmc(%arg0: !fir.box<!fir.array<?x?x?x!fir.logical<4>>> {fir.bindc_name = "m"}) -> i32 {
   %0 = fir.alloca i32 {bindc_name = "mc", uniq_name = "_QFmcEmc"}
   %c0 = arith.constant 0 : index
-  %1 = fir.address_of(@_QQcl.95529933117f47914fc21e220c1a0896) : !fir.ref<!fir.char<1,58>>
+  %1 = fir.address_of(@_QQclX95529933117f47914fc21e220c1a0896) : !fir.ref<!fir.char<1,58>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?x?x?x!fir.logical<4>>>) -> !fir.box<none>
   %3 = fir.convert %1 : (!fir.ref<!fir.char<1,58>>) -> !fir.ref<i8>
@@ -1298,7 +1298,7 @@ func.func @_QPtestAny_NoDimArg(%arg0: !fir.ref<!fir.array<10x!fir.logical<4>>> {
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
   %c1 = arith.constant 1 : index
-  %3 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %3 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %4 = fir.convert %2 : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
   %5 = fir.convert %3 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
@@ -1351,7 +1351,7 @@ func.func @_QPtestAny_NoDimArgLogical8(%arg0: !fir.ref<!fir.array<10x!fir.logica
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x!fir.logical<8>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<8>>>
   %c1 = arith.constant 1 : index
-  %3 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %3 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %4 = fir.convert %2 : (!fir.box<!fir.array<10x!fir.logical<8>>>) -> !fir.box<none>
   %5 = fir.convert %3 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
@@ -1414,7 +1414,7 @@ func.func @_QPtestAny_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %7 = fir.shape %c0 : (index) -> !fir.shape<1>
   %8 = fir.embox %6(%7) : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
   fir.store %8 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
-  %9 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %9 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
   %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
@@ -1453,7 +1453,7 @@ func.func private @_FortranAAnyDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32
 func.func @_QPtestAny_UnknownDim(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
   %0 = fir.alloca !fir.logical<4> {bindc_name = "testAny_UnknownDim", uniq_name = "_QFtestAny_UnknownDimEtestAny_UnknownDim"}
   %c1 = arith.constant 1 : index
-  %1 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %1 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %2 = fir.convert %arg0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
   %3 = fir.convert %1 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
@@ -1482,7 +1482,7 @@ func.func @_QPtestAny_2D(%arg0: !fir.ref<!fir.array<10x0x!fir.logical<4>>> {fir.
     %1 = fir.shape %c10, %c0 : (index, index) -> !fir.shape<2>
     %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x0x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x0x!fir.logical<4>>>
     %c1 = arith.constant 1 : index
-    %3 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+    %3 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
     %c3_i32 = arith.constant 3 : i32
     %4 = fir.convert %2 : (!fir.box<!fir.array<10x0x!fir.logical<4>>>) -> !fir.box<none>
     %5 = fir.convert %3 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
@@ -1540,7 +1540,7 @@ func.func @_QPtestAll_NoDimArg(%arg0: !fir.ref<!fir.array<10x!fir.logical<4>>> {
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
   %c1 = arith.constant 1 : index
-  %3 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %3 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %4 = fir.convert %2 : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
   %5 = fir.convert %3 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
@@ -1591,7 +1591,7 @@ func.func @_QPtestAll_NoDimArgLogical1(%arg0: !fir.ref<!fir.array<10x!fir.logica
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10x!fir.logical<1>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<1>>>
   %c1 = arith.constant 1 : index
-  %3 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %3 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %4 = fir.convert %2 : (!fir.box<!fir.array<10x!fir.logical<1>>>) -> !fir.box<none>
   %5 = fir.convert %3 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
@@ -1653,7 +1653,7 @@ func.func @_QPtestAll_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %7 = fir.shape %c0 : (index) -> !fir.shape<1>
   %8 = fir.embox %6(%7) : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
   fir.store %8 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
-  %9 = fir.address_of(@_QQcl.04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
+  %9 = fir.address_of(@_QQclX04ab56883945fd2c21a3b6d132f0bb37) : !fir.ref<!fir.char<1,48>>
   %c3_i32 = arith.constant 3 : i32
   %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
   %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
@@ -1707,7 +1707,7 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %9 = fir.shape %c0 : (index) -> !fir.shape<1>
   %10 = fir.embox %8(%9) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %10 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %11 = fir.address_of(@_QQcl.ea5bcf7f706678e1796661f8916f3379) : !fir.ref<!fir.char<1,55>>
+  %11 = fir.address_of(@_QQclXea5bcf7f706678e1796661f8916f3379) : !fir.ref<!fir.char<1,55>>
   %c5_i32 = arith.constant 5 : i32
   %12 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %13 = fir.convert %5 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
@@ -1837,7 +1837,7 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
   %8 = fir.shape %c0 : (index) -> !fir.shape<1>
   %9 = fir.embox %7(%8) : (!fir.heap<!fir.array<?xi64>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi64>>>
   fir.store %9 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi64>>>>
-  %10 = fir.address_of(@_QQcl.cba8b79c45ccae77d79d66a39ac99823) : !fir.ref<!fir.char<1,62>>
+  %10 = fir.address_of(@_QQclXcba8b79c45ccae77d79d66a39ac99823) : !fir.ref<!fir.char<1,62>>
   %c4_i32 = arith.constant 4 : i32
   %11 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi64>>>>) -> !fir.ref<!fir.box<none>>
   %12 = fir.convert %5 : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<none>
@@ -1964,7 +1964,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %8 = fir.shape %c0 : (index) -> !fir.shape<1>
   %9 = fir.embox %7(%8) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %9 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %10 = fir.address_of(@_QQcl.66951c28c5b8bab5cdb25c1ac762b978) : !fir.ref<!fir.char<1,65>>
+  %10 = fir.address_of(@_QQclX66951c28c5b8bab5cdb25c1ac762b978) : !fir.ref<!fir.char<1,65>>
   %c6_i32 = arith.constant 6 : i32
   %11 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %12 = fir.convert %5 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
@@ -2028,7 +2028,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) {
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<f64>
-// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf olt, %[[INARR_ITEMVAL]], %[[MIN]] : f64
+// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf olt, %[[INARR_ITEMVAL]], %[[MIN]] fastmath<{{.*}}> : f64
 // CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[NEW_MIN]] -> (f64) {
 // CHECK:                 %[[ONE:.*]] = arith.constant 1 : i32
 // CHECK:                 %[[OUTARR_IDX:.*]] = arith.constant 0 : index
@@ -2048,7 +2048,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           %[[FLAG_WAS_SET:.*]] = arith.cmpi eq, %[[FLAG_VAL]], %[[FLAG_CHECK]] : i32
 // CHECK:           fir.if %[[FLAG_WAS_SET]] {
 // CHECK:             %[[TEST_MAX:.*]] = arith.constant 1.7976931348623157E+308 : f64
-// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpf oeq, %[[TEST_MAX]], %[[INIT_RES:.*]] : f64
+// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpf oeq, %[[TEST_MAX]], %[[INIT_RES:.*]] fastmath<{{.*}}> : f64
 // CHECK:             fir.if %[[INIT_NOT_CHANGED]] {
 // CHECK:               %[[FLAG_OUTARR_IDX:.*]] = arith.constant 0 : index
 // CHECK:               %[[FLAG_OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[FLAG_OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
@@ -2080,7 +2080,7 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
   %8 = fir.shape %c0 : (index) -> !fir.shape<1>
   %9 = fir.embox %7(%8) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %9 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %10 = fir.address_of(@_QQcl.3791f01d699716ba5914ae524c6a8dee) : !fir.ref<!fir.char<1,62>>
+  %10 = fir.address_of(@_QQclX3791f01d699716ba5914ae524c6a8dee) : !fir.ref<!fir.char<1,62>>
   %c4_i32 = arith.constant 4 : i32
   %11 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %12 = fir.convert %5 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
@@ -2133,7 +2133,7 @@ func.func @_QPtestminloc_doesntwork1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {f
   %7 = fir.zero_bits !fir.heap<i32>
   %8 = fir.embox %7 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
   fir.store %8 to %0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-  %9 = fir.address_of(@_QQcl.cfcf4329f25d06a4b02a0c8f532ee9df) : !fir.ref<!fir.char<1,61>>
+  %9 = fir.address_of(@_QQclXcfcf4329f25d06a4b02a0c8f532ee9df) : !fir.ref<!fir.char<1,61>>
   %c4_i32 = arith.constant 4 : i32
   %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
   %11 = fir.convert %5 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
@@ -2179,7 +2179,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownsize(%arg0: !fir.box<!fir.array<?xi
   %6 = fir.shape %c0 : (index) -> !fir.shape<1>
   %7 = fir.embox %5(%6) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %7 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %8 = fir.address_of(@_QQcl.2064f5e9298c2127417d52b69eac898e) : !fir.ref<!fir.char<1,69>>
+  %8 = fir.address_of(@_QQclX2064f5e9298c2127417d52b69eac898e) : !fir.ref<!fir.char<1,69>>
   %c4_i32 = arith.constant 4 : i32
   %9 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %10 = fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
@@ -2234,7 +2234,7 @@ func.func @_QPtestminloc_doesntwork1d_chars(%arg0: !fir.boxchar<1> {fir.bindc_na
   %10 = fir.shape %c0 : (index) -> !fir.shape<1>
   %11 = fir.embox %9(%10) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %11 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %12 = fir.address_of(@_QQcl.74460ff3ef22ea53671c22344e1556b9) : !fir.ref<!fir.char<1,41>>
+  %12 = fir.address_of(@_QQclX74460ff3ef22ea53671c22344e1556b9) : !fir.ref<!fir.char<1,41>>
   %c4_i32 = arith.constant 4 : i32
   %13 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %14 = fir.convert %7 : (!fir.box<!fir.array<10x!fir.char<1>>>) -> !fir.box<none>
@@ -2315,7 +2315,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownmask(%arg0: !fir.ref<!fir.array<10x
   %28 = fir.shape %c0_1 : (index) -> !fir.shape<1>
   %29 = fir.embox %27(%28) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   fir.store %29 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  %30 = fir.address_of(@_QQcl.74460ff3ef22ea53671c22344e1556b9) : !fir.ref<!fir.char<1,41>>
+  %30 = fir.address_of(@_QQclX74460ff3ef22ea53671c22344e1556b9) : !fir.ref<!fir.char<1,41>>
   %c7_i32 = arith.constant 7 : i32
   %31 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %32 = fir.convert %16 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>

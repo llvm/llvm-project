@@ -148,9 +148,9 @@ entry:
 
 ; CHECK-LABEL: local_stack_alloc:
 ; CHECK: mov x29, sp
-; CHECK: addvl sp, sp, #-2
 ; CHECK: sub sp, sp, #16, lsl #12
 ; CHECK: sub sp, sp, #16
+; CHECK: addvl sp, sp, #-2
 
 ; Stack guard is placed below the SVE stack area (and above all fixed-width objects)
 ; CHECK-DAG: add [[STACK_GUARD_SPILL_PART_LOC:x[0-9]+]], sp, #8, lsl #12
@@ -198,9 +198,9 @@ entry:
 
 ; CHECK-LABEL: local_stack_alloc_strong:
 ; CHECK: mov x29, sp
-; CHECK: addvl sp, sp, #-3
 ; CHECK: sub sp, sp, #16, lsl #12
 ; CHECK: sub sp, sp, #16
+; CHECK: addvl sp, sp, #-3
 
 ; Stack guard is placed at the top of the SVE stack area
 ; CHECK-DAG: ldr [[STACK_GUARD:x[0-9]+]], [{{x[0-9]+}}, :lo12:__stack_chk_guard]

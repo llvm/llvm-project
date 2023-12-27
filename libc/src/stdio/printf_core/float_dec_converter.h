@@ -85,11 +85,13 @@ LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
 
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
-zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa) {
+zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa,
+                  const int32_t mant_width) {
   const int32_t required_twos = -base_2_exp - digits_after_point - 1;
+  // Add 8 to mant width since this is a loose bound.
   const bool has_trailing_zeros =
       required_twos <= 0 ||
-      (required_twos < 60 &&
+      (required_twos < (mant_width + 8) &&
        multiple_of_power_of_2(mantissa, static_cast<uint32_t>(required_twos)));
   return has_trailing_zeros;
 }
@@ -535,7 +537,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
   }
 
   if (exponent < MANT_WIDTH) {
-    const uint32_t blocks = (precision / BLOCK_SIZE) + 1;
+    const uint32_t blocks = (precision / static_cast<uint32_t>(BLOCK_SIZE)) + 1;
     uint32_t i = 0;
     // if all the blocks we should write are zero
     if (blocks <= float_converter.zero_blocks_after_point()) {
@@ -559,7 +561,8 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         RET_IF_RESULT_NEGATIVE(float_writer.write_middle_block(digits));
       } else {
 
-        const uint32_t maximum = precision - BLOCK_SIZE * i;
+        const uint32_t maximum =
+            static_cast<uint32_t>(precision - BLOCK_SIZE * i);
         uint32_t last_digit = 0;
         for (uint32_t k = 0; k < BLOCK_SIZE - maximum; ++k) {
           last_digit = digits % 10;
@@ -568,7 +571,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         RoundDirection round;
         const bool truncated =
             !zero_after_digits(exponent - MANT_WIDTH, precision,
-                               float_bits.get_explicit_mantissa());
+                               float_bits.get_explicit_mantissa(), MANT_WIDTH);
         round = get_round_direction(last_digit, truncated, is_negative);
 
         RET_IF_RESULT_NEGATIVE(
@@ -644,7 +647,8 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   const size_t block_width = IntegerToString<intmax_t>(digits).size();
 
-  final_exponent = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
+  final_exponent = static_cast<int>(cur_block * BLOCK_SIZE) +
+                   static_cast<int>(block_width - 1);
   int positive_exponent = final_exponent < 0 ? -final_exponent : final_exponent;
 
   size_t exponent_width = IntegerToString<intmax_t>(positive_exponent).size();
@@ -733,7 +737,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
       // Use the formula from %f.
       truncated =
           !zero_after_digits(exponent - MANT_WIDTH, precision - final_exponent,
-                             float_bits.get_explicit_mantissa());
+                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
     }
   }
   round = get_round_direction(last_digit, truncated, is_negative);
@@ -817,7 +821,8 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   size_t trailing_zeroes = 0;
   size_t trailing_nines = 0;
 
-  base_10_exp = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
+  base_10_exp = static_cast<int>(cur_block * BLOCK_SIZE) +
+                static_cast<int>(block_width - 1);
 
   // If the first block is not also the last block
   if (block_width <= exp_precision + 1) {
@@ -856,13 +861,13 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       trailing_nines = 0;
       trailing_zeroes = 0;
       BlockInt copy_of_digits = digits;
-      int cur_last_digit = copy_of_digits % 10;
+      BlockInt cur_last_digit = copy_of_digits % 10;
       // We only care if it ends in nines or zeroes.
       while (copy_of_digits > 0 &&
              (cur_last_digit == 9 || cur_last_digit == 0)) {
         // If the next digit is not the same as the previous one, then there are
         // no more contiguous trailing digits.
-        if ((copy_of_digits % 10) != cur_last_digit) {
+        if (copy_of_digits % 10 != cur_last_digit) {
           break;
         }
         if (cur_last_digit == 9) {
@@ -979,7 +984,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       // Use the formula from %f.
       truncated =
           !zero_after_digits(exponent - MANT_WIDTH, exp_precision - base_10_exp,
-                             float_bits.get_explicit_mantissa());
+                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
     }
   }
 

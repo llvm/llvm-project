@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -verify=both -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature +evex512 -verify=both -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=1 -o - -S
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=2 -o - -S
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=3 -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=2 -DNOEVEX512 -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=3 -DNOEVEX512 -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-512 -verify=both -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-256 -verify=avx512-256 -DAVX512_ERR=1 -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-256 -verify=avx512-256 -DAVX512_ERR=2 -o - -S
@@ -54,6 +54,13 @@ void call_errors(void) {
   // avx512-256-error@+1 {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'evex512' enabled changes the ABI}}
   variadic_err(3, t2); // no512-error {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'avx512f' enabled changes the ABI}}
 }
+#if defined(__AVX10_1__)
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+#endif
 #endif
 
 #if !defined(AVX512_ERR) || AVX512_ERR == 3
@@ -70,6 +77,21 @@ __attribute__((target("avx512f,evex512"))) void call_avx512_ok1(void) {
 
 __attribute__((target("avx512f"))) void call_avx512_ok2(void) {
   avx512fType t;
-  takesAvx512(t); // avx512-256-error {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'evex512' enabled changes the ABI}}
+#if defined(NOEVEX512)
+// avx512-256-error@+2 {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'evex512' enabled changes the ABI}}
+#endif
+  takesAvx512(t);
 }
+#if defined(__AVX10_1__)
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+#endif
 #endif

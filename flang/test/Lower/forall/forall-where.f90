@@ -1,6 +1,6 @@
 ! Test forall lowering
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !*** Test a FORALL construct with a nested WHERE construct.
 !    This has both an explicit and implicit iteration space. The WHERE construct
@@ -172,7 +172,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_141:.*]] = arith.subi %[[VAL_114]], %[[VAL_139]] : index
 ! CHECK:             %[[VAL_142:.*]] = fir.do_loop %[[VAL_143:.*]] = %[[VAL_140]] to %[[VAL_141]] step %[[VAL_139]] unordered iter_args(%[[VAL_144:.*]] = %[[VAL_122]]) -> (!fir.array<?xi8>) {
 ! CHECK:               %[[VAL_145:.*]] = fir.array_fetch %[[VAL_116]], %[[VAL_143]] : (!fir.array<100xf32>, index) -> f32
-! CHECK:               %[[VAL_146:.*]] = arith.cmpf ogt, %[[VAL_145]], %[[VAL_117]] : f32
+! CHECK:               %[[VAL_146:.*]] = arith.cmpf ogt, %[[VAL_145]], %[[VAL_117]] {{.*}} : f32
 ! CHECK:               %[[VAL_147:.*]] = arith.constant 1 : i32
 ! CHECK:               %[[VAL_148:.*]] = fir.coordinate_of %[[VAL_102]], %[[VAL_147]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>, i32) -> !fir.ref<!fir.heap<!fir.array<?xi8>>>
 ! CHECK:               %[[VAL_149:.*]] = fir.load %[[VAL_148]] : !fir.ref<!fir.heap<!fir.array<?xi8>>>

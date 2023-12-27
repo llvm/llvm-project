@@ -29,10 +29,14 @@
 // CHECK-NOT: __riscv_xcvalu {{.*$}}
 // CHECK-NOT: __riscv_xcvbi {{.*$}}
 // CHECK-NOT: __riscv_xcvbitmanip {{.*$}}
+// CHECK-NOT: __riscv_xcvelw {{.*$}}
 // CHECK-NOT: __riscv_xcvmac {{.*$}}
+// CHECK-NOT: __riscv_xcvmem {{.*$}}
 // CHECK-NOT: __riscv_xcvsimd {{.*$}}
 // CHECK-NOT: __riscv_xsfcie {{.*$}}
 // CHECK-NOT: __riscv_xsfvcp {{.*$}}
+// CHECK-NOT: __riscv_xsfvfnrclipxfqf {{.*$}}
+// CHECK-NOT: __riscv_xsfvfwmaccqqq {{.*$}}
 // CHECK-NOT: __riscv_xsfqmaccdod {{.*$}}
 // CHECK-NOT: __riscv_xsfvqmaccqoq {{.*$}}
 // CHECK-NOT: __riscv_xtheadba {{.*$}}
@@ -324,6 +328,22 @@
 // RUN: -march=rv64ixsfvcp -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-XSFVCP-EXT %s
 // CHECK-XSFVCP-EXT: __riscv_xsfvcp 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN: -march=rv32ixsfvfnrclipxfqf -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-XSFVFNRCLIPXFQF-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN: -march=rv64ixsfvfnrclipxfqf -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-XSFVFNRCLIPXFQF-EXT %s
+// CHECK-XSFVFNRCLIPXFQF-EXT: __riscv_xsfvfnrclipxfqf 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN: -march=rv32ixsfvfwmaccqqq -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-XSFVFWMACCQQQ-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN: -march=rv64ixsfvfwmaccqqq -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-XSFVFWMACCQQQ-EXT %s
+// CHECK-XSFVFWMACCQQQ-EXT: __riscv_xsfvfwmaccqqq 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN: -march=rv32ixsfvqmaccdod -x c -E -dM %s \

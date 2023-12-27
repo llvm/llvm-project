@@ -71,6 +71,7 @@ protected:
     CortexA9,
     CortexM3,
     CortexM7,
+    CortexM52,
     CortexR4,
     CortexR4F,
     CortexR5,

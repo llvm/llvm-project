@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: bbc -emit-fir -gen-array-coor %s -o - | FileCheck %s --check-prefix=ArrayCoorCHECK
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -gen-array-coor %s -o - | FileCheck %s --check-prefix=ArrayCoorCHECK
 
 ! Test that non-contiguous assumed-shape memory layout is handled in lowering.
 ! In practice, test that input fir.box is propagated to fir operations 

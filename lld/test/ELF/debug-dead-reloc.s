@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: aarch64, x86
 ## Test we resolve symbolic relocations in .debug_* sections to a tombstone
 ## value if the referenced symbol is discarded (--gc-sections, non-prevailing
 ## section group, SHF_EXCLUDE, /DISCARD/, etc).
@@ -9,13 +9,18 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL
 
+# RUN: echo '.globl _start; _start: bl group' | llvm-mc -filetype=obj -triple=aarch64 - -o %t.a64.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t1.a64.o
+# RUN: ld.lld --emit-relocs --gc-sections %t.a64.o %t1.a64.o %t1.a64.o -o %t.a64
+# RUN: llvm-objdump -s %t.a64 | FileCheck %s
+
 # CHECK:      Contents of section .debug_loc:
 # CHECK-NEXT:  0000 01000000 00000000 01000000 00000000
 # CHECK:      Contents of section .debug_ranges:
 # CHECK-NEXT:  0000 01000000 00000000 01000000 00000000
 # CHECK:      Contents of section .debug_addr:
-# CHECK-NEXT:  0000 {{.*}}000 00000000 {{.*}}000 00000000
-# CHECK-NEXT:  0010 00000000  00000000 {{.*}}000 00000000
+# CHECK-NEXT:  0000 {{.*}}00 00000000 {{.*}}00 00000000
+# CHECK-NEXT:  0010 00000000 00000000 {{.*}}00 00000000
 # CHECK:      Contents of section .debug_foo:
 # CHECK-NEXT:  0000 00000000 00000000 08000000 00000000
 # CHECK-NEXT:  0010 00000000 00000000 08000000 00000000

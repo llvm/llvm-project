@@ -347,11 +347,11 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="implicit"></DisplayString>
     <DisplayString IncludeView="modifiers">{*this,view(implicit)nd}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(modifiers)}{Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Struct">{*this,view(modifiers)nd}struct {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Interface">{*this,view(modifiers)nd}interface {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Union">{*this,view(modifiers)nd}union {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Class">{*this,view(modifiers)nd}class {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Enum">{*this,view(modifiers)nd}enum {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Struct">{*this,view(modifiers)nd}struct {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Interface">{*this,view(modifiers)nd}interface {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Union">{*this,view(modifiers)nd}union {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Class">{*this,view(modifiers)nd}class {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Enum">{*this,view(modifiers)nd}enum {Name,view(cpp)}</DisplayString>
     <Expand>
       <ExpandedItem>(clang::DeclContext *)this</ExpandedItem>
     </Expand>
@@ -817,7 +817,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="cached"> {IncludeMacroStack._Mypair._Myval2._Mylast - 1,na}</DisplayString>
     <DisplayString Condition="CurLexer._Mypair._Myval2 != 0">{CurLexer._Mypair._Myval2,na}</DisplayString>
     <DisplayString Condition="CurTokenLexer._Mypair._Myval2 != 0">Expanding Macro: {CurTokenLexer._Mypair._Myval2,na}</DisplayString>
-    <!-- Can't use CurLexerKind because natvis sees the type rather than the variable -->
+    <!-- Can't use CurLexerCallback because natvis sees the type rather than the variable -->
     <DisplayString Condition="IncludeMacroStack._Mypair._Myval2._Mylast - IncludeMacroStack._Mypair._Myval2._Myfirst">
       {this,view(cached)}
     </DisplayString>
@@ -878,7 +878,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{Name,s}</DisplayString>
   </Type>
   <Type Name="clang::FileEntry">
-    <DisplayString>{Name,s}</DisplayString>
+    <DisplayString>{RealPathName,s}</DisplayString>
   </Type>
   <Type Name="clang::DirectoryEntry">
     <DisplayString>{Name,s}</DisplayString>
@@ -1000,7 +1000,14 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::Expr">
+    <DisplayString Condition="StmtBits.sClass==clang::Stmt::StmtClass::StringLiteralClass" IncludeView="poly">{*(clang::StringLiteral *)this}</DisplayString>
     <DisplayString>Expression of class {(clang::Stmt::StmtClass)StmtBits.sClass,en} and type {TR,view(cpp)}</DisplayString>
+  </Type>
+  <Type Name="clang::StringLiteral">
+    <Expand>
+      <Item Name="Length">*(unsigned *)(((clang::StringLiteral *)this)+1)</Item>
+      <Item Name="Data" Condition="StringLiteralBits.NumConcatenated==1">(const char *)(((clang::StringLiteral *)this)+1)+4+4,[*(unsigned *)(((clang::StringLiteral *)this)+1)]s8</Item>
+    </Expand>
   </Type>
   <Type Name="clang::DeclAccessPair">
     <DisplayString IncludeView="access" Condition="(Ptr&amp;Mask) == clang::AS_public">public</DisplayString>

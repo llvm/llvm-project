@@ -666,7 +666,7 @@ static bool isReservedName(StringRef path) {
 
   // First, check to see if this is a device namespace, which always
   // starts with \\.\, since device namespaces are not legal file paths.
-  if (path.startswith("\\\\.\\"))
+  if (path.starts_with("\\\\.\\"))
     return true;
 
   // Then compare against the list of ancient reserved names.
@@ -940,10 +940,10 @@ static bool hasFlushBufferKernelBug() {
 
 static bool isEXE(StringRef Magic) {
   static const char PEMagic[] = {'P', 'E', '\0', '\0'};
-  if (Magic.startswith(StringRef("MZ")) && Magic.size() >= 0x3c + 4) {
+  if (Magic.starts_with(StringRef("MZ")) && Magic.size() >= 0x3c + 4) {
     uint32_t off = read32le(Magic.data() + 0x3c);
     // PE/COFF file, either EXE or DLL.
-    if (Magic.substr(off).startswith(StringRef(PEMagic, sizeof(PEMagic))))
+    if (Magic.substr(off).starts_with(StringRef(PEMagic, sizeof(PEMagic))))
       return true;
   }
   return false;

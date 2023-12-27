@@ -148,20 +148,6 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   }
 }
 
-bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
-  const MachineBasicBlock *MBB) const {
-  if (!AsmPrinter::isBlockOnlyReachableByFallthrough(MBB))
-    return false;
-
-  if (MBB->empty())
-    return true;
-
-  // If this is a block implementing a long branch, an expression relative to
-  // the start of the block is needed.  to the start of the block.
-  // XXX - Is there a smarter way to check this?
-  return (MBB->back().getOpcode() != AMDGPU::S_SETPC_B64);
-}
-
 void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
@@ -341,9 +327,6 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV3:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
-      break;
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
       break;
@@ -956,6 +939,17 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.Occupancy = STM.computeOccupancy(MF.getFunction(), ProgInfo.LDSSize,
                                             ProgInfo.NumSGPRsForWavesPerEU,
                                             ProgInfo.NumVGPRsForWavesPerEU);
+  const auto [MinWEU, MaxWEU] =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
+  if (ProgInfo.Occupancy < MinWEU) {
+    DiagnosticInfoOptimizationFailure Diag(
+        F, F.getSubprogram(),
+        "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
+        "'" +
+            F.getName() + "': desired occupancy was " + Twine(MinWEU) +
+            ", final occupancy is " + Twine(ProgInfo.Occupancy));
+    F.getContext().diagnose(Diag);
+  }
 }
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {

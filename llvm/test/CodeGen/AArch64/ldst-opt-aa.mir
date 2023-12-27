@@ -15,7 +15,7 @@
 ---
 # CHECK-LABEL: name: ldr_str_aa
 # CHECK: $w8, $w9 = LDPWi $x1, 0
-# CHECK: STPWi $w8, $w9, $x0, 0
+# CHECK: STPWi killed $w8, killed $w9, $x0, 0
 name:            ldr_str_aa
 tracksRegLiveness: true
 body:             |

@@ -90,7 +90,10 @@ define i32 @iops(i32 %a, i32 %b) {
   %21 = sdiv exact i32 %20, %2
   %22 = lshr exact i32 %21, %4
   %23 = ashr exact i32 %22, %14
-  ret i32 %23
+  %24 = zext i32 %23 to i64
+  %25 = zext nneg i32 %23 to i64
+  %26 = or disjoint i32 %23, %a
+  ret i32 %26
 }
 
 define i32 @call() {

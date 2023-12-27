@@ -34,7 +34,7 @@ cl::opt<std::string> InstrumentationFilename(
 
 cl::opt<std::string> InstrumentationBinpath(
     "instrumentation-binpath",
-    cl::desc("path to instumented binary in case if /proc/self/map_files "
+    cl::desc("path to instrumented binary in case if /proc/self/map_files "
              "is not accessible due to access restriction issues"),
     cl::Optional, cl::cat(BoltInstrCategory));
 

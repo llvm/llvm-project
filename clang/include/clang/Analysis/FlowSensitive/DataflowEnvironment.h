@@ -166,6 +166,15 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
+  /// Assigns storage locations and values to all parameters, captures, global
+  /// variables, fields and functions referenced in the function currently being
+  /// analyzed.
+  ///
+  /// Requirements:
+  ///
+  ///  The function must have a body.
+  void initialize();
+
   /// Returns a new environment that is a copy of this one.
   ///
   /// The state of the program is initially the same, but can be mutated without
@@ -283,7 +292,15 @@ public:
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  RecordStorageLocation *getThisPointeeStorageLocation() const;
+  RecordStorageLocation *getThisPointeeStorageLocation() const {
+    return ThisPointeeLoc;
+  }
+
+  /// Sets the storage location assigned to the `this` pointee in the
+  /// environment.
+  void setThisPointeeStorageLocation(RecordStorageLocation &Loc) {
+    ThisPointeeLoc = &Loc;
+  }
 
   /// Returns the location of the result object for a record-type prvalue.
   ///
@@ -367,7 +384,8 @@ public:
   /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
-  /// If `Type` is a class, struct, or union type, calls `setValue()` to
+  /// If `Type` is a class, struct, or union type, creates values for all
+  /// modeled fields (including synthetic fields) and calls `setValue()` to
   /// associate the `RecordValue` with its storage location
   /// (`RecordValue::getLoc()`).
   ///
@@ -544,9 +562,6 @@ public:
   /// Record a fact that must be true if this point in the program is reached.
   void assume(const Formula &);
 
-  /// Deprecated synonym for `assume()`.
-  void addToFlowCondition(const Formula &F) { assume(F); }
-
   /// Returns true if the formula is always true when this point is reached.
   /// Returns false if the formula may be false (or the flow condition isn't
   /// sufficiently precise to prove that it is true) or if the solver times out.
@@ -563,9 +578,6 @@ public:
   /// (or the flow condition is overly constraining) or if the solver times out.
   bool allows(const Formula &) const;
 
-  /// Deprecated synonym for `proves()`.
-  bool flowConditionImplies(const Formula &F) const { return proves(F); }
-
   /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
   /// returns null.
   const DeclContext *getDeclCtx() const { return CallStack.back(); }
@@ -575,6 +587,9 @@ public:
   const FunctionDecl *getCurrentFunc() const {
     return dyn_cast<FunctionDecl>(getDeclCtx());
   }
+
+  /// Returns the size of the call stack.
+  size_t callStackSize() const { return CallStack.size(); }
 
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a

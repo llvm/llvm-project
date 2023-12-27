@@ -129,6 +129,18 @@ _Tp __cxx_atomic_load(const volatile __cxx_atomic_base_impl<_Tp>* __a,
 }
 
 template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI void
+__cxx_atomic_load_inplace(const volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
+  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI void
+__cxx_atomic_load_inplace(const __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
+  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
+}
+
+template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI
 _Tp __cxx_atomic_load(const __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
   _Tp __ret;
@@ -362,6 +374,21 @@ _Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const* __a, memory_order __ord
         const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
 }
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI void
+__cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const volatile* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
+    using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
+    *__dst           = __c11_atomic_load(
+        const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
+}
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI void
+__cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
+    using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
+    *__dst           = __c11_atomic_load(
+        const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
+}
+
 template<class _Tp>
 _LIBCPP_HIDE_FROM_ABI
 _Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __value, memory_order __order) _NOEXCEPT {
@@ -558,6 +585,16 @@ struct __cxx_atomic_lock_impl {
     __unlock();
     return __old;
   }
+  _LIBCPP_HIDE_FROM_ABI void __read_inplace(_Tp* __dst) const volatile {
+    __lock();
+    __cxx_atomic_assign_volatile(*__dst, __a_value);
+    __unlock();
+  }
+  _LIBCPP_HIDE_FROM_ABI void __read_inplace(_Tp* __dst) const {
+    __lock();
+    *__dst = __a_value;
+    __unlock();
+  }
 };
 
 template <typename _Tp>
@@ -595,6 +632,16 @@ template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI
 _Tp __cxx_atomic_load(const __cxx_atomic_lock_impl<_Tp>* __a, memory_order) {
   return __a->__read();
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI void
+__cxx_atomic_load(const volatile __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __dst, memory_order) {
+  __a->__read_inplace(__dst);
+}
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_load(const __cxx_atomic_lock_impl<_Tp>* __a, _Tp* __dst, memory_order) {
+  __a->__read_inplace(__dst);
 }
 
 template <typename _Tp>

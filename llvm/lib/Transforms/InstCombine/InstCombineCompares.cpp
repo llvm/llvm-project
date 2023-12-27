@@ -12,12 +12,14 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
@@ -413,7 +415,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 /// Returns true if we can rewrite Start as a GEP with pointer Base
 /// and some integer offset. The nodes that need to be re-written
 /// for this transformation will be added to Explored.
-static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
+static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
                                   const DataLayout &DL,
                                   SetVector<Value *> &Explored) {
   SmallVector<Value *, 16> WorkList(1, Start);
@@ -441,27 +443,15 @@ static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
         continue;
       }
 
-      if (!isa<IntToPtrInst>(V) && !isa<PtrToIntInst>(V) &&
-          !isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
+      if (!isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
         // We've found some value that we can't explore which is different from
         // the base. Therefore we can't do this transformation.
         return false;
 
-      if (isa<IntToPtrInst>(V) || isa<PtrToIntInst>(V)) {
-        auto *CI = cast<CastInst>(V);
-        if (!CI->isNoopCast(DL))
-          return false;
-
-        if (!Explored.contains(CI->getOperand(0)))
-          WorkList.push_back(CI->getOperand(0));
-      }
-
       if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-        // We're limiting the GEP to having one index. This will preserve
-        // the original pointer type. We could handle more cases in the
-        // future.
-        if (GEP->getNumIndices() != 1 || !GEP->isInBounds() ||
-            GEP->getSourceElementType() != ElemTy)
+        // Only allow inbounds GEPs with at most one variable offset.
+        auto IsNonConst = [](Value *V) { return !isa<ConstantInt>(V); };
+        if (!GEP->isInBounds() || count_if(GEP->indices(), IsNonConst) > 1)
           return false;
 
         if (!Explored.contains(GEP->getOperand(0)))
@@ -538,7 +528,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
 
 /// Returns a re-written value of Start as an indexed GEP using Base as a
 /// pointer.
-static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
+static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
                                  const DataLayout &DL,
                                  SetVector<Value *> &Explored,
                                  InstCombiner &IC) {
@@ -569,36 +559,18 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
 
   // Create all the other instructions.
   for (Value *Val : Explored) {
-
     if (NewInsts.contains(Val))
       continue;
 
-    if (auto *CI = dyn_cast<CastInst>(Val)) {
-      // Don't get rid of the intermediate variable here; the store can grow
-      // the map which will invalidate the reference to the input value.
-      Value *V = NewInsts[CI->getOperand(0)];
-      NewInsts[CI] = V;
-      continue;
-    }
     if (auto *GEP = dyn_cast<GEPOperator>(Val)) {
-      Value *Index = NewInsts[GEP->getOperand(1)] ? NewInsts[GEP->getOperand(1)]
-                                                  : GEP->getOperand(1);
       setInsertionPoint(Builder, GEP);
-      // Indices might need to be sign extended. GEPs will magically do
-      // this, but we need to do it ourselves here.
-      if (Index->getType()->getScalarSizeInBits() !=
-          NewInsts[GEP->getOperand(0)]->getType()->getScalarSizeInBits()) {
-        Index = Builder.CreateSExtOrTrunc(
-            Index, NewInsts[GEP->getOperand(0)]->getType(),
-            GEP->getOperand(0)->getName() + ".sext");
-      }
-
-      auto *Op = NewInsts[GEP->getOperand(0)];
+      Value *Op = NewInsts[GEP->getOperand(0)];
+      Value *OffsetV = emitGEPOffset(&Builder, DL, GEP);
       if (isa<ConstantInt>(Op) && cast<ConstantInt>(Op)->isZero())
-        NewInsts[GEP] = Index;
+        NewInsts[GEP] = OffsetV;
       else
         NewInsts[GEP] = Builder.CreateNSWAdd(
-            Op, Index, GEP->getOperand(0)->getName() + ".add");
+            Op, OffsetV, GEP->getOperand(0)->getName() + ".add");
       continue;
     }
     if (isa<PHINode>(Val))
@@ -626,23 +598,14 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     }
   }
 
-  PointerType *PtrTy = PointerType::get(
-      Base->getContext(), Start->getType()->getPointerAddressSpace());
   for (Value *Val : Explored) {
     if (Val == Base)
       continue;
 
-    // Depending on the type, for external users we have to emit
-    // a GEP or a GEP + ptrtoint.
     setInsertionPoint(Builder, Val, false);
-
-    // Cast base to the expected type.
-    Value *NewVal = Builder.CreateBitOrPointerCast(
-        Base, PtrTy, Start->getName() + "to.ptr");
-    NewVal = Builder.CreateInBoundsGEP(ElemTy, NewVal, ArrayRef(NewInsts[Val]),
-                                       Val->getName() + ".ptr");
-    NewVal = Builder.CreateBitOrPointerCast(
-        NewVal, Val->getType(), Val->getName() + ".conv");
+    // Create GEP for external users.
+    Value *NewVal = Builder.CreateInBoundsGEP(
+        Builder.getInt8Ty(), Base, NewInsts[Val], Val->getName() + ".ptr");
     IC.replaceInstUsesWith(*cast<Instruction>(Val), NewVal);
     // Add old instruction to worklist for DCE. We don't directly remove it
     // here because the original compare is one of the users.
@@ -650,48 +613,6 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
   }
 
   return NewInsts[Start];
-}
-
-/// Looks through GEPs, IntToPtrInsts and PtrToIntInsts in order to express
-/// the input Value as a constant indexed GEP. Returns a pair containing
-/// the GEPs Pointer and Index.
-static std::pair<Value *, Value *>
-getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
-  Type *IndexType = IntegerType::get(V->getContext(),
-                                     DL.getIndexTypeSizeInBits(V->getType()));
-
-  Constant *Index = ConstantInt::getNullValue(IndexType);
-  while (true) {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-      // We accept only inbouds GEPs here to exclude the possibility of
-      // overflow.
-      if (!GEP->isInBounds())
-        break;
-      if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
-          GEP->getSourceElementType() == ElemTy) {
-        V = GEP->getOperand(0);
-        Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
-        Index = ConstantExpr::getAdd(
-            Index, ConstantExpr::getSExtOrTrunc(GEPIndex, IndexType));
-        continue;
-      }
-      break;
-    }
-    if (auto *CI = dyn_cast<IntToPtrInst>(V)) {
-      if (!CI->isNoopCast(DL))
-        break;
-      V = CI->getOperand(0);
-      continue;
-    }
-    if (auto *CI = dyn_cast<PtrToIntInst>(V)) {
-      if (!CI->isNoopCast(DL))
-        break;
-      V = CI->getOperand(0);
-      continue;
-    }
-    break;
-  }
-  return {V, Index};
 }
 
 /// Converts (CMP GEPLHS, RHS) if this change would make RHS a constant.
@@ -708,14 +629,19 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
-  Type *ElemTy = GEPLHS->getSourceElementType();
-  Value *PtrBase, *Index;
-  std::tie(PtrBase, Index) = getAsConstantIndexedAddress(ElemTy, GEPLHS, DL);
+  APInt Offset(DL.getIndexTypeSizeInBits(GEPLHS->getType()), 0);
+  Value *PtrBase =
+      GEPLHS->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                /*AllowNonInbounds*/ false);
+
+  // Bail if we looked through addrspacecast.
+  if (PtrBase->getType() != GEPLHS->getType())
+    return nullptr;
 
   // The set of nodes that will take part in this transformation.
   SetVector<Value *> Nodes;
 
-  if (!canRewriteGEPAsOffset(ElemTy, RHS, PtrBase, DL, Nodes))
+  if (!canRewriteGEPAsOffset(RHS, PtrBase, DL, Nodes))
     return nullptr;
 
   // We know we can re-write this as
@@ -724,13 +650,14 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   // can't have overflow on either side. We can therefore re-write
   // this as:
   //   OFFSET1 cmp OFFSET2
-  Value *NewRHS = rewriteGEPAsOffset(ElemTy, RHS, PtrBase, DL, Nodes, IC);
+  Value *NewRHS = rewriteGEPAsOffset(RHS, PtrBase, DL, Nodes, IC);
 
   // RewriteGEPAsOffset has replaced RHS and all of its uses with a re-written
   // GEP having PtrBase as the pointer base, and has returned in NewRHS the
   // offset. Since Index is the offset of LHS to the base pointer, we will now
   // compare the offsets instead of comparing the pointers.
-  return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Index, NewRHS);
+  return new ICmpInst(ICmpInst::getSignedPredicate(Cond),
+                      IC.Builder.getInt(Offset), NewRHS);
 }
 
 /// Fold comparisons between a GEP instruction and something else. At this point
@@ -846,17 +773,6 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    // If one of the GEPs has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPLHS->getType()->isVectorTy() && GEPLHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPRHS, GEPLHS->getOperand(0),
-                         ICmpInst::getSwappedPredicate(Cond), I);
-
-    // If the other GEP has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPRHS->getType()->isVectorTy() && GEPRHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPLHS, GEPRHS->getOperand(0), Cond, I);
-
     bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
@@ -896,8 +812,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     // Only lower this if the icmp is the only user of the GEP or if we expect
     // the result to fold to a constant!
     if ((GEPsInBounds || CmpInst::isEquality(Cond)) &&
-        (isa<ConstantExpr>(GEPLHS) || GEPLHS->hasOneUse()) &&
-        (isa<ConstantExpr>(GEPRHS) || GEPRHS->hasOneUse())) {
+        (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
+        (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse())) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       Value *L = EmitGEPOffset(GEPLHS);
       Value *R = EmitGEPOffset(GEPRHS);
@@ -1287,9 +1203,9 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   if (Pred == ICmpInst::ICMP_SGT) {
     Value *A, *B;
     if (match(Cmp.getOperand(0), m_SMin(m_Value(A), m_Value(B)))) {
-      if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
+      if (isKnownPositive(A, SQ.getWithInstruction(&Cmp)))
         return new ICmpInst(Pred, B, Cmp.getOperand(1));
-      if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))
+      if (isKnownPositive(B, SQ.getWithInstruction(&Cmp)))
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }
@@ -1554,6 +1470,61 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   }
 
   return nullptr;
+}
+
+/// Fold icmp (trunc X), (trunc Y).
+/// Fold icmp (trunc X), (zext Y).
+Instruction *
+InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                              const SimplifyQuery &Q) {
+  if (Cmp.isSigned())
+    return nullptr;
+
+  Value *X, *Y;
+  ICmpInst::Predicate Pred;
+  bool YIsZext = false;
+  // Try to match icmp (trunc X), (trunc Y)
+  if (match(&Cmp, m_ICmp(Pred, m_Trunc(m_Value(X)), m_Trunc(m_Value(Y))))) {
+    if (X->getType() != Y->getType() &&
+        (!Cmp.getOperand(0)->hasOneUse() || !Cmp.getOperand(1)->hasOneUse()))
+      return nullptr;
+    if (!isDesirableIntType(X->getType()->getScalarSizeInBits()) &&
+        isDesirableIntType(Y->getType()->getScalarSizeInBits())) {
+      std::swap(X, Y);
+      Pred = Cmp.getSwappedPredicate(Pred);
+    }
+  }
+  // Try to match icmp (trunc X), (zext Y)
+  else if (match(&Cmp, m_c_ICmp(Pred, m_Trunc(m_Value(X)),
+                                m_OneUse(m_ZExt(m_Value(Y))))))
+
+    YIsZext = true;
+  else
+    return nullptr;
+
+  Type *TruncTy = Cmp.getOperand(0)->getType();
+  unsigned TruncBits = TruncTy->getScalarSizeInBits();
+
+  // If this transform will end up changing from desirable types -> undesirable
+  // types skip it.
+  if (isDesirableIntType(TruncBits) &&
+      !isDesirableIntType(X->getType()->getScalarSizeInBits()))
+    return nullptr;
+
+  // Check if the trunc is unneeded.
+  KnownBits KnownX = llvm::computeKnownBits(X, /*Depth*/ 0, Q);
+  if (KnownX.countMaxActiveBits() > TruncBits)
+    return nullptr;
+
+  if (!YIsZext) {
+    // If Y is also a trunc, make sure it is unneeded.
+    KnownBits KnownY = llvm::computeKnownBits(Y, /*Depth*/ 0, Q);
+    if (KnownY.countMaxActiveBits() > TruncBits)
+      return nullptr;
+  }
+
+  Value *NewY = Builder.CreateZExtOrTrunc(Y, X->getType());
+  return new ICmpInst(Pred, X, NewY);
 }
 
 /// Fold icmp (xor X, Y), C.
@@ -2491,7 +2462,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
                             ConstantInt::getAllOnesValue(ShrTy));
       }
     }
-  } else {
+  } else if (!IsAShr) {
     if (Pred == CmpInst::ICMP_ULT || (Pred == CmpInst::ICMP_UGT && IsExact)) {
       // icmp ult (lshr X, ShAmtC), C --> icmp ult X, (C << ShAmtC)
       // icmp ugt (lshr exact X, ShAmtC), C --> icmp ugt X, (C << ShAmtC)
@@ -3270,10 +3241,12 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   // icmp eq/ne (bitcast (not X) to iN), -1 --> icmp eq/ne (bitcast X to iN), 0
   // Example: are all elements equal? --> are zero elements not equal?
   // TODO: Try harder to reduce compare of 2 freely invertible operands?
-  if (Cmp.isEquality() && C->isAllOnes() && Bitcast->hasOneUse() &&
-      isFreeToInvert(BCSrcOp, BCSrcOp->hasOneUse())) {
-    Value *Cast = Builder.CreateBitCast(Builder.CreateNot(BCSrcOp), DstType);
-    return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(DstType));
+  if (Cmp.isEquality() && C->isAllOnes() && Bitcast->hasOneUse()) {
+    if (Value *NotBCSrcOp =
+            getFreelyInverted(BCSrcOp, BCSrcOp->hasOneUse(), &Builder)) {
+      Value *Cast = Builder.CreateBitCast(NotBCSrcOp, DstType);
+      return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(DstType));
+    }
   }
 
   // If this is checking if all elements of an extended vector are clear or not,
@@ -4538,14 +4511,13 @@ static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
 
   if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
     // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
-    if (IC.isFreeToInvert(Op1, Op1->hasOneUse()))
-      return new ICmpInst(Pred,
-                          IC.Builder.CreateAnd(A, IC.Builder.CreateNot(Op1)),
+    if (Value *NotOp1 =
+            IC.getFreelyInverted(Op1, Op1->hasOneUse(), &IC.Builder))
+      return new ICmpInst(Pred, IC.Builder.CreateAnd(A, NotOp1),
                           Constant::getNullValue(Op1->getType()));
     // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
-    if (IC.isFreeToInvert(A, A->hasOneUse()))
-      return new ICmpInst(Pred,
-                          IC.Builder.CreateOr(Op1, IC.Builder.CreateNot(A)),
+    if (Value *NotA = IC.getFreelyInverted(A, A->hasOneUse(), &IC.Builder))
+      return new ICmpInst(Pred, IC.Builder.CreateOr(Op1, NotA),
                           Constant::getAllOnesValue(Op1->getType()));
   }
   return nullptr;
@@ -5483,6 +5455,32 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                          m_CombineAnd(m_Value(B), m_Unless(m_ImmConstant())))))
     return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
 
+  {
+    // (icmp eq/ne (and (add/sub/xor X, P2), P2), P2)
+    auto m_Matcher =
+        m_CombineOr(m_CombineOr(m_c_Add(m_Value(B), m_Deferred(A)),
+                                m_c_Xor(m_Value(B), m_Deferred(A))),
+                    m_Sub(m_Value(B), m_Deferred(A)));
+    std::optional<bool> IsZero = std::nullopt;
+    if (match(&I, m_c_ICmp(PredUnused, m_OneUse(m_c_And(m_Value(A), m_Matcher)),
+                           m_Deferred(A))))
+      IsZero = false;
+    // (icmp eq/ne (and (add/sub/xor X, P2), P2), 0)
+    else if (match(&I,
+                   m_ICmp(PredUnused, m_OneUse(m_c_And(m_Value(A), m_Matcher)),
+                          m_Zero())))
+      IsZero = true;
+
+    if (IsZero && isKnownToBeAPowerOfTwo(A, /* OrZero */ true, /*Depth*/ 0, &I))
+      // (icmp eq/ne (and (add/sub/xor X, P2), P2), P2)
+      //    -> (icmp eq/ne (and X, P2), 0)
+      // (icmp eq/ne (and (add/sub/xor X, P2), P2), 0)
+      //    -> (icmp eq/ne (and X, P2), P2)
+      return new ICmpInst(Pred, Builder.CreateAnd(B, A),
+                          *IsZero ? A
+                                  : ConstantInt::getNullValue(A->getType()));
+  }
+
   return nullptr;
 }
 
@@ -5559,8 +5557,8 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
   // icmp Pred (ext X), (ext Y)
   Value *Y;
   if (match(ICmp.getOperand(1), m_ZExtOrSExt(m_Value(Y)))) {
-    bool IsZext0 = isa<ZExtOperator>(ICmp.getOperand(0));
-    bool IsZext1 = isa<ZExtOperator>(ICmp.getOperand(1));
+    bool IsZext0 = isa<ZExtInst>(ICmp.getOperand(0));
+    bool IsZext1 = isa<ZExtInst>(ICmp.getOperand(1));
 
     if (IsZext0 != IsZext1) {
         // If X and Y and both i1
@@ -5572,11 +5570,16 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
         return new ICmpInst(ICmp.getPredicate(), Builder.CreateOr(X, Y),
                             Constant::getNullValue(X->getType()));
 
-      // If we have mismatched casts, treat the zext of a non-negative source as
-      // a sext to simulate matching casts. Otherwise, we are done.
-      // TODO: Can we handle some predicates (equality) without non-negative?
-      if ((IsZext0 && isKnownNonNegative(X, DL, 0, &AC, &ICmp, &DT)) ||
-          (IsZext1 && isKnownNonNegative(Y, DL, 0, &AC, &ICmp, &DT)))
+      // If we have mismatched casts and zext has the nneg flag, we can
+      //  treat the "zext nneg" as "sext". Otherwise, we cannot fold and quit.
+
+      auto *NonNegInst0 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(0));
+      auto *NonNegInst1 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(1));
+
+      bool IsNonNeg0 = NonNegInst0 && NonNegInst0->hasNonNeg();
+      bool IsNonNeg1 = NonNegInst1 && NonNegInst1->hasNonNeg();
+
+      if ((IsZext0 && IsNonNeg0) || (IsZext1 && IsNonNeg1))
         IsSignedExt = true;
       else
         return nullptr;
@@ -5819,8 +5822,8 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     return nullptr;
   assert(MulInstr->getOpcode() == Instruction::Mul);
 
-  auto *LHS = cast<ZExtOperator>(MulInstr->getOperand(0)),
-       *RHS = cast<ZExtOperator>(MulInstr->getOperand(1));
+  auto *LHS = cast<ZExtInst>(MulInstr->getOperand(0)),
+       *RHS = cast<ZExtInst>(MulInstr->getOperand(1));
   assert(LHS->getOpcode() == Instruction::ZExt);
   assert(RHS->getOpcode() == Instruction::ZExt);
   Value *A = LHS->getOperand(0), *B = RHS->getOperand(0);
@@ -6111,13 +6114,19 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   KnownBits Op0Known(BitWidth);
   KnownBits Op1Known(BitWidth);
 
-  if (SimplifyDemandedBits(&I, 0,
-                           getDemandedBitsLHSMask(I, BitWidth),
-                           Op0Known, 0))
-    return &I;
+  {
+    // Don't use dominating conditions when folding icmp using known bits. This
+    // may convert signed into unsigned predicates in ways that other passes
+    // (especially IndVarSimplify) may not be able to reliably undo.
+    SQ.DC = nullptr;
+    auto _ = make_scope_exit([&]() { SQ.DC = &DC; });
+    if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
+                             Op0Known, 0))
+      return &I;
 
-  if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
-    return &I;
+    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
+      return &I;
+  }
 
   // Given the known and unknown bits, compute a range that the LHS could be
   // in.  Compute the Min, Max and RHS values based on the known bits. For the
@@ -6892,6 +6901,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
+  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+    return Res;
+
   // Test if the ICmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -7032,16 +7044,18 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
 
-    // ~X < ~Y --> Y < X
-    // ~X < C -->  X > ~C
-    if (match(Op0, m_Not(m_Value(X)))) {
-      if (match(Op1, m_Not(m_Value(Y))))
-        return new ICmpInst(I.getPredicate(), Y, X);
-
-      const APInt *C;
-      if (match(Op1, m_APInt(C)))
-        return new ICmpInst(I.getSwappedPredicate(), X,
-                            ConstantInt::get(Op1->getType(), ~(*C)));
+    // Op0 pred Op1 -> ~Op1 pred ~Op0, if this allows us to drop an instruction.
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      bool ConsumesOp0, ConsumesOp1;
+      if (isFreeToInvert(Op0, Op0->hasOneUse(), ConsumesOp0) &&
+          isFreeToInvert(Op1, Op1->hasOneUse(), ConsumesOp1) &&
+          (ConsumesOp0 || ConsumesOp1)) {
+        Value *InvOp0 = getFreelyInverted(Op0, Op0->hasOneUse(), &Builder);
+        Value *InvOp1 = getFreelyInverted(Op1, Op1->hasOneUse(), &Builder);
+        assert(InvOp0 && InvOp1 &&
+               "Mismatch between isFreeToInvert and getFreelyInverted");
+        return new ICmpInst(I.getSwappedPredicate(), InvOp0, InvOp1);
+      }
     }
 
     Instruction *AddI = nullptr;
@@ -7309,17 +7323,14 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   }
 
   // Okay, now we know that the FP constant fits in the range [SMIN, SMAX] or
-  // [0, UMAX], but it may still be fractional.  See if it is fractional by
-  // casting the FP value to the integer value and back, checking for equality.
+  // [0, UMAX], but it may still be fractional. Check whether this is the case
+  // using the IsExact flag.
   // Don't do this for zero, because -0.0 is not fractional.
-  Constant *RHSInt = LHSUnsigned
-    ? ConstantExpr::getFPToUI(RHSC, IntTy)
-    : ConstantExpr::getFPToSI(RHSC, IntTy);
+  APSInt RHSInt(IntWidth, LHSUnsigned);
+  bool IsExact;
+  RHS.convertToInteger(RHSInt, APFloat::rmTowardZero, &IsExact);
   if (!RHS.isZero()) {
-    bool Equal = LHSUnsigned
-      ? ConstantExpr::getUIToFP(RHSInt, RHSC->getType()) == RHSC
-      : ConstantExpr::getSIToFP(RHSInt, RHSC->getType()) == RHSC;
-    if (!Equal) {
+    if (!IsExact) {
       // If we had a comparison against a fractional value, we have to adjust
       // the compare predicate and sometimes the value.  RHSC is rounded towards
       // zero at this point.
@@ -7385,7 +7396,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
 
   // Lower this FP comparison into an appropriate integer version of the
   // comparison.
-  return new ICmpInst(Pred, LHSI->getOperand(0), RHSInt);
+  return new ICmpInst(Pred, LHSI->getOperand(0), Builder.getInt(RHSInt));
 }
 
 /// Fold (C / X) < 0.0 --> X < 0.0 if possible. Swap predicate if necessary.

@@ -28,6 +28,7 @@ class DbgLabel;
 class DINode;
 class DILocalScope;
 class DwarfCompileUnit;
+class DwarfTypeUnit;
 class DwarfUnit;
 class LexicalScope;
 class MCSection;

@@ -200,6 +200,14 @@ func.func @test_reshape_type_mismatch(%arg0 : tensor<13x21x3xf32>) -> () {
 
 // -----
 
+func.func @test_reverse_axis_out_of_range(%arg0 : tensor<13x21x3xf32>) -> () {
+  // expected-error@+1 {{'tosa.reverse' op expect input tensor rank (3) to be larger than reverse axis (5)}}
+  %0 = tosa.reverse %arg0 {axis = 5 : i32} : (tensor<13x21x3xf32>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
 func.func @test_const_attribute_type_mismatch() -> tensor<100x100xf32> {
   // expected-error@+1 {{'tosa.const' op failed to verify that all of {value, output} have same shape}}
   %0 = "tosa.const"() {value = dense<0.000000e+00> : tensor<1x1xf32>} : () -> tensor<100x100xf32>
@@ -319,5 +327,14 @@ func.func @test_slice_invalid_size() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
   // expected-error@+1 {{'tosa.slice' op length of size attribute is not equal rank of input shape}}
   %1 = tosa.slice %0 {size = array<i64: 1>, start = array<i64: 1, 1, 1>} : (tensor<4x31x31xf32>) -> tensor<*xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_invalid_multiples() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  // expected-error@+1 {{'tosa.tile' op expect 'multiples' array to have length 3 but got 0.}}
+  %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<4x31x31xf32>) -> tensor<4x31x31xf32>
   return
 }

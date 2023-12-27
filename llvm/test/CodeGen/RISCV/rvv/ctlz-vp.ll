@@ -971,15 +971,15 @@ declare <vscale x 16 x i32> @llvm.vp.ctlz.nxv16i32(<vscale x 16 x i32>, i1 immar
 define <vscale x 16 x i32> @vp_ctlz_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
 ; CHECK-NEXT:    vsrl.vi v8, v8, 23, v0.t
-; CHECK-NEXT:    li a0, 158
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 158
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vminu.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv16i32:
@@ -994,15 +994,15 @@ define <vscale x 16 x i32> @vp_ctlz_nxv16i32(<vscale x 16 x i32> %va, <vscale x 
 define <vscale x 16 x i32> @vp_ctlz_nxv16i32_unmasked(<vscale x 16 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv16i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    vsrl.vi v8, v8, 23
-; CHECK-NEXT:    li a0, 158
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vminu.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 158
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv16i32_unmasked:
@@ -1021,16 +1021,16 @@ declare <vscale x 1 x i64> @llvm.vp.ctlz.nxv1i64(<vscale x 1 x i64>, i1 immarg, 
 define <vscale x 1 x i64> @vp_ctlz_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv1i64:
@@ -1045,16 +1045,16 @@ define <vscale x 1 x i64> @vp_ctlz_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x
 define <vscale x 1 x i64> @vp_ctlz_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv1i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv1i64_unmasked:
@@ -1073,16 +1073,16 @@ declare <vscale x 2 x i64> @llvm.vp.ctlz.nxv2i64(<vscale x 2 x i64>, i1 immarg, 
 define <vscale x 2 x i64> @vp_ctlz_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv2i64:
@@ -1097,16 +1097,16 @@ define <vscale x 2 x i64> @vp_ctlz_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x
 define <vscale x 2 x i64> @vp_ctlz_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv2i64_unmasked:
@@ -1125,16 +1125,16 @@ declare <vscale x 4 x i64> @llvm.vp.ctlz.nxv4i64(<vscale x 4 x i64>, i1 immarg, 
 define <vscale x 4 x i64> @vp_ctlz_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv4i64:
@@ -1149,16 +1149,16 @@ define <vscale x 4 x i64> @vp_ctlz_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x
 define <vscale x 4 x i64> @vp_ctlz_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv4i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv4i64_unmasked:
@@ -1177,16 +1177,16 @@ declare <vscale x 7 x i64> @llvm.vp.ctlz.nxv7i64(<vscale x 7 x i64>, i1 immarg, 
 define <vscale x 7 x i64> @vp_ctlz_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv7i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv7i64:
@@ -1201,16 +1201,16 @@ define <vscale x 7 x i64> @vp_ctlz_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x
 define <vscale x 7 x i64> @vp_ctlz_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv7i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv7i64_unmasked:
@@ -1229,16 +1229,16 @@ declare <vscale x 8 x i64> @llvm.vp.ctlz.nxv8i64(<vscale x 8 x i64>, i1 immarg, 
 define <vscale x 8 x i64> @vp_ctlz_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv8i64:
@@ -1253,16 +1253,16 @@ define <vscale x 8 x i64> @vp_ctlz_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x
 define <vscale x 8 x i64> @vp_ctlz_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_nxv8i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vminu.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv8i64_unmasked:
@@ -1290,10 +1290,10 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    fsrmi a3, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a2, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16, v0.t
-; CHECK-NEXT:    fsrm a3
+; CHECK-NEXT:    fsrm a2
 ; CHECK-NEXT:    li a2, 52
 ; CHECK-NEXT:    vsrl.vx v16, v16, a2, v0.t
 ; CHECK-NEXT:    li a3, 1086
@@ -1304,14 +1304,14 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB46_2:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
 ; CHECK-NEXT:    vsrl.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    vrsub.vx v8, v8, a3, v0.t
 ; CHECK-NEXT:    vminu.vx v8, v8, a4, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv16i64:
@@ -1347,10 +1347,10 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    fsrmi a3, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a2, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16
-; CHECK-NEXT:    fsrm a3
+; CHECK-NEXT:    fsrm a2
 ; CHECK-NEXT:    li a2, 52
 ; CHECK-NEXT:    vsrl.vx v16, v16, a2
 ; CHECK-NEXT:    li a3, 1086
@@ -1361,13 +1361,13 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB47_2:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    vsrl.vx v8, v8, a2
 ; CHECK-NEXT:    vrsub.vx v8, v8, a3
 ; CHECK-NEXT:    vminu.vx v8, v8, a4
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv16i64_unmasked:
@@ -2280,13 +2280,13 @@ define <vscale x 8 x i32> @vp_ctlz_zero_undef_nxv8i32_unmasked(<vscale x 8 x i32
 define <vscale x 16 x i32> @vp_ctlz_zero_undef_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
 ; CHECK-NEXT:    vsrl.vi v8, v8, 23, v0.t
-; CHECK-NEXT:    li a0, 158
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 158
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv16i32:
@@ -2301,13 +2301,13 @@ define <vscale x 16 x i32> @vp_ctlz_zero_undef_nxv16i32(<vscale x 16 x i32> %va,
 define <vscale x 16 x i32> @vp_ctlz_zero_undef_nxv16i32_unmasked(<vscale x 16 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv16i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    vsrl.vi v8, v8, 23
-; CHECK-NEXT:    li a0, 158
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 158
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv16i32_unmasked:
@@ -2325,14 +2325,14 @@ define <vscale x 16 x i32> @vp_ctlz_zero_undef_nxv16i32_unmasked(<vscale x 16 x 
 define <vscale x 1 x i64> @vp_ctlz_zero_undef_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv1i64:
@@ -2347,14 +2347,14 @@ define <vscale x 1 x i64> @vp_ctlz_zero_undef_nxv1i64(<vscale x 1 x i64> %va, <v
 define <vscale x 1 x i64> @vp_ctlz_zero_undef_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv1i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv1i64_unmasked:
@@ -2372,14 +2372,14 @@ define <vscale x 1 x i64> @vp_ctlz_zero_undef_nxv1i64_unmasked(<vscale x 1 x i64
 define <vscale x 2 x i64> @vp_ctlz_zero_undef_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv2i64:
@@ -2394,14 +2394,14 @@ define <vscale x 2 x i64> @vp_ctlz_zero_undef_nxv2i64(<vscale x 2 x i64> %va, <v
 define <vscale x 2 x i64> @vp_ctlz_zero_undef_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv2i64_unmasked:
@@ -2419,14 +2419,14 @@ define <vscale x 2 x i64> @vp_ctlz_zero_undef_nxv2i64_unmasked(<vscale x 2 x i64
 define <vscale x 4 x i64> @vp_ctlz_zero_undef_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv4i64:
@@ -2441,14 +2441,14 @@ define <vscale x 4 x i64> @vp_ctlz_zero_undef_nxv4i64(<vscale x 4 x i64> %va, <v
 define <vscale x 4 x i64> @vp_ctlz_zero_undef_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv4i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv4i64_unmasked:
@@ -2466,14 +2466,14 @@ define <vscale x 4 x i64> @vp_ctlz_zero_undef_nxv4i64_unmasked(<vscale x 4 x i64
 define <vscale x 7 x i64> @vp_ctlz_zero_undef_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv7i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv7i64:
@@ -2488,14 +2488,14 @@ define <vscale x 7 x i64> @vp_ctlz_zero_undef_nxv7i64(<vscale x 7 x i64> %va, <v
 define <vscale x 7 x i64> @vp_ctlz_zero_undef_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv7i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv7i64_unmasked:
@@ -2513,14 +2513,14 @@ define <vscale x 7 x i64> @vp_ctlz_zero_undef_nxv7i64_unmasked(<vscale x 7 x i64
 define <vscale x 8 x i64> @vp_ctlz_zero_undef_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv8i64:
@@ -2535,14 +2535,14 @@ define <vscale x 8 x i64> @vp_ctlz_zero_undef_nxv8i64(<vscale x 8 x i64> %va, <v
 define <vscale x 8 x i64> @vp_ctlz_zero_undef_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv8i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
-; CHECK-NEXT:    li a0, 52
-; CHECK-NEXT:    vsrl.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 1086
-; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    li a1, 52
+; CHECK-NEXT:    vsrl.vx v8, v8, a1
+; CHECK-NEXT:    li a1, 1086
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv8i64_unmasked:
@@ -2568,10 +2568,10 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    fsrmi a3, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a2, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16, v0.t
-; CHECK-NEXT:    fsrm a3
+; CHECK-NEXT:    fsrm a2
 ; CHECK-NEXT:    li a2, 52
 ; CHECK-NEXT:    vsrl.vx v16, v16, a2, v0.t
 ; CHECK-NEXT:    li a3, 1086
@@ -2580,13 +2580,13 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB94_2:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8, v0.t
 ; CHECK-NEXT:    vsrl.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    vrsub.vx v8, v8, a3, v0.t
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv16i64:
@@ -2622,10 +2622,10 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64_unmasked(<vscale x 16 x 
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    fsrmi a3, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a2, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16
-; CHECK-NEXT:    fsrm a3
+; CHECK-NEXT:    fsrm a2
 ; CHECK-NEXT:    li a2, 52
 ; CHECK-NEXT:    vsrl.vx v16, v16, a2
 ; CHECK-NEXT:    li a3, 1086
@@ -2634,12 +2634,12 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64_unmasked(<vscale x 16 x 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB95_2:
-; CHECK-NEXT:    fsrmi a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    vsrl.vx v8, v8, a2
 ; CHECK-NEXT:    vrsub.vx v8, v8, a3
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_zero_undef_nxv16i64_unmasked:

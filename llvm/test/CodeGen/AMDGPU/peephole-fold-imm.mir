@@ -8,7 +8,6 @@ body:             |
 
     ; GCN-LABEL: name: fold_simm_virtual
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; GCN-NEXT: SI_RETURN_TO_EPILOG
     %0:sreg_32 = S_MOV_B32 0
     %1:sreg_32 = COPY killed %0

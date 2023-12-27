@@ -6,8 +6,6 @@
 #
 #===----------------------------------------------------------------------===##
 
-import atexit
-import os
 import re
 import select
 import socket

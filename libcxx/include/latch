@@ -74,7 +74,7 @@ public:
         return numeric_limits<ptrdiff_t>::max();
     }
 
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     constexpr explicit latch(ptrdiff_t __expected) : __a_(__expected)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(__expected >= 0,
@@ -89,7 +89,7 @@ public:
     latch(const latch&) = delete;
     latch& operator=(const latch&) = delete;
 
-    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void count_down(ptrdiff_t __update = 1)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(
@@ -101,19 +101,19 @@ public:
         if (__old == __update)
             __a_.notify_all();
     }
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     bool try_wait() const noexcept
     {
         return 0 == __a_.load(memory_order_acquire);
     }
-    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void wait() const
     {
         __cxx_atomic_wait(&__a_.__a_, [this]() -> bool {
             return try_wait();
         });
     }
-    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_wait(ptrdiff_t __update = 1)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(

@@ -309,7 +309,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
           size, &sec)
       .overwrite(sym);
 
-  sym.verdefIndex = old.verdefIndex;
+  sym.versionId = old.versionId;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
@@ -739,7 +739,10 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     uint64_t offset = l.offset;
 
     msg += "\n>>> referenced by ";
-    std::string src = sec.getSrcMsg(sym, offset);
+    // In the absence of line number information, utilize DW_TAG_variable (if
+    // present) for the enclosing symbol (e.g. var in `int *a[] = {&undef};`).
+    Symbol *enclosing = sec.getEnclosingSymbol(offset);
+    std::string src = sec.getSrcMsg(enclosing ? *enclosing : sym, offset);
     if (!src.empty())
       msg += src + "\n>>>               ";
     msg += sec.getObjMsg(offset);

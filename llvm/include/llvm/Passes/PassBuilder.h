@@ -246,8 +246,7 @@ public:
   /// separately to avoid any inconsistencies with an ad-hoc pipeline that tries
   /// to approximate the PerModuleDefaultPipeline from the pre-link LTO
   /// pipelines.
-  ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
-                                               bool ThinLTO, bool EmitSummary);
+  ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
@@ -628,11 +627,16 @@ private:
   Error parseModulePassPipeline(ModulePassManager &MPM,
                                 ArrayRef<PipelineElement> Pipeline);
 
+  // Adds passes to do pre-inlining and related cleanup passes before
+  // profile instrumentation/matching (to enable better context sensitivity),
+  // and for memprof to enable better matching with missing debug frames.
+  void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
+                           ThinOrFullLTOPhase LTOPhase);
+
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
                          bool AtomicCounterUpdate, std::string ProfileFile,
                          std::string ProfileRemappingFile,
-                         ThinOrFullLTOPhase LTOPhase,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   // Extension Point callbacks

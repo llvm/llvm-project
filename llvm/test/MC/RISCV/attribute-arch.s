@@ -124,19 +124,19 @@
 # CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvkg1p0_zvl32b1p0"
 
 .attribute arch, "rv32i_zve64x_zvkn1p0"
-# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvkb1p0_zvkn1p0_zvkned1p0_zvknha1p0_zvknhb1p0_zvkt1p0_zvl32b1p0_zvl64b1p0"
+# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvkb1p0_zvkn1p0_zvkned1p0_zvknhb1p0_zvkt1p0_zvl32b1p0_zvl64b1p0"
     
 .attribute arch, "rv32i_zve64x_zvknc1p0"
-# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zvbc1p0_zve32x1p0_zve64x1p0_zvkb1p0_zvkn1p0_zvknc1p0_zvkned1p0_zvknha1p0_zvknhb1p0_zvkt1p0_zvl32b1p0_zvl64b1p0"
+# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zvbc1p0_zve32x1p0_zve64x1p0_zvkb1p0_zvkn1p0_zvknc1p0_zvkned1p0_zvknhb1p0_zvkt1p0_zvl32b1p0_zvl64b1p0"
 
 .attribute arch, "rv32i_zve64x_zvkng1p0"
-# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvkb1p0_zvkg1p0_zvkn1p0_zvkned1p0_zvkng1p0_zvknha1p0_zvknhb1p0_zvkt1p0_zvl32b1p0_zvl64b1p0"
+# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvkb1p0_zvkg1p0_zvkn1p0_zvkned1p0_zvkng1p0_zvknhb1p0_zvkt1p0_zvl32b1p0_zvl64b1p0"
 
 .attribute arch, "rv32i_zve32x_zvknha1p0"
 # CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvknha1p0_zvl32b1p0"
 
 .attribute arch, "rv32i_zve64x_zvknhb1p0"
-# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvknha1p0_zvknhb1p0_zvl32b1p0_zvl64b1p0"
+# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvknhb1p0_zvl32b1p0_zvl64b1p0"
 
 .attribute arch, "rv32i_zve32x_zvkned1p0"
 # CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvkned1p0_zvl32b1p0"
@@ -294,8 +294,14 @@
 .attribute arch, "rv32i_xcvbitmanip"
 # CHECK: attribute      5, "rv32i2p1_xcvbitmanip1p0"
 
+.attribute arch, "rv32i_xcvelw"
+# CHECK: attribute      5, "rv32i2p1_xcvelw1p0"
+
 .attribute arch, "rv32i_xcvmac"
 # CHECK: attribute      5, "rv32i2p1_xcvmac1p0"
+
+.attribute arch, "rv32i_xcvmem"
+# CHECK: attribute      5, "rv32i2p1_xcvmem1p0"
 
 .attribute arch, "rv32i_xcvsimd"
 # CHECK: attribute      5, "rv32i2p1_xcvsimd1p0"

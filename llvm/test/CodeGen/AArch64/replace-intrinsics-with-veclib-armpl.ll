@@ -15,7 +15,7 @@ declare <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float>)
 
 ;.
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [14 x ptr] [ptr @armpl_vcosq_f64, ptr @armpl_vcosq_f32, ptr @armpl_vsinq_f64, ptr @armpl_vsinq_f32, ptr @armpl_vexpq_f64, ptr @armpl_vexpq_f32, ptr @armpl_vexp2q_f64, ptr @armpl_vexp2q_f32, ptr @armpl_vlogq_f64, ptr @armpl_vlogq_f32, ptr @armpl_vlog2q_f64, ptr @armpl_vlog2q_f32, ptr @armpl_vlog10q_f64, ptr @armpl_vlog10q_f32], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [16 x ptr] [ptr @armpl_vcosq_f64, ptr @armpl_vcosq_f32, ptr @armpl_vsinq_f64, ptr @armpl_vsinq_f32, ptr @armpl_vexpq_f64, ptr @armpl_vexpq_f32, ptr @armpl_vexp2q_f64, ptr @armpl_vexp2q_f32, ptr @armpl_vexp10q_f64, ptr @armpl_vexp10q_f32, ptr @armpl_vlogq_f64, ptr @armpl_vlogq_f32, ptr @armpl_vlog2q_f64, ptr @armpl_vlog2q_f32, ptr @armpl_vlog10q_f64, ptr @armpl_vlog10q_f32], section "llvm.metadata"
 ;.
 define <2 x double> @llvm_cos_f64(<2 x double> %in) {
 ; CHECK-LABEL: define <2 x double> @llvm_cos_f64
@@ -192,6 +192,50 @@ define <vscale x 4 x float> @llvm_exp2_vscale_f32(<vscale x 4 x float> %in) #0 {
   ret <vscale x 4 x float> %1
 }
 
+declare <2 x double> @llvm.exp10.v2f64(<2 x double>)
+declare <4 x float> @llvm.exp10.v4f32(<4 x float>)
+declare <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float>)
+
+define <2 x double> @llvm_exp10_f64(<2 x double> %in) {
+; CHECK-LABEL: define <2 x double> @llvm_exp10_f64
+; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @armpl_vexp10q_f64(<2 x double> [[IN]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = call fast <2 x double> @llvm.exp10.v2f64(<2 x double> %in)
+  ret <2 x double> %1
+}
+
+define <4 x float> @llvm_exp10_f32(<4 x float> %in) {
+; CHECK-LABEL: define <4 x float> @llvm_exp10_f32
+; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vexp10q_f32(<4 x float> [[IN]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call fast <4 x float> @llvm.exp10.v4f32(<4 x float> %in)
+  ret <4 x float> %1
+}
+
+define <vscale x 2 x double> @llvm_exp10_vscale_f64(<vscale x 2 x double> %in) #0 {
+; CHECK-LABEL: define <vscale x 2 x double> @llvm_exp10_vscale_f64
+; CHECK-SAME: (<vscale x 2 x double> [[IN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double> [[IN]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = call fast <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double> %in)
+  ret <vscale x 2 x double> %1
+}
+
+define <vscale x 4 x float> @llvm_exp10_vscale_f32(<vscale x 4 x float> %in) #0 {
+; CHECK-LABEL: define <vscale x 4 x float> @llvm_exp10_vscale_f32
+; CHECK-SAME: (<vscale x 4 x float> [[IN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float> [[IN]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = call fast <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float> %in)
+  ret <vscale x 4 x float> %1
+}
 
 declare <2 x double> @llvm.log.v2f64(<2 x double>)
 declare <4 x float> @llvm.log.v4f32(<4 x float>)

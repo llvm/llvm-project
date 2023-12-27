@@ -401,7 +401,7 @@ public:
   void Execute(const char *args_string, CommandReturnObject &result) override;
 
 protected:
-  virtual bool DoExecute(Args &command, CommandReturnObject &result) = 0;
+  virtual void DoExecute(Args &command, CommandReturnObject &result) = 0;
 
   bool WantsRawCommandString() override { return false; }
 };
@@ -418,7 +418,7 @@ public:
   void Execute(const char *args_string, CommandReturnObject &result) override;
 
 protected:
-  virtual bool DoExecute(llvm::StringRef command,
+  virtual void DoExecute(llvm::StringRef command,
                          CommandReturnObject &result) = 0;
 
   bool WantsRawCommandString() override { return true; }

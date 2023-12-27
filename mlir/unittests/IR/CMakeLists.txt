@@ -10,6 +10,7 @@ add_mlir_unittest(MLIRIRTests
   ShapedTypeTest.cpp
   SymbolTableTest.cpp
   TypeTest.cpp
+  TypeAttrNamesTest.cpp
   OpPropertiesTest.cpp
 
   DEPENDS

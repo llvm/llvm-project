@@ -405,7 +405,7 @@ mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
 mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
   if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
     return seqTy.getEleTy();
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
     auto eleTy = unwrapRefType(boxTy.getEleTy());
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
       return seqTy.getEleTy();
@@ -545,7 +545,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
       break;
     } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
       name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
-      if (charTy.getLen() != fir::CharacterType::singleton())
+      if (charTy.getLen() == fir::CharacterType::unknownLen())
+        name << "xU";
+      else if (charTy.getLen() != fir::CharacterType::singleton())
         name << "x" << charTy.getLen();
       break;
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
@@ -574,6 +576,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
       name << "box_";
       ty = boxTy.getEleTy();
+    } else if (auto boxcharTy = mlir::dyn_cast_or_null<fir::BoxCharType>(ty)) {
+      name << "boxchar_";
+      ty = boxcharTy.getEleTy();
     } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
       name << "rec_" << recTy.getName();
       break;

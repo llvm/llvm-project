@@ -103,9 +103,13 @@ namespace clang {
   /// were written in a particular type specifier sequence.
   struct WrittenBuiltinSpecs {
     static_assert(TST_error < 1 << 7, "Type bitfield not wide enough for TST");
-    /*DeclSpec::TST*/ unsigned Type : 7;
-    /*DeclSpec::TSS*/ unsigned Sign  : 2;
-    /*TypeSpecifierWidth*/ unsigned Width : 2;
+    LLVM_PREFERRED_TYPE(TypeSpecifierType)
+    unsigned Type : 7;
+    LLVM_PREFERRED_TYPE(TypeSpecifierSign)
+    unsigned Sign : 2;
+    LLVM_PREFERRED_TYPE(TypeSpecifierWidth)
+    unsigned Width : 2;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ModeAttr : 1;
   };
 

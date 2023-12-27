@@ -69,7 +69,7 @@ struct Args {
 // Data structure which captures properties of a linux application.
 struct AppProperties {
   // Page size used for the application.
-  uintptr_t pageSize;
+  uintptr_t page_size;
 
   Args *args;
 
@@ -77,7 +77,7 @@ struct AppProperties {
   TLSImage tls;
 
   // Environment data.
-  EnvironType *envPtr;
+  EnvironType *env_ptr;
 };
 
 extern AppProperties app;

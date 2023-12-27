@@ -284,7 +284,7 @@ StaticLibraryDefinitionGenerator::Load(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->getBinary())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -347,7 +347,7 @@ StaticLibraryDefinitionGenerator::Create(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->get())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 

@@ -19,6 +19,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
 #include <optional>
@@ -264,10 +265,6 @@ public:
   enum OMPTargetRegionEntryKind : uint32_t {
     /// Mark the entry as target region.
     OMPTargetRegionEntryTargetRegion = 0x0,
-    /// Mark the entry as a global constructor.
-    OMPTargetRegionEntryCtor = 0x02,
-    /// Mark the entry as a global destructor.
-    OMPTargetRegionEntryDtor = 0x04,
   };
 
   /// Target region entries info.
@@ -445,7 +442,8 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this) {}
+      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
+        T(Triple(M.getTargetTriple())) {}
   ~OpenMPIRBuilder();
 
   /// Initialize the internal state, this will put structures types and
@@ -902,6 +900,28 @@ public:
                               omp::OpenMPOffloadMappingFlags MemberOfFlag);
 
 private:
+  /// Modifies the canonical loop to be a statically-scheduled workshare loop
+  /// which is executed on the device
+  ///
+  /// This takes a \p CLI representing a canonical loop, such as the one
+  /// created by \see createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to call OpenMP device rtl function
+  /// which handles worksharing of loop body interations.
+  ///
+  /// \param DL       Debug location for instructions added for the
+  ///                 workshare-loop construct itself.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param LoopType Information about type of loop worksharing.
+  ///                 It corresponds to type of loop workshare OpenMP pragma.
+  ///
+  /// \returns Point where to insert code after the workshare construct.
+  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                                         InsertPointTy AllocaIP,
+                                         omp::WorksharingLoopType LoopType);
+
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
   /// This takes a \p LoopInfo representing a canonical loop, such as the one
@@ -1014,6 +1034,8 @@ public:
   ///                                present in the schedule clause.
   /// \param HasOrderedClause Whether the (parameterless) ordered clause is
   ///                         present.
+  /// \param LoopType Information about type of loop worksharing.
+  ///                 It corresponds to type of loop workshare OpenMP pragma.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoop(
@@ -1022,7 +1044,9 @@ public:
       llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default,
       Value *ChunkSize = nullptr, bool HasSimdModifier = false,
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
-      bool HasOrderedClause = false);
+      bool HasOrderedClause = false,
+      omp::WorksharingLoopType LoopType =
+          omp::WorksharingLoopType::ForStaticLoop);
 
   /// Tile a loop nest.
   ///
@@ -1447,6 +1471,9 @@ public:
 
   /// Info manager to keep track of target regions.
   OffloadEntriesInfoManager OffloadInfoManager;
+
+  /// The target triple of the underlying module.
+  const Triple T;
 
   /// Helper that contains information about regions we need to outline
   /// during finalization.
@@ -2021,12 +2048,26 @@ public:
   ///
   /// \param Loc The insert and source location description.
   /// \param IsSPMD Flag to indicate if the kernel is an SPMD kernel or not.
-  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD);
+  /// \param MinThreads Minimal number of threads, or 0.
+  /// \param MaxThreads Maximal number of threads, or 0.
+  /// \param MinTeams Minimal number of teams, or 0.
+  /// \param MaxTeams Maximal number of teams, or 0.
+  InsertPointTy createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                 int32_t MinThreadsVal = 0,
+                                 int32_t MaxThreadsVal = 0,
+                                 int32_t MinTeamsVal = 0,
+                                 int32_t MaxTeamsVal = 0);
 
   /// Create a runtime call for kmpc_target_deinit
   ///
   /// \param Loc The insert and source location description.
-  void createTargetDeinit(const LocationDescription &Loc);
+  /// \param TeamsReductionDataSize The maximal size of all the reduction data
+  ///        for teams reduction.
+  /// \param TeamsReductionBufferLength The number of elements (each of up to
+  ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
+  void createTargetDeinit(const LocationDescription &Loc,
+                          int32_t TeamsReductionDataSize = 0,
+                          int32_t TeamsReductionBufferLength = 1024);
 
   ///}
 
@@ -2037,23 +2078,21 @@ public:
   /// Read/write a bounds on threads for \p Kernel. Read will return 0 if none
   /// is set.
   static std::pair<int32_t, int32_t>
-  readThreadBoundsForKernel(Function &Kernel);
-  static void writeThreadBoundsForKernel(Function &Kernel, int32_t LB,
-                                         int32_t UB);
+  readThreadBoundsForKernel(const Triple &T, Function &Kernel);
+  static void writeThreadBoundsForKernel(const Triple &T, Function &Kernel,
+                                         int32_t LB, int32_t UB);
 
   /// Read/write a bounds on teams for \p Kernel. Read will return 0 if none
   /// is set.
-  static std::pair<int32_t, int32_t> readTeamBoundsForKernel(Function &Kernel);
-  static void writeTeamsForKernel(Function &Kernel, int32_t LB, int32_t UB);
+  static std::pair<int32_t, int32_t> readTeamBoundsForKernel(const Triple &T,
+                                                             Function &Kernel);
+  static void writeTeamsForKernel(const Triple &T, Function &Kernel, int32_t LB,
+                                  int32_t UB);
   ///}
 
 private:
   // Sets the function attributes expected for the outlined function
-  void setOutlinedTargetRegionFunctionAttributes(Function *OutlinedFn,
-                                                 int32_t MinTeams,
-                                                 int32_t MaxTeams,
-                                                 int32_t MinThreads,
-                                                 int32_t MaxThreads);
+  void setOutlinedTargetRegionFunctionAttributes(Function *OutlinedFn);
 
   // Creates the function ID/Address for the given outlined function.
   // In the case of an embedded device function the address of the function is
@@ -2098,16 +2137,10 @@ public:
   /// \param InfoManager The info manager keeping track of the offload entries
   /// \param EntryInfo The entry information about the function
   /// \param GenerateFunctionCallback The callback function to generate the code
-  /// \param MinTeams Minimal number of teams
-  /// \param MaxTeams Maximal number of teams
-  /// \param MinThreads Minimal number of threads
-  /// \param MaxThreads Maximal number of threads
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnIDName Name of the ID o be created
   void emitTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
                                 FunctionGenCallback &GenerateFunctionCallback,
-                                int32_t MinTeams, int32_t MaxTeams,
-                                int32_t MinThreads, int32_t MaxThreads,
                                 bool IsOffloadEntry, Function *&OutlinedFn,
                                 Constant *&OutlinedFnID);
 
@@ -2119,14 +2152,10 @@ public:
   /// \param OutlinedFunction Pointer to the outlined function
   /// \param EntryFnName Name of the outlined function
   /// \param EntryFnIDName Name of the ID o be created
-  /// \param MinTeams Minimal number of teams
-  /// \param MaxTeams Maximal number of teams
-  /// \param MinThreads Minimal number of threads
-  /// \param MaxThreads Maximal number of threads
-  Constant *registerTargetRegionFunction(
-      TargetRegionEntryInfo &EntryInfo, Function *OutlinedFunction,
-      StringRef EntryFnName, StringRef EntryFnIDName, int32_t MinTeams,
-      int32_t MaxTeams, int32_t MinThreads, int32_t MaxThreads);
+  Constant *registerTargetRegionFunction(TargetRegionEntryInfo &EntryInfo,
+                                         Function *OutlinedFunction,
+                                         StringRef EntryFnName,
+                                         StringRef EntryFnIDName);
 
   /// Type of BodyGen to use for region codegen
   ///
