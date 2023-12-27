@@ -64,7 +64,6 @@ void test_call_operator_forwarding() {
       assert(Fn::check_call<int&>(CT_Const | CT_RValue));
     }
 #endif
-
     // non-member
     {
       std::visit(obj, v);
@@ -94,7 +93,6 @@ void test_call_operator_forwarding() {
       assert(Fn::check_call<long&>(CT_Const | CT_RValue));
     }
 #endif
-
     // non-member
     {
       std::visit(obj, v);
@@ -183,7 +181,6 @@ void test_argument_forwarding() {
       assert(Fn::check_call<const int&&>(val));
     }
 #endif
-
     // non-member
     {
       std::visit(obj, v);
@@ -249,7 +246,6 @@ void test_argument_forwarding() {
       assert(Fn::check_call<int&&>(val));
     }
 #  endif
-
     // non-member
     {
       std::visit(obj, v);
@@ -328,7 +324,6 @@ void test_return_type() {
       static_assert(std::is_same_v<decltype(v.visit(std::move(cobj))), const Fn&&>);
     }
 #endif
-
     // non-member
     {
       static_assert(std::is_same_v<decltype(std::visit(obj, v)), Fn&>);
@@ -350,7 +345,6 @@ void test_return_type() {
       static_assert(std::is_same_v<decltype(v.visit(std::move(cobj))), const Fn&&>);
     }
 #endif
-
     // non-member
     {
       static_assert(std::is_same_v<decltype(std::visit(obj, v)), Fn&>);
@@ -411,7 +405,6 @@ void test_constexpr() {
     // member
     { static_assert(v.visit(obj) == 42); }
 #endif
-
     // non-member
     { static_assert(std::visit(obj, v) == 42, ""); }
   }
@@ -481,7 +474,6 @@ void test_exceptions() {
     return false;
   };
 #  endif
-
   // non-member
   auto test_nonmember = [&](auto&&... args) {
     try {
@@ -498,9 +490,11 @@ void test_exceptions() {
     V v;
 #  if _LIBCPP_STD_VER >= 26
     makeEmpty(v);
+
     assert(test_member(v));
 #  endif
     makeEmpty(v);
+
     assert(test_nonmember(v));
   }
   {
@@ -509,6 +503,7 @@ void test_exceptions() {
     V v;
     makeEmpty(v);
     V2 v2("hello");
+
     assert(test_nonmember(v, v2));
   }
   {
@@ -517,6 +512,7 @@ void test_exceptions() {
     V v;
     makeEmpty(v);
     V2 v2("hello");
+
     assert(test_nonmember(v2, v));
   }
   {
@@ -526,12 +522,14 @@ void test_exceptions() {
     makeEmpty(v);
     V2 v2;
     makeEmpty(v2);
+
     assert(test_nonmember(v, v2));
   }
   {
     using V = std::variant<int, long, double, MakeEmptyT>;
     V v1(42l), v2(101), v3(202), v4(1.1);
     makeEmpty(v1);
+
     assert(test_nonmember(v1, v2, v3, v4));
   }
   {
@@ -541,6 +539,7 @@ void test_exceptions() {
     makeEmpty(v2);
     makeEmpty(v3);
     makeEmpty(v4);
+
     assert(test_nonmember(v1, v2, v3, v4));
   }
 #endif
@@ -558,7 +557,6 @@ void test_caller_accepts_nonconst() {
   // member
   { v.visit(Visitor{}); }
 #endif
-
   // non-member
   { std::visit(Visitor{}, v); }
 }
@@ -586,7 +584,6 @@ void test_derived_from_variant() {
     std::move(cv1).visit([](auto x) { assert(x == 142); });
   }
 #endif
-
   // non-member
   {
     std::visit([](auto x) { assert(x == 42); }, v1);
@@ -613,7 +610,6 @@ void test_derived_from_variant() {
     EvilVariant1{12.3}.visit([](auto x) { assert(x == 12.3); });
   }
 #endif
-
   // non-member
   {
     std::visit([](auto x) { assert(x == 12); }, EvilVariant1{12});
@@ -643,7 +639,6 @@ void test_derived_from_variant() {
     EvilVariant2{12.3}.visit([](auto x) { assert(x == 12.3); });
   }
 #endif
-
   // non-member
   {
     std::visit([](auto x) { assert(x == 12); }, EvilVariant2{12});
