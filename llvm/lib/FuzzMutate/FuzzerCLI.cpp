@@ -84,9 +84,10 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
       Args.push_back("-passes=simplifycfg");
     } else if (Opt == "gvn") {
       Args.push_back("-passes=gvn");
+    } else if (Opt == "newgvn") {
+      Args.push_back("-passes=newgvn");
     } else if (Opt == "sccp") {
       Args.push_back("-passes=sccp");
-
     } else if (Opt == "loop_predication") {
       Args.push_back("-passes=loop-predication");
     } else if (Opt == "guard_widening") {
@@ -107,7 +108,24 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
       Args.push_back("-passes=loop-reduce");
     } else if (Opt == "irce") {
       Args.push_back("-passes=irce");
-
+    } else if (Opt == "dse") {
+      Args.push_back("-passes=dse");
+    } else if (Opt == "loop_idiom") {
+      Args.push_back("-passes=loop-idiom");
+    } else if (Opt == "reassociate") {
+      Args.push_back("-passes=reassociate");
+    } else if (Opt == "lower_matrix_intrinsics") {
+      Args.push_back("-passes=lower-matrix-intrinsics");
+    } else if (Opt == "loop_reroll") {
+      Args.push_back("-passes=loop-reroll");
+    } else if (Opt == "loop_interchange") {
+      Args.push_back("-passes=loop-interchange");
+    } else if (Opt == "loop_fusion") {
+      Args.push_back("-passes=loop-fusion");
+    } else if (Opt == "memcpyopt") {
+      Args.push_back("-passes=memcpyopt");
+    } else if (Opt == "sroa") {
+      Args.push_back("-passes=sroa");
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {
