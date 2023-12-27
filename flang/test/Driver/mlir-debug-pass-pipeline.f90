@@ -1,14 +1,14 @@
 ! Test the debug pass pipeline
 
-! RUN: %flang -fomit-frame-pointer -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -o /dev/null %s 2>&1 | FileCheck --check-prefixes=ALL,NO-DEBUG %s
+! RUN: %flang -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -o /dev/null %s 2>&1 | FileCheck --check-prefixes=ALL,NO-DEBUG %s
 
-! RUN: %flang -fomit-frame-pointer -g0 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,NO-DEBUG %s
-! RUN: %flang -fomit-frame-pointer -g -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
-! RUN: %flang -fomit-frame-pointer -g1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
-! RUN: %flang -fomit-frame-pointer -gline-tables-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
-! RUN: %flang -fomit-frame-pointer -gline-directives-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-DIRECTIVES %s
-! RUN: %flang -fomit-frame-pointer -g2 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
-! RUN: %flang -fomit-frame-pointer -g3 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
+! RUN: %flang -g0 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,NO-DEBUG %s
+! RUN: %flang -g -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
+! RUN: %flang -g1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
+! RUN: %flang -gline-tables-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
+! RUN: %flang -gline-directives-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-DIRECTIVES %s
+! RUN: %flang -g2 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
+! RUN: %flang -g3 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
 
 ! RUN: not %flang_fc1 -debug-info-kind=invalid -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=DEBUG-ERR %s
 
@@ -82,5 +82,5 @@ end program
 ! ALL-NEXT: ExternalNameConversion
 ! DEBUG-NEXT: AddDebugFoundation
 ! NO-DEBUG-NOT: AddDebugFoundation
-! ALL-NEXT: FIRToLLVMLowering
+! ALL: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

@@ -1,4 +1,4 @@
-! Test that -mframe-pointer can accept only specific values.
+! Test that -mframe-pointer can accept only specific values and when given an invalid value, check it raises an error.
 
 ! RUN: %flang_fc1 -triple aarch64-none-none -mframe-pointer=none -emit-llvm -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-NONEFP
 ! RUN: %flang_fc1 -triple aarch64-none-none -mframe-pointer=non-leaf -emit-llvm -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-NONLEAFFP
