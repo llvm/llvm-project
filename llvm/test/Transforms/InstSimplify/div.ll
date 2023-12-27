@@ -570,9 +570,7 @@ define <2 x i8> @sdiv_vec_multi_one_bit_divisor(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @udiv_exact_mul_nsw(i8 %x) {
 ; CHECK-LABEL: @udiv_exact_mul_nsw(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 24
-; CHECK-NEXT:    [[B:%.*]] = udiv exact i8 [[A]], 24
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %a = mul nsw i8 %x, 24
   %b = udiv exact i8 %a, 24
@@ -581,9 +579,7 @@ define i8 @udiv_exact_mul_nsw(i8 %x) {
 
 define i8 @sdiv_exact_mul_nuw(i8 %x) {
 ; CHECK-LABEL: @sdiv_exact_mul_nuw(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 24
-; CHECK-NEXT:    [[B:%.*]] = sdiv exact i8 [[A]], 24
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %a = mul nuw i8 %x, 24
   %b = sdiv exact i8 %a, 24
