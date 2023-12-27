@@ -956,14 +956,15 @@ class ITy<bits<8> o, Format f, X86TypeInfo t, dag outs, dag ins, string m,
   let hasREX_W  = t.HasREX_W;
 }
 
-defvar unaryop_args = "$src";
+defvar unaryop_args = "$src1";
+defvar unaryop_ndd_args = "{$src1, $dst|$dst, $src1}";
 defvar binop_args = "{$src2, $src1|$src1, $src2}";
 defvar binop_ndd_args = "{$src2, $src1, $dst|$dst, $src1, $src2}";
-defvar binop_constraint = "$src1 = $dst";
+defvar tie_dst_src1 = "$src1 = $dst";
 
 // NDD - Helper for new data destination instructions
 class NDD<bit ndd> {
-  string Constraints = !if(!eq(ndd, 0), binop_constraint, "");
+  string Constraints = !if(!eq(ndd, 0), tie_dst_src1, "");
   Encoding OpEnc = !if(!eq(ndd, 0), EncNormal, EncEVEX);
   bit hasEVEX_B = ndd;
   bit hasVEX_4V = ndd;
