@@ -211,7 +211,11 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateReplacement(MatchedInteger->getLocation(),
                                           FormatedLiteralString);
     }
-  } else if (MatchedFloat != nullptr) {
+
+    return;
+  }
+
+  if (MatchedFloat != nullptr) {
     // Get original literal source text
     const llvm::StringRef OriginalLiteralString = Lexer::getSourceText(
         CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()), Source,
@@ -230,9 +234,11 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateReplacement(MatchedFloat->getLocation(),
                                           FormatedLiteralString);
     }
-  } else {
-    assert(0);
+
+    return;
   }
+
+  llvm_unreachable("Unreachable code in UseDigitSeparatorCheck");
 }
 
 } // namespace clang::tidy::modernize
