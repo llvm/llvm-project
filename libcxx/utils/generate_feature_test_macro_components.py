@@ -1265,9 +1265,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_variant",
             "values": {
-                "c++17": 202102, # std::visit for classes derived from std::variant
-                # "c++20": 202106, # Fully constexpr std::variant
-                # "c++26": 202306, # Member visit
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit
             },
             "headers": ["variant"],
         },
