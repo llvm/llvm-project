@@ -462,10 +462,8 @@ static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
   return MCDisassembler::Success;
 }
 
-// spimm is based on rlist now.
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, unsigned Imm,
                                     uint64_t Address, const void *Decoder) {
-  // TODO: check if spimm matches rlist
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
