@@ -1366,10 +1366,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
-void clang::InitializePreprocessor(
-    Preprocessor &PP, const PreprocessorOptions &InitOpts,
-    const PCHContainerReader &PCHContainerRdr,
-    const FrontendOptions &FEOpts) {
+void clang::InitializePreprocessor(Preprocessor &PP,
+                                   const PreprocessorOptions &InitOpts,
+                                   const PCHContainerReader &PCHContainerRdr,
+                                   const FrontendOptions &FEOpts,
+                                   const CodeGenOptions &CodeGenOpts) {
   const LangOptions &LangOpts = PP.getLangOpts();
   std::string PredefineBuffer;
   PredefineBuffer.reserve(4080);
@@ -1415,6 +1416,9 @@ void clang::InitializePreprocessor(
   // current language configuration.
   InitializeStandardPredefinedMacros(PP.getTargetInfo(), PP.getLangOpts(),
                                      FEOpts, Builder);
+
+  if (CodeGenOpts.hasProfileIRInstr())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_GENERATE");
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
   // that they come from the command line.
