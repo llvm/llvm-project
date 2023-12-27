@@ -465,6 +465,10 @@ Changes in existing checks
   `AllowPointerConditions` options. It also now provides more consistent
   suggestions when parentheses are added to the return value.
 
+- Improved :doc:`readability-misleading-indentation
+  <clang-tidy/checks/readability/misleading-indentation>` check to ignore
+  false-positives for line started with empty macro.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
