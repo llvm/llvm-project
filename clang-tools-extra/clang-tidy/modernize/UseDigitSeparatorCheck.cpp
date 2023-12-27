@@ -209,7 +209,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
            "unformatted representation of integer literal '%0'")
           << OriginalLiteralString
           << FixItHint::CreateReplacement(MatchedInteger->getLocation(),
-                                        FormatedLiteralString);
+                                          FormatedLiteralString);
     }
   } else if (MatchedFloat != nullptr) {
     // Get original literal source text
@@ -228,7 +228,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
            "unformatted representation of float literal '%0'")
           << OriginalLiteralString
           << FixItHint::CreateReplacement(MatchedFloat->getLocation(),
-                                        FormatedLiteralString);
+                                          FormatedLiteralString);
     }
   } else {
     assert(0);
