@@ -77,7 +77,7 @@ void test_handle(T value, ExpectedR expectedValue) {
 
   std::same_as<ExpectedR> decltype(auto) result = format_args.get(0).template visit<ExpectedR>([](auto a) -> ExpectedR {
     // TODO: This check fails
-    (void) a;
+    (void)a;
     // assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>));
 
     return make_expected_result<ExpectedR>();
