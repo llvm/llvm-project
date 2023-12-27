@@ -203,20 +203,20 @@ void test_argument_forwarding() {
     V v(x);
     const V& cv = v;
 
-    // #  if _LIBCPP_STD_VER >= 26
-    //     // member
-    //     {
-    //       v.visit(obj);
-    //       assert(Fn::check_call<int&>(val));
-    //       cv.visit(obj);
-    //       assert(Fn::check_call<int&>(val));
-    //       std::move(v).visit(obj);
-    //       assert(Fn::check_call<int&>(val));
-    //       std::move(cv).visit(obj);
-    //       assert(Fn::check_call<int>(CT_NonConst));
-    //       assert(false);
-    //     }
-    // #  endif
+#  if _LIBCPP_STD_VER >= 26
+    // member
+    {
+      v.visit(obj);
+      assert(Fn::check_call<int&>(val));
+      cv.visit(obj);
+      assert(Fn::check_call<int&>(val));
+      std::move(v).visit(obj);
+      assert(Fn::check_call<int&>(val));
+      std::move(cv).visit(obj);
+      assert(Fn::check_call<int&>(val));
+      assert(false);
+    }
+#  endif
 
     // non-member
     {
@@ -235,6 +235,20 @@ void test_argument_forwarding() {
     int x   = 42;
     V v(std::move(x));
     const V& cv = v;
+
+#  if _LIBCPP_STD_VER >= 26
+    // member
+    {
+      v.visit(obj);
+      assert(Fn::check_call<int&>(val));
+      cvstd::visit(obj);
+      assert(Fn::check_call<int&>(val));
+      std::move(v).visit(obj);
+      assert(Fn::check_call<int&&>(val));
+      std::move(cv).visit(obj);
+      assert(Fn::check_call<int&&>(val));
+    }
+#  endif
 
     // non-member
     {
