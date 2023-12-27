@@ -9360,6 +9360,7 @@ cc_binary(
         ":MlirJitRunner",
         ":Pass",
         ":ReconcileUnrealizedCasts",
+	":SCFDialect",
         ":SPIRVDialect",
         ":SPIRVTransforms",
         ":ToLLVMIRTranslation",
