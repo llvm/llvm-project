@@ -6663,24 +6663,38 @@ let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 class Crc32r<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   : ITy<0xF1, MRMSrcReg, t, (outs rc:$dst), (ins rc:$src1, t.RegClass:$src2),
       "crc32", binop_args, [(set rc:$dst, (node rc:$src1, t.RegClass:$src2))]>,
-    Sched<[WriteCRC32]> {
+    Sched<[WriteCRC32]>, NoCD8 {
   let Constraints = "$src1 = $dst";
 }
 
 class Crc32m<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   : ITy<0xF1, MRMSrcMem, t, (outs rc:$dst), (ins rc:$src1, t.MemOperand:$src2),
       "crc32", binop_args, [(set rc:$dst, (node rc:$src1, (load addr:$src2)))]>,
-    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]> {
+    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]>, NoCD8 {
   let Constraints = "$src1 = $dst";
 }
 
-let Predicates = [HasCRC32], OpMap = T8, OpPrefix = XD in {
+let Predicates = [HasCRC32, NoEGPR], OpMap = T8, OpPrefix = XD in {
   def CRC32r32r8  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
   def CRC32r32m8  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
   def CRC32r32r16 : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
   def CRC32r32m16 : Crc32m<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
   def CRC32r32r32 : Crc32r<Xi32, GR32, int_x86_sse42_crc32_32_32>, OpSize32;
   def CRC32r32m32 : Crc32m<Xi32, GR32, int_x86_sse42_crc32_32_32>, OpSize32;
+  def CRC32r64r64 : Crc32r<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64m64 : Crc32m<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64r8 : Crc32r<Xi8, GR64, null_frag>, REX_W;
+  let mayLoad = 1 in
+    def CRC32r64m8 : Crc32m<Xi8, GR64, null_frag>, REX_W;
+}
+
+let Predicates = [HasCRC32, HasEGPR, In64BitMode], OpMap = T8, OpEnc = EncEVEX in {
+  def CRC32r32r8  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32m8  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32r16 : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, PD;
+  def CRC32r32m16 : Crc32m<Xi16, GR32, int_x86_sse42_crc32_32_16>, PD;
+  def CRC32r32r32 : Crc32r<Xi32, GR32, int_x86_sse42_crc32_32_32>;
+  def CRC32r32m32 : Crc32m<Xi32, GR32, int_x86_sse42_crc32_32_32>;
   def CRC32r64r64 : Crc32r<Xi64, GR64, int_x86_sse42_crc32_64_64>;
   def CRC32r64m64 : Crc32m<Xi64, GR64, int_x86_sse42_crc32_64_64>;
   def CRC32r64r8 : Crc32r<Xi8, GR64, null_frag>, REX_W;
