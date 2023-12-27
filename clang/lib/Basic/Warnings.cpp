@@ -198,8 +198,7 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
       }
     }
 
-    for (unsigned i = 0, e = Opts.Remarks.size(); i != e; ++i) {
-      StringRef Opt = Opts.Remarks[i];
+    for (StringRef Opt : Opts.Remarks) {
       const auto Flavor = diag::Flavor::Remark;
 
       // Check to see if this warning starts with "no-", if so, this is a

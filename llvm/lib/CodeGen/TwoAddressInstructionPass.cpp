@@ -1124,8 +1124,7 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
       }
     }
 
-    for (unsigned i = 0, e = OtherDefs.size(); i != e; ++i) {
-      Register MOReg = OtherDefs[i];
+    for (Register MOReg : OtherDefs) {
       if (regOverlapsSet(Uses, MOReg))
         return false;
       if (MOReg.isPhysical() && regOverlapsSet(LiveDefs, MOReg))

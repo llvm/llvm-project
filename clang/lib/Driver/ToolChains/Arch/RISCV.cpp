@@ -167,13 +167,6 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
   }
 
-  // GCC Compatibility: -mno-save-restore is default, unless -msave-restore is
-  // specified.
-  if (Args.hasFlag(options::OPT_msave_restore, options::OPT_mno_save_restore, false))
-    Features.push_back("+save-restore");
-  else
-    Features.push_back("-save-restore");
-
   // -mno-unaligned-access is default, unless -munaligned-access is specified.
   AddTargetFeature(Args, Features, options::OPT_munaligned_access,
                    options::OPT_mno_unaligned_access, "fast-unaligned-access");
