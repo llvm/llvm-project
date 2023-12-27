@@ -674,12 +674,10 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; SI-NEXT:    s_and_b64 exec, exec, s[4:5]
 ; SI-NEXT:  .LBB6_3: ; %.continue0
 ; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
-; SI-NEXT:    s_xor_b64 s[4:5], s[0:1], -1
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; SI-NEXT:    v_and_b32_e32 v0, 1.0, v0
-; SI-NEXT:    v_mov_b32_e32 v1, v0
 ; SI-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; SI-NEXT:    s_nop 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v1, v0
+; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -724,12 +722,10 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:  .LBB6_3: ; %.continue0
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-NEXT:    s_xor_b64 s[4:5], s[0:1], -1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GFX9-NEXT:    v_and_b32_e32 v0, 1.0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -774,10 +770,8 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-32-NEXT:  .LBB6_3: ; %.continue0
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-32-NEXT:    s_xor_b32 s2, s0, -1
 ; GFX10-32-NEXT:    s_mov_b32 s1, s0
-; GFX10-32-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
-; GFX10-32-NEXT:    v_and_b32_e32 v0, 1.0, v0
+; GFX10-32-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s1
 ; GFX10-32-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-32-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-32-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -822,10 +816,8 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[4:5]
 ; GFX10-64-NEXT:  .LBB6_3: ; %.continue0
 ; GFX10-64-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX10-64-NEXT:    s_xor_b64 s[4:5], s[0:1], -1
 ; GFX10-64-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX10-64-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GFX10-64-NEXT:    v_and_b32_e32 v0, 1.0, v0
+; GFX10-64-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s[2:3]
 ; GFX10-64-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-64-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-64-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -919,12 +911,10 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; SI-NEXT:    s_cbranch_execz .LBB7_8
 ; SI-NEXT:  .LBB7_5: ; %.continue0
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_xor_b64 s[6:7], s[0:1], -1
-; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[6:7]
-; SI-NEXT:    v_and_b32_e32 v2, v2, v0
-; SI-NEXT:    v_mov_b32_e32 v3, v2
 ; SI-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; SI-NEXT:    s_nop 0
+; SI-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s[4:5]
+; SI-NEXT:    v_mov_b32_e32 v3, v2
+; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -987,12 +977,10 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX9-NEXT:    s_cbranch_execz .LBB7_8
 ; GFX9-NEXT:  .LBB7_5: ; %.continue0
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[0:1], -1
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[6:7]
-; GFX9-NEXT:    v_and_b32_e32 v2, v2, v0
-; GFX9-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX9-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -1054,10 +1042,8 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-NEXT:    s_cbranch_execz .LBB7_8
 ; GFX10-32-NEXT:  .LBB7_5: ; %.continue0
 ; GFX10-32-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-32-NEXT:    s_xor_b32 s3, s0, -1
 ; GFX10-32-NEXT:    s_mov_b32 s2, s0
-; GFX10-32-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s3
-; GFX10-32-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX10-32-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s2
 ; GFX10-32-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10-32-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-32-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -1120,10 +1106,8 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-64-NEXT:    s_cbranch_execz .LBB7_8
 ; GFX10-64-NEXT:  .LBB7_5: ; %.continue0
 ; GFX10-64-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-64-NEXT:    s_xor_b64 s[6:7], s[0:1], -1
 ; GFX10-64-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX10-64-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[6:7]
-; GFX10-64-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX10-64-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s[4:5]
 ; GFX10-64-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10-64-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-64-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1

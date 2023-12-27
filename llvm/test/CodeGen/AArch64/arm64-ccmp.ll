@@ -557,30 +557,14 @@ define i64 @gccbug(i64 %x0, i64 %x1) {
 }
 
 define i32 @select_ororand(i32 %w0, i32 %w1, i32 %w2, i32 %w3) {
-; SDISEL-LABEL: select_ororand:
-; SDISEL:       ; %bb.0:
-; SDISEL-NEXT:    cmp w3, #4
-; SDISEL-NEXT:    ccmp w2, #2, #0, gt
-; SDISEL-NEXT:    ccmp w1, #13, #2, ge
-; SDISEL-NEXT:    ccmp w0, #0, #4, ls
-; SDISEL-NEXT:    csel w0, w3, wzr, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: select_ororand:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    cmp w0, #0
-; GISEL-NEXT:    cset w8, eq
-; GISEL-NEXT:    cmp w1, #13
-; GISEL-NEXT:    cset w9, hi
-; GISEL-NEXT:    cmp w2, #2
-; GISEL-NEXT:    cset w10, lt
-; GISEL-NEXT:    cmp w3, #4
-; GISEL-NEXT:    cset w11, gt
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    and w9, w10, w11
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    and w0, w8, w3
-; GISEL-NEXT:    ret
+; CHECK-LABEL: select_ororand:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp w3, #4
+; CHECK-NEXT:    ccmp w2, #2, #0, gt
+; CHECK-NEXT:    ccmp w1, #13, #2, ge
+; CHECK-NEXT:    ccmp w0, #0, #4, ls
+; CHECK-NEXT:    csel w0, w3, wzr, eq
+; CHECK-NEXT:    ret
   %c0 = icmp eq i32 %w0, 0
   %c1 = icmp ugt i32 %w1, 13
   %c2 = icmp slt i32 %w2, 2
@@ -652,18 +636,18 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; GISEL-LABEL: select_noccmp1:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    cmp x0, #0
-; GISEL-NEXT:    cset w8, ge
+; GISEL-NEXT:    cset w8, lt
 ; GISEL-NEXT:    cmp x0, #13
-; GISEL-NEXT:    cset w9, le
+; GISEL-NEXT:    cset w9, gt
 ; GISEL-NEXT:    cmp x2, #2
-; GISEL-NEXT:    cset w10, ge
+; GISEL-NEXT:    cset w10, lt
 ; GISEL-NEXT:    cmp x2, #4
-; GISEL-NEXT:    cset w11, le
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    orr w9, w10, w11
+; GISEL-NEXT:    cset w11, gt
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    and x8, x8, #0x1
-; GISEL-NEXT:    and x0, x8, x3
+; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    orr w8, w8, w9
+; GISEL-NEXT:    tst w8, #0x1
+; GISEL-NEXT:    csel x0, xzr, x3, ne
 ; GISEL-NEXT:    ret
   %c0 = icmp slt i64 %v1, 0
   %c1 = icmp sgt i64 %v1, 13
@@ -698,12 +682,11 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; GISEL-NEXT:    cmp x0, #13
 ; GISEL-NEXT:    cset w9, gt
 ; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    eor w9, w8, #0x1
-; GISEL-NEXT:    and x9, x9, #0x1
+; GISEL-NEXT:    tst w8, #0x1
+; GISEL-NEXT:    csel x0, xzr, x3, ne
 ; GISEL-NEXT:    sbfx w8, w8, #0, #1
-; GISEL-NEXT:    adrp x10, _g@PAGE
-; GISEL-NEXT:    str w8, [x10, _g@PAGEOFF]
-; GISEL-NEXT:    and x0, x9, x3
+; GISEL-NEXT:    adrp x9, _g@PAGE
+; GISEL-NEXT:    str w8, [x9, _g@PAGEOFF]
 ; GISEL-NEXT:    ret
   %c0 = icmp slt i64 %v1, 0
   %c1 = icmp sgt i64 %v1, 13

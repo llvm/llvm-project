@@ -6352,16 +6352,22 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   LLT CondTy = MRI.getType(Select->getCondReg());
   LLT TrueTy = MRI.getType(Select->getTrueReg());
 
-  // Either both are scalars or both are vectors.
-  std::optional<APInt> TrueOpt = getConstantOrConstantSplatVector(True);
-  std::optional<APInt> FalseOpt = getConstantOrConstantSplatVector(False);
+  // Only do this before legalization to avoid conflicting with target-specific
+  // transforms in the other direction.
+  if (CondTy != LLT::scalar(1))
+    return false;
+
+  // Noth are scalars.
+  std::optional<ValueAndVReg> TrueOpt =
+      getIConstantVRegValWithLookThrough(True, MRI);
+  std::optional<ValueAndVReg> FalseOpt =
+      getIConstantVRegValWithLookThrough(False, MRI);
 
   if (!TrueOpt || !FalseOpt)
     return false;
 
-  // These are only the splat values.
-  APInt TrueValue = *TrueOpt;
-  APInt FalseValue = *FalseOpt;
+  APInt TrueValue = TrueOpt->Value;
+  APInt FalseValue = FalseOpt->Value;
 
   // Boolean or fixed vector of booleans.
   if (CondTy.isScalableVector() ||
@@ -6488,6 +6494,9 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       (CondTy.isFixedVector() &&
        CondTy.getElementType().getScalarSizeInBits() != 1) ||
       CondTy.getScalarSizeInBits() != 1)
+    return false;
+
+  if (CondTy != TrueTy)
     return false;
 
   // select Cond, Cond, F --> or Cond, F
