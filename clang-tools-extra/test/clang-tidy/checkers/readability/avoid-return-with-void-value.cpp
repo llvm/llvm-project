@@ -49,3 +49,11 @@ void f10() {
     RETURN_VOID;
     // CHECK-MESSAGES-INCLUDE-MACROS: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
 }
+
+template <typename A> 
+struct C {
+  C(A) {}
+};
+
+template <class T> 
+C<T> f11() { return {}; }

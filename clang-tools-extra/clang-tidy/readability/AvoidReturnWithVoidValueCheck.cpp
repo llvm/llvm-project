@@ -17,8 +17,9 @@ namespace clang::tidy::readability {
 
 void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      returnStmt(hasReturnValue(hasType(voidType())),
-                 optionally(hasParent(compoundStmt().bind("compound_parent"))))
+      returnStmt(
+          hasReturnValue(allOf(hasType(voidType()), unless(initListExpr()))),
+          optionally(hasParent(compoundStmt().bind("compound_parent"))))
           .bind("void_return"),
       this);
 }
