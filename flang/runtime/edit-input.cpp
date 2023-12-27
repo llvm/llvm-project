@@ -650,15 +650,23 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
     expo = 0; // subnormal
     flags |= decimal::Underflow;
   } else if (expo >= RealType::maxExponent) {
-    expo = RealType::maxExponent; // +/-Inf
-    fraction = 0;
+    if (rounding == decimal::RoundToZero ||
+        (rounding == decimal::RoundDown && !isNegative) ||
+        (rounding == decimal::RoundUp && isNegative)) {
+      expo = RealType::maxExponent - 1; // +/-HUGE()
+      fraction = significandMask;
+    } else {
+      expo = RealType::maxExponent; // +/-Inf
+      fraction = 0;
+      flags |= decimal::Overflow;
+    }
   } else {
     fraction &= significandMask; // remove explicit normalization unless x87
   }
   return decimal::ConversionToBinaryResult<binaryPrecision>{
       RealType{static_cast<RawType>(signBit |
           static_cast<RawType>(expo) << RealType::significandBits | fraction)},
-      static_cast<enum decimal::ConversionResultFlags>(flags)};
+      static_cast<decimal::ConversionResultFlags>(flags)};
 }
 
 template <int KIND>

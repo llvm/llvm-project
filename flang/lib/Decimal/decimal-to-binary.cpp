@@ -237,6 +237,15 @@ private:
   int exponent_{0};
 };
 
+// The standard says that these overflow cases round to "representable"
+// numbers, and some popular compilers interpret that to mean +/-HUGE()
+// rather than +/-Inf.
+static inline constexpr bool RoundOverflowToHuge(
+    enum FortranRounding rounding, bool isNegative) {
+  return rounding == RoundToZero || (!isNegative && rounding == RoundDown) ||
+      (isNegative && rounding == RoundUp);
+}
+
 template <int PREC>
 ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
     bool isNegative, FortranRounding rounding) const {
@@ -260,7 +269,7 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
     if (guard <= oneHalf) {
       if ((!isNegative && rounding == RoundUp) ||
           (isNegative && rounding == RoundDown)) {
-        // round to minimum nonzero value
+        // round to least nonzero value
       } else { // round to zero
         if (guard != 0) {
           flags |= Underflow;
@@ -310,12 +319,17 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   } else if (expo == 0) {
     flags |= Underflow;
   } else if (expo >= Binary::maxExponent) {
-    expo = Binary::maxExponent; // Inf
-    flags |= Overflow;
-    if constexpr (Binary::bits == 80) { // x87
-      fraction = IntType{1} << 63;
-    } else {
-      fraction = 0;
+    if (RoundOverflowToHuge(rounding, isNegative)) {
+      expo = Binary::maxExponent - 1;
+      fraction = mask;
+    } else { // Inf
+      expo = Binary::maxExponent;
+      flags |= Overflow;
+      if constexpr (Binary::bits == 80) { // x87
+        fraction = IntType{1} << 63;
+      } else {
+        fraction = 0;
+      }
     }
   }
   using Raw = typename Binary::RawType;
@@ -355,8 +369,12 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
     } else { // underflow to +/-0.
       return {Real{SignBit()}, flags};
     }
-  } else if (exponent_ > crazy) { // overflow to +/-Inf.
-    return {Real{Infinity()}, Overflow};
+  } else if (exponent_ > crazy) { // overflow to +/-HUGE() or +/-Inf
+    if (RoundOverflowToHuge(rounding_, isNegative_)) {
+      return {Real{HUGE()}};
+    } else {
+      return {Real{Infinity()}, Overflow};
+    }
   }
   // Apply any negative decimal exponent by multiplication
   // by a power of two, adjusting the binary exponent to compensate.
