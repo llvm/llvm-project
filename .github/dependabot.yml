@@ -11,7 +11,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/llvm/docs"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     groups:
       llvm-docs-requirements:
         patterns:
