@@ -22,18 +22,18 @@ namespace {
 std::string
 getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString);
 
-std::vector<std::basic_string<char>>
-splitStringByGroupSize(const std::basic_string<char> &String,
+std::vector<std::string>
+splitStringByGroupSize(const std::string &String,
                        size_t GroupSize) {
-  std::vector<std::basic_string<char>> Result;
-  std::basic_string<char> ReversedString(String.rbegin(), String.rend());
+  std::vector<std::string> Result;
+  std::string ReversedString(String.rbegin(), String.rend());
 
   for (size_t I = 0; I < ReversedString.size(); I += GroupSize) {
     Result.push_back(ReversedString.substr(I, GroupSize));
   }
 
   std::reverse(Result.begin(), Result.end());
-  std::for_each(Result.begin(), Result.end(), [](std::basic_string<char> &Str) {
+  std::for_each(Result.begin(), Result.end(), [](std::string &Str) {
     return std::reverse(Str.begin(), Str.end());
   });
 
@@ -82,8 +82,8 @@ getFormatedIntegerString(const llvm::StringRef OriginalLiteralString,
       Prefix +
       std::accumulate(SplittedIntegerLiteral.begin(),
                       SplittedIntegerLiteral.end(), std::string(""),
-                      [](std::basic_string<char> S1,
-                         std::basic_string<char> S2) { return S1 + "\'" + S2; })
+                      [](std::string S1,
+                         std::string S2) { return S1 + "\'" + S2; })
           .erase(0, 1) +
       Postfix;
 
