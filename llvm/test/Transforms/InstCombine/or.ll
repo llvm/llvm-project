@@ -1644,8 +1644,7 @@ define i32 @test_or_and_disjoint(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A0]], 8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A]], 7
-; CHECK-NEXT:    [[A2:%.*]] = or disjoint i32 [[A1]], 8
+; CHECK-NEXT:    [[A2:%.*]] = and i32 [[A]], 15
 ; CHECK-NEXT:    ret i32 [[A2]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0
@@ -1667,8 +1666,7 @@ define i32 @test_or_and_mixed(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A0]], 11
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A]], 4
-; CHECK-NEXT:    [[A2:%.*]] = or disjoint i32 [[A1]], 11
+; CHECK-NEXT:    [[A2:%.*]] = and i32 [[A]], 15
 ; CHECK-NEXT:    ret i32 [[A2]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0

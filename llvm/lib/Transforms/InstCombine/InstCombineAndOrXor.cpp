@@ -3872,6 +3872,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  // (X & C1) | C2 -> X & (C1 | C2) iff (X & C2) == C2
+  if (match(Op0, m_OneUse(m_And(m_Value(X), m_APInt(C1)))) &&
+      match(Op1, m_APInt(C2))) {
+    KnownBits KnownX = computeKnownBits(X, /*Depth*/ 0, &I);
+    if ((KnownX.One & *C2) == *C2)
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *C1 | *C2));
+  }
+
   return nullptr;
 }
 
