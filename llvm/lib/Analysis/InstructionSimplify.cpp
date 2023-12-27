@@ -4858,13 +4858,15 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   // select ?, undef,  X -> X
   if (isa<PoisonValue>(TrueVal) ||
       (Q.isUndefValue(TrueVal) &&
-       isGuaranteedNotToBePoison(FalseVal, Q.AC, Q.CxtI, Q.DT)))
+       (isGuaranteedNotToBePoison(FalseVal, Q.AC, Q.CxtI, Q.DT) ||
+        impliesPoison(FalseVal, Cond))))
     return FalseVal;
   // select ?, X, poison -> X
   // select ?, X, undef  -> X
   if (isa<PoisonValue>(FalseVal) ||
       (Q.isUndefValue(FalseVal) &&
-       isGuaranteedNotToBePoison(TrueVal, Q.AC, Q.CxtI, Q.DT)))
+       (isGuaranteedNotToBePoison(TrueVal, Q.AC, Q.CxtI, Q.DT) ||
+        impliesPoison(TrueVal, Cond))))
     return TrueVal;
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
