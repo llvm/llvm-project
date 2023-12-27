@@ -277,31 +277,63 @@ class BinOpAIF_AF<bits<8> o, string m, X86TypeInfo t, Register areg,
   let SchedRW = [WriteADC];
 }
 
-// UnaryOpR - Instructions that read "reg" and write "reg".
-class UnaryOpR<bits<8> o, Format f, string m, X86TypeInfo t, list<dag> p>
-  : ITy<o, f, t, (outs t.RegClass:$dst),
-        (ins t.RegClass:$src1), m, "$dst", p>, Sched<[WriteALU]>;
+// UnaryOpR - Instructions that read "reg".
+class UnaryOpR<bits<8> o, Format f, string m, string args, X86TypeInfo t,
+               dag out, list<dag> p>
+  : ITy<o, f, t, out, (ins t.RegClass:$src), m, args, p>, Sched<[WriteALU]>;
+// UnaryOpR_R - Instructions that read "reg" and write "reg".
+class UnaryOpR_R<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node>
+  : UnaryOpR<o, f, m, unaryop_args, t, (outs t.RegClass:$dst),
+             [(set t.RegClass:$dst, (node t.RegClass:$src))]>;
+// UnaryOpR_RF - Instructions that read "reg" and write "reg"/EFLAGS.
+class UnaryOpR_RF<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node>
+  : UnaryOpR<o, f, m, unaryop_args, t, (outs t.RegClass:$dst),
+             [(set t.RegClass:$dst, (node t.RegClass:$src)),
+              (implicit EFLAGS)]>, DefEFLAGS;
 
-// UnaryOpM - Instructions that read "[mem]" and writes "[mem]".
-class UnaryOpM<bits<8> o, Format f, string m, X86TypeInfo t, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.MemOperand:$dst), m, "$dst", p>,
-    Sched<[WriteALURMW]> {
+// UnaryOpM - Instructions that read "[mem]".
+class UnaryOpM<bits<8> o, Format f, string m, string args, X86TypeInfo t,
+               dag out, list<dag> p>
+  : ITy<o, f, t, out, (ins t.MemOperand:$src), m, args, p> {
   let mayLoad = 1;
+}
+// UnaryOpM_M - Instructions that read "[mem]" and writes "[mem]".
+class UnaryOpM_M<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node>
+  : UnaryOpM<o, f, m, unaryop_args, t, (outs),
+             [(store (node (t.LoadNode addr:$src)), addr:$src)]>,
+    Sched<[WriteALURMW]>{
+  let mayStore = 1;
+}
+// UnaryOpM_MF - Instructions that read "[mem]" and writes "[mem]"/EFLAGS.
+class UnaryOpM_MF<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node>
+  : UnaryOpM<o, f, m, unaryop_args, t, (outs),
+             [(store (node (t.LoadNode addr:$src)), addr:$src),
+              (implicit EFLAGS)]>, Sched<[WriteALURMW]>, DefEFLAGS {
   let mayStore = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // MUL/IMUL and DIV/IDIV Instructions
 //
-class MulOpR<bits<8> o, Format f, string m, X86TypeInfo t,
+class MulDivOpR<bits<8> o, Format f, string m, X86TypeInfo t,
              X86FoldableSchedWrite sched, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.RegClass:$src), m, "$src", p>, Sched<[sched]>;
+  : UnaryOpR<o, f, m, "$src", t, (outs), p> {
+  let SchedRW = [sched];
+}
 
-class MulOpM<bits<8> o, Format f, string m, X86TypeInfo t,
+class MulDivOpM<bits<8> o, Format f, string m, X86TypeInfo t,
              X86FoldableSchedWrite sched, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.MemOperand:$src), m,
-        "$src", p>, SchedLoadReg<sched> {
-  let mayLoad = 1;
+  : UnaryOpM<o, f, m, "$src", t, (outs), p> {
+  let SchedRW =
+    [sched.Folded,
+     // Memory operand.
+     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+     // Register reads (implicit or explicit).
+     sched.ReadAfterFold, sched.ReadAfterFold];
 }
 
 multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOperator node> {
@@ -312,23 +344,23 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   // This probably ought to be moved to a def : Pat<> if the
   // syntax can be accepted.
   let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-  def 8r : MulOpR<o, RegMRM, m, Xi8, WriteIMul8,
+  def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
                   [(set AL, (node AL, GR8:$src)), (implicit EFLAGS)]>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX] in
-  def 16r : MulOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
+  def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
-  def 32r : MulOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
+  def 32r : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
-  def 64r : MulOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
+  def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
   let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-  def 8m : MulOpM<o, MemMRM, m, Xi8, WriteIMul8,
+  def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
                   [(set AL, (node AL, (loadi8 addr:$src))), (implicit EFLAGS)]>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX] in
-  def 16m : MulOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
+  def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
-  def 32m : MulOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
+  def 32m : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
-  def 64m : MulOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
+  def 64m : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
 }
 
 defm MUL : Mul<0xF7, "mul", MRM4r, MRM4m, mul>;
@@ -340,21 +372,21 @@ multiclass Div<bits<8> o, string m, Format RegMRM, Format MemMRM> {
   defvar sched32 = !if(!eq(m, "div"), WriteDiv32, WriteIDiv32);
   defvar sched64 = !if(!eq(m, "div"), WriteDiv64, WriteIDiv64);
   let Defs = [AL,AH,EFLAGS], Uses = [AX] in
-  def 8r  : MulOpR<o, RegMRM, m, Xi8, sched8, []>;
+  def 8r  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
-  def 16r : MulOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
+  def 16r : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
-  def 32r : MulOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
+  def 32r : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
-  def 64r : MulOpR<o, RegMRM, m, Xi64, sched64, []>;
+  def 64r : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>;
   let Defs = [AL,AH,EFLAGS], Uses = [AX] in
-  def 8m  : MulOpM<o, MemMRM, m, Xi8, sched8, []>;
+  def 8m  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
-  def 16m : MulOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
+  def 16m : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
-  def 32m : MulOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
+  def 32m : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
-  def 64m : MulOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
+  def 64m : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
 }
 let hasSideEffects = 1 in { // so that we don't speculatively execute
 defm DIV: Div<0xF7, "div", MRM6r, MRM6m>;
@@ -426,92 +458,84 @@ def IMUL64rmi32 : IMulOpMI_R<Xi64, WriteIMul64Imm>;
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //
-class INCDECR<Format f, string m, X86TypeInfo t, SDPatternOperator node>
-  : UnaryOpR<0xFF, f, m, t,
-             [(set t.RegClass:$dst, EFLAGS, (node t.RegClass:$src1, 1))]>,
-    DefEFLAGS {
-  let isConvertibleToThreeAddress = 1; // Can xform into LEA.
+class IncOpR_RF<X86TypeInfo t> : UnaryOpR_RF<0xFF, MRM0r, "inc", t, null_frag> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS,
+                 (X86add_flag_nocf t.RegClass:$src, 1))];
 }
-class INCDECM<Format f, string m, X86TypeInfo t, int num>
-  : UnaryOpM<0xFF, f, m, t,
-             [(store (add (t.LoadNode addr:$dst), num), addr:$dst),
-              (implicit EFLAGS)]>, DefEFLAGS;
-// INCDECR_ALT - Instructions like "inc reg" short forms.
-class INCDECR_ALT<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpR<o, AddRegFrm, m, t, []>, DefEFLAGS {
-  // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-  let Predicates = [Not64BitMode];
+class DecOpR_RF<X86TypeInfo t> : UnaryOpR_RF<0xFF, MRM1r, "dec", t, null_frag> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS,
+                 (X86sub_flag_nocf t.RegClass:$src, 1))];
 }
-let Constraints = "$src1 = $dst" in {
-def INC16r_alt : INCDECR_ALT<0x40, "inc", Xi16>, OpSize16;
-def INC32r_alt : INCDECR_ALT<0x40, "inc", Xi32>, OpSize32;
-def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
-def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>, OpSize16;
-def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>, OpSize32;
-def INC64r : INCDECR<MRM0r, "inc", Xi64, X86add_flag_nocf>;
-def DEC16r_alt : INCDECR_ALT<0x48, "dec", Xi16>, OpSize16;
-def DEC32r_alt : INCDECR_ALT<0x48, "dec", Xi32>, OpSize32;
-def DEC8r  : INCDECR<MRM1r, "dec", Xi8, X86sub_flag_nocf>;
-def DEC16r : INCDECR<MRM1r, "dec", Xi16, X86sub_flag_nocf>, OpSize16;
-def DEC32r : INCDECR<MRM1r, "dec", Xi32, X86sub_flag_nocf>, OpSize32;
-def DEC64r : INCDECR<MRM1r, "dec", Xi64, X86sub_flag_nocf>;
+class IncOpM_M<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM0m, "inc", t, null_frag> {
+  let Pattern = [(store (add (t.LoadNode addr:$src), 1), addr:$src),
+                 (implicit EFLAGS)];
+}
+class DecOpM_M<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM1m, "dec", t, null_frag> {
+  let Pattern = [(store (add (t.LoadNode addr:$src), -1), addr:$src),
+                 (implicit EFLAGS)];
+}
+// IncDec_Alt - Instructions like "inc reg" short forms.
+// Short forms only valid in 32-bit mode. Selected during MCInst lowering.
+class IncDec_Alt<bits<8> o, string m, X86TypeInfo t>
+  : UnaryOpR_RF<o, AddRegFrm, m, t, null_frag>, Requires<[Not64BitMode]>;
+
+let Constraints = "$src = $dst", isConvertibleToThreeAddress = 1 in {
+def INC16r_alt : IncDec_Alt<0x40, "inc", Xi16>, OpSize16;
+def INC32r_alt : IncDec_Alt<0x40, "inc", Xi32>, OpSize32;
+def DEC16r_alt : IncDec_Alt<0x48, "dec", Xi16>, OpSize16;
+def DEC32r_alt : IncDec_Alt<0x48, "dec", Xi32>, OpSize32;
+def INC8r  : IncOpR_RF<Xi8>;
+def INC16r : IncOpR_RF<Xi16>, OpSize16;
+def INC32r : IncOpR_RF<Xi32>, OpSize32;
+def INC64r : IncOpR_RF<Xi64>;
+def DEC8r  : DecOpR_RF<Xi8>;
+def DEC16r : DecOpR_RF<Xi16>, OpSize16;
+def DEC32r : DecOpR_RF<Xi32>, OpSize32;
+def DEC64r : DecOpR_RF<Xi64>;
 }
 let Predicates = [UseIncDec] in {
-def INC8m  : INCDECM<MRM0m, "inc", Xi8, 1>;
-def INC16m : INCDECM<MRM0m, "inc", Xi16, 1>, OpSize16;
-def INC32m : INCDECM<MRM0m, "inc", Xi32, 1>, OpSize32;
-def DEC8m  : INCDECM<MRM1m, "dec", Xi8, -1>;
-def DEC16m : INCDECM<MRM1m, "dec", Xi16, -1>, OpSize16;
-def DEC32m : INCDECM<MRM1m, "dec", Xi32, -1>, OpSize32;
+def INC8m  : IncOpM_M<Xi8>;
+def INC16m : IncOpM_M<Xi16>, OpSize16;
+def INC32m : IncOpM_M<Xi32>, OpSize32;
+def DEC8m  : DecOpM_M<Xi8>;
+def DEC16m : DecOpM_M<Xi16>, OpSize16;
+def DEC32m : DecOpM_M<Xi32>, OpSize32;
 }
 let Predicates = [UseIncDec, In64BitMode] in {
-def INC64m : INCDECM<MRM0m, "inc", Xi64, 1>;
-def DEC64m : INCDECM<MRM1m, "dec", Xi64, -1>;
+def INC64m : IncOpM_M<Xi64>;
+def DEC64m : DecOpM_M<Xi64>;
 }
 
 //===----------------------------------------------------------------------===//
 // NEG and NOT Instructions
 //
-class NegOpR<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpR<o, MRM3r, m, t,
-             [(set t.RegClass:$dst, (ineg t.RegClass:$src1)),
-              (implicit EFLAGS)]>, DefEFLAGS;
-class NegOpM<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpM<o, MRM3m, m, t,
-             [(store (ineg (t.LoadNode addr:$dst)), addr:$dst),
-              (implicit EFLAGS)]>, DefEFLAGS;
+class NegOpR_RF<X86TypeInfo t> : UnaryOpR_RF<0xF7, MRM3r, "neg", t, ineg>;
+class NegOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xF7, MRM3m, "neg", t, ineg>;
 
-// NOTE: NOT does not set EFLAGS!
-class NotOpR<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpR<o, MRM2r, m, t, [(set t.RegClass:$dst, (not t.RegClass:$src1))]>;
+class NotOpR_R<X86TypeInfo t> : UnaryOpR_R<0xF7, MRM2r, "not", t, not>;
+class NotOpM_M<X86TypeInfo t> : UnaryOpM_M<0xF7, MRM2m, "not", t, not>;
 
-class NotOpM<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpM<o, MRM2m, m,  t,
-             [(store (not (t.LoadNode addr:$dst)), addr:$dst)]>;
+let Constraints = "$src = $dst" in {
+def NEG8r  : NegOpR_RF<Xi8>;
+def NEG16r : NegOpR_RF<Xi16>, OpSize16;
+def NEG32r : NegOpR_RF<Xi32>, OpSize32;
+def NEG64r : NegOpR_RF<Xi64>;
 
-let Constraints = "$src1 = $dst" in {
-def NEG8r  : NegOpR<0xF6, "neg", Xi8>;
-def NEG16r : NegOpR<0xF7, "neg", Xi16>, OpSize16;
-def NEG32r : NegOpR<0xF7, "neg", Xi32>, OpSize32;
-def NEG64r : NegOpR<0xF7, "neg", Xi64>;
+def NOT8r  : NotOpR_R<Xi8>;
+def NOT16r : NotOpR_R<Xi16>, OpSize16;
+def NOT32r : NotOpR_R<Xi32>, OpSize32;
+def NOT64r : NotOpR_R<Xi64>;
 }
 
-def NEG8m  : NegOpM<0xF6, "neg", Xi8>;
-def NEG16m : NegOpM<0xF7, "neg", Xi16>, OpSize16;
-def NEG32m : NegOpM<0xF7, "neg", Xi32>, OpSize32;
-def NEG64m : NegOpM<0xF7, "neg", Xi64>, Requires<[In64BitMode]>;
+def NEG8m  : NegOpM_MF<Xi8>;
+def NEG16m : NegOpM_MF<Xi16>, OpSize16;
+def NEG32m : NegOpM_MF<Xi32>, OpSize32;
+def NEG64m : NegOpM_MF<Xi64>, Requires<[In64BitMode]>;
 
-let Constraints = "$src1 = $dst" in {
-def NOT8r  : NotOpR<0xF6, "not", Xi8>;
-def NOT16r : NotOpR<0xF7, "not", Xi16>, OpSize16;
-def NOT32r : NotOpR<0xF7, "not", Xi32>, OpSize32;
-def NOT64r : NotOpR<0xF7, "not", Xi64>;
-}
-
-def NOT8m  : NotOpM<0xF6, "not", Xi8>;
-def NOT16m : NotOpM<0xF7, "not", Xi16>, OpSize16;
-def NOT32m : NotOpM<0xF7, "not", Xi32>, OpSize32;
-def NOT64m : NotOpM<0xF7, "not", Xi64>, Requires<[In64BitMode]>;
+def NOT8m  : NotOpM_M<Xi8>;
+def NOT16m : NotOpM_M<Xi16>, OpSize16;
+def NOT32m : NotOpM_M<Xi32>, OpSize32;
+def NOT64m : NotOpM_M<Xi64>, Requires<[In64BitMode]>;
 
 /// ArithBinOp_RF - This is an arithmetic binary operator where the pattern is
 /// defined with "(set GPR:$dst, EFLAGS, (...".
