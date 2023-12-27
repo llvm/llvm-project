@@ -1637,7 +1637,7 @@ SDValue M68kTargetLowering::LowerXALUO(SDValue Op, SelectionDAG &DAG) const {
   if (isa<ConstantSDNode>(CCR)) {
     // It's likely a result of operations that will not overflow
     // hence no setcc is needed.
-    Overflow = DAG.getZExtOrTrunc(CCR, DL, N->getValueType(1));
+    Overflow = CCR;
   } else {
     // Generate a M68kISD::SETCC.
     Overflow = DAG.getNode(M68kISD::SETCC, DL, N->getValueType(1),
@@ -2404,6 +2404,17 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       SDValue Cmov = DAG.getNode(M68kISD::CMOV, DL, VTs, T2, T1, CC, Cond);
       return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
     }
+  }
+
+  // Simple optimization when Cond is a constant to avoid generating
+  // M68kISD::CMOV if possible.
+  // TODO: Generalize this to use SelectionDAG::computeKnownBits.
+  if (auto *Const = dyn_cast<ConstantSDNode>(Cond.getNode())) {
+    const APInt &C = Const->getAPIntValue();
+    if (C.countr_zero() >= 5)
+      return Op2;
+    else if (C.countr_one() >= 5)
+      return Op1;
   }
 
   // M68kISD::CMOV means set the result (which is operand 1) to the RHS if
