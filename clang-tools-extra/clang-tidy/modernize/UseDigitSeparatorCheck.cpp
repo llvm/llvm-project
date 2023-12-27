@@ -22,9 +22,8 @@ namespace {
 std::string
 getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString);
 
-std::vector<std::string>
-splitStringByGroupSize(const std::string &String,
-                       size_t GroupSize) {
+std::vector<std::string> splitStringByGroupSize(const std::string &String,
+                                                size_t GroupSize) {
   std::vector<std::string> Result;
   std::string ReversedString(String.rbegin(), String.rend());
 
@@ -80,10 +79,10 @@ getFormatedIntegerString(const llvm::StringRef OriginalLiteralString,
       splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
   const std::string FormatedLiteralString =
       Prefix +
-      std::accumulate(SplittedIntegerLiteral.begin(),
-                      SplittedIntegerLiteral.end(), std::string(""),
-                      [](std::string S1,
-                         std::string S2) { return S1 + "\'" + S2; })
+      std::accumulate(
+          SplittedIntegerLiteral.begin(), SplittedIntegerLiteral.end(),
+          std::string(""),
+          [](std::string S1, std::string S2) { return S1 + "\'" + S2; })
           .erase(0, 1) +
       Postfix;
 
