@@ -2641,6 +2641,26 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   if (!match(Y, m_APInt(C2)))
     return nullptr;
 
+  // Fold the bound check idiom:
+  //  T *end, *start;
+  //  (size_t)(end - start) > (size_t)(PTRDIFF_MAX / sizeof(T))
+  // into:
+  //  (ptrdiff_t)(end - start) < 0
+  // i.e.:
+  //   icmp ugt (sdiv exact X, C2), (sdiv signed_max, C2) --> icmp slt X, 0
+  //   icmp ult (sdiv exact X, C2), (sdiv signed_max, C2) + 1 --> icmp sgt X, -1
+  // where C2 is positive.
+  if (DivIsSigned && Div->isExact() &&
+      (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT) &&
+      C2->isStrictlyPositive() &&
+      APInt::getSignedMaxValue(C2->getBitWidth()).sdiv(*C2) +
+              APInt(C2->getBitWidth(), Pred == ICmpInst::ICMP_UGT ? 0 : 1) ==
+          C)
+    return new ICmpInst(
+        Pred == ICmpInst::ICMP_UGT ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGT, X,
+        Pred == ICmpInst::ICMP_UGT ? Constant::getNullValue(X->getType())
+                                   : Constant::getAllOnesValue(X->getType()));
+
   // FIXME: If the operand types don't match the type of the divide
   // then don't attempt this transform. The code below doesn't have the
   // logic to deal with a signed divide and an unsigned compare (and

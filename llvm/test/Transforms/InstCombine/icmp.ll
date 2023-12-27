@@ -5140,8 +5140,7 @@ entry:
 
 define i1 @icmp_ugt_sdiv_by_constant(i64 %x) {
 ; CHECK-LABEL: @icmp_ugt_sdiv_by_constant(
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[X:%.*]], 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SDIV]], 384307168202282325
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sdiv = sdiv exact i64 %x, 24
@@ -5151,8 +5150,7 @@ define i1 @icmp_ugt_sdiv_by_constant(i64 %x) {
 
 define i1 @icmp_ult_sdiv_by_constant(i64 %x) {
 ; CHECK-LABEL: @icmp_ult_sdiv_by_constant(
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[X:%.*]], 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SDIV]], 384307168202282326
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sdiv = sdiv exact i64 %x, 24
