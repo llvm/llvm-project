@@ -82,7 +82,7 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
 
 static constexpr bool IsLegalIdStart(char32_t ch) {
   return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_' ||
-      ch == '@' || ch == '$';
+      ch == '@';
 }
 
 static constexpr bool IsLegalIdChar(char32_t ch) {
@@ -378,12 +378,13 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
-// Advance to the terminal '/' of a namelist group.
+// Advance to the terminal '/' of a namelist group or leading '&'/'$'
+// of the next.
 static void SkipNamelistGroup(IoStatementState &io) {
   std::size_t byteCount{0};
   while (auto ch{io.GetNextNonBlank(byteCount)}) {
     io.HandleRelativePosition(byteCount);
-    if (*ch == '/') {
+    if (*ch == '/' || *ch == '&' || *ch == '$') {
       break;
     } else if (*ch == '\'' || *ch == '"') {
       // Skip quoted character literal
@@ -418,7 +419,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   std::size_t byteCount{0};
   while (true) {
     next = io.GetNextNonBlank(byteCount);
-    while (next && *next != '&') {
+    while (next && *next != '&' && *next != '$') {
       // Extension: comment lines without ! before namelist groups
       if (!io.AdvanceRecord()) {
         next.reset();
@@ -430,9 +431,10 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       handler.SignalEnd();
       return false;
     }
-    if (*next != '&') {
+    if (*next != '&' && *next != '$') {
       handler.SignalError(
-          "NAMELIST input group does not begin with '&' (at '%lc')", *next);
+          "NAMELIST input group does not begin with '&' or '$' (at '%lc')",
+          *next);
       return false;
     }
     io.HandleRelativePosition(byteCount);
@@ -448,7 +450,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   // Read the group's items
   while (true) {
     next = io.GetNextNonBlank(byteCount);
-    if (!next || *next == '/') {
+    if (!next || *next == '/' || *next == '&' || *next == '$') {
       break;
     }
     if (!GetLowerCaseName(io, name, sizeof name)) {
@@ -540,12 +542,15 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       io.HandleRelativePosition(byteCount);
     }
   }
-  if (!next || *next != '/') {
+  if (next && *next == '/') {
+    io.HandleRelativePosition(byteCount);
+  } else if (*next && (*next == '&' || *next == '$')) {
+    // stop at beginning of next group
+  } else {
     handler.SignalError(
         "No '/' found after NAMELIST group '%s'", group.groupName);
     return false;
   }
-  io.HandleRelativePosition(byteCount);
   return true;
 }
 
@@ -565,7 +570,7 @@ bool IsNamelistNameOrSlash(IoStatementState &io) {
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
         } else {
-          return *ch == '/';
+          return *ch == '/' || *ch == '&' || *ch == '$';
         }
       }
     }
