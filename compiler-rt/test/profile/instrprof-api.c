@@ -3,7 +3,7 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: %clang_profuse=%t.profdata %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFUSE
-#include "profile/instr_profiling.h"
+#include "profile/instr_prof_interface.h"
 
 __attribute__((noinline)) int bar() { return 4; }
 
