@@ -221,11 +221,6 @@ m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
 }
 
-template <typename Op0_t, typename Op1_t>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::ActiveLaneMask>
-m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1);
-}
 
 template <typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::BranchOnCount>
@@ -296,6 +291,35 @@ inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>
 m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1);
 }
+
+template <typename Op0_t, typename Op1_t>
+struct VPActiveLaneMask_match {
+  Op0_t Op0;
+  Op1_t Op1;
+
+  VPActiveLaneMask_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
+
+  bool match(const VPValue *V) {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *R) {
+    auto *DefR = dyn_cast<VPActiveLaneMaskRecipe>(R);
+    if (!DefR)
+      return false;
+    assert(DefR->getNumOperands() == 2 &&
+           "recipe with matched opcode does not have 2 operands");
+    return Op0.match(DefR->getOperand(0)) && Op1.match(DefR->getOperand(1));
+  }
+};
+
+template <typename Op0_t, typename Op1_t>
+inline VPActiveLaneMask_match<Op0_t, Op1_t>
+m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
+  return {Op0, Op1};
+}
+
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

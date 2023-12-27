@@ -351,24 +351,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Op2 = State.get(getOperand(2), Part);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
-  case VPInstruction::ActiveLaneMask: {
-    // Get first lane of vector induction variable.
-    Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
-    // Get the original loop tripcount.
-    Value *ScalarTC = State.get(getOperand(1), VPIteration(Part, 0));
 
-    // If this part of the active lane mask is scalar, generate the CMP directly
-    // to avoid unnecessary extracts.
-    if (State.VF.isScalar())
-      return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
-                               Name);
-
-    auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = VectorType::get(Int1Ty, State.VF);
-    return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
-                                   {PredTy, ScalarTC->getType()},
-                                   {VIVElem0, ScalarTC}, nullptr, Name);
-  }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     // Generate code to combine the previous and current values in vector v3.
     //
@@ -636,7 +619,6 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -670,9 +652,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::SLPStore:
     O << "combined store";
-    break;
-  case VPInstruction::ActiveLaneMask:
-    O << "active lane mask";
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
@@ -713,7 +692,93 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     DL.print(O);
   }
 }
+
+void VPActiveLaneMaskRecipe::print(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = active lane mask";
+  printFlags(O);
+  printOperands(O, SlotTracker);
+
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
+}
+
 #endif
+
+void VPActiveLaneMaskRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "VPInstruction executing an Instance");
+
+  IRBuilderBase &Builder = State.Builder;
+  Builder.SetCurrentDebugLocation(getDebugLoc());
+
+  // If this the active lane mask is scalar, generate the CMP directly
+  // to avoid unnecessary extracts.
+  if (State.VF.isScalar()) {
+    for (int Part = State.UF - 1; Part >= 0; --Part) {
+      // Get first lane of vector induction variable.
+      Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
+      // Get the original loop tripcount.
+      Value *ScalarTC = State.get(getOperand(1), VPIteration(0, 0));
+
+      Value *V = Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0,
+                                   ScalarTC, Name);
+      State.set(this, V, Part);
+    }
+    return;
+  }
+
+  auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
+  auto *PredTy = VectorType::get(Int1Ty, State.VF);
+
+  unsigned MaxPred = std::min(State.MaxPred.getKnownMinValue(),
+                              State.UF * State.VF.getKnownMinValue());
+  if (State.UF <= 1 || MaxPred <= State.VF.getKnownMinValue() ||
+      MaxPred % State.VF.getKnownMinValue() != 0) {
+    for (int Part = State.UF - 1; Part >= 0; --Part) {
+      // Get first lane of vector induction variable.
+      Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
+      // Get the original loop tripcount.
+      Value *ScalarTC = State.get(getOperand(1), VPIteration(0, 0));
+      Value *V = Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                                         {PredTy, ScalarTC->getType()},
+                                         {VIVElem0, ScalarTC}, nullptr, Name);
+      State.set(this, V, Part);
+    }
+    return;
+  }
+
+  // Generate long active lane masks covering all the unrolled iterations.
+  unsigned PartsPerMask = MaxPred / State.VF.getKnownMinValue();
+  auto *LongPredTy = VectorType::get(Int1Ty, MaxPred, State.VF.isScalable());
+  SmallVector<Value *> LongMask(State.UF / PartsPerMask, nullptr);
+  for (int Part = State.UF - PartsPerMask; Part >= 0; Part -= PartsPerMask) {
+    // Get first lane of vector induction variable.
+    Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
+    // Get the original loop tripcount.
+    Value *ScalarTC = State.get(getOperand(1), VPIteration(0, 0));
+    Value *V = Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                                       {LongPredTy, ScalarTC->getType()},
+                                       {VIVElem0, ScalarTC}, nullptr, Name);
+    LongMask[Part / PartsPerMask] = V;
+  }
+
+  for (int Part = State.UF - 1; Part >= 0; --Part) {
+    Value *ALM = LongMask[Part / PartsPerMask];
+    const unsigned I = Part % PartsPerMask;
+    Value *V = Builder.CreateIntrinsic(
+        Intrinsic::vector_extract, {PredTy, ALM->getType()},
+        {ALM, ConstantInt::get(Type::getInt64Ty(Builder.getContext()),
+                               I * State.VF.getKnownMinValue())},
+        nullptr, Name);
+
+    State.set(this, V, Part);
+  }
+}
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");

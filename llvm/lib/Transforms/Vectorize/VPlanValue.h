@@ -358,6 +358,7 @@ public:
     VPWidenSC,
     VPWidenSelectSC,
     VPBlendSC,
+    VPActiveLaneMaskSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,

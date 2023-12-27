@@ -49,8 +49,8 @@ define float @pr70988() {
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX1]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX1]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 1021
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = icmp ult i32 [[TMP1]], 1021
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 1021
 ; CHECK-ALM-NEXT:    [[TMP2:%.*]] = select contract i1 [[ACTIVE_LANE_MASK]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
 ; CHECK-ALM-NEXT:    [[TMP4:%.*]] = select contract i1 [[ACTIVE_LANE_MASK2]], float 1.000000e+00, float -0.000000e+00
@@ -158,8 +158,8 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[PRED_LOAD_CONTINUE3]] ]
 ; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 15
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = icmp ult i32 [[TMP1]], 15
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 15
 ; CHECK-ALM-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-ALM:       pred.load.if:
 ; CHECK-ALM-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP0]]
