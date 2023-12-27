@@ -23,8 +23,8 @@ class CMOPInst<bits<3> imm3, string opcodestr>
 }
 
 foreach i = 0...7 in {
-    let Predicates = [HasStdExtZcmop, HasStdExtCOrZca] in {
+  let Predicates = [HasStdExtZcmop] in {
     defvar n = !add(!mul(i, 2), 1);
-    def CMOP#n : CMOPInst<i, "cmop."#n>, Sched<[]>;
-    } // Predicates = [HasStdExtZcmop, HasStdExtCOrZca]
+    def CMOP # n : CMOPInst<i, "cmop." # n>, Sched<[]>;
+  } // Predicates = [HasStdExtZcmop]
 }
