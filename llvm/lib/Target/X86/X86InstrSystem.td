@@ -446,11 +446,11 @@ let Predicates = [HasUSERMSR], mayLoad = 1 in {
 }
 let Predicates = [HasUSERMSR], mayStore = 1 in {
   def UWRMSRrr : I<0xf8, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
-                "uwrmsr\t{$src1, $src2|$src2, $src1}",
+                "uwrmsr\t{$src2, $src1|$src1, $src2}",
                 [(int_x86_uwrmsr GR64:$src1, GR64:$src2)]>, T8, XS;
   def UWRMSRir : Ii32<0xf8, MRM0r, (outs), (ins GR64:$src, i64i32imm:$imm),
                 "uwrmsr\t{$src, $imm|$imm, $src}",
-                [(int_x86_uwrmsr GR64:$src, i64immSExt32_su:$imm)]>, T_MAP7, XS, VEX;
+                [(int_x86_uwrmsr i64immSExt32_su:$imm, GR64:$src)]>, T_MAP7, XS, VEX;
 }
 let Defs = [RAX, RDX], Uses = [ECX] in
 def RDPMC : I<0x33, RawFrm, (outs), (ins), "rdpmc", []>, TB;
