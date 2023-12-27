@@ -159,21 +159,21 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
   case __format::__arg_t::__long_long:
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__long_long_);
   case __format::__arg_t::__i128:
-#      ifndef _LIBCPP_HAS_NO_INT128
+#    ifndef _LIBCPP_HAS_NO_INT128
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__i128_);
-#      else
+#    else
     __libcpp_unreachable();
-#      endif
+#    endif
   case __format::__arg_t::__unsigned:
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__unsigned_);
   case __format::__arg_t::__unsigned_long_long:
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__unsigned_long_long_);
   case __format::__arg_t::__u128:
-#      ifndef _LIBCPP_HAS_NO_INT128
+#    ifndef _LIBCPP_HAS_NO_INT128
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__u128_);
-#      else
+#    else
     __libcpp_unreachable();
-#      endif
+#    endif
   case __format::__arg_t::__float:
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__float_);
   case __format::__arg_t::__double:
