@@ -239,8 +239,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   if (decorationName.empty()) {
     return emitError(unknownLoc, "invalid Decoration code : ") << words[1];
   }
-  auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
-  auto symbol = opBuilder.getStringAttr(attrName);
+  auto symbol = getSymbolDecoration(decorationName);
   switch (static_cast<spirv::Decoration>(words[1])) {
   case spirv::Decoration::FPFastMathMode:
     if (words.size() != 3) {
@@ -298,6 +297,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   }
   case spirv::Decoration::Aliased:
+  case spirv::Decoration::AliasedPointer:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
   case spirv::Decoration::Flat:
@@ -308,6 +308,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::NoUnsignedWrap:
   case spirv::Decoration::RelaxedPrecision:
   case spirv::Decoration::Restrict:
+  case spirv::Decoration::RestrictPointer:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -367,6 +368,46 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
   }
   memberNameMap[words[0]][words[1]] = name;
   return success();
+}
+
+void spirv::Deserializer::setArgAttrs(uint32_t argID) {
+  if (!decorations.count(argID)) {
+    argAttrs.push_back(DictionaryAttr::get(context, {}));
+    return;
+  }
+
+  // Replace a decoration as UnitAttr with DecorationAttr for the physical
+  // buffer pointer in the function parameter.
+  // e.g. "aliased" -> "spirv.decoration = #spirv.decoration<Aliased>").
+  for (auto decAttr : decorations[argID]) {
+    if (decAttr.getName() ==
+        getSymbolDecoration(stringifyDecoration(spirv::Decoration::Aliased))) {
+      decorations[argID].erase(decAttr.getName());
+      decorations[argID].set(
+          spirv::DecorationAttr::name,
+          spirv::DecorationAttr::get(context, spirv::Decoration::Aliased));
+    } else if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                        spirv::Decoration::Restrict))) {
+      decorations[argID].erase(decAttr.getName());
+      decorations[argID].set(
+          spirv::DecorationAttr::name,
+          spirv::DecorationAttr::get(context, spirv::Decoration::Restrict));
+    } else if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                        spirv::Decoration::AliasedPointer))) {
+      decorations[argID].erase(decAttr.getName());
+      decorations[argID].set(spirv::DecorationAttr::name,
+                             spirv::DecorationAttr::get(
+                                 context, spirv::Decoration::AliasedPointer));
+    } else if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                        spirv::Decoration::RestrictPointer))) {
+      decorations[argID].erase(decAttr.getName());
+      decorations[argID].set(spirv::DecorationAttr::name,
+                             spirv::DecorationAttr::get(
+                                 context, spirv::Decoration::RestrictPointer));
+    }
+  }
+
+  argAttrs.push_back(decorations[argID].getDictionary(context));
 }
 
 LogicalResult
@@ -463,10 +504,17 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
         return emitError(unknownLoc, "duplicate definition of result <id> ")
                << operands[1];
       }
+      setArgAttrs(operands[1]);
       auto argValue = funcOp.getArgument(i);
       valueMap[operands[1]] = argValue;
     }
   }
+
+  if (llvm::any_of(argAttrs, [](Attribute attr) {
+        auto argAttr = cast<DictionaryAttr>(attr);
+        return !argAttr.empty();
+      }))
+    funcOp.setArgAttrsAttr(ArrayAttr::get(context, argAttrs));
 
   // entryBlock is needed to access the arguments, Once that is done, we can
   // erase the block for functions with 'Import' LinkageAttributes, since these

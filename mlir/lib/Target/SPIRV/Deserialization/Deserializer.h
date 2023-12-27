@@ -233,6 +233,15 @@ private:
     return globalVariableMap.lookup(id);
   }
 
+  /// Sets the argument's attributes with the given argument <id>.
+  void setArgAttrs(uint32_t argID);
+
+  /// Gets the symbol name from the name of decoration.
+  StringAttr getSymbolDecoration(StringRef decorationName) {
+    auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
+    return opBuilder.getStringAttr(attrName);
+  }
+
   //===--------------------------------------------------------------------===//
   // Type
   //===--------------------------------------------------------------------===//
@@ -604,6 +613,9 @@ private:
 
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
+
+  /// A list of argument attributes of function.
+  SmallVector<Attribute, 0> argAttrs;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

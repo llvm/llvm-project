@@ -215,6 +215,77 @@ static std::string getDecorationName(StringRef attrName) {
   return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
 }
 
+LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
+                                                Decoration decoration,
+                                                Attribute attr) {
+  SmallVector<uint32_t, 1> args;
+  switch (decoration) {
+  case spirv::Decoration::LinkageAttributes: {
+    // Get the value of the Linkage Attributes
+    // e.g., LinkageAttributes=["linkageName", linkageType].
+    auto linkageAttr = llvm::dyn_cast<spirv::LinkageAttributesAttr>(attr);
+    auto linkageName = linkageAttr.getLinkageName();
+    auto linkageType = linkageAttr.getLinkageType().getValue();
+    // Encode the Linkage Name (string literal to uint32_t).
+    spirv::encodeStringLiteralInto(args, linkageName);
+    // Encode LinkageType & Add the Linkagetype to the args.
+    args.push_back(static_cast<uint32_t>(linkageType));
+    break;
+  }
+  case spirv::Decoration::FPFastMathMode:
+    if (auto intAttr = dyn_cast<FPFastMathModeAttr>(attr)) {
+      args.push_back(static_cast<uint32_t>(intAttr.getValue()));
+      break;
+    }
+    return emitError(loc, "expected FPFastMathModeAttr attribute for ")
+           << stringifyDecoration(decoration);
+  case spirv::Decoration::Binding:
+  case spirv::Decoration::DescriptorSet:
+  case spirv::Decoration::Location:
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+      args.push_back(intAttr.getValue().getZExtValue());
+      break;
+    }
+    return emitError(loc, "expected integer attribute for ")
+           << stringifyDecoration(decoration);
+  case spirv::Decoration::BuiltIn:
+    if (auto strAttr = dyn_cast<StringAttr>(attr)) {
+      auto enumVal = spirv::symbolizeBuiltIn(strAttr.getValue());
+      if (enumVal) {
+        args.push_back(static_cast<uint32_t>(*enumVal));
+        break;
+      }
+      return emitError(loc, "invalid ")
+             << stringifyDecoration(decoration) << " decoration attribute "
+             << strAttr.getValue();
+    }
+    return emitError(loc, "expected string attribute for ")
+           << stringifyDecoration(decoration);
+  case spirv::Decoration::Aliased:
+  case spirv::Decoration::AliasedPointer:
+  case spirv::Decoration::Flat:
+  case spirv::Decoration::NonReadable:
+  case spirv::Decoration::NonWritable:
+  case spirv::Decoration::NoPerspective:
+  case spirv::Decoration::NoSignedWrap:
+  case spirv::Decoration::NoUnsignedWrap:
+  case spirv::Decoration::RelaxedPrecision:
+  case spirv::Decoration::Restrict:
+  case spirv::Decoration::RestrictPointer:
+    // For unit attributes and decoration attributes, the args list
+    // has no values so we do nothing.
+    if (isa<UnitAttr>(attr) || isa<DecorationAttr>(attr))
+      break;
+    return emitError(loc,
+                     "expected unit attribute or decoration attribute for ")
+           << stringifyDecoration(decoration);
+  default:
+    return emitError(loc, "unhandled decoration ")
+           << stringifyDecoration(decoration);
+  }
+  return emitDecoration(resultID, decoration, args);
+}
+
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
   auto attrName = attr.getName().strref();
@@ -226,63 +297,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                     "decoration name, unhandled attribute with name : ")
            << attrName;
   }
-  SmallVector<uint32_t, 1> args;
-  switch (*decoration) {
-  case spirv::Decoration::LinkageAttributes: {
-    // Get the value of the Linkage Attributes
-    // e.g., LinkageAttributes=["linkageName", linkageType].
-    auto linkageAttr = llvm::dyn_cast<spirv::LinkageAttributesAttr>(attr.getValue());
-    auto linkageName = linkageAttr.getLinkageName();
-    auto linkageType = linkageAttr.getLinkageType().getValue();
-    // Encode the Linkage Name (string literal to uint32_t).
-    spirv::encodeStringLiteralInto(args, linkageName);
-    // Encode LinkageType & Add the Linkagetype to the args.
-    args.push_back(static_cast<uint32_t>(linkageType));
-    break;
-  }
-  case spirv::Decoration::FPFastMathMode:
-    if (auto intAttr = dyn_cast<FPFastMathModeAttr>(attr.getValue())) {
-      args.push_back(static_cast<uint32_t>(intAttr.getValue()));
-      break;
-    }
-    return emitError(loc, "expected FPFastMathModeAttr attribute for ")
-           << attrName;
-  case spirv::Decoration::Binding:
-  case spirv::Decoration::DescriptorSet:
-  case spirv::Decoration::Location:
-    if (auto intAttr = dyn_cast<IntegerAttr>(attr.getValue())) {
-      args.push_back(intAttr.getValue().getZExtValue());
-      break;
-    }
-    return emitError(loc, "expected integer attribute for ") << attrName;
-  case spirv::Decoration::BuiltIn:
-    if (auto strAttr = dyn_cast<StringAttr>(attr.getValue())) {
-      auto enumVal = spirv::symbolizeBuiltIn(strAttr.getValue());
-      if (enumVal) {
-        args.push_back(static_cast<uint32_t>(*enumVal));
-        break;
-      }
-      return emitError(loc, "invalid ")
-             << attrName << " attribute " << strAttr.getValue();
-    }
-    return emitError(loc, "expected string attribute for ") << attrName;
-  case spirv::Decoration::Aliased:
-  case spirv::Decoration::Flat:
-  case spirv::Decoration::NonReadable:
-  case spirv::Decoration::NonWritable:
-  case spirv::Decoration::NoPerspective:
-  case spirv::Decoration::NoSignedWrap:
-  case spirv::Decoration::NoUnsignedWrap:
-  case spirv::Decoration::RelaxedPrecision:
-  case spirv::Decoration::Restrict:
-    // For unit attributes, the args list has no values so we do nothing
-    if (auto unitAttr = dyn_cast<UnitAttr>(attr.getValue()))
-      break;
-    return emitError(loc, "expected unit attribute for ") << attrName;
-  default:
-    return emitError(loc, "unhandled decoration ") << decorationName;
-  }
-  return emitDecoration(resultID, *decoration, args);
+  return processDecorationAttr(loc, resultID, *decoration, attr.getValue());
 }
 
 LogicalResult Serializer::processName(uint32_t resultID, StringRef name) {
