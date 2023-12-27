@@ -1317,28 +1317,28 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
-    if (SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsAsanRt()) {
       SharedRuntimes.push_back("asan");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
-    if (SanArgs.needsMemProfRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsMemProfRt()) {
       SharedRuntimes.push_back("memprof");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("memprof-preinit");
     }
-    if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsUbsanRt()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
       else
         SharedRuntimes.push_back("ubsan_standalone");
     }
-    if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsScudoRt()) {
       SharedRuntimes.push_back("scudo_standalone");
     }
-    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+    if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
-    if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsHwasanRt()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
       else
@@ -1349,7 +1349,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
 
   // The stats_client library is also statically linked into DSOs.
-  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsStatsRt())
     StaticRuntimes.push_back("stats_client");
 
   // Always link the static runtime regardless of DSO or executable.
@@ -1365,20 +1365,19 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   // Each static runtime that has a DSO counterpart above is excluded below,
   // but runtimes that exist only as static are not affected by needsSharedRt.
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsAsanRt()) {
     StaticRuntimes.push_back("asan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt() &&
-      SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt()) {
     StaticRuntimes.push_back("memprof");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("memprof_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt()) {
     if (SanArgs.needsHwasanAliasesRt()) {
       StaticRuntimes.push_back("hwasan_aliases");
       if (SanArgs.linkCXXRuntimes())
@@ -1389,22 +1388,21 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("hwasan_cxx");
     }
   }
-  if (SanArgs.needsDfsanRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsDfsanRt())
     StaticRuntimes.push_back("dfsan");
-  if (SanArgs.needsLsanRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsMsanRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt() &&
-      SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
@@ -1413,24 +1411,24 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsSafeStackRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");
   }
-  if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes())) {
-    if (SanArgs.needsCfiRt() && SanArgs.linkRuntimes())
+  if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
+    if (SanArgs.needsCfiRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsCfiDiagRt()) {
       StaticRuntimes.push_back("cfi_diag");
       if (SanArgs.linkCXXRuntimes())
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsStatsRt()) {
     NonWholeStaticRuntimes.push_back("stats");
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt()) {
     StaticRuntimes.push_back("scudo_standalone");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("scudo_standalone_cxx");
@@ -1441,13 +1439,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   SmallVector<StringRef, 4> SharedRuntimes, StaticRuntimes,
       NonWholeStaticRuntimes, HelperStaticRuntimes, RequiredSymbols;
-  collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
-                           NonWholeStaticRuntimes, HelperStaticRuntimes,
-                           RequiredSymbols);
+  if (SanArgs.linkRuntimes()) {
+    collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
+                             NonWholeStaticRuntimes, HelperStaticRuntimes,
+                             RequiredSymbols);
+  }
 
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {

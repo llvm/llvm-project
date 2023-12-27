@@ -11,8 +11,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+d -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+d -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LMULMAX8
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+d -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LMULMAX8
-; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
-; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv32 -mattr=+v,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
 
 define void @cttz_v16i8(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: cttz_v16i8:

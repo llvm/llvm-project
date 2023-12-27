@@ -385,6 +385,9 @@ public:
   /// Emit all the range checks for the immediates.
   void createSMERangeChecks(raw_ostream &o);
 
+  /// Create a table for a builtin's requirement for PSTATE.ZA.
+  void createBuiltinZAState(raw_ostream &OS);
+
   /// Create intrinsic and add it to \p Out
   void createIntrinsic(Record *R,
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
@@ -1705,6 +1708,31 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
+void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  std::map<bool, std::set<std::string>> DefsZAState;
+
+  uint64_t IsSharedZAFlag = getEnumValueForFlag("IsSharedZA");
+  for (auto &Def : Defs) {
+    bool HasZAState = Def->isFlagSet(IsSharedZAFlag);
+    DefsZAState[HasZAState].insert(Def->getMangledName());
+  }
+
+  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
+
+  for (auto HasZA : {true, false}) {
+    auto Names = DefsZAState[HasZA];
+    for (auto Name : Names)
+      OS << "case SME::BI__builtin_sme_" << Name << ":\n";
+    OS << "  return " << (HasZA ? "true" : "false") << ";\n";
+  }
+  OS << "#endif\n\n";
+}
+
 void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
@@ -1793,5 +1821,9 @@ void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitSmeStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SME);
+}
+
+void EmitSmeBuiltinZAState(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createBuiltinZAState(OS);
 }
 } // End namespace clang

@@ -350,6 +350,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("riscv64", Is64Bit)
                     .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
+                    .Case("experimental", HasExperimental)
                     .Default(std::nullopt);
   if (Result)
     return *Result;
@@ -381,6 +382,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     HasLegalHalfType = true;
 
   FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
+
+  if (llvm::is_contained(Features, "+experimental"))
+    HasExperimental = true;
 
   return true;
 }

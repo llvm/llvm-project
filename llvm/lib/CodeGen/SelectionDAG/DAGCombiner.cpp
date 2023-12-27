@@ -14818,11 +14818,11 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
-    // Handle the case where the load remains an extending load even
-    // after truncation.
+    // Handle the case where the truncated result is at least as wide as the
+    // loaded type.
     if (N0.hasOneUse() && ISD::isUNINDEXEDLoad(N0.getNode())) {
       auto *LN0 = cast<LoadSDNode>(N0);
-      if (LN0->isSimple() && LN0->getMemoryVT().bitsLT(VT)) {
+      if (LN0->isSimple() && LN0->getMemoryVT().bitsLE(VT)) {
         SDValue NewLoad = DAG.getExtLoad(
             LN0->getExtensionType(), SDLoc(LN0), VT, LN0->getChain(),
             LN0->getBasePtr(), LN0->getMemoryVT(), LN0->getMemOperand());

@@ -90,9 +90,10 @@ _LIBCPP_HIDE_FROM_ABI inline _Iterator __insert_sign(_Iterator __buf, bool __neg
  * regardless whether the @c std::numpunct's type is @c char or @c wchar_t.
  */
 _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const string& __grouping) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(!__grouping.empty() && __size > __grouping[0],
-                               "The slow grouping formatting is used while there will be no "
-                               "separators written");
+  _LIBCPP_ASSERT_UNCATEGORIZED(
+      !__grouping.empty() && __size > __grouping[0],
+      "The slow grouping formatting is used while there will be no "
+      "separators written");
   string __r;
   auto __end = __grouping.end() - 1;
   auto __ptr = __grouping.begin();
@@ -124,10 +125,10 @@ _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const
 //
 
 template <__fmt_char_type _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __format_char(
-    integral auto __value,
-    output_iterator<const _CharT&> auto __out_it,
-    __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto
+__format_char(integral auto __value,
+              output_iterator<const _CharT&> auto __out_it,
+              __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   using _Tp = decltype(__value);
   if constexpr (!same_as<_CharT, _Tp>) {
     // cmp_less and cmp_greater can't be used for character types.
@@ -212,9 +213,14 @@ consteval size_t __buffer_size() noexcept
 
 template <class _OutIt, contiguous_iterator _Iterator, class _CharT>
   requires same_as<char, iter_value_t<_Iterator>>
-_LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, _Iterator __begin, _Iterator __first,
-                                                              _Iterator __last, string&& __grouping, _CharT __sep,
-                                                              __format_spec::__parsed_specifications<_CharT> __specs) {
+_LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(
+    _OutIt __out_it,
+    _Iterator __begin,
+    _Iterator __first,
+    _Iterator __last,
+    string&& __grouping,
+    _CharT __sep,
+    __format_spec::__parsed_specifications<_CharT> __specs) {
   int __size = (__first - __begin) +    // [sign][prefix]
                (__last - __first) +     // data
                (__grouping.size() - 1); // number of separator characters
@@ -242,8 +248,10 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, _
 
   auto __r = __grouping.rbegin();
   auto __e = __grouping.rend() - 1;
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r != __e, "The slow grouping formatting is used while "
-                                           "there will be no separators written.");
+  _LIBCPP_ASSERT_UNCATEGORIZED(
+      __r != __e,
+      "The slow grouping formatting is used while "
+      "there will be no separators written.");
   // The output is divided in small groups of numbers to write:
   // - A group before the first separator.
   // - A separator and a group, repeated for the number of separators.
@@ -257,9 +265,9 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, _
   // hoisting the invariant is worth the effort.
   while (true) {
     if (__specs.__std_.__type_ == __format_spec::__type::__hexadecimal_upper_case) {
-      __last = __first + *__r;
+      __last   = __first + *__r;
       __out_it = __formatter::__transform(__first, __last, std::move(__out_it), __hex_to_upper);
-      __first = __last;
+      __first  = __last;
     } else {
       __out_it = __formatter::__copy(__first, *__r, std::move(__out_it));
       __first += *__r;
@@ -274,8 +282,6 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, _
 
   return __formatter::__fill(std::move(__out_it), __padding.__after_, __specs.__fill_);
 }
-
-
 
 template <unsigned_integral _Tp, contiguous_iterator _Iterator, class _CharT, class _FormatContext>
   requires same_as<char, iter_value_t<_Iterator>>
@@ -324,10 +330,10 @@ _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
     // The zero padding is done like:
     // - Write [sign][prefix]
     // - Write data right aligned with '0' as fill character.
-    __out_it             = __formatter::__copy(__begin, __first, std::move(__out_it));
-    __specs.__alignment_ = __format_spec::__alignment::__right;
+    __out_it                  = __formatter::__copy(__begin, __first, std::move(__out_it));
+    __specs.__alignment_      = __format_spec::__alignment::__right;
     __specs.__fill_.__data[0] = _CharT('0');
-    int32_t __size       = __first - __begin;
+    int32_t __size            = __first - __begin;
 
     __specs.__width_ -= std::min(__size, __specs.__width_);
   }

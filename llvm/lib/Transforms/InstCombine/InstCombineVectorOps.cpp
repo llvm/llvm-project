@@ -777,10 +777,10 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
   assert(V->getType()->isVectorTy() && "Invalid shuffle!");
   unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
-  if (match(V, m_Undef())) {
+  if (match(V, m_Poison())) {
     Mask.assign(NumElts, -1);
     return std::make_pair(
-        PermittedRHS ? UndefValue::get(PermittedRHS->getType()) : V, nullptr);
+        PermittedRHS ? PoisonValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
   if (isa<ConstantAggregateZero>(V)) {
@@ -2756,6 +2756,11 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
   if (Instruction *I = simplifyBinOpSplats(SVI))
     return I;
+
+  // Canonicalize splat shuffle to use poison RHS. Handle this explicitly in
+  // order to support scalable vectors.
+  if (match(SVI.getShuffleMask(), m_ZeroMask()) && !isa<PoisonValue>(RHS))
+    return replaceOperand(SVI, 1, PoisonValue::get(RHS->getType()));
 
   if (isa<ScalableVectorType>(LHS->getType()))
     return nullptr;
