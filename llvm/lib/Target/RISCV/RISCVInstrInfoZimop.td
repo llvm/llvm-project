@@ -47,15 +47,13 @@ class RVMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3,
                    opcodestr, "$rd, $rs1, $rs2">;
 
 foreach i = 0...31 in {
-  let Predicates = [HasStdExtZimop] in {
+  let Predicates = [HasStdExtZimop] in
   def MOPR#i : RVMopr<0b1000111, i, 0b100, OPC_SYSTEM, "mop.r."#i>,
                Sched<[]>;
-  } // Predicates = [HasStdExtZimop]
 }
 
 foreach i = 0...7 in {
-  let Predicates = [HasStdExtZimop] in {
+  let Predicates = [HasStdExtZimop] in
   def MOPRR#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
                 Sched<[]>;
-  } // Predicates = [HasStdExtZimop]
 }
