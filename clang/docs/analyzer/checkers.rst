@@ -2107,7 +2107,7 @@ a warning is emitted. Currently, this checker does not take exception handling i
 
  void test() {
    std::variant <int, char> v = 25;
-   char c = stg::get<char>(v); // warn
+   char c = stg::get<char>(v); // warn: "int" is the active alternative
  }
 
 .. _alpha-core-TestAfterDivZero:
