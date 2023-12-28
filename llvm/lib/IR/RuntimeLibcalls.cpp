@@ -62,59 +62,60 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
     Info.setLibcallImplCallingConv(Impl, CallingConv::ARM_AAPCS);
 }
 
+/// Set all libm libcalls for _Float128 to `long double` (`*l`) symbols.
 static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
                                     bool FiniteOnlyFuncs = false) {
-  Info.setLibcallImpl(RTLIB::REM_F128, RTLIB::fmodf128);
-  Info.setLibcallImpl(RTLIB::FMA_F128, RTLIB::fmaf128);
-  Info.setLibcallImpl(RTLIB::SQRT_F128, RTLIB::sqrtf128);
-  Info.setLibcallImpl(RTLIB::CBRT_F128, RTLIB::cbrtf128);
-  Info.setLibcallImpl(RTLIB::LOG_F128, RTLIB::logf128);
-  Info.setLibcallImpl(RTLIB::LOG2_F128, RTLIB::log2f128);
-  Info.setLibcallImpl(RTLIB::LOG10_F128, RTLIB::log10f128);
-  Info.setLibcallImpl(RTLIB::EXP_F128, RTLIB::expf128);
-  Info.setLibcallImpl(RTLIB::EXP2_F128, RTLIB::exp2f128);
-  Info.setLibcallImpl(RTLIB::EXP10_F128, RTLIB::exp10f128);
-  Info.setLibcallImpl(RTLIB::SIN_F128, RTLIB::sinf128);
-  Info.setLibcallImpl(RTLIB::COS_F128, RTLIB::cosf128);
-  Info.setLibcallImpl(RTLIB::TAN_F128, RTLIB::tanf128);
-  Info.setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincosf128);
-  Info.setLibcallImpl(RTLIB::ASIN_F128, RTLIB::asinf128);
-  Info.setLibcallImpl(RTLIB::ACOS_F128, RTLIB::acosf128);
-  Info.setLibcallImpl(RTLIB::ATAN_F128, RTLIB::atanf128);
-  Info.setLibcallImpl(RTLIB::ATAN2_F128, RTLIB::atan2f128);
-  Info.setLibcallImpl(RTLIB::SINH_F128, RTLIB::sinhf128);
-  Info.setLibcallImpl(RTLIB::COSH_F128, RTLIB::coshf128);
-  Info.setLibcallImpl(RTLIB::TANH_F128, RTLIB::tanhf128);
-  Info.setLibcallImpl(RTLIB::POW_F128, RTLIB::powf128);
-  Info.setLibcallImpl(RTLIB::CEIL_F128, RTLIB::ceilf128);
-  Info.setLibcallImpl(RTLIB::TRUNC_F128, RTLIB::truncf128);
-  Info.setLibcallImpl(RTLIB::RINT_F128, RTLIB::rintf128);
-  Info.setLibcallImpl(RTLIB::NEARBYINT_F128, RTLIB::nearbyintf128);
-  Info.setLibcallImpl(RTLIB::ROUND_F128, RTLIB::roundf128);
-  Info.setLibcallImpl(RTLIB::ROUNDEVEN_F128, RTLIB::roundevenf128);
-  Info.setLibcallImpl(RTLIB::FLOOR_F128, RTLIB::floorf128);
-  Info.setLibcallImpl(RTLIB::COPYSIGN_F128, RTLIB::copysignf128);
-  Info.setLibcallImpl(RTLIB::FMIN_F128, RTLIB::fminf128);
-  Info.setLibcallImpl(RTLIB::FMAX_F128, RTLIB::fmaxf128);
-  Info.setLibcallImpl(RTLIB::FMINIMUM_F128, RTLIB::fminimumf128);
-  Info.setLibcallImpl(RTLIB::FMAXIMUM_F128, RTLIB::fmaximumf128);
-  Info.setLibcallImpl(RTLIB::FMINIMUM_NUM_F128, RTLIB::fminimum_numf128);
-  Info.setLibcallImpl(RTLIB::FMAXIMUM_NUM_F128, RTLIB::fmaximum_numf128);
-  Info.setLibcallImpl(RTLIB::LROUND_F128, RTLIB::lroundf128);
-  Info.setLibcallImpl(RTLIB::LLROUND_F128, RTLIB::llroundf128);
-  Info.setLibcallImpl(RTLIB::LRINT_F128, RTLIB::lrintf128);
-  Info.setLibcallImpl(RTLIB::LLRINT_F128, RTLIB::llrintf128);
-  Info.setLibcallImpl(RTLIB::LDEXP_F128, RTLIB::ldexpf128);
-  Info.setLibcallImpl(RTLIB::FREXP_F128, RTLIB::frexpf128);
-  Info.setLibcallImpl(RTLIB::MODF_F128, RTLIB::modff128);
+  Info.setLibcallImpl(RTLIB::REM_F128, RTLIB::fmod_ld128);
+  Info.setLibcallImpl(RTLIB::FMA_F128, RTLIB::fma_ld128);
+  Info.setLibcallImpl(RTLIB::SQRT_F128, RTLIB::sqrt_ld128);
+  Info.setLibcallImpl(RTLIB::CBRT_F128, RTLIB::cbrt_ld128);
+  Info.setLibcallImpl(RTLIB::LOG_F128, RTLIB::log_ld128);
+  Info.setLibcallImpl(RTLIB::LOG2_F128, RTLIB::log2_ld128);
+  Info.setLibcallImpl(RTLIB::LOG10_F128, RTLIB::log10_ld128);
+  Info.setLibcallImpl(RTLIB::EXP_F128, RTLIB::exp_ld128);
+  Info.setLibcallImpl(RTLIB::EXP2_F128, RTLIB::exp2_ld128);
+  Info.setLibcallImpl(RTLIB::EXP10_F128, RTLIB::exp10_ld128);
+  Info.setLibcallImpl(RTLIB::SIN_F128, RTLIB::sin_ld128);
+  Info.setLibcallImpl(RTLIB::COS_F128, RTLIB::cos_ld128);
+  Info.setLibcallImpl(RTLIB::TAN_F128, RTLIB::tan_ld128);
+  Info.setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincos_ld128);
+  Info.setLibcallImpl(RTLIB::ASIN_F128, RTLIB::asin_ld128);
+  Info.setLibcallImpl(RTLIB::ACOS_F128, RTLIB::acos_ld128);
+  Info.setLibcallImpl(RTLIB::ATAN_F128, RTLIB::atan_ld128);
+  Info.setLibcallImpl(RTLIB::ATAN2_F128, RTLIB::atan2_ld128);
+  Info.setLibcallImpl(RTLIB::SINH_F128, RTLIB::sinh_ld128);
+  Info.setLibcallImpl(RTLIB::COSH_F128, RTLIB::cosh_ld128);
+  Info.setLibcallImpl(RTLIB::TANH_F128, RTLIB::tanh_ld128);
+  Info.setLibcallImpl(RTLIB::POW_F128, RTLIB::pow_ld128);
+  Info.setLibcallImpl(RTLIB::CEIL_F128, RTLIB::ceil_ld128);
+  Info.setLibcallImpl(RTLIB::TRUNC_F128, RTLIB::trunc_ld128);
+  Info.setLibcallImpl(RTLIB::RINT_F128, RTLIB::rint_ld128);
+  Info.setLibcallImpl(RTLIB::NEARBYINT_F128, RTLIB::nearbyint_ld128);
+  Info.setLibcallImpl(RTLIB::ROUND_F128, RTLIB::round_ld128);
+  Info.setLibcallImpl(RTLIB::ROUNDEVEN_F128, RTLIB::roundeven_ld128);
+  Info.setLibcallImpl(RTLIB::FLOOR_F128, RTLIB::floor_ld128);
+  Info.setLibcallImpl(RTLIB::COPYSIGN_F128, RTLIB::copysign_ld128);
+  Info.setLibcallImpl(RTLIB::FMIN_F128, RTLIB::fmin_ld128);
+  Info.setLibcallImpl(RTLIB::FMAX_F128, RTLIB::fmax_ld128);
+  Info.setLibcallImpl(RTLIB::FMINIMUM_F128, RTLIB::fminimum_ld128);
+  Info.setLibcallImpl(RTLIB::FMAXIMUM_F128, RTLIB::fmaximum_ld128);
+  Info.setLibcallImpl(RTLIB::FMINIMUM_NUM_F128, RTLIB::fminimum_num_ld128);
+  Info.setLibcallImpl(RTLIB::FMAXIMUM_NUM_F128, RTLIB::fmaximum_num_ld128);
+  Info.setLibcallImpl(RTLIB::LROUND_F128, RTLIB::lround_ld128);
+  Info.setLibcallImpl(RTLIB::LLROUND_F128, RTLIB::llround_ld128);
+  Info.setLibcallImpl(RTLIB::LRINT_F128, RTLIB::lrint_ld128);
+  Info.setLibcallImpl(RTLIB::LLRINT_F128, RTLIB::llrint_ld128);
+  Info.setLibcallImpl(RTLIB::LDEXP_F128, RTLIB::ldexp_ld128);
+  Info.setLibcallImpl(RTLIB::FREXP_F128, RTLIB::frexp_ld128);
+  Info.setLibcallImpl(RTLIB::MODF_F128, RTLIB::modf_ld128);
 
   if (FiniteOnlyFuncs) {
-    Info.setLibcallImpl(RTLIB::LOG_FINITE_F128, RTLIB::__logf128_finite);
-    Info.setLibcallImpl(RTLIB::LOG2_FINITE_F128, RTLIB::__log2f128_finite);
-    Info.setLibcallImpl(RTLIB::LOG10_FINITE_F128, RTLIB::__log10f128_finite);
-    Info.setLibcallImpl(RTLIB::EXP_FINITE_F128, RTLIB::__expf128_finite);
-    Info.setLibcallImpl(RTLIB::EXP2_FINITE_F128, RTLIB::__exp2f128_finite);
-    Info.setLibcallImpl(RTLIB::POW_FINITE_F128, RTLIB::__powf128_finite);
+    Info.setLibcallImpl(RTLIB::LOG_FINITE_F128, RTLIB::__log_finite_ld128);
+    Info.setLibcallImpl(RTLIB::LOG2_FINITE_F128, RTLIB::__log2_finite_ld128);
+    Info.setLibcallImpl(RTLIB::LOG10_FINITE_F128, RTLIB::__log10_finite_ld128);
+    Info.setLibcallImpl(RTLIB::EXP_FINITE_F128, RTLIB::__exp_finite_ld128);
+    Info.setLibcallImpl(RTLIB::EXP2_FINITE_F128, RTLIB::__exp2_finite_ld128);
+    Info.setLibcallImpl(RTLIB::POW_FINITE_F128, RTLIB::__pow_finite_ld128);
   } else {
     Info.setLibcallImpl(RTLIB::LOG_FINITE_F128, RTLIB::Unsupported);
     Info.setLibcallImpl(RTLIB::LOG2_FINITE_F128, RTLIB::Unsupported);
@@ -137,15 +138,24 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
+  LibcallImpl SinCosF128Impl = RTLIB::Unsupported;
   setTargetRuntimeLibcallSets(TT, FloatABI);
 
   // Early exit for targets that have fully ported to tablegen.
   if (TT.isAMDGPU() || TT.isNVPTX() || TT.isWasm())
     return;
 
-  // Use the f128 variants of math functions on x86
-  if (TT.isX86() && TT.isGNUEnvironment())
+  // By default fp128 libcalls get lowered to `*f128` symbols, which is
+  // safest because the symbols are only ever for binary128 on all platforms.
+  // Unfortunately many platforms only have the `*l` (`long double`) symbols,
+  // which vary by architecture and compilation flags, so we have to use them
+  // sometimes.
+  if (TT.f128LibmShouldUseLongDouble()) {
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
+    SinCosF128Impl = RTLIB::sincos_ld128;
+  } else {
+    SinCosF128Impl = RTLIB::sincos_f128;
+  }
 
   if (TT.isX86() || TT.isVE() || TT.isARM() || TT.isThumb()) {
     if (ExceptionModel == ExceptionHandling::SjLj)
@@ -184,7 +194,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::SINCOS_F32, RTLIB::sincosf);
     setLibcallImpl(RTLIB::SINCOS_F64, RTLIB::sincos);
     setLibcallImpl(RTLIB::SINCOS_F80, RTLIB::sincos_f80);
-    setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincos_f128);
+    setLibcallImpl(RTLIB::SINCOS_F128, SinCosF128Impl);
     setLibcallImpl(RTLIB::SINCOS_PPCF128, RTLIB::sincos_ppcf128);
   }
 
