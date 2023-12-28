@@ -11,7 +11,7 @@
 // RUN: not %clang -### -target x86_64 -fbasic-block-sections=list %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
 // RUN: not %clang -### -target x86_64 -fbasic-block-sections=listwithlabels %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
 // RUN: %clang -### -target x86_64 -fbasic-block-sections=list= %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-NULL-LIST %s
-// RUN: %clang -### -target x86_64 -fbasic-block-sections=listwithlabels= %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-NULL-LIST %s
+// RUN: %clang -### -target x86_64 -fbasic-block-sections=listwithlabels= %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-NULL-LISTWITHLABELS %s
 // RUN: %clang -### -target x86_64 -fbasic-block-sections=none %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-NONE %s
 // RUN: %clang -### -x cuda -nocudainc -nocudalib --target=x86_64 -fbasic-block-sections=all --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s -c 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-CUDA %s
@@ -26,6 +26,7 @@
 // CHECK-TRIPLE:     error: unsupported option '-fbasic-block-sections=all' for target
 // CHECK-INVALID-VALUE: error: invalid value {{[^ ]*}} in '-fbasic-block-sections={{.*}}'
 // CHECK-OPT-NULL-LIST: "-fbasic-block-sections=list="
+// CHECK-OPT-NULL-LISTWITHLABELS: "-fbasic-block-sections=listwithlabels="
 
 // GPU-side compilations should have no -fbasic-block-sections. It should only
 // be passed to the host compilation
