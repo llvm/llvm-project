@@ -15,6 +15,7 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -39,10 +40,34 @@ struct TestGpuRewritePass
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
+
+struct TestGpuSubgroupReduceLoweringPass
+    : public PassWrapper<TestGpuSubgroupReduceLoweringPass,
+                         OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestGpuSubgroupReduceLoweringPass)
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect, vector::VectorDialect>();
+  }
+  StringRef getArgument() const final {
+    return "test-gpu-subgroup-reduce-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Applies gpu.subgroup_reduce lowering patterns.";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateGpuBreakDownSubgrupReducePatterns(patterns,
+                                              /*maxShuffleBitwidth=*/32);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
-void registerTestAllReduceLoweringPass() {
+void registerTestGpuLoweringPasses() {
   PassRegistration<TestGpuRewritePass>();
+  PassRegistration<TestGpuSubgroupReduceLoweringPass>();
 }
 } // namespace mlir

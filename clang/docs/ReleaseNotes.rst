@@ -1072,6 +1072,7 @@ New features
 
 - Added a new experimental checker ``alpha.core.StdVariant`` to detect variant
   accesses via wrong alternatives.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#alpha-core-stdvariant-c>`__.
   (`#66481 <https://github.com/llvm/llvm-project/pull/66481>`_)
 
 - Added a new experimental checker ``alpha.cplusplus.ArrayDelete`` to detect
