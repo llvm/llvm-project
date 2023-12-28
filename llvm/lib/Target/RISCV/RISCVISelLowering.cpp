@@ -2711,19 +2711,11 @@ InstructionCost RISCVTargetLowering::getVRGatherVICost(MVT VT) const {
   return getLMULCost(VT);
 }
 
-/// Return the cost of a vslidedown.vx or vslideup.vx instruction
+/// Return the cost of a vslidedown.vi/vx or vslideup.vi/vx instruction
 /// for the type VT.  (This does not cover the vslide1up or vslide1down
 /// variants.)  Slides may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
-InstructionCost RISCVTargetLowering::getVSlideVXCost(MVT VT) const {
-  return getLMULCost(VT);
-}
-
-/// Return the cost of a vslidedown.vi or vslideup.vi instruction
-/// for the type VT.  (This does not cover the vslide1up or vslide1down
-/// variants.)  Slides may be linear in the number of vregs implied by LMUL,
-/// or may track the vrgather.vv cost. It is implementation-dependent.
-InstructionCost RISCVTargetLowering::getVSlideVICost(MVT VT) const {
+InstructionCost RISCVTargetLowering::getVSlideCost(MVT VT) const {
   return getLMULCost(VT);
 }
 
