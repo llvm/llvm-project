@@ -48,8 +48,7 @@ struct TestGpuSubgroupReduceLoweringPass
       TestGpuSubgroupReduceLoweringPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, func::FuncDialect, index::IndexDialect,
-                    memref::MemRefDialect, vector::VectorDialect>();
+    registry.insert<arith::ArithDialect, vector::VectorDialect>();
   }
   StringRef getArgument() const final {
     return "test-gpu-subgroup-reduce-lowering";
