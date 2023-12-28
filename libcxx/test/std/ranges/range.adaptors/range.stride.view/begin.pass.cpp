@@ -11,10 +11,11 @@
 // constexpr auto begin() requires(!__simple_view<_View>)
 // constexpr auto begin() const requires range<const _View>
 
-#include <concepts>
+// Note: Checks here are augmented by checks in
+// iterator/ctor.copy.pass.cpp.
+
 #include <ranges>
 
-#include "test_range.h"
 #include "types.h"
 
 template <class T>
@@ -54,5 +55,6 @@ int main(int, char**) {
   int buffer[] = {1, 2, 3};
   auto sv      = std::ranges::stride_view(SimpleView(buffer, buffer + 3), 1);
   assert(1 == *(sv.begin()));
+
   return 0;
 }
