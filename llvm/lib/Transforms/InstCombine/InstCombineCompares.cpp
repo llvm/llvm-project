@@ -4785,7 +4785,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         APInt Diff = *AP2 - *AP1;
         Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
         Value *NewAdd = Builder.CreateAdd(
-            C, C3, "", Op1HasNUW && Diff.ule(*AP1), Op1HasNSW);
+            C, C3, "", Op1HasNUW && Diff.ule(*AP2), Op1HasNSW);
         return new ICmpInst(Pred, A, NewAdd);
       }
     }
