@@ -71,7 +71,7 @@ LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 eisel_lemire(ExpandedFloat<T> init_num,
              RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
+  using FloatProp = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   StorageType mantissa = init_num.mantissa;
@@ -184,7 +184,7 @@ LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
                           RoundDirection round) {
   using FPBits = typename fputil::FPBits<long double>;
-  using FloatProp = typename fputil::FloatProperties<long double>;
+  using FloatProp = typename fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
 
   StorageType mantissa = init_num.mantissa;
@@ -321,7 +321,7 @@ LIBC_INLINE FloatConvertReturn<T>
 simple_decimal_conversion(const char *__restrict numStart,
                           RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
+  using FloatProp = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   int32_t exp2 = 0;
@@ -515,7 +515,7 @@ LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 clinger_fast_path(ExpandedFloat<T> init_num,
                   RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
+  using FloatProp = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   StorageType mantissa = init_num.mantissa;
@@ -605,7 +605,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 // log10(2^(exponent bias)).
 // The generic approximation uses the fact that log10(2^x) ~= x/3
 template <typename T> constexpr int32_t get_upper_bound() {
-  return fputil::FloatProperties<T>::EXP_BIAS / 3;
+  return fputil::FPBits<T>::EXP_BIAS / 3;
 }
 
 template <> constexpr int32_t get_upper_bound<float>() { return 39; }
@@ -621,7 +621,7 @@ template <> constexpr int32_t get_upper_bound<double>() { return 309; }
 // other out, and subnormal numbers allow for the result to be at the very low
 // end of the final mantissa.
 template <typename T> constexpr int32_t get_lower_bound() {
-  using FloatProp = typename fputil::FloatProperties<T>;
+  using FloatProp = typename fputil::FPBits<T>;
   return -(
       (FloatProp::EXP_BIAS +
        static_cast<int32_t>(FloatProp::FRACTION_LEN + FloatProp::STORAGE_LEN)) /
@@ -723,7 +723,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
                                                       bool truncated,
                                                       RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
-  using FloatProp = typename fputil::FloatProperties<T>;
+  using FloatProp = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   StorageType mantissa = init_num.mantissa;

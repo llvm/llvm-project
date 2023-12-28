@@ -387,7 +387,7 @@ static constexpr DoubleDouble LOG2_R2_DD[] = {
 };
 
 LIBC_INLINE bool is_odd_integer(float x) {
-  using FloatProp = typename fputil::FloatProperties<float>;
+  using FloatProp = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXP_MASK) >>
                                      FloatProp::FRACTION_LEN);
@@ -398,7 +398,7 @@ LIBC_INLINE bool is_odd_integer(float x) {
 }
 
 LIBC_INLINE bool is_integer(float x) {
-  using FloatProp = typename fputil::FloatProperties<float>;
+  using FloatProp = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXP_MASK) >>
                                      FloatProp::FRACTION_LEN);
@@ -424,7 +424,7 @@ LIBC_INLINE bool larger_exponent(double a, double b) {
 double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
                           const DoubleDouble &exp2_hi_mid) {
   using DoubleBits = typename fputil::FPBits<double>;
-  using DoubleProp = typename fputil::FloatProperties<double>;
+  using DoubleProp = typename fputil::FPBits<double>;
   // Perform a second range reduction step:
   //   idx2 = round(2^14 * (dx  + 2^-8)) = round ( dx * 2^14 + 2^6)
   //   dx2 = (1 + dx) * r2 - 1
@@ -512,8 +512,8 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
 
 LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   using FloatBits = typename fputil::FPBits<float>;
-  using FloatProp = typename fputil::FloatProperties<float>;
-  using DoubleProp = typename fputil::FloatProperties<double>;
+  using FloatProp = typename fputil::FPBits<float>;
+  using DoubleProp = typename fputil::FPBits<double>;
   FloatBits xbits(x), ybits(y);
 
   uint32_t x_u = xbits.uintval();

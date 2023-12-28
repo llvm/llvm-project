@@ -94,7 +94,7 @@ LIBC_INLINE bool shift_mantissa(int shift_length, UInt128 &mant) {
 
 template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   using FPBits = fputil::FPBits<double>;
-  using FloatProp = fputil::FloatProperties<double>;
+  using FloatProp = fputil::FPBits<double>;
 
   if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0)) {
     return x * y + z;

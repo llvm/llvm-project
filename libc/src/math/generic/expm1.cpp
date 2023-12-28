@@ -271,7 +271,7 @@ double set_exceptional(double x) {
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
+  using FloatProp = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
   bool x_sign = xbits.get_sign();

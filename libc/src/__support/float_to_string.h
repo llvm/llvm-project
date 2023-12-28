@@ -105,7 +105,7 @@ namespace LIBC_NAMESPACE {
 using BlockInt = uint32_t;
 constexpr uint32_t BLOCK_SIZE = 9;
 
-using FloatProp = fputil::FloatProperties<long double>;
+using FloatProp = fputil::FPBits<long double>;
 
 // Larger numbers prefer a slightly larger constant than is used for the smaller
 // numbers.

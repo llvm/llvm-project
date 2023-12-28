@@ -39,9 +39,9 @@ enum class FPEncoding {
   X86_ExtendedPrecision,
 };
 
-template <FPType> struct FPBaseProperties {};
+template <FPType> struct FPBaseAttr {};
 
-template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
+template <> struct FPBaseAttr<FPType::IEEE754_Binary16> {
   using StorageType = uint16_t;
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 16;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 10;
@@ -49,7 +49,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
+template <> struct FPBaseAttr<FPType::IEEE754_Binary32> {
   using StorageType = uint32_t;
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 32;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 23;
@@ -57,7 +57,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
+template <> struct FPBaseAttr<FPType::IEEE754_Binary64> {
   using StorageType = uint64_t;
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 64;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 52;
@@ -65,7 +65,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
+template <> struct FPBaseAttr<FPType::IEEE754_Binary128> {
   using StorageType = UInt128;
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 128;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
@@ -73,7 +73,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseProperties<FPType::X86_Binary80> {
+template <> struct FPBaseAttr<FPType::X86_Binary80> {
   using StorageType = UInt128;
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 80;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
@@ -85,9 +85,9 @@ template <> struct FPBaseProperties<FPType::X86_Binary80> {
 } // namespace internal
 
 template <FPType fp_type>
-struct FPProperties : public internal::FPBaseProperties<fp_type> {
+struct FPBaseMasksAndShifts : public internal::FPBaseAttr<fp_type> {
 private:
-  using UP = internal::FPBaseProperties<fp_type>;
+  using UP = internal::FPBaseAttr<fp_type>;
 
 public:
   // The number of bits to represent sign. For documentation purpose, always 1.
@@ -174,12 +174,12 @@ protected:
 };
 
 //-----------------------------------------------------------------------------
-template <typename FP> LIBC_INLINE static constexpr FPType get_fp_type() {
-  if constexpr (cpp::is_same_v<FP, float> && __FLT_MANT_DIG__ == 24)
+template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
+  if constexpr (cpp::is_same_v<T, float> && __FLT_MANT_DIG__ == 24)
     return FPType::IEEE754_Binary32;
-  else if constexpr (cpp::is_same_v<FP, double> && __DBL_MANT_DIG__ == 53)
+  else if constexpr (cpp::is_same_v<T, double> && __DBL_MANT_DIG__ == 53)
     return FPType::IEEE754_Binary64;
-  else if constexpr (cpp::is_same_v<FP, long double>) {
+  else if constexpr (cpp::is_same_v<T, long double>) {
     if constexpr (__LDBL_MANT_DIG__ == 53)
       return FPType::IEEE754_Binary64;
     else if constexpr (__LDBL_MANT_DIG__ == 64)
@@ -188,30 +188,27 @@ template <typename FP> LIBC_INLINE static constexpr FPType get_fp_type() {
       return FPType::IEEE754_Binary128;
   }
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
-  else if constexpr (cpp::is_same_v<FP, _Float16>)
+  else if constexpr (cpp::is_same_v<T, _Float16>)
     return FPType::IEEE754_Binary16;
 #endif
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
-  else if constexpr (cpp::is_same_v<FP, _Float128>)
+  else if constexpr (cpp::is_same_v<T, _Float128>)
     return FPType::IEEE754_Binary128;
 #endif
 #if defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
-  else if constexpr (cpp::is_same_v<FP, __float128>)
+  else if constexpr (cpp::is_same_v<T, __float128>)
     return FPType::IEEE754_Binary128;
 #endif
   else
-    static_assert(cpp::always_false<FP>, "Unsupported type");
+    static_assert(cpp::always_false<T>, "Unsupported type");
 }
-
-template <typename FP>
-struct FloatProperties : public FPProperties<get_fp_type<FP>()> {};
 
 namespace internal {
 
 // This is a temporary class to unify common methods and properties between
 // FPBits and FPBits<long double>.
-template <FPType fp_type> struct FPBitsCommon : private FPProperties<fp_type> {
-  using UP = FPProperties<fp_type>;
+template <FPType fp_type> struct FPRep : private FPBaseMasksAndShifts<fp_type> {
+  using UP = FPBaseMasksAndShifts<fp_type>;
   using typename UP::StorageType;
   using UP::TOTAL_LEN;
 
@@ -227,15 +224,17 @@ public:
   using UP::FP_MASK;
   using UP::FRACTION_LEN;
   using UP::FRACTION_MASK;
+  using UP::MANTISSA_PRECISION;
   using UP::SIGN_MASK;
+  using UP::STORAGE_LEN;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
   StorageType bits;
 
-  LIBC_INLINE constexpr FPBitsCommon() : bits(0) {}
-  LIBC_INLINE explicit constexpr FPBitsCommon(StorageType bits) : bits(bits) {}
+  LIBC_INLINE constexpr FPRep() : bits(0) {}
+  LIBC_INLINE explicit constexpr FPRep(StorageType bits) : bits(bits) {}
 
   LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
     mantVal &= FRACTION_MASK;
@@ -305,11 +304,10 @@ public:
 // floating numbers. On x86 platforms however, the 'long double' type maps to
 // an x87 floating point format. This format is an IEEE 754 extension format.
 // It is handled as an explicit specialization of this class.
-template <typename T>
-struct FPBits : public internal::FPBitsCommon<get_fp_type<T>()> {
+template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
-  using UP = internal::FPBitsCommon<get_fp_type<T>()>;
+  using UP = internal::FPRep<get_fp_type<T>()>;
   using StorageType = typename UP::StorageType;
   using UP::bits;
 
