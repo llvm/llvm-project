@@ -5082,3 +5082,59 @@ define i1 @disjoint_or_ugt_3(i8 %a, i8 %b) {
   %icmp_ = icmp ugt i8 %a1, %b1
   ret i1 %icmp_
 }
+
+define i1 @deduce_nuw_flag_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @deduce_nuw_flag_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, 2
+  %add2 = add i8 %a, 1
+  %cmp = icmp eq i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @deduce_nuw_flag_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @deduce_nuw_flag_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, 2
+  %add2 = add i8 %a, 1
+  %cmp = icmp eq i8 %add2, %add1
+  ret i1 %cmp
+}
+
+define i1 @dont_deduce_nuw_flag_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @dont_deduce_nuw_flag_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, -2
+  %add2 = add i8 %a, -1
+  %cmp = icmp eq i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @dont_deduce_nuw_flag_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @dont_deduce_nuw_flag_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, -2
+  %add2 = add i8 %a, -1
+  %cmp = icmp eq i8 %add2, %add1
+  ret i1 %cmp
+}
