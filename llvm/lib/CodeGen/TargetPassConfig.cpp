@@ -1270,7 +1270,8 @@ void TargetPassConfig::addMachinePasses() {
   // FIXME: In principle, BasicBlockSection::Labels and splitting can used
   // together. Update this check once we have addressed any issues.
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
-    if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
+    if (TM->getBBSectionsType() == llvm::BasicBlockSection::List ||
+        TM->getBBSectionsType() == llvm::BasicBlockSection::ListWithLabels) {
       addPass(llvm::createBasicBlockSectionsProfileReaderPass(
           TM->getBBSectionsFuncListBuf()));
       addPass(llvm::createBasicBlockPathCloningPass());

@@ -71,15 +71,19 @@ static lto::Config createConfig() {
     } else if (config->ltoBasicBlockSections == "none") {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
+      if (config->ltoBasicBlockSections.startswith("listwithlabels"))
+        c.Options.BBSections = BasicBlockSection::ListWithLabels;
+      else
+        c.Options.BBSections = BasicBlockSection::List;
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-          MemoryBuffer::getFile(config->ltoBasicBlockSections.str());
+          MemoryBuffer::getFile(config->ltoBasicBlockSections.substr(
+              c.Options.BBSections == BasicBlockSection::List ? 0 : 15));
       if (!MBOrErr) {
         error("cannot open " + config->ltoBasicBlockSections + ":" +
               MBOrErr.getError().message());
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
       }
-      c.Options.BBSections = BasicBlockSection::List;
     }
   }
 

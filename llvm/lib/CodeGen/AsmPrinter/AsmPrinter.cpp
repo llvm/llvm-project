@@ -128,7 +128,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -1370,25 +1369,35 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
-
-  const MCSymbol *FunctionSymbol = getFunctionBegin();
-
-  OutStreamer->pushSection();
-  OutStreamer->switchSection(BBAddrMapSection);
-  OutStreamer->AddComment("version");
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
-  OutStreamer->emitInt8(BBAddrMapVersion);
-  OutStreamer->AddComment("feature");
-  OutStreamer->emitInt8(0);
-  OutStreamer->AddComment("function address");
-  OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
-  OutStreamer->AddComment("number of basic blocks");
-  OutStreamer->emitULEB128IntValue(MF.size());
-  const MCSymbol *PrevMBBEndSymbol = FunctionSymbol;
-  // Emit BB Information for each basic block in the function.
+  std::unordered_map<MCSymbol *, uint64_t> SectionSize;
+  MCSymbol *BeginMBBSymbol = nullptr;
+  MCSymbol *PrevMBBEndSymbol = nullptr;
   for (const MachineBasicBlock &MBB : MF) {
-    const MCSymbol *MBBSymbol =
-        MBB.isEntryBlock() ? FunctionSymbol : MBB.getSymbol();
+    if (MBB.isBeginSection() || MBB.isEntryBlock()) {
+      BeginMBBSymbol =
+          MBB.isEntryBlock() ? getFunctionBegin() : MBB.getSymbol();
+    }
+    SectionSize[BeginMBBSymbol]++;
+  }
+  unsigned int i = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    MCSymbol *MBBSymbol =
+        MBB.isEntryBlock() ? getFunctionBegin() : MBB.getSymbol();
+    if (MBB.isBeginSection() || MBB.isEntryBlock()) {
+      OutStreamer->pushSection();
+      OutStreamer->switchSection(BBAddrMapSection);
+      OutStreamer->AddComment("version");
+      OutStreamer->emitInt8(BBAddrMapVersion);
+      OutStreamer->AddComment("feature");
+      OutStreamer->emitInt8(0);
+      OutStreamer->AddComment("function address");
+      OutStreamer->emitSymbolValue(MBBSymbol, getPointerSize());
+      OutStreamer->AddComment("number of basic blocks");
+      OutStreamer->emitULEB128IntValue(SectionSize[MBBSymbol]);
+      BeginMBBSymbol = MBBSymbol;
+      PrevMBBEndSymbol = MBBSymbol;
+    }
     // TODO: Remove this check when version 1 is deprecated.
     if (BBAddrMapVersion > 1) {
       OutStreamer->AddComment("BB id");
@@ -1408,8 +1417,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     // Emit the Metadata.
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
+    if (MBB.isEndSection() || i == MF.size() - 1) {
+      OutStreamer->popSection();
+    }
+    ++i;
   }
-  OutStreamer->popSection();
 }
 
 void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,

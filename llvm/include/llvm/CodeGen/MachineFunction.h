@@ -694,12 +694,14 @@ public:
   bool hasBBSections() const {
     return (BBSectionsType == BasicBlockSection::All ||
             BBSectionsType == BasicBlockSection::List ||
-            BBSectionsType == BasicBlockSection::Preset);
+            BBSectionsType == BasicBlockSection::Preset ||
+            BBSectionsType == BasicBlockSection::ListWithLabels);
   }
 
   /// Returns true if basic block labels are to be generated for this function.
   bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
+    return BBSectionsType == BasicBlockSection::Labels ||
+           BBSectionsType == BasicBlockSection::ListWithLabels;
   }
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }

@@ -225,7 +225,9 @@ INITIALIZE_PASS_END(
     false)
 
 bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
-  assert(MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
+  assert((MF.getTarget().getBBSectionsType() == BasicBlockSection::List ||
+          MF.getTarget().getBBSectionsType() ==
+              BasicBlockSection::ListWithLabels) &&
          "BB Sections list not enabled!");
   if (hasInstrProfHashMismatch(MF))
     return false;

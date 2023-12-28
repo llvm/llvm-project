@@ -380,11 +380,15 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
           .Case("labels", llvm::BasicBlockSection::Labels)
           .StartsWith("list=", llvm::BasicBlockSection::List)
           .Case("none", llvm::BasicBlockSection::None)
+          .StartsWith("listwithlabels=",
+                      llvm::BasicBlockSection::ListWithLabels)
           .Default(llvm::BasicBlockSection::None);
 
-  if (Options.BBSections == llvm::BasicBlockSection::List) {
+  if (Options.BBSections == llvm::BasicBlockSection::List ||
+      Options.BBSections == llvm::BasicBlockSection::ListWithLabels) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-        MemoryBuffer::getFile(CodeGenOpts.BBSections.substr(5));
+        MemoryBuffer::getFile(CodeGenOpts.BBSections.substr(
+            Options.BBSections == llvm::BasicBlockSection::List ? 5 : 15));
     if (!MBOrErr) {
       Diags.Report(diag::err_fe_unable_to_load_basic_block_sections_file)
           << MBOrErr.getError().message();

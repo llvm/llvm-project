@@ -1320,7 +1320,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->ltoBasicBlockSections =
-      args.getLastArgValue(OPT_lto_basic_block_sections);
+      args.getArgString(OPT_lto_basic_block_sections);
   config->ltoUniqueBasicBlockSectionNames =
       args.hasFlag(OPT_lto_unique_basic_block_section_names,
                    OPT_no_lto_unique_basic_block_section_names, false);

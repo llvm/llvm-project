@@ -10,6 +10,8 @@
 // RUN: not %clang_cc1 -fbasic-block-sections=list= -emit-obj -o %t %s 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=ERROR
 // RUN: not ls %t
 
+// RUN: %clang_cc1 -triple x86_64 -S -fbasic-block-sections=listwithlabels=%S/Inputs/basic-block-sections.funcnames -o - < %s | FileCheck %s --check-prefix=BB_WORLD  --check-prefix=BB_LIST
+
 int world(int a) {
   if (a > 10)
     return 10;
@@ -37,7 +39,6 @@ int another(int a) {
 // BB_LIST-NOT: .section .text.another,"ax",@progbits
 // BB_LIST: another:
 // BB_LIST-NOT: another.__part.1:
-//
 // UNIQUE: .section .text.world.world.__part.1,
 // UNIQUE: .section .text.another.another.__part.1,
 // ERROR: error:  unable to load basic block sections function list: '[[MSG]]'

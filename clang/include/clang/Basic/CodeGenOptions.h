@@ -117,6 +117,8 @@ public:
   // "list=<file>": Generate basic block sections for a subset of basic blocks.
   //                The functions and the machine basic block ids are specified
   //                in the file.
+  // "listwithlabels=<file>":
+  //                Mix of list and labels.
   // "none":        Disable sections/labels for basic blocks.
   std::string BBSections;
 

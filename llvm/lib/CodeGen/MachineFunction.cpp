@@ -467,7 +467,8 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
   // `-basic-block-sections=list` to allow robust mapping of profiles to basic
   // blocks.
   if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
-      Target.getBBSectionsType() == BasicBlockSection::List)
+      Target.getBBSectionsType() == BasicBlockSection::List ||
+      Target.getBBSectionsType() == BasicBlockSection::ListWithLabels)
     MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;
 }

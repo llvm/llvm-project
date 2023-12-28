@@ -517,13 +517,17 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
     return BasicBlockSection::None;
   else {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-        MemoryBuffer::getFile(getBBSections());
+        MemoryBuffer::getFile(getBBSections().substr(
+            getBBSections().find("listwithlabels=") == std::string::npos ? 0
+                                                                         : 15));
     if (!MBOrErr) {
       errs() << "Error loading basic block sections function list file: "
              << MBOrErr.getError().message() << "\n";
     } else {
       Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
     }
+    if (getBBSections().find("listwithlabels=") != std::string::npos)
+      return BasicBlockSection::ListWithLabels;
     return BasicBlockSection::List;
   }
 }

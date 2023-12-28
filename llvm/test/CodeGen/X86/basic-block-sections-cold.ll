@@ -13,6 +13,7 @@
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t2 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names -bbsections-cold-text-prefix=".text.unlikely." | FileCheck %s -check-prefix=LINUX-SPLIT
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=listwithlabels=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS -check-prefix=LABELS
 
 define void @_Z3bazb(i1 zeroext %0) nounwind {
   br i1 %0, label %2, label %4
@@ -49,3 +50,10 @@ declare i32 @_Z3foov() #1
 ; LINUX-SPLIT-NEXT:   callq _Z3barv
 ; LINUX-SPLIT:      .LBB0_2:
 ; LINUX-SPLIT:      .LBB_END0_2:
+
+; LABELS: .uleb128 .Lfunc_begin0-.Lfunc_begin0
+; LABELS: .uleb128 .LBB_END0_0-.Lfunc_begin0
+; LABELS: .uleb128 _Z3bazb.cold-_Z3bazb.cold
+; LABELS: .uleb128 .LBB_END0_1-_Z3bazb.cold
+; LABELS: .uleb128 .LBB0_2-.LBB_END0_1
+; LABELS: .uleb128 .LBB_END0_2-.LBB0_2

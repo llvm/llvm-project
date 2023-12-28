@@ -291,7 +291,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   // clusters of basic blocks using basic block ids. Source drift can
   // invalidate these groupings leading to sub-optimal code generation with
   // regards to performance.
-  if (BBSectionsType == BasicBlockSection::List &&
+  if ((BBSectionsType == BasicBlockSection::List ||
+       BBSectionsType == BasicBlockSection::ListWithLabels) &&
       hasInstrProfHashMismatch(MF))
     return false;
   // Renumber blocks before sorting them. This is useful for accessing the
@@ -304,7 +305,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   }
 
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
-  if (BBSectionsType == BasicBlockSection::List) {
+  if (BBSectionsType == BasicBlockSection::List ||
+      BBSectionsType == BasicBlockSection::ListWithLabels) {
     auto [HasProfile, ClusterInfo] =
         getAnalysis<BasicBlockSectionsProfileReader>()
             .getClusterInfoForFunction(MF.getName());
