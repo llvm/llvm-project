@@ -93,8 +93,12 @@ for.end:
   ret void
 }
 
+; We can vectorize the loop by using stride = 1 to calculate iteration count
+; and generate the runtime check to guard the vectorized loop.
+
 ; CHECK-LABEL: s172
-; CHECK-NOT: vector.body
+; CHECK-DAG: icmp ne i32 %xb, 1
+; CHECK: vector.body
 
 @b = global [32000 x float] zeroinitializer, align 64
 @a = global [32000 x float] zeroinitializer, align 64
