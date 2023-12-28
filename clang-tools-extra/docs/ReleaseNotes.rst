@@ -242,6 +242,10 @@ Changes in existing checks
   casting during type conversions at variable initialization, now with improved
   compatibility for C++17 and later versions.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check by extending the default
+  check function names to include ``iter_swap`` and ``iter_move``.
+
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
   `IgnoreMacros` to ignore warnings in macros.
