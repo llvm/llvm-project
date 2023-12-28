@@ -2571,31 +2571,6 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       if (!ParsedAttr.Tune.empty() &&
           getTarget().isValidCPUName(ParsedAttr.Tune))
         TuneCPU = ParsedAttr.Tune;
-
-      if (getTarget().getTriple().isRISCV()) {
-        // attr-cpu override march only if arch isn't present.
-        if (TD->getFeaturesStr().contains("arch=")) {
-          // Before drop attr-cpu, keep it in tune-cpu
-          if (!TargetCPU.empty() && TuneCPU.empty())
-            TuneCPU = TargetCPU;
-
-          // Reassign mcpu due to attr-arch=<Adding-Extension> need
-          // target-feature from mcpu/march.
-          // Use attr-cpu will affect target-feature.
-          TargetCPU = getTarget().getTargetOpts().CPU;
-
-          // arch=<full-arch-string> need keep target feature clean,
-          // use the baseline cpu.
-          if (llvm::find(ParsedAttr.Features,
-                         "__RISCV_TargetAttrNeedOverride") !=
-              ParsedAttr.Features.end())
-            TargetCPU = (getTarget().getTriple().isRISCV32()) ? "generic-rv32"
-                                                              : "generic-rv64";
-
-          if (TargetCPU == TuneCPU)
-            TuneCPU = "";
-        }
-      }
     }
 
     if (SD) {

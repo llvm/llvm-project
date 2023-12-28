@@ -482,5 +482,35 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
       Ret.Tune = AttrString;
     }
   }
+
+  StringRef MCPU = this->getTargetOpts().CPU;
+  StringRef MTune = this->getTargetOpts().TuneCPU;
+
+  // attr-cpu override march only if arch isn't present.
+  if (FoundArch) {
+    // If tune-cpu infer from CPU, then try to keep it.
+    // Otherwise, just use current tune option.
+    if (Ret.Tune.empty() && MTune.empty()) {
+      if (!Ret.CPU.empty())
+        Ret.Tune = Ret.CPU; // Keep attr-cpu in tune-cpu
+      else if (!MCPU.empty())
+        Ret.Tune = MCPU; // Keep mcpu in tune-cpu
+    }
+
+    // Reassign mcpu due to attr-arch=<Adding-Extension> need
+    // target-feature from mcpu/march.
+    // Use attr-cpu will affect target-feature.
+    Ret.CPU = MCPU;
+
+    // arch=<full-arch-string> need keep target feature clean,
+    // use the baseline cpu.
+    if (llvm::find(Ret.Features, "__RISCV_TargetAttrNeedOverride") !=
+        Ret.Features.end())
+      Ret.CPU =
+          (this->getTriple().isRISCV32()) ? "generic-rv32" : "generic-rv64";
+
+    if (Ret.CPU == Ret.Tune)
+      Ret.Tune = "";
+  }
   return Ret;
 }
