@@ -7160,6 +7160,10 @@ def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 }
 
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
+            (VBROADCASTF128rm addr:$src)>;
+
 //===----------------------------------------------------------------------===//
 // VPERM2F128 - Permute Floating-Point Values in 128-bit chunks
 //
