@@ -12,7 +12,6 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
 
