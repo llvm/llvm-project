@@ -419,17 +419,15 @@ entry:
 }
 declare fp128 @llvm.cos.f128(fp128 %Val)
 
-define fp128 @qp_sincos(ptr nocapture readonly %a) {
+define fp128 @qp_sincos(ptr nocapture readonly %a) nounwind {
 ; CHECK-LABEL: qp_sincos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addi r5, r1, 48
 ; CHECK-NEXT:    addi r6, r1, 32
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl sincosf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lxv v2, 48(r1)
@@ -443,10 +441,6 @@ define fp128 @qp_sincos(ptr nocapture readonly %a) {
 ; CHECK-P8-LABEL: qp_sincos:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -96(r1)
