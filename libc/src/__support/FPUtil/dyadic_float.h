@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 
 #include "FPBits.h"
-#include "FloatProperties.h"
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt.h"
