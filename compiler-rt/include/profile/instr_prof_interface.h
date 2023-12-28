@@ -6,8 +6,9 @@
  *
  *===-----------------------------------------------------------------------===
  *
- * This header provides a public interface for user programs to provide
- * fine-grained control of counter reset and profile dumping.
+ * This header provides a public interface for fine-grained control of counter
+ * reset and profile dumping. These interface functions can be directly called
+ * in user programs.
  *
 \*===---------------------------------------------------------------------===*/
 
@@ -20,7 +21,29 @@ extern "C" {
 
 #ifdef __LLVM_INSTR_PROFILE_GENERATE
 // Profile file reset and dump interfaces.
-// Only defined when `-fprofile-generate` is in effect.
+// When `-fprofile[-instr]-generate`/`-fcs-profile-generate` is in effect,
+// clang defines __LLVM_INSTR_PROFILE_GENERATE to pick up the API calls.
+
+/*!
+ * \brief Set the filename for writing instrumentation data.
+ *
+ * Sets the filename to be used for subsequent calls to
+ * \a __llvm_profile_write_file().
+ *
+ * \c Name is not copied, so it must remain valid.  Passing NULL resets the
+ * filename logic to the default behaviour.
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only modifies the filename within the
+ * copy of the runtime available to the calling image.
+ *
+ * Warning: This is a no-op if continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
+ * that in continuous mode, profile counters are mmap()'d to the profile at
+ * program initialization time. Support for transferring the mmap'd profile
+ * counts to a new file has not been implemented.
+ */
+void __llvm_profile_set_filename(const char *Name);
 
 /*!
  * \brief Interface to set all PGO counters to zero for the current process.
@@ -40,7 +63,7 @@ void __llvm_profile_reset_counters(void);
  *      __llvm_profile_dump();
  *      .. some other code
  *      __llvm_profile_reset_counters();
- *       ... hot region 2
+ *      ... hot region 2
  *      __llvm_profile_dump();
  *
  *  It is expected that on-line profile merging is on with \c %m specifier
@@ -54,9 +77,12 @@ int __llvm_profile_dump(void);
 int __llvm_orderfile_dump(void);
 
 #else
+
+#define __llvm_profile_set_filename(Name)
 #define __llvm_profile_reset_counters()
 #define __llvm_profile_dump() (0)
 #define __llvm_orderfile_dump() (0)
+
 #endif
 
 #ifdef __cplusplus

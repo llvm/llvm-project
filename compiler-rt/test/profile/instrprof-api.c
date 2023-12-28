@@ -16,9 +16,15 @@ int foo() {
   return bar();
 }
 
+// PROFUSE-NOT: declare void @__llvm_profile_reset_counters()
+
 int main() {
   int z = foo() + 3;
-  __llvm_profile_dump();
+  __llvm_profile_set_filename("rawprof.profraw");
+  // PROFGEN: call void @__llvm_profile_set_filename(ptr noundef @.str)
+  // PROFUSE-NOT: call void @__llvm_profile_set_filename(ptr noundef @.str)
+  if (__llvm_profile_dump())
+    return 2;
   // PROFGEN: %call1 = call signext i32 @__llvm_profile_dump()
   // PROFUSE-NOT: %call1 = call signext i32 @__llvm_profile_dump()
   __llvm_orderfile_dump();
@@ -26,3 +32,7 @@ int main() {
   // PROFUSE-NOT: %call2 = call signext i32 @__llvm_orderfile_dump()
   return z + bar() - 11;
 }
+
+// PROFUSE-NOT: declare void @__llvm_profile_set_filename(ptr noundef)
+// PROFUSE-NOT: declare signext i32 @__llvm_profile_dump()
+// PROFUSE-NOT: declare signext i32 @__llvm_orderfile_dump()
