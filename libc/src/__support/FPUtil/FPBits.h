@@ -47,40 +47,40 @@ template <FPType> struct FPLayout {};
 template <> struct FPLayout<FPType::IEEE754_Binary16> {
   using StorageType = uint16_t;
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
-  LIBC_INLINE_VAR static constexpr int SIG_LEN = 10;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 5;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 10;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPLayout<FPType::IEEE754_Binary32> {
   using StorageType = uint32_t;
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
-  LIBC_INLINE_VAR static constexpr int SIG_LEN = 23;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 23;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPLayout<FPType::IEEE754_Binary64> {
   using StorageType = uint64_t;
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
-  LIBC_INLINE_VAR static constexpr int SIG_LEN = 52;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 11;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 52;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPLayout<FPType::IEEE754_Binary128> {
   using StorageType = UInt128;
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
-  LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
   using StorageType = UInt128;
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
-  LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
   LIBC_INLINE_VAR static constexpr auto ENCODING =
       FPEncoding::X86_ExtendedPrecision;
 };
