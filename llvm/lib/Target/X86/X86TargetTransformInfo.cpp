@@ -1459,15 +1459,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                        Args, CxtI);
 }
 
-InstructionCost
-X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                            unsigned Opcode1, const SmallBitVector &OpcodeMask,
-                            TTI::TargetCostKind CostKind) const {
-  if (isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask))
-    return TTI::TCC_Basic;
-  return InstructionCost::getInvalid();
-}
-
 InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *BaseTp,
                                            ArrayRef<int> Mask,
