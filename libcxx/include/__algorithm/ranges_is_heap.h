@@ -64,9 +64,7 @@ struct __fn {
 
 } // namespace __is_heap
 
-inline namespace __cpo {
 inline constexpr auto is_heap = __is_heap::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

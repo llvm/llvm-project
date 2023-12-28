@@ -55,9 +55,7 @@ struct __fn {
 
 } // namespace __shuffle
 
-inline namespace __cpo {
 inline constexpr auto shuffle = __shuffle::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

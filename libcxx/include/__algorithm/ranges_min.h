@@ -81,9 +81,7 @@ struct __fn {
 };
 } // namespace __min
 
-inline namespace __cpo {
 inline constexpr auto min = __min::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -71,9 +71,7 @@ struct __fn {
 
 } // namespace __partition
 
-inline namespace __cpo {
 inline constexpr auto partition = __partition::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

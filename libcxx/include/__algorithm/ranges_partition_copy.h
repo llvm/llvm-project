@@ -93,9 +93,7 @@ struct __fn {
 
 } // namespace __partition_copy
 
-inline namespace __cpo {
 inline constexpr auto partition_copy = __partition_copy::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

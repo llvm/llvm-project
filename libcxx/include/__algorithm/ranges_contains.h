@@ -49,9 +49,7 @@ struct __fn {
 };
 } // namespace __contains
 
-inline namespace __cpo {
 inline constexpr auto contains = __contains::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

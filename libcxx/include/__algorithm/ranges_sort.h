@@ -67,9 +67,7 @@ struct __fn {
 
 } // namespace __sort
 
-inline namespace __cpo {
 inline constexpr auto sort = __sort::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

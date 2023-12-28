@@ -121,9 +121,7 @@ struct __fn {
 
 } // namespace __merge
 
-inline namespace __cpo {
 inline constexpr auto merge = __merge::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

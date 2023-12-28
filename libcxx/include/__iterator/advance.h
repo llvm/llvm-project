@@ -188,9 +188,7 @@ public:
 
 } // namespace __advance
 
-inline namespace __cpo {
 inline constexpr auto advance = __advance::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20

@@ -69,9 +69,7 @@ struct __fn {
 };
 } // namespace __adjacent_find
 
-inline namespace __cpo {
 inline constexpr auto adjacent_find = __adjacent_find::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

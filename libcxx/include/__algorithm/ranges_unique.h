@@ -65,9 +65,7 @@ struct __fn {
 
 } // namespace __unique
 
-inline namespace __cpo {
 inline constexpr auto unique = __unique::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

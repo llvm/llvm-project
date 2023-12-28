@@ -68,9 +68,7 @@ struct __fn {
 
 } // namespace __sort_heap
 
-inline namespace __cpo {
 inline constexpr auto sort_heap = __sort_heap::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -57,9 +57,7 @@ struct __fn {
 };
 } // namespace __move
 
-inline namespace __cpo {
 inline constexpr auto move = __move::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

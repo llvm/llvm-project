@@ -160,9 +160,7 @@ public:
 };
 } // namespace __transform
 
-inline namespace __cpo {
 inline constexpr auto transform = __transform::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -62,9 +62,7 @@ struct __fn {
 };
 } // namespace __upper_bound
 
-inline namespace __cpo {
 inline constexpr auto upper_bound = __upper_bound::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

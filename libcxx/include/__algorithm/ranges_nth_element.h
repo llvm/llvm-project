@@ -67,9 +67,7 @@ struct __fn {
 
 } // namespace __nth_element
 
-inline namespace __cpo {
 inline constexpr auto nth_element = __nth_element::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

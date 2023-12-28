@@ -56,9 +56,7 @@ struct __fn {
 
 } // namespace __generate
 
-inline namespace __cpo {
 inline constexpr auto generate = __generate::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

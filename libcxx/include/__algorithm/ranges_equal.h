@@ -92,9 +92,7 @@ struct __fn {
 };
 } // namespace __equal
 
-inline namespace __cpo {
 inline constexpr auto equal = __equal::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

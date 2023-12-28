@@ -61,9 +61,7 @@ struct __fn {
 
 } // namespace __prev_permutation
 
-inline namespace __cpo {
 constexpr inline auto prev_permutation = __prev_permutation::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

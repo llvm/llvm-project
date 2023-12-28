@@ -78,9 +78,7 @@ struct __fn {
 
 } // namespace __remove_copy_if
 
-inline namespace __cpo {
 inline constexpr auto remove_copy_if = __remove_copy_if::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -76,9 +76,7 @@ struct __fn {
 
 } // namespace __replace_copy
 
-inline namespace __cpo {
 inline constexpr auto replace_copy = __replace_copy::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

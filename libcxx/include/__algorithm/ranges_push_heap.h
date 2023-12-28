@@ -68,9 +68,7 @@ struct __fn {
 
 } // namespace __push_heap
 
-inline namespace __cpo {
 inline constexpr auto push_heap = __push_heap::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

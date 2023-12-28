@@ -48,9 +48,7 @@ struct __fn {
 };
 } // namespace __clamp
 
-inline namespace __cpo {
 inline constexpr auto clamp = __clamp::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -64,9 +64,7 @@ struct __fn {
 };
 } // namespace __copy_n
 
-inline namespace __cpo {
 inline constexpr auto copy_n = __copy_n::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20

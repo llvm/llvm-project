@@ -69,9 +69,7 @@ struct __fn {
 
 } // namespace __next
 
-inline namespace __cpo {
 inline constexpr auto next = __next::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20

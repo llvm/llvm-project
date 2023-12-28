@@ -69,9 +69,7 @@ struct __fn {
 };
 } // namespace __is_partitioned
 
-inline namespace __cpo {
 inline constexpr auto is_partitioned = __is_partitioned::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -64,9 +64,7 @@ public:
 };
 } // namespace __for_each
 
-inline namespace __cpo {
 inline constexpr auto for_each = __for_each::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

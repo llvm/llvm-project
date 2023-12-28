@@ -59,9 +59,7 @@ struct __fn {
 };
 } // namespace __move_backward
 
-inline namespace __cpo {
 inline constexpr auto move_backward = __move_backward::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

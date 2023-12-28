@@ -64,9 +64,7 @@ struct __fn {
 };
 } // namespace __replace_if
 
-inline namespace __cpo {
 inline constexpr auto replace_if = __replace_if::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

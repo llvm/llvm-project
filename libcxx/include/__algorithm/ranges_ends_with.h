@@ -184,9 +184,7 @@ struct __fn {
 };
 } // namespace __ends_with
 
-inline namespace __cpo {
 inline constexpr auto ends_with = __ends_with::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

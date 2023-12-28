@@ -63,9 +63,7 @@ struct __fn {
 
 } // namespace __equal_range
 
-inline namespace __cpo {
 inline constexpr auto equal_range = __equal_range::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

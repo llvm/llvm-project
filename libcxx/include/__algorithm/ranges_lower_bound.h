@@ -56,9 +56,7 @@ struct __fn {
 };
 } // namespace __lower_bound
 
-inline namespace __cpo {
 inline constexpr auto lower_bound = __lower_bound::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

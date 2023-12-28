@@ -57,9 +57,7 @@ struct __fn {
 };
 } // namespace __all_of
 
-inline namespace __cpo {
 inline constexpr auto all_of = __all_of::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

@@ -62,9 +62,7 @@ struct __fn {
 
 } // namespace __prev
 
-inline namespace __cpo {
 inline constexpr auto prev = __prev::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20

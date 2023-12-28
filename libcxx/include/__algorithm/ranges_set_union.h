@@ -98,9 +98,7 @@ struct __fn {
 
 } // namespace __set_union
 
-inline namespace __cpo {
 inline constexpr auto set_union = __set_union::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

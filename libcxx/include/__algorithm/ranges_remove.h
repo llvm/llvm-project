@@ -51,9 +51,7 @@ struct __fn {
 };
 } // namespace __remove
 
-inline namespace __cpo {
 inline constexpr auto remove = __remove::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

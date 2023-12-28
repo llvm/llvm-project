@@ -56,9 +56,7 @@ struct __fn {
 };
 } // namespace __binary_search
 
-inline namespace __cpo {
 inline constexpr auto binary_search = __binary_search::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

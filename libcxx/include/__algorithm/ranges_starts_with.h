@@ -78,9 +78,7 @@ struct __fn {
   }
 };
 } // namespace __starts_with
-inline namespace __cpo {
 inline constexpr auto starts_with = __starts_with::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD

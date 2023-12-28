@@ -67,9 +67,7 @@ struct __fn {
 
 } // namespace __inplace_merge
 
-inline namespace __cpo {
 inline constexpr auto inplace_merge = __inplace_merge::__fn{};
-} // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
