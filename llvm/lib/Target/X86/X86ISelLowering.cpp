@@ -2267,6 +2267,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
@@ -2282,6 +2284,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
