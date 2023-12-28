@@ -971,6 +971,6 @@ class NDD<bit ndd> {
   Map OpMap = !if(!eq(ndd, 0), OB, T_MAP4);
 }
 // NF - Helper for NF (no flags update) instructions
-class NF: T_MAP4, EVEX, EVEX_NF;
+class NF: T_MAP4, EVEX, EVEX_NF, NoCD8;
 // PL - Helper for promoted legacy instructions
-class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
+class PL: T_MAP4, EVEX, NoCD8, ExplicitEVEXPrefix;

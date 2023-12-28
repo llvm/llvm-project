@@ -115,6 +115,16 @@
 # CHECK: encoding: [0x62,0xeb,0x7d,0x08,0x17,0xc0,0x01]
          vextractps	$1, %xmm16, %r16d
 
+# CHECK: {nf}	addq	%r16, %r17
+# CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x01,0xc1]
+         {nf}	addq	%r16, %r17
+
+## MRMSrcReg
+
+# CHECK: mulxq	%r16, %r17, %r18
+# CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
+         mulxq	%r16, %r17, %r18
+
 ## MRMSrcReg4VOp3
 
 # CHECK: bzhiq	%r19, %r23, %r27
@@ -162,3 +172,13 @@
 # CHECK: xorq	$127, %r16, %r17
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0x83,0xf0,0x7f]
          xorq	$127, %r16, %r17
+
+## NoCD8
+
+# CHECK: {nf}	negq	123(%r16)
+# CHECK: encoding: [0x62,0xfc,0xfc,0x0c,0xf7,0x58,0x7b]
+         {nf}	negq	123(%r16)
+
+# CHECK: {evex}	notq	123(%r16)
+# CHECK: encoding: [0x62,0xfc,0xfc,0x08,0xf7,0x50,0x7b]
+         {evex}	notq	123(%r16)
