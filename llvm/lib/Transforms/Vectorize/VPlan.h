@@ -1061,9 +1061,7 @@ public:
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     BranchOnCount,
-    BranchOnCond,
-    VectorPtr,
-    VectorPtrReverse
+    BranchOnCond
   };
 
 private:
@@ -1170,8 +1168,6 @@ public:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::BranchOnCount:
-    case VPInstruction::VectorPtr:
-    case VPInstruction::VectorPtrReverse:
       return true;
     };
     llvm_unreachable("switch should return");
@@ -1353,6 +1349,36 @@ public:
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe to compute the pointers for widened memory accesses of IndexTy for
+/// all parts. If IsReverse is true, compute pointers for accessing the input in
+/// reverse order per part.
+class VPVectorPointerRecipe : public VPRecipeBase, public VPValue {
+  Type *IndexedTy;
+  bool IsReverse;
+
+public:
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsReverse,
+                        DebugLoc DL)
+      : VPRecipeBase(VPDef::VPVectorPointerSC, {Ptr}, DL), VPValue(this),
+        IndexedTy(IndexedTy), IsReverse(IsReverse) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  void execute(VPTransformState &State) override;
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

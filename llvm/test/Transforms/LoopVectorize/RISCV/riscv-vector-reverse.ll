@@ -67,11 +67,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:    EMIT vp<[[VEC_PTR:%.+]]> = vector-pointer-reverse ir<%arrayidx>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
 ; CHECK-NEXT:    WIDEN ir<%1> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%1>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    EMIT vp<[[VEC_PTR2:%.+]]> = vector-pointer-reverse ir<%arrayidx3>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
 ; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
@@ -207,11 +207,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:    EMIT vp<[[VEC_PTR:%.+]]> = vector-pointer-reverse ir<%arrayidx>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
 ; CHECK-NEXT:    WIDEN ir<%1> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    EMIT vp<[[VEC_PTR2:%.+]]> = vector-pointer-reverse ir<%arrayidx3>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%conv1>
 ; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>

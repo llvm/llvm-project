@@ -8175,11 +8175,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
-  if (Decision != LoopVectorizationCostModel::CM_GatherScatter &&
-      Decision != LoopVectorizationCostModel::CM_Interleave) {
-    auto *VectorPtr = new VPInstruction(
-        Reverse ? VPInstruction::VectorPtrReverse : VPInstruction::VectorPtr,
-        {Ptr}, I->getDebugLoc());
+  if (Consecutive) {
+    auto *VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
+                                                Reverse, I->getDebugLoc());
     Builder.getInsertBlock()->appendRecipe(VectorPtr);
     Ptr = VectorPtr;
   }
