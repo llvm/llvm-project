@@ -1339,13 +1339,7 @@ void LoopEmitter::enterTensorsAtDenseLvls(
       assert(dependentLvlMap[tid][lvl].empty());
       auto enc = getSparseTensorEncoding(tensors[tid].getType());
       if (enc && !isSparseOutput(tid)) {
-        bool validPos = lvl == 0 || posits[tid][lvl - 1];
-        if (!validPos) {
-          // We might not find the pos for the sparse output tensor as it is
-          // unconditionally required by the sparsification.
-          assert(isOutputTensor(tid));
-          continue;
-        }
+        assert(lvl == 0 || posits[tid][lvl - 1]);
         posits[tid][lvl] = genAddress(builder, loc, tid, lvl, iv);
         // NOTE: we can also prepare for next lvl here in advance
       }

@@ -688,13 +688,13 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
         } else {
           env.startReduc(exp, genTensorLoad(env, builder, exp));
         }
-        if (env.hasSparseOutput())
+        if (env.hasTrulySparseOutput())
           env.startValidLexInsert(
               constantI1(builder, env.op().getLoc(), false));
       } else {
         if (!env.isCustomReduc() || env.isReduc())
           genTensorStore(env, builder, exp, env.endReduc());
-        if (env.hasSparseOutput())
+        if (env.hasTrulySparseOutput())
           env.endValidLexInsert();
       }
     } else {
@@ -769,7 +769,7 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopId curr,
 /// converted to a parallel operation depends on the requested strategy.
 static bool isParallelFor(CodegenEnv &env, bool isOuter, bool isSparse) {
   // Reject parallelization of sparse output.
-  if (env.hasSparseOutput())
+  if (env.hasTrulySparseOutput())
     return false;
   // Parallel loops on tensor expansion can cause data races.
   if (env.isExpand())
@@ -1038,8 +1038,6 @@ static bool translateBitsToTidLvlPairs(
     SmallVectorImpl<TensorLevel> &tidLvls,
     SmallVectorImpl<std::pair<TensorLevel, AffineExpr>> &affineTidLvls) {
   const BitVector &simple = env.lat(li).simple;
-  const TensorId outTid = env.merger().getOutTensorID();
-  const std::optional<Level> outLvl = env.merger().getLvl(outTid, curr);
 
   unsigned numloopCond = 0;
   bool hasNonUnique = false;
@@ -1115,13 +1113,6 @@ static bool translateBitsToTidLvlPairs(
           }
         }
       });
-
-  if (isDenseLT(env.lt(outTid, curr))) {
-    // Note that we generate dense indices of the output tensor
-    // unconditionally, since they may not appear in the lattice, but may be
-    // needed for linearized env.
-    tidLvls.push_back(env.makeTensorLevel(outTid, *outLvl));
-  }
 
   if (numloopCond == 0) {
     // Corner cases where the loop bound is defined by a *unused* operand, in

@@ -147,10 +147,18 @@ bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
 
   OpOperand *lhs = linalgOp.getDpsInitOperand(0);
   const TensorId tensor = makeTensorId(lhs->getOperandNumber());
+  auto outStt = getSparseTensorType(lhs->get());
   // An non-annotated output tensor is assumed dense, and becomes a random
   // access n-dim memref. Admissible since insertions cannot occur.
-  if (getSparseTensorType(lhs->get()).isAllDense())
+  if (outStt.isAllDense()) {
+    // We treat "all dense" annotated tensor as a "sparse" tensor and handle it
+    // in a unified way as "truly sparse" tensor, which avoids extra code to
+    // handle corner cases introduced by the use of "all dense" annotated
+    // tensors.
+    if (outStt.hasEncoding())
+      sparseOut = lhs;
     return true;
+  }
 
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in

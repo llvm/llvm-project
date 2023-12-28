@@ -125,7 +125,10 @@ public:
   // Sparse tensor output and expansion methods.
   //
 
-  bool hasSparseOutput() const { return sparseOut != nullptr; }
+  bool hasTrulySparseOutput() const {
+    return sparseOut != nullptr &&
+           !getSparseTensorType(sparseOut->get()).isAllDense();
+  }
   bool isSparseOutput(OpOperand *o) const { return sparseOut == o; }
 
   Value getInsertionChain() const { return insChain; }

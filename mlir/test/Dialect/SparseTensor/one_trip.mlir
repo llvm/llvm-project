@@ -12,16 +12,14 @@
   doc = "X(i,j) = X(i,j) * 2.0"
 }
 
-// CHECK-LABEL: func.func @sparse_scale(
-// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x1xf32, #sparse{{[0-9]*}}>)
-// CHECK-DAG:     %[[VAL_1:.*]] = arith.constant 0 : index
-// CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK:         %[[VAL_3:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<1x1xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK:         %[[VAL_4:.*]] = memref.load %[[VAL_3]]{{\[}}%[[VAL_1]]] : memref<?xf32>
-// CHECK:         %[[VAL_5:.*]] = arith.mulf %[[VAL_4]], %[[VAL_2]] : f32
-// CHECK:         memref.store %[[VAL_5]], %[[VAL_3]]{{\[}}%[[VAL_1]]] : memref<?xf32>
-// CHECK:         %[[VAL_6:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<1x1xf32, #sparse{{[0-9]*}}>
-// CHECK:         return %[[VAL_6]] : tensor<1x1xf32, #sparse{{[0-9]*}}>
+// CHECK-LABEL:   func.func @sparse_scale(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<1x1xf32, #sparse{{[0-9]*}}>) -> tensor<1x1xf32, #sparse{{[0-9]*}}> {
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.insert %[[VAL_2]] into %[[VAL_0]]{{\[}}%[[VAL_1]], %[[VAL_1]]] : tensor<1x1xf32, #sparse{{[0-9]*}}>
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.load %[[VAL_3]] hasInserts : tensor<1x1xf32, #sparse{{[0-9]*}}>
+// CHECK:           return %[[VAL_4]] : tensor<1x1xf32, #sparse{{[0-9]*}}>
+// CHECK:         }
 func.func @sparse_scale(%argx: tensor<1x1xf32, #Dense>) -> tensor<1x1xf32, #Dense> {
   %c = arith.constant 2.0 : f32
   %0 = linalg.generic #trait_scale

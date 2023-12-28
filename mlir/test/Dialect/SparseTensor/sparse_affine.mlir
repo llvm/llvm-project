@@ -62,20 +62,20 @@ func.func @mul_inv_dense1d(%arga: tensor<32xf32, #SpVec>,
 // CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_6:.*]] = tensor.empty() : tensor<32xf32, #sparse{{[0-9]*}}>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<4xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_6]] : tensor<32xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_3]]] : memref<?xf32>
-// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_2]] step %[[VAL_5]] {
-// CHECK:             %[[VAL_12:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_11]]] : memref<?xf32>
-// CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
-// CHECK:             %[[VAL_14:.*]] = arith.mulf %[[VAL_13]], %[[VAL_10]] : f32
-// CHECK:             %[[VAL_15:.*]] = arith.addf %[[VAL_12]], %[[VAL_14]] : f32
-// CHECK:             memref.store %[[VAL_15]], %[[VAL_9]]{{\[}}%[[VAL_11]]] : memref<?xf32>
-// CHECK:           }
-// CHECK:           %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_6]] : tensor<32xf32, #sparse{{[0-9]*}}>
-// CHECK:           return %[[VAL_16]] : tensor<32xf32, #sparse{{[0-9]*}}>
+// CHECK:           %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[VAL_7:.*]] = tensor.empty() : tensor<32xf32, #sparse{{[0-9]*}}>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse{{[0-9]*}}> to memref<?xf32>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<4xf32, #sparse{{[0-9]*}}> to memref<?xf32>
+// CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_3]]] : memref<?xf32>
+// CHECK:           %[[VAL_11:.*]] = scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_2]] step %[[VAL_5]] iter_args(%[[VAL_13:.*]] = %[[VAL_7]]) -> (tensor<32xf32, #sparse{{[0-9]*}}>) {
+// CHECK:             %[[VAL_14:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_12]]] : memref<?xf32>
+// CHECK:             %[[VAL_15:.*]] = arith.mulf %[[VAL_14]], %[[VAL_10]] : f32
+// CHECK:             %[[VAL_16:.*]] = arith.addf %[[VAL_15]], %[[VAL_6]] : f32
+// CHECK:             %[[VAL_17:.*]] = sparse_tensor.insert %[[VAL_16]] into %[[VAL_13]]{{\[}}%[[VAL_12]]] : tensor<32xf32, #sparse{{[0-9]*}}>
+// CHECK:             scf.yield %[[VAL_17]] : tensor<32xf32, #sparse{{[0-9]*}}>
+// CHECK:           } {"Emitted from" = "linalg.generic"}
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.load %[[VAL_11]] hasInserts : tensor<32xf32, #sparse{{[0-9]*}}>
+// CHECK:           return %[[VAL_18]] : tensor<32xf32, #sparse{{[0-9]*}}>
 // CHECK:         }
 func.func @mul_inv_enc_dense1d(%arga: tensor<32xf32, #EncDenseVec>,
                             %argb: tensor<4xf32, #EncDenseVec>) -> tensor<32xf32, #EncDenseVec> {
