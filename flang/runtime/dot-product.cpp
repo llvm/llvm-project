@@ -91,6 +91,9 @@ static inline RT_API_ATTRS CppTypeFor<RCAT, RKIND> DoDotProduct(
         for (SubscriptValue j{0}; j < n; ++j) {
           // std::conj() may instantiate its argument twice,
           // so xp has to be incremented separately.
+          // This is a workaround for an alleged bug in clang,
+          // that shows up as:
+          //   warning: multiple unsequenced modifications to 'xp'
           accum += std::conj(static_cast<AccumType>(*xp)) *
               static_cast<AccumType>(*yp++);
           xp++;

@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/memory.h"
 #include "terminator.h"
+#include "tools.h"
 #include <cstdlib>
 
 namespace Fortran::runtime {
@@ -22,6 +23,19 @@ RT_API_ATTRS void *AllocateMemoryOrCrash(
     terminator.Crash(
         "Fortran runtime internal error: out of memory, needed %zd bytes",
         bytes);
+  }
+  return nullptr;
+}
+
+RT_API_ATTRS void *ReallocateMemoryOrCrash(
+    const Terminator &terminator, void *ptr, std::size_t newByteSize) {
+  if (void *p{Fortran::runtime::realloc(ptr, newByteSize)}) {
+    return p;
+  }
+  if (newByteSize > 0) {
+    terminator.Crash("Fortran runtime internal error: memory realloc returned "
+                     "null, needed %zd bytes",
+        newByteSize);
   }
   return nullptr;
 }

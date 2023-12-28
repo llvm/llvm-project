@@ -34,11 +34,13 @@ RT_API_ATTRS RaggedArrayHeader *RaggedArrayAllocate(RaggedArrayHeader *header,
     header->flags = (rank << 1) | isHeader;
     header->extentPointer = extentVector;
     if (isHeader) {
-      header->bufferPointer =
-          Fortran::runtime::calloc(sizeof(RaggedArrayHeader), size);
-    } else {
-      header->bufferPointer =
-          static_cast<void *>(Fortran::runtime::calloc(elementSize, size));
+      elementSize = sizeof(RaggedArrayHeader);
+    }
+    Terminator terminator{__FILE__, __LINE__};
+    std::size_t bytes{static_cast<std::size_t>(elementSize * size)};
+    header->bufferPointer = AllocateMemoryOrCrash(terminator, bytes);
+    if (header->bufferPointer) {
+      std::memset(header->bufferPointer, 0, bytes);
     }
     return header;
   } else {

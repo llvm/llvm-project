@@ -74,8 +74,8 @@ static RT_API_ATTRS void AllocateOrReallocateVectorIfNeeded(
       // realloc is undefined with zero new size and ElementBytes() may be null
       // if the character length is null, or if "from" is a zero sized array.
       if (newByteSize > 0) {
-        void *p{Fortran::runtime::realloc(to.raw().base_addr, newByteSize)};
-        RUNTIME_CHECK(terminator, p);
+        void *p{ReallocateMemoryOrCrash(
+            terminator, to.raw().base_addr, newByteSize)};
         to.set_base_addr(p);
       }
       vector.actualAllocationSize = requestedAllocationSize;
