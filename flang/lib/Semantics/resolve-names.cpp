@@ -8399,6 +8399,9 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
             "arm_streaming",
             "arm_locally_streaming",
             "arm_streaming_compatible",
+            "arm_shared_za",
+            "arm_new_za",
+            "arm_preserves_za",
         };
         if (std::find(handledAttrs.begin(), handledAttrs.end(), name) ==
             handledAttrs.end()) {

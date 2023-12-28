@@ -5073,6 +5073,26 @@ private:
         mlir::UnitAttr unitAttr = mlir::UnitAttr::get(mlirFunc.getContext());
         mlirFunc->setAttr(attrName, unitAttr);
       }
+      auto zaMode = mlir::arm_sme::ArmZaMode::Disabled;
+      if (name == "arm_new_za")
+        zaMode = mlir::arm_sme::ArmZaMode::NewZA;
+      else if (name == "arm_shared_za")
+        zaMode = mlir::arm_sme::ArmZaMode::SharedZA;
+      else if (name == "arm_preserves_za")
+        zaMode = mlir::arm_sme::ArmZaMode::PreservesZA;
+      if (zaMode != mlir::arm_sme::ArmZaMode::Disabled) {
+        if (!mlirFunc) {
+          // TODO: share diagnostic code with warnings elsewhere
+          // TODO: source location is printed as loc<"file.f90":line:col>
+          mlir::Location loc = genLocation(parserDirective->source);
+          llvm::errs() << loc << ": warning: ignoring directive '" << name
+                       << "' because it has no associated subprogram\n";
+          continue;
+        }
+        llvm::StringRef attrName = mlir::arm_sme::stringifyArmZaMode(zaMode);
+        mlir::UnitAttr unitAttr = mlir::UnitAttr::get(mlirFunc.getContext());
+        mlirFunc->setAttr(attrName, unitAttr);
+      }
     }
   }
 
