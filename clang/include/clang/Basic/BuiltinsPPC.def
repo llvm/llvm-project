@@ -944,6 +944,9 @@ TARGET_BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "", "vsx")
 // Set the floating point rounding mode
 BUILTIN(__builtin_setrnd, "di", "")
 
+// Barrier for instruction motion
+BUILTIN(__builtin_ppc_fence, "v", "")
+
 // Get content from current FPSCR
 BUILTIN(__builtin_readflm, "d", "")
 

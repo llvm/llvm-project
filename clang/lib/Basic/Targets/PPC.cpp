@@ -212,6 +212,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__darn_32", "__builtin_darn_32");
   Builder.defineMacro("__darn_raw", "__builtin_darn_raw");
   Builder.defineMacro("__dcbf", "__builtin_dcbf");
+  Builder.defineMacro("__fence", "__builtin_ppc_fence");
   Builder.defineMacro("__fmadd", "__builtin_fma");
   Builder.defineMacro("__fmadds", "__builtin_fmaf");
   Builder.defineMacro("__abs", "__builtin_abs");

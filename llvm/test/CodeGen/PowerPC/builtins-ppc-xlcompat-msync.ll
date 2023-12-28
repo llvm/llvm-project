@@ -29,3 +29,14 @@ entry:
   ret void
 }
 declare void @llvm.ppc.iospace.sync()
+
+define dso_local void @test_builtin_ppc_fence() {
+; CHECK-LABEL: test_builtin_ppc_fence:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #FENCE
+; CHECK-NEXT:    blr
+entry:
+  call void @llvm.ppc.fence()
+  ret void
+}
+declare void @llvm.ppc.fence()
