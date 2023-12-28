@@ -34,6 +34,7 @@ _Bool __aarch64_have_lse_atomics
     __attribute__((visibility("hidden"), nocommon)) = false;
 
 #if defined(__FreeBSD__)
+#include <sys/auxv.h>
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/freebsd.inc"
 #elif defined(__Fuchsia__)
