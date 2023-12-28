@@ -84,8 +84,6 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
       Args.push_back("-passes=simplifycfg");
     } else if (Opt == "gvn") {
       Args.push_back("-passes=gvn");
-    } else if (Opt == "newgvn") {
-      Args.push_back("-passes=newgvn");
     } else if (Opt == "sccp") {
       Args.push_back("-passes=sccp");
     } else if (Opt == "loop_predication") {
@@ -116,12 +114,6 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
       Args.push_back("-passes=reassociate");
     } else if (Opt == "lower_matrix_intrinsics") {
       Args.push_back("-passes=lower-matrix-intrinsics");
-    } else if (Opt == "loop_reroll") {
-      Args.push_back("-passes=loop-reroll");
-    } else if (Opt == "loop_interchange") {
-      Args.push_back("-passes=loop-interchange");
-    } else if (Opt == "loop_fusion") {
-      Args.push_back("-passes=loop-fusion");
     } else if (Opt == "memcpyopt") {
       Args.push_back("-passes=memcpyopt");
     } else if (Opt == "sroa") {
