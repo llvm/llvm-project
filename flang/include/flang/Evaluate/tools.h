@@ -1227,6 +1227,7 @@ bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);
 bool IsLenTypeParameter(const Symbol &);
 bool IsExtensibleType(const DerivedTypeSpec *);
+bool IsSequenceOrBindCType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
 bool IsBuiltinCPtr(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
