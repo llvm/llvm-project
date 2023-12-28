@@ -1101,17 +1101,18 @@ Static Analyzer
   the concrete value being cast to the enum.
   (`#74503 <https://github.com/llvm/llvm-project/pull/74503>`_)
 
-- Improved the ``ArrayBoundV2`` checker for detecting buffer accesses prior
-  the buffer; and also reworked the diagnostic messages.
+- Improved the ``alpha.security.ArrayBoundV2`` checker for detecting buffer
+  accesses prior the buffer; and also reworked the diagnostic messages.
   (`3e014038b373 <https://github.com/llvm/llvm-project/commit/3e014038b373e5a4a96d89d46cea17e4d2456a04>`_,
   `#70056 <https://github.com/llvm/llvm-project/pull/70056>`_,
   `#72107 <https://github.com/llvm/llvm-project/pull/72107>`_)
 
-- Improved the ``CStringChecker`` checking both ends of the buffers in more cases.
+- Improved the ``alpha.unix.cstring.OutOfBounds`` checking both ends of the
+  buffers in more cases.
   (`c3a87ddad62a <https://github.com/llvm/llvm-project/commit/c3a87ddad62a6cc01acaccc76592bc6730c8ac3c>`_,
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
-- Improved the ``StreamChecker`` by modeling more functions like,
+- Improved the ``alpha.unix.Stream`` checker by modeling more functions like,
   ``fflush``, ``fputs``, ``fgetc``, ``fputc``, ``fopen``, ``fopen``, ``fgets``.
   (`#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
@@ -1121,7 +1122,8 @@ Static Analyzer
   `#70540 <https://github.com/llvm/llvm-project/pull/70540>`_,
   `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_)
 
-- Improved the ``unix.StdCLibraryFunctions`` checker by modeling more functions like ``send``, ``recv``, ``readlink`` and ``errno`` behavior.
+- Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
+  functions like ``send``, ``recv``, ``readlink`` and ``errno`` behavior.
   (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
   `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
   `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_)
@@ -1129,7 +1131,8 @@ Static Analyzer
 - Fixed a false negative for when accessing a nonnull property (ObjC).
   (`1dceba3a3684 <https://github.com/llvm/llvm-project/commit/1dceba3a3684d12394731e09a6cf3efcebf07a3a>`_)
 
-- ``DeprecatedOrUnsafeBufferHandling`` now considers ``fprintf`` calls unsafe.
+- ``security.insecureAPI.DeprecatedOrUnsafeBufferHandling`` now considers
+  ``fprintf`` calls unsafe.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling-c>`__.
 
 - Fix false positive in mutation check when using pointer to member function.
