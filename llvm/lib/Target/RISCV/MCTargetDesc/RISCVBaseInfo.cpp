@@ -128,6 +128,39 @@ parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
   return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
 }
 
+// TODO: can we encode this in tblgen?
+// 3rd element cannot fit with the previous ones, or the same as previous,
+// if we don't have this restriction of A + B cannot fit with C.
+static const std::tuple<unsigned int, unsigned int, unsigned int>
+    IncompatibleFeatures[] = {{RISCV::FeatureStdExtF, RISCV::FeatureStdExtZfinx,
+                               // Repeat.
+                               RISCV::FeatureStdExtZfinx},
+                              {RISCV::FeatureStdExtD, RISCV::FeatureStdExtZcmp,
+                               // C cannot be with D + Zcmp.
+                               RISCV::FeatureStdExtC},
+                              {RISCV::FeatureStdExtD, RISCV::FeatureStdExtZcmt,
+                               // C cannot be with D + Zcmt.
+                               RISCV::FeatureStdExtC}};
+
+void filterOffIncompatibleFeatureBits(MCSubtargetInfo *STI) {
+  const auto &Features = STI->getFeatureBits();
+  // We cannot test and reset the same set,
+  // otherwise we will hide some combinations.
+  auto FeaturesToReset = STI->getFeatureBits();
+  for (auto &FeatTuple : IncompatibleFeatures) {
+    auto FirstFlag = std::get<0>(FeatTuple);
+    auto SecondFlag = std::get<1>(FeatTuple);
+    auto ThirdFlag = std::get<2>(FeatTuple);
+    if (Features.test(FirstFlag) && Features.test(SecondFlag) &&
+        Features.test(ThirdFlag)) {
+      FeaturesToReset.reset(FirstFlag);
+      FeaturesToReset.reset(SecondFlag);
+      FeaturesToReset.reset(ThirdFlag);
+    }
+  }
+  STI->setFeatureBits(FeaturesToReset);
+}
+
 } // namespace RISCVFeatures
 
 // Encode VTYPE into the binary format used by the the VSETVLI instruction which

@@ -408,6 +408,9 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
+    // We are interested only in the set of common and compatible
+    // flags accross all functions.
+    RISCVFeatures::filterOffIncompatibleFeatureBits(CommonSTI.get());
     emitAttributes();
     RTS.finishAttributeSection();
   }
