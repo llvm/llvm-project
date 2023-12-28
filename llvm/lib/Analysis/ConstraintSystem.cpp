@@ -95,17 +95,19 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxUpper++;
         }
 
-        if (MulOverflow(UpperV, -1 * LowerLast, M1))
-          return false;
+        if (MulOverflow(UpperV, -1 * LowerLast, M1)) {
+          NR.clear();
+          break;
+        }
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
           LowerV = LowerRow[IdxLower].Coefficient;
           IdxLower++;
         }
 
-        if (MulOverflow(LowerV, UpperLast, M2))
-          return false;
-        if (AddOverflow(M1, M2, N))
-          return false;
+        if (MulOverflow(LowerV, UpperLast, M2) || AddOverflow(M1, M2, N)) {
+          NR.clear();
+          break;
+        }
         if (N == 0)
           continue;
         NR.emplace_back(N, CurrentId);
