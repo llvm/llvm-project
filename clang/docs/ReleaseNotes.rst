@@ -1052,9 +1052,23 @@ libclang
 Static Analyzer
 ---------------
 
+New features
+^^^^^^^^^^^^
+
 - Implemented the ``[[clang::suppress]]`` attribute for suppressing diagnostics
   of static analysis tools, such as the Clang Static Analyzer.
   `Documentation <https://clang.llvm.org/docs/AttributeReference.html#suppress>`__.
+
+- Added support for the ``cleanup`` attribute.
+  `Documentation <https://clang.llvm.org/docs/AttributeReference.html#cleanup>`__.
+
+- Support "Deducing this" (P0847R7). (Worked out of the box)
+  (`af4751738db8 <https://github.com/llvm/llvm-project/commit/af4751738db89a142a8880c782d12d4201b222a8>`__)
+
+- Added a new checker ``core.BitwiseShift`` which reports situations where
+  bitwise shift operators produce undefined behavior (because some operand is
+  negative or too large).
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#core-bitwiseshift-c-c>`__.
 
 - Added a new experimental checker ``alpha.core.StdVariant`` to detect variant
   accesses via wrong alternatives.
@@ -1066,35 +1080,59 @@ Static Analyzer
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#alpha-cplusplus-arraydelete-c>`__.
   (`0e246bb67573 <https://github.com/llvm/llvm-project/commit/0e246bb67573799409d0085b89902a330998ddcc>`_)
 
-- Added a new checker ``core.BitwiseShift`` which reports situations where
-  bitwise shift operators produce undefined behavior (because some operand is
-  negative or too large).
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#core-bitwiseshift-c-c>`__.
-
-- Support "Deducing this" (P0847R7). (Worked out of the box)
-  (`af4751738db8 <https://github.com/llvm/llvm-project/commit/af4751738db89a142a8880c782d12d4201b222a8>`__)
-
-- Move checker ``alpha.unix.Errno`` out of the ``alpha`` package
-  to ``unix.Errno``.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-errno-c>`__.
-
-- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
-  to ``unix.StdCLibraryFunctions``.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
-
 - Added a new checker configuration option ``InvalidatingGetEnv=[true,false]`` to
   ``security.cert.env.InvalidPtr``. It's not set by default.
   If set, ``getenv`` calls won't invalidate previously returned pointers.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
   (`#67663 <https://github.com/llvm/llvm-project/pull/67663>`_)
 
-- Move checker ``alpha.security.cert.env.InvalidPtr`` out of the ``alpha``
-  package to ``security.cert.env.InvalidPtr``.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
+Crash and bug fixes
+^^^^^^^^^^^^^^^^^^^
 
-- Move checker ``alpha.cplusplus.EnumCastOutOfRange`` out of the ``alpha``
-  package to ``optin.core.EnumCastOutOfRange``.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#optin-core-enumcastoutofrange-c-c>`__.
+- Fixed a crash caused by ``builtin_bit_cast``.
+  (`#69922 <https://github.com/llvm/llvm-project/issues/69922>`_)
+
+- Fixed a ``core.StackAddressEscape`` crash on temporary object fields.
+  (`#66221 <https://github.com/llvm/llvm-project/issues/66221>`_)
+
+- A few crashes have been found and fixed using randomized testing related
+  to the use of ``_BitInt()`` in tidy checks and in clang analysis.
+  (`#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
+  `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
+  `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
+  `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_,
+  `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_)
+
+- Fixed note links of the HTML output.
+  (`#64054 <https://github.com/llvm/llvm-project/issues/64054>`_)
+
+- Allow widening rage-based for loops.
+  (`#70190 <https://github.com/llvm/llvm-project/pull/70190>`_)
+
+- Fixed uninitialized base class with initializer list when ctor is not
+  declared in the base class.
+  (`#70464 <https://github.com/llvm/llvm-project/issues/70464>`_,
+  `#59493 <https://github.com/llvm/llvm-project/issues/59493>`_,
+  `#54533 <https://github.com/llvm/llvm-project/issues/54533>`_)
+
+- Fix false positive in mutation check when using pointer to member function.
+  (`#66204 <https://github.com/llvm/llvm-project/issues/66204>`_)
+
+Improvements
+^^^^^^^^^^^^
+
+- Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
+  functions like ``send``, ``recv``, ``readlink`` and ``errno`` behavior.
+  (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
+  `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
+  `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_)
+
+- Fixed a false negative for when accessing a nonnull property (ObjC).
+  (`1dceba3a3684 <https://github.com/llvm/llvm-project/commit/1dceba3a3684d12394731e09a6cf3efcebf07a3a>`_)
+
+- ``security.insecureAPI.DeprecatedOrUnsafeBufferHandling`` now considers
+  ``fprintf`` calls unsafe.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling-c>`__.
 
 - Improved the diagnostics of the ``optin.core.EnumCastOutOfRange`` checker.
   It will display the name and the declaration of the enumeration along with
@@ -1122,28 +1160,6 @@ Static Analyzer
   `#70540 <https://github.com/llvm/llvm-project/pull/70540>`_,
   `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_)
 
-- Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
-  functions like ``send``, ``recv``, ``readlink`` and ``errno`` behavior.
-  (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
-  `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
-  `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_)
-
-- Fixed a false negative for when accessing a nonnull property (ObjC).
-  (`1dceba3a3684 <https://github.com/llvm/llvm-project/commit/1dceba3a3684d12394731e09a6cf3efcebf07a3a>`_)
-
-- ``security.insecureAPI.DeprecatedOrUnsafeBufferHandling`` now considers
-  ``fprintf`` calls unsafe.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling-c>`__.
-
-- Fix false positive in mutation check when using pointer to member function.
-  (`#66204 <https://github.com/llvm/llvm-project/issues/66204>`_)
-
-- Fixed a crash caused by ``builtin_bit_cast``.
-  (`#69922 <https://github.com/llvm/llvm-project/issues/69922>`_)
-
-- Fix ``StackAddrEscapeChecker`` crash on temporary object fields.
-  (`#66221 <https://github.com/llvm/llvm-project/issues/66221>`_)
-
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked
   explicitly propagators in the user-provided taint configuration file.
@@ -1156,31 +1172,27 @@ Static Analyzer
   `#66074 <https://github.com/llvm/llvm-project/pull/66074>`_,
   `#66358 <https://github.com/llvm/llvm-project/pull/66358>`_)
 
-- A few crashes have been found and fixed using randomized testing related
-  to the use of ``_BitInt()`` in tidy checks and in clang analysis.
-  (`#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
-  `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
-  `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
-  `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_,
-  `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_)
-
-- Fixed note links of the HTML output.
-  (`#64054 <https://github.com/llvm/llvm-project/issues/64054>`_)
-
-- Allow widening rage-based for loops.
-  (`#70190 <https://github.com/llvm/llvm-project/pull/70190>`_)
-
-- Fixed uninitialized base class with initializer list when ctor is not
-  declared in the base class.
-  (`#70464 <https://github.com/llvm/llvm-project/issues/70464>`_,
-  `#59493 <https://github.com/llvm/llvm-project/issues/59493>`_,
-  `#54533 <https://github.com/llvm/llvm-project/issues/54533>`_)
-
-- Added support for the ``cleanup`` attribute.
-  `Documentation <https://clang.llvm.org/docs/AttributeReference.html#cleanup>`__.
-
 - Checkers can query constraint bounds to improve diagnostic messages.
   (`#74141 <https://github.com/llvm/llvm-project/pull/74141>`_)
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- Move checker ``alpha.unix.Errno`` out of the ``alpha`` package
+  to ``unix.Errno``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-errno-c>`__.
+
+- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
+  to ``unix.StdCLibraryFunctions``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
+
+- Move checker ``alpha.security.cert.env.InvalidPtr`` out of the ``alpha``
+  package to ``security.cert.env.InvalidPtr``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
+
+- Move checker ``alpha.cplusplus.EnumCastOutOfRange`` out of the ``alpha``
+  package to ``optin.core.EnumCastOutOfRange``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#optin-core-enumcastoutofrange-c-c>`__.
 
 .. _release-notes-sanitizers:
 
