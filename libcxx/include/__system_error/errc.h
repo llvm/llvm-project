@@ -13,11 +13,9 @@
 /*
     system_error synopsis
 
-namespace std
-{
+namespace std {
 
-enum class errc
-{
+enum class errc {
   address_family_not_supported,       // EAFNOSUPPORT
   address_in_use,                     // EADDRINUSE
   address_not_available,              // EADDRNOTAVAIL
@@ -98,6 +96,8 @@ enum class errc
   value_too_large,                    // EOVERFLOW
   wrong_protocol_type                 // EPROTOTYPE
 };
+
+} // namespace std
 
 */
 
