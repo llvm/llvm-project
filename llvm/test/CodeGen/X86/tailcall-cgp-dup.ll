@@ -188,18 +188,14 @@ return:
 define ptr @memset_tailc(ptr %ret_val, i64 %sz) nounwind {
 ; CHECK-LABEL: memset_tailc:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB4_2
-; CHECK-NEXT:  ## %bb.1: ## %if.then
+; CHECK-NEXT:    je LBB4_1
+; CHECK-NEXT:  ## %bb.2: ## %if.then
 ; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq _memset
-; CHECK-NEXT:  LBB4_2: ## %return
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    jmp _memset ## TAILCALL
+; CHECK-NEXT:  LBB4_1: ## %return
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp eq ptr %ret_val, null
@@ -216,21 +212,15 @@ return:
 define ptr @memcpy_tailc(ptr %ret_val, i64 %sz, ptr %src) nounwind {
 ; CHECK-LABEL: memcpy_tailc:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    je LBB5_1
 ; CHECK-NEXT:  ## %bb.2: ## %if.then
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movq %rdx, %rsi
 ; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    callq _memcpy
-; CHECK-NEXT:    jmp LBB5_3
-; CHECK-NEXT:  LBB5_1:
-; CHECK-NEXT:    movq %rdx, %rbx
-; CHECK-NEXT:  LBB5_3: ## %return
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    jmp _memcpy ## TAILCALL
+; CHECK-NEXT:  LBB5_1: ## %return
+; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp eq i64 %sz, 0
@@ -251,25 +241,25 @@ define ptr @strcpy_legal_and_baz_illegal(ptr %arg, i64 %sz, ptr %2) nounwind {
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdx, %r14
+; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movq %rsi, %r15
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq _malloc
 ; CHECK-NEXT:    testq %r15, %r15
-; CHECK-NEXT:    je LBB6_2
-; CHECK-NEXT:  ## %bb.1: ## %if.then
+; CHECK-NEXT:    je LBB6_1
+; CHECK-NEXT:  ## %bb.2: ## %if.then
 ; CHECK-NEXT:    movq %rax, %rdi
-; CHECK-NEXT:    movq %r14, %rsi
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    callq _strcpy
-; CHECK-NEXT:    jmp LBB6_3
-; CHECK-NEXT:  LBB6_2: ## %if.else
-; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    movq %r14, %rsi
+; CHECK-NEXT:    movq %rbx, %rsi
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    jmp _strcpy ## TAILCALL
+; CHECK-NEXT:  LBB6_1: ## %if.else
+; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    callq _baz
-; CHECK-NEXT:  LBB6_3: ## %return
-; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
