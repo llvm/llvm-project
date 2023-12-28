@@ -416,8 +416,7 @@ static void handleFullArchString(StringRef FullArchStr,
   Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
-  if (!RII) {
-    consumeError(RII.takeError());
+  if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
     Features.push_back("+" + FullArchStr.str());
   } else {
