@@ -220,6 +220,15 @@ typedef uint64_t gnu_uint64m8_t __attribute__((vector_size(__riscv_v_fixed_vlen)
 typedef float gnu_float32m8_t __attribute__((vector_size(__riscv_v_fixed_vlen)));
 typedef double gnu_float64m8_t __attribute__((vector_size(__riscv_v_fixed_vlen)));
 
+
+typedef vbool1_t fixed_vbool1_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool2_t fixed_vbool2_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vbool4_t fixed_vbool4_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+typedef vbool8_t fixed_vbool8_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8)));
+typedef vbool16_t fixed_vbool16_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 16)));
+typedef vbool32_t fixed_vbool32_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 32)));
+typedef vbool64_t fixed_vbool64_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 64)));
+
 // Attribute must have a single argument
 typedef vint8m1_t no_argument __attribute__((riscv_rvv_vector_bits));         // expected-error {{'riscv_rvv_vector_bits' attribute takes one argument}}
 typedef vint8m1_t two_arguments __attribute__((riscv_rvv_vector_bits(2, 4))); // expected-error {{'riscv_rvv_vector_bits' attribute takes one argument}}
@@ -227,9 +236,6 @@ typedef vint8m1_t two_arguments __attribute__((riscv_rvv_vector_bits(2, 4))); //
 // The number of RVV vector bits must be an integer constant expression
 typedef vint8m1_t non_int_size1 __attribute__((riscv_rvv_vector_bits(2.0)));   // expected-error {{'riscv_rvv_vector_bits' attribute requires an integer constant}}
 typedef vint8m1_t non_int_size2 __attribute__((riscv_rvv_vector_bits("256"))); // expected-error {{'riscv_rvv_vector_bits' attribute requires an integer constant}}
-
-// bool types and LMUL != 1 are not supported.
-typedef vbool1_t fixed_vbool1_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vbool1_t'}}
 
 // Attribute must be attached to a single RVV vector or predicate type.
 typedef void *badtype1 __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));         // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'void *'}}
@@ -398,6 +404,14 @@ _Static_assert(sizeof(fixed_int64m8_t) == VECTOR_SIZE * 8, "");
 _Static_assert(sizeof(fixed_float32m8_t) == VECTOR_SIZE * 8, "");
 _Static_assert(sizeof(fixed_float64m8_t) == VECTOR_SIZE * 8, "");
 
+_Static_assert(sizeof(fixed_vbool1_t_t) == VECTOR_SIZE * 8, "");
+_Static_assert(sizeof(fixed_vbool2_t_t) == VECTOR_SIZE * 8 / 2, "");
+_Static_assert(sizeof(fixed_vbool4_t_t) == VECTOR_SIZE * 8 / 4, "");
+_Static_assert(sizeof(fixed_vbool8_t_t) == VECTOR_SIZE  * 8 / 8, "");
+_Static_assert(sizeof(fixed_vbool16_t_t) == VECTOR_SIZE * 8 / 16, "");
+_Static_assert(sizeof(fixed_vbool32_t_t) == VECTOR_SIZE * 8 / 32, "");
+_Static_assert(sizeof(fixed_vbool64_t_t) == VECTOR_SIZE * 8 / 64, "");
+
 // --------------------------------------------------------------------------//
 // Alignof
 
@@ -475,8 +489,19 @@ _Static_assert(__alignof__(fixed_uint64m8_t) == VECTOR_ALIGN, "");
 _Static_assert(__alignof__(fixed_float32m8_t) == VECTOR_ALIGN, "");
 _Static_assert(__alignof__(fixed_float64m8_t) == VECTOR_ALIGN, "");
 
+
+_Static_assert(__alignof__(fixed_vbool1_t_t) == (sizeof(fixed_vbool1_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool1_t_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_vbool2_t_t) == (sizeof(fixed_vbool2_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool2_t_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_vbool4_t_t) == (sizeof(fixed_vbool4_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool4_t_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_vbool8_t_t) == (sizeof(fixed_vbool8_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool8_t_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_vbool16_t_t) == (sizeof(fixed_vbool16_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool16_t_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_vbool32_t_t) == (sizeof(fixed_vbool32_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool32_t_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_vbool64_t_t) == (sizeof(fixed_vbool64_t_t) < VECTOR_ALIGN ? sizeof(fixed_vbool64_t_t) : VECTOR_ALIGN), "");
+
 // --------------------------------------------------------------------------//
 // Structs
+
+struct struct_vbool4 {fixed_vbool4_t_t x, y[5];};
 
 struct struct_int64 { fixed_int64m1_t x, y[5]; };
 struct struct_float64 { fixed_float64m1_t x, y[5]; };

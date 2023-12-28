@@ -2415,7 +2415,8 @@ only be a power of 2 between 64 and 65536.
 For types where LMUL!=1, ``__riscv_v_fixed_vlen`` needs to be scaled by the LMUL
 of the type before passing to the attribute.
 
-``vbool*_t`` types are not supported at this time.
+For ``vbool*_t`` types, ``__riscv_v_fixed_vlen`` needs to be divided by the EEW/LMUL
+(e.g. for vbool64_t we need ``N==(__riscv_v_fixed_vlen/64)``).
 }];
 }
 

@@ -8543,7 +8543,10 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   ASTContext::BuiltinVectorTypeInfo Info =
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned EltSize = S.Context.getTypeSize(Info.ElementType);
+  if (Info.ElementType->isBooleanType())
+    EltSize = 1;
   unsigned MinElts = Info.EC.getKnownMinValue();
+
 
   // The attribute vector size must match -mrvv-vector-bits.
   unsigned ExpectedSize = VScale->first * MinElts * EltSize;
