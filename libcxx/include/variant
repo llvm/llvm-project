@@ -506,63 +506,63 @@ private:
     return __at(__elems[__index], __indices...);
   }
 
-  template <class _Fp, class... _Fs>
+  template <class _Func, class... _Fs>
   static _LIBCPP_HIDE_FROM_ABI constexpr void __std_visit_visitor_return_type_check() {
     static_assert(
-        __all<is_same_v<_Fp, _Fs>...>::value, "`std::visit` requires the visitor to have a single return type.");
+        __all<is_same_v<_Func, _Fs>...>::value, "`std::visit` requires the visitor to have a single return type.");
   }
 
-  template <class... _Fs>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_farray(_Fs&&... __fs) {
-    __std_visit_visitor_return_type_check<__remove_cvref_t<_Fs>...>();
-    using __result = __farray<common_type_t<__remove_cvref_t<_Fs>...>, sizeof...(_Fs)>;
-    return __result{{std::forward<_Fs>(__fs)...}};
+  template <class... _Funcs>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_farray(_Funcs&&... __fs) {
+    __std_visit_visitor_return_type_check<__remove_cvref_t<_Funcs>...>();
+    using __result = __farray<common_type_t<__remove_cvref_t<_Funcs>...>, sizeof...(_Funcs)>;
+    return __result{{std::forward<_Funcs>(__fs)...}};
   }
 
   template <size_t... _Is>
   struct __dispatcher {
-    template <class _Fp, class... _Vs>
-    _LIBCPP_HIDE_FROM_ABI static constexpr decltype(auto) __dispatch(_Fp __f, _Vs... __vs) {
-      return std::__invoke(static_cast<_Fp>(__f), __access::__base::__get_alt<_Is>(static_cast<_Vs>(__vs))...);
+    template <class _Func, class... _Vs>
+    _LIBCPP_HIDE_FROM_ABI static constexpr decltype(auto) __dispatch(_Func __f, _Vs... __vs) {
+      return std::__invoke(static_cast<_Func>(__f), __access::__base::__get_alt<_Is>(static_cast<_Vs>(__vs))...);
     }
   };
 
-  template <class _Fp, class... _Vs, size_t... _Is>
+  template <class _Func, class... _Vs, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_dispatch(index_sequence<_Is...>) {
-    return __dispatcher<_Is...>::template __dispatch<_Fp, _Vs...>;
+    return __dispatcher<_Is...>::template __dispatch<_Func, _Vs...>;
   }
 
-  template <size_t _Ip, class _Fp, class... _Vs>
+  template <size_t _Ip, class _Func, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fdiagonal_impl() {
-    return __make_dispatch<_Fp, _Vs...>(index_sequence<((void)__type_identity<_Vs>{}, _Ip)...>{});
+    return __make_dispatch<_Func, _Vs...>(index_sequence<((void)__type_identity<_Vs>{}, _Ip)...>{});
   }
 
-  template <class _Fp, class... _Vs, size_t... _Is>
+  template <class _Func, class... _Vs, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fdiagonal_impl(index_sequence<_Is...>) {
-    return __base::__make_farray(__make_fdiagonal_impl<_Is, _Fp, _Vs...>()...);
+    return __base::__make_farray(__make_fdiagonal_impl<_Is, _Func, _Vs...>()...);
   }
 
-  template <class _Fp, class _Vp, class... _Vs>
+  template <class _Func, class _Vp, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fdiagonal() {
     constexpr size_t __np = __remove_cvref_t<_Vp>::__size();
     static_assert(__all<(__np == __remove_cvref_t<_Vs>::__size())...>::value);
-    return __make_fdiagonal_impl<_Fp, _Vp, _Vs...>(make_index_sequence<__np>{});
+    return __make_fdiagonal_impl<_Func, _Vp, _Vs...>(make_index_sequence<__np>{});
   }
 
-  template <class _Fp, class... _Vs, size_t... _Is>
+  template <class _Func, class... _Vs, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fmatrix_impl(index_sequence<_Is...> __is) {
-    return __make_dispatch<_Fp, _Vs...>(__is);
+    return __make_dispatch<_Func, _Vs...>(__is);
   }
 
-  template <class _Fp, class... _Vs, size_t... _Is, size_t... _Js, class... _Ls>
+  template <class _Func, class... _Vs, size_t... _Is, size_t... _Js, class... _Ls>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto
   __make_fmatrix_impl(index_sequence<_Is...>, index_sequence<_Js...>, _Ls... __ls) {
-    return __base::__make_farray(__make_fmatrix_impl<_Fp, _Vs...>(index_sequence<_Is..., _Js>{}, __ls...)...);
+    return __base::__make_farray(__make_fmatrix_impl<_Func, _Vs...>(index_sequence<_Is..., _Js>{}, __ls...)...);
   }
 
-  template <class _Fp, class... _Vs>
+  template <class _Func, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fmatrix() {
-    return __make_fmatrix_impl<_Fp, _Vs...>(
+    return __make_fmatrix_impl<_Func, _Vs...>(
         index_sequence<>{}, make_index_sequence<__remove_cvref_t<_Vs>::__size()>{}...);
   }
 };

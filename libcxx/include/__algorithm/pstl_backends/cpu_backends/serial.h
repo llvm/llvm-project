@@ -30,9 +30,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __par_backend {
 inline namespace __serial_cpu_backend {
 
-template <class _RandomAccessIterator, class _Fp>
+template <class _RandomAccessIterator, class _Func>
 _LIBCPP_HIDE_FROM_ABI optional<__empty>
-__parallel_for(_RandomAccessIterator __first, _RandomAccessIterator __last, _Fp __f) {
+__parallel_for(_RandomAccessIterator __first, _RandomAccessIterator __last, _Func __f) {
   __f(__first, __last);
   return __empty{};
 }

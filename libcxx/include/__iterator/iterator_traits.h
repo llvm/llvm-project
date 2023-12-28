@@ -154,67 +154,67 @@ public:
 // from `[iterator.cpp17]`. To avoid confusion between the two, the exposition-only concepts have been banished to
 // a "detail" namespace indicating they have a niche use-case.
 namespace __iterator_traits_detail {
-template <class _Ip>
-concept __cpp17_iterator = requires(_Ip __i) {
+template <class _Iter>
+concept __cpp17_iterator = requires(_Iter __i) {
   { *__i } -> __can_reference;
-  { ++__i } -> same_as<_Ip&>;
+  { ++__i } -> same_as<_Iter&>;
   { *__i++ } -> __can_reference;
-} && copyable<_Ip>;
+} && copyable<_Iter>;
 
-template <class _Ip>
-concept __cpp17_input_iterator = __cpp17_iterator<_Ip> && equality_comparable<_Ip> && requires(_Ip __i) {
-  typename incrementable_traits<_Ip>::difference_type;
-  typename indirectly_readable_traits<_Ip>::value_type;
-  typename common_reference_t<iter_reference_t<_Ip>&&, typename indirectly_readable_traits<_Ip>::value_type&>;
-  typename common_reference_t<decltype(*__i++)&&, typename indirectly_readable_traits<_Ip>::value_type&>;
-  requires signed_integral<typename incrementable_traits<_Ip>::difference_type>;
+template <class _Iter>
+concept __cpp17_input_iterator = __cpp17_iterator<_Iter> && equality_comparable<_Iter> && requires(_Iter __i) {
+  typename incrementable_traits<_Iter>::difference_type;
+  typename indirectly_readable_traits<_Iter>::value_type;
+  typename common_reference_t<iter_reference_t<_Iter>&&, typename indirectly_readable_traits<_Iter>::value_type&>;
+  typename common_reference_t<decltype(*__i++)&&, typename indirectly_readable_traits<_Iter>::value_type&>;
+  requires signed_integral<typename incrementable_traits<_Iter>::difference_type>;
 };
 
-template <class _Ip>
+template <class _Iter>
 concept __cpp17_forward_iterator =
-    __cpp17_input_iterator<_Ip> && constructible_from<_Ip> && is_reference_v<iter_reference_t<_Ip>> &&
-    same_as<remove_cvref_t<iter_reference_t<_Ip>>, typename indirectly_readable_traits<_Ip>::value_type> &&
-    requires(_Ip __i) {
-      { __i++ } -> convertible_to<_Ip const&>;
-      { *__i++ } -> same_as<iter_reference_t<_Ip>>;
+    __cpp17_input_iterator<_Iter> && constructible_from<_Iter> && is_reference_v<iter_reference_t<_Iter>> &&
+    same_as<remove_cvref_t<iter_reference_t<_Iter>>, typename indirectly_readable_traits<_Iter>::value_type> &&
+    requires(_Iter __i) {
+      { __i++ } -> convertible_to<_Iter const&>;
+      { *__i++ } -> same_as<iter_reference_t<_Iter>>;
     };
 
-template <class _Ip>
-concept __cpp17_bidirectional_iterator = __cpp17_forward_iterator<_Ip> && requires(_Ip __i) {
-  { --__i } -> same_as<_Ip&>;
-  { __i-- } -> convertible_to<_Ip const&>;
-  { *__i-- } -> same_as<iter_reference_t<_Ip>>;
+template <class _Iter>
+concept __cpp17_bidirectional_iterator = __cpp17_forward_iterator<_Iter> && requires(_Iter __i) {
+  { --__i } -> same_as<_Iter&>;
+  { __i-- } -> convertible_to<_Iter const&>;
+  { *__i-- } -> same_as<iter_reference_t<_Iter>>;
 };
 
-template <class _Ip>
+template <class _Iter>
 concept __cpp17_random_access_iterator =
-    __cpp17_bidirectional_iterator<_Ip> && totally_ordered<_Ip> &&
-    requires(_Ip __i, typename incrementable_traits<_Ip>::difference_type __n) {
-      { __i += __n } -> same_as<_Ip&>;
-      { __i -= __n } -> same_as<_Ip&>;
-      { __i + __n } -> same_as<_Ip>;
-      { __n + __i } -> same_as<_Ip>;
-      { __i - __n } -> same_as<_Ip>;
+    __cpp17_bidirectional_iterator<_Iter> && totally_ordered<_Iter> &&
+    requires(_Iter __i, typename incrementable_traits<_Iter>::difference_type __n) {
+      { __i += __n } -> same_as<_Iter&>;
+      { __i -= __n } -> same_as<_Iter&>;
+      { __i + __n } -> same_as<_Iter>;
+      { __n + __i } -> same_as<_Iter>;
+      { __i - __n } -> same_as<_Iter>;
       { __i - __i } -> same_as<decltype(__n)>; // NOLINT(misc-redundant-expression) ; This is llvm.org/PR54114
-      { __i[__n] } -> convertible_to<iter_reference_t<_Ip>>;
+      { __i[__n] } -> convertible_to<iter_reference_t<_Iter>>;
     };
 } // namespace __iterator_traits_detail
 
-template <class _Ip>
-concept __has_member_reference = requires { typename _Ip::reference; };
+template <class _Iter>
+concept __has_member_reference = requires { typename _Iter::reference; };
 
-template <class _Ip>
-concept __has_member_pointer = requires { typename _Ip::pointer; };
+template <class _Iter>
+concept __has_member_pointer = requires { typename _Iter::pointer; };
 
-template <class _Ip>
-concept __has_member_iterator_category = requires { typename _Ip::iterator_category; };
+template <class _Iter>
+concept __has_member_iterator_category = requires { typename _Iter::iterator_category; };
 
-template <class _Ip>
+template <class _Iter>
 concept __specifies_members = requires {
-  typename _Ip::value_type;
-  typename _Ip::difference_type;
-  requires __has_member_reference<_Ip>;
-  requires __has_member_iterator_category<_Ip>;
+  typename _Iter::value_type;
+  typename _Iter::difference_type;
+  requires __has_member_reference<_Iter>;
+  requires __has_member_iterator_category<_Iter>;
 };
 
 template <class>
@@ -242,69 +242,69 @@ struct __iterator_traits_member_pointer_or_arrow_or_void {
 
 // [iterator.traits]/3.2.1
 // If the qualified-id `I::pointer` is valid and denotes a type, `pointer` names that type.
-template <__has_member_pointer _Ip>
-struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
-  using type = typename _Ip::pointer;
+template <__has_member_pointer _Iter>
+struct __iterator_traits_member_pointer_or_arrow_or_void<_Iter> {
+  using type = typename _Iter::pointer;
 };
 
 // Otherwise, if `decltype(declval<I&>().operator->())` is well-formed, then `pointer` names that
 // type.
-template <class _Ip>
-  requires requires(_Ip& __i) { __i.operator->(); } && (!__has_member_pointer<_Ip>)
-struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
-  using type = decltype(std::declval<_Ip&>().operator->());
+template <class _Iter>
+  requires requires(_Iter& __i) { __i.operator->(); } && (!__has_member_pointer<_Iter>)
+struct __iterator_traits_member_pointer_or_arrow_or_void<_Iter> {
+  using type = decltype(std::declval<_Iter&>().operator->());
 };
 
 // Otherwise, `reference` names `iter-reference-t<I>`.
-template <class _Ip>
+template <class _Iter>
 struct __iterator_traits_member_reference {
-  using type = iter_reference_t<_Ip>;
+  using type = iter_reference_t<_Iter>;
 };
 
 // [iterator.traits]/3.2.2
 // If the qualified-id `I::reference` is valid and denotes a type, `reference` names that type.
-template <__has_member_reference _Ip>
-struct __iterator_traits_member_reference<_Ip> {
-  using type = typename _Ip::reference;
+template <__has_member_reference _Iter>
+struct __iterator_traits_member_reference<_Iter> {
+  using type = typename _Iter::reference;
 };
 
 // [iterator.traits]/3.2.3.4
 // input_iterator_tag
-template <class _Ip>
+template <class _Iter>
 struct __deduce_iterator_category {
   using type = input_iterator_tag;
 };
 
 // [iterator.traits]/3.2.3.1
 // `random_access_iterator_tag` if `I` satisfies `cpp17-random-access-iterator`, or otherwise
-template <__iterator_traits_detail::__cpp17_random_access_iterator _Ip>
-struct __deduce_iterator_category<_Ip> {
+template <__iterator_traits_detail::__cpp17_random_access_iterator _Iter>
+struct __deduce_iterator_category<_Iter> {
   using type = random_access_iterator_tag;
 };
 
 // [iterator.traits]/3.2.3.2
 // `bidirectional_iterator_tag` if `I` satisfies `cpp17-bidirectional-iterator`, or otherwise
-template <__iterator_traits_detail::__cpp17_bidirectional_iterator _Ip>
-struct __deduce_iterator_category<_Ip> {
+template <__iterator_traits_detail::__cpp17_bidirectional_iterator _Iter>
+struct __deduce_iterator_category<_Iter> {
   using type = bidirectional_iterator_tag;
 };
 
 // [iterator.traits]/3.2.3.3
 // `forward_iterator_tag` if `I` satisfies `cpp17-forward-iterator`, or otherwise
-template <__iterator_traits_detail::__cpp17_forward_iterator _Ip>
-struct __deduce_iterator_category<_Ip> {
+template <__iterator_traits_detail::__cpp17_forward_iterator _Iter>
+struct __deduce_iterator_category<_Iter> {
   using type = forward_iterator_tag;
 };
 
-template <class _Ip>
-struct __iterator_traits_iterator_category : __deduce_iterator_category<_Ip> {};
+template <class _Iter>
+struct __iterator_traits_iterator_category : __deduce_iterator_category<_Iter> {};
 
 // [iterator.traits]/3.2.3
 // If the qualified-id `I::iterator-category` is valid and denotes a type, `iterator-category` names
 // that type.
-template <__has_member_iterator_category _Ip>
-struct __iterator_traits_iterator_category<_Ip> {
-  using type = typename _Ip::iterator_category;
+template <__has_member_iterator_category _Iter>
+struct __iterator_traits_iterator_category<_Iter> {
+  using type = typename _Iter::iterator_category;
 };
 
 // otherwise, it names void.
@@ -315,10 +315,10 @@ struct __iterator_traits_difference_type {
 
 // If the qualified-id `incrementable_traits<I>::difference_type` is valid and denotes a type, then
 // `difference_type` names that type;
-template <class _Ip>
-  requires requires { typename incrementable_traits<_Ip>::difference_type; }
-struct __iterator_traits_difference_type<_Ip> {
-  using type = typename incrementable_traits<_Ip>::difference_type;
+template <class _Iter>
+  requires requires { typename incrementable_traits<_Iter>::difference_type; }
+struct __iterator_traits_difference_type<_Iter> {
+  using type = typename incrementable_traits<_Iter>::difference_type;
 };
 
 // [iterator.traits]/3.4
@@ -329,40 +329,40 @@ struct __iterator_traits {};
 // [iterator.traits]/3.1
 // If `I` has valid ([temp.deduct]) member types `difference-type`, `value-type`, `reference`, and
 // `iterator-category`, then `iterator-traits<I>` has the following publicly accessible members:
-template <__specifies_members _Ip>
-struct __iterator_traits<_Ip> {
-  using iterator_category = typename _Ip::iterator_category;
-  using value_type        = typename _Ip::value_type;
-  using difference_type   = typename _Ip::difference_type;
-  using pointer           = typename __iterator_traits_member_pointer_or_void<_Ip>::type;
-  using reference         = typename _Ip::reference;
+template <__specifies_members _Iter>
+struct __iterator_traits<_Iter> {
+  using iterator_category = typename _Iter::iterator_category;
+  using value_type        = typename _Iter::value_type;
+  using difference_type   = typename _Iter::difference_type;
+  using pointer           = typename __iterator_traits_member_pointer_or_void<_Iter>::type;
+  using reference         = typename _Iter::reference;
 };
 
 // [iterator.traits]/3.2
 // Otherwise, if `I` satisfies the exposition-only concept `cpp17-input-iterator`,
 // `iterator-traits<I>` has the following publicly accessible members:
-template <__cpp17_input_iterator_missing_members _Ip>
-struct __iterator_traits<_Ip> {
-  using iterator_category = typename __iterator_traits_iterator_category<_Ip>::type;
-  using value_type        = typename indirectly_readable_traits<_Ip>::value_type;
-  using difference_type   = typename incrementable_traits<_Ip>::difference_type;
-  using pointer           = typename __iterator_traits_member_pointer_or_arrow_or_void<_Ip>::type;
-  using reference         = typename __iterator_traits_member_reference<_Ip>::type;
+template <__cpp17_input_iterator_missing_members _Iter>
+struct __iterator_traits<_Iter> {
+  using iterator_category = typename __iterator_traits_iterator_category<_Iter>::type;
+  using value_type        = typename indirectly_readable_traits<_Iter>::value_type;
+  using difference_type   = typename incrementable_traits<_Iter>::difference_type;
+  using pointer           = typename __iterator_traits_member_pointer_or_arrow_or_void<_Iter>::type;
+  using reference         = typename __iterator_traits_member_reference<_Iter>::type;
 };
 
 // Otherwise, if `I` satisfies the exposition-only concept `cpp17-iterator`, then
 // `iterator_traits<I>` has the following publicly accessible members:
-template <__cpp17_iterator_missing_members _Ip>
-struct __iterator_traits<_Ip> {
+template <__cpp17_iterator_missing_members _Iter>
+struct __iterator_traits<_Iter> {
   using iterator_category = output_iterator_tag;
   using value_type        = void;
-  using difference_type   = typename __iterator_traits_difference_type<_Ip>::type;
+  using difference_type   = typename __iterator_traits_difference_type<_Iter>::type;
   using pointer           = void;
   using reference         = void;
 };
 
-template <class _Ip>
-struct iterator_traits : __iterator_traits<_Ip> {
+template <class _Iter>
+struct iterator_traits : __iterator_traits<_Iter> {
   using __primary_template = iterator_traits;
 };
 
@@ -516,11 +516,11 @@ using __iter_reference = typename iterator_traits<_Iter>::reference;
 // `indirectly_readable_traits<RI>::value_type` if `iterator_traits<RI>` names a specialization
 // generated from the primary template, and `iterator_traits<RI>::value_type` otherwise.
 // This has to be in this file and not readable_traits.h to break the include cycle between the two.
-template <class _Ip>
+template <class _Iter>
 using iter_value_t =
-    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
-                           indirectly_readable_traits<remove_cvref_t<_Ip> >,
-                           iterator_traits<remove_cvref_t<_Ip> > >::value_type;
+    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Iter> > >::value,
+                           indirectly_readable_traits<remove_cvref_t<_Iter> >,
+                           iterator_traits<remove_cvref_t<_Iter> > >::value_type;
 
 #endif // _LIBCPP_STD_VER >= 20
 

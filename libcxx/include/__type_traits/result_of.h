@@ -24,8 +24,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Callable>
 class _LIBCPP_DEPRECATED_IN_CXX17 result_of;
 
-template <class _Fp, class... _Args>
-class _LIBCPP_TEMPLATE_VIS result_of<_Fp(_Args...)> : public __invoke_of<_Fp, _Args...> {};
+template <class _Func, class... _Args>
+class _LIBCPP_TEMPLATE_VIS result_of<_Func(_Args...)> : public __invoke_of<_Func, _Args...> {};
 
 #  if _LIBCPP_STD_VER >= 14
 template <class _Tp>

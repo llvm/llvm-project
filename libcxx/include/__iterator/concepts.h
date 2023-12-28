@@ -84,143 +84,144 @@ concept __integer_like = integral<_Tp> && !same_as<_Tp, bool>;
 template <class _Tp>
 concept __signed_integer_like = signed_integral<_Tp>;
 
-template <class _Ip>
+template <class _Iter>
 concept weakly_incrementable =
     // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
-    !same_as<_Ip, bool> && // Currently, clang does not handle bool correctly.
-    movable<_Ip> && requires(_Ip __i) {
-      typename iter_difference_t<_Ip>;
-      requires __signed_integer_like<iter_difference_t<_Ip>>;
-      { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
+    !same_as<_Iter, bool> && // Currently, clang does not handle bool correctly.
+    movable<_Iter> && requires(_Iter __i) {
+      typename iter_difference_t<_Iter>;
+      requires __signed_integer_like<iter_difference_t<_Iter>>;
+      { ++__i } -> same_as<_Iter&>; // not required to be equality-preserving
       __i++;                      // not required to be equality-preserving
     };
 
 // [iterator.concept.inc]
-template <class _Ip>
-concept incrementable = regular<_Ip> && weakly_incrementable<_Ip> && requires(_Ip __i) {
-  { __i++ } -> same_as<_Ip>;
+template <class _Iter>
+concept incrementable = regular<_Iter> && weakly_incrementable<_Iter> && requires(_Iter __i) {
+  { __i++ } -> same_as<_Iter>;
 };
 
 // [iterator.concept.iterator]
-template <class _Ip>
-concept input_or_output_iterator = requires(_Ip __i) {
+template <class _Iter>
+concept input_or_output_iterator = requires(_Iter __i) {
   { *__i } -> __can_reference;
-} && weakly_incrementable<_Ip>;
+} && weakly_incrementable<_Iter>;
 
 // [iterator.concept.sentinel]
-template <class _Sp, class _Ip>
-concept sentinel_for = semiregular<_Sp> && input_or_output_iterator<_Ip> && __weakly_equality_comparable_with<_Sp, _Ip>;
+template <class _Sent, class _Iter>
+concept sentinel_for =
+    semiregular<_Sent> && input_or_output_iterator<_Iter> && __weakly_equality_comparable_with<_Sent, _Iter>;
 
 template <class, class>
 inline constexpr bool disable_sized_sentinel_for = false;
 
-template <class _Sp, class _Ip>
+template <class _Sent, class _Iter>
 concept sized_sentinel_for =
-    sentinel_for<_Sp, _Ip> && !disable_sized_sentinel_for<remove_cv_t<_Sp>, remove_cv_t<_Ip>> &&
-    requires(const _Ip& __i, const _Sp& __s) {
-      { __s - __i } -> same_as<iter_difference_t<_Ip>>;
-      { __i - __s } -> same_as<iter_difference_t<_Ip>>;
+    sentinel_for<_Sent, _Iter> && !disable_sized_sentinel_for<remove_cv_t<_Sent>, remove_cv_t<_Iter>> &&
+    requires(const _Iter& __i, const _Sent& __s) {
+      { __s - __i } -> same_as<iter_difference_t<_Iter>>;
+      { __i - __s } -> same_as<iter_difference_t<_Iter>>;
     };
 
 // [iterator.concept.input]
-template <class _Ip>
-concept input_iterator = input_or_output_iterator<_Ip> && indirectly_readable<_Ip> && requires {
-  typename _ITER_CONCEPT<_Ip>;
-} && derived_from<_ITER_CONCEPT<_Ip>, input_iterator_tag>;
+template <class _Iter>
+concept input_iterator = input_or_output_iterator<_Iter> && indirectly_readable<_Iter> && requires {
+  typename _ITER_CONCEPT<_Iter>;
+} && derived_from<_ITER_CONCEPT<_Iter>, input_iterator_tag>;
 
 // [iterator.concept.output]
-template <class _Ip, class _Tp>
+template <class _Iter, class _Tp>
 concept output_iterator =
-    input_or_output_iterator<_Ip> && indirectly_writable<_Ip, _Tp> && requires(_Ip __it, _Tp&& __t) {
+    input_or_output_iterator<_Iter> && indirectly_writable<_Iter, _Tp> && requires(_Iter __it, _Tp&& __t) {
       *__it++ = std::forward<_Tp>(__t); // not required to be equality-preserving
     };
 
 // [iterator.concept.forward]
-template <class _Ip>
+template <class _Iter>
 concept forward_iterator =
-    input_iterator<_Ip> && derived_from<_ITER_CONCEPT<_Ip>, forward_iterator_tag> && incrementable<_Ip> &&
-    sentinel_for<_Ip, _Ip>;
+    input_iterator<_Iter> && derived_from<_ITER_CONCEPT<_Iter>, forward_iterator_tag> && incrementable<_Iter> &&
+    sentinel_for<_Iter, _Iter>;
 
 // [iterator.concept.bidir]
-template <class _Ip>
+template <class _Iter>
 concept bidirectional_iterator =
-    forward_iterator<_Ip> && derived_from<_ITER_CONCEPT<_Ip>, bidirectional_iterator_tag> && requires(_Ip __i) {
-      { --__i } -> same_as<_Ip&>;
-      { __i-- } -> same_as<_Ip>;
+    forward_iterator<_Iter> && derived_from<_ITER_CONCEPT<_Iter>, bidirectional_iterator_tag> && requires(_Iter __i) {
+      { --__i } -> same_as<_Iter&>;
+      { __i-- } -> same_as<_Iter>;
     };
 
-template <class _Ip>
+template <class _Iter>
 concept random_access_iterator =
-    bidirectional_iterator<_Ip> && derived_from<_ITER_CONCEPT<_Ip>, random_access_iterator_tag> &&
-    totally_ordered<_Ip> && sized_sentinel_for<_Ip, _Ip> &&
-    requires(_Ip __i, const _Ip __j, const iter_difference_t<_Ip> __n) {
-      { __i += __n } -> same_as<_Ip&>;
-      { __j + __n } -> same_as<_Ip>;
-      { __n + __j } -> same_as<_Ip>;
-      { __i -= __n } -> same_as<_Ip&>;
-      { __j - __n } -> same_as<_Ip>;
-      { __j[__n] } -> same_as<iter_reference_t<_Ip>>;
+    bidirectional_iterator<_Iter> && derived_from<_ITER_CONCEPT<_Iter>, random_access_iterator_tag> &&
+    totally_ordered<_Iter> && sized_sentinel_for<_Iter, _Iter> &&
+    requires(_Iter __i, const _Iter __j, const iter_difference_t<_Iter> __n) {
+      { __i += __n } -> same_as<_Iter&>;
+      { __j + __n } -> same_as<_Iter>;
+      { __n + __j } -> same_as<_Iter>;
+      { __i -= __n } -> same_as<_Iter&>;
+      { __j - __n } -> same_as<_Iter>;
+      { __j[__n] } -> same_as<iter_reference_t<_Iter>>;
     };
 
-template <class _Ip>
+template <class _Iter>
 concept contiguous_iterator =
-    random_access_iterator<_Ip> && derived_from<_ITER_CONCEPT<_Ip>, contiguous_iterator_tag> &&
-    is_lvalue_reference_v<iter_reference_t<_Ip>> && same_as<iter_value_t<_Ip>, remove_cvref_t<iter_reference_t<_Ip>>> &&
-    requires(const _Ip& __i) {
-      { std::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
+    random_access_iterator<_Iter> && derived_from<_ITER_CONCEPT<_Iter>, contiguous_iterator_tag> &&
+    is_lvalue_reference_v<iter_reference_t<_Iter>> &&
+    same_as<iter_value_t<_Iter>, remove_cvref_t<iter_reference_t<_Iter>>> && requires(const _Iter& __i) {
+      { std::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Iter>>>;
     };
 
-template <class _Ip>
-concept __has_arrow = input_iterator<_Ip> && (is_pointer_v<_Ip> || requires(_Ip __i) { __i.operator->(); });
+template <class _Iter>
+concept __has_arrow = input_iterator<_Iter> && (is_pointer_v<_Iter> || requires(_Iter __i) { __i.operator->(); });
 
 // [indirectcallable.indirectinvocable]
-template <class _Fp, class _It>
+template <class _Func, class _It>
 concept indirectly_unary_invocable =
-    indirectly_readable<_It> && copy_constructible<_Fp> && invocable<_Fp&, iter_value_t<_It>&> &&
-    invocable<_Fp&, iter_reference_t<_It>> && invocable<_Fp&, iter_common_reference_t<_It>> &&
-    common_reference_with< invoke_result_t<_Fp&, iter_value_t<_It>&>, invoke_result_t<_Fp&, iter_reference_t<_It>>>;
+    indirectly_readable<_It> && copy_constructible<_Func> && invocable<_Func&, iter_value_t<_It>&> &&
+    invocable<_Func&, iter_reference_t<_It>> && invocable<_Func&, iter_common_reference_t<_It>> &&
+    common_reference_with< invoke_result_t<_Func&, iter_value_t<_It>&>, invoke_result_t<_Func&, iter_reference_t<_It>>>;
 
-template <class _Fp, class _It>
+template <class _Func, class _It>
 concept indirectly_regular_unary_invocable =
-    indirectly_readable<_It> && copy_constructible<_Fp> && regular_invocable<_Fp&, iter_value_t<_It>&> &&
-    regular_invocable<_Fp&, iter_reference_t<_It>> && regular_invocable<_Fp&, iter_common_reference_t<_It>> &&
-    common_reference_with< invoke_result_t<_Fp&, iter_value_t<_It>&>, invoke_result_t<_Fp&, iter_reference_t<_It>>>;
+    indirectly_readable<_It> && copy_constructible<_Func> && regular_invocable<_Func&, iter_value_t<_It>&> &&
+    regular_invocable<_Func&, iter_reference_t<_It>> && regular_invocable<_Func&, iter_common_reference_t<_It>> &&
+    common_reference_with< invoke_result_t<_Func&, iter_value_t<_It>&>, invoke_result_t<_Func&, iter_reference_t<_It>>>;
 
-template <class _Fp, class _It>
+template <class _Func, class _It>
 concept indirect_unary_predicate =
-    indirectly_readable<_It> && copy_constructible<_Fp> && predicate<_Fp&, iter_value_t<_It>&> &&
-    predicate<_Fp&, iter_reference_t<_It>> && predicate<_Fp&, iter_common_reference_t<_It>>;
+    indirectly_readable<_It> && copy_constructible<_Func> && predicate<_Func&, iter_value_t<_It>&> &&
+    predicate<_Func&, iter_reference_t<_It>> && predicate<_Func&, iter_common_reference_t<_It>>;
 
-template <class _Fp, class _It1, class _It2>
+template <class _Func, class _Iter1, class _Iter2>
 concept indirect_binary_predicate =
-    indirectly_readable<_It1> && indirectly_readable<_It2> && copy_constructible<_Fp> &&
-    predicate<_Fp&, iter_value_t<_It1>&, iter_value_t<_It2>&> &&
-    predicate<_Fp&, iter_value_t<_It1>&, iter_reference_t<_It2>> &&
-    predicate<_Fp&, iter_reference_t<_It1>, iter_value_t<_It2>&> &&
-    predicate<_Fp&, iter_reference_t<_It1>, iter_reference_t<_It2>> &&
-    predicate<_Fp&, iter_common_reference_t<_It1>, iter_common_reference_t<_It2>>;
+    indirectly_readable<_Iter1> && indirectly_readable<_Iter2> && copy_constructible<_Func> &&
+    predicate<_Func&, iter_value_t<_Iter1>&, iter_value_t<_Iter2>&> &&
+    predicate<_Func&, iter_value_t<_Iter1>&, iter_reference_t<_Iter2>> &&
+    predicate<_Func&, iter_reference_t<_Iter1>, iter_value_t<_Iter2>&> &&
+    predicate<_Func&, iter_reference_t<_Iter1>, iter_reference_t<_Iter2>> &&
+    predicate<_Func&, iter_common_reference_t<_Iter1>, iter_common_reference_t<_Iter2>>;
 
-template <class _Fp, class _It1, class _It2 = _It1>
+template <class _Func, class _Iter1, class _Iter2 = _Iter1>
 concept indirect_equivalence_relation =
-    indirectly_readable<_It1> && indirectly_readable<_It2> && copy_constructible<_Fp> &&
-    equivalence_relation<_Fp&, iter_value_t<_It1>&, iter_value_t<_It2>&> &&
-    equivalence_relation<_Fp&, iter_value_t<_It1>&, iter_reference_t<_It2>> &&
-    equivalence_relation<_Fp&, iter_reference_t<_It1>, iter_value_t<_It2>&> &&
-    equivalence_relation<_Fp&, iter_reference_t<_It1>, iter_reference_t<_It2>> &&
-    equivalence_relation<_Fp&, iter_common_reference_t<_It1>, iter_common_reference_t<_It2>>;
+    indirectly_readable<_Iter1> && indirectly_readable<_Iter2> && copy_constructible<_Func> &&
+    equivalence_relation<_Func&, iter_value_t<_Iter1>&, iter_value_t<_Iter2>&> &&
+    equivalence_relation<_Func&, iter_value_t<_Iter1>&, iter_reference_t<_Iter2>> &&
+    equivalence_relation<_Func&, iter_reference_t<_Iter1>, iter_value_t<_Iter2>&> &&
+    equivalence_relation<_Func&, iter_reference_t<_Iter1>, iter_reference_t<_Iter2>> &&
+    equivalence_relation<_Func&, iter_common_reference_t<_Iter1>, iter_common_reference_t<_Iter2>>;
 
-template <class _Fp, class _It1, class _It2 = _It1>
+template <class _Func, class _Iter1, class _Iter2 = _Iter1>
 concept indirect_strict_weak_order =
-    indirectly_readable<_It1> && indirectly_readable<_It2> && copy_constructible<_Fp> &&
-    strict_weak_order<_Fp&, iter_value_t<_It1>&, iter_value_t<_It2>&> &&
-    strict_weak_order<_Fp&, iter_value_t<_It1>&, iter_reference_t<_It2>> &&
-    strict_weak_order<_Fp&, iter_reference_t<_It1>, iter_value_t<_It2>&> &&
-    strict_weak_order<_Fp&, iter_reference_t<_It1>, iter_reference_t<_It2>> &&
-    strict_weak_order<_Fp&, iter_common_reference_t<_It1>, iter_common_reference_t<_It2>>;
+    indirectly_readable<_Iter1> && indirectly_readable<_Iter2> && copy_constructible<_Func> &&
+    strict_weak_order<_Func&, iter_value_t<_Iter1>&, iter_value_t<_Iter2>&> &&
+    strict_weak_order<_Func&, iter_value_t<_Iter1>&, iter_reference_t<_Iter2>> &&
+    strict_weak_order<_Func&, iter_reference_t<_Iter1>, iter_value_t<_Iter2>&> &&
+    strict_weak_order<_Func&, iter_reference_t<_Iter1>, iter_reference_t<_Iter2>> &&
+    strict_weak_order<_Func&, iter_common_reference_t<_Iter1>, iter_common_reference_t<_Iter2>>;
 
-template <class _Fp, class... _Its>
-  requires(indirectly_readable<_Its> && ...) && invocable<_Fp, iter_reference_t<_Its>...>
-using indirect_result_t = invoke_result_t<_Fp, iter_reference_t<_Its>...>;
+template <class _Func, class... _Its>
+  requires(indirectly_readable<_Its> && ...) && invocable<_Func, iter_reference_t<_Its>...>
+using indirect_result_t = invoke_result_t<_Func, iter_reference_t<_Its>...>;
 
 template <class _In, class _Out>
 concept indirectly_movable = indirectly_readable<_In> && indirectly_writable<_Out, iter_rvalue_reference_t<_In>>;

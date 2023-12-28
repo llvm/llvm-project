@@ -31,12 +31,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 namespace __max_element {
 struct __fn {
-  template <forward_iterator _Ip,
-            sentinel_for<_Ip> _Sp,
-            class _Proj                                             = identity,
-            indirect_strict_weak_order<projected<_Ip, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Ip
-  operator()(_Ip __first, _Sp __last, _Comp __comp = {}, _Proj __proj = {}) const {
+  template <forward_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            class _Proj                                               = identity,
+            indirect_strict_weak_order<projected<_Iter, _Proj>> _Comp = ranges::less>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Iter
+  operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __comp_lhs_rhs_swapped = [&](auto&& __lhs, auto&& __rhs) -> bool { return std::invoke(__comp, __rhs, __lhs); };
     return ranges::__min_element_impl(__first, __last, __comp_lhs_rhs_swapped, __proj);
   }

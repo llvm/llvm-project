@@ -981,8 +981,8 @@ template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(forward_list&& __x, const __type_identity_t<allocator_type>& __a)
     : base(std::move(__x), __a) {
   if (base::__alloc() != __x.__alloc()) {
-    typedef move_iterator<iterator> _Ip;
-    insert_after(cbefore_begin(), _Ip(__x.begin()), _Ip(__x.end()));
+    typedef move_iterator<iterator> _Iter;
+    insert_after(cbefore_begin(), _Iter(__x.begin()), _Iter(__x.end()));
   }
 }
 
@@ -1010,8 +1010,8 @@ void forward_list<_Tp, _Alloc>::__move_assign(forward_list& __x, false_type) {
   if (base::__alloc() == __x.__alloc())
     __move_assign(__x, true_type());
   else {
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__x.begin()), _Ip(__x.end()));
+    typedef move_iterator<iterator> _Iter;
+    assign(_Iter(__x.begin()), _Iter(__x.end()));
   }
 }
 
@@ -1489,11 +1489,11 @@ void forward_list<_Tp, _Alloc>::reverse() _NOEXCEPT {
 template <class _Tp, class _Alloc>
 _LIBCPP_HIDE_FROM_ABI bool operator==(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>& __y) {
   typedef forward_list<_Tp, _Alloc> _Cp;
-  typedef typename _Cp::const_iterator _Ip;
-  _Ip __ix = __x.begin();
-  _Ip __ex = __x.end();
-  _Ip __iy = __y.begin();
-  _Ip __ey = __y.end();
+  typedef typename _Cp::const_iterator _Iter;
+  _Iter __ix = __x.begin();
+  _Iter __ex = __x.end();
+  _Iter __iy = __y.begin();
+  _Iter __ey = __y.end();
   for (; __ix != __ex && __iy != __ey; ++__ix, ++__iy)
     if (!(*__ix == *__iy))
       return false;

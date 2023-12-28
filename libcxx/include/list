@@ -1079,8 +1079,8 @@ inline list<_Tp, _Alloc>::list(list&& __c, const __type_identity_t<allocator_typ
   if (__a == __c.get_allocator())
     splice(end(), __c);
   else {
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__c.begin()), _Ip(__c.end()));
+    typedef move_iterator<iterator> _Iter;
+    assign(_Iter(__c.begin()), _Iter(__c.end()));
   }
 }
 
@@ -1095,8 +1095,8 @@ inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c)
 template <class _Tp, class _Alloc>
 void list<_Tp, _Alloc>::__move_assign(list& __c, false_type) {
   if (base::__node_alloc() != __c.__node_alloc()) {
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__c.begin()), _Ip(__c.end()));
+    typedef move_iterator<iterator> _Iter;
+    assign(_Iter(__c.begin()), _Iter(__c.end()));
   } else
     __move_assign(__c, true_type());
 }

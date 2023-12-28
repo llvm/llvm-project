@@ -154,11 +154,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
 #ifndef _LIBCPP_CXX03_LANG
-  template <class _Fp, class... _Args, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value> >
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp&& __f, _Args&&... __args);
+  template <class _Func, class... _Args, class = __enable_if_t<!is_same<__remove_cvref_t<_Func>, thread>::value> >
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Func&& __f, _Args&&... __args);
 #else // _LIBCPP_CXX03_LANG
-  template <class _Fp>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp __f);
+  template <class _Func>
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Func __f);
 #endif
   ~thread();
 
@@ -185,8 +185,8 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 
-template <class _TSp, class _Fp, class... _Args, size_t... _Indices>
-inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>) {
+template <class _TSp, class _Func, class... _Args, size_t... _Indices>
+inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Func, _Args...>& __t, __tuple_indices<_Indices...>) {
   std::__invoke(std::move(std::get<1>(__t)), std::move(std::get<_Indices>(__t))...);
 }
 
@@ -200,12 +200,12 @@ _LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
   return nullptr;
 }
 
-template <class _Fp, class... _Args, class >
-thread::thread(_Fp&& __f, _Args&&... __args) {
+template <class _Func, class... _Args, class >
+thread::thread(_Func&& __f, _Args&&... __args) {
   typedef unique_ptr<__thread_struct> _TSPtr;
   _TSPtr __tsp(new __thread_struct);
-  typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
-  unique_ptr<_Gp> __p(new _Gp(std::move(__tsp), std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
+  typedef tuple<_TSPtr, __decay_t<_Func>, __decay_t<_Args>...> _Gp;
+  unique_ptr<_Gp> __p(new _Gp(std::move(__tsp), std::forward<_Func>(__f), std::forward<_Args>(__args)...));
   int __ec = std::__libcpp_thread_create(&__t_, &__thread_proxy<_Gp>, __p.get());
   if (__ec == 0)
     __p.release();
@@ -215,27 +215,27 @@ thread::thread(_Fp&& __f, _Args&&... __args) {
 
 #else // _LIBCPP_CXX03_LANG
 
-template <class _Fp>
+template <class _Func>
 struct __thread_invoke_pair {
   // This type is used to pass memory for thread local storage and a functor
   // to a newly created thread because std::pair doesn't work with
   // std::unique_ptr in C++03.
-  _LIBCPP_HIDE_FROM_ABI __thread_invoke_pair(_Fp& __f) : __tsp_(new __thread_struct), __fn_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI __thread_invoke_pair(_Func& __f) : __tsp_(new __thread_struct), __fn_(__f) {}
   unique_ptr<__thread_struct> __tsp_;
-  _Fp __fn_;
+  _Func __fn_;
 };
 
-template <class _Fp>
+template <class _Func>
 _LIBCPP_HIDE_FROM_ABI void* __thread_proxy_cxx03(void* __vp) {
-  unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
+  unique_ptr<_Func> __p(static_cast<_Func*>(__vp));
   __thread_local_data().set_pointer(__p->__tsp_.release());
   (__p->__fn_)();
   return nullptr;
 }
 
-template <class _Fp>
-thread::thread(_Fp __f) {
-  typedef __thread_invoke_pair<_Fp> _InvokePair;
+template <class _Func>
+thread::thread(_Func __f) {
+  typedef __thread_invoke_pair<_Func> _InvokePair;
   typedef unique_ptr<_InvokePair> _PairPtr;
   _PairPtr __pp(new _InvokePair(__f));
   int __ec = std::__libcpp_thread_create(&__t_, &__thread_proxy_cxx03<_InvokePair>, __pp.get());

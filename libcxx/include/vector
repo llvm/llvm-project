@@ -1226,9 +1226,9 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
     this->__end_cap() = __x.__end_cap();
     __x.__begin_ = __x.__end_ = __x.__end_cap() = nullptr;
   } else {
-    typedef move_iterator<iterator> _Ip;
+    typedef move_iterator<iterator> _Iter;
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
-    assign(_Ip(__x.begin()), _Ip(__x.end()));
+    assign(_Iter(__x.begin()), _Iter(__x.end()));
     __guard.__complete();
   }
 }
@@ -1272,8 +1272,8 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector& __c, false_type)
     _NOEXCEPT_(__alloc_traits::is_always_equal::value) {
   if (__alloc() != __c.__alloc()) {
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__c.begin()), _Ip(__c.end()));
+    typedef move_iterator<iterator> _Iter;
+    assign(_Iter(__c.begin()), _Iter(__c.end()));
   } else
     __move_assign(__c, true_type());
 }

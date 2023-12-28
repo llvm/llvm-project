@@ -386,8 +386,8 @@ __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c, const __al
     __first_          = __allocation.ptr;
     __begin_ = __end_ = __first_;
     __end_cap()       = __first_ + __allocation.count;
-    typedef move_iterator<iterator> _Ip;
-    __construct_at_end(_Ip(__c.begin()), _Ip(__c.end()));
+    typedef move_iterator<iterator> _Iter;
+    __construct_at_end(_Iter(__c.begin()), _Iter(__c.end()));
   }
 }
 

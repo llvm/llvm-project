@@ -55,10 +55,10 @@ namespace ranges {
 namespace __distance {
 
 struct __fn {
-  template <class _Ip, sentinel_for<_Ip> _Sp>
-    requires(!sized_sentinel_for<_Sp, _Ip>)
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip __first, _Sp __last) const {
-    iter_difference_t<_Ip> __n = 0;
+  template <class _Iter, sentinel_for<_Iter> _Sent>
+    requires(!sized_sentinel_for<_Sent, _Iter>)
+  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter> operator()(_Iter __first, _Sent __last) const {
+    iter_difference_t<_Iter> __n = 0;
     while (__first != __last) {
       ++__first;
       ++__n;
@@ -66,12 +66,12 @@ struct __fn {
     return __n;
   }
 
-  template <class _Ip, sized_sentinel_for<decay_t<_Ip>> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip&& __first, _Sp __last) const {
-    if constexpr (sized_sentinel_for<_Sp, __remove_cvref_t<_Ip>>) {
+  template <class _Iter, sized_sentinel_for<decay_t<_Iter>> _Sent>
+  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter> operator()(_Iter&& __first, _Sent __last) const {
+    if constexpr (sized_sentinel_for<_Sent, __remove_cvref_t<_Iter>>) {
       return __last - __first;
     } else {
-      return __last - decay_t<_Ip>(__first);
+      return __last - decay_t<_Iter>(__first);
     }
   }
 

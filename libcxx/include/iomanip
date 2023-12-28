@@ -237,11 +237,11 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
     typename basic_istream<_CharT, _Traits>::sentry __s(__is);
     if (__s) {
-      typedef istreambuf_iterator<_CharT, _Traits> _Ip;
-      typedef money_get<_CharT, _Ip> _Fp;
+      typedef istreambuf_iterator<_CharT, _Traits> _Iter;
+      typedef money_get<_CharT, _Iter> _Fp;
       ios_base::iostate __err = ios_base::goodbit;
       const _Fp& __mf         = std::use_facet<_Fp>(__is.getloc());
-      __mf.get(_Ip(__is), _Ip(), __x.__intl_, __is, __err, __x.__mon_);
+      __mf.get(_Iter(__is), _Iter(), __x.__intl_, __is, __err, __x.__mon_);
       __is.setstate(__err);
     }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -334,11 +334,11 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
     typename basic_istream<_CharT, _Traits>::sentry __s(__is);
     if (__s) {
-      typedef istreambuf_iterator<_CharT, _Traits> _Ip;
-      typedef time_get<_CharT, _Ip> _Fp;
+      typedef istreambuf_iterator<_CharT, _Traits> _Iter;
+      typedef time_get<_CharT, _Iter> _Fp;
       ios_base::iostate __err = ios_base::goodbit;
       const _Fp& __tf         = std::use_facet<_Fp>(__is.getloc());
-      __tf.get(_Ip(__is), _Ip(), __is, __err, __x.__tm_, __x.__fmt_, __x.__fmt_ + _Traits::length(__x.__fmt_));
+      __tf.get(_Iter(__is), _Iter(), __is, __err, __x.__tm_, __x.__fmt_, __x.__fmt_ + _Traits::length(__x.__fmt_));
       __is.setstate(__err);
     }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS

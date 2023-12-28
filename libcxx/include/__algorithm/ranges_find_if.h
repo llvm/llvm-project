@@ -30,8 +30,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class _Ip, class _Sp, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI constexpr _Ip __find_if_impl(_Ip __first, _Sp __last, _Pred& __pred, _Proj& __proj) {
+template <class _Iter, class _Sent, class _Pred, class _Proj>
+_LIBCPP_HIDE_FROM_ABI constexpr _Iter __find_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   for (; __first != __last; ++__first) {
     if (std::invoke(__pred, std::invoke(__proj, *__first)))
       break;
@@ -41,12 +41,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Ip __find_if_impl(_Ip __first, _Sp __last, _Pre
 
 namespace __find_if {
 struct __fn {
-  template <input_iterator _Ip,
-            sentinel_for<_Ip> _Sp,
+  template <input_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
             class _Proj = identity,
-            indirect_unary_predicate<projected<_Ip, _Proj>> _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Ip
-  operator()(_Ip __first, _Sp __last, _Pred __pred, _Proj __proj = {}) const {
+            indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Iter
+  operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
     return ranges::__find_if_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
 

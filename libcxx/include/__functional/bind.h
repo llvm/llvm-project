@@ -161,44 +161,47 @@ struct __mu_return
           0 < is_placeholder<_Ti>::value && is_placeholder<_Ti>::value <= tuple_size<_TupleUj>::value,
           _TupleUj> {};
 
-template <class _Fp, class _BoundArgs, class _TupleUj>
+template <class _Func, class _BoundArgs, class _TupleUj>
 struct __is_valid_bind_return {
   static const bool value = false;
 };
 
-template <class _Fp, class... _BoundArgs, class _TupleUj>
-struct __is_valid_bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __invokable<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>::value;
+template <class _Func, class... _BoundArgs, class _TupleUj>
+struct __is_valid_bind_return<_Func, tuple<_BoundArgs...>, _TupleUj> {
+  static const bool value = __invokable<_Func, typename __mu_return<_BoundArgs, _TupleUj>::type...>::value;
 };
 
-template <class _Fp, class... _BoundArgs, class _TupleUj>
-struct __is_valid_bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __invokable<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>::value;
+template <class _Func, class... _BoundArgs, class _TupleUj>
+struct __is_valid_bind_return<_Func, const tuple<_BoundArgs...>, _TupleUj> {
+  static const bool value = __invokable<_Func, typename __mu_return<const _BoundArgs, _TupleUj>::type...>::value;
 };
 
-template <class _Fp, class _BoundArgs, class _TupleUj, bool = __is_valid_bind_return<_Fp, _BoundArgs, _TupleUj>::value>
+template <class _Func,
+          class _BoundArgs,
+          class _TupleUj,
+          bool = __is_valid_bind_return<_Func, _BoundArgs, _TupleUj>::value>
 struct __bind_return;
 
-template <class _Fp, class... _BoundArgs, class _TupleUj>
-struct __bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj, true> {
-  typedef typename __invoke_of< _Fp&, typename __mu_return< _BoundArgs, _TupleUj >::type... >::type type;
+template <class _Func, class... _BoundArgs, class _TupleUj>
+struct __bind_return<_Func, tuple<_BoundArgs...>, _TupleUj, true> {
+  typedef typename __invoke_of< _Func&, typename __mu_return< _BoundArgs, _TupleUj >::type... >::type type;
 };
 
-template <class _Fp, class... _BoundArgs, class _TupleUj>
-struct __bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj, true> {
-  typedef typename __invoke_of< _Fp&, typename __mu_return< const _BoundArgs, _TupleUj >::type... >::type type;
+template <class _Func, class... _BoundArgs, class _TupleUj>
+struct __bind_return<_Func, const tuple<_BoundArgs...>, _TupleUj, true> {
+  typedef typename __invoke_of< _Func&, typename __mu_return< const _BoundArgs, _TupleUj >::type... >::type type;
 };
 
-template <class _Fp, class _BoundArgs, size_t... _Indx, class _Args>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bind_return<_Fp, _BoundArgs, _Args>::type
-__apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>, _Args&& __args) {
+template <class _Func, class _BoundArgs, size_t... _Indx, class _Args>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bind_return<_Func, _BoundArgs, _Args>::type
+__apply_functor(_Func& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>, _Args&& __args) {
   return std::__invoke(__f, std::__mu(std::get<_Indx>(__bound_args), __args)...);
 }
 
-template <class _Fp, class... _BoundArgs>
-class __bind : public __weak_result_type<__decay_t<_Fp> > {
+template <class _Func, class... _BoundArgs>
+class __bind : public __weak_result_type<__decay_t<_Func> > {
 protected:
-  using _Fd = __decay_t<_Fp>;
+  using _Fd = __decay_t<_Func>;
   typedef tuple<__decay_t<_BoundArgs>...> _Td;
 
 private:
@@ -230,12 +233,12 @@ public:
   }
 };
 
-template <class _Fp, class... _BoundArgs>
-struct is_bind_expression<__bind<_Fp, _BoundArgs...> > : public true_type {};
+template <class _Func, class... _BoundArgs>
+struct is_bind_expression<__bind<_Func, _BoundArgs...> > : public true_type {};
 
-template <class _Rp, class _Fp, class... _BoundArgs>
-class __bind_r : public __bind<_Fp, _BoundArgs...> {
-  typedef __bind<_Fp, _BoundArgs...> base;
+template <class _Rp, class _Func, class... _BoundArgs>
+class __bind_r : public __bind<_Func, _BoundArgs...> {
+  typedef __bind<_Func, _BoundArgs...> base;
   typedef typename base::_Fd _Fd;
   typedef typename base::_Td _Td;
 
@@ -271,21 +274,21 @@ public:
   }
 };
 
-template <class _Rp, class _Fp, class... _BoundArgs>
-struct is_bind_expression<__bind_r<_Rp, _Fp, _BoundArgs...> > : public true_type {};
+template <class _Rp, class _Func, class... _BoundArgs>
+struct is_bind_expression<__bind_r<_Rp, _Func, _BoundArgs...> > : public true_type {};
 
-template <class _Fp, class... _BoundArgs>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind<_Fp, _BoundArgs...>
-bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
-  typedef __bind<_Fp, _BoundArgs...> type;
-  return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);
+template <class _Func, class... _BoundArgs>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind<_Func, _BoundArgs...>
+bind(_Func&& __f, _BoundArgs&&... __bound_args) {
+  typedef __bind<_Func, _BoundArgs...> type;
+  return type(std::forward<_Func>(__f), std::forward<_BoundArgs>(__bound_args)...);
 }
 
-template <class _Rp, class _Fp, class... _BoundArgs>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind_r<_Rp, _Fp, _BoundArgs...>
-bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
-  typedef __bind_r<_Rp, _Fp, _BoundArgs...> type;
-  return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);
+template <class _Rp, class _Func, class... _BoundArgs>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bind_r<_Rp, _Func, _BoundArgs...>
+bind(_Func&& __f, _BoundArgs&&... __bound_args) {
+  typedef __bind_r<_Rp, _Func, _BoundArgs...> type;
+  return type(std::forward<_Func>(__f), std::forward<_BoundArgs>(__bound_args)...);
 }
 
 #endif // _LIBCPP_CXX03_LANG

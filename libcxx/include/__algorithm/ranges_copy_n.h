@@ -31,8 +31,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class _Ip, class _Op>
-using copy_n_result = in_out_result<_Ip, _Op>;
+template <class _InIter, class _OutIter>
+using copy_n_result = in_out_result<_InIter, _OutIter>;
 
 namespace __copy_n {
 struct __fn {
@@ -55,10 +55,10 @@ struct __fn {
     return {__ret.first, __ret.second};
   }
 
-  template <input_iterator _Ip, weakly_incrementable _Op>
-    requires indirectly_copyable<_Ip, _Op>
-  _LIBCPP_HIDE_FROM_ABI constexpr copy_n_result<_Ip, _Op>
-  operator()(_Ip __first, iter_difference_t<_Ip> __n, _Op __result) const {
+  template <input_iterator _InIter, weakly_incrementable _OutIter>
+    requires indirectly_copyable<_InIter, _OutIter>
+  _LIBCPP_HIDE_FROM_ABI constexpr copy_n_result<_InIter, _OutIter>
+  operator()(_InIter __first, iter_difference_t<_InIter> __n, _OutIter __result) const {
     return __go(std::move(__first), __n, std::move(__result));
   }
 };

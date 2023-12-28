@@ -47,10 +47,10 @@ struct __fn {
     }
   }
 
-  template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, class _Proj = identity>
-    requires indirect_binary_predicate<ranges::equal_to, projected<_Ip, _Proj>, const _Tp*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Ip
-  operator()(_Ip __first, _Sp __last, const _Tp& __value, _Proj __proj = {}) const {
+  template <input_iterator _Iter, sentinel_for<_Iter> _Sent, class _Tp, class _Proj = identity>
+    requires indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Tp*>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Iter
+  operator()(_Iter __first, _Sent __last, const _Tp& __value, _Proj __proj = {}) const {
     return __find_unwrap(std::move(__first), std::move(__last), __value, __proj);
   }
 

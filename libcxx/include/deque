@@ -1348,8 +1348,8 @@ inline deque<_Tp, _Allocator>::deque(deque&& __c, const __type_identity_t<alloca
     __map_.clear();
     __start_ = 0;
     __size() = 0;
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__c.begin()), _Ip(__c.end()));
+    typedef move_iterator<iterator> _Iter;
+    assign(_Iter(__c.begin()), _Iter(__c.end()));
   }
 }
 
@@ -1363,8 +1363,8 @@ inline deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(deque&& __c) _N
 template <class _Tp, class _Allocator>
 void deque<_Tp, _Allocator>::__move_assign(deque& __c, false_type) {
   if (__alloc() != __c.__alloc()) {
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__c.begin()), _Ip(__c.end()));
+    typedef move_iterator<iterator> _Iter;
+    assign(_Iter(__c.begin()), _Iter(__c.end()));
   } else
     __move_assign(__c, true_type());
 }

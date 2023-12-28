@@ -31,12 +31,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 // TODO(ranges): `ranges::min_element` can now simply delegate to `std::__min_element`.
-template <class _Ip, class _Sp, class _Proj, class _Comp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Ip __min_element_impl(_Ip __first, _Sp __last, _Comp& __comp, _Proj& __proj) {
+template <class _Iter, class _Sent, class _Proj, class _Comp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Iter __min_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
   if (__first == __last)
     return __first;
 
-  _Ip __i = __first;
+  _Iter __i = __first;
   while (++__i != __last)
     if (std::invoke(__comp, std::invoke(__proj, *__i), std::invoke(__proj, *__first)))
       __first = __i;
@@ -45,12 +45,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Ip __min_element_impl(_Ip __first, _Sp __last, 
 
 namespace __min_element {
 struct __fn {
-  template <forward_iterator _Ip,
-            sentinel_for<_Ip> _Sp,
-            class _Proj                                             = identity,
-            indirect_strict_weak_order<projected<_Ip, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Ip
-  operator()(_Ip __first, _Sp __last, _Comp __comp = {}, _Proj __proj = {}) const {
+  template <forward_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            class _Proj                                               = identity,
+            indirect_strict_weak_order<projected<_Iter, _Proj>> _Comp = ranges::less>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Iter
+  operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     return ranges::__min_element_impl(__first, __last, __comp, __proj);
   }
 

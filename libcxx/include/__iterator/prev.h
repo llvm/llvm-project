@@ -41,20 +41,20 @@ namespace ranges {
 namespace __prev {
 
 struct __fn {
-  template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
+  template <bidirectional_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __x) const {
     --__x;
     return __x;
   }
 
-  template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
+  template <bidirectional_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __x, iter_difference_t<_Iter> __n) const {
     ranges::advance(__x, -__n);
     return __x;
   }
 
-  template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Ip __bound_iter) const {
+  template <bidirectional_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __x, iter_difference_t<_Iter> __n, _Iter __bound_iter) const {
     ranges::advance(__x, -__n, __bound_iter);
     return __x;
   }

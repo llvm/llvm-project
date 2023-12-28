@@ -35,21 +35,21 @@ namespace ranges {
 
 // This concept ensures that uninitialized algorithms can construct an object
 // at the address pointed-to by the iterator, which requires an lvalue.
-template <class _Ip>
+template <class _Iter>
 concept __nothrow_input_iterator =
-    input_iterator<_Ip> && is_lvalue_reference_v<iter_reference_t<_Ip>> &&
-    same_as<remove_cvref_t<iter_reference_t<_Ip>>, iter_value_t<_Ip>>;
+    input_iterator<_Iter> && is_lvalue_reference_v<iter_reference_t<_Iter>> &&
+    same_as<remove_cvref_t<iter_reference_t<_Iter>>, iter_value_t<_Iter>>;
 
-template <class _Sp, class _Ip>
-concept __nothrow_sentinel_for = sentinel_for<_Sp, _Ip>;
+template <class _Sent, class _Iter>
+concept __nothrow_sentinel_for = sentinel_for<_Sent, _Iter>;
 
 template <class _Rp>
 concept __nothrow_input_range =
     range<_Rp> && __nothrow_input_iterator<iterator_t<_Rp>> && __nothrow_sentinel_for<sentinel_t<_Rp>, iterator_t<_Rp>>;
 
-template <class _Ip>
+template <class _Iter>
 concept __nothrow_forward_iterator =
-    __nothrow_input_iterator<_Ip> && forward_iterator<_Ip> && __nothrow_sentinel_for<_Ip, _Ip>;
+    __nothrow_input_iterator<_Iter> && forward_iterator<_Iter> && __nothrow_sentinel_for<_Iter, _Iter>;
 
 template <class _Rp>
 concept __nothrow_forward_range = __nothrow_input_range<_Rp> && __nothrow_forward_iterator<iterator_t<_Rp>>;

@@ -231,8 +231,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto get(subrange<_Iter, _Sent, _Kind>&& __subra
     return __subrange.end();
 }
 
-template <class _Ip, class _Sp, subrange_kind _Kp>
-inline constexpr bool enable_borrowed_range<subrange<_Ip, _Sp, _Kp>> = true;
+template <class _Iter, class _Sent, subrange_kind _Kp>
+inline constexpr bool enable_borrowed_range<subrange<_Iter, _Sent, _Kp>> = true;
 
 template <range _Rp>
 using borrowed_subrange_t = _If<borrowed_range<_Rp>, subrange<iterator_t<_Rp>>, dangling>;
@@ -244,27 +244,27 @@ using ranges::get;
 
 // [ranges.syn]
 
-template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
-struct tuple_size<ranges::subrange<_Ip, _Sp, _Kp>> : integral_constant<size_t, 2> {};
+template <class _Iter, class _Sent, ranges::subrange_kind _Kp>
+struct tuple_size<ranges::subrange<_Iter, _Sent, _Kp>> : integral_constant<size_t, 2> {};
 
-template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
-struct tuple_element<0, ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Ip;
+template <class _Iter, class _Sent, ranges::subrange_kind _Kp>
+struct tuple_element<0, ranges::subrange<_Iter, _Sent, _Kp>> {
+  using type = _Iter;
 };
 
-template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
-struct tuple_element<1, ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Sp;
+template <class _Iter, class _Sent, ranges::subrange_kind _Kp>
+struct tuple_element<1, ranges::subrange<_Iter, _Sent, _Kp>> {
+  using type = _Sent;
 };
 
-template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
-struct tuple_element<0, const ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Ip;
+template <class _Iter, class _Sent, ranges::subrange_kind _Kp>
+struct tuple_element<0, const ranges::subrange<_Iter, _Sent, _Kp>> {
+  using type = _Iter;
 };
 
-template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
-struct tuple_element<1, const ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Sp;
+template <class _Iter, class _Sent, ranges::subrange_kind _Kp>
+struct tuple_element<1, const ranges::subrange<_Iter, _Sent, _Kp>> {
+  using type = _Sent;
 };
 
 #endif // _LIBCPP_STD_VER >= 20

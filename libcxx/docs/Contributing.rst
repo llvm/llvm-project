@@ -45,6 +45,22 @@ other implementations (e.g. system headers), the test in
 ``libcxx/test/libcxx/system_reserved_names.gen.py`` contains the list of
 reserved names that can't be used.
 
+We use the following names to refer to various tempalate type parameters:
+
+* ``_Iter``, to refer to an iterator type. Some alterations are used if multiple
+  iterators with different categories appear in the same template:
+  * ``_InIter`` to disambiguate input iterators
+  * ``_ForwardIter`` to disambiguate input iterators
+  * ``_BiIter`` to disambiguate input iterators
+  * ``_RandomIter`` to disambiguate input iterators
+  * ``_ContgiuousIter`` to disambiguate input iterators
+  * ``_OutIter`` to disambiguate output iterators
+* ``_Sent``, to refer to sentinels
+* ``_Func``, to refer to arbitrary invocable objects
+* ``_Pred``, to refer to predicates
+* ``_Comp``, to refer to comparators
+* ``_Proj``, to refer to projections
+
 Unqualified function calls are susceptible to
 `argument-dependent lookup (ADL) <https://en.cppreference.com/w/cpp/language/adl>`_.
 This means calling ``move(UserType)`` might not call ``std::move``. Therefore,

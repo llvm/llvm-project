@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Fp>
+template <class _Func>
 struct __strip_signature;
 
 #  if defined(__cpp_static_call_operator) && __cpp_static_call_operator >= 202207L

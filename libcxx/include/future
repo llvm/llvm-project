@@ -753,25 +753,25 @@ void __assoc_sub_state_alloc<_Alloc>::__on_zero_shared() _NOEXCEPT {
   __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
-template <class _Rp, class _Fp>
+template <class _Rp, class _Func>
 class __deferred_assoc_state : public __assoc_state<_Rp> {
   typedef __assoc_state<_Rp> base;
 
-  _Fp __func_;
+  _Func __func_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __deferred_assoc_state(_Fp&& __f);
+  _LIBCPP_HIDE_FROM_ABI explicit __deferred_assoc_state(_Func&& __f);
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __execute();
 };
 
-template <class _Rp, class _Fp>
-inline __deferred_assoc_state<_Rp, _Fp>::__deferred_assoc_state(_Fp&& __f) : __func_(std::forward<_Fp>(__f)) {
+template <class _Rp, class _Func>
+inline __deferred_assoc_state<_Rp, _Func>::__deferred_assoc_state(_Func&& __f) : __func_(std::forward<_Func>(__f)) {
   this->__set_deferred();
 }
 
-template <class _Rp, class _Fp>
-void __deferred_assoc_state<_Rp, _Fp>::__execute() {
+template <class _Rp, class _Func>
+void __deferred_assoc_state<_Rp, _Func>::__execute() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
@@ -783,25 +783,25 @@ void __deferred_assoc_state<_Rp, _Fp>::__execute() {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
-template <class _Fp>
-class __deferred_assoc_state<void, _Fp> : public __assoc_sub_state {
+template <class _Func>
+class __deferred_assoc_state<void, _Func> : public __assoc_sub_state {
   typedef __assoc_sub_state base;
 
-  _Fp __func_;
+  _Func __func_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __deferred_assoc_state(_Fp&& __f);
+  _LIBCPP_HIDE_FROM_ABI explicit __deferred_assoc_state(_Func&& __f);
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __execute() override;
 };
 
-template <class _Fp>
-inline __deferred_assoc_state<void, _Fp>::__deferred_assoc_state(_Fp&& __f) : __func_(std::forward<_Fp>(__f)) {
+template <class _Func>
+inline __deferred_assoc_state<void, _Func>::__deferred_assoc_state(_Func&& __f) : __func_(std::forward<_Func>(__f)) {
   this->__set_deferred();
 }
 
-template <class _Fp>
-void __deferred_assoc_state<void, _Fp>::__execute() {
+template <class _Func>
+void __deferred_assoc_state<void, _Func>::__execute() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
@@ -814,25 +814,25 @@ void __deferred_assoc_state<void, _Fp>::__execute() {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
-template <class _Rp, class _Fp>
+template <class _Rp, class _Func>
 class __async_assoc_state : public __assoc_state<_Rp> {
   typedef __assoc_state<_Rp> base;
 
-  _Fp __func_;
+  _Func __func_;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __on_zero_shared() _NOEXCEPT;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __async_assoc_state(_Fp&& __f);
+  _LIBCPP_HIDE_FROM_ABI explicit __async_assoc_state(_Func&& __f);
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __execute();
 };
 
-template <class _Rp, class _Fp>
-inline __async_assoc_state<_Rp, _Fp>::__async_assoc_state(_Fp&& __f) : __func_(std::forward<_Fp>(__f)) {}
+template <class _Rp, class _Func>
+inline __async_assoc_state<_Rp, _Func>::__async_assoc_state(_Func&& __f) : __func_(std::forward<_Func>(__f)) {}
 
-template <class _Rp, class _Fp>
-void __async_assoc_state<_Rp, _Fp>::__execute() {
+template <class _Rp, class _Func>
+void __async_assoc_state<_Rp, _Func>::__execute() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
@@ -844,31 +844,31 @@ void __async_assoc_state<_Rp, _Fp>::__execute() {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
-template <class _Rp, class _Fp>
-void __async_assoc_state<_Rp, _Fp>::__on_zero_shared() _NOEXCEPT {
+template <class _Rp, class w_Func>
+void __async_assoc_state<_Rp, _Func>::__on_zero_shared() _NOEXCEPT {
   this->wait();
   base::__on_zero_shared();
 }
 
-template <class _Fp>
-class __async_assoc_state<void, _Fp> : public __assoc_sub_state {
+template <class _Func>
+class __async_assoc_state<void, _Func> : public __assoc_sub_state {
   typedef __assoc_sub_state base;
 
-  _Fp __func_;
+  _Func __func_;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __async_assoc_state(_Fp&& __f);
+  _LIBCPP_HIDE_FROM_ABI explicit __async_assoc_state(_Func&& __f);
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __execute() override;
 };
 
-template <class _Fp>
-inline __async_assoc_state<void, _Fp>::__async_assoc_state(_Fp&& __f) : __func_(std::forward<_Fp>(__f)) {}
+template <class _Func>
+inline __async_assoc_state<void, _Func>::__async_assoc_state(_Func&& __f) : __func_(std::forward<_Func>(__f)) {}
 
-template <class _Fp>
-void __async_assoc_state<void, _Fp>::__execute() {
+template <class _Func>
+void __async_assoc_state<void, _Func>::__execute() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
@@ -881,8 +881,8 @@ void __async_assoc_state<void, _Fp>::__execute() {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
-template <class _Fp>
-void __async_assoc_state<void, _Fp>::__on_zero_shared() _NOEXCEPT {
+template <class _Func>
+void __async_assoc_state<void, _Func>::__on_zero_shared() _NOEXCEPT {
   this->wait();
   base::__on_zero_shared();
 }
@@ -897,11 +897,11 @@ class _LIBCPP_TEMPLATE_VIS shared_future;
 template <class _Rp>
 class _LIBCPP_TEMPLATE_VIS future;
 
-template <class _Rp, class _Fp>
-_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_deferred_assoc_state(_Fp&& __f);
+template <class _Rp, class _Func>
+_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_deferred_assoc_state(_Func&& __f);
 
-template <class _Rp, class _Fp>
-_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f);
+template <class _Rp, class _Func>
+_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Func&& __f);
 
 template <class _Rp>
 class _LIBCPP_TEMPLATE_VIS future {
@@ -914,10 +914,10 @@ class _LIBCPP_TEMPLATE_VIS future {
   template <class>
   friend class shared_future;
 
-  template <class _R1, class _Fp>
-  friend future<_R1> __make_deferred_assoc_state(_Fp&& __f);
-  template <class _R1, class _Fp>
-  friend future<_R1> __make_async_assoc_state(_Fp&& __f);
+  template <class _R1, class _Func>
+  friend future<_R1> __make_deferred_assoc_state(_Func&& __f);
+  template <class _R1, class _Func>
+  friend future<_R1> __make_async_assoc_state(_Func&& __f);
 
 public:
   _LIBCPP_HIDE_FROM_ABI future() _NOEXCEPT : __state_(nullptr) {}
@@ -985,10 +985,10 @@ class _LIBCPP_TEMPLATE_VIS future<_Rp&> {
   template <class>
   friend class shared_future;
 
-  template <class _R1, class _Fp>
-  friend future<_R1> __make_deferred_assoc_state(_Fp&& __f);
-  template <class _R1, class _Fp>
-  friend future<_R1> __make_async_assoc_state(_Fp&& __f);
+  template <class _R1, class _Func>
+  friend future<_R1> __make_deferred_assoc_state(_Func&& __f);
+  template <class _R1, class _Func>
+  friend future<_R1> __make_async_assoc_state(_Func&& __f);
 
 public:
   _LIBCPP_HIDE_FROM_ABI future() _NOEXCEPT : __state_(nullptr) {}
@@ -1052,10 +1052,10 @@ class _LIBCPP_EXPORTED_FROM_ABI future<void> {
   template <class>
   friend class shared_future;
 
-  template <class _R1, class _Fp>
-  friend future<_R1> __make_deferred_assoc_state(_Fp&& __f);
-  template <class _R1, class _Fp>
-  friend future<_R1> __make_async_assoc_state(_Fp&& __f);
+  template <class _R1, class _Func>
+  friend future<_R1> __make_deferred_assoc_state(_Func&& __f);
+  template <class _R1, class _Func>
+  friend future<_R1> __make_async_assoc_state(_Func&& __f);
 
 public:
   _LIBCPP_HIDE_FROM_ABI future() _NOEXCEPT : __state_(nullptr) {}
@@ -1376,7 +1376,7 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<promise<_Rp>, _Alloc> : public true_t
 
 // packaged_task
 
-template <class _Fp>
+template <class _Func>
 class __packaged_task_base;
 
 template <class _Rp, class... _ArgTypes>
@@ -1397,44 +1397,44 @@ public:
 template <class _FD, class _Alloc, class _FB>
 class __packaged_task_func;
 
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-class __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)> : public __packaged_task_base<_Rp(_ArgTypes...)> {
-  __compressed_pair<_Fp, _Alloc> __f_;
+template <class _Func, class _Alloc, class _Rp, class... _ArgTypes>
+class __packaged_task_func<_Func, _Alloc, _Rp(_ArgTypes...)> : public __packaged_task_base<_Rp(_ArgTypes...)> {
+  __compressed_pair<_Func, _Alloc> __f_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(const _Fp& __f) : __f_(__f, __default_init_tag()) {}
-  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(_Fp&& __f) : __f_(std::move(__f), __default_init_tag()) {}
-  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(const _Fp& __f, const _Alloc& __a) : __f_(__f, __a) {}
-  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(_Fp&& __f, const _Alloc& __a) : __f_(std::move(__f), __a) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(const _Func& __f) : __f_(__f, __default_init_tag()) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(_Func&& __f) : __f_(std::move(__f), __default_init_tag()) {}
+  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(const _Func& __f, const _Alloc& __a) : __f_(__f, __a) {}
+  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(_Func&& __f, const _Alloc& __a) : __f_(std::move(__f), __a) {}
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __move_to(__packaged_task_base<_Rp(_ArgTypes...)>*) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy();
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy_deallocate();
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual _Rp operator()(_ArgTypes&&... __args);
 };
 
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__move_to(
+template <class _Func, class _Alloc, class _Rp, class... _ArgTypes>
+void __packaged_task_func<_Func, _Alloc, _Rp(_ArgTypes...)>::__move_to(
     __packaged_task_base<_Rp(_ArgTypes...)>* __p) _NOEXCEPT {
   ::new ((void*)__p) __packaged_task_func(std::move(__f_.first()), std::move(__f_.second()));
 }
 
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy() {
-  __f_.~__compressed_pair<_Fp, _Alloc>();
+template <class _Func, class _Alloc, class _Rp, class... _ArgTypes>
+void __packaged_task_func<_Func, _Alloc, _Rp(_ArgTypes...)>::destroy() {
+  __f_.~__compressed_pair<_Func, _Alloc>();
 }
 
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy_deallocate() {
+template <class _Func, class _Alloc, class _Rp, class... _ArgTypes>
+void __packaged_task_func<_Func, _Alloc, _Rp(_ArgTypes...)>::destroy_deallocate() {
   typedef typename __allocator_traits_rebind<_Alloc, __packaged_task_func>::type _Ap;
   typedef allocator_traits<_Ap> _ATraits;
   typedef pointer_traits<typename _ATraits::pointer> _PTraits;
   _Ap __a(__f_.second());
-  __f_.~__compressed_pair<_Fp, _Alloc>();
+  __f_.~__compressed_pair<_Func, _Alloc>();
   __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
-template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-_Rp __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::operator()(_ArgTypes&&... __arg) {
+template <class _Func, class _Alloc, class _Rp, class... _ArgTypes>
+_Rp __packaged_task_func<_Func, _Alloc, _Rp(_ArgTypes...)>::operator()(_ArgTypes&&... __arg) {
   return std::__invoke(__f_.first(), std::forward<_ArgTypes>(__arg)...);
 }
 
@@ -1457,10 +1457,10 @@ public:
 
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function() _NOEXCEPT : __f_(nullptr) {}
-  template <class _Fp>
-  _LIBCPP_HIDE_FROM_ABI __packaged_task_function(_Fp&& __f);
-  template <class _Fp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI __packaged_task_function(allocator_arg_t, const _Alloc& __a, _Fp&& __f);
+  template <class _Func>
+  _LIBCPP_HIDE_FROM_ABI __packaged_task_function(_Func&& __f);
+  template <class _Func, class _Alloc>
+  _LIBCPP_HIDE_FROM_ABI __packaged_task_function(allocator_arg_t, const _Alloc& __a, _Func&& __f);
 
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function(__packaged_task_function&&) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI __packaged_task_function& operator=(__packaged_task_function&&) _NOEXCEPT;
@@ -1489,38 +1489,38 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(__packaged
 }
 
 template <class _Rp, class... _ArgTypes>
-template <class _Fp>
-__packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f) : __f_(nullptr) {
-  typedef __libcpp_remove_reference_t<__decay_t<_Fp> > _FR;
+template <class _Func>
+__packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Func&& __f) : __f_(nullptr) {
+  typedef __libcpp_remove_reference_t<__decay_t<_Func> > _FR;
   typedef __packaged_task_func<_FR, allocator<_FR>, _Rp(_ArgTypes...)> _FF;
   if (sizeof(_FF) <= sizeof(__buf_)) {
-    ::new ((void*)&__buf_) _FF(std::forward<_Fp>(__f));
+    ::new ((void*)&__buf_) _FF(std::forward<_Func>(__f));
     __f_ = (__base*)&__buf_;
   } else {
     typedef allocator<_FF> _Ap;
     _Ap __a;
     typedef __allocator_destructor<_Ap> _Dp;
     unique_ptr<__base, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-    ::new ((void*)__hold.get()) _FF(std::forward<_Fp>(__f), allocator<_FR>(__a));
+    ::new ((void*)__hold.get()) _FF(std::forward<_Func>(__f), allocator<_FR>(__a));
     __f_ = __hold.release();
   }
 }
 
 template <class _Rp, class... _ArgTypes>
-template <class _Fp, class _Alloc>
-__packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(allocator_arg_t, const _Alloc& __a0, _Fp&& __f)
+template <class _Func, class _Alloc>
+__packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(allocator_arg_t, const _Alloc& __a0, _Func&& __f)
     : __f_(nullptr) {
-  typedef __libcpp_remove_reference_t<__decay_t<_Fp> > _FR;
+  typedef __libcpp_remove_reference_t<__decay_t<_Func> > _FR;
   typedef __packaged_task_func<_FR, _Alloc, _Rp(_ArgTypes...)> _FF;
   if (sizeof(_FF) <= sizeof(__buf_)) {
     __f_ = (__base*)&__buf_;
-    ::new ((void*)__f_) _FF(std::forward<_Fp>(__f));
+    ::new ((void*)__f_) _FF(std::forward<_Func>(__f));
   } else {
     typedef typename __allocator_traits_rebind<_Alloc, _FF>::type _Ap;
     _Ap __a(__a0);
     typedef __allocator_destructor<_Ap> _Dp;
     unique_ptr<__base, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-    ::new ((void*)std::addressof(*__hold.get())) _FF(std::forward<_Fp>(__f), _Alloc(__a));
+    ::new ((void*)std::addressof(*__hold.get())) _FF(std::forward<_Func>(__f), _Alloc(__a));
     __f_ = std::addressof(*__hold.release());
   }
 }
@@ -1601,11 +1601,11 @@ private:
 public:
   // construction and destruction
   _LIBCPP_HIDE_FROM_ABI packaged_task() _NOEXCEPT : __p_(nullptr) {}
-  template <class _Fp, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-  _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Fp&& __f) : __f_(std::forward<_Fp>(__f)) {}
-  template <class _Fp, class _Allocator, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-  _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
-      : __f_(allocator_arg_t(), __a, std::forward<_Fp>(__f)), __p_(allocator_arg_t(), __a) {}
+  template <class _Func, class = __enable_if_t<!is_same<__remove_cvref_t<_Func>, packaged_task>::value> >
+  _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Func&& __f) : __f_(std::forward<_Func>(__f)) {}
+  template <class _Func, class _Allocator, class = __enable_if_t<!is_same<__remove_cvref_t<_Func>, packaged_task>::value> >
+  _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Func&& __f)
+      : __f_(allocator_arg_t(), __a, std::forward<_Func>(__f)), __p_(allocator_arg_t(), __a) {}
   // ~packaged_task() = default;
 
   // no copy
@@ -1691,11 +1691,11 @@ private:
 public:
   // construction and destruction
   _LIBCPP_HIDE_FROM_ABI packaged_task() _NOEXCEPT : __p_(nullptr) {}
-  template <class _Fp, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-  _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Fp&& __f) : __f_(std::forward<_Fp>(__f)) {}
-  template <class _Fp, class _Allocator, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-  _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
-      : __f_(allocator_arg_t(), __a, std::forward<_Fp>(__f)), __p_(allocator_arg_t(), __a) {}
+  template <class _Func, class = __enable_if_t<!is_same<__remove_cvref_t<_Func>, packaged_task>::value> >
+  _LIBCPP_HIDE_FROM_ABI explicit packaged_task(_Func&& __f) : __f_(std::forward<_Func>(__f)) {}
+  template <class _Func, class _Allocator, class = __enable_if_t<!is_same<__remove_cvref_t<_Func>, packaged_task>::value> >
+  _LIBCPP_HIDE_FROM_ABI packaged_task(allocator_arg_t, const _Allocator& __a, _Func&& __f)
+      : __f_(allocator_arg_t(), __a, std::forward<_Func>(__f)), __p_(allocator_arg_t(), __a) {}
   // ~packaged_task() = default;
 
   // no copy
@@ -1733,8 +1733,8 @@ public:
 template <class _Rp, class... _Args>
 packaged_task(_Rp (*)(_Args...)) -> packaged_task<_Rp(_Args...)>;
 
-template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
-packaged_task(_Fp) -> packaged_task<_Stripped>;
+template <class _Func, class _Stripped = typename __strip_signature<decltype(&_Func::operator())>::type>
+packaged_task(_Func) -> packaged_task<_Stripped>;
 
 #endif
 
@@ -1790,31 +1790,31 @@ swap(packaged_task<_Rp(_ArgTypes...)>& __x, packaged_task<_Rp(_ArgTypes...)>& __
 template <class _Callable, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<packaged_task<_Callable>, _Alloc> : public true_type {};
 
-template <class _Rp, class _Fp>
-_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_deferred_assoc_state(_Fp&& __f) {
-  unique_ptr<__deferred_assoc_state<_Rp, _Fp>, __release_shared_count> __h(
-      new __deferred_assoc_state<_Rp, _Fp>(std::forward<_Fp>(__f)));
+template <class _Rp, class _Func>
+_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_deferred_assoc_state(_Func&& __f) {
+  unique_ptr<__deferred_assoc_state<_Rp, _Func>, __release_shared_count> __h(
+      new __deferred_assoc_state<_Rp, _Func>(std::forward<_Func>(__f)));
   return future<_Rp>(__h.get());
 }
 
-template <class _Rp, class _Fp>
-_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f) {
-  unique_ptr<__async_assoc_state<_Rp, _Fp>, __release_shared_count> __h(
-      new __async_assoc_state<_Rp, _Fp>(std::forward<_Fp>(__f)));
-  std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
+template <class _Rp, class _Func>
+_LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Func&& __f) {
+  unique_ptr<__async_assoc_state<_Rp, _Func>, __release_shared_count> __h(
+      new __async_assoc_state<_Rp, _Func>(std::forward<_Func>(__f)));
+  std::thread(&__async_assoc_state<_Rp, _Func>::__execute, __h.get()).detach();
   return future<_Rp>(__h.get());
 }
 
 #ifndef _LIBCPP_CXX03_LANG
 
-template <class _Fp, class... _Args>
+template <class _Func, class... _Args>
 class _LIBCPP_HIDDEN __async_func {
-  tuple<_Fp, _Args...> __f_;
+  tuple<_Func, _Args...> __f_;
 
 public:
-  typedef typename __invoke_of<_Fp, _Args...>::type _Rp;
+  typedef typename __invoke_of<_Func, _Args...>::type _Rp;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Fp&& __f, _Args&&... __args)
+  _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Func&& __f, _Args&&... __args)
       : __f_(std::move(__f), std::move(__args)...) {}
 
   _LIBCPP_HIDE_FROM_ABI __async_func(__async_func&& __f) : __f_(std::move(__f.__f_)) {}
@@ -1835,11 +1835,11 @@ inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch 
   return (int(__policy) & int(__value)) != 0;
 }
 
-template <class _Fp, class... _Args>
+template <class _Func, class... _Args>
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
-    future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
-    async(launch __policy, _Fp&& __f, _Args&&... __args) {
-  typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
+    future<typename __invoke_of<__decay_t<_Func>, __decay_t<_Args>...>::type>
+    async(launch __policy, _Func&& __f, _Args&&... __args) {
+  typedef __async_func<__decay_t<_Func>, __decay_t<_Args>...> _BF;
   typedef typename _BF::_Rp _Rp;
 
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -1847,7 +1847,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
 #  endif
     if (__does_policy_contain(__policy, launch::async))
       return std::__make_async_assoc_state<_Rp>(
-          _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
+          _BF(_LIBCPP_AUTO_CAST(std::forward<_Func>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     if (__policy == launch::async)
@@ -1857,15 +1857,15 @@ _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
 
   if (__does_policy_contain(__policy, launch::deferred))
     return std::__make_deferred_assoc_state<_Rp>(
-        _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
+        _BF(_LIBCPP_AUTO_CAST(std::forward<_Func>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
   return future<_Rp>{};
 }
 
-template <class _Fp, class... _Args>
+template <class _Func, class... _Args>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
-    future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
-    async(_Fp&& __f, _Args&&... __args) {
-  return std::async(launch::any, std::forward<_Fp>(__f), std::forward<_Args>(__args)...);
+    future<typename __invoke_of<__decay_t<_Func>, __decay_t<_Args>...>::type>
+    async(_Func&& __f, _Args&&... __args) {
+  return std::async(launch::any, std::forward<_Func>(__f), std::forward<_Args>(__args)...);
 }
 
 #endif // C++03

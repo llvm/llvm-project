@@ -32,11 +32,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class _Ip, class _Op>
-using unary_transform_result = in_out_result<_Ip, _Op>;
+template <class _InIter, class _OutIter>
+using unary_transform_result = in_out_result<_InIter, _OutIter>;
 
-template <class _I1, class _I2, class _O1>
-using binary_transform_result = in_in_out_result<_I1, _I2, _O1>;
+template <class _InIter1, class _InIter2, class _OutIter>
+using binary_transform_result = in_in_out_result<_InIter1, _InIter2, _OutIter>;
 
 namespace __transform {
 struct __fn {

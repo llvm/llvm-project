@@ -30,8 +30,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class _Ip, class _Op>
-using copy_if_result = in_out_result<_Ip, _Op>;
+template <class _InIter, class _OutIter>
+using copy_if_result = in_out_result<_InIter, _OutIter>;
 
 namespace __copy_if {
 struct __fn {

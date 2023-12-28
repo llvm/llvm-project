@@ -79,16 +79,16 @@ namespace __advance {
 
 struct __fn {
 private:
-  template <class _Ip>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
+  template <class _Iter>
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_forward(_Iter& __i, iter_difference_t<_Iter> __n) {
     while (__n > 0) {
       --__n;
       ++__i;
     }
   }
 
-  template <class _Ip>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_backward(_Ip& __i, iter_difference_t<_Ip> __n) {
+  template <class _Iter>
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_backward(_Iter& __i, iter_difference_t<_Iter> __n) {
     while (__n < 0) {
       ++__n;
       --__i;
@@ -97,16 +97,16 @@ private:
 
 public:
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
-  template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
+  template <input_or_output_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Iter& __i, iter_difference_t<_Iter> __n) const {
     _LIBCPP_ASSERT_UNCATEGORIZED(
-        __n >= 0 || bidirectional_iterator<_Ip>, "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
+        __n >= 0 || bidirectional_iterator<_Iter>, "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
 
     // If `I` models `random_access_iterator`, equivalent to `i += n`.
-    if constexpr (random_access_iterator<_Ip>) {
+    if constexpr (random_access_iterator<_Iter>) {
       __i += __n;
       return;
-    } else if constexpr (bidirectional_iterator<_Ip>) {
+    } else if constexpr (bidirectional_iterator<_Iter>) {
       // Otherwise, if `n` is non-negative, increments `i` by `n`.
       __advance_forward(__i, __n);
       // Otherwise, decrements `i` by `-n`.
@@ -121,15 +121,15 @@ public:
 
   // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound_sentinel)
   // denotes a range.
-  template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
+  template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
+  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Iter& __i, _Sent __bound_sentinel) const {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound_sentinel)`.
-    if constexpr (assignable_from<_Ip&, _Sp>) {
+    if constexpr (assignable_from<_Iter&, _Sent>) {
       __i = std::move(__bound_sentinel);
     }
     // Otherwise, if `S` and `I` model `sized_sentinel_for<S, I>`, equivalent to `ranges::advance(i, bound_sentinel -
     // i)`.
-    else if constexpr (sized_sentinel_for<_Sp, _Ip>) {
+    else if constexpr (sized_sentinel_for<_Sent, _Iter>) {
       (*this)(__i, __bound_sentinel - __i);
     }
     // Otherwise, while `bool(i != bound_sentinel)` is true, increments `i`.
@@ -146,13 +146,13 @@ public:
   //   * If `n < 0`, [bound_sentinel, i) denotes a range, `I` models `bidirectional_iterator`, and `I` and `S` model
   //   `same_as<I, S>`.
   // Returns: `n - M`, where `M` is the difference between the ending and starting position.
-  template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip>
-  operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
+  template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
+  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter>
+  operator()(_Iter& __i, iter_difference_t<_Iter> __n, _Sent __bound_sentinel) const {
+    _LIBCPP_ASSERT_UNCATEGORIZED((__n >= 0) || (bidirectional_iterator<_Iter> && same_as<_Iter, _Sent>),
                                  "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
-    if constexpr (sized_sentinel_for<_Sp, _Ip>) {
+    if constexpr (sized_sentinel_for<_Sent, _Iter>) {
       // If |n| >= |bound_sentinel - i|, equivalent to `ranges::advance(i, bound_sentinel)`.
       // __magnitude_geq(a, b) returns |a| >= |b|, assuming they have the same sign.
       auto __magnitude_geq = [](auto __a, auto __b) { return __a == 0 ? __b == 0 : __a > 0 ? __a >= __b : __a <= __b; };
@@ -173,7 +173,7 @@ public:
       }
 
       // Otherwise, while `bool(i != bound_sentinel)` is true, decrements `i` but at most `-n` times.
-      if constexpr (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>) {
+      if constexpr (bidirectional_iterator<_Iter> && same_as<_Iter, _Sent>) {
         while (__i != __bound_sentinel && __n < 0) {
           --__i;
           ++__n;

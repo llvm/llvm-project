@@ -38,8 +38,8 @@ struct incrementable_traits<_Tp*> {
   using difference_type = ptrdiff_t;
 };
 
-template <class _Ip>
-struct incrementable_traits<const _Ip> : incrementable_traits<_Ip> {};
+template <class _Iter>
+struct incrementable_traits<const _Iter> : incrementable_traits<_Iter> {};
 
 template <class _Tp>
 concept __has_member_difference_type = requires { typename _Tp::difference_type; };
@@ -66,11 +66,11 @@ struct iterator_traits;
 // Let `RI` be `remove_cvref_t<I>`. The type `iter_difference_t<I>` denotes
 // `incrementable_traits<RI>::difference_type` if `iterator_traits<RI>` names a specialization
 // generated from the primary template, and `iterator_traits<RI>::difference_type` otherwise.
-template <class _Ip>
+template <class _Iter>
 using iter_difference_t =
-    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
-                           incrementable_traits<remove_cvref_t<_Ip> >,
-                           iterator_traits<remove_cvref_t<_Ip> > >::difference_type;
+    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Iter> > >::value,
+                           incrementable_traits<remove_cvref_t<_Iter> >,
+                           iterator_traits<remove_cvref_t<_Iter> > >::difference_type;
 
 #endif // _LIBCPP_STD_VER >= 20
 

@@ -357,10 +357,10 @@ basic_ostream<_CharT, _Traits>::operator<<(basic_streambuf<char_type, traits_typ
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-          typedef istreambuf_iterator<_CharT, _Traits> _Ip;
+          typedef istreambuf_iterator<_CharT, _Traits> _Iter;
           typedef ostreambuf_iterator<_CharT, _Traits> _Op;
-          _Ip __i(__sb);
-          _Ip __eof;
+          _Iter __i(__sb);
+          _Iter __eof;
           _Op __o(*this);
           size_t __c = 0;
           for (; __i != __eof; ++__i, ++__o, ++__c) {
@@ -668,9 +668,9 @@ __put_character_sequence(basic_ostream<_CharT, _Traits>& __os, const _CharT* __s
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
     typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
     if (__s) {
-      typedef ostreambuf_iterator<_CharT, _Traits> _Ip;
+      typedef ostreambuf_iterator<_CharT, _Traits> _Iter;
       if (std::__pad_and_output(
-              _Ip(__os),
+              _Iter(__os),
               __str,
               (__os.flags() & ios_base::adjustfield) == ios_base::left ? __str + __len : __str,
               __str + __len,
@@ -700,9 +700,9 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_
     typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
     if (__s) {
       _CharT __c = __os.widen(__cn);
-      typedef ostreambuf_iterator<_CharT, _Traits> _Ip;
+      typedef ostreambuf_iterator<_CharT, _Traits> _Iter;
       if (std::__pad_and_output(
-              _Ip(__os),
+              _Iter(__os),
               &__c,
               (__os.flags() & ios_base::adjustfield) == ios_base::left ? &__c + 1 : &__c,
               &__c + 1,
@@ -748,7 +748,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn) {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
     typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
     if (__s) {
-      typedef ostreambuf_iterator<_CharT, _Traits> _Ip;
+      typedef ostreambuf_iterator<_CharT, _Traits> _Iter;
       size_t __len   = char_traits<char>::length(__strn);
       const int __bs = 100;
       _CharT __wbb[__bs];
@@ -763,7 +763,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn) {
       for (_CharT* __p = __wb; *__strn != '\0'; ++__strn, ++__p)
         *__p = __os.widen(*__strn);
       if (std::__pad_and_output(
-              _Ip(__os),
+              _Iter(__os),
               __wb,
               (__os.flags() & ios_base::adjustfield) == ios_base::left ? __wb + __len : __wb,
               __wb + __len,
@@ -1047,9 +1047,9 @@ __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool _
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      typedef ostreambuf_iterator<char> _Ip;
+      typedef ostreambuf_iterator<char> _Iter;
       if (std::__pad_and_output(
-              _Ip(__os),
+              _Iter(__os),
               __str,
               (__os.flags() & ios_base::adjustfield) == ios_base::left ? __str + __len : __str,
               __str + __len,

@@ -315,10 +315,10 @@ basic_istream<_CharT, _Traits>::sentry::sentry(basic_istream<_CharT, _Traits>& _
     if (__is.tie())
       __is.tie()->flush();
     if (!__noskipws && (__is.flags() & ios_base::skipws)) {
-      typedef istreambuf_iterator<_CharT, _Traits> _Ip;
+      typedef istreambuf_iterator<_CharT, _Traits> _Iter;
       const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__is.getloc());
-      _Ip __i(__is);
-      _Ip __eof;
+      _Iter __i(__is);
+      _Iter __eof;
       for (; __i != __eof; ++__i)
         if (!__ct.is(__ct.space, *__i))
           break;
@@ -354,9 +354,9 @@ __input_arithmetic(basic_istream<_CharT, _Traits>& __is, _Tp& __n) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      typedef istreambuf_iterator<_CharT, _Traits> _Ip;
-      typedef num_get<_CharT, _Ip> _Fp;
-      std::use_facet<_Fp>(__is.getloc()).get(_Ip(__is), _Ip(), __is, __state, __n);
+      typedef istreambuf_iterator<_CharT, _Traits> _Iter;
+      typedef num_get<_CharT, _Iter> _Fp;
+      std::use_facet<_Fp>(__is.getloc()).get(_Iter(__is), _Iter(), __is, __state, __n);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
       __state |= ios_base::badbit;
@@ -435,10 +435,10 @@ __input_arithmetic_with_numeric_limits(basic_istream<_CharT, _Traits>& __is, _Tp
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      typedef istreambuf_iterator<_CharT, _Traits> _Ip;
-      typedef num_get<_CharT, _Ip> _Fp;
+      typedef istreambuf_iterator<_CharT, _Traits> _Iter;
+      typedef num_get<_CharT, _Iter> _Fp;
       long __temp;
-      std::use_facet<_Fp>(__is.getloc()).get(_Ip(__is), _Ip(), __is, __state, __temp);
+      std::use_facet<_Fp>(__is.getloc()).get(_Iter(__is), _Iter(), __is, __state, __temp);
       if (__temp < numeric_limits<_Tp>::min()) {
         __state |= ios_base::failbit;
         __n = numeric_limits<_Tp>::min();

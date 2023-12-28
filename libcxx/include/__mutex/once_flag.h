@@ -76,15 +76,15 @@ private:
 
 #ifndef _LIBCPP_CXX03_LANG
 
-template <class _Fp>
+template <class _Func>
 class __call_once_param {
-  _Fp& __f_;
+  _Func& __f_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Func& __f) : __f_(__f) {}
 
   _LIBCPP_HIDE_FROM_ABI void operator()() {
-    typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 1>::type _Index;
+    typedef typename __make_tuple_indices<tuple_size<_Func>::value, 1>::type _Index;
     __execute(_Index());
   }
 
@@ -97,21 +97,21 @@ private:
 
 #else
 
-template <class _Fp>
+template <class _Func>
 class __call_once_param {
-  _Fp& __f_;
+  _Func& __f_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Func& __f) : __f_(__f) {}
 
   _LIBCPP_HIDE_FROM_ABI void operator()() { __f_(); }
 };
 
 #endif
 
-template <class _Fp>
+template <class _Func>
 void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
-  __call_once_param<_Fp>* __p = static_cast<__call_once_param<_Fp>*>(__vp);
+  __call_once_param<_Func>* __p = static_cast<__call_once_param<_Func>*>(__vp);
   (*__p)();
 }
 
