@@ -1054,7 +1054,7 @@ Static Analyzer
 
 - Implemented the ``[[clang::suppress]]`` attribute for suppressing diagnostics
   of static analysis tools, such as the Clang Static Analyzer.
-  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
+  `Documentation <https://clang.llvm.org/docs/AttributeReference.html#suppress>`__.
 
 - Added a new experimental checker ``alpha.core.StdVariant`` to detect variant
   accesses via wrong alternatives.
