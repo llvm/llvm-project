@@ -2101,7 +2101,7 @@ alpha.core.StdVariant (C++)
 """""""""""""""""""""""""""
 Check if a value of active type is retrieved from an ``std::variant`` instance with ``std::get``.
 In case of bad variant type access(the accessed type differs from the active type)
-a warning is emitted. Currently this checker does not take exception handling into account.
+a warning is emitted. Currently, this checker does not take exception handling into account.
 
 .. code-block:: cpp
 
