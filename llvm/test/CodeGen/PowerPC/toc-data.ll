@@ -3,14 +3,14 @@
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefixes=TEST64,ASMOPT64
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0  | FileCheck %s --check-prefix CHECK32
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0 | FileCheck %s --check-prefix CHECK64-NOOPT
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST64
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefixes=TEST64,ASMNOOPT64
 
 @i = dso_local global i32 0, align 4 #0
 @d = dso_local local_unnamed_addr global double 3.141590e+00, align 8
@@ -32,8 +32,7 @@ define dso_local void @write_int(i32 signext %in) {
 ; TEST32-NEXT:      stw 3, 0(4)
 
 ; CHECK64: name:            write_int
-; CHECK64:      %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @i, $x2
-; CHECK64-NEXT: STW8 %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store (s32) into @i)
+; CHECK64:      STW8 %{{[0-9]+}}, @i, $x2  :: (store (s32) into @i)
 
 ; CHECK64-NOOPT:  name: write_int
 ; CHECK64-NOOPT:    %[[SUBREG:[0-9]+]]:gprc = COPY %{{[0-9]}}.sub_32
@@ -41,8 +40,9 @@ define dso_local void @write_int(i32 signext %in) {
 ; CHECK64-NOOPT:    STW %[[SUBREG]], 0, killed %[[ADDR]] :: (store (s32) into @i)
 
 ; TEST64:         .write_int:
-; TEST64:           la 4, i[TD](2)
-; TEST64-NEXT:      stw 3, 0(4)
+; ASMNOOPT64:       la 4, i[TD](2)
+; ASMNOOPT64-NEXT:  stw 3, 0(4)
+; ASMOPT64:         stw 3, i[TD](2)
 
 
 define dso_local i64 @read_ll() {
@@ -85,16 +85,16 @@ define dso_local float @read_float() {
 ; TEST32-NEXT:    lfs 1, 0(3)
 
 ; CHECK64: name:            read_float
-; CHECK64: %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @f, $x2
-; CHECK64: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
+; CHECK64: %{{[0-9]+}}:f4rc = LFS @f, $x2 :: (dereferenceable load (s32) from @f)
 
 ; CHECK64-NOOPT: name:            read_float
 ; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 @f, $x2
 ; CHECK64-NOOPT:   %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]]
 
-; TEST64:       .read_float:
-; TEST64:         la 3, f[TD](2)
-; TEST64-NEXT:    lfs 1, 0(3)
+; TEST64:          .read_float:
+; ASMNOOPT64:        la 3, f[TD](2)
+; ASMNOOPT64-NEXT:   lfs 1, 0(3)
+; ASMOPT64:          lfs 1, f[TD](2)
 
 
 define dso_local void @write_double(double %in) {

@@ -7662,6 +7662,193 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
     DAG->RemoveDeadNode(InitialADDI.getNode());
 }
 
+static bool isValidOffsetMemOp(SDNode *N, bool &IsLoad,
+                               MaybeAlign &ExtraAlign) {
+  switch (N->getMachineOpcode()) {
+  default:
+    return false;
+  // Global must be word-aligned for LD, STD, LWA.
+  case PPC::LWA:
+  case PPC::LD:
+  case PPC::DFLOADf64:
+  case PPC::DFLOADf32:
+    ExtraAlign = Align(4);
+    [[fallthrough]];
+  case PPC::LBZ:
+  case PPC::LBZ8:
+  case PPC::LFD:
+  case PPC::LFS:
+  case PPC::LHA:
+  case PPC::LHA8:
+  case PPC::LHZ:
+  case PPC::LHZ8:
+  case PPC::LWZ:
+  case PPC::LWZ8:
+    IsLoad = true;
+    break;
+  case PPC::STD:
+  case PPC::DFSTOREf64:
+  case PPC::DFSTOREf32:
+    ExtraAlign = Align(4);
+    [[fallthrough]];
+  case PPC::STB:
+  case PPC::STB8:
+  case PPC::STFD:
+  case PPC::STFS:
+  case PPC::STH:
+  case PPC::STH8:
+  case PPC::STW:
+  case PPC::STW8:
+    break;
+  }
+  SDValue Base = N->getOperand(IsLoad ? 1 : 2);
+  if (!Base.isMachineOpcode())
+    return false;
+  switch (Base.getMachineOpcode()) {
+  default:
+    return false;
+  case PPC::ADDI8:
+  case PPC::ADDI:
+  case PPC::ADDIdtprelL:
+  case PPC::ADDItlsldL:
+  case PPC::ADDItocL8:
+  case PPC::ADDItoc:
+  case PPC::ADDItoc8:
+    break;
+  }
+  return true;
+}
+
+static void peepholeMemOffset(SDNode *N, SelectionDAG *DAG,
+                              const PPCSubtarget *Subtarget) {
+  // TODO: Enable for AIX 32-bit.
+  if (!Subtarget->isPPC64())
+    return;
+
+  bool IsLoad = false;
+  MaybeAlign ExtraAlign;
+  if (!isValidOffsetMemOp(N, IsLoad, ExtraAlign))
+    return;
+
+  SDValue MemBase = N->getOperand(IsLoad ? 1 : 2);
+  unsigned BaseOpc = MemBase.getMachineOpcode();
+  auto *MemOffset = dyn_cast<ConstantSDNode>(N->getOperand(IsLoad ? 0 : 1));
+
+  // Only additions with constant offsets will be folded.
+  if (!MemOffset)
+    return;
+  assert(MemBase.getNumOperands() == 2 && "Invalid base of memop with offset!");
+
+  SDValue ImmOp, RegOp;
+  // ADDItoc and ADDItoc8 ('la') puts the register at the second operand.
+  if (BaseOpc == PPC::ADDItoc || BaseOpc == PPC::ADDItoc8) {
+    ImmOp = MemBase.getOperand(0);
+    RegOp = MemBase.getOperand(1);
+  } else {
+    ImmOp = MemBase.getOperand(1);
+    RegOp = MemBase.getOperand(0);
+  }
+
+  MaybeAlign ImmAlign;
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(ImmOp))
+    ImmAlign = GA->getGlobal()->getPointerAlignment(DAG->getDataLayout());
+  else if (auto *CP = dyn_cast<ConstantPoolSDNode>(ImmOp))
+    ImmAlign = CP->getAlign();
+
+  if (ImmAlign && ExtraAlign && ImmAlign.value() < ExtraAlign.value())
+    return;
+
+  // On PPC64, the TOC base pointer is guaranteed by the ABI only to have
+  // 8-byte alignment, and so we can only use offsets less than 8 (otherwise,
+  // we might have needed different @ha relocation values for the offset
+  // pointers).
+  int MaxDisplacement = 7;
+  if (ImmAlign && ImmAlign.value().value() < 8)
+    MaxDisplacement = (int)ImmAlign.value().value() - 1;
+
+  // If addis also contributes to TOC relocation, it also needs to be updated.
+  bool UpdateHaBase = false;
+  SDValue HaBase = MemBase.getOperand(0);
+  int64_t Offset = MemOffset->getSExtValue();
+
+  // Some flags in addition needs to be carried to new memop.
+  PPCII::TOF NewOpFlags = PPCII::MO_NO_FLAG;
+  if (BaseOpc == PPC::ADDIdtprelL)
+    NewOpFlags = PPCII::MO_DTPREL_LO;
+  else if (BaseOpc == PPC::ADDItlsldL)
+    NewOpFlags = PPCII::MO_TLSLD_LO;
+  else if (BaseOpc == PPC::ADDItocL8)
+    NewOpFlags = PPCII::MO_TOC_LO;
+
+  if (NewOpFlags) {
+    if (Offset < 0 || Offset > MaxDisplacement) {
+      // Check base opcode and its uses, quit if it has multiple uses.
+      if (MemBase.getMachineOpcode() != PPC::ADDItocL8 || !MemBase.hasOneUse() ||
+          !HaBase.isMachineOpcode() || !HaBase.hasOneUse() ||
+          HaBase.getMachineOpcode() != PPC::ADDIStocHA8 ||
+          HaBase.getOperand(1) != ImmOp)
+        return;
+      UpdateHaBase = true;
+    }
+
+    if (const auto *GA = dyn_cast<GlobalAddressSDNode>(ImmOp)) {
+      // We can't perform this optimization for data whose alignment is
+      // insufficient for the instruction encoding.
+      if (ImmAlign && ImmAlign.value() < Align(4) &&
+          (ExtraAlign || (Offset % 4) != 0))
+        return;
+      ImmOp = DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(ImmOp),
+                                          MVT::i64, Offset, NewOpFlags);
+    } else if (const auto *CP = dyn_cast<ConstantPoolSDNode>(ImmOp)) {
+      ImmOp = DAG->getTargetConstantPool(CP->getConstVal(), MVT::i64,
+                                         CP->getAlign(), Offset, NewOpFlags);
+    }
+  } else {
+    if (ImmAlign && ExtraAlign && ImmAlign.value() < ExtraAlign.value())
+      return;
+    if (auto *C = dyn_cast<ConstantSDNode>(ImmOp)) {
+      Offset += C->getSExtValue();
+
+      if ((Offset % ExtraAlign.valueOrOne().value()) != 0 || !isInt<16>(Offset))
+        return;
+      ImmOp =
+          DAG->getTargetConstant(Offset, SDLoc(ImmOp), ImmOp.getValueType());
+    } else if (Offset != 0) {
+      // This optimization is performed for non-TOC-based local-exec accesses.
+      if (isEligibleToFoldADDIForLocalExecAccesses(DAG, MemBase)) {
+        // Add the non-zero offset information into the load or store
+        // instruction to be used for non-TOC-based local-exec accesses.
+        GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOp);
+        assert(GA && "Expecting a valid GlobalAddressSDNode when folding "
+                     "addi into local-exec accesses!");
+        ImmOp = DAG->getTargetGlobalAddress(
+            GA->getGlobal(), SDLoc(GA), MVT::i64, Offset, GA->getTargetFlags());
+      } else {
+        return;
+      }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
+  LLVM_DEBUG(MemBase->dump(DAG));
+  LLVM_DEBUG(dbgs() << "\nN: ");
+  LLVM_DEBUG(N->dump(DAG));
+  LLVM_DEBUG(dbgs() << "\n");
+
+  if (IsLoad)
+    (void)DAG->UpdateNodeOperands(N, ImmOp, RegOp, N->getOperand(2));
+  else
+    (void)DAG->UpdateNodeOperands(N, N->getOperand(0), ImmOp, RegOp,
+                                  N->getOperand(3));
+
+  if (UpdateHaBase)
+    (void)DAG->UpdateNodeOperands(HaBase.getNode(), HaBase.getOperand(0),
+                                  ImmOp);
+
+  if (MemBase.getNode()->use_empty())
+    DAG->RemoveDeadNode(MemBase.getNode());
+}
+
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
@@ -7677,223 +7864,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     // This optimization is performed for non-TOC-based local-exec accesses.
     foldADDIForLocalExecAccesses(N, CurDAG);
 
-    unsigned FirstOp;
-    unsigned StorageOpcode = N->getMachineOpcode();
-    bool RequiresMod4Offset = false;
-
-    switch (StorageOpcode) {
-    default: continue;
-
-    case PPC::LWA:
-    case PPC::LD:
-    case PPC::DFLOADf64:
-    case PPC::DFLOADf32:
-      RequiresMod4Offset = true;
-      [[fallthrough]];
-    case PPC::LBZ:
-    case PPC::LBZ8:
-    case PPC::LFD:
-    case PPC::LFS:
-    case PPC::LHA:
-    case PPC::LHA8:
-    case PPC::LHZ:
-    case PPC::LHZ8:
-    case PPC::LWZ:
-    case PPC::LWZ8:
-      FirstOp = 0;
-      break;
-
-    case PPC::STD:
-    case PPC::DFSTOREf64:
-    case PPC::DFSTOREf32:
-      RequiresMod4Offset = true;
-      [[fallthrough]];
-    case PPC::STB:
-    case PPC::STB8:
-    case PPC::STFD:
-    case PPC::STFS:
-    case PPC::STH:
-    case PPC::STH8:
-    case PPC::STW:
-    case PPC::STW8:
-      FirstOp = 1;
-      break;
-    }
-
-    // If this is a load or store with a zero offset, or within the alignment,
-    // we may be able to fold an add-immediate into the memory operation.
-    // The check against alignment is below, as it can't occur until we check
-    // the arguments to N
-    if (!isa<ConstantSDNode>(N->getOperand(FirstOp)))
-      continue;
-
-    SDValue Base = N->getOperand(FirstOp + 1);
-    if (!Base.isMachineOpcode())
-      continue;
-
-    unsigned Flags = 0;
-    bool ReplaceFlags = true;
-
-    // When the feeding operation is an add-immediate of some sort,
-    // determine whether we need to add relocation information to the
-    // target flags on the immediate operand when we fold it into the
-    // load instruction.
-    //
-    // For something like ADDItocL8, the relocation information is
-    // inferred from the opcode; when we process it in the AsmPrinter,
-    // we add the necessary relocation there.  A load, though, can receive
-    // relocation from various flavors of ADDIxxx, so we need to carry
-    // the relocation information in the target flags.
-    switch (Base.getMachineOpcode()) {
-    default: continue;
-
-    case PPC::ADDI8:
-    case PPC::ADDI:
-      // In some cases (such as TLS) the relocation information
-      // is already in place on the operand, so copying the operand
-      // is sufficient.
-      ReplaceFlags = false;
-      break;
-    case PPC::ADDIdtprelL:
-      Flags = PPCII::MO_DTPREL_LO;
-      break;
-    case PPC::ADDItlsldL:
-      Flags = PPCII::MO_TLSLD_LO;
-      break;
-    case PPC::ADDItocL8:
-      Flags = PPCII::MO_TOC_LO;
-      break;
-    }
-
-    SDValue ImmOpnd = Base.getOperand(1);
-
-    // On PPC64, the TOC base pointer is guaranteed by the ABI only to have
-    // 8-byte alignment, and so we can only use offsets less than 8 (otherwise,
-    // we might have needed different @ha relocation values for the offset
-    // pointers).
-    int MaxDisplacement = 7;
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
-      const GlobalValue *GV = GA->getGlobal();
-      Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
-      MaxDisplacement = std::min((int)Alignment.value() - 1, MaxDisplacement);
-    }
-
-    bool UpdateHBase = false;
-    SDValue HBase = Base.getOperand(0);
-
-    int Offset = N->getConstantOperandVal(FirstOp);
-    if (ReplaceFlags) {
-      if (Offset < 0 || Offset > MaxDisplacement) {
-        // If we have a addi(toc@l)/addis(toc@ha) pair, and the addis has only
-        // one use, then we can do this for any offset, we just need to also
-        // update the offset (i.e. the symbol addend) on the addis also.
-        if (Base.getMachineOpcode() != PPC::ADDItocL8)
-          continue;
-
-        if (!HBase.isMachineOpcode() ||
-            HBase.getMachineOpcode() != PPC::ADDIStocHA8)
-          continue;
-
-        if (!Base.hasOneUse() || !HBase.hasOneUse())
-          continue;
-
-        SDValue HImmOpnd = HBase.getOperand(1);
-        if (HImmOpnd != ImmOpnd)
-          continue;
-
-        UpdateHBase = true;
-      }
-    } else {
-      // Global addresses can be folded, but only if they are sufficiently
-      // aligned.
-      if (RequiresMod4Offset) {
-        if (GlobalAddressSDNode *GA =
-                dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
-          const GlobalValue *GV = GA->getGlobal();
-          Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
-          if (Alignment < 4)
-            continue;
-        }
-      }
-
-      // If we're directly folding the addend from an addi instruction, then:
-      //  1. In general, the offset on the memory access must be zero.
-      //  2. If the addend is a constant, then it can be combined with a
-      //     non-zero offset, but only if the result meets the encoding
-      //     requirements.
-      if (auto *C = dyn_cast<ConstantSDNode>(ImmOpnd)) {
-        Offset += C->getSExtValue();
-
-        if (RequiresMod4Offset && (Offset % 4) != 0)
-          continue;
-
-        if (!isInt<16>(Offset))
-          continue;
-
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
-      } else if (Offset != 0) {
-        // This optimization is performed for non-TOC-based local-exec accesses.
-        if (isEligibleToFoldADDIForLocalExecAccesses(CurDAG, Base)) {
-          // Add the non-zero offset information into the load or store
-          // instruction to be used for non-TOC-based local-exec accesses.
-          GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
-          assert(GA && "Expecting a valid GlobalAddressSDNode when folding "
-                       "addi into local-exec accesses!");
-          ImmOpnd = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
-                                                   MVT::i64, Offset,
-                                                   GA->getTargetFlags());
-        } else
-          continue;
-      }
-    }
-
-    // We found an opportunity.  Reverse the operands from the add
-    // immediate and substitute them into the load or store.  If
-    // needed, update the target flags for the immediate operand to
-    // reflect the necessary relocation information.
-    LLVM_DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
-    LLVM_DEBUG(Base->dump(CurDAG));
-    LLVM_DEBUG(dbgs() << "\nN: ");
-    LLVM_DEBUG(N->dump(CurDAG));
-    LLVM_DEBUG(dbgs() << "\n");
-
-    // If the relocation information isn't already present on the
-    // immediate operand, add it now.
-    if (ReplaceFlags) {
-      if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
-        SDLoc dl(GA);
-        const GlobalValue *GV = GA->getGlobal();
-        Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
-        // We can't perform this optimization for data whose alignment
-        // is insufficient for the instruction encoding.
-        if (Alignment < 4 && (RequiresMod4Offset || (Offset % 4) != 0)) {
-          LLVM_DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
-          continue;
-        }
-        ImmOpnd = CurDAG->getTargetGlobalAddress(GV, dl, MVT::i64, Offset, Flags);
-      } else if (ConstantPoolSDNode *CP =
-                 dyn_cast<ConstantPoolSDNode>(ImmOpnd)) {
-        const Constant *C = CP->getConstVal();
-        ImmOpnd = CurDAG->getTargetConstantPool(C, MVT::i64, CP->getAlign(),
-                                                Offset, Flags);
-      }
-    }
-
-    if (FirstOp == 1) // Store
-      (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0), ImmOpnd,
-                                       Base.getOperand(0), N->getOperand(3));
-    else // Load
-      (void)CurDAG->UpdateNodeOperands(N, ImmOpnd, Base.getOperand(0),
-                                       N->getOperand(2));
-
-    if (UpdateHBase)
-      (void)CurDAG->UpdateNodeOperands(HBase.getNode(), HBase.getOperand(0),
-                                       ImmOpnd);
-
-    // The add-immediate may now be dead, in which case remove it.
-    if (Base.getNode()->use_empty())
-      CurDAG->RemoveDeadNode(Base.getNode());
+    peepholeMemOffset(N, CurDAG, Subtarget);
   }
 }
 
