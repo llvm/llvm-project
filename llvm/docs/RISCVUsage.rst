@@ -224,6 +224,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zimop``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
 
+``experimental-zcmop``
+  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
