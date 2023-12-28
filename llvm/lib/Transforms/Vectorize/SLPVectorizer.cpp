@@ -8384,6 +8384,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       (void)E;
       return TTI->getInstructionCost(VI, CostKind);
     };
+    // FIXME: Workaround for syntax error reported by MSVC buildbots.
+    TargetTransformInfo &TTIRef = *TTI;
     // Need to clear CommonCost since the final shuffle cost is included into
     // vector cost.
     auto GetVectorCost = [&](InstructionCost) {
@@ -8398,14 +8400,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // No need to add new vector costs here since we're going to reuse
         // same main/alternate vector ops, just do different shuffling.
       } else if (Instruction::isBinaryOp(E->getOpcode())) {
-        VecCost = TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind);
+        VecCost =
+            TTIRef.getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind);
         VecCost +=
-            TTI->getArithmeticInstrCost(E->getAltOpcode(), VecTy, CostKind);
+            TTIRef.getArithmeticInstrCost(E->getAltOpcode(), VecTy, CostKind);
       } else if (auto *CI0 = dyn_cast<CmpInst>(VL0)) {
         auto *MaskTy = FixedVectorType::get(Builder.getInt1Ty(), VL.size());
-        VecCost = TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
-                                          CI0->getPredicate(), CostKind, VL0);
-        VecCost += TTI->getCmpSelInstrCost(
+        VecCost = TTIRef.getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
+                                            CI0->getPredicate(), CostKind, VL0);
+        VecCost += TTIRef.getCmpSelInstrCost(
             E->getOpcode(), VecTy, MaskTy,
             cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind,
             E->getAltOp());
@@ -8414,10 +8417,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Type *Src1SclTy = E->getAltOp()->getOperand(0)->getType();
         auto *Src0Ty = FixedVectorType::get(Src0SclTy, VL.size());
         auto *Src1Ty = FixedVectorType::get(Src1SclTy, VL.size());
-        VecCost = TTI->getCastInstrCost(E->getOpcode(), VecTy, Src0Ty,
-                                        TTI::CastContextHint::None, CostKind);
-        VecCost += TTI->getCastInstrCost(E->getAltOpcode(), VecTy, Src1Ty,
-                                         TTI::CastContextHint::None, CostKind);
+        VecCost = TTIRef.getCastInstrCost(E->getOpcode(), VecTy, Src0Ty,
+                                          TTI::CastContextHint::None, CostKind);
+        VecCost +=
+            TTIRef.getCastInstrCost(E->getAltOpcode(), VecTy, Src1Ty,
+                                    TTI::CastContextHint::None, CostKind);
       }
       SmallVector<int> Mask;
       E->buildAltOpShuffleMask(
@@ -8426,8 +8430,27 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return I->getOpcode() == E->getAltOpcode();
           },
           Mask);
-      VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
-                                     FinalVecTy, Mask);
+      VecCost += TTIRef.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                       FinalVecTy, Mask);
+      // Patterns like [fadd,fsub] can be combined into a single instruction
+      // in x86. Reordering them into [fsub,fadd] blocks this pattern. So we
+      // need to take into account their order when looking for the most used
+      // order.
+      unsigned Opcode0 = E->getOpcode();
+      unsigned Opcode1 = E->getAltOpcode();
+      // The opcode mask selects between the two opcodes.
+      SmallBitVector OpcodeMask(E->Scalars.size(), false);
+      for (unsigned Lane : seq<unsigned>(0, E->Scalars.size()))
+        if (cast<Instruction>(E->Scalars[Lane])->getOpcode() == Opcode1)
+          OpcodeMask.set(Lane);
+      // If this pattern is supported by the target then we consider the
+      // order.
+      if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
+        InstructionCost AltVecCost = TTIRef.getAltInstrCost(
+            VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+        return AltVecCost < VecCost ? AltVecCost : VecCost;
+      }
+      // TODO: Check the reverse order too.
       return VecCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
