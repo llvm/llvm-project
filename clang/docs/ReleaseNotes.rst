@@ -1082,8 +1082,9 @@ Static Analyzer
   to ``unix.StdCLibraryFunctions``.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
 
-- Added a new checker configuration option to
-  ``alpha.security.cert.InvalidPtrChecker``.
+- Added a new checker configuration option ``InvalidatingGetEnv=[true,false]`` to
+  ``alpha.security.cert.InvalidPtrChecker``. It's not set by default.
+  If set, ``getenv`` calls won't invalidate previously returned pointers.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
   (`#67663 <https://github.com/llvm/llvm-project/pull/67663>`_)
 
