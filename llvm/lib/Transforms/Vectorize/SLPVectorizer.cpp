@@ -11924,6 +11924,7 @@ Value *BoUpSLP::vectorizeTree(
                        TreeEntry *UseEntry = getTreeEntry(U);
                        return UseEntry &&
                               UseEntry->State == TreeEntry::Vectorize &&
+                              E->State == TreeEntry::Vectorize &&
                               doesInTreeUserNeedToExtract(
                                   Scalar,
                                   cast<Instruction>(UseEntry->Scalars.front()),
