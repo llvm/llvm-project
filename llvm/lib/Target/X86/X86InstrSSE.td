@@ -7909,6 +7909,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
 
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
+
 //===----------------------------------------------------------------------===//
 // VEXTRACTI128 - Extract packed integer values
 //
@@ -7930,6 +7933,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
 }
+
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
 
 //===----------------------------------------------------------------------===//
 // VPMASKMOV - Conditional SIMD Integer Packed Loads and Stores
