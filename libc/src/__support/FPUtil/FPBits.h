@@ -39,43 +39,46 @@ enum class FPEncoding {
   X86_ExtendedPrecision,
 };
 
-template <FPType> struct FPBaseAttr {};
+// Defines the layout (sign, exponent, significand) of a floating point type in
+// memory. It also defines its associated StorageType, i.e., the unsigned
+// integer type used to manipulate its representation.
+template <FPType> struct FPLayout {};
 
-template <> struct FPBaseAttr<FPType::IEEE754_Binary16> {
+template <> struct FPLayout<FPType::IEEE754_Binary16> {
   using StorageType = uint16_t;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 16;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 10;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 5;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseAttr<FPType::IEEE754_Binary32> {
+template <> struct FPLayout<FPType::IEEE754_Binary32> {
   using StorageType = uint32_t;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 32;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 23;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseAttr<FPType::IEEE754_Binary64> {
+template <> struct FPLayout<FPType::IEEE754_Binary64> {
   using StorageType = uint64_t;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 64;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 52;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 11;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseAttr<FPType::IEEE754_Binary128> {
+template <> struct FPLayout<FPType::IEEE754_Binary128> {
   using StorageType = UInt128;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 128;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-template <> struct FPBaseAttr<FPType::X86_Binary80> {
+template <> struct FPLayout<FPType::X86_Binary80> {
   using StorageType = UInt128;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 80;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING =
@@ -84,19 +87,18 @@ template <> struct FPBaseAttr<FPType::X86_Binary80> {
 
 } // namespace internal
 
+// FPBaseMasksAndShifts derives useful constants from the FPLayout.
 template <FPType fp_type>
-struct FPBaseMasksAndShifts : public internal::FPBaseAttr<fp_type> {
+struct FPBaseMasksAndShifts : public internal::FPLayout<fp_type> {
 private:
-  using UP = internal::FPBaseAttr<fp_type>;
+  using UP = internal::FPLayout<fp_type>;
 
 public:
-  // The number of bits to represent sign. For documentation purpose, always 1.
-  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
-  using UP::EXP_LEN;   // The number of bits for the *exponent* part
-  using UP::SIG_LEN;   // The number of bits for the *significand* part
-  using UP::TOTAL_LEN; // For convenience, the sum of `SIG_LEN`, `EXP_LEN`,
-                       // and `SIGN_LEN`.
-  static_assert(SIGN_LEN + EXP_LEN + SIG_LEN == TOTAL_LEN);
+  using UP::EXP_LEN;  // The number of bits for the *exponent* part
+  using UP::SIG_LEN;  // The number of bits for the *significand* part
+  using UP::SIGN_LEN; // The number of bits for the *sign* part
+  // For convenience, the sum of `SIG_LEN`, `EXP_LEN`, and `SIGN_LEN`.
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + EXP_LEN + SIG_LEN;
 
   // An unsigned integer that is wide enough to contain all of the floating
   // point bits.
@@ -172,36 +174,6 @@ protected:
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
           : bit_at(SIG_LEN - 2);                      // 0b0100...
 };
-
-//-----------------------------------------------------------------------------
-template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
-  if constexpr (cpp::is_same_v<T, float> && __FLT_MANT_DIG__ == 24)
-    return FPType::IEEE754_Binary32;
-  else if constexpr (cpp::is_same_v<T, double> && __DBL_MANT_DIG__ == 53)
-    return FPType::IEEE754_Binary64;
-  else if constexpr (cpp::is_same_v<T, long double>) {
-    if constexpr (__LDBL_MANT_DIG__ == 53)
-      return FPType::IEEE754_Binary64;
-    else if constexpr (__LDBL_MANT_DIG__ == 64)
-      return FPType::X86_Binary80;
-    else if constexpr (__LDBL_MANT_DIG__ == 113)
-      return FPType::IEEE754_Binary128;
-  }
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
-  else if constexpr (cpp::is_same_v<T, _Float16>)
-    return FPType::IEEE754_Binary16;
-#endif
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
-  else if constexpr (cpp::is_same_v<T, _Float128>)
-    return FPType::IEEE754_Binary128;
-#endif
-#if defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
-  else if constexpr (cpp::is_same_v<T, __float128>)
-    return FPType::IEEE754_Binary128;
-#endif
-  else
-    static_assert(cpp::always_false<T>, "Unsupported type");
-}
 
 namespace internal {
 
@@ -295,6 +267,37 @@ public:
 };
 
 } // namespace internal
+
+// Returns the FPType corresponding to C++ type T on the host.
+template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
+  using UnqualT = cpp::remove_cv_t<T>;
+  if constexpr (cpp::is_same_v<UnqualT, float> && __FLT_MANT_DIG__ == 24)
+    return FPType::IEEE754_Binary32;
+  else if constexpr (cpp::is_same_v<UnqualT, double> && __DBL_MANT_DIG__ == 53)
+    return FPType::IEEE754_Binary64;
+  else if constexpr (cpp::is_same_v<UnqualT, long double>) {
+    if constexpr (__LDBL_MANT_DIG__ == 53)
+      return FPType::IEEE754_Binary64;
+    else if constexpr (__LDBL_MANT_DIG__ == 64)
+      return FPType::X86_Binary80;
+    else if constexpr (__LDBL_MANT_DIG__ == 113)
+      return FPType::IEEE754_Binary128;
+  }
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
+  else if constexpr (cpp::is_same_v<UnqualT, _Float16>)
+    return FPType::IEEE754_Binary16;
+#endif
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
+  else if constexpr (cpp::is_same_v<UnqualT, _Float128>)
+    return FPType::IEEE754_Binary128;
+#endif
+#if defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
+  else if constexpr (cpp::is_same_v<UnqualT, __float128>)
+    return FPType::IEEE754_Binary128;
+#endif
+  else
+    static_assert(cpp::always_false<UnqualT>, "Unsupported type");
+}
 
 // A generic class to represent single precision, double precision, and quad
 // precision IEEE 754 floating point formats.
