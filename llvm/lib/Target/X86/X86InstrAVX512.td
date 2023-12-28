@@ -1447,6 +1447,17 @@ def : Pat<(vselect_mask VK8WM:$mask,
           (VBROADCASTI32X4Z256rmk VR256X:$src0, VK8WM:$mask, addr:$src)>;
 }
 
+let Predicates = [HasBF16] in {
+  def : Pat<(v32bf16 (X86SubVBroadcastld256 addr:$src)),
+            (VBROADCASTF64X4rm addr:$src)>;
+  def : Pat<(v32bf16 (X86SubVBroadcastld128 addr:$src)),
+            (VBROADCASTF32X4rm addr:$src)>;
+}
+
+let Predicates = [HasBF16, HasVLX] in
+  def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
+            (VBROADCASTF32X4Z256rm addr:$src)>;
+
 let Predicates = [HasVLX, HasDQI] in {
 defm VBROADCASTI64X2Z128 : avx512_subvec_broadcast_rm_dq<0x5a, "vbroadcasti64x2",
                            X86SubVBroadcastld128, v4i64x_info, v2i64x_info>, VEX_W1X,
