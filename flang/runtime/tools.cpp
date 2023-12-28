@@ -205,8 +205,8 @@ RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
     const char *rawValue, std::size_t rawValueLength, const Descriptor *errmsg,
     std::size_t offset) {
 
-  const std::size_t toCopy{
-      std::min(rawValueLength, value.ElementBytes() - offset)};
+  const std::int64_t toCopy{std::min(static_cast<std::int64_t>(rawValueLength),
+      static_cast<std::int64_t>(value.ElementBytes() - offset))};
   if (toCopy < 0) {
     return ToErrmsg(errmsg, StatValueTooShort);
   }

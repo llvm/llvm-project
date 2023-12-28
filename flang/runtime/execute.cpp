@@ -157,7 +157,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
-    wchar_t *newCmd{(wchar_t *)AllocateMemoryOrCrash(
+    wchar_t *wcmd{(wchar_t *)AllocateMemoryOrCrash(
         terminator, sizeNeeded * sizeof(wchar_t))};
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
