@@ -54,8 +54,9 @@ body:             |
 
     %18 = V_LSHRREV_B32_e64 16, %17, implicit $exec
     %19 = V_READLANE_B32 killed %18, 0, implicit-def $vcc, implicit $exec
-    %20 = V_MOV_B32_e64 %19, implicit $exec
+    %20 = V_MOV_B32_e64 0, %19, 0, implicit $exec
 
     FLAT_STORE_DWORD %0, %20, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
+

@@ -9,8 +9,8 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %src0:vgpr_32 = V_MOV_B32_e64 0, implicit $exec
-  ; CHECK-NEXT:   %src1:vgpr_32 = V_MOV_B32_e64 1, implicit $exec
+  ; CHECK-NEXT:   %src0:vgpr_32 = V_MOV_B32_e64 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   %src1:vgpr_32 = V_MOV_B32_e64 0, 1, 0, implicit $exec
   ; CHECK-NEXT:   %live0:vgpr_32 = V_ADD_U32_e32 %src0, %src1, implicit $exec
   ; CHECK-NEXT:   %live1:vgpr_32 = V_ADD_U32_e32 %live0, %src1, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -20,8 +20,8 @@ body:             |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
-    %src0:vgpr_32 = V_MOV_B32_e64 0, implicit $exec
-    %src1:vgpr_32 = V_MOV_B32_e64 1, implicit $exec
+    %src0:vgpr_32 = V_MOV_B32_e64 0, 0, 0, implicit $exec
+    %src1:vgpr_32 = V_MOV_B32_e64 0, 1, 0, implicit $exec
     %live0:vgpr_32 = V_ADD_U32_e32 %src0:vgpr_32, %src1:vgpr_32, implicit $exec
     %live1:vgpr_32 = V_ADD_U32_e32 %live0:vgpr_32, %src1:vgpr_32, implicit $exec
 

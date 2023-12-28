@@ -100,7 +100,7 @@ body:             |
     %24 = V_LSHLREV_B32_e64 16, %23, implicit $exec
 
     %25 = V_LSHRREV_B32_e64 16, %3, implicit $exec
-    %26 = V_MOV_B32_e64 %25, implicit $exec
+    %26 = V_MOV_B32_e64 0, %25, 0, implicit $exec
     %26 = V_LSHLREV_B32_e64 16, %26, implicit $exec
     %27 = V_FRACT_F32_e64 0, %6, 0, 0, implicit $mode, implicit $exec
     %28 = V_LSHLREV_B32_e64 16, %27, implicit $exec

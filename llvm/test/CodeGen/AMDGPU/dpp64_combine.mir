@@ -39,8 +39,8 @@ body: |
 
 # DPP64 does not support all control values and must be split to become legal
 # GCN-LABEL: name: dpp64_illegal_ctrl
-# GCN: %4:vgpr_32 = V_MOV_B32_dpp undef %1.sub0:vreg_64_align2, undef %2.sub0:vreg_64_align2, 1, 15, 15, 1, implicit $exec
-# GCN: %5:vgpr_32 = V_MOV_B32_dpp undef %1.sub1:vreg_64_align2, undef %2.sub1:vreg_64_align2, 1, 15, 15, 1, implicit $exec
+# GCN: %4:vgpr_32 = V_MOV_B32_dpp undef %1.sub0:vreg_64_align2, 0, undef %2.sub0:vreg_64_align2, 1, 15, 15, 1, implicit $exec
+# GCN: %5:vgpr_32 = V_MOV_B32_dpp undef %1.sub1:vreg_64_align2, 0, undef %2.sub1:vreg_64_align2, 1, 15, 15, 1, implicit $exec
 # GCN: %0:vreg_64_align2 = REG_SEQUENCE %4, %subreg.sub0, %5, %subreg.sub1
 # GCN: %3:vreg_64_align2 = V_CEIL_F64_e32 %0, implicit $mode, implicit $exec
 name: dpp64_illegal_ctrl
