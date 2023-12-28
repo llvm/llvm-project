@@ -1706,10 +1706,10 @@ void ASTDeclReader::VisitImplicitParamDecl(ImplicitParamDecl *PD) {
 void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   VisitVarDecl(PD);
 
+  unsigned scopeIndex = Record.readInt();
   BitsUnpacker ParmVarDeclBits(Record.readInt());
   unsigned isObjCMethodParam = ParmVarDeclBits.getNextBit();
   unsigned scopeDepth = ParmVarDeclBits.getNextBits(/*Width=*/7);
-  unsigned scopeIndex = ParmVarDeclBits.getNextBits(/*Width=*/8);
   unsigned declQualifier = ParmVarDeclBits.getNextBits(/*Width=*/7);
   if (isObjCMethodParam) {
     assert(scopeDepth == 0);
