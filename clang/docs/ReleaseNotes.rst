@@ -1080,6 +1080,7 @@ Static Analyzer
 
 - Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
   to ``unix.StdCLibraryFunctions``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
 
 - Added a new checker configuration option to
   ``alpha.security.cert.InvalidPtrChecker``.
