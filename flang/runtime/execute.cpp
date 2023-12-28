@@ -18,7 +18,6 @@
 #ifdef _WIN32
 #define LEAN_AND_MEAN
 #define NOMINMAX
-#include <stdio.h>
 #include <windows.h>
 #else
 #include <signal.h>
@@ -158,7 +157,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
-    wchar_t *wcmd{new wchar_t[sizeNeeded]};
+    wchar_t *newCmd{(wchar_t *)AllocateMemoryOrCrash(
+        terminator, sizeNeeded * sizeof(wchar_t))};
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
@@ -197,7 +197,10 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
 #endif
   }
-  FreeMemory((void *)newCmd);
+  // Deallocate memory if EnsureNullTerminated dynamically allocate a memory
+  if (newCmd != command.OffsetElement()) {
+    FreeMemory((void *)newCmd);
+  }
 }
 
 } // namespace Fortran::runtime

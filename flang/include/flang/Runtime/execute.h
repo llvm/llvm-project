@@ -11,8 +11,6 @@
 
 #include "flang/Runtime/entry-names.h"
 
-#include <cstdint>
-
 namespace Fortran::runtime {
 class Descriptor;
 

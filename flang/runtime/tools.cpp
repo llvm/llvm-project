@@ -174,8 +174,10 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
 }
 
 RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, size_t length, Terminator &terminator) {
-  if (length <= std::strlen(str)) {
+    const char *str, std::size_t length, Terminator &terminator) {
+  const void *nullTerminatorPos{std::memchr(str, '\0', length)};
+
+  if (nullTerminatorPos == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
     std::memcpy(newCmd, str, length);
     newCmd[length] = '\0';
@@ -200,7 +202,7 @@ RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal) {
 }
 
 RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
-    const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
+    const char *rawValue, std::size_t rawValueLength, const Descriptor *errmsg,
     std::size_t offset) {
 
   std::int64_t toCopy{std::min(rawValueLength,

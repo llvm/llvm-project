@@ -412,8 +412,12 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
+// Ensures that a character string is null-terminated, allocating a /p length +1
+// size memory for null-terminator if necessary. Returns the original or a newly
+// allocated null-terminated string (responsibility for deallocation is on the
+// caller).
 RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, size_t length, Terminator &terminator);
+    const char *str, std::size_t length, Terminator &terminator);
 
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
 
@@ -424,7 +428,7 @@ RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal);
 // If descriptor `errmsg` is provided, error messages will be stored to it.
 // Returns stats specified in standard.
 RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
-    const char *rawValue, std::int64_t rawValueLength,
+    const char *rawValue, std::size_t rawValueLength,
     const Descriptor *errmsg = nullptr, std::size_t offset = 0);
 
 RT_API_ATTRS void StoreIntToDescriptor(
