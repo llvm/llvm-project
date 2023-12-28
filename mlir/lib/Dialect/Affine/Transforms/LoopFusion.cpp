@@ -205,7 +205,7 @@ static bool isEscapingMemref(Value memref, Block *block) {
   // (e.g., call ops, alias creating ops, etc.).
   return llvm::any_of(memref.getUsers(), [&](Operation *user) {
     // Ignore users outside of `block`.
-    auto ancestorOp = block->getParent()->findAncestorOpInRegion(*user);
+    Operation *ancestorOp = block->getParent()->findAncestorOpInRegion(*user);
     if (!ancestorOp)
       return true;
     if (ancestorOp->getBlock() != block)
