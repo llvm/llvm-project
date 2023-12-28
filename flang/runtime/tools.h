@@ -108,8 +108,8 @@ static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
   case 16: {
     using Int128 = CppTypeFor<TypeCategory::Integer, 16>;
     auto n{*reinterpret_cast<const Int128 *>(p)};
-    std::int64_t result = n;
-    if (result == n) {
+    std::int64_t result{static_cast<std::int64_t>(n)};
+    if (static_cast<Int128>(result) == n) {
       return result;
     }
     return std::nullopt;
