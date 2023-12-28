@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
 #include "FPBits.h"
-#include "FloatProperties.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
 
