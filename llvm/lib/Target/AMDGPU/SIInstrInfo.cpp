@@ -2600,7 +2600,7 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
 
     for (unsigned I = 1; I <= 2; ++I) { // old and src operands.
       const MachineOperand &SrcOp = MI.getOperand(I);
-      if(I == 2)
+      if (I == 2)
         MovDPP.addImm(0); // add src modifier
       assert(!SrcOp.isFPImm());
       if (SrcOp.isImm()) {

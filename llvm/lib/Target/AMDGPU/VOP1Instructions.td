@@ -404,7 +404,10 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
 
-  let Ins64 = !con((ins Src0RC64:$vdst), !if(!eq(Src1RC, VSrc_b32), (ins FP32InputMods:$src0_modifiers), (ins FPVRegInputMods:$src0_modifiers)), (ins Src1RC:$src0, clampmod0:$clamp));
+  let Ins64 = !con((ins Src0RC64:$vdst),
+                   !if(!eq(Src1RC, VSrc_b32), (ins FP32InputMods:$src0_modifiers),
+                       (ins FPVRegInputMods:$src0_modifiers)),
+                   (ins Src1RC:$src0, clampmod0:$clamp));
 
   let Asm32 = getAsm32<1, 1>.ret;
 
@@ -423,11 +426,10 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
                       dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                       bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
   let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
-  let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers,Src0RC32:$src0,dpp8:$dpp8, FI:$fi);
+  let InsDPP8 = (ins Src0RC32:$old, FPVRegInputMods:$src0_modifiers, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
 
   let InsVOP3Base = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, clampmod0:$clamp);
-
 
   let OutsVOP3DPP = (outs Src0RC64:$vdst);
   let InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, Src0RC64, NumSrcArgs>.ret;
@@ -1390,7 +1392,8 @@ defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
 let OtherPredicates = [isGFX10Only] in {
 def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)), timm:$dpp8)),
+  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)),
+                            timm:$dpp8)),
   (V_MOV_B32_dpp8_gfx10 VGPR_32:$src, i32:$src0_modifiers, VGPR_32:$src,
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
@@ -1400,8 +1403,9 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 let OtherPredicates = [isGFX11Only] in {
 def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)), timm:$dpp8)),
-  (V_MOV_B32_dpp8_gfx11  VGPR_32:$src, i32:$src0_modifiers, VGPR_32:$src,
+  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)),
+                            timm:$dpp8)),
+  (V_MOV_B32_dpp8_gfx11 VGPR_32:$src, i32:$src0_modifiers, VGPR_32:$src,
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
 } // End OtherPredicates = [isGFX11Only]
@@ -1412,7 +1416,8 @@ def : GCNPat <
 
 let OtherPredicates = [isGFX12Only] in {
 def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)), timm:$dpp8)),
+  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)),
+                            timm:$dpp8)),
   (V_MOV_B32_dpp8_gfx12 VGPR_32:$src, i32:$src0_modifiers, VGPR_32:$src,
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;

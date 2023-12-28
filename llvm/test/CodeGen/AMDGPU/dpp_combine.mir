@@ -346,7 +346,7 @@ body:             |
     %2:vgpr_32 = IMPLICIT_DEF
 
     ; this should be combined as all modifiers are default
-    %3:vgpr_32 = V_MOV_B32_dpp undef %2, 0,%0, 1, 15, 15, 1, implicit $exec
+    %3:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %0, 1, 15, 15, 1, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e64 %3, %1, 0, implicit $exec
 
     ; this shouldn't be combined as clamp is set
