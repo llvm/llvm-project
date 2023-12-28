@@ -2106,7 +2106,7 @@ a warning is emitted. Currently, this checker does not take exception handling i
 .. code-block:: cpp
 
  void test() {
-   std::variant <int, char> v = 25;
+   std::variant<int, char> v = 25;
    char c = stg::get<char>(v); // warn: "int" is the active alternative
  }
 
