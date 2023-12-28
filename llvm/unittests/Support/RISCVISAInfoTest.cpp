@@ -759,6 +759,7 @@ Experimental extensions
     zimop               0.1
     zacas               1.0
     zfbfmin             0.8
+    zcmop               0.2
     ztso                0.1
     zvfbfmin            0.8
     zvfbfwma            0.8

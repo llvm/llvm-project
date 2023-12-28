@@ -215,10 +215,8 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /* EnableExperimentalExtension */ true);
-  if (!ParseResult)
-    // Ignore parsing error, just go 3rd step.
-    consumeError(ParseResult.takeError());
-  else
+  // Ignore parsing error, just go 3rd step.
+  if (!llvm::errorToBool(ParseResult.takeError()))
     return (*ParseResult)->computeDefaultABI();
 
   // 3. Choose a default based on the triple
