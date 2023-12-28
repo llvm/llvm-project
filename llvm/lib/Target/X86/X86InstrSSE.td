@@ -6655,49 +6655,37 @@ let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 // SSE4.2 - CRC Instructions
 //===----------------------------------------------------------------------===//
 
+// NOTE: 'HasCRC32' is used as CRC32 instructions are GPR only and not directly
+// controlled by the SSE42 flag.
+//
 // No CRC instructions have AVX equivalents
 
-// crc intrinsic instruction
-// This set of instructions are only rm, the only difference is the size
-// of r and m.
-class SS42I_crc32r<bits<8> opc, string asm, RegisterClass RCOut,
-                   RegisterClass RCIn, SDPatternOperator Int> :
-  CRC32I<opc, MRMSrcReg, (outs RCOut:$dst), (ins RCOut:$src1, RCIn:$src2),
-         !strconcat(asm, "\t{$src2, $src1|$src1, $src2}"),
-         [(set RCOut:$dst, (Int RCOut:$src1, RCIn:$src2))]>,
-         Sched<[WriteCRC32]>;
+class Crc32r<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
+  : ITy<0xF1, MRMSrcReg, t, (outs rc:$dst), (ins rc:$src1, t.RegClass:$src2),
+      "crc32", binop_args, [(set rc:$dst, (node rc:$src1, t.RegClass:$src2))]>,
+    Sched<[WriteCRC32]> {
+  let Constraints = "$src1 = $dst";
+}
 
-class SS42I_crc32m<bits<8> opc, string asm, RegisterClass RCOut,
-                   X86MemOperand x86memop, SDPatternOperator Int> :
-  CRC32I<opc, MRMSrcMem, (outs RCOut:$dst), (ins RCOut:$src1, x86memop:$src2),
-         !strconcat(asm, "\t{$src2, $src1|$src1, $src2}"),
-         [(set RCOut:$dst, (Int RCOut:$src1, (load addr:$src2)))]>,
-         Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]>;
+class Crc32m<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
+  : ITy<0xF1, MRMSrcMem, t, (outs rc:$dst), (ins rc:$src1, t.MemOperand:$src2),
+      "crc32", binop_args, [(set rc:$dst, (node rc:$src1, (load addr:$src2)))]>,
+    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]> {
+  let Constraints = "$src1 = $dst";
+}
 
-let Constraints = "$src1 = $dst" in {
-  def CRC32r32m8  : SS42I_crc32m<0xF0, "crc32{b}", GR32, i8mem,
-                                 int_x86_sse42_crc32_32_8>;
-  def CRC32r32r8  : SS42I_crc32r<0xF0, "crc32{b}", GR32, GR8,
-                                 int_x86_sse42_crc32_32_8>;
-  def CRC32r32m16 : SS42I_crc32m<0xF1, "crc32{w}", GR32, i16mem,
-                                 int_x86_sse42_crc32_32_16>, OpSize16;
-  def CRC32r32r16 : SS42I_crc32r<0xF1, "crc32{w}", GR32, GR16,
-                                 int_x86_sse42_crc32_32_16>, OpSize16;
-  def CRC32r32m32 : SS42I_crc32m<0xF1, "crc32{l}", GR32, i32mem,
-                                 int_x86_sse42_crc32_32_32>, OpSize32;
-  def CRC32r32r32 : SS42I_crc32r<0xF1, "crc32{l}", GR32, GR32,
-                                 int_x86_sse42_crc32_32_32>, OpSize32;
-  def CRC32r64m64 : SS42I_crc32m<0xF1, "crc32{q}", GR64, i64mem,
-                                 int_x86_sse42_crc32_64_64>, REX_W;
-  def CRC32r64r64 : SS42I_crc32r<0xF1, "crc32{q}", GR64, GR64,
-                                 int_x86_sse42_crc32_64_64>, REX_W;
-  let hasSideEffects = 0 in {
-    let mayLoad = 1 in
-    def CRC32r64m8 : SS42I_crc32m<0xF0, "crc32{b}", GR64, i8mem,
-                                   null_frag>, REX_W;
-    def CRC32r64r8 : SS42I_crc32r<0xF0, "crc32{b}", GR64, GR8,
-                                   null_frag>, REX_W;
-  }
+let Predicates = [HasCRC32], OpMap = T8, OpPrefix = XD in {
+  def CRC32r32r8  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32m8  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32r16 : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
+  def CRC32r32m16 : Crc32m<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
+  def CRC32r32r32 : Crc32r<Xi32, GR32, int_x86_sse42_crc32_32_32>, OpSize32;
+  def CRC32r32m32 : Crc32m<Xi32, GR32, int_x86_sse42_crc32_32_32>, OpSize32;
+  def CRC32r64r64 : Crc32r<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64m64 : Crc32m<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64r8 : Crc32r<Xi8, GR64, null_frag>, REX_W;
+  let mayLoad = 1 in
+    def CRC32r64m8 : Crc32m<Xi8, GR64, null_frag>, REX_W;
 }
 
 //===----------------------------------------------------------------------===//
