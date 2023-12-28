@@ -1805,11 +1805,9 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
       llvm::RISCVISAInfo::parseArchString(
           Arch, /*EnableExperimentalExtension=*/true,
           /*ExperimentalExtensionVersionCheck=*/false);
-  if (!ParseResult) {
-    // Ignore any error here, we assume it will be handled in another place.
-    consumeError(ParseResult.takeError());
+  // Ignore any error here, we assume it will be handled in another place.
+  if (llvm::errorToBool(ParseResult.takeError()))
     return false;
-  }
 
   auto &ISAInfo = *ParseResult;
 
@@ -1844,10 +1842,8 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
           llvm::RISCVISAInfo::parseArchString(
               Flag, /*EnableExperimentalExtension=*/true,
               /*ExperimentalExtensionVersionCheck=*/false);
-      if (!MLConfigParseResult) {
-        // Ignore any error here, we assume it will handled in another place.
-        llvm::consumeError(MLConfigParseResult.takeError());
-
+      // Ignore any error here, we assume it will handled in another place.
+      if (llvm::errorToBool(MLConfigParseResult.takeError())) {
         // We might get a parsing error if rv32e in the list, we could just skip
         // that and process the rest of multi-lib configs.
         Skip = true;
