@@ -6170,25 +6170,28 @@ bool Sema::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
 
 void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   const TargetInfo &TI = Context.getTargetInfo();
+
+  ASTContext::BuiltinVectorTypeInfo Info =
+      Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
+  unsigned EltSize = Context.getTypeSize(Info.ElementType);
+  unsigned MinElts = Info.EC.getKnownMinValue();
+
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
-  if ((Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ false) ||
-       Ty->isRVVType(/* ElementCount */ 1)) &&
+  if (((EltSize == 64 && Info.ElementType->isIntegerType()) || MinElts == 1) &&
       !TI.hasFeature("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
-  if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
-      !TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
+  if (Info.ElementType->isFloat16Type() && !TI.hasFeature("zvfh") &&
+      !TI.hasFeature("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
-  // Check if enabled zvfbfmin for BFloat16
-  if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ false,
-                    /* IsBFloat */ true) &&
+  if (Info.ElementType->isBFloat16Type() &&
       !TI.hasFeature("experimental-zvfbfmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
-  if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
+  if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
       !TI.hasFeature("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
-  if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ true) &&
+  if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
       !TI.hasFeature("zve64d"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // Given that caller already checked isRVVType() before calling this function,
