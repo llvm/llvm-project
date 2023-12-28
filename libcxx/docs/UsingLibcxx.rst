@@ -414,6 +414,16 @@ Extensions to the C++23 modules ``std`` and ``std.compat``
 Like other major implementations, libc++ provides C++23 modules ``std`` and
 ``std.compat`` in C++20 as an extension"
 
+Extensions to ``<system_error>``
+--------------------------------
+
+``std::errc`` contains the values documented in the C++ standard under
+``[system_error.syn]`` (``EINVAL``, ``ENOENT``, etc), but can also
+include platform-specific values as extensions.
+
+As of this writing, the only extension value is ``EINTEGRITY``, which is
+specific to FreeBSD.
+
 Constant-initialized std::string
 --------------------------------
 

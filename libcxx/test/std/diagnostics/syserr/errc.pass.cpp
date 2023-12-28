@@ -44,7 +44,7 @@ int main(int, char**)
     static_assert(static_cast<int>(std::errc::identifier_removed) == EIDRM, "");
     static_assert(static_cast<int>(std::errc::illegal_byte_sequence) == EILSEQ, "");
     static_assert(static_cast<int>(std::errc::inappropriate_io_control_operation) == ENOTTY, "");
-#ifdef EINTEGRITY
+#if defined(__FreeBSD__) && defined(EINTEGRITY) // FreeBSD extension
     static_assert(static_cast<int>(std::errc::integrity_check_failed) == EINTEGRITY, "");
 #endif
     static_assert(static_cast<int>(std::errc::interrupted) == EINTR, "");
