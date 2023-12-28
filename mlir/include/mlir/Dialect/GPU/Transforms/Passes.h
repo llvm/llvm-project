@@ -64,7 +64,8 @@ void populateGpuShufflePatterns(RewritePatternSet &patterns);
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to break down subgroup_reduce ops into smaller
-/// ones supported by the target of size <= `maxShuffleBitwidth`.
+/// ones supported by the target of `size <= maxShuffleBitwidth`, where `size`
+/// is the subgroup_reduce value bitwidth.
 void populateGpuBreakDownSubgrupReducePatterns(RewritePatternSet &patterns,
                                                unsigned maxShuffleBitwidth = 32,
                                                PatternBenefit benefit = 1);

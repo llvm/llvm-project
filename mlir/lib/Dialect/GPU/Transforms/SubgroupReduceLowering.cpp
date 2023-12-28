@@ -17,6 +17,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 
@@ -24,7 +25,7 @@ using namespace mlir;
 
 namespace {
 
-/// Example:
+/// Example, assumes `maxShuffleBitwidth` equal to 32:
 /// ```
 /// %a = gpu.subgroup_reduce add %x : (vector<3xf16>) -> vector<3xf16>
 ///  ==>
@@ -48,7 +49,7 @@ struct BreakDownSubgroupReduce final : OpRewritePattern<gpu::SubgroupReduceOp> {
                                 PatternRewriter &rewriter) const override {
     auto vecTy = dyn_cast<VectorType>(op.getType());
     if (!vecTy || vecTy.getNumElements() < 2)
-      return rewriter.notifyMatchFailure(op, "not a multireduction");
+      return rewriter.notifyMatchFailure(op, "not a multi-element reduction");
 
     assert(vecTy.getRank() == 1 && "Unexpected vector type");
     assert(!vecTy.isScalable() && "Unexpected vector type");
@@ -57,7 +58,9 @@ struct BreakDownSubgroupReduce final : OpRewritePattern<gpu::SubgroupReduceOp> {
     unsigned elemBitwidth = elemTy.getIntOrFloatBitWidth();
     if (elemBitwidth >= maxShuffleBitwidth)
       return rewriter.notifyMatchFailure(
-          op, "large element type, nothing to break down");
+          op, llvm::formatv("element type too large {0}, cannot break down "
+                            "into vectors of bitwidth {1} or less",
+                            elemBitwidth, maxShuffleBitwidth));
 
     unsigned elementsPerShuffle = maxShuffleBitwidth / elemBitwidth;
     assert(elementsPerShuffle >= 1);
@@ -107,7 +110,15 @@ private:
   unsigned maxShuffleBitwidth = 0;
 };
 
-struct ScalarizeSignleElementReduce final
+/// Example:
+/// ```
+/// %a = gpu.subgroup_reduce add %x : (vector<1xf32>) -> vector<1xf32>
+///  ==>
+/// %e0 = vector.extract %x[0] : f32 from vector<1xf32>
+/// %r0 = gpu.subgroup_reduce add %e0 : (f32) -> f32
+/// %a = vector.broadcast %r0 : f32 to vector<1xf32>
+/// ```
+struct ScalarizeSingleElementReduce final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -135,5 +146,5 @@ void mlir::populateGpuBreakDownSubgrupReducePatterns(
     PatternBenefit benefit) {
   patterns.add<BreakDownSubgroupReduce>(patterns.getContext(),
                                         maxShuffleBitwidth, benefit);
-  patterns.add<ScalarizeSignleElementReduce>(patterns.getContext(), benefit);
+  patterns.add<ScalarizeSingleElementReduce>(patterns.getContext(), benefit);
 }
