@@ -2492,3 +2492,40 @@ define <16 x bfloat> @concat_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y) {
   %a = shufflevector <8 x bfloat> %x, <8 x bfloat> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x bfloat> %a
 }
+
+define <8 x bfloat> @extract_v32bf16_v8bf16(<32 x bfloat> %x) {
+; SSE2-LABEL: extract_v32bf16_v8bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pextrw $0, %xmm1, %eax
+; SSE2-NEXT:    pextrw $1, %xmm1, %ecx
+; SSE2-NEXT:    shll $16, %ecx
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    pextrw $2, %xmm1, %eax
+; SSE2-NEXT:    pextrw $3, %xmm1, %edx
+; SSE2-NEXT:    shll $16, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    pextrw $4, %xmm1, %eax
+; SSE2-NEXT:    pextrw $5, %xmm1, %ecx
+; SSE2-NEXT:    shll $16, %ecx
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    pextrw $6, %xmm1, %eax
+; SSE2-NEXT:    pextrw $7, %xmm1, %esi
+; SSE2-NEXT:    shll $16, %esi
+; SSE2-NEXT:    orl %eax, %esi
+; SSE2-NEXT:    shlq $32, %rsi
+; SSE2-NEXT:    orq %rcx, %rsi
+; SSE2-NEXT:    movq %rsi, %xmm1
+; SSE2-NEXT:    movq %rdx, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: extract_v32bf16_v8bf16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a = shufflevector <32 x bfloat> %x, <32 x bfloat> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x bfloat> %a
+}
