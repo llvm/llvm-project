@@ -1,13 +1,13 @@
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-none -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
-; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
+; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-musl -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
-; RUN: %if arm-registered-target %{ llc < %s -mtriple=arm-none-eabi -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
-; RUN: %if xfail-powerpc-registered-target %{ llc < %s -mtriple=powerpc-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
-; RUN: %if xfail-powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
+; RUN: %if arm-registered-target %{ llc < %s -mtriple=arm-none-eabi -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
+; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
+; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
 ; RUN: %if riscv-registered-target %{ llc < %s -mtriple=riscv32-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
 ; RUN: %if systemz-registered-target %{ llc < %s -mtriple=s390x-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-S390X %}
-; RUN: %if x86-registered-target %{ llc < %s -mtriple=i686-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
-; RUN: %if x86-registered-target %{ llc < %s -mtriple=x86_64-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-USELD %}
+; RUN: %if x86-registered-target %{ llc < %s -mtriple=i686-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
+; RUN: %if x86-registered-target %{ llc < %s -mtriple=x86_64-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-F128 %}
 ;
 ; Verify that fp128 intrinsics only lower to `long double` calls (e.g. sinl) on
 ; platforms where 128 and `long double` have the same layout, and where the
@@ -21,9 +21,6 @@
 ; * x86, x64 (80-bit long double, should use ld syms)
 ; * gnu (has f128 symbols on all platforms so we can use those)
 ; * musl (no f128 symbols available)
-
-; FIXME: targets are configured so these tests pass, but the output has not
-; yet been corrected.
 
 define fp128 @test_acos(fp128 %a) {
 ; CHECK-LABEL:      test_acos:
