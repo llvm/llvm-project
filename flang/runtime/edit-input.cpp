@@ -478,6 +478,9 @@ static void RaiseFPExceptions(decimal::ConversionResultFlags flags) {
   if (flags & decimal::ConversionResultFlags::Overflow) {
     RAISE(FE_OVERFLOW);
   }
+  if (flags & decimal::ConversionResultFlags::Underflow) {
+    RAISE(FE_UNDERFLOW);
+  }
   if (flags & decimal::ConversionResultFlags::Inexact) {
     RAISE(FE_INEXACT);
   }
@@ -640,20 +643,30 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
   }
   // Package & return result
   constexpr RawType significandMask{(one << RealType::significandBits) - 1};
+  int flags{(roundingBit | guardBit) ? decimal::Inexact : decimal::Exact};
   if (!fraction) {
     expo = 0;
   } else if (expo == 1 && !(fraction >> (binaryPrecision - 1))) {
     expo = 0; // subnormal
+    flags |= decimal::Underflow;
   } else if (expo >= RealType::maxExponent) {
-    expo = RealType::maxExponent; // +/-Inf
-    fraction = 0;
+    if (rounding == decimal::RoundToZero ||
+        (rounding == decimal::RoundDown && !isNegative) ||
+        (rounding == decimal::RoundUp && isNegative)) {
+      expo = RealType::maxExponent - 1; // +/-HUGE()
+      fraction = significandMask;
+    } else {
+      expo = RealType::maxExponent; // +/-Inf
+      fraction = 0;
+      flags |= decimal::Overflow;
+    }
   } else {
     fraction &= significandMask; // remove explicit normalization unless x87
   }
   return decimal::ConversionToBinaryResult<binaryPrecision>{
       RealType{static_cast<RawType>(signBit |
           static_cast<RawType>(expo) << RealType::significandBits | fraction)},
-      (roundingBit | guardBit) ? decimal::Inexact : decimal::Exact};
+      static_cast<decimal::ConversionResultFlags>(flags)};
 }
 
 template <int KIND>

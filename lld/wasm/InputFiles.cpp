@@ -680,16 +680,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   llvm_unreachable("unknown symbol kind");
 }
 
-
-StringRef strip(StringRef s) {
-  while (s.starts_with(" ")) {
-    s = s.drop_front();
-  }
-  while (s.ends_with(" ")) {
-    s = s.drop_back();
-  }
-  return s;
-}
+StringRef strip(StringRef s) { return s.trim(' '); }
 
 void StubFile::parse() {
   bool first = true;

@@ -1351,15 +1351,5 @@ unsigned GCNTTIImpl::getPrefetchDistance() const {
 }
 
 bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
-  switch (AS) {
-  case AMDGPUAS::FLAT_ADDRESS:
-  case AMDGPUAS::GLOBAL_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
-    return true;
-  default:
-    break;
-  }
-
-  return false;
+  return AMDGPU::isFlatGlobalAddrSpace(AS);
 }

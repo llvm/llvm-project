@@ -737,24 +737,35 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
   case Matcher::EmitRegister: {
     const EmitRegisterMatcher *Matcher = cast<EmitRegisterMatcher>(N);
     const CodeGenRegister *Reg = Matcher->getReg();
+    MVT::SimpleValueType VT = Matcher->getVT();
     // If the enum value of the register is larger than one byte can handle,
     // use EmitRegister2.
     if (Reg && Reg->EnumValue > 255) {
-      OS << "OPC_EmitRegister2, " << getEnumName(Matcher->getVT()) << ", ";
+      OS << "OPC_EmitRegister2, " << getEnumName(VT) << ", ";
       OS << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
       return 4;
-    } else {
-      OS << "OPC_EmitRegister, " << getEnumName(Matcher->getVT()) << ", ";
-      if (Reg) {
-        OS << getQualifiedName(Reg->TheDef) << ",\n";
-      } else {
-        OS << "0 ";
-        if (!OmitComments)
-          OS << "/*zero_reg*/";
-        OS << ",\n";
-      }
-      return 3;
     }
+    unsigned OpBytes;
+    switch (VT) {
+    case MVT::i32:
+    case MVT::i64:
+      OpBytes = 1;
+      OS << "OPC_EmitRegisterI" << MVT(VT).getSizeInBits() << ", ";
+      break;
+    default:
+      OpBytes = 2;
+      OS << "OPC_EmitRegister, " << getEnumName(VT) << ", ";
+      break;
+    }
+    if (Reg) {
+      OS << getQualifiedName(Reg->TheDef) << ",\n";
+    } else {
+      OS << "0 ";
+      if (!OmitComments)
+        OS << "/*zero_reg*/";
+      OS << ",\n";
+    }
+    return OpBytes + 1;
   }
 
   case Matcher::EmitConvertToTarget: {

@@ -46,6 +46,24 @@ __attribute__ ((target("branch-protection=pac-ret+leaf+bti")))
 void btileaf() {}
 // CHECK: define{{.*}} void @btileaf() #[[#BTIPACLEAF:]]
 
+
+__attribute__ ((target("branch-protection=pac-ret+pc")))
+void pauthlr() {}
+// CHECK: define{{.*}} void @pauthlr()  #[[#PAUTHLR:]]
+
+__attribute__ ((target("branch-protection=pac-ret+pc+b-key")))
+void pauthlr_bkey() {}
+// CHECK: define{{.*}} void @pauthlr_bkey()  #[[#PAUTHLR_BKEY:]]
+
+__attribute__ ((target("branch-protection=pac-ret+pc+leaf")))
+void pauthlr_leaf() {}
+// CHECK: define{{.*}} void @pauthlr_leaf()  #[[#PAUTHLR_LEAF:]]
+
+__attribute__ ((target("branch-protection=pac-ret+pc+bti")))
+void pauthlr_bti() {}
+// CHECK: define{{.*}} void @pauthlr_bti()  #[[#PAUTHLR_BTI:]]
+
+
 // CHECK-DAG: attributes #[[#NONE]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="none"
 
 // CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
@@ -61,3 +79,13 @@ void btileaf() {}
 // CHECK-DAG: attributes #[[#PACBKEYLEAF]] = { {{.*}} "branch-target-enforcement"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="b_key"
 
 // CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}}"branch-target-enforcement"="true" {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
+
+
+// CHECK-DAG: attributes #[[#PAUTHLR]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+
+// CHECK-DAG: attributes #[[#PAUTHLR_BKEY]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
+
+// CHECK-DAG: attributes #[[#PAUTHLR_LEAF]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+
+// CHECK-DAG: attributes #[[#PAUTHLR_BTI]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="true" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+

@@ -1617,7 +1617,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
                                SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  bool HasEvents = Call->Builtin->Name.find("events") != StringRef::npos;
+  bool HasEvents = Call->Builtin->Name.contains("events");
   const SPIRVType *Int32Ty = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
 
   // Make vararg instructions before OpEnqueueKernel.
@@ -2098,7 +2098,7 @@ parseBuiltinTypeNameToTargetExtType(std::string TypeName,
 
   // Parameterized SPIR-V builtins names follow this format:
   // e.g. %spirv.Image._void_1_0_0_0_0_0_0, %spirv.Pipe._0
-  if (NameWithParameters.find('_') == std::string::npos)
+  if (!NameWithParameters.contains('_'))
     return TargetExtType::get(MIRBuilder.getContext(), NameWithParameters);
 
   SmallVector<StringRef> Parameters;

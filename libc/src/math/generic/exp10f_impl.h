@@ -42,7 +42,7 @@ LIBC_INLINE float exp10f(float x) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return static_cast<float>(FPBits(FPBits::MIN_SUBNORMAL));
+        return FPBits::min_denormal();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;

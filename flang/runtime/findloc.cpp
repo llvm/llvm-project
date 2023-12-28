@@ -84,27 +84,27 @@ template <typename EQUALITY> class LocationAccumulator {
 public:
   LocationAccumulator(
       const Descriptor &array, const Descriptor &target, bool back)
-      : array_{array}, target_{target}, back_{back} {
-    Reinitialize();
-  }
-  void Reinitialize() {
-    // per standard: result indices are all zero if no data
-    for (int j{0}; j < rank_; ++j) {
-      location_[j] = 0;
-    }
-  }
+      : array_{array}, target_{target}, back_{back} {}
+  void Reinitialize() { gotAnything_ = false; }
   template <typename A> void GetResult(A *p, int zeroBasedDim = -1) {
     if (zeroBasedDim >= 0) {
-      *p = location_[zeroBasedDim] -
-          array_.GetDimension(zeroBasedDim).LowerBound() + 1;
-    } else {
+      *p = gotAnything_ ? location_[zeroBasedDim] -
+              array_.GetDimension(zeroBasedDim).LowerBound() + 1
+                        : 0;
+    } else if (gotAnything_) {
       for (int j{0}; j < rank_; ++j) {
         p[j] = location_[j] - array_.GetDimension(j).LowerBound() + 1;
+      }
+    } else {
+      // no unmasked hits? result is all zeroes
+      for (int j{0}; j < rank_; ++j) {
+        p[j] = 0;
       }
     }
   }
   template <typename IGNORED> bool AccumulateAt(const SubscriptValue at[]) {
     if (equality_(array_, at, target_)) {
+      gotAnything_ = true;
       for (int j{0}; j < rank_; ++j) {
         location_[j] = at[j];
       }
@@ -119,6 +119,7 @@ private:
   const Descriptor &target_;
   const bool back_{false};
   const int rank_{array_.rank()};
+  bool gotAnything_{false};
   SubscriptValue location_[maxRank];
   const EQUALITY equality_{};
 };

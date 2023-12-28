@@ -21,7 +21,7 @@ class Descriptor;
 extern "C" {
 
 // Predicate: is the storage described by a Descriptor contiguous in memory?
-bool RTNAME(IsContiguous)(const Descriptor &);
+bool RTDECL(IsContiguous)(const Descriptor &);
 
 } // extern "C"
 } // namespace Fortran::runtime

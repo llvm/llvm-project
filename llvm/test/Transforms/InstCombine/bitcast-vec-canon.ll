@@ -132,7 +132,7 @@ define <3 x i64> @bitcast_inselt_undef_from_mmx(x86_mmx %x, i32 %idx) {
 define <2 x i64> @PR45748(double %x, double %y) {
 ; CHECK-LABEL: @PR45748(
 ; CHECK-NEXT:    [[XB:%.*]] = bitcast double [[X:%.*]] to i64
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> undef, i64 [[XB]], i64 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> poison, i64 [[XB]], i64 0
 ; CHECK-NEXT:    [[YB:%.*]] = bitcast double [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i64> [[I0]], i64 [[YB]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[I1]]

@@ -1735,6 +1735,21 @@ define float @copysign_type_mismatch(double %x) {
 
 ; Negative test
 
+define <2 x float> @copysign_type_mismatch2(<2 x float> %x) {
+; CHECK-LABEL: @copysign_type_mismatch2(
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to i64
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to i64
+  %ispos = icmp sgt i64 %i, -1
+  %r = select i1 %ispos, <2 x float> <float 1.0, float 1.0>, <2 x float> <float -1.0, float -1.0>
+  ret <2 x float> %r
+}
+
+; Negative test
+
 define float @copysign_wrong_cmp(float %x) {
 ; CHECK-LABEL: @copysign_wrong_cmp(
 ; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32

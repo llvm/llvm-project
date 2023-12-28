@@ -79,6 +79,7 @@ public:
   TargetRewrite(const fir::TargetRewriteOptions &options) {
     noCharacterConversion = options.noCharacterConversion;
     noComplexConversion = options.noComplexConversion;
+    noStructConversion = options.noStructConversion;
   }
 
   void runOnOperation() override final {
@@ -252,6 +253,11 @@ public:
       fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs,
       llvm::SmallVectorImpl<mlir::Value> &newOpers,
       mlir::Value &savedStackPtr) {
+    if (noStructConversion) {
+      newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(recTy));
+      newOpers.push_back(oper);
+      return;
+    }
     auto structArgs =
         specifics->structArgumentType(loc, recTy, newInTyAndAttrs);
     if (structArgs.size() != 1)
@@ -522,6 +528,10 @@ public:
   void
   lowerStructSignatureArg(mlir::Location loc, fir::RecordType recTy,
                           fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
+    if (noStructConversion) {
+      newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(recTy));
+      return;
+    }
     auto structArgs =
         specifics->structArgumentType(loc, recTy, newInTyAndAttrs);
     newInTyAndAttrs.insert(newInTyAndAttrs.end(), structArgs.begin(),
@@ -645,7 +655,7 @@ public:
            !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
           (ty.isa<mlir::IntegerType>() && hasCCallingConv) ||
-          ty.isa<fir::RecordType>()) {
+          (ty.isa<fir::RecordType>() && !noStructConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
@@ -1128,6 +1138,10 @@ public:
   void doStructArg(mlir::func::FuncOp func, fir::RecordType recTy,
                    fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs,
                    FIXUPS &fixups) {
+    if (noStructConversion) {
+      newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(recTy));
+      return;
+    }
     auto structArgs =
         specifics->structArgumentType(func.getLoc(), recTy, newInTyAndAttrs);
     createFuncOpArgFixups(func, newInTyAndAttrs, structArgs, fixups);

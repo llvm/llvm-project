@@ -23,6 +23,7 @@ module iso_fortran_env
     compiler_version => __builtin_compiler_version
 
   implicit none
+  private count
 
   ! TODO: Use PACK([x],test) in place of the array constructor idiom
   ! [(x, integer::j=1,COUNT([test]))] below once PACK() can be folded.

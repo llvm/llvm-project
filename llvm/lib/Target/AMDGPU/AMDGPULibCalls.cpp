@@ -1050,8 +1050,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                      CF->isNegative();
     } else {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
-                               (!CF || CF->isNegative());
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
     }
   } else {
     ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr0);

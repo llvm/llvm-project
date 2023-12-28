@@ -350,6 +350,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (match(&I, m_c_Mul(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNeg(Builder.CreateMul(X, Y));
 
+  // (-X * Y) * -X --> (X * Y) * X
+  // (-X << Y) * -X --> (X << Y) * X
+  if (match(Op1, m_Neg(m_Value(X)))) {
+    if (Value *NegOp0 = Negator::Negate(false, /*IsNSW*/ false, Op0, *this))
+      return BinaryOperator::CreateMul(NegOp0, X);
+  }
+
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
   {
