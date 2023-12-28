@@ -11,8 +11,10 @@
 #include <cstdlib>
 
 namespace Fortran::runtime {
+RT_OFFLOAD_VAR_GROUP_BEGIN
 
-void *AllocateMemoryOrCrash(const Terminator &terminator, std::size_t bytes) {
+RT_API_ATTRS void *AllocateMemoryOrCrash(
+    const Terminator &terminator, std::size_t bytes) {
   if (void *p{std::malloc(bytes)}) {
     return p;
   }
@@ -24,5 +26,7 @@ void *AllocateMemoryOrCrash(const Terminator &terminator, std::size_t bytes) {
   return nullptr;
 }
 
-void FreeMemory(void *p) { std::free(p); }
+RT_API_ATTRS void FreeMemory(void *p) { std::free(p); }
+
+RT_OFFLOAD_VAR_GROUP_END
 } // namespace Fortran::runtime

@@ -37,6 +37,16 @@
 #define STD_MEMCMP_UNSUPPORTED 1
 #endif
 
+#if !defined(STD_REALLOC_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_REALLOC_UNSUPPORTED 1
+#endif
+
+#if !defined(STD_CALLOC_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_CALLOC_UNSUPPORTED 1
+#endif
+
 namespace Fortran::runtime {
 
 #if STD_FILL_N_UNSUPPORTED
@@ -117,6 +127,31 @@ static inline RT_API_ATTRS int memcmp(
 #else // !STD_MEMCMP_UNSUPPORTED
 using std::memcmp;
 #endif // !STD_MEMCMP_UNSUPPORTED
+
+#if STD_REALLOC_UNSUPPORTED
+static inline RT_API_ATTRS void *realloc(void *ptr, std::size_t new_size) {
+  // Return nullptr and let the callers assert that.
+  // TODO: we can provide a straightforward implementation
+  // via malloc/memcpy/free.
+  return nullptr;
+}
+#else // !STD_REALLOC_UNSUPPORTED
+using std::realloc;
+#endif // !STD_REALLOC_UNSUPPORTED
+
+#if STD_CALLOC_UNSUPPORTED
+static inline RT_API_ATTRS void *calloc(std::size_t num, std::size_t size) {
+  std::size_t bytes{num * size};
+  void *ptr{nullptr};
+  if (bytes != 0) {
+    ptr = std::malloc(bytes);
+    ptr = std::memset(ptr, 0, bytes);
+  }
+  return ptr;
+}
+#else // !STD_CALLOC_UNSUPPORTED
+using std::calloc;
+#endif // !STD_CALLOC_UNSUPPORTED
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
