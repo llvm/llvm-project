@@ -976,6 +976,8 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
     BytesPerCU = 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     BytesPerCU = 65536;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize163840))
+    BytesPerCU = 163840;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize393216))
     BytesPerCU = 393216;
 
@@ -993,6 +995,8 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     return 65536;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize163840))
+    return 163840;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize393216))
     return 393216;
   return 0;

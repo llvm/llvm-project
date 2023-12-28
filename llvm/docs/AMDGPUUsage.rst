@@ -4995,6 +4995,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (64 * 4))
                                                      GFX7-GFX12
                                                        roundup(lds-size / (128 * 4))
+                                                     GFX950
+                                                       roundup(lds-size / (320 * 4))
                                                      GFX1210
                                                        roundup(lds-size / (256 * 4))
 
