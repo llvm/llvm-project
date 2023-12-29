@@ -1600,8 +1600,8 @@ def : Pat<(f64 (vector_extract v4f64:$xj, uimm2:$imm)),
           (MOVGR2FR_D (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm))>;
 
 // vselect
-def : Pat<(v32i8 (vselect LASX256:$xj, LASX256:$xd,
-                          (v32i8 (SplatPat_uimm8 uimm8:$imm)))),
+def : Pat<(v32i8 (vselect LASX256:$xd, (v32i8 (SplatPat_uimm8 uimm8:$imm)),
+                          LASX256:$xj)),
           (XVBITSELI_B LASX256:$xd, LASX256:$xj, uimm8:$imm)>;
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def  : Pat<(vt (vselect LASX256:$xa, LASX256:$xk, LASX256:$xj)),
