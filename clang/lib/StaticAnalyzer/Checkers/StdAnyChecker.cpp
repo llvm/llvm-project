@@ -13,6 +13,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "TaggedUnionModeling.h"
@@ -63,7 +64,7 @@ public:
       if (!ThisMemRegion)
         return false;
 
-      setNullTypeAny(ThisMemRegion, C);
+      C.addTransition(setNullTypeAny(ThisMemRegion, C));
       return true;
     }
 
@@ -90,7 +91,7 @@ public:
       // In this case the any holds a null type.
       if (Call.getNumArgs() == 0) {
         const auto *ThisMemRegion = ThisSVal.getAsRegion();
-        setNullTypeAny(ThisMemRegion, C);
+        C.addTransition(setNullTypeAny(ThisMemRegion, C));
         return true;
       }
 
@@ -106,10 +107,10 @@ public:
 private:
   // When an std::any is rested or default constructed it has a null type.
   // We represent it by storing a null QualType.
-  void setNullTypeAny(const MemRegion *Mem, CheckerContext &C) const {
+  ProgramStateRef setNullTypeAny(const MemRegion *Mem, CheckerContext &C) const {
     auto State = C.getState();
-    State = State->set<AnyHeldTypeMap>(Mem, QualType{});
-    C.addTransition(State);
+    return State->set<AnyHeldTypeMap>(Mem, QualType{});
+    //C.addTransition(State);
   }
 
   bool handleAnyCastCall(const CallEvent &Call, CheckerContext &C) const {
