@@ -86,8 +86,8 @@ public:
         llvm_unreachable("We must have an assignment operator or constructor");
       }();
 
-      // default constructor call
-      // in this case the any holds a null type
+      // Default constructor call.
+      // In this case the any holds a null type.
       if (Call.getNumArgs() == 0) {
         const auto *ThisMemRegion = ThisSVal.getAsRegion();
         setNullTypeAny(ThisMemRegion, C);
@@ -112,7 +112,6 @@ private:
     C.addTransition(State);
   }
 
-  // this function name is terrible
   bool handleAnyCastCall(const CallEvent &Call, CheckerContext &C) const {
     auto State = C.getState();
 
@@ -121,8 +120,8 @@ private:
 
     auto ArgSVal = Call.getArgSVal(0);
 
-    // The argument is aether a const reference or a right value reference
-    //  We need the type referred
+    // The argument is ether a const reference or a right value reference.
+    // We need the type referred.
     const auto *ArgType = ArgSVal.getType(C.getASTContext())
                               .getTypePtr()
                               ->getPointeeType()
@@ -135,7 +134,7 @@ private:
     if (!State->contains<AnyHeldTypeMap>(AnyMemRegion))
       return false;
 
-    // get the type we are trying to get from any
+    // Get the type we are trying to retrieve from any.
     const CallExpr *CE = cast<CallExpr>(Call.getOriginExpr());
     const FunctionDecl *FD = CE->getDirectCallee();
     if (FD->getTemplateSpecializationArgs()->size() < 1)
@@ -150,7 +149,7 @@ private:
     const auto *TypeStored = State->get<AnyHeldTypeMap>(AnyMemRegion);
 
     // Report when we try to use std::any_cast on an std::any that held a null
-    // type
+    // type.
     if (TypeStored->isNull()) {
       ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
       if (!ErrNode)
@@ -164,14 +163,13 @@ private:
       return true;
     }
 
-    // Check if the right type is being accessed
-    // There is spacial case for object types.
+    // Check if the right type is being accessed.
     QualType RetrievedCanonicalType = TypeOut.getCanonicalType();
     QualType StoredCanonicalType = TypeStored->getCanonicalType();
     if (RetrievedCanonicalType == StoredCanonicalType)
       return true;
 
-    // Report when the type we want to get out of std::any is wrong
+    // Report when the type we want to get out of std::any is wrong.
     ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
     if (!ErrNode)
       return false;
