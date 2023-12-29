@@ -455,7 +455,7 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
         def NAME#8ri_NF_ND  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM, 1>, EVEX_NF;
         def NAME#16ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
         def NAME#32ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
-        def NAME#64ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
+        def NAME#64ri32_NF_ND : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
       }
       let Predicates = [In64BitMode] in {
         def NAME#16ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM>, NF, PD;
@@ -464,7 +464,7 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
         def NAME#8ri_NF  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM>, NF;
         def NAME#16ri_NF : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM>, NF, PD;
         def NAME#32ri_NF : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM>, NF;
-        def NAME#64ri_NF : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM>, NF;
+        def NAME#64ri32_NF : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM>, NF;
         def NAME#16ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
         def NAME#32ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
         def NAME#64ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
