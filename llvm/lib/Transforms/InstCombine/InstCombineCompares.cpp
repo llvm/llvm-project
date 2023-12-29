@@ -111,8 +111,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, GlobalVariable *GV, CmpInst &ICI,
     ConstantInt *AndCst) {
   if (LI->isVolatile() || LI->getType() != GEP->getResultElementType() ||
-      GV->getValueType() != GEP->getSourceElementType() ||
-      !GV->isConstant() || !GV->hasDefinitiveInitializer())
+      GV->getValueType() != GEP->getSourceElementType() || !GV->isConstant() ||
+      !GV->hasDefinitiveInitializer())
     return nullptr;
 
   Constant *Init = GV->getInitializer();
@@ -128,8 +128,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // the simple index into a single-dimensional array.
   //
   // Require: GEP GV, 0, i {{, constant indices}}
-  if (GEP->getNumOperands() < 3 ||
-      !isa<ConstantInt>(GEP->getOperand(1)) ||
+  if (GEP->getNumOperands() < 3 || !isa<ConstantInt>(GEP->getOperand(1)) ||
       !cast<ConstantInt>(GEP->getOperand(1))->isZero() ||
       isa<Constant>(GEP->getOperand(2)))
     return nullptr;
@@ -142,15 +141,18 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   Type *EltTy = Init->getType()->getArrayElementType();
   for (unsigned i = 3, e = GEP->getNumOperands(); i != e; ++i) {
     ConstantInt *Idx = dyn_cast<ConstantInt>(GEP->getOperand(i));
-    if (!Idx) return nullptr;  // Variable index.
+    if (!Idx)
+      return nullptr; // Variable index.
 
     uint64_t IdxVal = Idx->getZExtValue();
-    if ((unsigned)IdxVal != IdxVal) return nullptr; // Too large array index.
+    if ((unsigned)IdxVal != IdxVal)
+      return nullptr; // Too large array index.
 
     if (StructType *STy = dyn_cast<StructType>(EltTy))
       EltTy = STy->getElementType(IdxVal);
     else if (ArrayType *ATy = dyn_cast<ArrayType>(EltTy)) {
-      if (IdxVal >= ATy->getNumElements()) return nullptr;
+      if (IdxVal >= ATy->getNumElements())
+        return nullptr;
       EltTy = ATy->getElementType();
     } else {
       return nullptr; // Unknown type.
@@ -191,7 +193,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   Constant *CompareRHS = cast<Constant>(ICI.getOperand(1));
   for (unsigned i = 0, e = ArrayElementCount; i != e; ++i) {
     Constant *Elt = Init->getAggregateElement(i);
-    if (!Elt) return nullptr;
+    if (!Elt)
+      return nullptr;
 
     // If this is indexing an array of structures, get the structure element.
     if (!LaterIndices.empty()) {
@@ -214,16 +217,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (isa<UndefValue>(C)) {
       // Extend range state machines to cover this element in case there is an
       // undef in the middle of the range.
-      if (TrueRangeEnd == (int)i-1)
+      if (TrueRangeEnd == (int)i - 1)
         TrueRangeEnd = i;
-      if (FalseRangeEnd == (int)i-1)
+      if (FalseRangeEnd == (int)i - 1)
         FalseRangeEnd = i;
       continue;
     }
 
     // If we can't compute the result for any of the elements, we have to give
     // up evaluating the entire conditional.
-    if (!isa<ConstantInt>(C)) return nullptr;
+    if (!isa<ConstantInt>(C))
+      return nullptr;
 
     // Otherwise, we know if the comparison is true or false for this element,
     // update our state machines.
@@ -233,7 +237,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (IsTrueForElt) {
       // Update the TrueElement state machine.
       if (FirstTrueElement == Undefined)
-        FirstTrueElement = TrueRangeEnd = i;  // First true element.
+        FirstTrueElement = TrueRangeEnd = i; // First true element.
       else {
         // Update double-compare state machine.
         if (SecondTrueElement == Undefined)
@@ -242,7 +246,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
           SecondTrueElement = Overdefined;
 
         // Update range state machine.
-        if (TrueRangeEnd == (int)i-1)
+        if (TrueRangeEnd == (int)i - 1)
           TrueRangeEnd = i;
         else
           TrueRangeEnd = Overdefined;
@@ -259,7 +263,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
           SecondFalseElement = Overdefined;
 
         // Update range state machine.
-        if (FalseRangeEnd == (int)i-1)
+        if (FalseRangeEnd == (int)i - 1)
           FalseRangeEnd = i;
         else
           FalseRangeEnd = Overdefined;
@@ -348,7 +352,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
     // False for two elements -> 'i != 47 & i != 72'.
     Value *C1 = Builder.CreateICmpNE(Idx, FirstFalseIdx);
-    Value *SecondFalseIdx = ConstantInt::get(Idx->getType(),SecondFalseElement);
+    Value *SecondFalseIdx =
+        ConstantInt::get(Idx->getType(), SecondFalseElement);
     Value *C2 = Builder.CreateICmpNE(Idx, SecondFalseIdx);
     return BinaryOperator::CreateAnd(C1, C2);
   }
@@ -365,8 +370,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
-    Value *End = ConstantInt::get(Idx->getType(),
-                                  TrueRangeEnd-FirstTrueElement+1);
+    Value *End =
+        ConstantInt::get(Idx->getType(), TrueRangeEnd - FirstTrueElement + 1);
     return new ICmpInst(ICmpInst::ICMP_ULT, Idx, End);
   }
 
@@ -380,8 +385,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
-    Value *End = ConstantInt::get(Idx->getType(),
-                                  FalseRangeEnd-FirstFalseElement);
+    Value *End =
+        ConstantInt::get(Idx->getType(), FalseRangeEnd - FirstFalseElement);
     return new ICmpInst(ICmpInst::ICMP_UGT, Idx, End);
   }
 
