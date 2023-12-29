@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -393,6 +394,19 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
   }
 }
 
+// For some reason a CastExpr casting to an lvalue does not have a reference
+// type. This function adds that reference to the expr type.
+static QualType getTypeOfExpression(const Expr *E, const ASTContext &Ctx) {
+  QualType Ty = E->getType().getCanonicalType();
+  if (Ty->isPointerType() || Ty->isReferenceType())
+    return Ty;
+  if (E->isLValue())
+    return Ctx.getLValueReferenceType(Ty);
+  if (E->isXValue())
+    return Ctx.getRValueReferenceType(Ty);
+  return Ty;
+}
+
 ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
     const CastExpr *CE, ProgramStateRef &State, CheckerContext &C) const {
   // We only track type info for regions.
@@ -402,8 +416,9 @@ ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
 
   if (CE->getCastKind() == CK_BaseToDerived) {
     bool CastSucceeds = true;
-    QualType FromTy = CE->getSubExpr()->getType();
-    QualType ToTy = CE->getType();
+    const ASTContext &Ctx = C.getASTContext();
+    QualType FromTy = getTypeOfExpression(CE->getSubExpr(), Ctx);
+    QualType ToTy = getTypeOfExpression(CE, Ctx);
     ToR = ToR->StripCasts(/*StripBaseAndDerivedCasts=*/true);
     State = setDynamicTypeAndCastInfo(State, ToR, FromTy, ToTy, CastSucceeds);
     return C.addTransition(State);

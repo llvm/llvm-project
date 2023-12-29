@@ -121,3 +121,34 @@ bool PParent::OnMessageReceived() {
   Parent* foo = static_cast<Parent*>(this);
   return foo->RecvCancel(port);
 }
+
+namespace BaseToDerivedRef {
+struct Base {
+  virtual int number() const { return 1; }
+};
+struct Derived : Base {
+  int number() const override { return 2; }
+};
+void top(Base &B) {
+  clang_analyzer_dump(B.number()); // expected-warning{{1}} expected-warning{{conj}}
+  Derived &&D = static_cast<Derived &&>(B);
+  clang_analyzer_dump(B.number()); // expected-warning{{2}} expected-warning{{conj}}
+  clang_analyzer_dump(D.number()); // expected-warning{{2}} expected-warning{{conj}}
+}
+} // namespace BaseToDerivedRef
+
+
+namespace BaseToDerivedPtr {
+struct Base {
+  virtual int number() const { return 1; }
+};
+struct Derived : Base {
+  int number() const override { return 2; }
+};
+void top(Base *B) {
+  clang_analyzer_dump(B->number()); // expected-warning{{1}} expected-warning{{conj}}
+  auto *D = static_cast<Derived *>(B);
+  clang_analyzer_dump(B->number()); // expected-warning{{2}} expected-warning{{conj}}
+  clang_analyzer_dump(D->number()); // expected-warning{{2}} expected-warning{{conj}}
+}
+} // namespace BaseToDerivedPtr
