@@ -29,8 +29,8 @@ class StdAnyChecker : public Checker<eval::Call, check::RegionChanges> {
   CallDescription AnyReset{{"std", "any", "reset"}, 0, 0};
   CallDescription AnyCast{{"std", "any_cast"}, 1, 1};
 
-  BugType BadAnyType{this, "BadAnyType", "BadAnyType"};
-  BugType NullAnyType{this, "NullAnyType", "NullAnyType"};
+  const BugType BadAnyType{this, "Bad std::any type access.", "BadAnyType"};
+  const BugType NullAnyType{this, "std::any has no value", "NullAnyType"};
 
 public:
   ProgramStateRef checkRegionChanges(ProgramStateRef State,
