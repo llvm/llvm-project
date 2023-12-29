@@ -2811,6 +2811,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 
 Fine Tuning Profile Collection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 The PGO infrastructure provides user program knobs to fine tune profile
 collection. Specifically, the PGO runtime provides the following functions
 that can be used to control the regions in the program where profiles should
