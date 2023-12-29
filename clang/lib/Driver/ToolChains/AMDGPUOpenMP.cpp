@@ -129,22 +129,6 @@ AMDGPUOpenMPToolChain::GetCXXStdlibType(const ArgList &Args) const {
 void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
-
-  CC1Args.push_back("-internal-isystem");
-  SmallString<128> P(HostTC.getDriver().ResourceDir);
-  llvm::sys::path::append(P, "include/cuda_wrappers");
-  CC1Args.push_back(DriverArgs.MakeArgString(P));
-
-  // Force USM mode will forcefully include #pragma omp requires
-  // unified_shared_memory via the force_usm header
-  // XXX This may result in a compilation error if the source
-  // file already includes that pragma.
-  if (DriverArgs.hasArg(options::OPT_fopenmp_force_usm)) {
-    CC1Args.push_back("-include");
-    CC1Args.push_back(
-        DriverArgs.MakeArgString(HostTC.getDriver().ResourceDir +
-                                 "/include/openmp_wrappers/force_usm.h"));
-  }
 }
 
 void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
