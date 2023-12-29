@@ -58,9 +58,7 @@ void test_handle(T value) {
   assert(format_args.get(0));
 
   format_args.get(0).visit([](auto a) {
-    // TODO: This assertion fails
-    (void) a;
-    // assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>));
+    assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>));
   });
 }
 
