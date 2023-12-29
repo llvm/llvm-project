@@ -753,6 +753,52 @@ define i32 @test45(i32 %x, i32 %y, i32 %z) {
   ret i32 %or1
 }
 
+define i32 @test45_commuted1(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45_commuted1(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %or = or i32 %yy, %z
+  %and = and i32 %or, %x
+  %or1 = or i32 %yy, %and
+  ret i32 %or1
+}
+
+define i32 @test45_commuted2(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45_commuted2(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[XX:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[XX]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %xx = mul i32 %x, %x ; thwart complexity-based ordering
+  %or = or i32 %yy, %z
+  %and = and i32 %xx, %or
+  %or1 = or i32 %and, %yy
+  ret i32 %or1
+}
+
+define i32 @test45_commuted3(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45_commuted3(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[ZZ:%.*]] = mul i32 [[Z:%.*]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ZZ]], [[X:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %zz = mul i32 %z, %z ; thwart complexity-based ordering
+  %or = or i32 %zz, %yy
+  %and = and i32 %or, %x
+  %or1 = or i32 %and, %yy
+  ret i32 %or1
+}
+
 define i1 @test46(i8 signext %c)  {
 ; CHECK-LABEL: @test46(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[C:%.*]], -33
@@ -1213,11 +1259,11 @@ define i32 @PR46712(i1 %x, i1 %y, i1 %b, i64 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[BOOL5:%.*]] = icmp eq i64 [[Z:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = zext i1 [[BOOL5]] to i32
+; CHECK-NEXT:    [[BOOL5_NOT:%.*]] = icmp eq i64 [[Z:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[BOOL5_NOT]] to i32
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SEL]], [[TRUE]] ]
+; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP0]], [[TRUE]] ]
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
 entry:
@@ -1245,11 +1291,11 @@ define i32 @PR46712_logical(i1 %x, i1 %y, i1 %b, i64 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[BOOL5:%.*]] = icmp eq i64 [[Z:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = zext i1 [[BOOL5]] to i32
+; CHECK-NEXT:    [[BOOL5_NOT:%.*]] = icmp eq i64 [[Z:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[BOOL5_NOT]] to i32
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SEL]], [[TRUE]] ]
+; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP0]], [[TRUE]] ]
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
 entry:
