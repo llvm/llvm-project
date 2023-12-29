@@ -1922,6 +1922,15 @@ def Convergent : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def BehavesLikeStd : InheritableAttr {
+  let Spellings = [Clang<"behaves_like_std">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [StringArgument<"StdFunction">];
+  let LangOpts = [CPlusPlus];
+  let PragmaAttributeSupport = 0;
+  let Documentation = [BehavesLikeStdDocs];
+}
+
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
                    CXX11<"clang", "noinline">, C23<"clang", "noinline">,

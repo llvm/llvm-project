@@ -7145,6 +7145,27 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
   if (BuiltinID != Builtin::BImove && BuiltinID != Builtin::BIforward)
     return;
 
+  if (auto *GA = FD->getAttr<BehavesLikeStdAttr>()) {
+    if (auto *DC = FD->getDeclContext()) {
+      const NamespaceDecl *NSD = nullptr;
+      while (DC->isNamespace()) {
+        NSD = cast<NamespaceDecl>(DC);
+        if (NSD->isInline())
+          DC = NSD->getParent();
+        else
+          break;
+      }
+      if (NSD && NSD->getIdentifier()) {
+        std::string Name = NSD->getIdentifier()->getName().str() + "::";
+        S.Diag(DRE->getLocation(),
+               diag::warn_unqualified_call_to_std_cast_function)
+            << FD->getQualifiedNameAsString()
+            << FixItHint::CreateInsertion(DRE->getLocation(), Name);
+      }
+    }
+    return;
+  }
+
   S.Diag(DRE->getLocation(), diag::warn_unqualified_call_to_std_cast_function)
       << FD->getQualifiedNameAsString()
       << FixItHint::CreateInsertion(DRE->getLocation(), "std::");

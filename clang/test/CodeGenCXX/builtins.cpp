@@ -31,12 +31,19 @@ S *addressof(bool b, S &s, S &t) {
 }
 
 namespace std { template<typename T> T *addressof(T &); }
+namespace mystd { template<typename T> [[clang::behaves_like_std("addressof")]] T *addressof(T &); }
 
 // CHECK: define {{.*}} @_Z13std_addressofbR1SS0_(
 S *std_addressof(bool b, S &s, S &t) {
   // CHECK: %[[LVALUE:.*]] = phi
   // CHECK: ret ptr %[[LVALUE]]
   return std::addressof(b ? s : t);
+}
+
+S *mystd_addressof(bool b, S &s, S &t) {
+  // CHECK: %[[LVALUE:.*]] = phi
+  // CHECK: ret ptr %[[LVALUE]]
+  return mystd::addressof(b ? s : t);
 }
 
 namespace std { template<typename T> T *__addressof(T &); }

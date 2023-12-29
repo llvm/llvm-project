@@ -9753,14 +9753,11 @@ static Scope *getTagInjectionScope(Scope *S, const LangOptions &LangOpts) {
   return S;
 }
 
-/// Determine whether a declaration matches a known function in namespace std.
-static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
-                         unsigned BuiltinID) {
+/// Determine whether a declaration matches a known cast function in namespace
+/// std.
+static bool isStdCastBuiltin(ASTContext &Ctx, FunctionDecl *FD,
+                             unsigned BuiltinID) {
   switch (BuiltinID) {
-  case Builtin::BI__GetExceptionInfo:
-    // No type checking whatsoever.
-    return Ctx.getTargetInfo().getCXXABI().isMicrosoft();
-
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BIforward:
@@ -9774,9 +9771,20 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
     const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
     return FPT->getNumParams() == 1 && !FPT->isVariadic();
   }
-
   default:
     return false;
+  }
+}
+
+/// Determine whether a declaration matches a known function in namespace std.
+static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
+                         unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__GetExceptionInfo:
+    // No type checking whatsoever.
+    return Ctx.getTargetInfo().getCXXABI().isMicrosoft();
+  default:
+    return isStdCastBuiltin(Ctx, FD, BuiltinID);
   }
 }
 
@@ -10704,11 +10712,28 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // If this is the first declaration of a library builtin function, add
   // attributes as appropriate.
   if (!D.isRedeclaration()) {
-    if (IdentifierInfo *II = Previous.getLookupName().getAsIdentifierInfo()) {
+    IdentifierInfo *II = nullptr;
+    if (auto *GA = NewFD->getAttr<BehavesLikeStdAttr>()) {
+      auto iter = PP.getIdentifierTable().find(GA->getStdFunction());
+      if (iter != PP.getIdentifierTable().end())
+        II = iter->getValue();
+      else
+        Diag(NewFD->getLocation(), diag::err_attribute_invalid_std_builtin)
+            << GA;
+    } else {
+      II = Previous.getLookupName().getAsIdentifierInfo();
+    }
+    if (II) {
       if (unsigned BuiltinID = II->getBuiltinID()) {
         bool InStdNamespace = Context.BuiltinInfo.isInStdNamespace(BuiltinID);
-        if (!InStdNamespace &&
-            NewFD->getDeclContext()->getRedeclContext()->isFileContext()) {
+        if (NewFD->hasAttr<BehavesLikeStdAttr>()) {
+          if (!InStdNamespace || !isStdCastBuiltin(Context, NewFD, BuiltinID))
+            Diag(NewFD->getLocation(), diag::err_attribute_invalid_std_builtin)
+                << NewFD->getAttr<BehavesLikeStdAttr>();
+          NewFD->addAttr(BuiltinAttr::Create(Context, BuiltinID));
+        } else if (!InStdNamespace && NewFD->getDeclContext()
+                                          ->getRedeclContext()
+                                          ->isFileContext()) {
           if (NewFD->getLanguageLinkage() == CLanguageLinkage) {
             // Validate the type matches unless this builtin is specified as
             // matching regardless of its declared type.

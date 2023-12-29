@@ -3132,6 +3132,8 @@ def err_attribute_no_member_function : Error<
 def err_attribute_parameter_types : Error<
   "%0 attribute parameter types do not match: parameter %1 of function %2 has type %3, "
   "but parameter %4 of function %5 has type %6">;
+def err_attribute_invalid_std_builtin : Error<
+  "not a valid std builtin for attribute %0">;
 
 def err_attribute_too_many_arguments : Error<
   "%0 attribute takes no more than %1 argument%s1">;

@@ -8485,6 +8485,19 @@ static void handleNoUniqueAddressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(NoUniqueAddressAttr::Create(S.Context, AL));
 }
 
+static void handleBehavesLikeStdAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.getNumArgs() > 1) {
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+
+  D->addAttr(BehavesLikeStdAttr::Create(S.Context, Str, AL));
+}
+
 static void handleSYCLKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The 'sycl_kernel' attribute applies only to function templates.
   const auto *FD = cast<FunctionDecl>(D);
@@ -9396,6 +9409,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoUniqueAddress:
     handleNoUniqueAddressAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_BehavesLikeStd:
+    handleBehavesLikeStdAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:

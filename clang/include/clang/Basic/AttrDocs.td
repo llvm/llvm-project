@@ -577,6 +577,35 @@ effect applies only to a specific function pointer. For example:
   }];
 }
 
+def BehavesLikeStdDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute can be used to tag functions that behave like `std` functions.
+This allows custom STL libraries in non-freestanding environments to get the same benefits
+as the `std` functions that are treated like builtins without conflicting with the `std` declarations
+and without including costly `std` headers.
+
+This attribute currently supports all `std` functions that are implicitly treated as builtins which include
+`std::addressof`, `std::forward`, `std::forward_like`, `std::move`, `std::move_if_noexcept`, and `std::as_const`.
+
+.. code-block:: c
+
+  namespace MySTL {
+    template<class T>
+    [[clang::behaves_like_std("move")]] constexpr remove_reference_t<T>&& move(T &&t) noexcept;
+  }
+
+  template<class T>
+  [[clang::behaves_like_std("move")]] constexpr remove_reference_t<T>&& myMove(T &&t) noexcept;
+
+  void example(std::string a, std::string b) {
+    foo(MySTL::move(a));
+    foo(myMove(b));
+  }
+
+  }];
+}
+
 def NoInlineDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
