@@ -1761,6 +1761,10 @@ bool IsLockType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "lock_type");
 }
 
+bool IsNotifyType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "notify_type");
+}
+
 bool IsTeamType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "team_type");
 }
