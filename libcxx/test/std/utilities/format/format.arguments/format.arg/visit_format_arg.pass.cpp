@@ -14,14 +14,18 @@
 //   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
 
 #include <algorithm>
-#include <format>
 #include <cassert>
+#include <format>
 #include <type_traits>
 
 #include "constexpr_char_traits.h"
-#include "test_macros.h"
 #include "make_string.h"
 #include "min_allocator.h"
+#include "test_macros.h"
+
+#if _LIBCPP_STD_VER >= 26
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#endif
 
 template <class Context, class To, class From>
 void test(From value) {
@@ -75,8 +79,8 @@ void test_string_view(From value) {
   assert(format_args.get(0));
 
   using CharT = typename Context::char_type;
-  using To = std::basic_string_view<CharT>;
-  using V = std::basic_string<CharT>;
+  using To    = std::basic_string_view<CharT>;
+  using V     = std::basic_string<CharT>;
   auto result = std::visit_format_arg(
       [v = V(value.begin(), value.end())](auto a) -> To {
         if constexpr (std::is_same_v<To, decltype(a)>) {
@@ -170,8 +174,7 @@ void test() {
   test<Context, int, int>(std::numeric_limits<short>::max());
   test<Context, int, int>(std::numeric_limits<int>::max());
 
-  using LongToType =
-      std::conditional_t<sizeof(long) == sizeof(int), int, long long>;
+  using LongToType = std::conditional_t<sizeof(long) == sizeof(int), int, long long>;
 
   test<Context, LongToType, long>(std::numeric_limits<long>::min());
   test<Context, LongToType, long>(std::numeric_limits<int>::min());
@@ -202,14 +205,11 @@ void test() {
   // Test unsigned integer types.
 
   test<Context, unsigned, unsigned char>(0);
-  test<Context, unsigned, unsigned char>(
-      std::numeric_limits<unsigned char>::max());
+  test<Context, unsigned, unsigned char>(std::numeric_limits<unsigned char>::max());
 
   test<Context, unsigned, unsigned short>(0);
-  test<Context, unsigned, unsigned short>(
-      std::numeric_limits<unsigned char>::max());
-  test<Context, unsigned, unsigned short>(
-      std::numeric_limits<unsigned short>::max());
+  test<Context, unsigned, unsigned short>(std::numeric_limits<unsigned char>::max());
+  test<Context, unsigned, unsigned short>(std::numeric_limits<unsigned short>::max());
 
   test<Context, unsigned, unsigned>(0);
   test<Context, unsigned, unsigned>(std::numeric_limits<unsigned char>::max());
@@ -217,30 +217,20 @@ void test() {
   test<Context, unsigned, unsigned>(std::numeric_limits<unsigned>::max());
 
   using UnsignedLongToType =
-      std::conditional_t<sizeof(unsigned long) == sizeof(unsigned), unsigned,
-                         unsigned long long>;
+      std::conditional_t<sizeof(unsigned long) == sizeof(unsigned), unsigned, unsigned long long>;
 
   test<Context, UnsignedLongToType, unsigned long>(0);
-  test<Context, UnsignedLongToType, unsigned long>(
-      std::numeric_limits<unsigned char>::max());
-  test<Context, UnsignedLongToType, unsigned long>(
-      std::numeric_limits<unsigned short>::max());
-  test<Context, UnsignedLongToType, unsigned long>(
-      std::numeric_limits<unsigned>::max());
-  test<Context, UnsignedLongToType, unsigned long>(
-      std::numeric_limits<unsigned long>::max());
+  test<Context, UnsignedLongToType, unsigned long>(std::numeric_limits<unsigned char>::max());
+  test<Context, UnsignedLongToType, unsigned long>(std::numeric_limits<unsigned short>::max());
+  test<Context, UnsignedLongToType, unsigned long>(std::numeric_limits<unsigned>::max());
+  test<Context, UnsignedLongToType, unsigned long>(std::numeric_limits<unsigned long>::max());
 
   test<Context, unsigned long long, unsigned long long>(0);
-  test<Context, unsigned long long, unsigned long long>(
-      std::numeric_limits<unsigned char>::max());
-  test<Context, unsigned long long, unsigned long long>(
-      std::numeric_limits<unsigned short>::max());
-  test<Context, unsigned long long, unsigned long long>(
-      std::numeric_limits<unsigned>::max());
-  test<Context, unsigned long long, unsigned long long>(
-      std::numeric_limits<unsigned long>::max());
-  test<Context, unsigned long long, unsigned long long>(
-      std::numeric_limits<unsigned long long>::max());
+  test<Context, unsigned long long, unsigned long long>(std::numeric_limits<unsigned char>::max());
+  test<Context, unsigned long long, unsigned long long>(std::numeric_limits<unsigned short>::max());
+  test<Context, unsigned long long, unsigned long long>(std::numeric_limits<unsigned>::max());
+  test<Context, unsigned long long, unsigned long long>(std::numeric_limits<unsigned long>::max());
+  test<Context, unsigned long long, unsigned long long>(std::numeric_limits<unsigned long long>::max());
 
 #ifndef TEST_HAS_NO_INT128
   test_handle<Context, __uint128_t>(0);
@@ -262,16 +252,12 @@ void test() {
   test<Context, double, double>(std::numeric_limits<double>::min());
   test<Context, double, double>(std::numeric_limits<double>::max());
 
-  test<Context, long double, long double>(
-      -std::numeric_limits<long double>::max());
-  test<Context, long double, long double>(
-      -std::numeric_limits<long double>::min());
+  test<Context, long double, long double>(-std::numeric_limits<long double>::max());
+  test<Context, long double, long double>(-std::numeric_limits<long double>::min());
   test<Context, long double, long double>(-0.0);
   test<Context, long double, long double>(0.0);
-  test<Context, long double, long double>(
-      std::numeric_limits<long double>::min());
-  test<Context, long double, long double>(
-      std::numeric_limits<long double>::max());
+  test<Context, long double, long double>(std::numeric_limits<long double>::min());
+  test<Context, long double, long double>(std::numeric_limits<long double>::max());
 
   // Test const CharT pointer types.
 
@@ -307,8 +293,7 @@ void test() {
   }
 
   {
-    using From = std::basic_string<CharT, constexpr_char_traits<CharT>,
-                                   std::allocator<CharT>>;
+    using From = std::basic_string<CharT, constexpr_char_traits<CharT>, std::allocator<CharT>>;
 
     test_string_view<Context>(From());
     test_string_view<Context>(From(empty.c_str()));
@@ -316,8 +301,7 @@ void test() {
   }
 
   {
-    using From =
-        std::basic_string<CharT, std::char_traits<CharT>, min_allocator<CharT>>;
+    using From = std::basic_string<CharT, std::char_traits<CharT>, min_allocator<CharT>>;
 
     test_string_view<Context>(From());
     test_string_view<Context>(From(empty.c_str()));
@@ -325,8 +309,7 @@ void test() {
   }
 
   {
-    using From = std::basic_string<CharT, constexpr_char_traits<CharT>,
-                                   min_allocator<CharT>>;
+    using From = std::basic_string<CharT, constexpr_char_traits<CharT>, min_allocator<CharT>>;
 
     test_string_view<Context>(From());
     test_string_view<Context>(From(empty.c_str()));
