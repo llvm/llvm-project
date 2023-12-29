@@ -980,14 +980,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   PostIncLoopSet SavedPostIncLoops = PostIncLoops;
   PostIncLoops.clear();
 
-  // Expand code for the start value into the loop predecessor. The loop is not
-  // necessarily in Loop Simplify Form, so assert it's legal to do so.
-  auto *LP = L->getLoopPredecessor();
-  assert(LP && LP->isLegalToHoistInto() &&
-         "Can't expand add recurrences without hoisting into the loop "
-         "predecessor.");
-
-  Value *StartV = expand(Normalized->getStart(), LP->getTerminator());
+  // Expand code for the start value into the loop preheader.
+  assert(L->getLoopPreheader() &&
+         "Can't expand add recurrences without a loop preheader!");
+  Value *StartV =
+      expand(Normalized->getStart(), L->getLoopPreheader()->getTerminator());
 
   // StartV must have been be inserted into L's preheader to dominate the new
   // phi.
