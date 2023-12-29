@@ -58,6 +58,14 @@ void wontConfuseStdGets() {
 //----------------------------------------------------------------------------//
 // std::get
 //----------------------------------------------------------------------------//
+void stdGetType2() {
+  std::variant<int, char> v = {25};
+  int a = std::get<int>(v);
+  char c = std::get<char>(v); // expected-warning {{std::variant 'v' held an 'int', not a 'char'}}
+  (void)a;
+  (void)c;
+}
+
 void stdGetType() {
   std::variant<int, char> v = 25;
   int a = std::get<int>(v);

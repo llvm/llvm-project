@@ -2095,6 +2095,27 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
                  //       returned block
  }
 
+.. _alpha-core-StdAny:
+
+alpha.core.StdAny (C++)
+"""""""""""""""""""""""
+Check if a value of active type is retrieved from an ``std::any`` instance with ``std::any_cats``
+or if the ``std::any`` instance holds type. In case of bad any type access
+(the accessed type differs from the active type, or the instance has no stored value)
+a warning is emitted. Currently, this checker does not take exception handling into account.
+
+.. code-block:: cpp
+
+ void anyCast() {
+  std::any a = 5;
+  char c = std::any_cast<char>(a); // // warn: "int" is the active alternative
+ }
+
+ void noTypeHeld() {
+  std::any a;
+  int i = std::any_cast<int>(a); // warn: any 'a' is empty
+ }
+
 .. _alpha-core-StdVariant:
 
 alpha.core.StdVariant (C++)

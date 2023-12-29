@@ -17,9 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
-#include <string_view>
 
 #include "TaggedUnionModeling.h"
 
@@ -87,6 +85,28 @@ bool isStdVariant(const Type *Type) {
   return isStdType(Type, llvm::StringLiteral("variant"));
 }
 
+bool isStdAny(const Type *Type) {
+  return isStdType(Type, llvm::StringLiteral("any"));
+}
+
+bool isVowel(char a) {
+  switch (a) {
+  case 'a':
+  case 'e':
+  case 'i':
+  case 'o':
+  case 'u':
+    return true;
+  default:
+    return false;
+  }
+}
+
+llvm::StringRef indefiniteArticleBasedOnVowel(char a) {
+  if (isVowel(a))
+    return "an";
+  return "a";
+}
 } // end of namespace clang::ento::tagged_union_modeling
 
 static std::optional<ArrayRef<TemplateArgument>>
@@ -106,25 +126,6 @@ getNthTemplateTypeArgFromVariant(const Type *varType, unsigned i) {
     return {};
 
   return (*VariantTemplates)[i].getAsType();
-}
-
-static bool isVowel(char a) {
-  switch (a) {
-  case 'a':
-  case 'e':
-  case 'i':
-  case 'o':
-  case 'u':
-    return true;
-  default:
-    return false;
-  }
-}
-
-static llvm::StringRef indefiniteArticleBasedOnVowel(char a) {
-  if (isVowel(a))
-    return "an";
-  return "a";
 }
 
 class StdVariantChecker : public Checker<eval::Call, check::RegionChanges> {
@@ -184,9 +185,8 @@ public:
       } else if (IsVariantAssignmentOperatorCall) {
         const auto &AsMemberOpCall = cast<CXXMemberOperatorCall>(Call);
         ThisSVal = AsMemberOpCall.getCXXThisVal();
-      } else {
+      } else
         return false;
-      }
 
       handleConstructorAndAssignment<VariantHeldTypeMap>(Call, C, ThisSVal);
       return true;
