@@ -815,7 +815,7 @@ body: |
     %5:vgpr_32 = V_CNDMASK_B32_e64 0, %3, 0, %1, %4, implicit $exec
 
     ; src2 is legal for _e64
-    %6:vgpr_32 = V_MOV_B32_dpp %2, 0,%1, 1, 15, 15, 1, implicit $exec
+    %6:vgpr_32 = V_MOV_B32_dpp %2, 0, %1, 1, 15, 15, 1, implicit $exec
     %7:sreg_32_xm0_xexec = IMPLICIT_DEF
     %8:vgpr_32 = V_CNDMASK_B32_e64 4, %6, 0, %1, %7, implicit $exec
 ...
@@ -835,7 +835,7 @@ body:             |
     %1:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = IMPLICIT_DEF
 
-    %3:vgpr_32 = V_MOV_B32_dpp undef %2, 0,%1, 1, 15, 15, 1, implicit $exec
+    %3:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
     %4:vgpr_32 = nofpexcept nnan V_ADD_F32_e64 0, %3, 0, %0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %4
 
@@ -864,7 +864,7 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vreg_64 = COPY $vgpr2_vgpr3
-    %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, 0,%1.sub0, 1, 15, 15, 1, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, 0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, 0, %1.sub1, 1, 15, 15, 1, implicit $exec
     %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1
     %5:vgpr_32 = V_ADD_U32_e32 %4.sub0, %4.sub0, implicit $exec
