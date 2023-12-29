@@ -2338,6 +2338,64 @@ defm : VPatBinaryVL_VV_VX_VI<riscv_uaddsat_vl, "PseudoVSADDU">;
 defm : VPatBinaryVL_VV_VX<riscv_ssubsat_vl, "PseudoVSSUB">;
 defm : VPatBinaryVL_VV_VX<riscv_usubsat_vl, "PseudoVSSUBU">;
 
+// 12.5. Vector Narrowing Fixed-Point Clip Instructions
+class VPatTruncSatClipMaxMinBase<string inst,
+                                 VTypeInfo vti,
+                                 VTypeInfo wti,
+                                 SDPatternOperator op1,
+                                 int op1_value,
+                                 SDPatternOperator op2,
+                                 int op2_value> :
+  Pat<(vti.Vector (riscv_trunc_vector_vl
+        (wti.Vector (op1
+          (wti.Vector (op2
+            (wti.Vector wti.RegClass:$rs1),
+            (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op2_value, (XLenVT srcvalue))),
+            (wti.Vector undef),(wti.Mask V0), VLOpFrag)),
+          (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op1_value, (XLenVT srcvalue))),
+          (wti.Vector undef), (wti.Mask V0), VLOpFrag)),
+        (vti.Mask V0), VLOpFrag)),
+      (!cast<Instruction>(inst#"_WI_"#vti.LMul.MX#"_MASK")
+        (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
+        (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
+
+class VPatTruncSatClipUMin<VTypeInfo vti,
+                           VTypeInfo wti,
+                           int uminval> :
+  Pat<(vti.Vector (riscv_trunc_vector_vl
+        (wti.Vector (riscv_umin_vl
+          (wti.Vector wti.RegClass:$rs1),
+          (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), uminval, (XLenVT srcvalue))),
+          (wti.Vector undef), (wti.Mask V0), VLOpFrag)),
+        (vti.Mask V0), VLOpFrag)),
+      (!cast<Instruction>("PseudoVNCLIPU_WI_"#vti.LMul.MX#"_MASK")
+        (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
+        (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
+
+multiclass VPatTruncSatClipMaxMin<string inst, VTypeInfo vti, VTypeInfo wti,
+  SDPatternOperator max, int maxval, SDPatternOperator min, int minval> {
+    def : VPatTruncSatClipMaxMinBase<inst, vti, wti, max, maxval, min, minval>;
+    def : VPatTruncSatClipMaxMinBase<inst, vti, wti, min, minval, max, maxval>;
+}
+
+multiclass VPatTruncSatClip<VTypeInfo vti, VTypeInfo wti> {
+  defvar sew = vti.SEW;
+  defvar uminval = !sub(!shl(1, sew), 1);
+  defvar sminval = !sub(!shl(1, !sub(sew, 1)), 1);
+  defvar smaxval = !sub(0, !shl(1, !sub(sew, 1)));
+
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    defm : VPatTruncSatClipMaxMin<"PseudoVNCLIP", vti, wti, riscv_smin_vl,
+                                  sminval, riscv_smax_vl, smaxval>;
+    def : VPatTruncSatClipUMin<vti, wti, uminval>;
+  }
+
+}
+
+foreach vtiToWti = AllWidenableIntVectors in
+  defm : VPatTruncSatClip<vtiToWti.Vti, vtiToWti.Wti>;
+
 // 13. Vector Floating-Point Instructions
 
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
