@@ -225,6 +225,48 @@ void test() {
   test<Context, long long, ExpectedResultType, long long>(std::numeric_limits<long long>::max(), visited);
 
 #ifndef TEST_HAS_NO_INT128
+  test_handle<Context, __int128_t, ExpectedResultType>(0, visited);
+#endif // TEST_HAS_NO_INT128
+
+  // Test unsigned integer types.
+
+  test<Context, unsigned, ExpectedResultType, unsigned char>(0, visited);
+  test<Context, unsigned, ExpectedResultType, unsigned char>(std::numeric_limits<unsigned char>::max(), visited);
+
+  test<Context, unsigned, ExpectedResultType, unsigned short>(0, visited);
+  test<Context, unsigned, ExpectedResultType, unsigned short>(std::numeric_limits<unsigned char>::max(), visited);
+  test<Context, unsigned, ExpectedResultType, unsigned short>(std::numeric_limits<unsigned short>::max(), visited);
+
+  test<Context, unsigned, ExpectedResultType, unsigned>(0, visited);
+  test<Context, unsigned, ExpectedResultType, unsigned>(std::numeric_limits<unsigned char>::max(), visited);
+  test<Context, unsigned, ExpectedResultType, unsigned>(std::numeric_limits<unsigned short>::max(), visited);
+  test<Context, unsigned, ExpectedResultType, unsigned>(std::numeric_limits<unsigned>::max(), visited);
+
+  using UnsignedLongToType =
+      std::conditional_t<sizeof(unsigned long) == sizeof(unsigned), unsigned, unsigned long long>;
+
+  test<Context, UnsignedLongToType, ExpectedResultType, unsigned long>(0, visited);
+  test<Context, UnsignedLongToType, ExpectedResultType, unsigned long>(
+      std::numeric_limits<unsigned char>::max(), visited);
+  test<Context, UnsignedLongToType, ExpectedResultType, unsigned long>(
+      std::numeric_limits<unsigned short>::max(), visited);
+  test<Context, UnsignedLongToType, ExpectedResultType, unsigned long>(std::numeric_limits<unsigned>::max(), visited);
+  test<Context, UnsignedLongToType, ExpectedResultType, unsigned long>(
+      std::numeric_limits<unsigned long>::max(), visited);
+
+  test<Context, unsigned long long, ExpectedResultType, unsigned long long>(0, visited);
+  test<Context, unsigned long long, ExpectedResultType, unsigned long long>(
+      std::numeric_limits<unsigned char>::max(), visited);
+  test<Context, unsigned long long, ExpectedResultType, unsigned long long>(
+      std::numeric_limits<unsigned short>::max(), visited);
+  test<Context, unsigned long long, ExpectedResultType, unsigned long long>(
+      std::numeric_limits<unsigned>::max(), visited);
+  test<Context, unsigned long long, ExpectedResultType, unsigned long long>(
+      std::numeric_limits<unsigned long>::max(), visited);
+  test<Context, unsigned long long, ExpectedResultType, unsigned long long>(
+      std::numeric_limits<unsigned long long>::max(), visited);
+
+#ifndef TEST_HAS_NO_INT128
   test_handle<Context, __uint128_t, ExpectedResultType>(0, visited);
 #endif // TEST_HAS_NO_INT128
 
