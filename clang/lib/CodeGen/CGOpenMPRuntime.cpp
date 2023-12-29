@@ -1044,6 +1044,13 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
                                          ? CGM.getLangOpts().OMPHostIRFile
                                          : StringRef{});
   OMPBuilder.setConfig(Config);
+
+  // The user forces the compiler to behave as if omp requires
+  // unified_shared_memory was given.
+  if (CGM.getLangOpts().OpenMPForceUSM) {
+    HasRequiresUnifiedSharedMemory = true;
+    OMPBuilder.Config.setHasRequiresUnifiedSharedMemory(true);
+  }
 }
 
 void CGOpenMPRuntime::clear() {
