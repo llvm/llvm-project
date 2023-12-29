@@ -178,30 +178,26 @@ LogicalResult Serializer::processUndefOp(spirv::UndefOp op) {
 }
 
 LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
-  unsigned numArgs = op.getNumArguments();
-  if (numArgs != 0) {
-    for (unsigned i = 0; i < numArgs; ++i) {
-      auto arg = op.getArgument(i);
-      uint32_t argTypeID = 0;
-      if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
-        return failure();
-      }
-      auto argValueID = getNextID();
-
-      // Process decoration attributes of arguments.
-      auto funcOp = cast<FunctionOpInterface>(*op);
-      for (auto argAttr : funcOp.getArgAttrs(i)) {
-        if (auto decAttr = dyn_cast<DecorationAttr>(argAttr.getValue())) {
-          if (failed(processDecorationAttr(op->getLoc(), argValueID,
-                                           decAttr.getValue(), decAttr)))
-            return failure();
-        }
-      }
-
-      valueIDMap[arg] = argValueID;
-      encodeInstructionInto(functionHeader, spirv::Opcode::OpFunctionParameter,
-                            {argTypeID, argValueID});
+  for (auto [idx, arg] : llvm::enumerate(op.getArguments())) {
+    uint32_t argTypeID = 0;
+    if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
+      return failure();
     }
+    auto argValueID = getNextID();
+
+    // Process decoration attributes of arguments.
+    auto funcOp = cast<FunctionOpInterface>(*op);
+    for (auto argAttr : funcOp.getArgAttrs(idx)) {
+      if (auto decAttr = dyn_cast<DecorationAttr>(argAttr.getValue())) {
+        if (failed(processDecorationAttr(op->getLoc(), argValueID,
+                                         decAttr.getValue(), decAttr)))
+          return failure();
+      }
+    }
+
+    valueIDMap[arg] = argValueID;
+    encodeInstructionInto(functionHeader, spirv::Opcode::OpFunctionParameter,
+                          {argTypeID, argValueID});
   }
   return success();
 }

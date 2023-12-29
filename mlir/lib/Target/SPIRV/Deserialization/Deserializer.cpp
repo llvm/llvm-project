@@ -371,39 +371,25 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
 }
 
 void spirv::Deserializer::setArgAttrs(uint32_t argID) {
-  if (!decorations.count(argID)) {
+  if (!decorations.contains(argID)) {
     argAttrs.push_back(DictionaryAttr::get(context, {}));
     return;
   }
 
   // Replace a decoration as UnitAttr with DecorationAttr for the physical
   // buffer pointer in the function parameter.
-  // e.g. "aliased" -> "spirv.decoration = #spirv.decoration<Aliased>").
-  for (auto decAttr : decorations[argID]) {
-    if (decAttr.getName() ==
-        getSymbolDecoration(stringifyDecoration(spirv::Decoration::Aliased))) {
-      decorations[argID].erase(decAttr.getName());
-      decorations[argID].set(
-          spirv::DecorationAttr::name,
-          spirv::DecorationAttr::get(context, spirv::Decoration::Aliased));
-    } else if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                        spirv::Decoration::Restrict))) {
-      decorations[argID].erase(decAttr.getName());
-      decorations[argID].set(
-          spirv::DecorationAttr::name,
-          spirv::DecorationAttr::get(context, spirv::Decoration::Restrict));
-    } else if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                        spirv::Decoration::AliasedPointer))) {
-      decorations[argID].erase(decAttr.getName());
-      decorations[argID].set(spirv::DecorationAttr::name,
-                             spirv::DecorationAttr::get(
-                                 context, spirv::Decoration::AliasedPointer));
-    } else if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                        spirv::Decoration::RestrictPointer))) {
-      decorations[argID].erase(decAttr.getName());
-      decorations[argID].set(spirv::DecorationAttr::name,
-                             spirv::DecorationAttr::get(
-                                 context, spirv::Decoration::RestrictPointer));
+  // e.g. `aliased` -> `spirv.decoration = #spirv.decoration<Aliased>`).
+  for (NamedAttribute decAttr : decorations[argID]) {
+    for (auto decoration :
+         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
+          spirv::Decoration::AliasedPointer,
+          spirv::Decoration::RestrictPointer}) {
+      if (decAttr.getName() ==
+          getSymbolDecoration(stringifyDecoration(decoration))) {
+        decorations[argID].erase(decAttr.getName());
+        decorations[argID].set(spirv::DecorationAttr::name,
+                               spirv::DecorationAttr::get(context, decoration));
+      }
     }
   }
 

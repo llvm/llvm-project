@@ -1002,17 +1002,17 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
       return emitError(loc, "'") << symbol
                                  << "' attribute cannot specify storage class "
                                     "when attaching to a non-scalar value";
-  } else if (symbol == spirv::DecorationAttr::name) {
-    auto decAttr = llvm::dyn_cast<spirv::DecorationAttr>(attr);
-    if (!decAttr)
+    return success();
+  }
+  if (symbol == spirv::DecorationAttr::name) {
+    if (!isa<spirv::DecorationAttr>(attr))
       return emitError(loc, "'")
              << symbol << "' must be a spirv::DecorationAttr";
-  } else {
-    return emitError(loc, "found unsupported '")
-           << symbol << "' attribute on region argument";
+    return success();
   }
 
-  return success();
+  return emitError(loc, "found unsupported '")
+         << symbol << "' attribute on region argument";
 }
 
 LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,

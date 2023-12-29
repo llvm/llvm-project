@@ -274,7 +274,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::RestrictPointer:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
-    if (isa<UnitAttr>(attr) || isa<DecorationAttr>(attr))
+    if (isa<UnitAttr, DecorationAttr>(attr))
       break;
     return emitError(loc,
                      "expected unit attribute or decoration attribute for ")
@@ -288,9 +288,10 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
 
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
-  auto attrName = attr.getName().strref();
-  auto decorationName = getDecorationName(attrName);
-  auto decoration = spirv::symbolizeDecoration(decorationName);
+  StringRef attrName = attr.getName().strref();
+  std::string decorationName = getDecorationName(attrName);
+  std::optional<Decoration> decoration =
+      spirv::symbolizeDecoration(decorationName);
   if (!decoration) {
     return emitError(
                loc, "non-argument attributes expected to have snake-case-ified "
