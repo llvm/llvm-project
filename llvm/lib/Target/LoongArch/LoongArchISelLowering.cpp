@@ -286,7 +286,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UNDEF, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
 
       setOperationAction(ISD::SETCC, VT, Legal);
@@ -406,6 +406,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerWRITE_REGISTER(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return lowerINSERT_VECTOR_ELT(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
@@ -509,6 +511,23 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     }
     return Vector;
   }
+
+  return SDValue();
+}
+
+SDValue
+LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VecTy = Op->getOperand(0)->getValueType(0);
+  SDValue Idx = Op->getOperand(1);
+  EVT EltTy = VecTy.getVectorElementType();
+  unsigned NumElts = VecTy.getVectorNumElements();
+
+  if (isa<ConstantSDNode>(Idx) &&
+      (EltTy == MVT::i32 || EltTy == MVT::i64 || EltTy == MVT::f32 ||
+       EltTy == MVT::f64 ||
+       cast<ConstantSDNode>(Idx)->getZExtValue() < NumElts / 2))
+    return Op;
 
   return SDValue();
 }
