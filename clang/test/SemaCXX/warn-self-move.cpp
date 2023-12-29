@@ -33,13 +33,13 @@ void int_test() {
 }
 
 void int_test_mystd() {
-    int x = 5;
-    x = mystd::move(x);  // expected-warning{{explicitly moving}}
-    (x) = mystd::move(x);  // expected-warning{{explicitly moving}}
+  int x = 5;
+  x = mystd::move(x);  // expected-warning{{explicitly moving}}
+  (x) = mystd::move(x);  // expected-warning{{explicitly moving}}
 
-    using mystd::move;
-    x = move(x); // expected-warning{{explicitly moving}} \
-                 expected-warning {{unqualified call to 'mystd::move}}
+  using mystd::move;
+  x = move(x); // expected-warning{{explicitly moving}} \
+                   expected-warning {{unqualified call to 'mystd::move}}
 }
 
 int global;
@@ -53,12 +53,12 @@ void global_int_test() {
 }
 
 void global_int_test_mystd() {
-    global = mystd::move(global);  // expected-warning{{explicitly moving}}
-    (global) = mystd::move(global);  // expected-warning{{explicitly moving}}
+  global = mystd::move(global);  // expected-warning{{explicitly moving}}
+  (global) = mystd::move(global);  // expected-warning{{explicitly moving}}
 
-    using mystd::move;
-    global = move(global); // expected-warning{{explicitly moving}} \
-                           expected-warning {{unqualified call to 'mystd::move}}
+  using mystd::move;
+  global = move(global); // expected-warning{{explicitly moving}} \
+                             expected-warning {{unqualified call to 'mystd::move}}
 }
 
 class field_test {
@@ -75,16 +75,16 @@ class field_test {
 };
 
 class field_test_mystd {
-    int x;
-    field_test_mystd(field_test_mystd&& other) {
-        x = mystd::move(x);  // expected-warning{{explicitly moving}}
-        x = mystd::move(other.x);
-        other.x = mystd::move(x);
-        other.x = mystd::move(other.x);  // expected-warning{{explicitly moving}}
-    }
-    void withSuggest(int x) {
-        x = mystd::move(x); // expected-warning{{explicitly moving variable of type 'int' to itself; did you mean to move to member 'x'?}}
-    }
+  int x;
+  field_test_mystd(field_test_mystd&& other) {
+    x = mystd::move(x);  // expected-warning{{explicitly moving}}
+    x = mystd::move(other.x);
+    other.x = mystd::move(x);
+    other.x = mystd::move(other.x);  // expected-warning{{explicitly moving}}
+  }
+  void withSuggest(int x) {
+    x = mystd::move(x); // expected-warning{{explicitly moving variable of type 'int' to itself; did you mean to move to member 'x'?}}
+  }
 };
 
 struct A {};
@@ -103,13 +103,13 @@ void struct_test() {
 }
 
 void struct_test_mystd() {
-    A a;
-    a = mystd::move(a);  // expected-warning{{explicitly moving}}
+  A a;
+  a = mystd::move(a);  // expected-warning{{explicitly moving}}
 
-    B b;
-    b = mystd::move(b);  // expected-warning{{explicitly moving}}
-    b.a = mystd::move(b.a);  // expected-warning{{explicitly moving}}
+  B b;
+  b = mystd::move(b);  // expected-warning{{explicitly moving}}
+  b.a = mystd::move(b.a);  // expected-warning{{explicitly moving}}
 
-    C c;
-    c = mystd::move(c);  // expected-warning{{explicitly moving}}
+  C c;
+  c = mystd::move(c);  // expected-warning{{explicitly moving}}
 }

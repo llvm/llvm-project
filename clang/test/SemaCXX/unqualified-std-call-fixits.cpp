@@ -43,7 +43,7 @@ void g() {
 }
 
 void h() {
-    int i = 0;
-    (void)mymove(i); // no-warning
-    (void)myforward(i); // no-warning
+  int i = 0;
+  (void)mymove(i); // no-warning
+  (void)myforward(i); // no-warning
 }
