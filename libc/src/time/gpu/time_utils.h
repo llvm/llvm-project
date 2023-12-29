@@ -40,7 +40,7 @@ constexpr uint64_t clock_freq = 0;
 // this to the correct value. If it is not set we try to default to the
 // known values.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq = clock_freq;
+    [[clang::address_space(4)]] __llvm_libc_clock_freq;
 #define GPU_CLOCKS_PER_SEC static_cast<clock_t>(__llvm_libc_clock_freq)
 
 #elif defined(LIBC_TARGET_ARCH_IS_NVPTX)
