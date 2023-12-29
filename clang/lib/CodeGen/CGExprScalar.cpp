@@ -2139,14 +2139,16 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // bitcast.
     if (const auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
       if (const auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(DstTy)) {
-        // If we are casting a fixed i8 vector to a scalable 16 x i1 predicate
+        // If we are casting a fixed i8 vector to a scalable i1 predicate
         // vector, use a vector insert and bitcast the result.
         bool NeedsBitCast = false;
-        auto PredType = llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
         llvm::Type *OrigType = DstTy;
-        if (ScalableDst == PredType &&
-            FixedSrc->getElementType() == Builder.getInt8Ty()) {
-          DstTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
+        if (ScalableDst->getElementType()->isIntegerTy(1) &&
+            ScalableDst->getElementCount().isKnownMultipleOf(8) &&
+            FixedSrc->getElementType()->isIntegerTy(8)) {
+          DstTy = llvm::VectorType::get(
+              FixedSrc->getElementType(),
+              ScalableDst->getElementCount().divideCoefficientBy(8));
           ScalableDst = cast<llvm::ScalableVectorType>(DstTy);
           NeedsBitCast = true;
         }
@@ -2167,12 +2169,14 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // bitcast.
     if (const auto *ScalableSrc = dyn_cast<llvm::ScalableVectorType>(SrcTy)) {
       if (const auto *FixedDst = dyn_cast<llvm::FixedVectorType>(DstTy)) {
-        // If we are casting a scalable 16 x i1 predicate vector to a fixed i8
+        // If we are casting a scalable i1 predicate vector to a fixed i8
         // vector, bitcast the source and use a vector extract.
-        auto PredType = llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-        if (ScalableSrc == PredType &&
-            FixedDst->getElementType() == Builder.getInt8Ty()) {
-          SrcTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
+        if (ScalableSrc->getElementType()->isIntegerTy(1) &&
+            ScalableSrc->getElementCount().isKnownMultipleOf(8) &&
+            FixedDst->getElementType()->isIntegerTy(8)) {
+          SrcTy = llvm::VectorType::get(
+              FixedDst->getElementType(),
+              ScalableSrc->getElementCount().divideCoefficientBy(8));
           ScalableSrc = cast<llvm::ScalableVectorType>(SrcTy);
           Src = Builder.CreateBitCast(Src, SrcTy);
         }
