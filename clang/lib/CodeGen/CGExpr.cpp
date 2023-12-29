@@ -1084,12 +1084,16 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
   return false;
 }
 
+/// This method is typically called in contexts where we can't generate
+/// side-effects, like in __builtin_dynamic_object_size. When finding
+/// expressions, only choose those that have either already been emitted or can
+/// be loaded without side-effects.
+///
+/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
+///   within the top-level struct.
+/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
 llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  // This method is typically called in contexts where we can't generate
-  // side-effects, like in __builtin_dynamic_object_size. When finding
-  // expressions, only choose those that have either already been emitted or
-  // can be loaded without side-effects.
   const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
 
   // Find the base struct expr (i.e. p in p->a.b.c.d).
@@ -1155,15 +1159,14 @@ const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
     return nullptr;
 
   auto GetNonAnonStructOrUnion = [](const RecordDecl *RD) {
-    while (RD && !RD->getDeclName())
-      if (const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext()))
-        RD = R;
-      else
+    while (RD && RD->isAnonymousStructOrUnion()) {
+      const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext());
+      if (!R)
         break;
-
+      RD = R;
+    }
     return RD;
   };
-
   const RecordDecl *EnclosingRD = GetNonAnonStructOrUnion(FD->getParent());
   if (!EnclosingRD)
     return nullptr;
