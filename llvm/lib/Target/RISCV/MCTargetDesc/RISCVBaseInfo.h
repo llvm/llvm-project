@@ -401,6 +401,7 @@ int getLoadFPImm(APFloat FPImm);
 namespace RISCVSysReg {
 struct SysReg {
   const char *Name;
+  const char *AltName;
   const char *DeprecatedName;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
@@ -424,22 +425,9 @@ struct SysReg {
       return true;
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
-
-  bool haveVendorRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
-    // Not in 32-bit mode.
-    if (isRV32Only && ActiveFeatures[RISCV::Feature64Bit])
-      return false;
-    // No required feature associated with the system register.
-    if (FeaturesRequired.none())
-      return false;
-    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
 };
 
-struct SiFiveReg : SysReg {};
-
 #define GET_SysRegsList_DECL
-#define GET_SiFiveRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 

@@ -359,7 +359,8 @@ public:
                      const TargetTransformInfo::LSRCost &C2);
 
   bool shouldFoldTerminatingConditionAfterLSR() const {
-    return true;
+    // FIXME: Enabling this causes miscompiles.
+    return false;
   }
 };
 
