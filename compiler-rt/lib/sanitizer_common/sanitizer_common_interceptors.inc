@@ -7498,10 +7498,19 @@ INTERCEPTOR(int, mprotect, void *addr, SIZE_T sz, int prot) {
   MprotectMallocZones(addr, prot);
   return REAL(mprotect)(addr, sz, prot);
 }
-#define INIT_MMAP                                                              \
-  COMMON_INTERCEPT_FUNCTION(mmap);                                             \
-  COMMON_INTERCEPT_FUNCTION(munmap);                                           \
-  COMMON_INTERCEPT_FUNCTION(mprotect);
+
+INTERCEPTOR(int, madvise, uptr addr, SIZE_T sz, int advice) {
+  void *ctx;
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return (int)internal_madvise(addr, sz, advice);
+  COMMON_INTERCEPTOR_ENTER(ctx, madvise, addr, sz, advice);
+  return REAL(madvise)(addr, sz, advice);
+}
+#  define INIT_MMAP                      \
+    COMMON_INTERCEPT_FUNCTION(mmap);     \
+    COMMON_INTERCEPT_FUNCTION(munmap);   \
+    COMMON_INTERCEPT_FUNCTION(mprotect); \
+    COMMON_INTERCEPT_FUNCTION(madvise);
 #else
 #define INIT_MMAP
 #endif
