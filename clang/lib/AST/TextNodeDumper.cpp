@@ -1613,6 +1613,9 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   case VectorKind::RVVFixedLengthData:
     OS << " fixed-length rvv data vector";
     break;
+  case VectorKind::RVVFixedLengthMask:
+    OS << " fixed-length rvv mask vector";
+    break;
   }
   OS << " " << T->getNumElements();
 }
