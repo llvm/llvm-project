@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='function-attrs' -S | FileCheck %s
 
 define i32 @test_ret_constant() {
-; CHECK-LABEL: define i32 @test_ret_constant(
+; CHECK-LABEL: define noundef i32 @test_ret_constant(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -34,7 +34,7 @@ define i32 @test_ret_param(i32 %x) {
 }
 
 define i32 @test_ret_noundef_param(i32 noundef %x) {
-; CHECK-LABEL: define i32 @test_ret_noundef_param(
+; CHECK-LABEL: define noundef i32 @test_ret_noundef_param(
 ; CHECK-SAME: i32 noundef returned [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -42,7 +42,7 @@ define i32 @test_ret_noundef_param(i32 noundef %x) {
 }
 
 define i32 @test_ret_noundef_expr(i32 noundef %x) {
-; CHECK-LABEL: define i32 @test_ret_noundef_expr(
+; CHECK-LABEL: define noundef i32 @test_ret_noundef_expr(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Y]]
@@ -62,7 +62,7 @@ define i32 @test_ret_create_poison_expr(i32 noundef %x) {
 }
 
 define i32 @test_ret_freezed(i32 noundef %x) {
-; CHECK-LABEL: define i32 @test_ret_freezed(
+; CHECK-LABEL: define noundef i32 @test_ret_freezed(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[Y:%.*]] = add nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[Z:%.*]] = freeze i32 [[Y]]
@@ -74,7 +74,7 @@ define i32 @test_ret_freezed(i32 noundef %x) {
 }
 
 define i32 @test_ret_control_flow(i32 noundef %x) {
-; CHECK-LABEL: define i32 @test_ret_control_flow(
+; CHECK-LABEL: define noundef i32 @test_ret_control_flow(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -135,7 +135,7 @@ if.else:
 }
 
 define i32 @test_noundef_prop() {
-; CHECK-LABEL: define i32 @test_noundef_prop(
+; CHECK-LABEL: define noundef i32 @test_noundef_prop(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RET:%.*]] = call i32 @test_ret_constant()
 ; CHECK-NEXT:    ret i32 [[RET]]
