@@ -3520,6 +3520,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op1, m_c_And(m_c_Or(m_Specific(Op0), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op0, Builder.CreateAnd(A, C));
 
+  // ((A ^ B) & C) | A -> A | (B & C)
+  if (match(&I, m_c_Or(m_Value(A),
+                       m_OneUse(m_c_And(m_c_Xor(m_Deferred(A), m_Value(B)),
+                                        m_Value(C))))))
+    return BinaryOperator::CreateOr(A, Builder.CreateAnd(B, C));
+
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
 
