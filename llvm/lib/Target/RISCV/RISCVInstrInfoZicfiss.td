@@ -47,16 +47,26 @@ def SSPUSH : RVInstR<0b1100111, 0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs2),
 }
 } // Predicates = [HasStdExtZicfiss]
 
-let Predicates = [HasStdExtZicfiss], DecoderNamespace = "Zicfiss" in {
+let Predicates = [HasStdExtZicfiss, HasStdExtZcmop],
+    DecoderNamespace = "Zicfiss" in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def C_SSPUSH : RVC_SSInst<0b00001, GPRX1, "c.sspush">;
 
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def C_SSPOPCHK : RVC_SSInst<0b00101, GPRX5, "c.sspopchk">;
-} // Predicates = [HasStdExtZicfiss, HasStdExtCOrZca]
+} // Predicates = [HasStdExtZicfiss, HasStdExtZcmop]
 
 let Predicates = [HasStdExtZicfiss] in
 defm SSAMOSWAP_W  : AMO_rr_aq_rl<0b01001, 0b010, "ssamoswap.w">;
 
 let Predicates = [HasStdExtZicfiss, IsRV64] in
 defm SSAMOSWAP_D  : AMO_rr_aq_rl<0b01001, 0b011, "ssamoswap.d">;
+
+//===----------------------------------------------------------------------===/
+// Compress Instruction tablegen backend.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZicfiss, HasStdExtZcmop] in {
+def : CompressPat<(SSPUSH X1), (C_SSPUSH X1)>;
+def : CompressPat<(SSPOPCHK X5), (C_SSPOPCHK X5)>;
+} // Predicates = [HasStdExtZicfiss, HasStdExtZcmop]

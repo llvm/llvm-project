@@ -703,7 +703,7 @@ def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
 def FeatureStdExtZicfiss
     : SubtargetFeature<"experimental-zicfiss", "HasStdExtZicfiss", "true",
                        "'Zicfiss' (Shadow stack)",
-                       [FeatureStdExtZicsr, FeatureStdExtZimop, FeatureStdExtZcmop]>;
+                       [FeatureStdExtZicsr, FeatureStdExtZimop]>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                                  AssemblerPredicate<(all_of FeatureStdExtZicfiss),
                                  "'Zicfiss' (Shadow stack)">;

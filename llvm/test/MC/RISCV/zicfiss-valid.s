@@ -100,23 +100,3 @@ ssamoswap.d.rl a4, ra, (s0)
 # CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zicfiss' (Shadow stack)
 ssamoswap.d.aqrl a4, ra, (s0)
 .endif
-
-# CHECK-ASM-AND-OBJ: c.sspush ra
-# CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
-c.sspush x1
-
-# CHECK-ASM-AND-OBJ: c.sspush ra
-# CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
-c.sspush ra
-
-# CHECK-ASM-AND-OBJ: c.sspopchk t0
-# CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
-c.sspopchk x5
-
-# CHECK-ASM-AND-OBJ: c.sspopchk t0
-# CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
-c.sspopchk t0
