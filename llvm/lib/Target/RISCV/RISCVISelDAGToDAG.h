@@ -80,6 +80,8 @@ public:
     return false;
   }
 
+  bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
+
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool tryIndexedLoad(SDNode *Node);
