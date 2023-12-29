@@ -14,6 +14,7 @@
 // RUN: %clang -fcs-profile-generate -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFGENMACRO %s
 //
 // RUN: %clang -fprofile-use=%t.profdata -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFUSEMACRO %s
+// RUN: %clang -fprofile-instr-use=%t.profdata -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFUSEMACRO %s
 
 // PROFGENMACRO:#define __LLVM_INSTR_PROFILE_GENERATE 1
 // PROFUSEMACRO:#define __LLVM_INSTR_PROFILE_USE 1

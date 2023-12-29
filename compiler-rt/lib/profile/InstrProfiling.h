@@ -14,16 +14,14 @@
 
 // Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
 // including instr_prof_interface.h so the interface functions are
-// declared correctly for the runtime. Additionally, make sure
-// that __LLVM_INSTR_PROFILE_GENERATE is undefined only when it is
-// not explicitly defined somewhere else.
+// declared correctly for the runtime.
+// __LLVM_INSTR_PROFILE_GENERATE is always `#undef`ed after the header,
+// because compiler-rt does not support profiling the profiling runtime itself.
 #ifndef __LLVM_INSTR_PROFILE_GENERATE
 #define __LLVM_INSTR_PROFILE_GENERATE
+#endif
 #include "profile/instr_prof_interface.h"
 #undef __LLVM_INSTR_PROFILE_GENERATE
-#else
-#include "profile/instr_prof_interface.h"
-#endif
 
 #define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "profile/InstrProfData.inc"

@@ -5,13 +5,10 @@
 
 __attribute__((weak)) void __llvm_profile_reset_counters(void);
 
-__attribute__((noinline)) int bar() { return 4; }
-int foo() {
+int main() {
   if (__llvm_profile_reset_counters) {
     __llvm_profile_reset_counters();
-    return 0;
+    return 1;
   }
-  return bar();
+  return 0;
 }
-
-int main() { return foo() - 4; }
