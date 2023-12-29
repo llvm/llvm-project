@@ -608,20 +608,19 @@ static bool isIgnored(StringRef FilePath) {
 
   AbsPath = convert_to_slash(AbsPath);
 
-  bool HasMatch = false;
-  for (std::string Pattern; std::getline(IgnoreFile, Pattern);) {
-    Pattern = StringRef(Pattern).trim();
+  for (std::string Line; std::getline(IgnoreFile, Line);) {
+    auto Pattern = StringRef(Line).trim();
     if (Pattern.empty() || Pattern[0] == '#')
       continue;
 
     const bool IsNegated = Pattern[0] == '!';
     if (IsNegated)
-      Pattern.erase(0, 1);
+      Pattern = Pattern.drop_front();
 
     if (Pattern.empty())
       continue;
 
-    Pattern = StringRef(Pattern).ltrim();
+    Pattern = Pattern.ltrim();
     if (Pattern[0] != '/') {
       Path = convert_to_slash(IgnoreDir);
       append(Path, Style::posix, Pattern);
@@ -629,14 +628,11 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path.str();
     }
 
-    if (clang::format::matchFilePath(Pattern, AbsPath.str()) == !IsNegated) {
-      HasMatch = true;
-      break;
-    }
+    if (clang::format::matchFilePath(Pattern, AbsPath.str()) == !IsNegated)
+      return true;
   }
 
-  IgnoreFile.close();
-  return HasMatch;
+  return false;
 }
 
 int main(int argc, const char **argv) {
