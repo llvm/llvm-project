@@ -299,7 +299,10 @@ void RTNAME(System)(const Descriptor &command, const Descriptor *exitstat,
     StoreLengthToDescriptor(exitstat, exitstatVal, terminator);
 #endif
   }
-  FreeMemory((void *)newCmd);
+  // Deallocate memory if EnsureNullTerminated dynamically allocate a memory
+  if (newCmd != command.OffsetElement()) {
+    FreeMemory((void *)newCmd);
+  }
 }
 
 } // namespace Fortran::runtime

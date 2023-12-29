@@ -411,8 +411,12 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
+// Ensures that a character string is null-terminated, allocating a /p length +1
+// size memory for null-terminator if necessary. Returns the original or a newly
+// allocated null-terminated string (responsibility for deallocation is on the
+// caller).
 RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, size_t length, Terminator &terminator);
+    const char *str, std::size_t length, Terminator &terminator);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_
