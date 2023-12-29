@@ -223,7 +223,7 @@ void check_fileno(void) {
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
 }
 
-void check_fflush_0(void) {
+void check_fflush_opened_file(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
@@ -238,7 +238,7 @@ void check_fflush_0(void) {
   fclose(F);
 }
 
-void check_fflush_1(void) {
+void check_fflush_all(void) {
   int N = fflush(NULL);
   if (N == 0) {
     if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
