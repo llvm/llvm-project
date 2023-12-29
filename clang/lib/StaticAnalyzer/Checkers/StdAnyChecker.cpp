@@ -33,12 +33,12 @@ class StdAnyChecker : public Checker<eval::Call, check::RegionChanges> {
   BugType NullAnyType{this, "NullAnyType", "NullAnyType"};
 
 public:
-  ProgramStateRef
-  checkRegionChanges(ProgramStateRef State,
-                     const InvalidatedSymbols *Invalidated,
-                     ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const {
+  ProgramStateRef checkRegionChanges(ProgramStateRef State,
+                                     const InvalidatedSymbols *,
+                                     ArrayRef<const MemRegion *>,
+                                     ArrayRef<const MemRegion *> Regions,
+                                     const LocationContext *,
+                                     const CallEvent *Call) const {
     if (!Call)
       return State;
 
