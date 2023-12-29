@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
@@ -14,9 +14,6 @@
 
 // template<class Visitor>
 //   decltype(auto) visit(this basic_format_arg arg, Visitor&& vis);  // since C++26
-
-// template<class Visitor, class Context>
-//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // deprecated in C++26
 
 #include <algorithm>
 #include <cassert>
@@ -28,9 +25,6 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
-// Deprecated `std::visit_format_arg` should be tested in C++26 or newer.
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
-
 template <class Context, class To, class From>
 void test(From value) {
   auto store = std::make_format_args<Context>(value);
@@ -39,41 +33,18 @@ void test(From value) {
   LIBCPP_ASSERT(format_args.__size() == 1);
   assert(format_args.get(0));
 
-#if _LIBCPP_STD_VER >= 26
-  // member
-  {
-    auto result = format_args.get(0).visit([v = To(value)](auto a) -> To {
-      if constexpr (std::is_same_v<To, decltype(a)>) {
-        assert(v == a);
-        return a;
-      } else {
-        assert(false);
-        return {};
-      }
-    });
+  auto result = format_args.get(0).visit([v = To(value)](auto a) -> To {
+    if constexpr (std::is_same_v<To, decltype(a)>) {
+      assert(v == a);
+      return a;
+    } else {
+      assert(false);
+      return {};
+    }
+  });
 
-    using ct = std::common_type_t<From, To>;
-    assert(static_cast<ct>(result) == static_cast<ct>(value));
-  }
-#endif
-
-  // non-member
-  {
-    auto result = std::visit_format_arg(
-        [v = To(value)](auto a) -> To {
-          if constexpr (std::is_same_v<To, decltype(a)>) {
-            assert(v == a);
-            return a;
-          } else {
-            assert(false);
-            return {};
-          }
-        },
-        format_args.get(0));
-
-    using ct = std::common_type_t<From, To>;
-    assert(static_cast<ct>(result) == static_cast<ct>(value));
-  }
+  using ct = std::common_type_t<From, To>;
+  assert(static_cast<ct>(result) == static_cast<ct>(value));
 }
 
 // Some types, as an extension, are stored in the variant. The Standard
