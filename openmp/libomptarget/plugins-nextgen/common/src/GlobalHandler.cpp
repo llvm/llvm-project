@@ -176,3 +176,85 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
 
   return Plugin::success();
 }
+
+bool GenericGlobalHandlerTy::hasProfilingGlobals(GenericDeviceTy &Device,
+                                                 DeviceImageTy &Image) {
+  GlobalTy global(getInstrProfNamesVarName().str(), 0);
+  if (auto Err = getGlobalMetadataFromImage(Device, Image, global)) {
+    consumeError(std::move(Err));
+    return false;
+  }
+  return true;
+}
+
+Expected<GPUProfGlobals>
+GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
+                                             DeviceImageTy &Image) {
+  GPUProfGlobals profdata;
+  const auto *elf = getOrCreateELFObjectFile(Device, Image);
+  profdata.targetTriple = elf->makeTriple();
+  // Iterate through
+  for (auto &sym : elf->symbols()) {
+    if (auto name = sym.getName()) {
+      // Check if given current global is a profiling global based
+      // on name
+      if (name->equals(getInstrProfNamesVarName())) {
+        // Read in profiled function names
+        std::vector<char> chars(sym.getSize() / sizeof(char), ' ');
+        GlobalTy NamesGlobal(name->str(), sym.getSize(), chars.data());
+        if (auto Err = readGlobalFromDevice(Device, Image, NamesGlobal))
+          return Err;
+        std::string names(chars.begin(), chars.end());
+        profdata.names = std::move(names);
+      } else if (name->starts_with(getInstrProfCountersVarPrefix())) {
+        // Read global variable profiling counts
+        std::vector<int64_t> counts(sym.getSize() / sizeof(int64_t), 0);
+        GlobalTy CountGlobal(name->str(), sym.getSize(), counts.data());
+        if (auto Err = readGlobalFromDevice(Device, Image, CountGlobal))
+          return Err;
+        profdata.counts.push_back(std::move(counts));
+      } else if (name->starts_with(getInstrProfDataVarPrefix())) {
+        // Read profiling data for this global variable
+        __llvm_profile_data data{};
+        GlobalTy DataGlobal(name->str(), sym.getSize(), &data);
+        if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
+          return Err;
+        profdata.data.push_back(std::move(data));
+      }
+    }
+  }
+  return profdata;
+}
+
+void GPUProfGlobals::dump() const {
+  llvm::outs() << "======= GPU Profile =======\nTarget: " << targetTriple.str()
+               << "\n";
+
+  llvm::outs() << "======== Counters =========\n";
+  for (const auto &count : counts) {
+    llvm::outs() << "[";
+    for (size_t i = 0; i < count.size(); i++) {
+      if (i == 0)
+        llvm::outs() << " ";
+      llvm::outs() << count[i] << " ";
+    }
+    llvm::outs() << "]\n";
+  }
+
+  llvm::outs() << "========== Data ===========\n";
+  for (const auto &d : data) {
+    llvm::outs() << "{ ";
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
+  llvm::outs() << d.Name << " ";
+#include "llvm/ProfileData/InstrProfData.inc"
+    llvm::outs() << " }\n";
+  }
+
+  llvm::outs() << "======== Functions ========\n";
+  InstrProfSymtab symtab;
+  if (Error Err = symtab.create(StringRef(names))) {
+    consumeError(std::move(Err));
+  }
+  symtab.dumpNames(llvm::outs());
+  llvm::outs() << "===========================\n";
+}
