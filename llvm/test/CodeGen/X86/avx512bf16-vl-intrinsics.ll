@@ -370,7 +370,6 @@ entry:
   ret <16 x i16> %2
 }
 
-;; FIXME: This should generate the same output as above, but let's fix the crash first.
 define <16 x bfloat> @test_no_vbroadcast2() nounwind {
 ; CHECK-LABEL: test_no_vbroadcast2:
 ; CHECK:       # %bb.0: # %entry
