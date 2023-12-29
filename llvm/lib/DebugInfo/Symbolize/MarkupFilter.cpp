@@ -41,8 +41,8 @@ MarkupFilter::MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
       ColorsEnabled(
           ColorsEnabled.value_or(WithColor::defaultAutoDetectFunction()(OS))) {}
 
-void MarkupFilter::filter(StringRef Line) {
-  this->Line = Line;
+void MarkupFilter::filter(std::string &&InputLine) {
+  Line = std::move(InputLine);
   resetColor();
 
   Parser.parseLine(Line);
@@ -552,7 +552,7 @@ std::optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
   }
   if (all_of(Str, [](char C) { return C == '0'; }))
     return 0;
-  if (!Str.startswith("0x")) {
+  if (!Str.starts_with("0x")) {
     reportTypeError(Str, "address");
     return std::nullopt;
   }
@@ -695,7 +695,9 @@ void MarkupFilter::reportTypeError(StringRef Str, StringRef TypeName) const {
 // passed to beginLine().
 void MarkupFilter::reportLocation(StringRef::iterator Loc) const {
   errs() << Line;
-  WithColor(errs().indent(Loc - Line.begin()), HighlightColor::String) << '^';
+  WithColor(errs().indent(Loc - StringRef(Line).begin()),
+            HighlightColor::String)
+      << '^';
   errs() << '\n';
 }
 
@@ -741,7 +743,7 @@ uint64_t MarkupFilter::adjustAddr(uint64_t Addr, PCType Type) const {
 }
 
 StringRef MarkupFilter::lineEnding() const {
-  return Line.endswith("\r\n") ? "\r\n" : "\n";
+  return StringRef(Line).ends_with("\r\n") ? "\r\n" : "\n";
 }
 
 bool MarkupFilter::MMap::contains(uint64_t Addr) const {

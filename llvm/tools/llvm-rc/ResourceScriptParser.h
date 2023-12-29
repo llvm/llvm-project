@@ -18,6 +18,7 @@
 #include "ResourceScriptToken.h"
 
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <system_error>
@@ -185,6 +186,9 @@ private:
   std::vector<RCToken> Tokens;
   LocIter CurLoc;
   const LocIter End;
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver{Alloc};
 };
 
 } // namespace rc

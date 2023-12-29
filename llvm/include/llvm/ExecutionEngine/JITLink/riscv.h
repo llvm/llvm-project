@@ -214,6 +214,12 @@ enum EdgeKind_riscv : Edge::Kind {
   /// Linker relaxation will use this to ensure all code sequences are properly
   /// aligned and then remove these edges from the graph.
   AlignRelaxable,
+
+  /// 32-bit negative delta.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Fixup - Target + Addend
+  NegDelta32,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes

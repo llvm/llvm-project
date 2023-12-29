@@ -310,7 +310,7 @@ def emit_named_structured_op(
         )
 
     # Set the index attributes used to compute the indexing maps.
-    named_op = getattr(linalg, op_class_name)(ins, outs, result_types)
+    named_op = getattr(linalg, op_class_name)(result_types, ins, outs)
     for name, value in index_attrs.items():
         named_op.operation.attributes[name] = value
 

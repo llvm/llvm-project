@@ -13,6 +13,10 @@
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
+#include <assert.h>
+#include <sanitizer/hwasan_interface.h>
+#include <stdio.h>
+
 void USE(void *x) { // pretend_to_do_something(void *x)
   __asm__ __volatile__(""
                        :
@@ -36,8 +40,20 @@ __attribute__((noinline)) void Unrelated3() {
 __attribute__((noinline)) char buggy() {
   char *volatile p;
   {
-    char zzz[0x1000] = {};
-    p = zzz;
+    char zzz[0x800] = {};
+    char yyy[0x800] = {};
+    // With -hwasan-generate-tags-with-calls=false, stack tags can occasionally
+    // be zero, leading to a false negative
+    // (https://github.com/llvm/llvm-project/issues/69221). Work around it by
+    // using the neighboring variable, which is guaranteed by
+    // -hwasan-generate-tags-with-calls=false to have a different (hence
+    // non-zero) tag.
+    if (__hwasan_tag_pointer(zzz, 0) == zzz) {
+      assert(__hwasan_tag_pointer(yyy, 0) != yyy);
+      p = yyy;
+    } else {
+      p = zzz;
+    }
   }
   return *p;
 }
@@ -53,15 +69,16 @@ int main() {
   // CHECK: Cause: stack tag-mismatch
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
-  // CHECK-NEXT: zzz in buggy {{.*}}stack-uas.c:[[@LINE-17]]
-  // CHECK-NEXT: Memory tags around the buggy address
+  // CHECK: Cause: use-after-scope
+  // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a 2048-byte local variable {{zzz|yyy}} [0x{{.*}}) in buggy {{.*}}stack-uas.c:
+  // CHECK: Memory tags around the buggy address
 
   // NOSYM: Previously allocated frames:
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uas.c.tmp+0x{{.*}}){{$}}
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uas.c.tmp+0x{{.*}}){{$}}
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uas.c.tmp+0x{{.*}}){{$}}
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uas.c.tmp+0x{{.*}}){{$}}
-  // NOSYM-NEXT: Memory tags around the buggy address
+  // NOSYM: Memory tags around the buggy address
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in buggy
 }

@@ -466,7 +466,7 @@ finally transferring linked memory to the executing process.
 
       Calls the ``JITLinkContext``'s ``JITLinkMemoryManager`` to allocate both
       working and target memory for the graph. As part of this process the
-      ``JITLinkMemoryManager`` will update the the addresses of all nodes
+      ``JITLinkMemoryManager`` will update the addresses of all nodes
       defined in the graph to their assigned target address.
 
       Note: This step only updates the addresses of nodes defined in this graph.

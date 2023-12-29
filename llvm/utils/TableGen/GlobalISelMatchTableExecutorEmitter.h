@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include <functional>
-#include <vector>
 
 namespace llvm {
 class CodeGenTarget;
@@ -110,7 +109,7 @@ class GlobalISelMatchTableExecutorEmitter {
         OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
            << GetPredEnumName(Pred) << ": {\n"
            << "    " << Code << "\n";
-        if (!StringRef(Code).ltrim().startswith("return")) {
+        if (!StringRef(Code).ltrim().starts_with("return")) {
           OS << "    llvm_unreachable(\"" << GetPredEnumName(Pred)
              << " should have returned\");\n";
         }

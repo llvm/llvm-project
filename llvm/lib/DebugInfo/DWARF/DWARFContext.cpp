@@ -89,9 +89,11 @@ void fixupIndexV4(DWARFContext &C, DWARFUnitIndex &Index) {
     DWARFDataExtractor Data(DObj, S, C.isLittleEndian(), 0);
     while (Data.isValidOffset(Offset)) {
       DWARFUnitHeader Header;
-      if (!Header.extract(C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
-        logAllUnhandledErrors(
-            createError("Failed to parse CU header in DWP file"), errs());
+      if (Error ExtractionErr = Header.extract(
+              C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
+        C.getWarningHandler()(
+            createError("Failed to parse CU header in DWP file: " +
+                        toString(std::move(ExtractionErr))));
         Map.clear();
         break;
       }
@@ -149,9 +151,11 @@ void fixupIndexV5(DWARFContext &C, DWARFUnitIndex &Index) {
     uint64_t Offset = 0;
     while (Data.isValidOffset(Offset)) {
       DWARFUnitHeader Header;
-      if (!Header.extract(C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
-        logAllUnhandledErrors(
-            createError("Failed to parse unit header in DWP file"), errs());
+      if (Error ExtractionErr = Header.extract(
+              C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
+        C.getWarningHandler()(
+            createError("Failed to parse CU header in DWP file: " +
+                        toString(std::move(ExtractionErr))));
         break;
       }
       bool CU = Header.getUnitType() == DW_UT_split_compile;
@@ -635,7 +639,10 @@ public:
   }
   DWARFUnitVector &getDWOUnits(bool Lazy) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::getDWOUnits(Lazy);
+    // We need to not do lazy parsing when we need thread safety as
+    // DWARFUnitVector, in lazy mode, will slowly add things to itself and
+    // will cause problems in a multi-threaded environment.
+    return ThreadUnsafeDWARFContextState::getDWOUnits(false);
   }
   const DWARFUnitIndex &getCUIndex() override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
@@ -2200,7 +2207,7 @@ public:
         continue;
 
       if (!Section.relocations().empty() && Name.ends_with(".dwo") &&
-          RelSecName.startswith(".debug")) {
+          RelSecName.starts_with(".debug")) {
         HandleWarning(createError("unexpected relocations for dwo section '" +
                                   RelSecName + "'"));
       }

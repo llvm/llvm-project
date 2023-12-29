@@ -592,7 +592,7 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
 
 /// Returns true if a value number exists for the specified value.
 bool GVNPass::ValueTable::exists(Value *V) const {
-  return valueNumbering.count(V) != 0;
+  return valueNumbering.contains(V);
 }
 
 /// lookup_or_add - Returns the value number for the specified value, assigning
@@ -945,9 +945,14 @@ static void replaceValuesPerBlockEntry(
     SmallVectorImpl<AvailableValueInBlock> &ValuesPerBlock, Value *OldValue,
     Value *NewValue) {
   for (AvailableValueInBlock &V : ValuesPerBlock) {
-    if ((V.AV.isSimpleValue() && V.AV.getSimpleValue() == OldValue) ||
-       (V.AV.isCoercedLoadValue() && V.AV.getCoercedLoadValue() == OldValue))
-      V = AvailableValueInBlock::get(V.BB, NewValue);
+    if (V.AV.Val == OldValue)
+      V.AV.Val = NewValue;
+    if (V.AV.isSelectValue()) {
+      if (V.AV.V1 == OldValue)
+        V.AV.V1 = NewValue;
+      if (V.AV.V2 == OldValue)
+        V.AV.V2 = NewValue;
+    }
   }
 }
 

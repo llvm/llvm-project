@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false  enable-index-reduction=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-index-reduction=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -41,8 +41,8 @@
 module {
 
   func.func @conv2d(%input:  tensor<8x8xi32>,
-               %filter: tensor<3x3xi32>,
-               %output: tensor<6x6xi32>) -> tensor<6x6xi32> {
+                    %filter: tensor<3x3xi32>,
+                    %output: tensor<6x6xi32>) -> tensor<6x6xi32> {
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32>)
       outs (%output: tensor<6x6xi32>) -> tensor<6x6xi32>
@@ -50,7 +50,7 @@ module {
   }
 
   func.func @conv2d_all_sparse_DCSR(%input:  tensor<8x8xi32, #DCSR>,
-               %filter: tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR> {
+                                    %filter: tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR> {
     %s = tensor.empty() : tensor<6x6xi32, #DCSR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #DCSR>, tensor<3x3xi32, #DCSR>)
@@ -59,7 +59,7 @@ module {
   }
 
   func.func @conv2d_all_sparse_CSR(%input:  tensor<8x8xi32, #CSR>,
-               %filter: tensor<3x3xi32, #CSR>) -> tensor<6x6xi32, #CSR> {
+                                   %filter: tensor<3x3xi32, #CSR>) -> tensor<6x6xi32, #CSR> {
     %s = tensor.empty() : tensor<6x6xi32, #CSR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #CSR>, tensor<3x3xi32, #CSR>)
@@ -68,7 +68,7 @@ module {
   }
 
   func.func @conv2d_all_sparse_CD(%input:  tensor<8x8xi32, #CDR>,
-               %filter: tensor<3x3xi32, #CDR>) -> tensor<6x6xi32, #CDR> {
+                                  %filter: tensor<3x3xi32, #CDR>) -> tensor<6x6xi32, #CDR> {
     %s = tensor.empty() : tensor<6x6xi32, #CDR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #CDR>, tensor<3x3xi32, #CDR>)
@@ -77,7 +77,7 @@ module {
   }
 
   func.func @conv2d_all_sparse_CSC(%input:  tensor<8x8xi32, #CSC>,
-               %filter: tensor<3x3xi32, #CSC>) -> tensor<6x6xi32, #CSC> {
+                                   %filter: tensor<3x3xi32, #CSC>) -> tensor<6x6xi32, #CSC> {
     %s = tensor.empty() : tensor<6x6xi32, #CSC>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #CSC>, tensor<3x3xi32, #CSC>)

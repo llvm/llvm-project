@@ -183,16 +183,16 @@ constexpr void test_iterators() {
   { // pattern has zero length
     {
       int a[] = {6, 7, 8};
-      int p[] = {};
-      auto ret = std::ranges::search(Iter1(a), Sent1(Iter1(a + 3)), Iter2(p), Sent2(Iter2(p)));
+      std::array<int, 0> p = {};
+      auto ret = std::ranges::search(Iter1(a), Sent1(Iter1(a + 3)), Iter2(p.data()), Sent2(Iter2(p.data())));
       assert(base(ret.begin()) == a);
       assert(base(ret.end()) == a);
     }
     {
       int a[] = {6, 7, 8};
-      int p[] = {};
+      std::array<int, 0> p = {};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 3)));
-      auto range2 = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
+      auto range2          = std::ranges::subrange(Iter2(p.data()), Sent2(Iter2(p.data())));
       auto ret = std::ranges::search(range1, range2);
       assert(base(ret.begin()) == a);
       assert(base(ret.end()) == a);
@@ -201,20 +201,20 @@ constexpr void test_iterators() {
 
   { // range has zero length
     {
-      int a[] = {};
+      std::array<int, 0> a = {};
       int p[] = {6, 7, 8};
-      auto ret = std::ranges::search(Iter1(a), Sent1(Iter1(a)), Iter2(p), Sent2(Iter2(p + 3)));
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a);
+      auto ret = std::ranges::search(Iter1(a.data()), Sent1(Iter1(a.data())), Iter2(p), Sent2(Iter2(p + 3)));
+      assert(base(ret.begin()) == a.data());
+      assert(base(ret.end()) == a.data());
     }
     {
-      int a[] = {};
+      std::array<int, 0> a = {};
       int p[] = {6, 7, 8};
-      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
+      auto range1          = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
       auto range2 = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
       auto ret = std::ranges::search(range1, range2);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a);
+      assert(base(ret.begin()) == a.data());
+      assert(base(ret.end()) == a.data());
     }
   }
 

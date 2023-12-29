@@ -85,10 +85,11 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   // Mark any registers requested to be reserved as such
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
-    if (MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(Reg))
+    if (Subtarget.isRegisterReservedByUser(Reg))
       markSuperRegs(Reserved, Reg);
   }
 
@@ -118,6 +119,13 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Floating point environment registers.
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    if (Subtarget.isRVE())
+      report_fatal_error("Graal reserved registers do not exist in RVE");
+    markSuperRegs(Reserved, RISCV::X23);
+    markSuperRegs(Reserved, RISCV::X27);
+  }
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -291,12 +299,20 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
                 "Unexpected subreg numbering");
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
-  uint32_t ShiftAmount = Log2_32(LMUL);
-  if (ShiftAmount != 0)
-    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
-        .addReg(VL)
-        .addImm(ShiftAmount);
+  // Optimize for constant VLEN.
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    int64_t Offset = VLENB * LMUL;
+    STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
+  } else {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
+    uint32_t ShiftAmount = Log2_32(LMUL);
+    if (ShiftAmount != 0)
+      BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+          .addReg(VL)
+          .addImm(ShiftAmount);
+  }
 
   Register SrcReg = II->getOperand(0).getReg();
   Register Base = II->getOperand(1).getReg();
@@ -360,12 +376,20 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
                 "Unexpected subreg numbering");
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
-  uint32_t ShiftAmount = Log2_32(LMUL);
-  if (ShiftAmount != 0)
-    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
-        .addReg(VL)
-        .addImm(ShiftAmount);
+  // Optimize for constant VLEN.
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    int64_t Offset = VLENB * LMUL;
+    STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
+  } else {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
+    uint32_t ShiftAmount = Log2_32(LMUL);
+    if (ShiftAmount != 0)
+      BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+          .addReg(VL)
+          .addImm(ShiftAmount);
+  }
 
   Register DestReg = II->getOperand(0).getReg();
   Register Base = II->getOperand(1).getReg();
@@ -436,9 +460,16 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // offset can by construction, at worst, a LUI and a ADD.
       int64_t Val = Offset.getFixed();
       int64_t Lo12 = SignExtend64<12>(Val);
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
-      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
-                                Offset.getScalable());
+      if ((MI.getOpcode() == RISCV::PREFETCH_I ||
+           MI.getOpcode() == RISCV::PREFETCH_R ||
+           MI.getOpcode() == RISCV::PREFETCH_W) &&
+          (Lo12 & 0b11111) != 0)
+        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+      else {
+        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
+        Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
+                                  Offset.getScalable());
+      }
     }
   }
 
@@ -656,6 +687,14 @@ RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                              const MachineFunction &) const {
   if (RC == &RISCV::VMV0RegClass)
     return &RISCV::VRRegClass;
+  if (RC == &RISCV::VRNoV0RegClass)
+    return &RISCV::VRRegClass;
+  if (RC == &RISCV::VRM2NoV0RegClass)
+    return &RISCV::VRM2RegClass;
+  if (RC == &RISCV::VRM4NoV0RegClass)
+    return &RISCV::VRM4RegClass;
+  if (RC == &RISCV::VRM8NoV0RegClass)
+    return &RISCV::VRM8RegClass;
   return RC;
 }
 

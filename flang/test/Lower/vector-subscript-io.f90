@@ -1,5 +1,5 @@
 ! Test lowering of IO input items with vector subscripts
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 ! UNSUPPORTED: system-windows
 
 ! CHECK-LABEL: func @_QPsimple(

@@ -35,6 +35,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -155,14 +156,14 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
+  OptionalDirectoryEntryRef Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<FileEntryRef, DirectoryEntryRef> Umbrella;
+  std::variant<std::monostate, FileEntryRef, DirectoryEntryRef> Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -177,9 +178,11 @@ public:
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
 
-  /// Does this Module scope describe part of the purview of a standard named
-  /// C++ module?
-  bool isModulePurview() const {
+  /// For the debug info, the path to this module's .apinotes file, if any.
+  std::string APINotesFile;
+
+  /// Does this Module is a named module of a standard named module?
+  bool isNamedModule() const {
     switch (Kind) {
     case ModuleInterfaceUnit:
     case ModuleImplementationUnit:
@@ -297,50 +300,62 @@ public:
   /// Whether this module has declared itself unimportable, either because
   /// it's missing a requirement from \p Requirements or because it's been
   /// shadowed by another module.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnimportable : 1;
 
   /// Whether we tried and failed to load a module file for this module.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasIncompatibleModuleFile : 1;
 
   /// Whether this module is available in the current translation unit.
   ///
   /// If the module is missing headers or does not meet all requirements then
   /// this bit will be 0.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAvailable : 1;
 
   /// Whether this module was loaded from a module file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFromModuleFile : 1;
 
   /// Whether this is a framework module.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFramework : 1;
 
   /// Whether this is an explicit submodule.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExplicit : 1;
 
   /// Whether this is a "system" module (which assumes that all
   /// headers in it are system headers).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsSystem : 1;
 
   /// Whether this is an 'extern "C"' module (which implicitly puts all
   /// headers in it within an 'extern "C"' block, and allows the module to be
   /// imported within such a block).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExternC : 1;
 
   /// Whether this is an inferred submodule (module * { ... }).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsInferred : 1;
 
   /// Whether we should infer submodules for this module based on
   /// the headers.
   ///
   /// Submodules can only be inferred for modules with an umbrella header.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InferSubmodules : 1;
 
   /// Whether, when inferring submodules, the inferred submodules
   /// should be explicit.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InferExplicitSubmodules : 1;
 
   /// Whether, when inferring submodules, the inferr submodules should
   /// export all modules they import (e.g., the equivalent of "export *").
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InferExportWildcard : 1;
 
   /// Whether the set of configuration macros is exhaustive.
@@ -348,18 +363,22 @@ public:
   /// When the set of configuration macros is exhaustive, meaning
   /// that no identifier not in this list should affect how the module is
   /// built.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ConfigMacrosExhaustive : 1;
 
   /// Whether files in this module can only include non-modular headers
   /// and headers from used modules.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoUndeclaredIncludes : 1;
 
   /// Whether this module came from a "private" module map, found next
   /// to a regular (public) module map.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModuleMapIsPrivate : 1;
 
   /// Whether this C++20 named modules doesn't need an initializer.
   /// This is only meaningful for C++20 modules.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NamedModuleHasInit : 1;
 
   /// Describes the visibility of the various names within a
@@ -653,7 +672,7 @@ public:
   }
 
   /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRefDegradesToFileEntryPtr getASTFile() const {
+  OptionalFileEntryRef getASTFile() const {
     return getTopLevelModule()->ASTFile;
   }
 
@@ -665,18 +684,17 @@ public:
 
   /// Retrieve the umbrella directory as written.
   std::optional<DirectoryName> getUmbrellaDirAsWritten() const {
-    if (Umbrella && Umbrella.is<DirectoryEntryRef>())
+    if (const auto *Dir = std::get_if<DirectoryEntryRef>(&Umbrella))
       return DirectoryName{UmbrellaAsWritten,
-                           UmbrellaRelativeToRootModuleDirectory,
-                           Umbrella.get<DirectoryEntryRef>()};
+                           UmbrellaRelativeToRootModuleDirectory, *Dir};
     return std::nullopt;
   }
 
   /// Retrieve the umbrella header as written.
   std::optional<Header> getUmbrellaHeaderAsWritten() const {
-    if (Umbrella && Umbrella.is<FileEntryRef>())
+    if (const auto *Hdr = std::get_if<FileEntryRef>(&Umbrella))
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    Umbrella.get<FileEntryRef>()};
+                    *Hdr};
     return std::nullopt;
   }
 

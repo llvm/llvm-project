@@ -313,11 +313,12 @@ static const uint8_t tailMergeARM64[] = {
 };
 
 // A chunk for the delay import thunk.
-class ThunkChunkX64 : public NonSectionChunk {
+class ThunkChunkX64 : public NonSectionCodeChunk {
 public:
   ThunkChunkX64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
 
   size_t getSize() const override { return sizeof(thunkX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkX64, sizeof(thunkX64));
@@ -329,11 +330,12 @@ public:
   Chunk *tailMerge = nullptr;
 };
 
-class TailMergeChunkX64 : public NonSectionChunk {
+class TailMergeChunkX64 : public NonSectionCodeChunk {
 public:
   TailMergeChunkX64(Chunk *d, Defined *h) : desc(d), helper(h) {}
 
   size_t getSize() const override { return sizeof(tailMergeX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeX64, sizeof(tailMergeX64));
@@ -380,12 +382,13 @@ public:
   }
 };
 
-class ThunkChunkX86 : public NonSectionChunk {
+class ThunkChunkX86 : public NonSectionCodeChunk {
 public:
   ThunkChunkX86(COFFLinkerContext &ctx, Defined *i, Chunk *tm)
       : imp(i), tailMerge(tm), ctx(ctx) {}
 
   size_t getSize() const override { return sizeof(thunkX86); }
+  MachineTypes getMachine() const override { return I386; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkX86, sizeof(thunkX86));
@@ -404,12 +407,13 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class TailMergeChunkX86 : public NonSectionChunk {
+class TailMergeChunkX86 : public NonSectionCodeChunk {
 public:
   TailMergeChunkX86(COFFLinkerContext &ctx, Chunk *d, Defined *h)
       : desc(d), helper(h), ctx(ctx) {}
 
   size_t getSize() const override { return sizeof(tailMergeX86); }
+  MachineTypes getMachine() const override { return I386; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeX86, sizeof(tailMergeX86));
@@ -428,7 +432,7 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class ThunkChunkARM : public NonSectionChunk {
+class ThunkChunkARM : public NonSectionCodeChunk {
 public:
   ThunkChunkARM(COFFLinkerContext &ctx, Defined *i, Chunk *tm)
       : imp(i), tailMerge(tm), ctx(ctx) {
@@ -436,6 +440,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(thunkARM); }
+  MachineTypes getMachine() const override { return ARMNT; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkARM, sizeof(thunkARM));
@@ -454,7 +459,7 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class TailMergeChunkARM : public NonSectionChunk {
+class TailMergeChunkARM : public NonSectionCodeChunk {
 public:
   TailMergeChunkARM(COFFLinkerContext &ctx, Chunk *d, Defined *h)
       : desc(d), helper(h), ctx(ctx) {
@@ -462,6 +467,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(tailMergeARM); }
+  MachineTypes getMachine() const override { return ARMNT; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM, sizeof(tailMergeARM));
@@ -480,13 +486,14 @@ private:
   const COFFLinkerContext &ctx;
 };
 
-class ThunkChunkARM64 : public NonSectionChunk {
+class ThunkChunkARM64 : public NonSectionCodeChunk {
 public:
   ThunkChunkARM64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {
     setAlignment(4);
   }
 
   size_t getSize() const override { return sizeof(thunkARM64); }
+  MachineTypes getMachine() const override { return ARM64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkARM64, sizeof(thunkARM64));
@@ -499,13 +506,14 @@ public:
   Chunk *tailMerge = nullptr;
 };
 
-class TailMergeChunkARM64 : public NonSectionChunk {
+class TailMergeChunkARM64 : public NonSectionCodeChunk {
 public:
   TailMergeChunkARM64(Chunk *d, Defined *h) : desc(d), helper(h) {
     setAlignment(4);
   }
 
   size_t getSize() const override { return sizeof(tailMergeARM64); }
+  MachineTypes getMachine() const override { return ARM64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM64, sizeof(tailMergeARM64));

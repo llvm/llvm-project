@@ -4205,11 +4205,14 @@ class SPIRV_JointMatrixOfType<list<Type> allowedTypes> :
     "::llvm::cast<::mlir::spirv::JointMatrixINTELType>($_self).getElementType()",
     "Joint Matrix">;
 
+class SPIRV_VectorOf<Type type> :
+    VectorOfLengthAndType<[2, 3, 4, 8,16], [type]>;
+
 class SPIRV_ScalarOrVectorOf<Type type> :
-    AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>]>;
+    AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
 
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
-    AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>,
+    AnyTypeOf<[type, SPIRV_VectorOf<type>,
                SPIRV_CoopMatrixOfType<[type]>, SPIRV_CoopMatrixNVOfType<[type]>]>;
 
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
@@ -4357,6 +4360,7 @@ def SPIRV_OC_OpFMod                       : I32EnumAttrCase<"OpFMod", 141>;
 def SPIRV_OC_OpVectorTimesScalar          : I32EnumAttrCase<"OpVectorTimesScalar", 142>;
 def SPIRV_OC_OpMatrixTimesScalar          : I32EnumAttrCase<"OpMatrixTimesScalar", 143>;
 def SPIRV_OC_OpMatrixTimesMatrix          : I32EnumAttrCase<"OpMatrixTimesMatrix", 146>;
+def SPIRV_OC_OpDot                        : I32EnumAttrCase<"OpDot", 148>;
 def SPIRV_OC_OpIAddCarry                  : I32EnumAttrCase<"OpIAddCarry", 149>;
 def SPIRV_OC_OpISubBorrow                 : I32EnumAttrCase<"OpISubBorrow", 150>;
 def SPIRV_OC_OpUMulExtended               : I32EnumAttrCase<"OpUMulExtended", 151>;
@@ -4458,6 +4462,12 @@ def SPIRV_OC_OpGroupNonUniformFMin        : I32EnumAttrCase<"OpGroupNonUniformFM
 def SPIRV_OC_OpGroupNonUniformSMax        : I32EnumAttrCase<"OpGroupNonUniformSMax", 356>;
 def SPIRV_OC_OpGroupNonUniformUMax        : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
 def SPIRV_OC_OpGroupNonUniformFMax        : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
+def SPIRV_OC_OpGroupNonUniformBitwiseAnd  : I32EnumAttrCase<"OpGroupNonUniformBitwiseAnd", 359>;
+def SPIRV_OC_OpGroupNonUniformBitwiseOr   : I32EnumAttrCase<"OpGroupNonUniformBitwiseOr", 360>;
+def SPIRV_OC_OpGroupNonUniformBitwiseXor  : I32EnumAttrCase<"OpGroupNonUniformBitwiseXor", 361>;
+def SPIRV_OC_OpGroupNonUniformLogicalAnd  : I32EnumAttrCase<"OpGroupNonUniformLogicalAnd", 362>;
+def SPIRV_OC_OpGroupNonUniformLogicalOr   : I32EnumAttrCase<"OpGroupNonUniformLogicalOr", 363>;
+def SPIRV_OC_OpGroupNonUniformLogicalXor  : I32EnumAttrCase<"OpGroupNonUniformLogicalXor", 364>;
 def SPIRV_OC_OpSubgroupBallotKHR          : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
 def SPIRV_OC_OpSDot                       : I32EnumAttrCase<"OpSDot", 4450>;
 def SPIRV_OC_OpUDot                       : I32EnumAttrCase<"OpUDot", 4451>;
@@ -4526,7 +4536,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpFSub, SPIRV_OC_OpIMul, SPIRV_OC_OpFMul, SPIRV_OC_OpUDiv,
       SPIRV_OC_OpSDiv, SPIRV_OC_OpFDiv, SPIRV_OC_OpUMod, SPIRV_OC_OpSRem,
       SPIRV_OC_OpSMod, SPIRV_OC_OpFRem, SPIRV_OC_OpFMod,
-      SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar,
+      SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar, SPIRV_OC_OpDot,
       SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpIAddCarry, SPIRV_OC_OpISubBorrow,
       SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended, SPIRV_OC_OpIsNan,
       SPIRV_OC_OpIsInf, SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
@@ -4566,6 +4576,9 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupNonUniformSMin, SPIRV_OC_OpGroupNonUniformUMin,
       SPIRV_OC_OpGroupNonUniformFMin, SPIRV_OC_OpGroupNonUniformSMax,
       SPIRV_OC_OpGroupNonUniformUMax, SPIRV_OC_OpGroupNonUniformFMax,
+      SPIRV_OC_OpGroupNonUniformBitwiseAnd, SPIRV_OC_OpGroupNonUniformBitwiseOr,
+      SPIRV_OC_OpGroupNonUniformBitwiseXor, SPIRV_OC_OpGroupNonUniformLogicalAnd,
+      SPIRV_OC_OpGroupNonUniformLogicalOr, SPIRV_OC_OpGroupNonUniformLogicalXor,
       SPIRV_OC_OpSubgroupBallotKHR, SPIRV_OC_OpSDot, SPIRV_OC_OpUDot,
       SPIRV_OC_OpSUDot, SPIRV_OC_OpSDotAccSat, SPIRV_OC_OpUDotAccSat,
       SPIRV_OC_OpSUDotAccSat,
@@ -4741,5 +4754,29 @@ class SPIRV_IntelVendorOp<string mnemonic, list<Trait> traits = []> :
 class SPIRV_NvVendorOp<string mnemonic, list<Trait> traits = []> :
   SPIRV_VendorOp<mnemonic, "NV", traits> {
 }
+
+def SPIRV_FPFMM_None         : I32BitEnumAttrCaseNone<"None">;
+def SPIRV_FPFMM_NotNaN       : I32BitEnumAttrCaseBit<"NotNaN", 0>;
+def SPIRV_FPFMM_NotInf       : I32BitEnumAttrCaseBit<"NotInf", 1>;
+def SPIRV_FPFMM_NSZ          : I32BitEnumAttrCaseBit<"NSZ", 2>;
+def SPIRV_FPFMM_AllowRecip   : I32BitEnumAttrCaseBit<"AllowRecip", 3>;
+def SPIRV_FPFMM_Fast         : I32BitEnumAttrCaseBit<"Fast", 4>;
+def SPIRV_FPFMM_AllowContractFastINTEL : I32BitEnumAttrCaseBit<"AllowContractFastINTEL", 16> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FPFastMathModeINTEL]>
+  ];
+}
+def SPIRV_FPFMM_AllowReassocINTEL : I32BitEnumAttrCaseBit<"AllowReassocINTEL", 17> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FPFastMathModeINTEL]>
+  ];
+}
+
+def SPIRV_FPFastMathModeAttr :
+    SPIRV_BitEnumAttr<"FPFastMathMode", "Indicates a floating-point fast math flag", "fastmath_mode", [
+      SPIRV_FPFMM_None, SPIRV_FPFMM_NotNaN, SPIRV_FPFMM_NotInf, SPIRV_FPFMM_NSZ,
+      SPIRV_FPFMM_AllowRecip, SPIRV_FPFMM_Fast, SPIRV_FPFMM_AllowContractFastINTEL,
+      SPIRV_FPFMM_AllowReassocINTEL
+    ]>;
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

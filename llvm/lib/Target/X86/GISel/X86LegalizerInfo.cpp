@@ -29,6 +29,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     : Subtarget(STI) {
 
   bool Is64Bit = Subtarget.is64Bit();
+  bool HasCMOV = Subtarget.canUseCMOV();
   bool HasSSE1 = Subtarget.hasSSE1();
   bool HasSSE2 = Subtarget.hasSSE2();
   bool HasSSE41 = Subtarget.hasSSE41();
@@ -255,7 +256,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s8}, Is64Bit ? IntTypes64 : IntTypes32)
-      .clampScalar(0, s8, s8);
+      .clampScalar(0, s8, s8)
+      .clampScalar(1, s8, sMaxScalar)
+      .scalarSameSizeAs(2, 1);
 
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
@@ -519,11 +522,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
-       .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32},
-                  {p0, s32}})
-    .widenScalarToNextPow2(0, /*Min=*/8)
-    .clampScalar(0, s8, sMaxScalar)
-    .clampScalar(1, s32, s32);
+      .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32}, {p0, s32}})
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar)
+      .clampScalar(1, s32, s32);
 
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();

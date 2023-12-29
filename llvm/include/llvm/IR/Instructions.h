@@ -317,17 +317,25 @@ protected:
 public:
   StoreInst(Value *Val, Value *Ptr, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, BasicBlock::iterator InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
+            BasicBlock::iterator InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             BasicBlock *InsertAtEnd);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
+            BasicBlock::iterator InsertBefore);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
+            AtomicOrdering Order, SyncScope::ID SSID,
+            BasicBlock::iterator InsertBefore);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
@@ -3661,7 +3669,7 @@ public:
 
   /// Delegate the call to the underlying SwitchInst::eraseFromParent() and mark
   /// this object to not touch the underlying SwitchInst in destructor.
-  SymbolTableList<Instruction>::iterator eraseFromParent();
+  Instruction::InstListType::iterator eraseFromParent();
 
   void setSuccessorWeight(unsigned idx, CaseWeightOpt W);
   CaseWeightOpt getSuccessorWeight(unsigned idx);

@@ -185,19 +185,11 @@ define void @test_revhv32i16(ptr %a) {
 define void @test_rev_elts_fail(ptr %a) {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    stp x9, x8, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    stp x9, x8, [sp, #16]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    stp q0, q1, [x0]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    index z0.d, #1, #-1
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    tbl z1.d, { z1.d }, z0.d
+; CHECK-NEXT:    tbl z0.d, { z2.d }, z0.d
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a
   %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -240,30 +232,11 @@ define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 define void @test_revv8i32(ptr %a) {
 ; CHECK-LABEL: test_revv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldp q0, q3, [x0]
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z4.s, z0.s[3]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z0.s, z3.s[1]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.s, z3.s[2]
-; CHECK-NEXT:    stp w9, w8, [sp, #24]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z2.s, z3.s[3]
-; CHECK-NEXT:    stp w9, w8, [sp, #16]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    stp w9, w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    stp w9, w8, [sp]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    stp q0, q1, [x0]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    index z0.s, #3, #-1
+; CHECK-NEXT:    ldp q2, q1, [x0]
+; CHECK-NEXT:    tbl z1.s, { z1.s }, z0.s
+; CHECK-NEXT:    tbl z0.s, { z2.s }, z0.s
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
   %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

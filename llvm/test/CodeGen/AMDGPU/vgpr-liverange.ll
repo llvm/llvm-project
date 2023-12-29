@@ -92,20 +92,20 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-NEXT:  .LBB2_1: ; %if.end
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; SI-NEXT:    v_add_nc_u32_e32 v2, 1, v0
+; SI-NEXT:    v_add_nc_u32_e32 v2, 1, v3
 ; SI-NEXT:    s_add_i32 s1, s1, 1
 ; SI-NEXT:    s_cmp_lt_i32 s1, s0
 ; SI-NEXT:    s_cbranch_scc0 .LBB2_6
 ; SI-NEXT:  .LBB2_2: ; %for.body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; SI-NEXT:    s_xor_b32 s2, exec_lo, s2
 ; SI-NEXT:  ; %bb.3: ; %else
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; SI-NEXT:    v_mul_lo_u32 v0, v2, 3
-; SI-NEXT:    v_mul_f32_e32 v3, v1, v2
+; SI-NEXT:    v_mul_f32_e32 v0, v1, v2
+; SI-NEXT:    v_lshl_add_u32 v3, v2, 1, v2
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:  ; %bb.4: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
@@ -113,11 +113,11 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-NEXT:    s_cbranch_execz .LBB2_1
 ; SI-NEXT:  ; %bb.5: ; %if
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; SI-NEXT:    v_mul_f32_e32 v3, s1, v1
-; SI-NEXT:    v_add_nc_u32_e32 v0, 1, v2
+; SI-NEXT:    v_mul_f32_e32 v0, s1, v1
+; SI-NEXT:    v_add_nc_u32_e32 v3, 1, v2
 ; SI-NEXT:    s_branch .LBB2_1
 ; SI-NEXT:  .LBB2_6: ; %for.end
-; SI-NEXT:    v_add_f32_e32 v0, v0, v3
+; SI-NEXT:    v_add_f32_e32 v0, v3, v0
 ; SI-NEXT:    ; return to shader part epilog
 entry:
 ;  %break = icmp sgt i32 %bound, 0

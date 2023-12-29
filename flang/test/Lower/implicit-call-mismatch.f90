@@ -2,7 +2,7 @@
 ! Lowering must close the eyes and do as if it did not know
 ! about the function definition since semantic lets these
 ! programs through with a warning.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test reference to non-char procedure conversion.
 

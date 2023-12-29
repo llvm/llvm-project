@@ -279,13 +279,17 @@ TYPE_CONTEXT_PARSER("loop control"_en_US,
                 many(Parser<LocalitySpec>{})))))
 
 // R1121 label-do-stmt -> [do-construct-name :] DO label [loop-control]
+// A label-do-stmt with a do-construct-name is parsed as a nonlabel-do-stmt
+// with an optional label.
 TYPE_CONTEXT_PARSER("label DO statement"_en_US,
-    construct<LabelDoStmt>(
-        maybe(name / ":"), "DO" >> label, maybe(loopControl)))
+    construct<LabelDoStmt>("DO" >> label, maybe(loopControl)))
 
 // R1122 nonlabel-do-stmt -> [do-construct-name :] DO [loop-control]
 TYPE_CONTEXT_PARSER("nonlabel DO statement"_en_US,
-    construct<NonLabelDoStmt>(maybe(name / ":"), "DO" >> maybe(loopControl)))
+    construct<NonLabelDoStmt>(
+        name / ":", "DO" >> maybe(label), maybe(loopControl)) ||
+        construct<NonLabelDoStmt>(construct<std::optional<Name>>(),
+            construct<std::optional<Label>>(), "DO" >> maybe(loopControl)))
 
 // R1132 end-do-stmt -> END DO [do-construct-name]
 TYPE_CONTEXT_PARSER("END DO statement"_en_US,

@@ -1352,9 +1352,11 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
       setOperand(src);
       return getResult();
     }
+
     // trunci(zexti(a)) -> a
     // trunci(sexti(a)) -> a
-    return src;
+    if (srcType == dstType)
+      return src;
   }
 
   // trunci(trunci(a)) -> trunci(a))
@@ -2412,7 +2414,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
     APFloat identity = useOnlyFiniteValue
-                           ? APFloat::getSmallest(semantic, /*Negative=*/true)
+                           ? APFloat::getLargest(semantic, /*Negative=*/true)
                            : APFloat::getInf(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }

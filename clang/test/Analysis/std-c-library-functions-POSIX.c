@@ -1,17 +1,17 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux -verify
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
@@ -204,4 +204,24 @@ void test_recvmsg(int sockfd, struct msghdr *msg, int flags) {
 void test_sendmsg(int sockfd, const struct msghdr *msg, int flags) {
   ssize_t Ret = sendmsg(sockfd, msg, flags);
   clang_analyzer_eval(Ret != 0); // expected-warning{{TRUE}}
+}
+
+void test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlink("path", Buf, Bufsize);
+  if (Ret == 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{TRUE}}
+  else if (Ret > 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
+  else
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_readlinkat_bufsize_zero(int fd, char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlinkat(fd, "path", Buf, Bufsize);
+  if (Ret == 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{TRUE}}
+  else if (Ret > 0)
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
+  else
+    clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
 }

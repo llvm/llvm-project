@@ -1,12 +1,12 @@
 ; RUN: opt -passes='default<O2>' -pass-remarks-missed=openmp-opt < %s 2>&1 | FileCheck %s --check-prefix=MODULE
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
 
 @.str = private unnamed_addr constant [13 x i8] c"Alloc Shared\00", align 1
 @S = external local_unnamed_addr global ptr
-@foo_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
+@foo_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 ; MODULE: remark: openmp_opt_module.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 

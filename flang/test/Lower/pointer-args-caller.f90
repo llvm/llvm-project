@@ -1,5 +1,5 @@
 ! Test calls with POINTER dummy arguments on the caller side.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module call_defs
 interface

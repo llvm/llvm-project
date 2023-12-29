@@ -141,13 +141,9 @@ using ::putc _LIBCPP_USING_IF_EXISTS;
 using ::ungetc _LIBCPP_USING_IF_EXISTS;
 using ::fread _LIBCPP_USING_IF_EXISTS;
 using ::fwrite _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 using ::fgetpos _LIBCPP_USING_IF_EXISTS;
-#endif
 using ::fseek _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 using ::fsetpos _LIBCPP_USING_IF_EXISTS;
-#endif
 using ::ftell _LIBCPP_USING_IF_EXISTS;
 using ::rewind _LIBCPP_USING_IF_EXISTS;
 using ::clearerr _LIBCPP_USING_IF_EXISTS;

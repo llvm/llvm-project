@@ -817,9 +817,9 @@ void NonLocalizedStringChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     // Handle the case where the receiver is an NSString
     // These special NSString methods draw to the screen
 
-    if (!(SelectorName.startswith("drawAtPoint") ||
-          SelectorName.startswith("drawInRect") ||
-          SelectorName.startswith("drawWithRect")))
+    if (!(SelectorName.starts_with("drawAtPoint") ||
+          SelectorName.starts_with("drawInRect") ||
+          SelectorName.starts_with("drawWithRect")))
       return;
 
     SVal svTitle = msg.getReceiverSVal();

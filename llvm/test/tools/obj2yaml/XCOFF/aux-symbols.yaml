@@ -1,0 +1,322 @@
+## Check that obj2yaml can parse auxiliary symbols for XCOFF object file correctly.
+
+## 32-bit
+# RUN: yaml2obj %s --docnum=1 -o %t32
+# RUN: obj2yaml %t32 | FileCheck %s --check-prefix=CHECK32
+
+# CHECK32:      --- !XCOFF
+# CHECK32-NEXT: FileHeader:
+# CHECK32-NEXT:   MagicNumber:     0x1DF
+# CHECK32-NEXT:   NumberOfSections: 0
+# CHECK32-NEXT:   CreationTime:    0
+# CHECK32-NEXT:   OffsetToSymbolTable: 0x14
+# CHECK32-NEXT:   EntriesInSymbolTable: 13
+# CHECK32-NEXT:   AuxiliaryHeaderSize: 0
+# CHECK32-NEXT:   Flags:           0x0
+# CHECK32-NEXT: Symbols:
+# CHECK32-NEXT:   - Name:            ''
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_FILE
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_FILE
+# CHECK32-NEXT:         FileNameOrString: FileName
+# CHECK32-NEXT:         FileStringType:  XFT_CD
+# CHECK32-NEXT:   - Name:            ''
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_HIDEXT
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_CSECT
+# CHECK32-NEXT:         ParameterHashIndex: 1
+# CHECK32-NEXT:         TypeChkSectNum:  2
+# CHECK32-NEXT:         SymbolAlignmentAndType: 41
+# CHECK32-NEXT:         StorageMappingClass: XMC_PR
+# CHECK32-NEXT:         SectionOrLength: 3
+# CHECK32-NEXT:         StabInfoIndex:   4
+# CHECK32-NEXT:         StabSectNum:     5
+# CHECK32-NEXT:   - Name:            ''
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_EXT
+# CHECK32-NEXT:     NumberOfAuxEntries: 2
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_FCN
+# CHECK32-NEXT:         OffsetToExceptionTbl: 1
+# CHECK32-NEXT:         SizeOfFunction:  2
+# CHECK32-NEXT:         SymIdxOfNextBeyond: 3
+# CHECK32-NEXT:         PtrToLineNum:    4
+# CHECK32-NEXT:       - Type:            AUX_CSECT
+# CHECK32-NEXT:         ParameterHashIndex: 1
+# CHECK32-NEXT:         TypeChkSectNum:  2
+# CHECK32-NEXT:         SymbolAlignmentAndType: 17
+# CHECK32-NEXT:         StorageMappingClass: XMC_PR
+# CHECK32-NEXT:         SectionOrLength: 4
+# CHECK32-NEXT:         StabInfoIndex:   5
+# CHECK32-NEXT:         StabSectNum:     6
+# CHECK32-NEXT:   - Name:            ''
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_DWARF
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_SECT
+# CHECK32-NEXT:         LengthOfSectionPortion: 44
+# CHECK32-NEXT:         NumberOfRelocEnt: 1
+# CHECK32-NEXT:   - Name:            ''
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_STAT
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_STAT
+# CHECK32-NEXT:         SectionLength:   1
+# CHECK32-NEXT:         NumberOfRelocEnt: 2
+# CHECK32-NEXT:         NumberOfLineNum: 3
+# CHECK32-NEXT:   - Name:            ''
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_BLOCK
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_SYM
+# CHECK32-NEXT:         LineNumHi:       1
+# CHECK32-NEXT:         LineNumLo:       2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Symbols:
+  - StorageClass:    C_FILE
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: FileName
+        FileStringType:   XFT_CD
+  - StorageClass:    C_HIDEXT
+    AuxEntries:
+      - Type:               AUX_CSECT
+        ParameterHashIndex: 1
+        TypeChkSectNum:     2
+        SymbolAlignmentAndType: 41
+        SectionOrLength:    3
+        StabInfoIndex:      4
+        StabSectNum:        5
+  - StorageClass:    C_EXT
+    AuxEntries:
+      - Type:                 AUX_FCN
+        OffsetToExceptionTbl: 1
+        SizeOfFunction:       2
+        SymIdxOfNextBeyond:   3
+        PtrToLineNum:         4
+      - Type:               AUX_CSECT
+        ParameterHashIndex: 1
+        TypeChkSectNum:     2
+        SymbolAlignmentAndType: 17
+        SectionOrLength:    4
+        StabInfoIndex:      5
+        StabSectNum:        6
+  - StorageClass:    C_DWARF
+    AuxEntries:
+      - Type:                   AUX_SECT
+        LengthOfSectionPortion: 44
+        NumberOfRelocEnt:       1
+  - StorageClass:    C_STAT
+    AuxEntries:
+      - Type:             AUX_STAT
+        SectionLength:    1
+        NumberOfRelocEnt: 2
+        NumberOfLineNum:  3
+  - StorageClass:    C_BLOCK
+    AuxEntries:
+      - Type:            AUX_SYM
+        LineNumHi:       1
+        LineNumLo:       2
+
+## 64-bit
+# RUN: yaml2obj %s --docnum=2 -o %t64
+# RUN: obj2yaml %t64 | FileCheck %s --check-prefix=CHECK64
+
+# CHECK64:      --- !XCOFF
+# CHECK64-NEXT: FileHeader:
+# CHECK64-NEXT:   MagicNumber:     0x1F7
+# CHECK64-NEXT:   NumberOfSections: 0
+# CHECK64-NEXT:   CreationTime:    0
+# CHECK64-NEXT:   OffsetToSymbolTable: 0x18
+# CHECK64-NEXT:   EntriesInSymbolTable: 12
+# CHECK64-NEXT:   AuxiliaryHeaderSize: 0
+# CHECK64-NEXT:   Flags:           0x0
+# CHECK64-NEXT: Symbols:
+# CHECK64-NEXT:   - Name:            ''
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_FILE
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_FILE
+# CHECK64-NEXT:         FileNameOrString: FileName
+# CHECK64-NEXT:         FileStringType:  XFT_CD
+# CHECK64-NEXT:   - Name:            ''
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_HIDEXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 1
+# CHECK64-NEXT:         TypeChkSectNum:  2
+# CHECK64-NEXT:         SymbolAlignmentAndType: 41
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 3
+# CHECK64-NEXT:         SectionOrLengthHi: 4
+# CHECK64-NEXT:   - Name:            ''
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_EXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 3
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_FCN
+# CHECK64-NEXT:         SizeOfFunction:  3
+# CHECK64-NEXT:         SymIdxOfNextBeyond: 2
+# CHECK64-NEXT:         PtrToLineNum:    1
+# CHECK64-NEXT:       - Type:            AUX_EXCEPT
+# CHECK64-NEXT:         OffsetToExceptionTbl: 1
+# CHECK64-NEXT:         SizeOfFunction:  2
+# CHECK64-NEXT:         SymIdxOfNextBeyond: 3
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 1
+# CHECK64-NEXT:         TypeChkSectNum:  2
+# CHECK64-NEXT:         SymbolAlignmentAndType: 17
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 3
+# CHECK64-NEXT:         SectionOrLengthHi: 4
+# CHECK64-NEXT:   - Name:            ''
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_DWARF
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_SECT
+# CHECK64-NEXT:         LengthOfSectionPortion: 44
+# CHECK64-NEXT:         NumberOfRelocEnt: 1
+# CHECK64-NEXT:   - Name:            ''
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_BLOCK
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_SYM
+# CHECK64-NEXT:         LineNum:         1
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1F7
+Symbols:
+  - StorageClass:    C_FILE
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: FileName
+        FileStringType:   XFT_CD
+  - StorageClass:    C_HIDEXT
+    AuxEntries:
+      - Type:               AUX_CSECT
+        ParameterHashIndex: 1
+        TypeChkSectNum:     2
+        SymbolAlignmentAndType: 41
+        SectionOrLengthLo:  3
+        SectionOrLengthHi:  4
+  - StorageClass:    C_EXT
+    AuxEntries:
+      - Type:               AUX_FCN
+        SizeOfFunction:     3
+        SymIdxOfNextBeyond: 2
+        PtrToLineNum:       1
+      - Type:                 AUX_EXCEPT
+        OffsetToExceptionTbl: 1
+        SizeOfFunction:       2
+        SymIdxOfNextBeyond:   3
+      - Type:               AUX_CSECT
+        ParameterHashIndex: 1
+        TypeChkSectNum:     2
+        SymbolAlignmentAndType: 17
+        SectionOrLengthLo:  3
+        SectionOrLengthHi:  4
+  - StorageClass:    C_DWARF
+    AuxEntries:
+      - Type:                   AUX_SECT
+        LengthOfSectionPortion: 44
+        NumberOfRelocEnt:       1
+  - StorageClass:    C_BLOCK
+    AuxEntries:
+      - Type:            AUX_SYM
+        LineNum:         1
+
+## Check that error messages are reported appropriately.
+
+# RUN: yaml2obj %s --docnum=3 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR1
+# ERROR1: failed to parse symbol "SYM_STAT" with index of 1: expected 1 aux symbol for C_STAT, while got 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               SYM
+  - Name:               SYM_STAT
+    StorageClass:       C_STAT
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_STAT
+      - Type: AUX_STAT
+
+# RUN: yaml2obj %s --docnum=4 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR2
+# ERROR2: failed to parse symbol "SYM_BLOCK" with index of 0: expected 1 aux symbol for C_BLOCK or C_FCN, while got 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               SYM_BLOCK
+    StorageClass:       C_BLOCK
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_SYM
+      - Type: AUX_SYM
+
+# RUN: yaml2obj %s --docnum=5 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR3
+# ERROR3: failed to parse symbol "SYM_DWARF" with index of 0: expected 1 aux symbol for C_DWARF, while got 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               SYM_DWARF
+    StorageClass:       C_DWARF
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_SECT
+      - Type: AUX_SECT
+
+# RUN: yaml2obj %s --docnum=6 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR4
+# ERROR4: failed to parse symbol "SYM_EXT" with index of 0: invalid auxiliary symbol type: 252
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Symbols:
+  - Name:         SYM_EXT
+    StorageClass: C_EXT
+    AuxEntries:
+      - Type: AUX_FILE
+      - Type: AUX_CSECT

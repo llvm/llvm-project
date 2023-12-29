@@ -53,7 +53,7 @@ define i64 @add_i32_i64(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], 2147483644
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -118,7 +118,7 @@ define i64 @add_i16_i64(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], 2147483644
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -183,7 +183,7 @@ define i64 @add_i8_i64(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], 2147483644
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -244,7 +244,7 @@ define i32 @add_i32_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -288,7 +288,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -335,7 +335,7 @@ define i32 @add_i8_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -382,7 +382,7 @@ define signext i16 @add_i16_i16(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -426,7 +426,7 @@ define signext i16 @add_i8_i16(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -473,7 +473,7 @@ define zeroext i8 @add_i8_i8(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -565,7 +565,7 @@ define i64 @mla_i32_i64(ptr nocapture readonly %x, ptr nocapture readonly %y, i3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], 2147483644
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -639,7 +639,7 @@ define i64 @mla_i16_i64(ptr nocapture readonly %x, ptr nocapture readonly %y, i3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -8
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], 2147483640
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -719,7 +719,7 @@ define i64 @mla_i8_i64(ptr nocapture readonly %x, ptr nocapture readonly %y, i32
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -8
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], 2147483640
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -731,7 +731,7 @@ define i64 @mla_i8_i64(ptr nocapture readonly %x, ptr nocapture readonly %y, i32
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[WIDE_LOAD1]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <8 x i32> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg <8 x i32> [[TMP4]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7]] = add i64 [[TMP6]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -754,7 +754,7 @@ define i64 @mla_i8_i64(ptr nocapture readonly %x, ptr nocapture readonly %y, i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP10]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV2]], [[CONV]]
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i32 [[MUL]] to i64
+; CHECK-NEXT:    [[CONV3:%.*]] = zext nneg i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i64 [[R_011]], [[CONV3]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_012]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
@@ -795,7 +795,7 @@ define i32 @mla_i32_i32(ptr nocapture readonly %x, ptr nocapture readonly %y, i3
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -846,7 +846,7 @@ define i32 @mla_i16_i32(ptr nocapture readonly %x, ptr nocapture readonly %y, i3
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -901,7 +901,7 @@ define i32 @mla_i8_i32(ptr nocapture readonly %x, ptr nocapture readonly %y, i32
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -956,7 +956,7 @@ define signext i16 @mla_i16_i16(ptr nocapture readonly %x, ptr nocapture readonl
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1007,7 +1007,7 @@ define signext i16 @mla_i8_i16(ptr nocapture readonly %x, ptr nocapture readonly
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1062,7 +1062,7 @@ define zeroext i8 @mla_i8_i8(ptr nocapture readonly %x, ptr nocapture readonly %
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP10]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1323,7 +1323,7 @@ define i32 @reduction_interleave_group(i32 %n, ptr %arr) #0 {
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[GUARD]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 7
@@ -1336,7 +1336,7 @@ define i32 @reduction_interleave_group(i32 %n, ptr %arr) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[ARR:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
@@ -1359,7 +1359,7 @@ define i32 @reduction_interleave_group(i32 %n, ptr %arr) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RED_PHI:%.*]] = phi i32 [ [[RED_2:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[IV]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i32 [[ADD]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load i32, ptr [[GEP_0]], align 4
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i32 [[IV]]
@@ -1380,7 +1380,7 @@ entry:
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %red.phi = phi i32 [ %red.2, %for.body ], [ 0, %entry ]
-  %add = or i32 %iv, 1
+  %add = or disjoint i32 %iv, 1
   %gep.0 = getelementptr inbounds i32, ptr %arr, i32 %add
   %l.0 = load i32, ptr %gep.0, align 4
   %gep.1 = getelementptr inbounds i32, ptr %arr, i32 %iv
@@ -1403,7 +1403,7 @@ define i32 @mla_i8_i32_multiuse(ptr nocapture readonly %x, ptr nocapture readonl
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

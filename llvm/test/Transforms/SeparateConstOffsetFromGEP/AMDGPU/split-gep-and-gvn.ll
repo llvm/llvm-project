@@ -22,20 +22,20 @@ define void @sum_of_array(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[I:%.*]] = sext i32 [[Y]] to i64
 ; IR-NEXT:    [[I1:%.*]] = sext i32 [[X]] to i64
-; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i64 0, i64 [[I1]], i64 [[I]]
+; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i32 0, i32 [[X]], i32 [[Y]]
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I82:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 1
-; IR-NEXT:    [[I9:%.*]] = addrspacecast ptr addrspace(3) [[I82]] to ptr
+; IR-NEXT:    [[I87:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I9:%.*]] = addrspacecast ptr addrspace(3) [[I87]] to ptr
 ; IR-NEXT:    [[I10:%.*]] = load float, ptr [[I9]], align 4
 ; IR-NEXT:    [[I11:%.*]] = fadd float [[I5]], [[I10]]
-; IR-NEXT:    [[I144:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 32
-; IR-NEXT:    [[I15:%.*]] = addrspacecast ptr addrspace(3) [[I144]] to ptr
+; IR-NEXT:    [[I1412:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I15:%.*]] = addrspacecast ptr addrspace(3) [[I1412]] to ptr
 ; IR-NEXT:    [[I16:%.*]] = load float, ptr [[I15]], align 4
 ; IR-NEXT:    [[I17:%.*]] = fadd float [[I11]], [[I16]]
-; IR-NEXT:    [[I187:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 33
-; IR-NEXT:    [[I19:%.*]] = addrspacecast ptr addrspace(3) [[I187]] to ptr
+; IR-NEXT:    [[I1818:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I19:%.*]] = addrspacecast ptr addrspace(3) [[I1818]] to ptr
 ; IR-NEXT:    [[I20:%.*]] = load float, ptr [[I19]], align 4
 ; IR-NEXT:    [[I21:%.*]] = fadd float [[I17]], [[I20]]
 ; IR-NEXT:    store float [[I21]], ptr [[OUTPUT]], align 4
@@ -84,20 +84,20 @@ define void @sum_of_array2(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[I:%.*]] = sext i32 [[Y]] to i64
 ; IR-NEXT:    [[I1:%.*]] = sext i32 [[X]] to i64
-; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i64 0, i64 [[I1]], i64 [[I]]
+; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i32 0, i32 [[X]], i32 [[Y]]
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I72:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 1
-; IR-NEXT:    [[I8:%.*]] = addrspacecast ptr addrspace(3) [[I72]] to ptr
+; IR-NEXT:    [[I77:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I8:%.*]] = addrspacecast ptr addrspace(3) [[I77]] to ptr
 ; IR-NEXT:    [[I9:%.*]] = load float, ptr [[I8]], align 4
 ; IR-NEXT:    [[I10:%.*]] = fadd float [[I5]], [[I9]]
-; IR-NEXT:    [[I124:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 32
-; IR-NEXT:    [[I13:%.*]] = addrspacecast ptr addrspace(3) [[I124]] to ptr
+; IR-NEXT:    [[I1212:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I13:%.*]] = addrspacecast ptr addrspace(3) [[I1212]] to ptr
 ; IR-NEXT:    [[I14:%.*]] = load float, ptr [[I13]], align 4
 ; IR-NEXT:    [[I15:%.*]] = fadd float [[I10]], [[I14]]
-; IR-NEXT:    [[I167:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 33
-; IR-NEXT:    [[I17:%.*]] = addrspacecast ptr addrspace(3) [[I167]] to ptr
+; IR-NEXT:    [[I1618:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I17:%.*]] = addrspacecast ptr addrspace(3) [[I1618]] to ptr
 ; IR-NEXT:    [[I18:%.*]] = load float, ptr [[I17]], align 4
 ; IR-NEXT:    [[I19:%.*]] = fadd float [[I15]], [[I18]]
 ; IR-NEXT:    store float [[I19]], ptr [[OUTPUT]], align 4
@@ -145,20 +145,20 @@ define void @sum_of_array3(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[I:%.*]] = zext i32 [[Y]] to i64
 ; IR-NEXT:    [[I1:%.*]] = zext i32 [[X]] to i64
-; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i64 0, i64 [[I1]], i64 [[I]]
+; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i32 0, i32 [[X]], i32 [[Y]]
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I82:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 1
-; IR-NEXT:    [[I9:%.*]] = addrspacecast ptr addrspace(3) [[I82]] to ptr
+; IR-NEXT:    [[I87:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I9:%.*]] = addrspacecast ptr addrspace(3) [[I87]] to ptr
 ; IR-NEXT:    [[I10:%.*]] = load float, ptr [[I9]], align 4
 ; IR-NEXT:    [[I11:%.*]] = fadd float [[I5]], [[I10]]
-; IR-NEXT:    [[I144:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 32
-; IR-NEXT:    [[I15:%.*]] = addrspacecast ptr addrspace(3) [[I144]] to ptr
+; IR-NEXT:    [[I1412:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I15:%.*]] = addrspacecast ptr addrspace(3) [[I1412]] to ptr
 ; IR-NEXT:    [[I16:%.*]] = load float, ptr [[I15]], align 4
 ; IR-NEXT:    [[I17:%.*]] = fadd float [[I11]], [[I16]]
-; IR-NEXT:    [[I187:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 33
-; IR-NEXT:    [[I19:%.*]] = addrspacecast ptr addrspace(3) [[I187]] to ptr
+; IR-NEXT:    [[I1818:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I19:%.*]] = addrspacecast ptr addrspace(3) [[I1818]] to ptr
 ; IR-NEXT:    [[I20:%.*]] = load float, ptr [[I19]], align 4
 ; IR-NEXT:    [[I21:%.*]] = fadd float [[I17]], [[I20]]
 ; IR-NEXT:    store float [[I21]], ptr [[OUTPUT]], align 4
@@ -205,20 +205,20 @@ define void @sum_of_array4(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[I:%.*]] = zext i32 [[Y]] to i64
 ; IR-NEXT:    [[I1:%.*]] = zext i32 [[X]] to i64
-; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i64 0, i64 [[I1]], i64 [[I]]
+; IR-NEXT:    [[I2:%.*]] = getelementptr [32 x [32 x float]], ptr addrspace(3) @array, i32 0, i32 [[X]], i32 [[Y]]
 ; IR-NEXT:    [[I3:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
 ; IR-NEXT:    [[I4:%.*]] = load float, ptr [[I3]], align 4
 ; IR-NEXT:    [[I5:%.*]] = fadd float [[I4]], 0.000000e+00
-; IR-NEXT:    [[I72:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 1
-; IR-NEXT:    [[I8:%.*]] = addrspacecast ptr addrspace(3) [[I72]] to ptr
+; IR-NEXT:    [[I77:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 1
+; IR-NEXT:    [[I8:%.*]] = addrspacecast ptr addrspace(3) [[I77]] to ptr
 ; IR-NEXT:    [[I9:%.*]] = load float, ptr [[I8]], align 4
 ; IR-NEXT:    [[I10:%.*]] = fadd float [[I5]], [[I9]]
-; IR-NEXT:    [[I124:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 32
-; IR-NEXT:    [[I13:%.*]] = addrspacecast ptr addrspace(3) [[I124]] to ptr
+; IR-NEXT:    [[I1212:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 32
+; IR-NEXT:    [[I13:%.*]] = addrspacecast ptr addrspace(3) [[I1212]] to ptr
 ; IR-NEXT:    [[I14:%.*]] = load float, ptr [[I13]], align 4
 ; IR-NEXT:    [[I15:%.*]] = fadd float [[I10]], [[I14]]
-; IR-NEXT:    [[I167:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i64 33
-; IR-NEXT:    [[I17:%.*]] = addrspacecast ptr addrspace(3) [[I167]] to ptr
+; IR-NEXT:    [[I1618:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[I2]], i32 33
+; IR-NEXT:    [[I17:%.*]] = addrspacecast ptr addrspace(3) [[I1618]] to ptr
 ; IR-NEXT:    [[I18:%.*]] = load float, ptr [[I17]], align 4
 ; IR-NEXT:    [[I19:%.*]] = fadd float [[I15]], [[I18]]
 ; IR-NEXT:    store float [[I19]], ptr [[OUTPUT]], align 4

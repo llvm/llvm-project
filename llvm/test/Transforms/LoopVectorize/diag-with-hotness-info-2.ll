@@ -21,11 +21,11 @@
 ;  19	  }
 ;  20	}
 
-; CHECK: remark: /tmp/s.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/s.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:3:16 (hotness: 300)
-; CHECK: remark: /tmp/s.c:10:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/s.c:10:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:10:16 (hotness: 5000)
-; CHECK: remark: /tmp/s.c:17:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/s.c:17:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at /tmp/s.c:17:16{{$}}
 
 ; ModuleID = '/tmp/s.c'
@@ -198,5 +198,5 @@ attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "l
 !55 = distinct !{!55, !43}
 !56 = !{!"function_entry_count", i64 3}
 !57 = !{!"function_entry_count", i64 50}
-!58 = !{!"branch_weights", i32 99, i32 1}
+!58 = !{!"branch_weights", i32 10000, i32 1}
 !59 = !{!"branch_weights", i32 1, i32 99}

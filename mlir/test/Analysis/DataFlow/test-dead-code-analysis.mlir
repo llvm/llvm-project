@@ -258,3 +258,10 @@ func.func @test_call_dead_return(%arg0: i32) -> () {
   %0 = func.call @test_dead_return(%arg0) {tag = "test_dead_return"} : (i32) -> i32
   return
 }
+
+func.func @test_dca_doesnt_crash() -> () {
+  %0 = scf.execute_region -> tensor<5x16xi16> {
+    llvm.unreachable
+  }  
+  return
+}

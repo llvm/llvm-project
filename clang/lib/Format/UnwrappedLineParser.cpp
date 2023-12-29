@@ -47,8 +47,7 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
       OS << Prefix;
       NewLine = false;
     }
-    OS << I->Tok->Tok.getName() << "["
-       << "T=" << (unsigned)I->Tok->getType()
+    OS << I->Tok->Tok.getName() << "[" << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
     for (SmallVectorImpl<UnwrappedLine>::const_iterator
@@ -213,7 +212,7 @@ void UnwrappedLineParser::parse() {
     }
 
     // Create line with eof token.
-    assert(FormatTok->is(tok::eof));
+    assert(eof());
     pushToken(FormatTok);
     addUnwrappedLine();
 
@@ -438,7 +437,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       [[fallthrough]];
     }
     case tok::kw_case:
-      if (Style.isProto() || Style.isVerilog() ||
+      if (Style.Language == FormatStyle::LK_Proto || Style.isVerilog() ||
           (Style.isJavaScript() && Line->MustBeDeclaration)) {
         // Proto: there are no switch/case statements
         // Verilog: Case labels don't have this word. We handle case
@@ -491,11 +490,18 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
   do {
-    // Get next non-comment token.
+    // Get next non-comment, non-preprocessor token.
     FormatToken *NextTok;
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
+    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
+      NextTok = Tokens->getNextToken();
+      do {
+        NextTok = Tokens->getNextToken();
+      } while (NextTok->is(tok::comment) ||
+               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+    }
 
     switch (Tok->Tok.getKind()) {
     case tok::l_brace:
@@ -611,12 +617,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       if (Tok->isNot(TT_StatementMacro))
         break;
       [[fallthrough]];
-    case tok::kw_if:
-      if (PrevTok->is(tok::hash))
-        break;
-      [[fallthrough]];
     case tok::at:
     case tok::semi:
+    case tok::kw_if:
     case tok::kw_while:
     case tok::kw_for:
     case tok::kw_switch:
@@ -1167,6 +1170,12 @@ void UnwrappedLineParser::parsePPDefine() {
   assert((int)Line->PPLevel >= 0);
   Line->InMacroBody = true;
 
+  if (FormatTok->is(tok::identifier) &&
+      Tokens->peekNextToken()->is(tok::colon)) {
+    nextToken();
+    nextToken();
+  }
+
   // Errors during a preprocessor directive can only affect the layout of the
   // preprocessor directive, and thus we ignore them. An alternative approach
   // would be to use the same approach we use on the file level (no
@@ -1324,7 +1333,7 @@ bool UnwrappedLineParser::parseModuleImport() {
         // Mark tokens up to the trailing line comments as implicit string
         // literals.
         if (FormatTok->isNot(tok::comment) &&
-            !FormatTok->TokenText.startswith("//")) {
+            !FormatTok->TokenText.starts_with("//")) {
           FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
         }
         nextToken();
@@ -1362,7 +1371,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 
   bool PreviousMustBeValue = mustBeJSIdentOrValue(Keywords, Previous);
   bool PreviousStartsTemplateExpr =
-      Previous->is(TT_TemplateString) && Previous->TokenText.endswith("${");
+      Previous->is(TT_TemplateString) && Previous->TokenText.ends_with("${");
   if (PreviousMustBeValue || Previous->is(tok::r_paren)) {
     // If the line contains an '@' sign, the previous token might be an
     // annotation, which can precede another identifier/value.
@@ -1376,7 +1385,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
     return addUnwrappedLine();
   bool NextMustBeValue = mustBeJSIdentOrValue(Keywords, Next);
   bool NextEndsTemplateExpr =
-      Next->is(TT_TemplateString) && Next->TokenText.startswith("}");
+      Next->is(TT_TemplateString) && Next->TokenText.starts_with("}");
   if (NextMustBeValue && !NextEndsTemplateExpr && !PreviousStartsTemplateExpr &&
       (PreviousMustBeValue ||
        Previous->isOneOf(tok::r_square, tok::r_paren, tok::plusplus,
@@ -1517,7 +1526,7 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   case tok::kw_case:
     // Proto: there are no switch/case statements.
-    if (Style.isProto()) {
+    if (Style.Language == FormatStyle::LK_Proto) {
       nextToken();
       return;
     }
@@ -1641,8 +1650,10 @@ void UnwrappedLineParser::parseStructuralElement(
       return;
     }
     // In Verilog labels can be any expression, so we don't do them here.
-    if (!Style.isVerilog() && Tokens->peekNextToken()->is(tok::colon) &&
-        !Line->MustBeDeclaration) {
+    // JS doesn't have macros, and within classes colons indicate fields, not
+    // labels.
+    if (!Style.isJavaScript() && !Style.isVerilog() &&
+        Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
       Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
@@ -1967,8 +1978,9 @@ void UnwrappedLineParser::parseStructuralElement(
         auto I = Line->Tokens.begin(), E = Line->Tokens.end();
         while (I != E && I->Tok->is(tok::comment))
           ++I;
-        while (I != E && Style.isVerilog() && I->Tok->is(tok::hash))
-          ++I;
+        if (Style.isVerilog())
+          while (I != E && I->Tok->is(tok::hash))
+            ++I;
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
@@ -2012,8 +2024,7 @@ void UnwrappedLineParser::parseStructuralElement(
       } else if (Style.Language == FormatStyle::LK_Proto &&
                  FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       break;
     case tok::l_square:
@@ -2024,7 +2035,7 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     case tok::kw_case:
       // Proto: there are no switch/case statements.
-      if (Style.isProto()) {
+      if (Style.Language == FormatStyle::LK_Proto) {
         nextToken();
         return;
       }
@@ -2226,9 +2237,6 @@ bool UnwrappedLineParser::tryToParseLambda() {
     // followed by an `a->b` expression, such as:
     // ([obj func:arg] + a->b)
     // Otherwise the code below would parse as a lambda.
-    //
-    // FIXME: This heuristic is incorrect for C++20 generic lambdas with
-    // explicit template lists: []<bool b = true && false>(U &&u){}
     case tok::plus:
     case tok::minus:
     case tok::exclaim:
@@ -2258,7 +2266,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_LambdaArrow);
+      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2268,6 +2276,11 @@ bool UnwrappedLineParser::tryToParseLambda() {
       parseRequiresClause(RequiresToken);
       break;
     }
+    case tok::equal:
+      if (!InTemplateParameterList)
+        return true;
+      nextToken();
+      break;
     default:
       return true;
     }
@@ -2372,9 +2385,7 @@ bool UnwrappedLineParser::tryToParseChildBlock() {
   return true;
 }
 
-bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
-                                          bool IsEnum,
-                                          tok::TokenKind ClosingBraceKind) {
+bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
@@ -2396,7 +2407,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         parseChildBlock();
       }
     }
-    if (FormatTok->Tok.getKind() == ClosingBraceKind) {
+    if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
         addUnwrappedLine();
       nextToken();
@@ -2427,14 +2438,9 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       parseBracedList();
       break;
     case tok::less:
-      if (Style.Language == FormatStyle::LK_Proto ||
-          ClosingBraceKind == tok::greater) {
-        nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
-      } else {
-        nextToken();
-      }
+      nextToken();
+      if (IsAngleBracket)
+        parseBracedList(/*IsAngleBracket=*/true);
       break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
@@ -2446,8 +2452,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         break;
       }
       HasError = true;
-      if (!ContinueOnSemicolons)
-        return !HasError;
+      if (!IsEnum)
+        return false;
       nextToken();
       break;
     case tok::comma:
@@ -3114,9 +3120,16 @@ void UnwrappedLineParser::parseForOrWhileLoop(bool HasParens) {
       FormatTok->setFinalizedType(TT_ConditionLParen);
     parseParens();
   }
-  // Event control.
-  if (Style.isVerilog())
+
+  if (Style.isVerilog()) {
+    // Event control.
     parseVerilogSensitivityList();
+  } else if (Style.AllowShortLoopsOnASingleLine && FormatTok->is(tok::semi) &&
+             Tokens->getPreviousToken()->is(tok::r_paren)) {
+    nextToken();
+    addUnwrappedLine();
+    return;
+  }
 
   handleAttributes();
   parseLoopBody(KeepBraces, /*WrapRightBrace=*/true);
@@ -3133,6 +3146,8 @@ void UnwrappedLineParser::parseDoWhile() {
     addUnwrappedLine();
     return;
   }
+
+  FormatTok->setFinalizedType(TT_DoWhile);
 
   // If in Whitesmiths mode, the line with the while() needs to be indented
   // to the same level as the block.
@@ -3602,8 +3617,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
         return;
 
       nextToken();
-      parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                      /*ClosingBraceKind=*/tok::greater);
+      parseBracedList(/*IsAngleBracket=*/true);
       break;
 
     default:
@@ -3634,8 +3648,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       nextToken();
       if (FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       TopLevelParensAllowed = false;
       break;
@@ -3716,8 +3729,7 @@ bool UnwrappedLineParser::parseEnum() {
     addUnwrappedLine();
     Line->Level += 1;
   }
-  bool HasError = !parseBracedList(/*ContinueOnSemicolons=*/true,
-                                   /*IsEnum=*/true);
+  bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine)
     Line->Level -= 1;
   if (HasError) {
@@ -4449,8 +4461,8 @@ continuesLineCommentSection(const FormatToken &FormatTok,
     return false;
 
   StringRef IndentContent = FormatTok.TokenText;
-  if (FormatTok.TokenText.startswith("//") ||
-      FormatTok.TokenText.startswith("/*")) {
+  if (FormatTok.TokenText.starts_with("//") ||
+      FormatTok.TokenText.starts_with("/*")) {
     IndentContent = FormatTok.TokenText.substr(2);
   }
   if (CommentPragmasRegex.match(IndentContent))

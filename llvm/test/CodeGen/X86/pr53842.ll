@@ -8,16 +8,16 @@ define void @PR53842() {
 ; CHECK-LABEL: PR53842:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm2 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %ymm3
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %ymm2
-; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
-; CHECK-NEXT:    vpsubq %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    jmp .LBB0_1
 entry:
   br label %vector.body

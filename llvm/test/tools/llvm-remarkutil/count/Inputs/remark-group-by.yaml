@@ -1,6 +1,6 @@
 --- !Analysis
 Pass:            generic-remarks-pass
-Name:            Remark 
+Name:            Remark
 DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
 Function:        func1
 Args:
@@ -9,7 +9,7 @@ Args:
   - type:            remark
 --- !Missed
 Pass:            generic-remarks-pass
-Name:            Remark 
+Name:            Remark
 DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
 Function:        func1
 Args:
@@ -18,7 +18,7 @@ Args:
   - type:            remark
 --- !Passed
 Pass:            generic-remarks-pass
-Name:            Remark 
+Name:            Remark
 DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
 Function:        func2
 Args:
@@ -27,7 +27,7 @@ Args:
   - type:            remark
 --- !Analysis
 Pass:            generic-remarks-pass2
-Name:            Remark 
+Name:            Remark
 DebugLoc:        { File: path/to/anno3.c, Line: 1, Column: 2 }
 Function:        func1
 Args:
@@ -36,7 +36,7 @@ Args:
   - type:            remark
 --- !Analysis
 Pass:            generic-remarks-pass3
-Name:            Remark 
+Name:            Remark
 DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
 Function:        func2
 Args:
@@ -45,7 +45,7 @@ Args:
   - type:            remark
 --- !Analysis
 Pass:            generic-remarks-pass4
-Name:            Remark 
+Name:            Remark
 DebugLoc:        { File: path/to/anno2.c, Line: 1, Column: 2 }
 Function:        func3
 Args:

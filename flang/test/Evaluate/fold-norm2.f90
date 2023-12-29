@@ -17,13 +17,20 @@ module m
   real(dp), parameter :: a(3,4) = &
     reshape([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape(a))
   real(dp), parameter :: nAll = norm2(a)
-  real(dp), parameter :: check_nAll = sqrt(sum(a * a))
+  real(dp), parameter :: check_nAll = 11._dp * sqrt(sum((a/11._dp)**2))
   logical, parameter :: test_all = nAll == check_nAll
   real(dp), parameter :: norms1(4) = norm2(a, dim=1)
-  real(dp), parameter :: check_norms1(4) = sqrt(sum(a * a, dim=1))
+  real(dp), parameter :: check_norms1(4) = [ &
+    2.236067977499789805051477742381393909454345703125_8, &
+    7.07106781186547550532850436866283416748046875_8, &
+    1.2206555615733702069292121450416743755340576171875e1_8, &
+    1.7378147196982769884243680280633270740509033203125e1_8 ]
   logical, parameter :: test_norms1 = all(norms1 == check_norms1)
   real(dp), parameter :: norms2(3) = norm2(a, dim=2)
-  real(dp), parameter :: check_norms2(3) = sqrt(sum(a * a, dim=2))
+  real(dp), parameter :: check_norms2(3) = [ &
+    1.1224972160321822656214862945489585399627685546875e1_8, &
+    1.28840987267251261272349438513629138469696044921875e1_8, &
+    1.4628738838327791427218471653759479522705078125e1_8 ]
   logical, parameter :: test_norms2 = all(norms2 == check_norms2)
   logical, parameter :: test_normZ = norm2([0.,0.,0.]) == 0.
 end

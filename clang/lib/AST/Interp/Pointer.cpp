@@ -94,7 +94,7 @@ APValue Pointer::toAPValue() const {
     Offset = CharUnits::Zero();
   } else {
     // Build the lvalue base from the block.
-    Descriptor *Desc = getDeclDesc();
+    const Descriptor *Desc = getDeclDesc();
     if (auto *VD = Desc->asValueDecl())
       Base = VD;
     else if (auto *E = Desc->asExpr())
@@ -164,13 +164,16 @@ bool Pointer::isInitialized() const {
   if (Desc->isPrimitiveArray()) {
     if (isStatic() && Base == 0)
       return true;
-    // Primitive array field are stored in a bitset.
-    InitMap *Map = getInitMap();
-    if (!Map)
+
+    InitMapPtr &IM = getInitMap();
+
+    if (!IM)
       return false;
-    if (Map == (InitMap *)-1)
+
+    if (IM->first)
       return true;
-    return Map->isInitialized(getIndex());
+
+    return IM->second->isElementInitialized(getIndex());
   }
 
   // Field has its bit in an inline descriptor.
@@ -187,15 +190,20 @@ void Pointer::initialize() const {
     if (isStatic() && Base == 0)
       return;
 
-    // Primitive array initializer.
-    InitMap *&Map = getInitMap();
-    if (Map == (InitMap *)-1)
+    InitMapPtr &IM = getInitMap();
+    if (!IM)
+      IM =
+          std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
+
+    assert(IM);
+
+    // All initialized.
+    if (IM->first)
       return;
-    if (Map == nullptr)
-      Map = InitMap::allocate(Desc->getNumElems());
-    if (Map->initialize(getIndex())) {
-      free(Map);
-      Map = (InitMap *)-1;
+
+    if (IM->second->initializeElement(getIndex())) {
+      IM->first = true;
+      IM->second.reset();
     }
     return;
   }

@@ -81,9 +81,9 @@ def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
 def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
                               SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
-// Operand that is allowed to be a register or a 5 bit immediate.
-// This allows us to pick between VSETIVLI and VSETVLI opcodes using the same
-// pseudo instructions.
+// Operand that is allowed to be a register other than X0, a 5 bit unsigned
+// immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
+// VSETVLI opcodes using the same pseudo instructions.
 def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";
@@ -134,7 +134,8 @@ class PseudoToVInst<string PseudoInst> {
                         ["_M2", ""],
                         ["_M4", ""],
                         ["_M8", ""],
-                        ["_SE", ""]
+                        ["_SE", ""],
+                        ["_RM", ""]
                        ];
   string VInst = !foldl(PseudoInst, AffixSubsts, Acc, AffixSubst,
                         !subst(AffixSubst[0], AffixSubst[1], Acc));
@@ -240,6 +241,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
+def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
+
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
 
@@ -254,13 +257,13 @@ class SegRegClass<LMULInfo m, int nf> {
 // Vector register and vector group type information.
 //===----------------------------------------------------------------------===//
 
-class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
+class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, LMULInfo M,
                 ValueType Scal = XLenVT, RegisterClass ScalarReg = GPR> {
   ValueType Vector = Vec;
   ValueType Mask = Mas;
   int SEW = Sew;
   int Log2SEW = !logtwo(Sew);
-  VReg RegClass = Reg;
+  VReg RegClass = M.vrclass;
   LMULInfo LMul = M;
   ValueType Scalar = Scal;
   RegisterClass ScalarRegClass = ScalarReg;
@@ -276,9 +279,9 @@ class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
 }
 
 class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas, int Sew,
-                     VReg Reg, LMULInfo M, ValueType Scal = XLenVT,
+                     LMULInfo M, ValueType Scal = XLenVT,
                      RegisterClass ScalarReg = GPR>
-    : VTypeInfo<Vec, Mas, Sew, Reg, M, Scal, ScalarReg> {
+    : VTypeInfo<Vec, Mas, Sew, M, Scal, ScalarReg> {
   ValueType VectorM1 = VecM1;
 }
 
@@ -286,70 +289,70 @@ defset list<VTypeInfo> AllVectors = {
   defset list<VTypeInfo> AllIntegerVectors = {
     defset list<VTypeInfo> NoGroupIntegerVectors = {
       defset list<VTypeInfo> FractionalGroupIntegerVectors = {
-        def VI8MF8: VTypeInfo<vint8mf8_t,  vbool64_t,  8, VR, V_MF8>;
-        def VI8MF4: VTypeInfo<vint8mf4_t,  vbool32_t,  8, VR, V_MF4>;
-        def VI8MF2: VTypeInfo<vint8mf2_t,  vbool16_t,  8, VR, V_MF2>;
-        def VI16MF4: VTypeInfo<vint16mf4_t, vbool64_t, 16, VR, V_MF4>;
-        def VI16MF2: VTypeInfo<vint16mf2_t, vbool32_t, 16, VR, V_MF2>;
-        def VI32MF2: VTypeInfo<vint32mf2_t, vbool64_t, 32, VR, V_MF2>;
+        def VI8MF8:  VTypeInfo<vint8mf8_t,  vbool64_t, 8,  V_MF8>;
+        def VI8MF4:  VTypeInfo<vint8mf4_t,  vbool32_t, 8,  V_MF4>;
+        def VI8MF2:  VTypeInfo<vint8mf2_t,  vbool16_t, 8,  V_MF2>;
+        def VI16MF4: VTypeInfo<vint16mf4_t, vbool64_t, 16, V_MF4>;
+        def VI16MF2: VTypeInfo<vint16mf2_t, vbool32_t, 16, V_MF2>;
+        def VI32MF2: VTypeInfo<vint32mf2_t, vbool64_t, 32, V_MF2>;
       }
-      def VI8M1: VTypeInfo<vint8m1_t,   vbool8_t,   8, VR, V_M1>;
-      def VI16M1: VTypeInfo<vint16m1_t,  vbool16_t, 16, VR, V_M1>;
-      def VI32M1: VTypeInfo<vint32m1_t,  vbool32_t, 32, VR, V_M1>;
-      def VI64M1: VTypeInfo<vint64m1_t,  vbool64_t, 64, VR, V_M1>;
+      def VI8M1:  VTypeInfo<vint8m1_t,  vbool8_t,   8, V_M1>;
+      def VI16M1: VTypeInfo<vint16m1_t, vbool16_t, 16, V_M1>;
+      def VI32M1: VTypeInfo<vint32m1_t, vbool32_t, 32, V_M1>;
+      def VI64M1: VTypeInfo<vint64m1_t, vbool64_t, 64, V_M1>;
     }
     defset list<GroupVTypeInfo> GroupIntegerVectors = {
-      def VI8M2: GroupVTypeInfo<vint8m2_t, vint8m1_t, vbool4_t, 8, VRM2, V_M2>;
-      def VI8M4: GroupVTypeInfo<vint8m4_t, vint8m1_t, vbool2_t, 8, VRM4, V_M4>;
-      def VI8M8: GroupVTypeInfo<vint8m8_t, vint8m1_t, vbool1_t, 8, VRM8, V_M8>;
+      def VI8M2: GroupVTypeInfo<vint8m2_t, vint8m1_t, vbool4_t, 8, V_M2>;
+      def VI8M4: GroupVTypeInfo<vint8m4_t, vint8m1_t, vbool2_t, 8, V_M4>;
+      def VI8M8: GroupVTypeInfo<vint8m8_t, vint8m1_t, vbool1_t, 8, V_M8>;
 
-      def VI16M2: GroupVTypeInfo<vint16m2_t,vint16m1_t,vbool8_t, 16,VRM2, V_M2>;
-      def VI16M4: GroupVTypeInfo<vint16m4_t,vint16m1_t,vbool4_t, 16,VRM4, V_M4>;
-      def VI16M8: GroupVTypeInfo<vint16m8_t,vint16m1_t,vbool2_t, 16,VRM8, V_M8>;
+      def VI16M2: GroupVTypeInfo<vint16m2_t, vint16m1_t, vbool8_t, 16, V_M2>;
+      def VI16M4: GroupVTypeInfo<vint16m4_t, vint16m1_t, vbool4_t, 16, V_M4>;
+      def VI16M8: GroupVTypeInfo<vint16m8_t, vint16m1_t, vbool2_t, 16, V_M8>;
 
-      def VI32M2: GroupVTypeInfo<vint32m2_t,vint32m1_t,vbool16_t,32,VRM2, V_M2>;
-      def VI32M4: GroupVTypeInfo<vint32m4_t,vint32m1_t,vbool8_t, 32,VRM4, V_M4>;
-      def VI32M8: GroupVTypeInfo<vint32m8_t,vint32m1_t,vbool4_t, 32,VRM8, V_M8>;
+      def VI32M2: GroupVTypeInfo<vint32m2_t, vint32m1_t, vbool16_t, 32, V_M2>;
+      def VI32M4: GroupVTypeInfo<vint32m4_t, vint32m1_t, vbool8_t,  32, V_M4>;
+      def VI32M8: GroupVTypeInfo<vint32m8_t, vint32m1_t, vbool4_t,  32, V_M8>;
 
-      def VI64M2: GroupVTypeInfo<vint64m2_t,vint64m1_t,vbool32_t,64,VRM2, V_M2>;
-      def VI64M4: GroupVTypeInfo<vint64m4_t,vint64m1_t,vbool16_t,64,VRM4, V_M4>;
-      def VI64M8: GroupVTypeInfo<vint64m8_t,vint64m1_t,vbool8_t, 64,VRM8, V_M8>;
+      def VI64M2: GroupVTypeInfo<vint64m2_t, vint64m1_t, vbool32_t, 64, V_M2>;
+      def VI64M4: GroupVTypeInfo<vint64m4_t, vint64m1_t, vbool16_t, 64, V_M4>;
+      def VI64M8: GroupVTypeInfo<vint64m8_t, vint64m1_t, vbool8_t,  64, V_M8>;
     }
   }
 
   defset list<VTypeInfo> AllFloatVectors = {
     defset list<VTypeInfo> NoGroupFloatVectors = {
       defset list<VTypeInfo> FractionalGroupFloatVectors = {
-        def VF16MF4: VTypeInfo<vfloat16mf4_t, vbool64_t, 16, VR, V_MF4, f16, FPR16>;
-        def VF16MF2: VTypeInfo<vfloat16mf2_t, vbool32_t, 16, VR, V_MF2, f16, FPR16>;
-        def VF32MF2: VTypeInfo<vfloat32mf2_t,vbool64_t, 32, VR, V_MF2, f32, FPR32>;
+        def VF16MF4: VTypeInfo<vfloat16mf4_t, vbool64_t, 16, V_MF4, f16, FPR16>;
+        def VF16MF2: VTypeInfo<vfloat16mf2_t, vbool32_t, 16, V_MF2, f16, FPR16>;
+        def VF32MF2: VTypeInfo<vfloat32mf2_t, vbool64_t, 32, V_MF2, f32, FPR32>;
       }
-      def VF16M1:  VTypeInfo<vfloat16m1_t,  vbool16_t, 16, VR, V_M1,  f16, FPR16>;
-      def VF32M1:  VTypeInfo<vfloat32m1_t, vbool32_t, 32, VR, V_M1,  f32, FPR32>;
-      def VF64M1: VTypeInfo<vfloat64m1_t, vbool64_t, 64, VR, V_M1, f64, FPR64>;
+      def VF16M1: VTypeInfo<vfloat16m1_t, vbool16_t, 16, V_M1, f16, FPR16>;
+      def VF32M1: VTypeInfo<vfloat32m1_t, vbool32_t, 32, V_M1, f32, FPR32>;
+      def VF64M1: VTypeInfo<vfloat64m1_t, vbool64_t, 64, V_M1, f64, FPR64>;
     }
 
     defset list<GroupVTypeInfo> GroupFloatVectors = {
       def VF16M2: GroupVTypeInfo<vfloat16m2_t, vfloat16m1_t, vbool8_t, 16,
-                                 VRM2, V_M2, f16, FPR16>;
+                                 V_M2, f16, FPR16>;
       def VF16M4: GroupVTypeInfo<vfloat16m4_t, vfloat16m1_t, vbool4_t, 16,
-                                 VRM4, V_M4, f16, FPR16>;
+                                 V_M4, f16, FPR16>;
       def VF16M8: GroupVTypeInfo<vfloat16m8_t, vfloat16m1_t, vbool2_t, 16,
-                                 VRM8, V_M8, f16, FPR16>;
+                                 V_M8, f16, FPR16>;
 
       def VF32M2: GroupVTypeInfo<vfloat32m2_t, vfloat32m1_t, vbool16_t, 32,
-                                 VRM2, V_M2, f32, FPR32>;
+                                 V_M2, f32, FPR32>;
       def VF32M4: GroupVTypeInfo<vfloat32m4_t, vfloat32m1_t, vbool8_t,  32,
-                                 VRM4, V_M4, f32, FPR32>;
+                                 V_M4, f32, FPR32>;
       def VF32M8: GroupVTypeInfo<vfloat32m8_t, vfloat32m1_t, vbool4_t,  32,
-                                 VRM8, V_M8, f32, FPR32>;
+                                 V_M8, f32, FPR32>;
 
       def VF64M2: GroupVTypeInfo<vfloat64m2_t, vfloat64m1_t, vbool32_t, 64,
-                                 VRM2, V_M2, f64, FPR64>;
+                                 V_M2, f64, FPR64>;
       def VF64M4: GroupVTypeInfo<vfloat64m4_t, vfloat64m1_t, vbool16_t, 64,
-                                 VRM4, V_M4, f64, FPR64>;
+                                 V_M4, f64, FPR64>;
       def VF64M8: GroupVTypeInfo<vfloat64m8_t, vfloat64m1_t, vbool8_t,  64,
-                                 VRM8, V_M8, f64, FPR64>;
+                                 V_M8, f64, FPR64>;
     }
   }
 }
@@ -357,19 +360,19 @@ defset list<VTypeInfo> AllVectors = {
 defset list<VTypeInfo> AllBFloatVectors = {
   defset list<VTypeInfo> NoGroupBFloatVectors = {
     defset list<VTypeInfo> FractionalGroupBFloatVectors = {
-      def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, VR, V_MF4, bf16, FPR16>;
-      def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, VR, V_MF2, bf16, FPR16>;
+      def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
+      def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
     }
-    def VBF16M1:  VTypeInfo<vbfloat16m1_t,  vbool16_t, 16, VR, V_M1,  bf16, FPR16>;
+    def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
   }
 
   defset list<GroupVTypeInfo> GroupBFloatVectors = {
     def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
-                                VRM2, V_M2, bf16, FPR16>;
+                                V_M2, bf16, FPR16>;
     def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
-                                VRM4, V_M4, bf16, FPR16>;
+                                V_M4, bf16, FPR16>;
     def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
-                                VRM8, V_M8, bf16, FPR16>;
+                                V_M8, bf16, FPR16>;
   }
 }
 
@@ -526,14 +529,6 @@ class RISCVVPseudo {
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
   bit NeedBeInPseudoTable = 1;
-  // TargetOverlapConstraintType indicates that these instructions can 
-  // overlap between source operands and destination operands. 
-  // 1 -> default value, remain current constraint
-  // 2 -> narrow case
-  // 3 -> widen case
-  // TODO: Add TargetOverlapConstraintType into PseudosTable for further
-  // query.
-  bits<2> TargetOverlapConstraintType = 1;
 }
 
 // The actual table.
@@ -569,16 +564,17 @@ def RISCVVIntrinsicsTable : GenericTable {
 //    unmasked variant.  For all but compares, both the masked and
 //    unmasked variant have a passthru and policy operand.  For compares,
 //    neither has a policy op, and only the masked version has a passthru.
-class RISCVMaskedPseudo<bits<4> MaskIdx> {
+class RISCVMaskedPseudo<bits<4> MaskIdx, bit MaskAffectsRes=false> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
   bits<4> MaskOpIdx = MaskIdx;
+  bit MaskAffectsResult = MaskAffectsRes;
 }
 
 def RISCVMaskedPseudosTable : GenericTable {
   let FilterClass = "RISCVMaskedPseudo";
   let CppTypeName = "RISCVMaskedPseudoInfo";
-  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx"];
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "MaskAffectsResult"];
   let PrimaryKey = ["MaskedPseudo"];
   let PrimaryKeyName = "getMaskedPseudoInfo";
 }
@@ -1113,7 +1109,8 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
                              string Constraint = ""> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$merge, OpClass:$rs2, ixlenimm:$frm,
-                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
+                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
+      RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1122,7 +1119,6 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryMask_FRM<VReg RetClass,
@@ -1131,7 +1127,8 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
                   VMaskOp:$vm, ixlenimm:$frm,
-                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
+                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
+      RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1141,7 +1138,6 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryNoMaskGPROut :
@@ -2089,7 +2085,7 @@ multiclass VPseudoVIOT_M {
                        SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
-                                 RISCVMaskedPseudo<MaskIdx=2>,
+                                 RISCVMaskedPseudo<MaskIdx=2, MaskAffectsRes=true>,
                                  SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
                                             forceMergeOpRead=true>;
     }
@@ -3209,7 +3205,8 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>,
+                                          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
   }
 }
 
@@ -3228,7 +3225,8 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                                      Op2Class, Constraint>;
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
-                                               Op2Class, Constraint>;
+                                               Op2Class, Constraint>,
+          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
   }
 }
 
@@ -7419,6 +7417,11 @@ foreach fvti = AllFloatVectors in {
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
                (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
+                           (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
+              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
+               (fvti.Vector $rs1), GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
   }
 }
 

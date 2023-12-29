@@ -105,7 +105,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override;
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
   TraceIntelPT &m_trace;
   CommandOptions m_options;

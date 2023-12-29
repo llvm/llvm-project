@@ -132,7 +132,7 @@ constexpr void test_one(std::array<int, N1> input, Pred pred, std::array<int, N2
     std::array<int, N3> out2;
 
     std::same_as<ResultT> decltype(auto) result = std::ranges::partition_copy(
-        Iter(begin), Sent(Iter(end)), OutIter1(out1.begin()), OutIter2(out2.begin()), pred);
+        Iter(begin), Sent(Iter(end)), OutIter1(out1.data()), OutIter2(out2.data()), pred);
 
     assert(base(result.in) == input.data() + input.size());
     assert(base(result.out1) == out1.data() + expected_true.size());
@@ -148,7 +148,7 @@ constexpr void test_one(std::array<int, N1> input, Pred pred, std::array<int, N2
     std::array<int, N3> out2;
 
     std::same_as<ResultT> decltype(auto) result = std::ranges::partition_copy(
-        range, OutIter1(out1.begin()), OutIter2(out2.begin()), pred);
+        range, OutIter1(out1.data()), OutIter2(out2.data()), pred);
 
     assert(base(result.in) == input.data() + input.size());
     assert(base(result.out1) == out1.data() + expected_true.size());

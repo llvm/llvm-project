@@ -29,6 +29,10 @@ protected:
   std::string ABI, CPU;
   std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
 
+private:
+  bool FastUnalignedAccess;
+  bool HasExperimental = false;
+
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
@@ -114,6 +118,8 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool isValidTuneCPUName(StringRef Name) const override;
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool supportsTargetAttributeTune() const override { return true; }
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

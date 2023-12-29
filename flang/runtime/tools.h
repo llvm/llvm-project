@@ -94,6 +94,31 @@ static inline RT_API_ATTRS std::int64_t GetInt64(
   }
 }
 
+static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
+    const char *p, std::size_t bytes, Terminator &terminator) {
+  switch (bytes) {
+  case 1:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(p);
+  case 2:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 2> *>(p);
+  case 4:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 4> *>(p);
+  case 8:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(p);
+  case 16: {
+    using Int128 = CppTypeFor<TypeCategory::Integer, 16>;
+    auto n{*reinterpret_cast<const Int128 *>(p)};
+    std::int64_t result = n;
+    if (result == n) {
+      return result;
+    }
+    return std::nullopt;
+  }
+  default:
+    terminator.Crash("GetInt64Safe: no case for %zd bytes", bytes);
+  }
+}
+
 template <typename INT>
 inline RT_API_ATTRS bool SetInteger(INT &x, int kind, std::int64_t value) {
   switch (kind) {
@@ -410,6 +435,28 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
+
+// Defines a utility function for copying and padding characters
+template <typename TO, typename FROM>
+RT_API_ATTRS void CopyAndPad(
+    TO *to, const FROM *from, std::size_t toChars, std::size_t fromChars) {
+  if constexpr (sizeof(TO) != sizeof(FROM)) {
+    std::size_t copyChars{std::min(toChars, fromChars)};
+    for (std::size_t j{0}; j < copyChars; ++j) {
+      to[j] = from[j];
+    }
+    for (std::size_t j{copyChars}; j < toChars; ++j) {
+      to[j] = static_cast<TO>(' ');
+    }
+  } else if (toChars <= fromChars) {
+    std::memcpy(to, from, toChars * sizeof(TO));
+  } else {
+    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    for (std::size_t j{fromChars}; j < toChars; ++j) {
+      to[j] = static_cast<TO>(' ');
+    }
+  }
+}
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

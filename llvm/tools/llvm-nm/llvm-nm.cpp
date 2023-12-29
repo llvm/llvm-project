@@ -561,37 +561,22 @@ struct DarwinStabName {
   const char *Name;
 };
 const struct DarwinStabName DarwinStabNames[] = {
-    {MachO::N_GSYM, "GSYM"},
-    {MachO::N_FNAME, "FNAME"},
-    {MachO::N_FUN, "FUN"},
-    {MachO::N_STSYM, "STSYM"},
-    {MachO::N_LCSYM, "LCSYM"},
-    {MachO::N_BNSYM, "BNSYM"},
-    {MachO::N_PC, "PC"},
-    {MachO::N_AST, "AST"},
-    {MachO::N_OPT, "OPT"},
-    {MachO::N_RSYM, "RSYM"},
-    {MachO::N_SLINE, "SLINE"},
-    {MachO::N_ENSYM, "ENSYM"},
-    {MachO::N_SSYM, "SSYM"},
-    {MachO::N_SO, "SO"},
-    {MachO::N_OSO, "OSO"},
-    {MachO::N_LSYM, "LSYM"},
-    {MachO::N_BINCL, "BINCL"},
-    {MachO::N_SOL, "SOL"},
-    {MachO::N_PARAMS, "PARAM"},
-    {MachO::N_VERSION, "VERS"},
-    {MachO::N_OLEVEL, "OLEV"},
-    {MachO::N_PSYM, "PSYM"},
-    {MachO::N_EINCL, "EINCL"},
-    {MachO::N_ENTRY, "ENTRY"},
-    {MachO::N_LBRAC, "LBRAC"},
-    {MachO::N_EXCL, "EXCL"},
-    {MachO::N_RBRAC, "RBRAC"},
-    {MachO::N_BCOMM, "BCOMM"},
-    {MachO::N_ECOMM, "ECOMM"},
-    {MachO::N_ECOML, "ECOML"},
-    {MachO::N_LENG, "LENG"},
+    {MachO::N_GSYM, "GSYM"},    {MachO::N_FNAME, "FNAME"},
+    {MachO::N_FUN, "FUN"},      {MachO::N_STSYM, "STSYM"},
+    {MachO::N_LCSYM, "LCSYM"},  {MachO::N_BNSYM, "BNSYM"},
+    {MachO::N_PC, "PC"},        {MachO::N_AST, "AST"},
+    {MachO::N_OPT, "OPT"},      {MachO::N_RSYM, "RSYM"},
+    {MachO::N_SLINE, "SLINE"},  {MachO::N_ENSYM, "ENSYM"},
+    {MachO::N_SSYM, "SSYM"},    {MachO::N_SO, "SO"},
+    {MachO::N_OSO, "OSO"},      {MachO::N_LIB, "LIB"},
+    {MachO::N_LSYM, "LSYM"},    {MachO::N_BINCL, "BINCL"},
+    {MachO::N_SOL, "SOL"},      {MachO::N_PARAMS, "PARAM"},
+    {MachO::N_VERSION, "VERS"}, {MachO::N_OLEVEL, "OLEV"},
+    {MachO::N_PSYM, "PSYM"},    {MachO::N_EINCL, "EINCL"},
+    {MachO::N_ENTRY, "ENTRY"},  {MachO::N_LBRAC, "LBRAC"},
+    {MachO::N_EXCL, "EXCL"},    {MachO::N_RBRAC, "RBRAC"},
+    {MachO::N_BCOMM, "BCOMM"},  {MachO::N_ECOMM, "ECOMM"},
+    {MachO::N_ECOML, "ECOML"},  {MachO::N_LENG, "LENG"},
 };
 
 static const char *getDarwinStabString(uint8_t NType) {
@@ -915,7 +900,7 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
       consumeError(NameOrErr.takeError());
       return '?';
     }
-    if ((*NameOrErr).startswith(".debug"))
+    if ((*NameOrErr).starts_with(".debug"))
       return 'N';
     if (!(Flags & ELF::SHF_WRITE))
       return 'n';
@@ -954,7 +939,7 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
     const coff_section *Section = Obj.getCOFFSection(*SecI);
     Characteristics = Section->Characteristics;
     if (Expected<StringRef> NameOrErr = Obj.getSectionName(Section))
-      if (NameOrErr->startswith(".idata"))
+      if (NameOrErr->starts_with(".idata"))
         return 'i';
   }
 
@@ -1753,13 +1738,13 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
     StringRef SymName = cantFail(Sym.getName());
     if (SymName.empty())
       continue;
-    if (SymName.startswith("__sinit") || SymName.startswith("__sterm") ||
+    if (SymName.starts_with("__sinit") || SymName.starts_with("__sterm") ||
         SymName.front() == '.' || SymName.front() == '(')
       continue;
 
     // Check the SymName regex matching with "^__[0-9]+__".
-    if (SymName.size() > 4 && SymName.startswith("__") &&
-        SymName.endswith("__")) {
+    if (SymName.size() > 4 && SymName.starts_with("__") &&
+        SymName.ends_with("__")) {
       if (std::all_of(SymName.begin() + 2, SymName.end() - 2, isDigit))
         continue;
     }
@@ -1767,9 +1752,9 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
     if (SymName == "__rsrc" && NoRsrc)
       continue;
 
-    if (SymName.startswith("__tf1"))
+    if (SymName.starts_with("__tf1"))
       SymName = SymName.substr(6);
-    else if (SymName.startswith("__tf9"))
+    else if (SymName.starts_with("__tf9"))
       SymName = SymName.substr(14);
 
     NMSymbol S = {};

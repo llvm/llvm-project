@@ -229,7 +229,6 @@ struct LowerGpuOpsToROCDLOpsPass
         ctx, DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.useOpaquePointers = useOpaquePointers;
 
     if (useBarePtrCallConv) {
       options.useBarePtrCallConv = true;
@@ -364,6 +363,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
     // Use address space = 4 to match the OpenCL definition of printf()
     patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/4);
   }
+  // TODO: Add alignment for workgroup memory
+  patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
 

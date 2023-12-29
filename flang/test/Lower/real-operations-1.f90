@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 ! Test real add on real kinds.
 

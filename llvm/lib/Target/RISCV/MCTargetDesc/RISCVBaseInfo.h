@@ -113,6 +113,15 @@ enum {
 
   UsesVXRMShift = HasRoundModeOpShift + 1,
   UsesVXRMMask = 1 << UsesVXRMShift,
+
+  // Indicates whether these instructions can partially overlap between source
+  // registers and destination registers according to the vector spec.
+  // 0 -> not a vector pseudo
+  // 1 -> default value for vector pseudos. not widening or narrowing.
+  // 2 -> narrowing case
+  // 3 -> widening case
+  TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
+  TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
 };
 
 enum VLMUL : uint8_t {
@@ -535,6 +544,8 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
 
+std::optional<RISCVII::VLMUL>
+getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW);
 } // namespace RISCVVType
 
 namespace RISCVRVC {

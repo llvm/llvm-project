@@ -104,6 +104,7 @@ set(sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   extensions.cpp
   extrema.cpp
   file.cpp
@@ -151,10 +152,17 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 # List of files that are buildable for all devices.
 set(supported_files
   ISO_Fortran_binding.cpp
+  allocatable.cpp
   assign.cpp
   derived.cpp
+  derived-api.cpp
   descriptor.cpp
+  matmul-transpose.cpp
+  matmul.cpp
+  numeric.cpp
   stat.cpp
+  sum.cpp
+  support.cpp
   terminator.cpp
   tools.cpp
   transformational.cpp
@@ -187,6 +195,10 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA")
     set(CUDA_COMPILE_OPTIONS
       --expt-relaxed-constexpr
+      # Disable these warnings:
+      #   'long double' is treated as 'double' in device code
+      -Xcudafe --diag_suppress=20208
+      -Xcudafe --display_error_number
       )
   endif()
   set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
@@ -274,10 +286,40 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
   endif()
 endif()
 
-add_flang_library(FortranRuntime
-  ${sources}
-  LINK_LIBS
-  FortranDecimal
+if (NOT DEFINED MSVC)
+  add_flang_library(FortranRuntime
+    ${sources}
+    LINK_LIBS
+    FortranDecimal
 
-  INSTALL_WITH_TOOLCHAIN
-)
+    INSTALL_WITH_TOOLCHAIN
+  )
+else()
+  add_flang_library(FortranRuntime
+    ${sources}
+    LINK_LIBS
+    FortranDecimal
+  )
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  add_flang_library(FortranRuntime.static ${sources}
+    LINK_LIBS
+    FortranDecimal.static
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  add_flang_library(FortranRuntime.dynamic ${sources}
+    LINK_LIBS
+    FortranDecimal.dynamic
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+  add_flang_library(FortranRuntime.static_dbg ${sources}
+    LINK_LIBS
+    FortranDecimal.static_dbg
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
+  add_flang_library(FortranRuntime.dynamic_dbg ${sources}
+    LINK_LIBS
+    FortranDecimal.dynamic_dbg
+    INSTALL_WITH_TOOLCHAIN)
+  add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
+    FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
+endif()

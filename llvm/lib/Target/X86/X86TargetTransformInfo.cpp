@@ -180,7 +180,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasAVX512() && PreferVectorWidth >= 512)
+    if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
       return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
       return TypeSize::getFixed(256);
@@ -1457,6 +1457,15 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                        Args, CxtI);
+}
+
+InstructionCost
+X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                            unsigned Opcode1, const SmallBitVector &OpcodeMask,
+                            TTI::TargetCostKind CostKind) const {
+  if (isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask))
+    return TTI::TCC_Basic;
+  return InstructionCost::getInvalid();
 }
 
 InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
@@ -6131,7 +6140,8 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
     const unsigned PreferredWidth = ST->getPreferVectorWidth();
-    if (PreferredWidth >= 512 && ST->hasAVX512()) Options.LoadSizes.push_back(64);
+    if (PreferredWidth >= 512 && ST->hasAVX512() && ST->hasEVEX512())
+      Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
   }

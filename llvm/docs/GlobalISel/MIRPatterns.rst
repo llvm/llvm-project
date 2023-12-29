@@ -101,6 +101,48 @@ pattern, you can try naming your patterns to see exactly where the issue is.
   // using $x again here copies operand 1 from G_AND into the new inst.
   (apply (COPY $root, $x))
 
+Types
+-----
+
+ValueType
+~~~~~~~~~
+
+Subclasses of ``ValueType`` are valid types, e.g. ``i32``.
+
+GITypeOf
+~~~~~~~~
+
+``GITypeOf<"$x">`` is a ``GISpecialType`` that allows for the creation of a
+register or immediate with the same type as another (register) operand.
+
+Operand:
+
+* An operand name as a string, prefixed by ``$``.
+
+Semantics:
+
+* Can only appear in an 'apply' pattern.
+* The operand name used must appear in the 'match' pattern of the
+  same ``GICombineRule``.
+
+.. code-block:: text
+  :caption: Example: Immediate
+
+  def mul_by_neg_one: GICombineRule <
+    (defs root:$root),
+    (match (G_MUL $dst, $x, -1)),
+    (apply (G_SUB $dst, (GITypeOf<"$x"> 0), $x))
+  >;
+
+.. code-block:: text
+  :caption: Example: Temp Reg
+
+  def Test0 : GICombineRule<
+    (defs root:$dst),
+    (match (G_FMUL $dst, $src, -1)),
+    (apply (G_FSUB $dst, $src, $tmp),
+           (G_FNEG GITypeOf<"$dst">:$tmp, $src))>;
+
 Builtin Operations
 ------------------
 
@@ -141,6 +183,44 @@ Semantics:
 * The root cannot have any output operands.
 * The root must be a CodeGenInstruction
 
+Instruction Flags
+-----------------
+
+MIR Patterns support both matching & writing ``MIFlags``.
+
+.. code-block:: text
+  :caption: Example
+
+  def Test : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs))),
+    (apply (G_BAR $dst, $src, (MIFlags FmReassoc)))>;
+
+In ``apply`` patterns, we also support referring to a matched instruction to
+"take" its MIFlags.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoNans/NoInfs, but $zext may have more flags.
+  ; Copy them all into the output instruction, and set Reassoc on the output inst.
+  def TestCpyFlags : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs)):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, FmReassoc)))>;
+
+The ``not`` operator can be used to check that a flag is NOT present
+on a matched instruction, and to remove a flag from a generated instruction.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoInfs but we don't want NoNans/Reassoc to be set. $zext may have more flags.
+  ; Copy them all into the output instruction but remove NoInfs on the output inst.
+  def TestNot : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoInfs, (not FmNoNans, FmReassoc))):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, (not FmNoInfs))))>;
 
 Limitations
 -----------
@@ -257,8 +337,8 @@ Common Pattern #3: Emitting a Constant Value
 When an immediate operand appears in an 'apply' pattern, the behavior
 depends on whether it's typed or not.
 
-* If the immediate is typed, a ``G_CONSTANT`` is implicitly emitted
-  (= a register operand is added to the instruction).
+* If the immediate is typed, ``MachineIRBuilder::buildConstant`` is used
+  to create a ``G_CONSTANT``. A ``G_BUILD_VECTOR`` will be used for vectors.
 * If the immediate is untyped, a simple immediate is added
   (``MachineInstrBuilder::addImm``).
 

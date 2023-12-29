@@ -519,8 +519,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV32IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV32IZce =
       (*MaybeRV32IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV32IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV32IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV32IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zce"), 1U);
@@ -562,8 +563,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV64IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV64IZce =
       (*MaybeRV64IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV64IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV64IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV64IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zce"), 1U);
@@ -629,6 +631,7 @@ TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
 }
 
 TEST(RiscvExtensionsHelp, CheckExtensions) {
+  // clang-format off
   std::string ExpectedOutput =
 R"(All available -march extensions for RISC-V
 
@@ -682,6 +685,8 @@ R"(All available -march extensions for RISC-V
     zksed               1.0
     zksh                1.0
     zkt                 1.0
+    zvbb                1.0
+    zvbc                1.0
     zve32f              1.0
     zve32x              1.0
     zve64d              1.0
@@ -689,53 +694,6 @@ R"(All available -march extensions for RISC-V
     zve64x              1.0
     zvfh                1.0
     zvfhmin             1.0
-    zvl1024b            1.0
-    zvl128b             1.0
-    zvl16384b           1.0
-    zvl2048b            1.0
-    zvl256b             1.0
-    zvl32768b           1.0
-    zvl32b              1.0
-    zvl4096b            1.0
-    zvl512b             1.0
-    zvl64b              1.0
-    zvl65536b           1.0
-    zvl8192b            1.0
-    zhinx               1.0
-    zhinxmin            1.0
-    svinval             1.0
-    svnapot             1.0
-    svpbmt              1.0
-    xcvalu              1.0
-    xcvbi               1.0
-    xcvbitmanip         1.0
-    xcvmac              1.0
-    xcvsimd             1.0
-    xsfcie              1.0
-    xsfvcp              1.0
-    xtheadba            1.0
-    xtheadbb            1.0
-    xtheadbs            1.0
-    xtheadcmo           1.0
-    xtheadcondmov       1.0
-    xtheadfmemidx       1.0
-    xtheadmac           1.0
-    xtheadmemidx        1.0
-    xtheadmempair       1.0
-    xtheadsync          1.0
-    xtheadvdot          1.0
-    xventanacondops     1.0
-
-Experimental extensions
-    zicfilp             0.2       This is a long dummy description
-    zicond              1.0
-    zacas               1.0
-    zfbfmin             0.8
-    ztso                0.1
-    zvbb                1.0
-    zvbc                1.0
-    zvfbfmin            0.8
-    zvfbfwma            0.8
     zvkb                1.0
     zvkg                1.0
     zvkn                1.0
@@ -750,11 +708,65 @@ Experimental extensions
     zvksg               1.0
     zvksh               1.0
     zvkt                1.0
+    zvl1024b            1.0
+    zvl128b             1.0
+    zvl16384b           1.0
+    zvl2048b            1.0
+    zvl256b             1.0
+    zvl32768b           1.0
+    zvl32b              1.0
+    zvl4096b            1.0
+    zvl512b             1.0
+    zvl64b              1.0
+    zvl65536b           1.0
+    zvl8192b            1.0
+    zhinx               1.0
+    zhinxmin            1.0
     smaia               1.0
     ssaia               1.0
+    svinval             1.0
+    svnapot             1.0
+    svpbmt              1.0
+    xcvalu              1.0
+    xcvbi               1.0
+    xcvbitmanip         1.0
+    xcvelw              1.0
+    xcvmac              1.0
+    xcvmem              1.0
+    xcvsimd             1.0
+    xsfcie              1.0
+    xsfvcp              1.0
+    xsfvfnrclipxfqf     1.0
+    xsfvfwmaccqqq       1.0
+    xsfvqmaccdod        1.0
+    xsfvqmaccqoq        1.0
+    xtheadba            1.0
+    xtheadbb            1.0
+    xtheadbs            1.0
+    xtheadcmo           1.0
+    xtheadcondmov       1.0
+    xtheadfmemidx       1.0
+    xtheadmac           1.0
+    xtheadmemidx        1.0
+    xtheadmempair       1.0
+    xtheadsync          1.0
+    xtheadvdot          1.0
+    xventanacondops     1.0
+
+Experimental extensions
+    zicfilp             0.4       This is a long dummy description
+    zicond              1.0
+    zimop               0.1
+    zacas               1.0
+    zfbfmin             0.8
+    zcmop               0.2
+    ztso                0.1
+    zvfbfmin            0.8
+    zvfbfwma            0.8
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";
+  // clang-format on
 
   StringMap<StringRef> DummyMap;
   DummyMap["i"] = "This is a long dummy description";

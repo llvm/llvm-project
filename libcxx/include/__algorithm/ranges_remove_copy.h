@@ -47,7 +47,7 @@ struct __fn {
              indirect_binary_predicate<ranges::equal_to, projected<_InIter, _Proj>, const _Type*>
   _LIBCPP_HIDE_FROM_ABI constexpr remove_copy_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result, const _Type& __value, _Proj __proj = {}) const {
-    auto __pred = [&](auto&& __val) { return __value == __val; };
+    auto __pred = [&](auto&& __val) -> bool { return __value == __val; };
     return ranges::__remove_copy_if_impl(std::move(__first), std::move(__last), std::move(__result), __pred, __proj);
   }
 
@@ -56,7 +56,7 @@ struct __fn {
              indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type*>
   _LIBCPP_HIDE_FROM_ABI constexpr remove_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, const _Type& __value, _Proj __proj = {}) const {
-    auto __pred = [&](auto&& __val) { return __value == __val; };
+    auto __pred = [&](auto&& __val) -> bool { return __value == __val; };
     return ranges::__remove_copy_if_impl(
         ranges::begin(__range), ranges::end(__range), std::move(__result), __pred, __proj);
   }

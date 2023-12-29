@@ -1222,6 +1222,14 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
       evalBind(Tmp, Init, Pred, FieldLoc, InitVal, /*isInit=*/true, &PP);
     }
+  } else if (BMI->isBaseInitializer() && isa<InitListExpr>(Init)) {
+    // When the base class is initialized with an initialization list and the
+    // base class does not have a ctor, there will not be a CXXConstructExpr to
+    // initialize the base region. Hence, we need to make the bind for it.
+    SVal BaseLoc = getStoreManager().evalDerivedToBase(
+        thisVal, QualType(BMI->getBaseClass(), 0), BMI->isBaseVirtual());
+    SVal InitVal = State->getSVal(Init, stackFrame);
+    evalBind(Tmp, Init, Pred, BaseLoc, InitVal, /*isInit=*/true);
   } else {
     assert(BMI->isBaseInitializer() || BMI->isDelegatingInitializer());
     Tmp.insert(Pred);
@@ -2509,7 +2517,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
-    if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt>(Term))
+    if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
     // Widen.
     const LocationContext *LCtx = Pred->getLocationContext();

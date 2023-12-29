@@ -172,8 +172,8 @@ public:
       Expected<StringRef> ContentsOrErr = Section.getContents();
       ASSERT_TRUE(static_cast<bool>(ContentsOrErr));
       StringRef Contents = *ContentsOrErr;
-      ASSERT_TRUE(Contents.find("dir") != StringRef::npos);
-      ASSERT_TRUE(Contents.find("file") != StringRef::npos);
+      ASSERT_TRUE(Contents.contains("dir"));
+      ASSERT_TRUE(Contents.contains("file"));
       ASSERT_TRUE(Contents.size() == 9);
       return;
     }

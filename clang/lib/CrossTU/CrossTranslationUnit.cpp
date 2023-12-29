@@ -551,7 +551,7 @@ CrossTranslationUnitContext::ASTLoader::load(StringRef Identifier) {
   // Normalize by removing relative path components.
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot*/ true, PathStyle);
 
-  if (Path.endswith(".ast"))
+  if (Path.ends_with(".ast"))
     return loadFromDump(Path);
   else
     return loadFromSource(Path);

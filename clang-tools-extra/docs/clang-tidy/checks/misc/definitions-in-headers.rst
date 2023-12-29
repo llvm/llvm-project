@@ -88,6 +88,11 @@ from multiple translation units.
    template <class T>
    constexpr T pi = T(3.1415926L);
 
+When :program:`clang-tidy` is invoked with the `--fix-notes` option, this check
+provides fixes that automatically add the ``inline`` keyword to discovered
+functions. Please note that the addition of the ``inline`` keyword to variables
+is not currently supported by this check.
+
 Options
 -------
 

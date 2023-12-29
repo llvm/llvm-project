@@ -1,7 +1,7 @@
 RUN: llvm-remarkutil count --parser=yaml --count-by=remark-name --group-by=source %p/Inputs/remark-count-by.yaml | FileCheck %s
 RUN: llvm-remarkutil count --parser=yaml --count-by=remark-name --group-by=function %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKFUNC
 RUN: llvm-remarkutil count --parser=yaml --count-by=remark-name --group-by=function-with-loc %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKFUNCLOC
-RUN: llvm-remarkutil count --parser=yaml --count-by=remark-name --group-by=total %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKTOTAL 
+RUN: llvm-remarkutil count --parser=yaml --count-by=remark-name --group-by=total %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKTOTAL
 
 ; CHECK-LABEL: Source,Count
 ; CHECK: path/to/anno.c,3

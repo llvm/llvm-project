@@ -58,6 +58,10 @@ using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
 /// Returns the set of all fields in the type.
 FieldSet getObjectFields(QualType Type);
 
+/// Returns whether `Fields` and `FieldLocs` contain the same fields.
+bool containsSameFields(const FieldSet &Fields,
+                        const RecordStorageLocation::FieldToLoc &FieldLocs);
+
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
   /// context-sensitive analysis entirely.
@@ -92,10 +96,38 @@ public:
                               /*Logger=*/nullptr});
   ~DataflowAnalysisContext();
 
+  /// Sets a callback that returns the names and types of the synthetic fields
+  /// to add to a `RecordStorageLocation` of a given type.
+  /// Typically, this is called from the constructor of a `DataflowAnalysis`
+  ///
+  /// To maintain the invariant that all `RecordStorageLocation`s of a given
+  /// type have the same fields:
+  /// *  The callback must always return the same result for a given type
+  /// *  `setSyntheticFieldCallback()` must be called before any
+  //     `RecordStorageLocation`s are created.
+  void setSyntheticFieldCallback(
+      std::function<llvm::StringMap<QualType>(QualType)> CB) {
+    assert(!RecordStorageLocationCreated);
+    SyntheticFieldCallback = CB;
+  }
+
   /// Returns a new storage location appropriate for `Type`.
   ///
   /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
+
+  /// Creates a `RecordStorageLocation` for the given type and with the given
+  /// fields.
+  ///
+  /// Requirements:
+  ///
+  ///  `FieldLocs` must contain exactly the fields returned by
+  ///  `getModeledFields(Type)`.
+  ///  `SyntheticFields` must contain exactly the fields returned by
+  ///  `getSyntheticFields(Type)`.
+  RecordStorageLocation &createRecordStorageLocation(
+      QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+      RecordStorageLocation::SyntheticFieldMap SyntheticFields);
 
   /// Returns a stable storage location for `D`.
   StorageLocation &getStableStorageLocation(const ValueDecl &D);
@@ -129,13 +161,17 @@ public:
   /// token.
   Atom joinFlowConditions(Atom FirstToken, Atom SecondToken);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` imply that `Val` is true.
-  bool flowConditionImplies(Atom Token, const Formula &);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` imply that `F` is true.
+  /// Returns false if the flow condition does not imply `F` or if the solver
+  /// times out.
+  bool flowConditionImplies(Atom Token, const Formula &F);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` are always true.
-  bool flowConditionIsTautology(Atom Token);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` still allow `F` to be true.
+  /// Returns false if the flow condition implies that `F` is false or if the
+  /// solver times out.
+  bool flowConditionAllows(Atom Token, const Formula &F);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and
@@ -165,6 +201,15 @@ public:
   /// context.
   FieldSet getModeledFields(QualType Type);
 
+  /// Returns the names and types of the synthetic fields for the given record
+  /// type.
+  llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
+    assert(Type->isRecordType());
+    if (SyntheticFieldCallback)
+      return SyntheticFieldCallback(Type);
+    return {};
+  }
+
 private:
   friend class Environment;
 
@@ -188,6 +233,12 @@ private:
   addTransitiveFlowConditionConstraints(Atom Token,
                                         llvm::SetVector<const Formula *> &Out);
 
+  /// Returns true if the solver is able to prove that there is a satisfying
+  /// assignment for `Constraints`.
+  bool isSatisfiable(llvm::SetVector<const Formula *> Constraints) {
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Satisfiable;
+  }
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
@@ -240,6 +291,11 @@ private:
   FieldSet ModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
+
+  std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
+
+  /// Has any `RecordStorageLocation` been created yet?
+  bool RecordStorageLocationCreated = false;
 };
 
 } // namespace dataflow

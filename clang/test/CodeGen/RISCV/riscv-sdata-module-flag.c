@@ -27,8 +27,6 @@
 // RUN:   | FileCheck %s -check-prefix=RV64-ANDROID
 // RUN: %clang --target=riscv64-unknown-elf %s -S -emit-llvm -fpic -o - \
 // RUN:   | FileCheck %s -check-prefix=RV64-PIC
-// RUN: %clang --target=riscv64-unknown-elf %s -S -emit-llvm -mcmodel=large -o - \
-// RUN:   | FileCheck %s -check-prefix=RV64-LARGE
 
 void test(void) {}
 

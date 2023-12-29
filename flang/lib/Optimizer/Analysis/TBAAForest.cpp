@@ -56,5 +56,6 @@ fir::TBAATree::TBAATree(mlir::LLVM::TBAATypeDescriptorAttr anyAccess,
     : globalDataTree(dataRoot.getContext(), "global data", dataRoot),
       allocatedDataTree(dataRoot.getContext(), "allocated data", dataRoot),
       dummyArgDataTree(dataRoot.getContext(), "dummy arg data", dataRoot),
+      directDataTree(dataRoot.getContext(), "direct data", dataRoot),
       anyAccessDesc(anyAccess), boxMemberTypeDesc(boxMemberTypeDesc),
       anyDataTypeDesc(dataRoot) {}

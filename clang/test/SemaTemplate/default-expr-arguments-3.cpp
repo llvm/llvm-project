@@ -4,7 +4,7 @@
 // CHECK: FunctionDecl {{.*}} used func 'void ()'
 // CHECK-NEXT: TemplateArgument type 'int'
 // CHECK: LambdaExpr {{.*}} '(lambda at
-// CHECK: ParmVarDecl {{.*}} used f 'foo':'foo' cinit
+// CHECK: ParmVarDecl {{.*}} used f 'foo' cinit
 // CHECK-NEXT: DeclRefExpr {{.*}} 'foo' EnumConstant {{.*}} 'a' 'foo'
 
 namespace PR28795 {
@@ -23,7 +23,7 @@ namespace PR28795 {
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct class2 definition
 // CHECK: TemplateArgument type 'int'
 // CHECK: LambdaExpr {{.*}} '(lambda at
-// CHECK: ParmVarDecl {{.*}} used f 'foo':'foo' cinit
+// CHECK: ParmVarDecl {{.*}} used f 'foo' cinit
 // CHECK-NEXT: DeclRefExpr {{.*}} 'foo' EnumConstant {{.*}} 'a' 'foo'
 
 // Template struct case:
@@ -41,7 +41,7 @@ template struct class2<int>;
 // CHECK-NEXT: FunctionDecl {{.*}} f1 'void ()'
 // CHECK: FunctionDecl {{.*}} f1 'void ()'
 // CHECK-NEXT: TemplateArgument type 'int'
-// CHECK: ParmVarDecl {{.*}} n 'foo':'foo' cinit
+// CHECK: ParmVarDecl {{.*}} n 'foo' cinit
 // CHECK-NEXT: DeclRefExpr {{.*}} 'foo' EnumConstant {{.*}} 'a' 'foo'
 
 template<typename T>

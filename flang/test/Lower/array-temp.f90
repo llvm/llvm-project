@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1()
 subroutine ss1

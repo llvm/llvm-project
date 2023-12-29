@@ -11,6 +11,7 @@
 #include "tools.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/character.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
@@ -256,7 +257,8 @@ static void LenTrimKind(Descriptor &result, const Descriptor &string, int kind,
         result, string, terminator);
     break;
   default:
-    terminator.Crash("not yet implemented: LEN_TRIM: KIND=%d", kind);
+    terminator.Crash(
+        "not yet implemented: CHARACTER(KIND=%d) in LEN_TRIM intrinsic", kind);
   }
 }
 
@@ -457,28 +459,9 @@ static void GeneralCharFuncKind(Descriptor &result, const Descriptor &string,
         result, string, arg, back, terminator);
     break;
   default:
-    terminator.Crash("not yet implemented: INDEX/SCAN/VERIFY: KIND=%d", kind);
-  }
-}
-
-template <typename TO, typename FROM>
-static void CopyAndPad(
-    TO *to, const FROM *from, std::size_t toChars, std::size_t fromChars) {
-  if constexpr (sizeof(TO) != sizeof(FROM)) {
-    std::size_t copyChars{std::min(toChars, fromChars)};
-    for (std::size_t j{0}; j < copyChars; ++j) {
-      to[j] = from[j];
-    }
-    for (std::size_t j{copyChars}; j < toChars; ++j) {
-      to[j] = static_cast<TO>(' ');
-    }
-  } else if (toChars <= fromChars) {
-    std::memcpy(to, from, toChars * sizeof(TO));
-  } else {
-    std::memcpy(to, from, fromChars * sizeof(TO));
-    for (std::size_t j{fromChars}; j < toChars; ++j) {
-      to[j] = static_cast<TO>(' ');
-    }
+    terminator.Crash("not yet implemented: CHARACTER(KIND=%d) in "
+                     "INDEX/SCAN/VERIFY intrinsic",
+        kind);
   }
 }
 
@@ -624,148 +607,6 @@ void RTNAME(CharacterConcatenateScalar1)(
   RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
   std::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
   FreeMemory(old);
-}
-
-void RTNAME(CharacterAssign)(Descriptor &lhs, const Descriptor &rhs,
-    const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
-  int rank{lhs.rank()};
-  RUNTIME_CHECK(terminator, rhs.rank() == 0 || rhs.rank() == rank);
-  SubscriptValue ub[maxRank], lhsAt[maxRank], rhsAt[maxRank];
-  SubscriptValue elements{1};
-  std::size_t lhsBytes{lhs.ElementBytes()};
-  std::size_t rhsBytes{rhs.ElementBytes()};
-  bool reallocate{lhs.IsAllocatable() &&
-      (lhs.raw().base_addr == nullptr || lhsBytes != rhsBytes)};
-  for (int j{0}; j < rank; ++j) {
-    lhsAt[j] = lhs.GetDimension(j).LowerBound();
-    if (rhs.rank() > 0) {
-      SubscriptValue lhsExt{lhs.GetDimension(j).Extent()};
-      SubscriptValue rhsExt{rhs.GetDimension(j).Extent()};
-      ub[j] = lhsAt[j] + rhsExt - 1;
-      if (lhsExt != rhsExt) {
-        if (lhs.IsAllocatable()) {
-          reallocate = true;
-        } else {
-          terminator.Crash("Character array assignment: operands are not "
-                           "conforming on dimension %d (%jd != %jd)",
-              j + 1, static_cast<std::intmax_t>(lhsExt),
-              static_cast<std::intmax_t>(rhsExt));
-        }
-      }
-      rhsAt[j] = rhs.GetDimension(j).LowerBound();
-    } else {
-      ub[j] = lhs.GetDimension(j).UpperBound();
-    }
-    elements *= ub[j] - lhsAt[j] + 1;
-  }
-  void *old{nullptr};
-  if (reallocate) {
-    old = lhs.raw().base_addr;
-    lhs.set_base_addr(nullptr);
-    lhs.raw().elem_len = lhsBytes = rhsBytes;
-    if (rhs.rank() > 0) {
-      // When the RHS is not scalar, the LHS acquires its bounds.
-      for (int j{0}; j < rank; ++j) {
-        lhsAt[j] = rhsAt[j];
-        ub[j] = rhs.GetDimension(j).UpperBound();
-        lhs.GetDimension(j).SetBounds(lhsAt[j], ub[j]);
-      }
-    }
-    RUNTIME_CHECK(terminator, lhs.Allocate() == CFI_SUCCESS);
-  }
-  switch (lhs.raw().type) {
-  case CFI_type_char:
-    switch (rhs.raw().type) {
-    case CFI_type_char:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char>(lhsAt), rhs.Element<char>(rhsAt), lhsBytes,
-            rhsBytes);
-      }
-      break;
-    case CFI_type_char16_t:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char>(lhsAt), rhs.Element<char16_t>(rhsAt),
-            lhsBytes, rhsBytes >> 1);
-      }
-      break;
-    case CFI_type_char32_t:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char>(lhsAt), rhs.Element<char32_t>(rhsAt),
-            lhsBytes, rhsBytes >> 2);
-      }
-      break;
-    default:
-      terminator.Crash(
-          "RHS of character assignment does not have a character type");
-    }
-    break;
-  case CFI_type_char16_t:
-    switch (rhs.raw().type) {
-    case CFI_type_char:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char16_t>(lhsAt), rhs.Element<char>(rhsAt),
-            lhsBytes >> 1, rhsBytes);
-      }
-      break;
-    case CFI_type_char16_t:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char16_t>(lhsAt), rhs.Element<char16_t>(rhsAt),
-            lhsBytes >> 1, rhsBytes >> 1);
-      }
-      break;
-    case CFI_type_char32_t:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char16_t>(lhsAt), rhs.Element<char32_t>(rhsAt),
-            lhsBytes >> 1, rhsBytes >> 2);
-      }
-      break;
-    default:
-      terminator.Crash(
-          "RHS of character assignment does not have a character type");
-    }
-    break;
-  case CFI_type_char32_t:
-    switch (rhs.raw().type) {
-    case CFI_type_char:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char32_t>(lhsAt), rhs.Element<char>(rhsAt),
-            lhsBytes >> 2, rhsBytes);
-      }
-      break;
-    case CFI_type_char16_t:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char32_t>(lhsAt), rhs.Element<char16_t>(rhsAt),
-            lhsBytes >> 2, rhsBytes >> 1);
-      }
-      break;
-    case CFI_type_char32_t:
-      for (; elements-- > 0;
-           lhs.IncrementSubscripts(lhsAt), rhs.IncrementSubscripts(rhsAt)) {
-        CopyAndPad(lhs.Element<char32_t>(lhsAt), rhs.Element<char32_t>(rhsAt),
-            lhsBytes >> 2, rhsBytes >> 2);
-      }
-      break;
-    default:
-      terminator.Crash(
-          "RHS of character assignment does not have a character type");
-    }
-    break;
-  default:
-    terminator.Crash(
-        "LHS of character assignment does not have a character type");
-  }
-  if (reallocate) {
-    FreeMemory(old);
-  }
 }
 
 int RTNAME(CharacterCompareScalar)(const Descriptor &x, const Descriptor &y) {

@@ -1,8 +1,8 @@
-// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
 
-// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1 use-opaque-pointers=1'  %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1'  %s | FileCheck %s --check-prefix=BAREPTR
 
-// RUN: mlir-opt -test-transform-dialect-interpreter %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -transform-interpreter %s | FileCheck %s --check-prefix=BAREPTR
 
 // These tests were separated from func-memref.mlir because applying
 // -reconcile-unrealized-casts resulted in `llvm.extractvalue` ops getting
@@ -110,17 +110,20 @@ func.func @unranked_memref(%arg0:memref<*xi32>) {
 }
 func.func private @printMemrefI32(memref<*xi32>)
 
-transform.sequence failures(propagate) {
-^bb1(%toplevel_module: !transform.any_op):
-  %func = transform.structured.match ops{["func.func"]} in %toplevel_module
-    : (!transform.any_op) -> !transform.any_op
-  transform.apply_conversion_patterns to %func {
-    transform.apply_conversion_patterns.func.func_to_llvm
-  } with type_converter {
-    transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-      {use_bare_ptr_call_conv = true, use_opaque_pointers = true}
-  } {
-    legal_dialects = ["llvm"],
-    partial_conversion
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %toplevel_module: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %toplevel_module
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_conversion_patterns to %func {
+      transform.apply_conversion_patterns.func.func_to_llvm
+    } with type_converter {
+      transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+        {use_bare_ptr_call_conv = true, use_opaque_pointers = true}
+    } {
+      legal_dialects = ["llvm"],
+      partial_conversion
+    } : !transform.any_op
+    transform.yield
+  }
 }

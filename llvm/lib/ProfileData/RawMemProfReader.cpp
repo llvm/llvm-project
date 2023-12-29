@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -337,6 +336,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                                           inconvertibleErrorCode()),
                   FileName);
 
+  // Process the raw profile.
+  if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
+    return E;
+
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
   std::unique_ptr<DIContext> Context = DWARFContext::create(
       *Object, DWARFContext::ProcessDebugRelocations::Process);
@@ -345,16 +351,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
       Object, std::move(Context), /*UntagAddresses=*/false);
   if (!SOFOr)
     return report(SOFOr.takeError(), FileName);
-  Symbolizer = std::move(SOFOr.get());
+  auto Symbolizer = std::move(SOFOr.get());
 
-  // Process the raw profile.
-  if (Error E = readRawProfile(std::move(DataBuffer)))
-    return E;
-
-  if (Error E = setupForSymbolization())
-    return E;
-
-  if (Error E = symbolizeAndFilterStackFrames())
+  // The symbolizer ownership is moved into symbolizeAndFilterStackFrames so
+  // that it is freed automatically at the end, when it is no longer used. This
+  // reduces peak memory since it won't be live while also mapping the raw
+  // profile into records afterwards.
+  if (Error E = symbolizeAndFilterStackFrames(std::move(Symbolizer)))
     return E;
 
   return mapRawProfileToRecords();
@@ -470,7 +473,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   return Error::success();
 }
 
-Error RawMemProfReader::symbolizeAndFilterStackFrames() {
+Error RawMemProfReader::symbolizeAndFilterStackFrames(
+    std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer) {
   // The specifier to use when symbolization is requested.
   const DILineInfoSpecifier Specifier(
       DILineInfoSpecifier::FileLineInfoKind::RawValue,

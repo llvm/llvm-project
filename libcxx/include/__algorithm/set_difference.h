@@ -55,7 +55,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_d
     _OutputIterator __result,
     _Compare __comp) {
   return std::__set_difference<_ClassicAlgPolicy, __comp_ref_type<_Compare> >(
-      __first1, __last1, __first2, __last2, __result, __comp)
+             __first1, __last1, __first2, __last2, __result, __comp)
       .second;
 }
 

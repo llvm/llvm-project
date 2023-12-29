@@ -45,7 +45,7 @@ define float @t3(float %x, float %y) {
 
 define i8 @ashr_exact_poison_constant_fold(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ashr_exact_poison_constant_fold(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 [[TMP1]], i8 5
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

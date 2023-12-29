@@ -48,7 +48,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -145,6 +144,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
+      APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
@@ -161,6 +161,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
+    APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
     FSOpts = make_shared_copy(X.getFileSystemOpts());
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
@@ -180,6 +181,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = X.PPOpts;
     AnalyzerOpts = X.AnalyzerOpts;
     MigratorOpts = X.MigratorOpts;
+    APINotesOpts = X.APINotesOpts;
     CodeGenOpts = X.CodeGenOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
@@ -231,6 +233,10 @@ AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
 
 MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
   return ensureOwned(MigratorOpts);
+}
+
+APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
+  return ensureOwned(APINotesOpts);
 }
 
 CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
@@ -648,6 +654,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
                   DefaultCC == LangOptions::DCC_RegCall) &&
                  !T.isX86();
+    emitError |= DefaultCC == LangOptions::DCC_RtdCall && Arch != llvm::Triple::m68k;
     if (emitError)
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();
@@ -1854,6 +1861,20 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_funified_lto))
       Opts.PrepareForThinLTO = true;
   }
+  if (Arg *A = Args.getLastArg(options::OPT_ffat_lto_objects,
+                               options::OPT_fno_fat_lto_objects)) {
+    if (A->getOption().matches(options::OPT_ffat_lto_objects)) {
+      if (Arg *Uni = Args.getLastArg(options::OPT_funified_lto,
+                                     options::OPT_fno_unified_lto)) {
+        if (Uni->getOption().matches(options::OPT_fno_unified_lto))
+          Diags.Report(diag::err_drv_incompatible_options)
+              << A->getAsString(Args) << "-fno-unified-lto";
+      } else
+        Diags.Report(diag::err_drv_argument_only_allowed_with)
+            << A->getAsString(Args) << "-funified-lto";
+    }
+  }
+
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -2808,7 +2829,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                "-interface-stub-version=ifs-v1"
             << ErrorMessage;
         ProgramAction = frontend::ParseSyntaxOnly;
-      } else if (!ArgStr.startswith("ifs-")) {
+      } else if (!ArgStr.starts_with("ifs-")) {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() + ".";
         Diags.Report(diag::err_drv_invalid_value)
@@ -3162,8 +3183,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     StringRef Val = A->getValue();
     if (Val.contains('=')) {
       auto Split = Val.split('=');
-      Opts.PrebuiltModuleFiles.insert(
-          {std::string(Split.first), std::string(Split.second)});
+      Opts.PrebuiltModuleFiles.insert_or_assign(
+          std::string(Split.first), std::string(Split.second));
     }
   }
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
@@ -3258,6 +3279,27 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.AddVFSOverlayFile(A->getValue());
 
   return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static void GenerateAPINotesArgs(const APINotesOptions &Opts,
+                                 ArgumentConsumer Consumer) {
+  if (!Opts.SwiftVersion.empty())
+    GenerateArg(Consumer, OPT_fapinotes_swift_version,
+                Opts.SwiftVersion.getAsString());
+
+  for (const auto &Path : Opts.ModuleSearchPaths)
+    GenerateArg(Consumer, OPT_iapinotes_modules, Path);
+}
+
+static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &diags) {
+  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
+    if (Opts.SwiftVersion.tryParse(A->getValue()))
+      diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+  }
+  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
+    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -3530,6 +3572,13 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
+
+  if (Opts.OpenACC) {
+    GenerateArg(Consumer, OPT_fopenacc);
+    if (!Opts.OpenACCMacroOverride.empty())
+      GenerateArg(Consumer, OPT_openacc_macro_override,
+                  Opts.OpenACCMacroOverride);
+  }
 
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
@@ -3865,11 +3914,17 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << "-fdefault-calling-conv";
     else {
-      if (T.getArch() != llvm::Triple::x86)
+      switch (T.getArch()) {
+      case llvm::Triple::x86:
+        Opts.setDefaultCallingConv(LangOptions::DCC_StdCall);
+        break;
+      case llvm::Triple::m68k:
+        Opts.setDefaultCallingConv(LangOptions::DCC_RtdCall);
+        break;
+      default:
         Diags.Report(diag::err_drv_argument_not_allowed_with)
             << A->getSpelling() << T.getTriple();
-      else
-        Opts.setDefaultCallingConv(LangOptions::DCC_StdCall);
+      }
     }
   }
 
@@ -3994,6 +4049,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                         (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
+  // OpenACC Configuration.
+  if (Args.hasArg(options::OPT_fopenacc)) {
+    Opts.OpenACC = true;
+
+    if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override))
+      Opts.OpenACCMacroOverride = A->getValue();
+  }
+
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
        OptSize = getOptimizationLevelSize(Args);
@@ -4043,13 +4106,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
     // Check the version number is valid: either 3.x (0 <= x <= 9) or
     // y or y.0 (4 <= y <= current version).
-    if (!VerParts.first.startswith("0") &&
-        !VerParts.first.getAsInteger(10, Major) &&
-        3 <= Major && Major <= CLANG_VERSION_MAJOR &&
-        (Major == 3 ? VerParts.second.size() == 1 &&
-                      !VerParts.second.getAsInteger(10, Minor)
-                    : VerParts.first.size() == Ver.size() ||
-                      VerParts.second == "0")) {
+    if (!VerParts.first.starts_with("0") &&
+        !VerParts.first.getAsInteger(10, Major) && 3 <= Major &&
+        Major <= CLANG_VERSION_MAJOR &&
+        (Major == 3
+             ? VerParts.second.size() == 1 &&
+                   !VerParts.second.getAsInteger(10, Minor)
+             : VerParts.first.size() == Ver.size() || VerParts.second == "0")) {
       // Got a valid version number.
       if (Major == 3 && Minor <= 8)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver3_8);
@@ -4096,10 +4159,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (Arg *A = Args.getLastArg(OPT_msign_return_address_key_EQ)) {
       StringRef SignKey = A->getValue();
       if (!SignScope.empty() && !SignKey.empty()) {
-        if (SignKey.equals_insensitive("a_key"))
+        if (SignKey == "a_key")
           Opts.setSignReturnAddressKey(
               LangOptions::SignReturnAddressKeyKind::AKey);
-        else if (SignKey.equals_insensitive("b_key"))
+        else if (SignKey == "b_key")
           Opts.setSignReturnAddressKey(
               LangOptions::SignReturnAddressKeyKind::BKey);
         else
@@ -4129,7 +4192,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                    TargetCXXABI::usesRelativeVTables(T));
 
   // RTTI is on by default.
-  bool HasRTTI = Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, true);
+  bool HasRTTI = !Args.hasArg(options::OPT_fno_rtti);
   Opts.OmitVTableRTTI =
       Args.hasFlag(options::OPT_fexperimental_omit_vtable_rtti,
                    options::OPT_fno_experimental_omit_vtable_rtti, false);
@@ -4302,6 +4365,9 @@ static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
   if (Opts.SourceDateEpoch)
     GenerateArg(Consumer, OPT_source_date_epoch, Twine(*Opts.SourceDateEpoch));
 
+  if (Opts.DefineTargetOSMacros)
+    GenerateArg(Consumer, OPT_fdefine_target_os_macros);
+
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
 }
@@ -4399,6 +4465,10 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // "editor placeholder in source file" error in PP only mode.
   if (isStrictlyPreprocessorAction(Action))
     Opts.LexEditorPlaceholders = false;
+
+  Opts.DefineTargetOSMacros =
+      Args.hasFlag(OPT_fdefine_target_os_macros,
+                   OPT_fno_define_target_os_macros, Opts.DefineTargetOSMacros);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4531,6 +4601,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);
@@ -4706,10 +4777,34 @@ std::string CompilerInvocation::getModuleHash() const {
   for (const auto &ext : getFrontendOpts().ModuleFileExtensions)
     ext->hashExtension(HBuilder);
 
+  // Extend the signature with the Swift version for API notes.
+  const APINotesOptions &APINotesOpts = getAPINotesOpts();
+  if (!APINotesOpts.SwiftVersion.empty()) {
+    HBuilder.add(APINotesOpts.SwiftVersion.getMajor());
+    if (auto Minor = APINotesOpts.SwiftVersion.getMinor())
+      HBuilder.add(*Minor);
+    if (auto Subminor = APINotesOpts.SwiftVersion.getSubminor())
+      HBuilder.add(*Subminor);
+    if (auto Build = APINotesOpts.SwiftVersion.getBuild())
+      HBuilder.add(*Build);
+  }
+
   // When compiling with -gmodules, also hash -fdebug-prefix-map as it
   // affects the debug info in the PCM.
   if (getCodeGenOpts().DebugTypeExtRefs)
     HBuilder.addRange(getCodeGenOpts().DebugPrefixMap);
+
+  // Extend the signature with the affecting debug options.
+  if (getHeaderSearchOpts().ModuleFormat == "obj") {
+#define DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define VALUE_DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default)                               \
+  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
+#define BENIGN_DEBUGOPT(Name, Bits, Default)
+#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
+#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
+#include "clang/Basic/DebugOptions.def"
+  }
 
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
@@ -4736,6 +4831,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);
   GenerateTargetArgs(getTargetOpts(), Consumer);
   GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
+  GenerateAPINotesArgs(getAPINotesOpts(), Consumer);
   GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
   GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
                       getFrontendOpts().OutputFile, &getLangOpts());
@@ -4756,6 +4852,7 @@ std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
 void CompilerInvocation::resetNonModularOptions() {
   getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
+  getCodeGenOpts().resetNonModularOptions(getHeaderSearchOpts().ModuleFormat);
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {

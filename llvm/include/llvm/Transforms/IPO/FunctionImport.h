@@ -10,7 +10,6 @@
 #define LLVM_TRANSFORMS_IPO_FUNCTIONIMPORT_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"

@@ -8,8 +8,14 @@
 
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/Utils.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <utility>
 
 using namespace mlir;
 using namespace presburger;
@@ -432,4 +438,209 @@ MPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
 
 MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
+}
+
+MPInt IntMatrix::determinant(IntMatrix *inverse) const {
+  assert(nRows == nColumns &&
+         "determinant can only be calculated for square matrices!");
+
+  FracMatrix m(*this);
+
+  FracMatrix fracInverse(nRows, nColumns);
+  MPInt detM = m.determinant(&fracInverse).getAsInteger();
+
+  if (detM == 0)
+    return MPInt(0);
+
+  *inverse = IntMatrix(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      inverse->at(i, j) = (fracInverse.at(i, j) * detM).getAsInteger();
+
+  return detM;
+}
+
+FracMatrix FracMatrix::identity(unsigned dimension) {
+  return Matrix::identity(dimension);
+}
+
+FracMatrix::FracMatrix(IntMatrix m)
+    : FracMatrix(m.getNumRows(), m.getNumColumns()) {
+  for (unsigned i = 0, r = m.getNumRows(); i < r; i++)
+    for (unsigned j = 0, c = m.getNumColumns(); j < c; j++)
+      this->at(i, j) = m.at(i, j);
+}
+
+Fraction FracMatrix::determinant(FracMatrix *inverse) const {
+  assert(nRows == nColumns &&
+         "determinant can only be calculated for square matrices!");
+
+  FracMatrix m(*this);
+  FracMatrix tempInv(nRows, nColumns);
+  if (inverse)
+    tempInv = FracMatrix::identity(nRows);
+
+  Fraction a, b;
+  // Make the matrix into upper triangular form using
+  // gaussian elimination with row operations.
+  // If inverse is required, we apply more operations
+  // to turn the matrix into diagonal form. We apply
+  // the same operations to the inverse matrix,
+  // which is initially identity.
+  // Either way, the product of the diagonal elements
+  // is then the determinant.
+  for (unsigned i = 0; i < nRows; i++) {
+    if (m(i, i) == 0)
+      // First ensure that the diagonal
+      // element is nonzero, by swapping
+      // it with a nonzero row.
+      for (unsigned j = i + 1; j < nRows; j++) {
+        if (m(j, i) != 0) {
+          m.swapRows(j, i);
+          if (inverse)
+            tempInv.swapRows(j, i);
+          break;
+        }
+      }
+
+    b = m.at(i, i);
+    if (b == 0)
+      return 0;
+
+    // Set all elements above the
+    // diagonal to zero.
+    if (inverse) {
+      for (unsigned j = 0; j < i; j++) {
+        if (m.at(j, i) == 0)
+          continue;
+        a = m.at(j, i);
+        // Set element (j, i) to zero
+        // by subtracting the ith row,
+        // appropriately scaled.
+        m.addToRow(i, j, -a / b);
+        tempInv.addToRow(i, j, -a / b);
+      }
+    }
+
+    // Set all elements below the
+    // diagonal to zero.
+    for (unsigned j = i + 1; j < nRows; j++) {
+      if (m.at(j, i) == 0)
+        continue;
+      a = m.at(j, i);
+      // Set element (j, i) to zero
+      // by subtracting the ith row,
+      // appropriately scaled.
+      m.addToRow(i, j, -a / b);
+      if (inverse)
+        tempInv.addToRow(i, j, -a / b);
+    }
+  }
+
+  // Now only diagonal elements of m are nonzero, but they are
+  // not necessarily 1. To get the true inverse, we should
+  // normalize them and apply the same scale to the inverse matrix.
+  // For efficiency we skip scaling m and just scale tempInv appropriately.
+  if (inverse) {
+    for (unsigned i = 0; i < nRows; i++)
+      for (unsigned j = 0; j < nRows; j++)
+        tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
+
+    *inverse = std::move(tempInv);
+  }
+
+  Fraction determinant = 1;
+  for (unsigned i = 0; i < nRows; i++)
+    determinant *= m.at(i, i);
+
+  return determinant;
+}
+
+FracMatrix FracMatrix::gramSchmidt() const {
+  // Create a copy of the argument to store
+  // the orthogonalised version.
+  FracMatrix orth(*this);
+
+  // For each vector (row) in the matrix, subtract its unit
+  // projection along each of the previous vectors.
+  // This ensures that it has no component in the direction
+  // of any of the previous vectors.
+  for (unsigned i = 1, e = getNumRows(); i < e; i++) {
+    for (unsigned j = 0; j < i; j++) {
+      Fraction jNormSquared = dotProduct(orth.getRow(j), orth.getRow(j));
+      assert(jNormSquared != 0 && "some row became zero! Inputs to this "
+                                  "function must be linearly independent.");
+      Fraction projectionScale =
+          dotProduct(orth.getRow(i), orth.getRow(j)) / jNormSquared;
+      orth.addToRow(j, i, -projectionScale);
+    }
+  }
+  return orth;
+}
+
+// Convert the matrix, interpreted (row-wise) as a basis
+// to an LLL-reduced basis.
+//
+// This is an implementation of the algorithm described in
+// "Factoring polynomials with rational coefficients" by
+// A. K. Lenstra, H. W. Lenstra Jr., L. Lovasz.
+//
+// Let {b_1,  ..., b_n}  be the current basis and
+//     {b_1*, ..., b_n*} be the Gram-Schmidt orthogonalised
+//                          basis (unnormalized).
+// Define the Gram-Schmidt coefficients μ_ij as
+// (b_i • b_j*) / (b_j* • b_j*), where (•) represents the inner product.
+//
+// We iterate starting from the second row to the last row.
+//
+// For the kth row, we first check μ_kj for all rows j < k.
+// We subtract b_j (scaled by the integer nearest to μ_kj)
+// from b_k.
+//
+// Now, we update k.
+// If b_k and b_{k-1} satisfy the Lovasz condition
+//    |b_k|^2 ≥ (δ - μ_k{k-1}^2) |b_{k-1}|^2,
+// we are done and we increment k.
+// Otherwise, we swap b_k and b_{k-1} and decrement k.
+//
+// We repeat this until k = n and return.
+void FracMatrix::LLL(Fraction delta) {
+  MPInt nearest;
+  Fraction mu;
+
+  // `gsOrth` holds the Gram-Schmidt orthogonalisation
+  // of the matrix at all times. It is recomputed every
+  // time the matrix is modified during the algorithm.
+  // This is naive and can be optimised.
+  FracMatrix gsOrth = gramSchmidt();
+
+  // We start from the second row.
+  unsigned k = 1;
+  while (k < getNumRows()) {
+    for (unsigned j = k - 1; j < k; j--) {
+      // Compute the Gram-Schmidt coefficient μ_jk.
+      mu = dotProduct(getRow(k), gsOrth.getRow(j)) /
+           dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      nearest = round(mu);
+      // Subtract b_j scaled by the integer nearest to μ_jk from b_k.
+      addToRow(k, getRow(j), -Fraction(nearest, 1));
+      gsOrth = gramSchmidt(); // Update orthogonalization.
+    }
+    mu = dotProduct(getRow(k), gsOrth.getRow(k - 1)) /
+         dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1));
+    // Check the Lovasz condition for b_k and b_{k-1}.
+    if (dotProduct(gsOrth.getRow(k), gsOrth.getRow(k)) >
+        (delta - mu * mu) *
+            dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1))) {
+      // If it is satisfied, proceed to the next k.
+      k += 1;
+    } else {
+      // If it is not satisfied, decrement k (without
+      // going beyond the second row).
+      swapRows(k, k - 1);
+      gsOrth = gramSchmidt(); // Update orthogonalization.
+      k = k > 1 ? k - 1 : 1;
+    }
+  }
+  return;
 }

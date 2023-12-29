@@ -532,7 +532,6 @@ int main()
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "type",
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "integral_constant<_Ty, _Val>",
 // CHECK-NEXT:         "qualType": "integral_constant<_Ty, _Val>"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -872,7 +871,6 @@ int main()
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "bool_constant",
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "desugaredQualType": "integral_constant<bool, _Val>",
 // CHECK-NEXT:       "qualType": "integral_constant<bool, _Val>"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [

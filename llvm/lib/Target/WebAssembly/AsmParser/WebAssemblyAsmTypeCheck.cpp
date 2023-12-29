@@ -32,7 +32,6 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;

@@ -101,26 +101,45 @@ bufferization strategy would be unacceptable for high-performance codegen. When
 choosing an already existing buffer, we must be careful not to accidentally
 overwrite data that is still needed later in the program.
 
-To simplify this problem, One-Shot Bufferize was designed for ops that are in
-*destination-passing style*. For every tensor result, such ops have a tensor
-operand, whose buffer could be utilized for storing the result of the op in the
-absence of other conflicts. We call such tensor operands the *destination*.
+To simplify this problem, One-Shot Bufferize was designed to take advantage of
+*destination-passing style*. This form exists in itself independently of
+bufferization and is tied to SSA semantics: many ops are “updating” part of
+their input SSA variable. For example the LLVM instruction
+[`insertelement`](https://llvm.org/docs/LangRef.html#insertelement-instruction)
+is inserting an element inside a vector. Since SSA values are immutable, the
+operation returns a copy of the input vector with the element inserted.
+Another example in MLIR is `linalg.generic`, which always has an extra `outs`
+operand which provides the initial values to update (for example when the
+operation is doing a reduction). 
+
+This input is referred to as "destination" in the following (quotes are
+important as this operand isn't modified in place but copied) and comes into
+place in the context of bufferization as a possible "anchor" for the
+bufferization algorithm. This allows the user to shape the input in a form that
+guarantees close to optimal bufferization result when carefully choosing the
+SSA value used as "destination".
+
+For every tensor result, a "destination-passing" style op has a corresponding
+tensor operand. If there aren't any other uses of this tensor, the bufferization
+can alias it with the op result and perform the operation "in-place" by reusing
+the buffer allocated for this "destination" input.
 
 As an example, consider the following op: `%0 = tensor.insert %cst into
 %t[%idx] : tensor<?xf32>`
 
-`%t` is the destination in this example. When choosing a buffer for the result
-`%0`, One-Shot Bufferize considers only two options:
+`%t` is the "destination" in this example. When choosing a buffer for the result
+`%0`, denoted as `buffer(%0)`, One-Shot Bufferize considers only two options:
 
-1.  buffer(`%0`) = buffer(`%t`).
-2.  buffer(`%0`) is a newly allocated buffer.
+1.  `buffer(%0) = buffer(%t)` : alias the "destination" tensor with the
+    result and perform the operation in-place.
+2.  `buffer(%0)` is a newly allocated buffer.
 
 There may be other buffers in the same function that could potentially be used
-for buffer(`%0`), but those are not considered by One-Shot Bufferize to keep the
+for `buffer(%0)`, but those are not considered by One-Shot Bufferize to keep the
 bufferization simple. One-Shot Bufferize could be extended to consider such
 buffers in the future to achieve a better quality of bufferization.
 
-Tensor ops that are not in destination-passing style always bufferize to a
+Tensor ops that are not in destination-passing style always bufferized to a
 memory allocation. E.g.:
 
 ```mlir
@@ -131,10 +150,10 @@ memory allocation. E.g.:
 } : tensor<?xf32>
 ```
 
-The result of `tensor.generate` does not have a "destination", so bufferization
-allocates a new buffer. This could be avoided by choosing an op such as
-`linalg.generic`, which can express the same computation with a destination
-("out") tensor:
+The result of `tensor.generate` does not have a "destination" operand, so
+bufferization allocates a new buffer. This could be avoided by choosing an
+op such as `linalg.generic`, which can express the same computation with a
+"destination" operand, as specified behind outputs (`outs`):
 
 ```mlir
 #map = affine_map<(i) -> (i)>
@@ -159,14 +178,13 @@ slice of a tensor:
 ```
 
 The above example bufferizes to a `memref.subview`, followed by a
-"`linalg.generic` on memrefs" that overwrites the memory of the subview. The
-`tensor.insert_slice` bufferizes to a no-op (in the absence of RaW conflicts
-such as a subsequent read of `%s`).
+"`linalg.generic` on memrefs" that overwrites the memory of the subview, assuming
+that the slice `%t` has no other user. The `tensor.insert_slice` then bufferizes
+to a no-op (in the absence of RaW conflicts such as a subsequent read of `%s`).
 
 RaW conflicts are detected with an analysis of SSA use-def chains (details
 later). One-Shot Bufferize works best if there is a single SSA use-def chain,
-where the result of a tensor op is the "destination" operand of the next tensor
-ops, e.g.:
+where the result of a tensor op is the operand of the next tensor ops, e.g.:
 
 ```mlir
 %0 = "my_dialect.some_op"(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
@@ -263,7 +281,7 @@ must be inserted due to a RaW conflict. E.g.:
 }
 ```
 
-In the above example, a buffer copy of buffer(`%another_tensor`) (with `%cst`
+In the above example, a buffer copy of `buffer(%another_tensor)` (with `%cst`
 inserted) is yielded from the "then" branch.
 
 Note: Buffer allocations that are returned from a function are not deallocated.

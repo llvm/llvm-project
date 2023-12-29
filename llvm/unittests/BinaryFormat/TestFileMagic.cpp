@@ -87,6 +87,8 @@ const char pdb[] = "Microsoft C/C++ MSF 7.00\r\n\x1a"
                    "DS\x00\x00\x00";
 const char tapi_file[] = "--- !tapi-tbd-v1\n";
 const char tapi_file_tbd_v1[] = "---\narchs: [";
+const char spirv_object_le[] = "\x03\x02\x23\x07";
+const char spirv_object_be[] = "\x07\x23\x02\x03";
 
 TEST_F(MagicTest, Magic) {
   struct type {
@@ -117,6 +119,10 @@ TEST_F(MagicTest, Magic) {
       DEFINE(macho_dynamically_linked_shared_lib_stub),
       DEFINE(macho_dsym_companion),
       DEFINE(macho_kext_bundle),
+      {"spirv_object_le", spirv_object_le, sizeof(spirv_object_le),
+       file_magic ::spirv_object},
+      {"spirv_object_be", spirv_object_be, sizeof(spirv_object_be),
+       file_magic ::spirv_object},
       DEFINE(windows_resource),
       DEFINE(pdb),
       {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),

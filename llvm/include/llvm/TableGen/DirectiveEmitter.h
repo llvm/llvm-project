@@ -157,7 +157,7 @@ public:
       }
       return C;
     });
-    llvm::erase_value(N, '_');
+    llvm::erase(N, '_');
     return N;
   }
 

@@ -83,7 +83,7 @@ define void @test_01() {
 ; CHECK:       loop_latch.postloop:
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i32 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[LOOP_COND_POSTLOOP:%.*]] = icmp ult i32 [[IV_NEXT_POSTLOOP]], 400
-; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]], !irce.loop.clone [[META5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone [[META5:![0-9]+]]
 ;
 
 entry:
@@ -333,7 +333,7 @@ define void @test_04(ptr %p) {
 ; CHECK:       loop_latch.postloop:
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i32 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[LOOP_COND_POSTLOOP:%.*]] = icmp ult i32 [[IV_NEXT_POSTLOOP]], 400
-; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP6:![0-9]+]], !irce.loop.clone [[META5]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP6:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -446,7 +446,7 @@ define void @test_05(ptr %p) {
 ; CHECK:       loop_latch.postloop:
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i32 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[LOOP_COND_POSTLOOP:%.*]] = icmp ult i32 [[IV_NEXT_POSTLOOP]], 400
-; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !irce.loop.clone [[META5]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:

@@ -98,8 +98,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 1
+          "character": 5,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -127,7 +127,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       "availability": [
         {
           "domain": "macos",
-          "introducedVersion": {
+          "introduced": {
             "major": 12,
             "minor": 0,
             "patch": 0
@@ -172,8 +172,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 3
+          "character": 5,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -200,18 +200,18 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       "accessLevel": "public",
       "availability": [
         {
-          "deprecatedVersion": {
+          "deprecated": {
             "major": 12,
             "minor": 0,
             "patch": 0
           },
           "domain": "macos",
-          "introducedVersion": {
+          "introduced": {
             "major": 11,
             "minor": 0,
             "patch": 0
           },
-          "obsoletedVersion": {
+          "obsoleted": {
             "major": 20,
             "minor": 0,
             "patch": 0
@@ -256,8 +256,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 5
+          "character": 5,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -284,18 +284,18 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       "accessLevel": "public",
       "availability": [
         {
-          "deprecatedVersion": {
+          "deprecated": {
             "major": 12,
             "minor": 0,
             "patch": 0
           },
           "domain": "macos",
-          "introducedVersion": {
+          "introduced": {
             "major": 11,
             "minor": 0,
             "patch": 0
           },
-          "obsoletedVersion": {
+          "obsoleted": {
             "major": 20,
             "minor": 0,
             "patch": 0
@@ -303,7 +303,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "domain": "ios",
-          "introducedVersion": {
+          "introduced": {
             "major": 13,
             "minor": 0,
             "patch": 0
@@ -311,7 +311,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "domain": "tvos",
-          "introducedVersion": {
+          "introduced": {
             "major": 15,
             "minor": 0,
             "patch": 0
@@ -356,8 +356,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 7
+          "character": 5,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -389,7 +389,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "domain": "macos",
-          "introducedVersion": {
+          "introduced": {
             "major": 11,
             "minor": 0,
             "patch": 0
@@ -438,8 +438,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 9
+          "character": 5,
+          "line": 8
         },
         "uri": "file://INPUT_DIR/input.h"
       },

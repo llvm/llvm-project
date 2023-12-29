@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -41,7 +42,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "dwarfehprepare"
+#define DEBUG_TYPE "dwarf-eh-prepare"
 
 STATISTIC(NumResumesLowered, "Number of resume calls lowered");
 STATISTIC(NumCleanupLandingPadsUnreachable,
@@ -227,8 +228,8 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
     DoesRewindFunctionNeedExceptionObject = false;
   } else {
     RewindName = TLI.getLibcallName(RTLIB::UNWIND_RESUME);
-    FTy =
-        FunctionType::get(Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false);
+    FTy = FunctionType::get(Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx),
+                            false);
     RewindFunctionCallingConv = TLI.getLibcallCallingConv(RTLIB::UNWIND_RESUME);
     DoesRewindFunctionNeedExceptionObject = true;
   }
@@ -269,8 +270,8 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   llvm::SmallVector<Value *, 1> RewindFunctionArgs;
 
   BasicBlock *UnwindBB = BasicBlock::Create(Ctx, "unwind_resume", &F);
-  PHINode *PN = PHINode::Create(Type::getInt8PtrTy(Ctx), ResumesLeft, "exn.obj",
-                                UnwindBB);
+  PHINode *PN = PHINode::Create(PointerType::getUnqual(Ctx), ResumesLeft,
+                                "exn.obj", UnwindBB);
 
   // Extract the exception object from the ResumeInst and add it to the PHI node
   // that feeds the _Unwind_Resume call.
@@ -364,6 +365,27 @@ public:
 };
 
 } // end anonymous namespace
+
+PreservedAnalyses DwarfEHPreparePass::run(Function &F,
+                                          FunctionAnalysisManager &FAM) {
+  const auto &TLI = *TM->getSubtargetImpl(F)->getTargetLowering();
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  const TargetTransformInfo *TTI = nullptr;
+  auto OptLevel = TM->getOptLevel();
+  if (OptLevel != CodeGenOptLevel::None) {
+    if (!DT)
+      DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+    TTI = &FAM.getResult<TargetIRAnalysis>(F);
+  }
+  bool Changed =
+      prepareDwarfEH(OptLevel, F, TLI, DT, TTI, TM->getTargetTriple());
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 char DwarfEHPrepareLegacyPass::ID = 0;
 

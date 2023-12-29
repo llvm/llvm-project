@@ -27,6 +27,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
@@ -70,25 +71,16 @@ static LogicalResult runMLIRPasses(Operation *op,
   if (options.spirvWebGPUPrepare)
     modulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 
-  auto enableOpaquePointers = [](auto passOption) {
-    passOption.useOpaquePointers = true;
-    return passOption;
-  };
-
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
-  passManager.addPass(createFinalizeMemRefToLLVMConversionPass(
-      enableOpaquePointers(FinalizeMemRefToLLVMConversionPassOptions{})));
-  passManager.addPass(createConvertVectorToLLVMPass(
-      enableOpaquePointers(ConvertVectorToLLVMPassOptions{})));
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
+  passManager.addPass(createConvertVectorToLLVMPass());
   passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
   ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
   funcToLLVMOptions.indexBitwidth =
       DataLayout(module).getTypeSizeInBits(IndexType::get(module.getContext()));
-  passManager.addPass(
-      createConvertFuncToLLVMPass(enableOpaquePointers(funcToLLVMOptions)));
+  passManager.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
   passManager.addPass(createReconcileUnrealizedCastsPass());
-  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass(
-      enableOpaquePointers(ConvertVulkanLaunchFuncToVulkanCallsPassOptions{})));
+  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
 
   return passManager.run(module);
 }
@@ -114,8 +106,8 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
                   mlir::gpu::GPUDialect, mlir::spirv::SPIRVDialect,
-                  mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-                  mlir::vector::VectorDialect>();
+                  mlir::scf::SCFDialect, mlir::func::FuncDialect,
+                  mlir::memref::MemRefDialect, mlir::vector::VectorDialect>();
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
 

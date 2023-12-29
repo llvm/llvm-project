@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:  -test-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
+// RUN:  -gpu-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -31,7 +31,7 @@
 module @mymod {
   func.func private @printMemrefF32(memref<*xf32>)
   memref.global "private" @bufferLhsGlobal : !shmemlhs
-  llvm.func @printf(!llvm.ptr<i8>, ...) -> i32
+  llvm.func @printf(!llvm.ptr, ...) -> i32
   func.func @main() {
     %c8192 = arith.constant 8192 : index
     %c-1_i32 = arith.constant -1 : i32

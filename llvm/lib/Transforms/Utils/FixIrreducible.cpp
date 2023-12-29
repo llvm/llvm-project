@@ -87,10 +87,8 @@ struct FixIrreducible : public FunctionPass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredID(LowerSwitchID);
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreservedID(LowerSwitchID);
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
   }
@@ -106,7 +104,6 @@ FunctionPass *llvm::createFixIrreduciblePass() { return new FixIrreducible(); }
 INITIALIZE_PASS_BEGIN(FixIrreducible, "fix-irreducible",
                       "Convert irreducible control-flow into natural loops",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
-INITIALIZE_PASS_DEPENDENCY(LowerSwitchLegacyPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
@@ -316,6 +313,8 @@ static bool makeReducible(LoopInfo &LI, DominatorTree &DT, Graph &&G) {
 static bool FixIrreducibleImpl(Function &F, LoopInfo &LI, DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
+
+  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
 
   bool Changed = false;
   SmallVector<Loop *, 8> WorkList;

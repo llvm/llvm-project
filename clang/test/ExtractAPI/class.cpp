@@ -106,8 +106,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 1
+          "character": 6,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -161,8 +161,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 3
+          "character": 6,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -225,8 +225,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 15,
-          "line": 4
+          "character": 14,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -281,8 +281,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 7
+          "character": 6,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -337,8 +337,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 10
+          "character": 6,
+          "line": 9
         },
         "uri": "file://INPUT_DIR/input.h"
       },

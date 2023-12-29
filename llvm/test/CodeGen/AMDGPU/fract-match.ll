@@ -1821,14 +1821,14 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX6-NEXT:    v_add_f64 v[4:5], v[0:1], -v[4:5]
 ; GFX6-NEXT:    s_mov_b32 s9, 0x3fefffff
 ; GFX6-NEXT:    v_add_f64 v[6:7], v[0:1], -v[4:5]
-; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    v_min_f64 v[6:7], v[6:7], s[8:9]
 ; GFX6-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX6-NEXT:    v_min_f64 v[6:7], v[6:7], s[8:9]
+; GFX6-NEXT:    s_mov_b32 s8, 0
 ; GFX6-NEXT:    s_mov_b32 s9, 0x7ff00000
-; GFX6-NEXT:    s_mov_b32 s8, s6
 ; GFX6-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc
 ; GFX6-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[8:9]
+; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s4, s6
 ; GFX6-NEXT:    s_mov_b32 s5, s6
@@ -1841,13 +1841,14 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX7-LABEL: safe_math_fract_f64:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    s_mov_b32 s4, 0
 ; GFX7-NEXT:    s_mov_b32 s5, 0x7ff00000
-; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
 ; GFX7-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
 ; GFX7-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
+; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v5, vcc
@@ -1872,10 +1873,8 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX11-LABEL: safe_math_fract_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_mov_b32 s1, 0x7ff00000
 ; GFX11-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
-; GFX11-NEXT:    v_cmp_neq_f64_e64 vcc_lo, |v[0:1]|, s[0:1]
+; GFX11-NEXT:    v_cmp_neq_f64_e64 vcc_lo, 0x7ff00000, |v[0:1]|
 ; GFX11-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v4 :: v_dual_cndmask_b32 v1, 0, v5

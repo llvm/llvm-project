@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -polymorphic-type %s -o - | FileCheck %s
 
 module same_type_as_mod
 

@@ -26,8 +26,8 @@
 ; CHECK-DAG: @__omp_outlined__1_wrapper.ID = private constant i8 undef
 ; CHECK-DAG: @__omp_outlined__2_wrapper.ID = private constant i8 undef
 
-; CHECK-DAG:   icmp eq ptr %worker.work_fn.addr_cast, @__omp_outlined__1_wrapper.ID
-; CHECK-DAG:   icmp eq ptr %worker.work_fn.addr_cast, @__omp_outlined__2_wrapper.ID
+; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__1_wrapper.ID
+; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__2_wrapper.ID
 
 
 ; CHECK-DAG:   call void @__kmpc_parallel_51(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr %{{.*}}, i64 0)
@@ -37,19 +37,19 @@
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @0 }, align 8
-@__omp_offloading_10301_87b2c_foo_l7_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr @1, ptr null }
+@__omp_offloading_10301_87b2c_foo_l7_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 define weak void @__omp_offloading_10301_87b2c_foo_l7() "kernel" {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_10301_87b2c_foo_l7_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_10301_87b2c_foo_l7_kernel_environment, ptr null)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -64,7 +64,7 @@ worker.exit:                                      ; preds = %entry
   ret void
 }
 
-define weak i32 @__kmpc_target_init(ptr %0) {
+define weak i32 @__kmpc_target_init(ptr %0, ptr) {
   ret i32 0
 }
 

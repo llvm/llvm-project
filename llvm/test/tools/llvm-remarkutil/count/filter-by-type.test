@@ -13,4 +13,4 @@ RUN: llvm-remarkutil count --parser=yaml --remark-type=unknown %p/Inputs/remark-
 ; ANALYSIS: path/to/anno2.c,2
 
 ; UNKNOWN: Source,Count
-; UNKNOWN-EMPTY: 
+; UNKNOWN-EMPTY:

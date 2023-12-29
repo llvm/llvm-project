@@ -75,7 +75,7 @@ public:
   ///             negative = a < 0 in
   ///         select negative, remainder + b, remainder.
   Value visitModExpr(AffineBinaryOpExpr expr) {
-    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+    if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "modulo by non-positive value is not supported");
         return nullptr;
@@ -115,7 +115,7 @@ public:
   /// IR because arith.floordivsi is more general than affine floordiv in that
   /// it supports negative RHS.
   Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
-    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+    if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "division by non-positive value is not supported");
         return nullptr;
@@ -154,7 +154,7 @@ public:
   /// Note: not using arith.ceildivsi for the same reason as explained in the
   /// visitFloorDivExpr comment.
   Value visitCeilDivExpr(AffineBinaryOpExpr expr) {
-    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+    if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "division by non-positive value is not supported");
         return nullptr;
@@ -464,15 +464,15 @@ AffineExpr mlir::affine::substWithMin(AffineExpr e, AffineExpr dim,
                                       bool positivePath) {
   if (e == dim)
     return positivePath ? min : max;
-  if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
+  if (auto bin = dyn_cast<AffineBinaryOpExpr>(e)) {
     AffineExpr lhs = bin.getLHS();
     AffineExpr rhs = bin.getRHS();
     if (bin.getKind() == mlir::AffineExprKind::Add)
       return substWithMin(lhs, dim, min, max, positivePath) +
              substWithMin(rhs, dim, min, max, positivePath);
 
-    auto c1 = bin.getLHS().dyn_cast<AffineConstantExpr>();
-    auto c2 = bin.getRHS().dyn_cast<AffineConstantExpr>();
+    auto c1 = dyn_cast<AffineConstantExpr>(bin.getLHS());
+    auto c2 = dyn_cast<AffineConstantExpr>(bin.getRHS());
     if (c1 && c1.getValue() < 0)
       return getAffineBinaryOpExpr(
           bin.getKind(), c1, substWithMin(rhs, dim, min, max, !positivePath));
@@ -497,8 +497,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
   bool isAlreadyNormalized =
       llvm::all_of(llvm::zip(steps, lbMap.getResults()), [](auto tuple) {
         int64_t step = std::get<0>(tuple);
-        auto lbExpr =
-            std::get<1>(tuple).template dyn_cast<AffineConstantExpr>();
+        auto lbExpr = dyn_cast<AffineConstantExpr>(std::get<1>(tuple));
         return lbExpr && lbExpr.getValue() == 0 && step == 1;
       });
   if (isAlreadyNormalized)
@@ -1474,8 +1473,8 @@ static LogicalResult getTileSizePos(
   unsigned pos = 0;
   for (AffineExpr expr : map.getResults()) {
     if (expr.getKind() == AffineExprKind::FloorDiv) {
-      AffineBinaryOpExpr binaryExpr = expr.cast<AffineBinaryOpExpr>();
-      if (binaryExpr.getRHS().isa<AffineConstantExpr>())
+      AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
+      if (isa<AffineConstantExpr>(binaryExpr.getRHS()))
         floordivExprs.emplace_back(
             std::make_tuple(binaryExpr.getLHS(), binaryExpr.getRHS(), pos));
     }
@@ -1509,7 +1508,7 @@ static LogicalResult getTileSizePos(
         expr.walk([&](AffineExpr e) {
           if (e == floordivExprLHS) {
             if (expr.getKind() == AffineExprKind::Mod) {
-              AffineBinaryOpExpr binaryExpr = expr.cast<AffineBinaryOpExpr>();
+              AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
               // If LHS and RHS of `mod` are the same with those of floordiv.
               if (floordivExprLHS == binaryExpr.getLHS() &&
                   floordivExprRHS == binaryExpr.getRHS()) {
@@ -1569,7 +1568,7 @@ isNormalizedMemRefDynamicDim(unsigned dim, AffineMap layoutMap,
   // Check if affine expr of the dimension includes dynamic dimension of input
   // memrefType.
   expr.walk([&inMemrefTypeDynDims, &isDynamicDim, &context](AffineExpr e) {
-    if (e.isa<AffineDimExpr>()) {
+    if (isa<AffineDimExpr>(e)) {
       for (unsigned dm : inMemrefTypeDynDims) {
         if (e == getAffineDimExpr(dm, context)) {
           isDynamicDim = true;
@@ -1590,11 +1589,11 @@ static AffineExpr createDimSizeExprForTiledLayout(AffineExpr oldMapOutput,
   AffineBinaryOpExpr binaryExpr = nullptr;
   switch (pat) {
   case TileExprPattern::TileMod:
-    binaryExpr = oldMapOutput.cast<AffineBinaryOpExpr>();
+    binaryExpr = cast<AffineBinaryOpExpr>(oldMapOutput);
     newMapOutput = binaryExpr.getRHS();
     break;
   case TileExprPattern::TileFloorDiv:
-    binaryExpr = oldMapOutput.cast<AffineBinaryOpExpr>();
+    binaryExpr = cast<AffineBinaryOpExpr>(oldMapOutput);
     newMapOutput = getAffineBinaryOpExpr(
         AffineExprKind::CeilDiv, binaryExpr.getLHS(), binaryExpr.getRHS());
     break;

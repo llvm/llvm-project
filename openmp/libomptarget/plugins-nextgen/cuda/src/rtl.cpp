@@ -16,11 +16,13 @@
 #include <string>
 #include <unordered_map>
 
-#include "Debug.h"
-#include "Environment.h"
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+
 #include "GlobalHandler.h"
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
+#include "Utils/ELF.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -36,6 +38,30 @@ namespace plugin {
 struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
+
+#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11000))
+/// Forward declarations for all Virtual Memory Management
+/// related data structures and functions. This is necessary
+/// for older cuda versions.
+typedef void *CUmemGenericAllocationHandle;
+typedef void *CUmemAllocationProp;
+typedef void *CUmemAccessDesc;
+typedef void *CUmemAllocationGranularity_flags;
+CUresult cuMemAddressReserve(CUdeviceptr *ptr, size_t size, size_t alignment,
+                             CUdeviceptr addr, unsigned long long flags) {}
+CUresult cuMemMap(CUdeviceptr ptr, size_t size, size_t offset,
+                  CUmemGenericAllocationHandle handle,
+                  unsigned long long flags) {}
+CUresult cuMemCreate(CUmemGenericAllocationHandle *handle, size_t size,
+                     const CUmemAllocationProp *prop,
+                     unsigned long long flags) {}
+CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
+                        const CUmemAccessDesc *desc, size_t count) {}
+CUresult
+cuMemGetAllocationGranularity(size_t *granularity,
+                              const CUmemAllocationProp *prop,
+                              CUmemAllocationGranularity_flags option) {}
+#endif
 
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
@@ -79,8 +105,7 @@ private:
 /// generic kernel class.
 struct CUDAKernelTy : public GenericKernelTy {
   /// Create a CUDA kernel with a name and an execution mode.
-  CUDAKernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
-      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
+  CUDAKernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the CUDA kernel.
   Error initImpl(GenericDeviceTy &GenericDevice,
@@ -354,16 +379,25 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
+                                       DeviceImageTy &Image) override {
+    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
+  }
+
+  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) override {
+    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+  }
+
   /// Allocate and construct a CUDA kernel.
   Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  constructKernel(const __tgt_offload_entry &KernelEntry) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name, ExecMode);
+    new (CUDAKernel) CUDAKernelTy(KernelEntry.name);
 
     return *CUDAKernel;
   }
@@ -519,6 +553,122 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuStreamSynchronize: %s");
   }
 
+  /// CUDA support VA management
+  bool supportVAManagement() const override {
+#if (defined(CUDA_VERSION) && (CUDA_VERSION >= 11000))
+    return true;
+#else
+    return false;
+#endif
+  }
+
+  /// Allocates \p RSize bytes (rounded up to page size) and hints the cuda
+  /// driver to map it to \p VAddr. The obtained address is stored in \p Addr.
+  /// At return \p RSize contains the actual size
+  Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize) override {
+    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
+    auto IHandle = DeviceMMaps.find(DVAddr);
+    size_t Size = *RSize;
+
+    if (Size == 0)
+      return Plugin::error("Memory Map Size must be larger than 0");
+
+    // Check if we have already mapped this address
+    if (IHandle != DeviceMMaps.end())
+      return Plugin::error("Address already memory mapped");
+
+    CUmemAllocationProp Prop = {};
+    size_t Granularity = 0;
+
+    size_t Free, Total;
+    CUresult Res = cuMemGetInfo(&Free, &Total);
+    if (auto Err = Plugin::check(Res, "Error in cuMemGetInfo: %s"))
+      return Err;
+
+    if (Size >= Free) {
+      *Addr = nullptr;
+      return Plugin::error(
+          "Canot map memory size larger than the available device memory");
+    }
+
+    // currently NVidia only supports pinned device types
+    Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
+    Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+
+    Prop.location.id = DeviceId;
+    cuMemGetAllocationGranularity(&Granularity, &Prop,
+                                  CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    if (auto Err =
+            Plugin::check(Res, "Error in cuMemGetAllocationGranularity: %s"))
+      return Err;
+
+    if (Granularity == 0)
+      return Plugin::error("Wrong device Page size");
+
+    // Ceil to page size.
+    Size = roundUp(Size, Granularity);
+
+    // Create a handler of our allocation
+    CUmemGenericAllocationHandle AHandle;
+    Res = cuMemCreate(&AHandle, Size, &Prop, 0);
+    if (auto Err = Plugin::check(Res, "Error in cuMemCreate: %s"))
+      return Err;
+
+    CUdeviceptr DevPtr = 0;
+    Res = cuMemAddressReserve(&DevPtr, Size, 0, DVAddr, 0);
+    if (auto Err = Plugin::check(Res, "Error in cuMemAddressReserve: %s"))
+      return Err;
+
+    Res = cuMemMap(DevPtr, Size, 0, AHandle, 0);
+    if (auto Err = Plugin::check(Res, "Error in cuMemMap: %s"))
+      return Err;
+
+    CUmemAccessDesc ADesc = {};
+    ADesc.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    ADesc.location.id = DeviceId;
+    ADesc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
+
+    // Sets address
+    Res = cuMemSetAccess(DevPtr, Size, &ADesc, 1);
+    if (auto Err = Plugin::check(Res, "Error in cuMemSetAccess: %s"))
+      return Err;
+
+    *Addr = reinterpret_cast<void *>(DevPtr);
+    *RSize = Size;
+    DeviceMMaps.insert({DevPtr, AHandle});
+    return Plugin::success();
+  }
+
+  /// De-allocates device memory and Unmaps the Virtual Addr
+  Error memoryVAUnMap(void *VAddr, size_t Size) override {
+    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
+    auto IHandle = DeviceMMaps.find(DVAddr);
+    // Mapping does not exist
+    if (IHandle == DeviceMMaps.end()) {
+      return Plugin::error("Addr is not MemoryMapped");
+    }
+
+    if (IHandle == DeviceMMaps.end())
+      return Plugin::error("Addr is not MemoryMapped");
+
+    CUmemGenericAllocationHandle &AllocHandle = IHandle->second;
+
+    CUresult Res = cuMemUnmap(DVAddr, Size);
+    if (auto Err = Plugin::check(Res, "Error in cuMemUnmap: %s"))
+      return Err;
+
+    Res = cuMemRelease(AllocHandle);
+    if (auto Err = Plugin::check(Res, "Error in cuMemRelease: %s"))
+      return Err;
+
+    Res = cuMemAddressFree(DVAddr, Size);
+    if (auto Err = Plugin::check(Res, "Error in cuMemAddressFree: %s"))
+      return Err;
+
+    DeviceMMaps.erase(IHandle);
+    return Plugin::success();
+  }
+
   /// Query for the completion of the pending operations on the async info.
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
     CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
@@ -578,7 +728,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // If there is already pending work on the stream it could be waiting for
     // someone to check the RPC server.
-    if (auto RPCServer = getRPCServer()) {
+    if (auto *RPCServer = getRPCServer()) {
       CUresult Res = cuStreamQuery(Stream);
       while (Res == CUDA_ERROR_NOT_READY) {
         if (auto Err = RPCServer->runServer(*this))
@@ -843,6 +993,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  virtual bool shouldSetupDeviceMemoryPool() const override {
+    /// We use the CUDA malloc for now.
+    return false;
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -855,6 +1010,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
   Error setDeviceHeapSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
+  }
+  Error getDeviceMemorySize(uint64_t &Value) override {
+    CUresult Res = cuDeviceTotalMem(&Value, Device);
+    return Plugin::check(Res, "Error in getDeviceMemorySize %s");
   }
 
   /// CUDA-specific functions for getting and setting context limits.
@@ -891,6 +1050,101 @@ private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
   using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;
 
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 bool IsCtor) {
+    const char *KernelName = IsCtor ? "nvptx$device$init" : "nvptx$device$fini";
+    // Perform a quick check for the named kernel in the image. The kernel
+    // should be created by the 'nvptx-lower-ctor-dtor' pass.
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    if (!Handler.isSymbolInImage(*this, Image, KernelName))
+      return Plugin::success();
+
+    // The Nvidia backend cannot handle creating the ctor / dtor array
+    // automatically so we must create it ourselves. The backend will emit
+    // several globals that contain function pointers we can call. These are
+    // prefixed with a known name due to Nvidia's lack of section support.
+    auto ELFObjOrErr = Handler.getELFObjectFile(Image);
+    if (!ELFObjOrErr)
+      return ELFObjOrErr.takeError();
+
+    // Search for all symbols that contain a constructor or destructor.
+    SmallVector<std::pair<StringRef, uint16_t>> Funcs;
+    for (ELFSymbolRef Sym : ELFObjOrErr->symbols()) {
+      auto NameOrErr = Sym.getName();
+      if (!NameOrErr)
+        return NameOrErr.takeError();
+
+      if (!NameOrErr->starts_with(IsCtor ? "__init_array_object_"
+                                         : "__fini_array_object_"))
+        continue;
+
+      uint16_t Priority;
+      if (NameOrErr->rsplit('_').second.getAsInteger(10, Priority))
+        return Plugin::error("Invalid priority for constructor or destructor");
+
+      Funcs.emplace_back(*NameOrErr, Priority);
+    }
+
+    // Sort the created array to be in priority order.
+    llvm::sort(Funcs, [=](auto X, auto Y) { return X.second < Y.second; });
+
+    // Allocate a buffer to store all of the known constructor / destructor
+    // functions in so we can iterate them on the device.
+    void *Buffer =
+        allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
+    if (!Buffer)
+      return Plugin::error("Failed to allocate memory for global buffer");
+
+    auto *GlobalPtrStart = reinterpret_cast<uintptr_t *>(Buffer);
+    auto *GlobalPtrStop = reinterpret_cast<uintptr_t *>(Buffer) + Funcs.size();
+
+    SmallVector<void *> FunctionPtrs(Funcs.size());
+    std::size_t Idx = 0;
+    for (auto [Name, Priority] : Funcs) {
+      GlobalTy FunctionAddr(Name.str(), sizeof(void *), &FunctionPtrs[Idx++]);
+      if (auto Err = Handler.readGlobalFromDevice(*this, Image, FunctionAddr))
+        return Err;
+    }
+
+    // Copy the local buffer to the device.
+    if (auto Err = dataSubmit(GlobalPtrStart, FunctionPtrs.data(),
+                              FunctionPtrs.size() * sizeof(void *), nullptr))
+      return Err;
+
+    // Copy the created buffer to the appropriate symbols so the kernel can
+    // iterate through them.
+    GlobalTy StartGlobal(IsCtor ? "__init_array_start" : "__fini_array_start",
+                         sizeof(void *), &GlobalPtrStart);
+    if (auto Err = Handler.writeGlobalToDevice(*this, Image, StartGlobal))
+      return Err;
+
+    GlobalTy StopGlobal(IsCtor ? "__init_array_end" : "__fini_array_end",
+                        sizeof(void *), &GlobalPtrStop);
+    if (auto Err = Handler.writeGlobalToDevice(*this, Image, StopGlobal))
+      return Err;
+
+    CUDAKernelTy CUDAKernel(KernelName);
+
+    if (auto Err = CUDAKernel.init(*this, Image))
+      return Err;
+
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
+
+    KernelArgsTy KernelArgs = {};
+    if (auto Err = CUDAKernel.launchImpl(*this, /*NumThread=*/1u,
+                                         /*NumBlocks=*/1ul, KernelArgs, nullptr,
+                                         AsyncInfoWrapper))
+      return Err;
+
+    Error Err = Plugin::success();
+    AsyncInfoWrapper.finalize(Err);
+
+    if (free(Buffer, TARGET_ALLOC_DEVICE) != OFFLOAD_SUCCESS)
+      return Plugin::error("Failed to free memory for global buffer");
+
+    return Err;
+  }
+
   /// Stream manager for CUDA streams.
   CUDAStreamManagerTy CUDAStreamManager;
 
@@ -903,6 +1157,9 @@ private:
 
   /// The CUDA device handler.
   CUdevice Device = CU_DEVICE_INVALID;
+
+  /// The memory mapped addresses and their handles
+  std::unordered_map<CUdeviceptr, CUmemGenericAllocationHandle> DeviceMMaps;
 
   /// The compute capability of the corresponding CUDA device.
   struct ComputeCapabilityTy {
@@ -1026,7 +1283,16 @@ struct CUDAPluginTy final : public GenericPluginTy {
   }
 
   /// Check whether the image is compatible with the available CUDA devices.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool> isELFCompatible(StringRef Image) const override {
+    auto ElfOrErr =
+        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
+                                  /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+
+    // Get the numeric value for the image's `sm_` value.
+    auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
+
     for (int32_t DevId = 0; DevId < getNumDevices(); ++DevId) {
       CUdevice Device;
       CUresult Res = cuDeviceGet(&Device, DevId);
@@ -1044,16 +1310,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
       if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
         return std::move(Err);
 
-      StringRef ArchStr(Info->Arch);
-      StringRef PrefixStr("sm_");
-      if (!ArchStr.startswith(PrefixStr))
-        return Plugin::error("Unrecognized image arch %s", ArchStr.data());
+      int32_t ImageMajor = SM / 10;
+      int32_t ImageMinor = SM % 10;
 
-      int32_t ImageMajor = ArchStr[PrefixStr.size() + 0] - '0';
-      int32_t ImageMinor = ArchStr[PrefixStr.size() + 1] - '0';
-
-      // A cubin generated for a certain compute capability is supported to run
-      // on any GPU with the same major revision and same or higher minor
+      // A cubin generated for a certain compute capability is supported to
+      // run on any GPU with the same major revision and same or higher minor
       // revision.
       if (Major != ImageMajor || Minor < ImageMinor)
         return false;

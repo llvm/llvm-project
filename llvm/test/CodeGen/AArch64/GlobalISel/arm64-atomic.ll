@@ -1770,10 +1770,7 @@ define i8 @atomicrmw_min_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    sxtb w9, w10
 ; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w8, sxtb
-; CHECK-NOLSE-O0-NEXT:    cset w9, le
-; CHECK-NOLSE-O0-NEXT:    and w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, le
 ; CHECK-NOLSE-O0-NEXT:  LBB33_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB33_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -1843,10 +1840,7 @@ define i8 @atomicrmw_max_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    sxtb w9, w10
 ; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w8, sxtb
-; CHECK-NOLSE-O0-NEXT:    cset w9, gt
-; CHECK-NOLSE-O0-NEXT:    and w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, gt
 ; CHECK-NOLSE-O0-NEXT:  LBB34_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB34_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -1917,10 +1911,7 @@ define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    and w9, w10, #0xff
 ; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w8, uxtb
-; CHECK-NOLSE-O0-NEXT:    cset w9, ls
-; CHECK-NOLSE-O0-NEXT:    and w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, ls
 ; CHECK-NOLSE-O0-NEXT:  LBB35_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB35_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -1991,10 +1982,7 @@ define i8 @atomicrmw_umax_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    and w9, w10, #0xff
 ; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w8, uxtb
-; CHECK-NOLSE-O0-NEXT:    cset w9, hi
-; CHECK-NOLSE-O0-NEXT:    and w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, hi
 ; CHECK-NOLSE-O0-NEXT:  LBB36_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB36_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -2463,10 +2451,7 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    sxth w10, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w9, sxth
-; CHECK-NOLSE-O0-NEXT:    cset w10, le
-; CHECK-NOLSE-O0-NEXT:    and w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, le
 ; CHECK-NOLSE-O0-NEXT:  LBB43_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB43_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -2536,10 +2521,7 @@ define i16 @atomicrmw_max_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    sxth w10, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w9, sxth
-; CHECK-NOLSE-O0-NEXT:    cset w10, gt
-; CHECK-NOLSE-O0-NEXT:    and w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, gt
 ; CHECK-NOLSE-O0-NEXT:  LBB44_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB44_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -2610,10 +2592,7 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    uxth w10, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w9, uxth
-; CHECK-NOLSE-O0-NEXT:    cset w10, ls
-; CHECK-NOLSE-O0-NEXT:    and w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, ls
 ; CHECK-NOLSE-O0-NEXT:  LBB45_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB45_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -2684,10 +2663,7 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    uxth w10, w8
 ; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w9, uxth
-; CHECK-NOLSE-O0-NEXT:    cset w10, hi
-; CHECK-NOLSE-O0-NEXT:    and w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, ne
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, hi
 ; CHECK-NOLSE-O0-NEXT:  LBB46_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB46_1 Depth=1
 ; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -2763,8 +2739,7 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O0-NEXT:  LBB47_3:
 ; CHECK-NOLSE-O0-NEXT:    and w8, w0, #0xff
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w1, uxtb
-; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-NOLSE-O0-NEXT:    cset w1, eq
 ; CHECK-NOLSE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: cmpxchg_i8:
@@ -2784,8 +2759,7 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-LSE-O0-NEXT:    casb w0, w2, [x8]
 ; CHECK-LSE-O0-NEXT:    and w8, w0, #0xff
 ; CHECK-LSE-O0-NEXT:    subs w8, w8, w1, uxtb
-; CHECK-LSE-O0-NEXT:    cset w8, eq
-; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-LSE-O0-NEXT:    cset w1, eq
 ; CHECK-LSE-O0-NEXT:    ret
   %res = cmpxchg ptr %ptr, i8 %desired, i8 %new monotonic monotonic
   ret { i8, i1 } %res
@@ -2829,8 +2803,7 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O0-NEXT:  LBB48_3:
 ; CHECK-NOLSE-O0-NEXT:    and w8, w0, #0xffff
 ; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w1, uxth
-; CHECK-NOLSE-O0-NEXT:    cset w8, eq
-; CHECK-NOLSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-NOLSE-O0-NEXT:    cset w1, eq
 ; CHECK-NOLSE-O0-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: cmpxchg_i16:
@@ -2850,8 +2823,7 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-LSE-O0-NEXT:    cash w0, w2, [x8]
 ; CHECK-LSE-O0-NEXT:    and w8, w0, #0xffff
 ; CHECK-LSE-O0-NEXT:    subs w8, w8, w1, uxth
-; CHECK-LSE-O0-NEXT:    cset w8, eq
-; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-LSE-O0-NEXT:    cset w1, eq
 ; CHECK-LSE-O0-NEXT:    ret
   %res = cmpxchg ptr %ptr, i16 %desired, i16 %new monotonic monotonic
   ret { i16, i1 } %res

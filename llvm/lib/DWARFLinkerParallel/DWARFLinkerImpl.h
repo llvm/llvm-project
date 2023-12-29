@@ -11,6 +11,7 @@
 
 #include "DWARFEmitterImpl.h"
 #include "DWARFLinkerCompileUnit.h"
+#include "DWARFLinkerTypeUnit.h"
 #include "StringEntryToDwarfStringPoolEntryMap.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/CodeGen/AccelTable.h"
@@ -25,13 +26,7 @@ class DWARFLinkerImpl : public DWARFLinker {
 public:
   DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
                   MessageHandlerTy WarningHandler,
-                  TranslatorFuncTy StringsTranslator)
-      : UniqueUnitID(0), DebugStrStrings(GlobalData),
-        DebugLineStrStrings(GlobalData), CommonSections(GlobalData) {
-    GlobalData.setTranslator(StringsTranslator);
-    GlobalData.setErrorHandler(ErrorHandler);
-    GlobalData.setWarningHandler(WarningHandler);
-  }
+                  TranslatorFuncTy StringsTranslator);
 
   /// Create debug info emitter.
   Error createEmitter(const Triple &TheTriple, OutputFileType FileType,
@@ -74,11 +69,7 @@ public:
   }
 
   /// Do not unique types according to ODR.
-  void setNoODR(bool) override {
-    // FIXME: set option when ODR mode will be supported.
-    // getOptions().NoODR = NoODR;
-    GlobalData.Options.NoODR = true;
-  }
+  void setNoODR(bool NoODR) override { GlobalData.Options.NoODR = NoODR; }
 
   /// Update index tables only(do not modify rest of DWARF).
   void setUpdateIndexTablesOnly(bool UpdateIndexTablesOnly) override {
@@ -114,9 +105,7 @@ public:
   }
 
   /// Set estimated objects files amount, for preliminary data allocation.
-  void setEstimatedObjfilesAmount(unsigned ObjFilesNum) override {
-    ObjectContexts.reserve(ObjFilesNum);
-  }
+  void setEstimatedObjfilesAmount(unsigned ObjFilesNum) override;
 
   /// Set verification handler which would be used to report verification
   /// errors.
@@ -173,10 +162,8 @@ protected:
     /// Keep information for referenced clang module: already loaded DWARF info
     /// of the clang module and a CompileUnit of the module.
     struct RefModuleUnit {
-      RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit)
-          : File(File), Unit(std::move(Unit)) {}
-      RefModuleUnit(RefModuleUnit &&Other)
-          : File(Other.File), Unit(std::move(Other.Unit)) {}
+      RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit);
+      RefModuleUnit(RefModuleUnit &&Other);
       RefModuleUnit(const RefModuleUnit &) = delete;
 
       DWARFFile &File;
@@ -209,28 +196,15 @@ protected:
     /// if new inter-connected units were found.
     std::atomic<bool> HasNewInterconnectedCUs = {false};
 
+    std::atomic<bool> HasNewGlobalDependency = {false};
+
     /// Counter for compile units ID.
     std::atomic<size_t> &UniqueUnitID;
 
     LinkContext(LinkingGlobalData &GlobalData, DWARFFile &File,
                 StringMap<uint64_t> &ClangModules,
                 std::atomic<size_t> &UniqueUnitID,
-                std::optional<Triple> TargetTriple)
-        : OutputSections(GlobalData), InputDWARFFile(File),
-          ClangModules(ClangModules), TargetTriple(TargetTriple),
-          UniqueUnitID(UniqueUnitID) {
-
-      if (File.Dwarf) {
-        if (!File.Dwarf->compile_units().empty())
-          CompileUnits.reserve(File.Dwarf->getNumCompileUnits());
-
-        // Set context format&endianness based on the input file.
-        Format.Version = File.Dwarf->getMaxVersion();
-        Format.AddrSize = File.Dwarf->getCUAddrSize();
-        Endianness = File.Dwarf->isLittleEndian() ? llvm::endianness::little
-                                                  : llvm::endianness::big;
-      }
-    }
+                std::optional<Triple> TargetTriple);
 
     /// Check whether specified \p CUDie is a Clang module reference.
     /// if \p Quiet is false then display error messages.
@@ -259,9 +233,7 @@ protected:
                           unsigned Indent = 0);
 
     /// Add Compile Unit corresponding to the module.
-    void addModulesCompileUnit(RefModuleUnit &&Unit) {
-      ModulesCompileUnits.emplace_back(std::move(Unit));
-    }
+    void addModulesCompileUnit(RefModuleUnit &&Unit);
 
     /// Computes the total size of the debug info.
     uint64_t getInputDebugInfoSize() const {
@@ -277,11 +249,11 @@ protected:
     }
 
     /// Link compile units for this context.
-    Error link();
+    Error link(TypeUnit *ArtificialTypeUnit);
 
     /// Link specified compile unit until specified stage.
     void linkSingleCompileUnit(
-        CompileUnit &CU,
+        CompileUnit &CU, TypeUnit *ArtificialTypeUnit,
         enum CompileUnit::Stage DoUntilStage = CompileUnit::Stage::Cleaned);
 
     /// Emit invariant sections.
@@ -331,6 +303,9 @@ protected:
   void forEachObjectSectionsSet(
       function_ref<void(OutputSections &SectionsSet)> SectionsSetHandler);
 
+  /// Enumerates all compile and type units.
+  void forEachCompileAndTypeUnit(function_ref<void(DwarfUnit *CU)> UnitHandler);
+
   /// Enumerates all comple units.
   void forEachCompileUnit(function_ref<void(CompileUnit *CU)> UnitHandler);
 
@@ -368,6 +343,9 @@ protected:
   /// Mapping the PCM filename to the DwoId.
   StringMap<uint64_t> ClangModules;
   std::mutex ClangModulesMutex;
+
+  /// Type unit.
+  std::unique_ptr<TypeUnit> ArtificialTypeUnit;
   /// @}
 
   /// \defgroup Data members accessed sequentially.

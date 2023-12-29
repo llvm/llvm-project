@@ -98,6 +98,7 @@ public:
   Instruction *visitSub(BinaryOperator &I);
   Instruction *visitFSub(BinaryOperator &I);
   Instruction *visitMul(BinaryOperator &I);
+  Instruction *foldFMulReassoc(BinaryOperator &I);
   Instruction *visitFMul(BinaryOperator &I);
   Instruction *visitURem(BinaryOperator &I);
   Instruction *visitSRem(BinaryOperator &I);
@@ -131,7 +132,6 @@ public:
   Instruction *FoldShiftByConstant(Value *Op0, Constant *Op1,
                                    BinaryOperator &I);
   Instruction *commonCastTransforms(CastInst &CI);
-  Instruction *commonPointerCastTransforms(CastInst &CI);
   Instruction *visitTrunc(TruncInst &CI);
   Instruction *visitZExt(ZExtInst &Zext);
   Instruction *visitSExt(SExtInst &Sext);
@@ -276,6 +276,17 @@ private:
   bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
+  Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
+
+  // Match a pair of Phi Nodes like
+  // phi [a, BB0], [b, BB1] & phi [b, BB0], [a, BB1]
+  // Return the matched two operands.
+  std::optional<std::pair<Value *, Value *>>
+  matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS);
+
+  // Tries to fold (op phi(a, b) phi(b, a)) -> (op a, b)
+  // while op is a commutative intrinsic call.
+  Instruction *foldCommutativeIntrinsicOverPhis(IntrinsicInst &II);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
@@ -295,13 +306,15 @@ private:
 
   Instruction *transformSExtICmp(ICmpInst *Cmp, SExtInst &Sext);
 
-  bool willNotOverflowSignedAdd(const Value *LHS, const Value *RHS,
+  bool willNotOverflowSignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
                                 const Instruction &CxtI) const {
     return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
   }
 
-  bool willNotOverflowUnsignedAdd(const Value *LHS, const Value *RHS,
+  bool willNotOverflowUnsignedAdd(const WithCache<const Value *> &LHS,
+                                  const WithCache<const Value *> &RHS,
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
@@ -457,6 +470,7 @@ public:
     // use counts.
     SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
+    DC.removeValue(&I);
     I.eraseFromParent();
     for (Value *Op : Ops)
       Worklist.handleUseCountDecrement(Op);
@@ -487,6 +501,11 @@ public:
   /// expression X % C0 + (( X / C0 ) % C1) * C0 can be simplified to
   /// X % (C0 * C1)
   Value *SimplifyAddWithRemainder(BinaryOperator &I);
+
+  // Tries to fold (Binop phi(a, b) phi(b, a)) -> (Binop a, b)
+  // while Binop is commutative.
+  Value *SimplifyPhiCommutativeBinaryOp(BinaryOperator &I, Value *LHS,
+                                        Value *RHS);
 
   // Binary Op helper for select operations where the expression can be
   // efficiently reorganized.
@@ -543,9 +562,10 @@ public:
   /// Tries to simplify operands to an integer instruction based on its
   /// demanded bits.
   bool SimplifyDemandedInstructionBits(Instruction &Inst);
+  bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &UndefElts, unsigned Depth = 0,
+                                    APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
   /// Canonicalize the position of binops relative to shufflevector.
@@ -644,6 +664,8 @@ public:
                                       ConstantInt *C);
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, TruncInst *Trunc,
                                      const APInt &C);
+  Instruction *foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                           const SimplifyQuery &Q);
   Instruction *foldICmpAndConstant(ICmpInst &Cmp, BinaryOperator *And,
                                    const APInt &C);
   Instruction *foldICmpXorConstant(ICmpInst &Cmp, BinaryOperator *Xor,
@@ -734,13 +756,11 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const SimplifyQuery &SQ;
-
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

@@ -32,7 +32,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -1104,7 +1103,7 @@ public:
     // object writer expects each function to have its own section. This way
     // The user can't forget this "convention".
     auto SymName = Symbol->getName();
-    if (SymName.startswith(".L"))
+    if (SymName.starts_with(".L"))
       return; // Local Symbol.
 
     // TODO: If the user explicitly creates a new function section, we ignore

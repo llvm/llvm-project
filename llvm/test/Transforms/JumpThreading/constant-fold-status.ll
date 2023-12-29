@@ -14,7 +14,7 @@
 
 define void @foo(i16 %d) {
 entry:
-  %.not = icmp eq i16 zext (i1 icmp ne (i32 ptrtoint (ptr @a to i32), i32 0) to i16), 0
+  %.not = icmp eq i32 ptrtoint (ptr @a to i32), 0
   br i1 %.not, label %overflow, label %cont
 
 overflow:                                         ; preds = %entry

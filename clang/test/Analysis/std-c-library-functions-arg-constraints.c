@@ -1,8 +1,8 @@
 // Check the basic reporting/warning and the application of constraints.
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -11,8 +11,8 @@
 // Check the bugpath related to the reports.
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \

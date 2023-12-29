@@ -53,52 +53,6 @@
 
 namespace LIBC_NAMESPACE {
 
-// Lookup table for log2(f) = log2(1 + n*2^(-7)) where n = 0..127.
-static constexpr double LOG2_R[128] = {
-    0x0.0000000000000p+0, 0x1.72c7ba20f7327p-7, 0x1.743ee861f3556p-6,
-    0x1.184b8e4c56af8p-5, 0x1.77394c9d958d5p-5, 0x1.d6ebd1f1febfep-5,
-    0x1.1bb32a600549dp-4, 0x1.4c560fe68af88p-4, 0x1.7d60496cfbb4cp-4,
-    0x1.960caf9abb7cap-4, 0x1.c7b528b70f1c5p-4, 0x1.f9c95dc1d1165p-4,
-    0x1.097e38ce60649p-3, 0x1.22dadc2ab3497p-3, 0x1.3c6fb650cde51p-3,
-    0x1.494f863b8df35p-3, 0x1.633a8bf437ce1p-3, 0x1.7046031c79f85p-3,
-    0x1.8a8980abfbd32p-3, 0x1.97c1cb13c7ec1p-3, 0x1.b2602497d5346p-3,
-    0x1.bfc67a7fff4ccp-3, 0x1.dac22d3e441d3p-3, 0x1.e857d3d361368p-3,
-    0x1.01d9bbcfa61d4p-2, 0x1.08bce0d95fa38p-2, 0x1.169c05363f158p-2,
-    0x1.1d982c9d52708p-2, 0x1.249cd2b13cd6cp-2, 0x1.32bfee370ee68p-2,
-    0x1.39de8e1559f6fp-2, 0x1.4106017c3eca3p-2, 0x1.4f6fbb2cec598p-2,
-    0x1.56b22e6b578e5p-2, 0x1.5dfdcf1eeae0ep-2, 0x1.6552b49986277p-2,
-    0x1.6cb0f6865c8eap-2, 0x1.7b89f02cf2aadp-2, 0x1.8304d90c11fd3p-2,
-    0x1.8a8980abfbd32p-2, 0x1.921800924dd3bp-2, 0x1.99b072a96c6b2p-2,
-    0x1.a8ff971810a5ep-2, 0x1.b0b67f4f4681p-2,  0x1.b877c57b1b07p-2,
-    0x1.c043859e2fdb3p-2, 0x1.c819dc2d45fe4p-2, 0x1.cffae611ad12bp-2,
-    0x1.d7e6c0abc3579p-2, 0x1.dfdd89d586e2bp-2, 0x1.e7df5fe538ab3p-2,
-    0x1.efec61b011f85p-2, 0x1.f804ae8d0cd02p-2, 0x1.0014332be0033p-1,
-    0x1.042bd4b9a7c99p-1, 0x1.08494c66b8efp-1,  0x1.0c6caaf0c5597p-1,
-    0x1.1096015dee4dap-1, 0x1.14c560fe68af9p-1, 0x1.18fadb6e2d3c2p-1,
-    0x1.1d368296b5255p-1, 0x1.217868b0c37e8p-1, 0x1.25c0a0463bebp-1,
-    0x1.2a0f3c340705cp-1, 0x1.2e644fac04fd8p-1, 0x1.2e644fac04fd8p-1,
-    0x1.32bfee370ee68p-1, 0x1.37222bb70747cp-1, 0x1.3b8b1c68fa6edp-1,
-    0x1.3ffad4e74f1d6p-1, 0x1.44716a2c08262p-1, 0x1.44716a2c08262p-1,
-    0x1.48eef19317991p-1, 0x1.4d7380dcc422dp-1, 0x1.51ff2e30214bcp-1,
-    0x1.5692101d9b4a6p-1, 0x1.5b2c3da19723bp-1, 0x1.5b2c3da19723bp-1,
-    0x1.5fcdce2727ddbp-1, 0x1.6476d98ad990ap-1, 0x1.6927781d932a8p-1,
-    0x1.6927781d932a8p-1, 0x1.6ddfc2a78fc63p-1, 0x1.729fd26b707c8p-1,
-    0x1.7767c12967a45p-1, 0x1.7767c12967a45p-1, 0x1.7c37a9227e7fbp-1,
-    0x1.810fa51bf65fdp-1, 0x1.810fa51bf65fdp-1, 0x1.85efd062c656dp-1,
-    0x1.8ad846cf369a4p-1, 0x1.8ad846cf369a4p-1, 0x1.8fc924c89ac84p-1,
-    0x1.94c287492c4dbp-1, 0x1.94c287492c4dbp-1, 0x1.99c48be2063c8p-1,
-    0x1.9ecf50bf43f13p-1, 0x1.9ecf50bf43f13p-1, 0x1.a3e2f4ac43f6p-1,
-    0x1.a8ff971810a5ep-1, 0x1.a8ff971810a5ep-1, 0x1.ae255819f022dp-1,
-    0x1.b35458761d479p-1, 0x1.b35458761d479p-1, 0x1.b88cb9a2ab521p-1,
-    0x1.b88cb9a2ab521p-1, 0x1.bdce9dcc96187p-1, 0x1.c31a27dd00b4ap-1,
-    0x1.c31a27dd00b4ap-1, 0x1.c86f7b7ea4a89p-1, 0x1.c86f7b7ea4a89p-1,
-    0x1.cdcebd2373995p-1, 0x1.d338120a6dd9dp-1, 0x1.d338120a6dd9dp-1,
-    0x1.d8aba045b01c8p-1, 0x1.d8aba045b01c8p-1, 0x1.de298ec0bac0dp-1,
-    0x1.de298ec0bac0dp-1, 0x1.e3b20546f554ap-1, 0x1.e3b20546f554ap-1,
-    0x1.e9452c8a71028p-1, 0x1.e9452c8a71028p-1, 0x1.eee32e2aeccbfp-1,
-    0x1.eee32e2aeccbfp-1, 0x1.f48c34bd1e96fp-1, 0x1.f48c34bd1e96fp-1,
-    0x1.fa406bd2443dfp-1, 0x1.0000000000000p0};
-
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
@@ -107,7 +61,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Hard to round value(s).
   using fputil::round_result_slightly_up;
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   // log2(1.0f) = 0.0f.
   if (LIBC_UNLIKELY(x_u == 0x3f80'0000U))
@@ -133,10 +87,10 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
     m -= 23;
   }
 
-  m += xbits.get_unbiased_exponent();
+  m += xbits.get_biased_exponent();
   int index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
   float u = static_cast<float>(xbits);
   double v;

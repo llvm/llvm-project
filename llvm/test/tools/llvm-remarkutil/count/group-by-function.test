@@ -4,4 +4,4 @@ RUN: llvm-remarkutil count --parser=yaml --group-by=function %p/Inputs/remark-gr
 ; CHECK-LABEL: Function,Count
 ; CHECK: func1,3
 ; CHECK: func2,2
-; CHECK: func3,1 
+; CHECK: func3,1

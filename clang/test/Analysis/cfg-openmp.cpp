@@ -22,7 +22,7 @@ void target_has_device_addr(int argc) {
 }
 // OMP51-LABEL: void target_s_has_device_addr(int argc)
 void target_s_has_device_addr(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // OMP51-DAG:  [B3]
 // OMP51-DAG: [[#TSB:]]: x
 // OMP51-DAG: [[#TSB+1]]: [B3.[[#TSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -35,14 +35,14 @@ void target_s_has_device_addr(int argc) {
 // OMP51-DAG: [[#TS+3]]: fp
 // OMP51-DAG: [[#TS+4]]: rd
 // OMP51-DAG: [[#TS+5]]: lin
-// OMP51-DAG: [[#TS+6]]: step
+// OMP51-DAG: [[#TS+6]]: step_sz
 // OMP51-DAG: [[#TS+7]]: [B1.[[#TS+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // OMP51-DAG: [[#TS+8]]: [B3.[[#TSB+2]]]
 // OMP51-DAG: [[#TS+9]]: [B3.[[#TSB]]]
-// OMP51-DAG: [[#TS+10]]: #pragma omp target simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step) has_device_addr(map)
+// OMP51-DAG: [[#TS+10]]: #pragma omp target simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step(step_sz)) has_device_addr(map)
 // OMP51-DAG:    for (int i = 0;
 // OMP51-DAG: [B3.[[#TSB+3]]];
-#pragma omp target simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step) has_device_addr(map)
+#pragma omp target simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step_sz) has_device_addr(map)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
@@ -129,9 +129,9 @@ void xxx(int argc) {
 // CHECK-NEXT:   3: int fp;
 // CHECK-NEXT:   4: int rd;
 // CHECK-NEXT:   5: int lin;
-// CHECK-NEXT:   6: int step;
+// CHECK-NEXT:   6: int step_sz;
 // CHECK-NEXT:   7: int map;
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-NEXT:   [[#ATOM:]]: x
 // CHECK-NEXT:   [[#ATOM+1]]: [B1.[[#ATOM]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:   [[#ATOM+2]]: argc
@@ -294,7 +294,7 @@ void xxx(int argc) {
 
 // CHECK-LABEL:  void dpf(int argc)
 void dpf(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#DPFB:]]: x
 // CHECK-DAG:  [[#DPFB+1]]: [B3.[[#DPFB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -316,7 +316,7 @@ void dpf(int argc) {
 
 // CHECK-LABEL:  void dpfs(int argc)
 void dpfs(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#DPFSB:]]: x
 // CHECK-DAG:  [[#DPFSB+1]]: [B3.[[#DPFSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -338,7 +338,7 @@ void dpfs(int argc) {
 
 // CHECK-LABEL:  void ds(int argc)
 void ds(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#DSB:]]: x
 // CHECK-DAG:  [[#DSB+1]]: [B3.[[#DSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -355,7 +355,7 @@ void ds(int argc) {
 
 // CHECK-LABEL:  void for_fn(int argc)
 void for_fn(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#FORB:]]: x
 // CHECK-DAG:  [[#FORB+1]]: [B3.[[#FORB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -363,19 +363,19 @@ void for_fn(int argc) {
 // CHECK-DAG:  [[#FORB+3]]: [B3.[[#FORB+2]]] = [B3.[[#FORB+1]]]
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#FOR:]]: lin
-// CHECK-DAG:  [[#FOR+1]]: step
+// CHECK-DAG:  [[#FOR+1]]: step_sz
 // CHECK-DAG:  [[#FOR+2]]: [B1.[[#FOR+1]]] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-DAG:  [[#FOR+3]]: #pragma omp for linear(lin: step)
+// CHECK-DAG:  [[#FOR+3]]: #pragma omp for linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#FORB+3]]];
-#pragma omp for linear(lin : step)
+#pragma omp for linear(lin : step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void fs(int argc)
 void fs(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#FSB:]]: x
 // CHECK-DAG:  [[#FSB+1]]: [B3.[[#FSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -383,19 +383,19 @@ void fs(int argc) {
 // CHECK-DAG:  [[#FSB+3]]: [B3.[[#FSB+2]]] = [B3.[[#FSB+1]]]
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#FS:]]: lin
-// CHECK-DAG:  [[#FS+1]]: step
+// CHECK-DAG:  [[#FS+1]]: step_sz
 // CHECK-DAG:  [[#FS+2]]: [B1.[[#FS+1]]] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-DAG:  [[#FS+3]]: #pragma omp for simd linear(lin: step)
+// CHECK-DAG:  [[#FS+3]]: #pragma omp for simd linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#FSB+3]]];
-#pragma omp for simd linear(lin: step)
+#pragma omp for simd linear(lin: step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void ord(int argc)
 void ord(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#ORDB:]]: x
 // CHECK-DAG:  [[#ORDB+1]]: [B3.[[#ORDB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -416,7 +416,7 @@ void ord(int argc) {
 
 // CHECK-LABEL:  void pf(int argc)
 void pf(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#PFB:]]: x
 // CHECK-DAG:  [[#PFB+1]]: [B3.[[#PFB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -429,19 +429,19 @@ void pf(int argc) {
 // CHECK-DAG:  [[#PF+3]]: fp
 // CHECK-DAG:  [[#PF+4]]: rd
 // CHECK-DAG:  [[#PF+5]]: lin
-// CHECK-DAG:  [[#PF+6]]: step
+// CHECK-DAG:  [[#PF+6]]: step_sz
 // CHECK-DAG:  [[#PF+7]]: [B1.[[#PF+6]]] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-DAG:  [[#PF+8]]: #pragma omp parallel for if(cond) firstprivate(fp) reduction(&: rd) linear(lin: step)
+// CHECK-DAG:  [[#PF+8]]: #pragma omp parallel for if(cond) firstprivate(fp) reduction(&: rd) linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#PFB+3]]];
-#pragma omp parallel for if(cond) firstprivate(fp) reduction(&:rd) linear(lin: step)
+#pragma omp parallel for if(cond) firstprivate(fp) reduction(&:rd) linear(lin: step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void pfs(int argc)
 void pfs(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#PFSB:]]: x
 // CHECK-DAG:  [[#PFSB+1]]: [B3.[[#PFSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -454,19 +454,19 @@ void pfs(int argc) {
 // CHECK-DAG:  [[#PFS+3]]: fp
 // CHECK-DAG:  [[#PFS+4]]: rd
 // CHECK-DAG:  [[#PFS+5]]: lin
-// CHECK-DAG:  [[#PFS+6]]: step
+// CHECK-DAG:  [[#PFS+6]]: step_sz
 // CHECK-DAG:  [[#PFS+7]]: [B1.[[#PFS+6]]] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-DAG:  [[#PFS+8]]: #pragma omp parallel for simd if(cond) firstprivate(fp) reduction(|: rd) linear(lin: step)
+// CHECK-DAG:  [[#PFS+8]]: #pragma omp parallel for simd if(cond) firstprivate(fp) reduction(|: rd) linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#PFSB+3]]];
-#pragma omp parallel for simd if(cond) firstprivate(fp) reduction(|:rd) linear(lin: step)
+#pragma omp parallel for simd if(cond) firstprivate(fp) reduction(|:rd) linear(lin: step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void simd(int argc)
 void simd(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#SIMDB:]]: x
 // CHECK-DAG:  [[#SIMDB+1]]: [B3.[[#SIMDB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -474,19 +474,19 @@ void simd(int argc) {
 // CHECK-DAG:  [[#SIMDB+3]]: [B3.[[#SIMDB+2]]] = [B3.[[#SIMDB+1]]]
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#SIMD:]]: lin
-// CHECK-DAG:  [[#SIMD+1]]: step
+// CHECK-DAG:  [[#SIMD+1]]: step_sz
 // CHECK-DAG:  [[#SIMD+2]]: [B1.[[#SIMD+1]]] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-DAG:  [[#SIMD+3]]: #pragma omp simd linear(lin: step)
+// CHECK-DAG:  [[#SIMD+3]]: #pragma omp simd linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#SIMDB+3]]];
-#pragma omp simd linear(lin: step)
+#pragma omp simd linear(lin: step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void tpf(int argc)
 void tpf(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TPFB:]]: x
 // CHECK-DAG:  [[#TPFB+1]]: [B3.[[#TPFB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -499,22 +499,22 @@ void tpf(int argc) {
 // CHECK-DAG:  [[#TPF+3]]: fp
 // CHECK-DAG:  [[#TPF+4]]: rd
 // CHECK-DAG:  [[#TPF+5]]: lin
-// CHECK-DAG:  [[#TPF+6]]: step
+// CHECK-DAG:  [[#TPF+6]]: step_sz
 // CHECK-DAG:  [[#TPF+7]]: [B1.[[#TPF+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#TPF+8]]: map
 // CHECK-DAG:  [[#TPF+9]]: [B3.[[#TPFB+2]]]
 // CHECK-DAG:  [[#TPF+10]]: [B3.[[#TPFB]]]
-// CHECK-DAG:  [[#TPF+11]]: #pragma omp target parallel for if(parallel: cond) firstprivate(fp) reduction(max: rd) linear(lin: step) map(tofrom: map)
+// CHECK-DAG:  [[#TPF+11]]: #pragma omp target parallel for if(parallel: cond) firstprivate(fp) reduction(max: rd) linear(lin: step(step_sz)) map(tofrom: map)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TPFB+3]]];
-#pragma omp target parallel for if(parallel:cond) firstprivate(fp) reduction(max:rd) linear(lin: step) map(map)
+#pragma omp target parallel for if(parallel:cond) firstprivate(fp) reduction(max:rd) linear(lin: step_sz) map(map)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void tpfs(int argc)
 void tpfs(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TPFSB:]]: x
 // CHECK-DAG:  [[#TPFSB+1]]: [B3.[[#TPFSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -527,22 +527,22 @@ void tpfs(int argc) {
 // CHECK-DAG:  [[#TPFS+3]]: fp
 // CHECK-DAG:  [[#TPFS+4]]: rd
 // CHECK-DAG:  [[#TPFS+5]]: lin
-// CHECK-DAG:  [[#TPFS+6]]: step
+// CHECK-DAG:  [[#TPFS+6]]: step_sz
 // CHECK-DAG:  [[#TPFS+7]]: [B1.[[#TPFS+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#TPFS+8]]: map
 // CHECK-DAG:  [[#TPFS+9]]: [B3.[[#TPFSB+2]]]
 // CHECK-DAG:  [[#TPFS+10]]: [B3.[[#TPFSB]]]
-// CHECK-DAG:  [[#TPFS+11]]: #pragma omp target parallel for simd if(target: cond) firstprivate(fp) reduction(*: rd) linear(lin: step) map(tofrom: map)
+// CHECK-DAG:  [[#TPFS+11]]: #pragma omp target parallel for simd if(target: cond) firstprivate(fp) reduction(*: rd) linear(lin: step(step_sz)) map(tofrom: map)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TPFSB+3]]];
-#pragma omp target parallel for simd if(target:cond) firstprivate(fp) reduction(*:rd) linear(lin: step) map(tofrom:map)
+#pragma omp target parallel for simd if(target:cond) firstprivate(fp) reduction(*:rd) linear(lin: step_sz) map(tofrom:map)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void ts(int argc)
 void ts(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TSB:]]: x
 // CHECK-DAG:  [[#TSB+1]]: [B3.[[#TSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -555,21 +555,21 @@ void ts(int argc) {
 // CHECK-DAG:  [[#TS+3]]: fp
 // CHECK-DAG:  [[#TS+4]]: rd
 // CHECK-DAG:  [[#TS+5]]: lin
-// CHECK-DAG:  [[#TS+6]]: step
+// CHECK-DAG:  [[#TS+6]]: step_sz
 // CHECK-DAG:  [[#TS+7]]: [B1.[[#TS+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#TS+8]]: [B3.[[#TSB+2]]]
 // CHECK-DAG:  [[#TS+9]]: [B3.[[#TSB]]]
-// CHECK-DAG:  [[#TS+10]]: #pragma omp target simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step) map(alloc: map)
+// CHECK-DAG:  [[#TS+10]]: #pragma omp target simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step(step_sz)) map(alloc: map)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TSB+3]]];
-#pragma omp target simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step) map(alloc:map)
+#pragma omp target simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step_sz) map(alloc:map)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void ttd(int argc)
 void ttd(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TTDB:]]: x
 // CHECK-DAG:  [[#TTDB+1]]: [B3.[[#TTDB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -593,7 +593,7 @@ void ttd(int argc) {
 
 // CHECK-LABEL:  void ttdpf(int argc)
 void ttdpf(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TTDPFB:]]: x
 // CHECK-DAG:  [[#TTDPFB+1]]: [B3.[[#TTDPFB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -617,7 +617,7 @@ void ttdpf(int argc) {
 
 // CHECK-LABEL:  void ttdpfs(int argc)
 void ttdpfs(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TTDPFSB:]]: x
 // CHECK-DAG:  [[#TTDPFSB+1]]: [B3.[[#TTDPFSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -641,7 +641,7 @@ void ttdpfs(int argc) {
 
 // CHECK-LABEL:  void ttds(int argc)
 void ttds(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TTDSB:]]: x
 // CHECK-DAG:  [[#TTDSB+1]]: [B3.[[#TTDSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -666,7 +666,7 @@ void ttds(int argc) {
 
 // CHECK-LABEL:  void tl(int argc)
 void tl(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TLB:]]: x
 // CHECK-DAG:  [[#TLB+1]]: [B3.[[#TLB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -690,7 +690,7 @@ void tl(int argc) {
 
 // CHECK-LABEL:  void maskedtaskloop(int argc)
 void maskedtaskloop(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#MTLB:]]: x
 // CHECK-DAG:  [[#MTLB+1]]: [B3.[[#MTLB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -714,7 +714,7 @@ void maskedtaskloop(int argc) {
 
 // CHECK-LABEL:  void parallelmaskedtaskloop(int argc)
 void parallelmaskedtaskloop(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#PMTLB:]]: x
 // CHECK-DAG:  [[#PMTLB+1]]: [B3.[[#PMTLB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -738,7 +738,7 @@ void parallelmaskedtaskloop(int argc) {
 
 // CHECK-LABEL:  void parallelmaskedtasksimdloop(int argc)
 void parallelmaskedtasksimdloop(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#PMTLSB:]]: x
 // CHECK-DAG:  [[#PMTLSB+1]]: [B3.[[#PMTLSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -762,7 +762,7 @@ void parallelmaskedtasksimdloop(int argc) {
 
 // CHECK-LABEL:  void tls(int argc)
 void tls(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TLSB:]]: x
 // CHECK-DAG:  [[#TLSB+1]]: [B3.[[#TLSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -775,21 +775,21 @@ void tls(int argc) {
 // CHECK-DAG:  [[#TLS+3]]: fp
 // CHECK-DAG:  [[#TLS+4]]: rd
 // CHECK-DAG:  [[#TLS+5]]: lin
-// CHECK-DAG:  [[#TLS+6]]: step
+// CHECK-DAG:  [[#TLS+6]]: step_sz
 // CHECK-DAG:  [[#TLS+7]]: [B1.[[#TLS+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#TLS+8]]: [B3.[[#TLSB+2]]]
 // CHECK-DAG:  [[#TLS+9]]: [B3.[[#TLSB]]]
-// CHECK-DAG:  [[#TLS+10]]: #pragma omp taskloop simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step)
+// CHECK-DAG:  [[#TLS+10]]: #pragma omp taskloop simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TLSB+3]]];
-#pragma omp taskloop simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step)
+#pragma omp taskloop simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void maskedtaskloopsimd(int argc)
 void maskedtaskloopsimd(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#MTLSB:]]: x
 // CHECK-DAG:  [[#MTLSB+1]]: [B3.[[#MTLSB]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -802,21 +802,21 @@ void maskedtaskloopsimd(int argc) {
 // CHECK-DAG:  [[#MTLS+3]]: fp
 // CHECK-DAG:  [[#MTLS+4]]: rd
 // CHECK-DAG:  [[#MTLS+5]]: lin
-// CHECK-DAG:  [[#MTLS+6]]: step
+// CHECK-DAG:  [[#MTLS+6]]: step_sz
 // CHECK-DAG:  [[#MTLS+7]]: [B1.[[#MTLS+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#MTLS+8]]: [B3.[[#MTLSB+2]]]
 // CHECK-DAG:  [[#MTLS+9]]: [B3.[[#MTLSB]]]
-// CHECK-DAG:  [[#MTLS+10]]: #pragma omp masked taskloop simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step)
+// CHECK-DAG:  [[#MTLS+10]]: #pragma omp masked taskloop simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step(step_sz))
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#MTLSB+3]]];
-#pragma omp masked taskloop simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step)
+#pragma omp masked taskloop simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step_sz)
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
 
 // CHECK-LABEL:  void tdpf(int argc)
 void tdpf(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#TDPF:]]: [B1.{{.+}}]
 // CHECK-DAG:  [[#TDPF+1]]: [B1.[[#TDPF+6]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -845,7 +845,7 @@ void tdpf(int argc) {
 
 // CHECK-LABEL:  void tdpfs(int argc)
 void tdpfs(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#TDPFS:]]: [B1.{{.+}}]
 // CHECK-DAG:  [[#TDPFS+1]]: [B1.[[#TDPFS+6]]] (ImplicitCastExpr, LValueToRValue, int)
@@ -874,7 +874,7 @@ void tdpfs(int argc) {
 
 // CHECK-LABEL:  void tds(int argc)
 void tds(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#TDS:]]: #pragma omp teams distribute simd firstprivate(fp) reduction(+: rd)
 // CHECK-DAG:  [[#TDS-2]]: [B1.[[#TDS+1]]]
@@ -899,7 +899,7 @@ void tds(int argc) {
 
 // CHECK-LABEL:  void teamsloop(int argc)
 void teamsloop(int argc) {
-  int x, cond, fp, rd, lin, step, map;
+  int x, cond, fp, rd, lin, step_sz, map;
 // CHECK-DAG:   [B1]
 // CHECK-DAG:  [[#TDS:]]: #pragma omp teams loop firstprivate(fp) reduction(+: rd)
 // CHECK-DAG:  [[#TDS-2]]: [B1.[[#TDS+1]]]

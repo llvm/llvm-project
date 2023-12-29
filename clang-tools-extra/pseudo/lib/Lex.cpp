@@ -87,9 +87,9 @@ TokenStream cook(const TokenStream &Code, const LangOptions &LangOpts) {
       llvm::SmallString<64> CleanBuffer;
       const char *Pos = Tok.text().begin();
       while (Pos < Tok.text().end()) {
-        unsigned CharSize = 0;
-        CleanBuffer.push_back(
-            clang::Lexer::getCharAndSizeNoWarn(Pos, CharSize, LangOpts));
+        auto [Char, CharSize] =
+            clang::Lexer::getCharAndSizeNoWarn(Pos, LangOpts);
+        CleanBuffer.push_back(Char);
         assert(CharSize != 0 && "no progress!");
         Pos += CharSize;
       }

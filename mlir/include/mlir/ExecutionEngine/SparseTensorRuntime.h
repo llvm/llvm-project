@@ -24,8 +24,6 @@
 
 using namespace mlir::sparse_tensor;
 
-using SparseTensorWriter = std::ostream;
-
 extern "C" {
 
 //===----------------------------------------------------------------------===//
@@ -47,14 +45,14 @@ extern "C" {
 /// kEmpty          -               STS, empty
 /// kEmptyForward   -               STS, empty, with forwarding COO
 /// kFromCOO        COO             STS, copied from the COO source
-/// kSparseToSparse STS             STS, copied from the STS source
+/// kFromReader     reader          STS, input from reader
 /// kToCOO          STS             COO, copied from the STS source
 /// kPack           buffers         STS, from level buffers
 /// kSortCOOInPlace STS             STS, sorted in place
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<LevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr);
@@ -115,31 +113,22 @@ MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_createCheckedSparseTensorReader(
     char *filename, StridedMemRefType<index_type, 1> *dimShapeRef,
     PrimaryType valTp);
 
-/// Constructs a new sparse-tensor storage object with the given encoding,
-/// initializes it by reading all the elements from the file, and then
-/// closes the file.
-MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensorFromReader(
-    void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
-    OverheadType crdTp, PrimaryType valTp);
-
 /// SparseTensorReader method to obtain direct access to the
 /// dimension-sizes array.
 MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
     StridedMemRefType<index_type, 1> *out, void *p);
 
 /// Reads the sparse tensor, stores the coordinates and values to the given
-/// memrefs. Returns a boolean to indicate whether the COO elements are sorted.
-#define DECL_GETNEXT(VNAME, V, CNAME, C)                                       \
+/// memrefs of a COO in AoS format. Returns a boolean to indicate whether
+/// the COO elements are sorted.
+#define DECL_READTOBUFFERS(VNAME, V, CNAME, C)                                 \
   MLIR_CRUNNERUTILS_EXPORT bool                                                \
       _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(           \
           void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,               \
           StridedMemRefType<index_type, 1> *lvl2dimRef,                        \
           StridedMemRefType<C, 1> *cref, StridedMemRefType<V, 1> *vref)        \
-          MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_GETNEXT)
-#undef DECL_GETNEXT
+          MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_READTOBUFFERS)
+#undef DECL_READTOBUFFERS
 
 /// Outputs the sparse tensor dim-rank, nse, and dim-shape.
 MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_outSparseTensorWriterMetaData(
@@ -177,13 +166,6 @@ MLIR_CRUNNERUTILS_EXPORT void endForwardingInsert(void *tensor);
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endLexInsert(void *tensor);
 
-/// Coordinate-scheme method to write to file in extended FROSTT format.
-#define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
-  MLIR_CRUNNERUTILS_EXPORT void outSparseTensor##VNAME(void *coo, void *dest,  \
-                                                       bool sort);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_OUTSPARSETENSOR)
-#undef DECL_OUTSPARSETENSOR
-
 /// Releases the memory for the tensor-storage object.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);
 
@@ -197,23 +179,8 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELCOO)
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
 MLIR_CRUNNERUTILS_EXPORT char *getTensorFilename(index_type id);
 
-/// Helper function to read the header of a file and return the
-/// shape/sizes, without parsing the elements of the file.
-MLIR_CRUNNERUTILS_EXPORT void readSparseTensorShape(char *filename,
-                                                    std::vector<uint64_t> *out);
-
-/// Returns the rank of the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderRank(void *p);
-
-/// Returns the is_symmetric bit for the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT bool getSparseTensorReaderIsSymmetric(void *p);
-
 /// Returns the number of stored elements for the sparse tensor being read.
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderNSE(void *p);
-
-/// Returns the size of a dimension for the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
-                                                                 index_type d);
 
 /// Releases the SparseTensorReader and closes the associated file.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);

@@ -90,6 +90,8 @@ on support follow.
      ``F``            Supported
      ``H``            Assembly Support
      ``M``            Supported
+     ``Smaia``        Supported
+     ``Ssaia``        Supported
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
@@ -106,7 +108,7 @@ on support follow.
      ``Zcb``          Supported
      ``Zcd``          Supported
      ``Zcf``          Supported
-     ``Zcmp``         Assembly Support
+     ``Zcmp``         Supported
      ``Zcmt``         Assembly Support
      ``Zdinx``        Supported
      ``Zfa``          Supported
@@ -116,7 +118,7 @@ on support follow.
      ``Zhinx``        Supported
      ``Zhinxmin``     Supported
      ``Zicbom``       Assembly Support
-     ``Zicbop``       Assembly Support
+     ``Zicbop``       Supported
      ``Zicboz``       Assembly Support
      ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
@@ -135,12 +137,28 @@ on support follow.
      ``Zks``          Supported
      ``Zkt``          Supported
      ``Zmmul``        Supported
+     ``Zvbb``         Assembly Support
+     ``Zvbc``         Assembly Support
      ``Zve32x``       (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``       (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``       Supported
      ``Zve64f``       Supported
      ``Zve64d``       Supported
      ``Zvfh``         Supported
+     ``Zvkb``         Assembly Support
+     ``Zvkg``         Assembly Support
+     ``Zvkn``         Assembly Support
+     ``Zvknc``        Assembly Support
+     ``Zvkned``       Assembly Support
+     ``Zvkng``        Assembly Support
+     ``Zvknha``       Assembly Support
+     ``Zvknhb``       Assembly Support
+     ``Zvks``         Assembly Support
+     ``Zvksc``        Assembly Support
+     ``Zvksed``       Assembly Support
+     ``Zvksg``        Assembly Support
+     ``Zvksh``        Assembly Support
+     ``Zvkt``         Assembly Support
      ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``       Supported
      ``Zvl128b``      Supported
@@ -188,12 +206,6 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
-``experimental-smaia``
-  LLVM implements the `Ratification candidate 3 <https://github.com/riscv/riscv-aia/releases/tag/1.0-RC3>`_.
-
-``experimental-ssaia``
-  LLVM implements the `Ratification candidate 3 <https://github.com/riscv/riscv-aia/releases/tag/1.0-RC3>`_.
-
 ``experimental-zacas``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
@@ -201,7 +213,7 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements assembler support for the `0.8.0 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/20230629>`_.
 
 ``experimental-zicfilp``
-  LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.2.0>`__.
+  LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
 
 ``experimental-zicond``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zicond/releases/tag/v1.0-rc1>`__.
@@ -209,8 +221,11 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
-``experimental-zvbb``, ``experimental-zvbc``, ``experimental-zvkb``, ``experimental-zvkg``, ``experimental-zvkn``, ``experimental-zvknc``, ``experimental-zvkned``, ``experimental-zvkng``, ``experimental-zvknha``, ``experimental-zvknhb``, ``experimental-zvks``, ``experimental-zvksc``, ``experimental-zvksed``, ``experimental-zvksg``, ``experimental-zvksh``, ``experimental-zvkt``
-  LLVM implements the `1.0.0-rc2 specification <https://github.com/riscv/riscv-crypto/releases/download/v/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
+``experimental-zimop``
+  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
+
+``experimental-zcmop``
+  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -267,8 +282,14 @@ The current vendor extensions supported are:
 ``XCVbitmanip``
   LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
+``XCVelw``
+  LLVM implements `version 1.0.0 of the CORE-V Event load custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+
 ``XCVmac``
   LLVM implements `version 1.0.0 of the CORE-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.mac` as described in the specification. These instructions are only available for riscv32 at this time.
+
+``XCVmem``
+  LLVM implements `version 1.0.0 of the CORE-V Post-Increment load and stores custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/master/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XCValu``
   LLVM implements `version 1.0.0 of the Core-V ALU custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
@@ -281,3 +302,28 @@ The current vendor extensions supported are:
 
 ``XSfcie``
   LLVM implements `version 1.0.0 of the SiFive Custom Instruction Extension (CIE) Software Specification <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.  All custom instruction are added as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for S76 processor at this time.
+
+Experimental C Intrinsics
+=========================
+
+In some cases an extension is non-experimental but the C intrinsics for that
+extension are still experimental.  To use C intrinsics for such an extension
+from `clang`, you must add `-menable-experimental-extensions` to the command
+line.  This currently applies to the following extensions:
+
+* ``Zvbb``
+* ``Zvbc``
+* ``Zvkb``
+* ``Zvkg``
+* ``Zvkn``
+* ``Zvknc``
+* ``Zvkned``
+* ``Zvkng``
+* ``Zvknha``
+* ``Zvknhb``
+* ``Zvks``
+* ``Zvksc``
+* ``Zvksed``
+* ``Zvksg``
+* ``Zvksh``
+* ``Zvkt``

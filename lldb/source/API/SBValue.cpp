@@ -24,6 +24,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Type.h"
@@ -114,7 +115,7 @@ public:
 
     Target *target = value_sp->GetTargetSP().get();
     // If this ValueObject holds an error, then it is valuable for that.
-    if (value_sp->GetError().Fail()) 
+    if (value_sp->GetError().Fail())
       return value_sp;
 
     if (!target)
@@ -1038,8 +1039,8 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid() 
-      && (m_opaque_sp->GetRootSP() 
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
+      && (m_opaque_sp->GetRootSP()
           && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError().SetErrorString("No value");
     return ValueObjectSP();
@@ -1209,10 +1210,14 @@ bool SBValue::GetDescription(SBStream &description) {
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp)
-    value_sp->Dump(strm);
-  else
+  if (value_sp) {
+    DumpValueObjectOptions options;
+    options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
+    options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
+    value_sp->Dump(strm, options);
+  } else {
     strm.PutCString("No value");
+  }
 
   return true;
 }
@@ -1504,4 +1509,15 @@ lldb::SBValue SBValue::Persist() {
     persisted_sb.SetSP(value_sp->Persist());
   }
   return persisted_sb;
+}
+
+lldb::SBValue SBValue::GetVTable() {
+  SBValue vtable_sb;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return vtable_sb;
+
+  vtable_sb.SetSP(value_sp->GetVTable());
+  return vtable_sb;
 }

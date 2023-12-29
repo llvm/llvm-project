@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
 #include "src/__support/integer_to_string.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -113,7 +112,7 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   size_t prefix_len;
   char prefix[2];
   if ((to_lower(to_conv.conv_name) == 'x') &&
-      ((flags & FormatFlags::ALTERNATE_FORM) != 0)) {
+      ((flags & FormatFlags::ALTERNATE_FORM) != 0) && num != 0) {
     prefix_len = 2;
     prefix[0] = '0';
     prefix[1] = a + ('x' - 'a');
@@ -158,8 +157,20 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
                               prefix_len);
   }
 
+  // The standard says that alternate form for the o conversion "increases
+  // the precision, if and only if necessary, to force the first digit of the
+  // result to be a zero (if the value and precision are both 0, a single 0 is
+  // printed)"
+  // This if checks the following conditions:
+  // 1) is this an o conversion in alternate form?
+  // 2) does this number has a leading zero?
+  //    2a) ... because there are additional leading zeroes?
+  //    2b) ... because it is just "0", unless it will not write any digits.
+  const bool has_leading_zero =
+      (zeroes > 0) || ((num == 0) && (digits_written != 0));
   if ((to_conv.conv_name == 'o') &&
-      ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0) && zeroes < 1) {
+      ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0) &&
+      !has_leading_zero) {
     zeroes = 1;
     --spaces;
   }

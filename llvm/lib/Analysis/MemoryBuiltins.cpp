@@ -282,10 +282,7 @@ static AllocFnKind getAllocFnKind(const Value *V) {
 }
 
 static AllocFnKind getAllocFnKind(const Function *F) {
-  Attribute Attr = F->getFnAttribute(Attribute::AllocKind);
-  if (Attr.isValid())
-    return AllocFnKind(Attr.getValueAsInt());
-  return AllocFnKind::Unknown;
+  return F->getAttributes().getAllocKind();
 }
 
 static bool checkFnAllocKind(const Value *V, AllocFnKind Wanted) {

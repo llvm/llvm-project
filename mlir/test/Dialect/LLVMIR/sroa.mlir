@@ -170,12 +170,14 @@ llvm.func @direct_promotable_use_is_fine_on_accessor() -> i32 {
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, f64, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %2 = llvm.getelementptr %1[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, f64, i32)>
-  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]]
-  %3 = llvm.load %2 : !llvm.ptr -> i32
   // This does not provide side-effect info but it can be removed because it implements PromotableOpInterface.
-  llvm.intr.lifetime.start 2, %2 : !llvm.ptr
+  %3 = llvm.intr.invariant.start 2, %2 : !llvm.ptr
+  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]]
+  %4 = llvm.load %2 : !llvm.ptr -> i32
+  // This does not provide side-effect info but it can be removed because it implements PromotableOpInterface.
+  llvm.intr.invariant.end %3, 2, %2 : !llvm.ptr
   // CHECK: llvm.return %[[RES]] : i32
-  llvm.return %3 : i32
+  llvm.return %4 : i32
 }
 
 // -----
@@ -193,19 +195,5 @@ llvm.func @no_dynamic_indexing(%arg: i32) -> i32 {
   // CHECK: %[[RES:.*]] = llvm.load %[[GEP]]
   %3 = llvm.load %2 : !llvm.ptr -> i32
   // CHECK: llvm.return %[[RES]] : i32
-  llvm.return %3 : i32
-}
-
-// -----
-
-// CHECK-LABEL: llvm.func @no_typed_pointers
-llvm.func @no_typed_pointers() -> i32 {
-  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32)
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x !llvm.array<10 x i32> {alignment = 8 : i64} : (i32) -> !llvm.ptr<array<10 x i32>>
-  %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 8 : i64} : (i32) -> !llvm.ptr<array<10 x i32>>
-  // CHECK-NOT: = llvm.alloca
-  %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr<array<10 x i32>>) -> !llvm.ptr<i32>
-  %3 = llvm.load %2 : !llvm.ptr<i32>
   llvm.return %3 : i32
 }

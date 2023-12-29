@@ -39,7 +39,7 @@ _warningFlags = [
     "-Wno-literal-suffix",  # GCC
     "-Wno-user-defined-literals",  # Clang
     # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
-    # function. (This mostely happens in C++11 mode.)
+    # function. (This mostly happens in C++11 mode.)
     # TODO(mordante) investigate a solution for this issue.
     "-Wno-tautological-compare",
     # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
@@ -77,9 +77,6 @@ _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
 
 
 def getStdFlag(cfg, std):
-    # TODO(LLVM-17) Remove this clang-tidy-16 work-around
-    if std == "c++23":
-        std = "c++2b"
     if hasCompileFlag(cfg, "-std=" + std):
         return "-std=" + std
     # TODO(LLVM-19) Remove the fallbacks needed for Clang 16.
@@ -117,7 +114,7 @@ DEFAULT_PARAMETERS = [
         ),
         actions=lambda std: [
             AddFeature(std),
-            AddSubstitution("%{cxx_std}", re.sub("\+", "x", std)),
+            AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
         ],
     ),
@@ -190,7 +187,7 @@ DEFAULT_PARAMETERS = [
                 AddFeature("stdlib={}".format(stdlib)),
                 # Also add an umbrella feature 'stdlib=libc++' for all flavors of libc++, to simplify
                 # the test suite.
-                AddFeature("stdlib=libc++") if re.match(".+-libc\+\+", stdlib) else None,
+                AddFeature("stdlib=libc++") if re.match(r".+-libc\+\+", stdlib) else None,
             ],
         ),
     ),
@@ -245,6 +242,7 @@ DEFAULT_PARAMETERS = [
                 AddFlag("-fsanitize=leaks")    if sanitizer == "Leaks" else None,
 
                 AddFeature("sanitizer-new-delete") if sanitizer in ["Address", "HWAddress", "Memory", "MemoryWithOrigins", "Thread"] else None,
+                AddFeature("lsan") if sanitizer in ["Address", "HWAddress", "Leaks"] else None,
             ]
         )
     ),
@@ -269,6 +267,7 @@ DEFAULT_PARAMETERS = [
             AddFeature("libcpp-has-no-incomplete-pstl"),
             AddFeature("libcpp-has-no-experimental-stop_token"),
             AddFeature("libcpp-has-no-incomplete-tzdb"),
+            AddFeature("libcpp-has-no-experimental-syncstream"),
         ],
     ),
     Parameter(
@@ -280,18 +279,27 @@ DEFAULT_PARAMETERS = [
         actions=lambda enabled: [] if not enabled else [AddFeature("long_tests")],
     ),
     Parameter(
+        name="large_tests",
+        choices=[True, False],
+        type=bool,
+        default=True,
+        help="Whether to enable tests that use a lot of memory. This can be useful when running on a device with limited amounts of memory.",
+        actions=lambda enabled: [] if not enabled else [AddFeature("large_tests")],
+    ),
+    Parameter(
         name="hardening_mode",
-        choices=["unchecked", "hardened", "safe", "debug"],
+        choices=["none", "fast", "extensive", "debug"],
         type=str,
-        default="unchecked",
+        default="none",
         help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
         "meaningful when running the tests against libc++.",
         actions=lambda hardening_mode: filter(
             None,
             [
-                AddCompileFlag("-D_LIBCPP_ENABLE_HARDENED_MODE=1") if hardening_mode == "hardened" else None,
-                AddCompileFlag("-D_LIBCPP_ENABLE_SAFE_MODE=1")     if hardening_mode == "safe" else None,
-                AddCompileFlag("-D_LIBCPP_ENABLE_DEBUG_MODE=1")    if hardening_mode == "debug" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")      if hardening_mode == "none" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
                 AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],
         ),

@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -705,10 +704,11 @@ class MetadataLoader::MetadataLoaderImpl {
     return Error::success();
   }
 
-  void upgradeDebugInfo() {
+  void upgradeDebugInfo(bool ModuleLevel) {
     upgradeCUSubprograms();
     upgradeCUVariables();
-    upgradeCULocals();
+    if (ModuleLevel)
+      upgradeCULocals();
   }
 
   void callMDTypeCallback(Metadata **Val, unsigned TypeID);
@@ -1085,7 +1085,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       // Reading the named metadata created forward references and/or
       // placeholders, that we flush here.
       resolveForwardRefsAndPlaceholders(Placeholders);
-      upgradeDebugInfo();
+      upgradeDebugInfo(ModuleLevel);
       // Return at the beginning of the block, since it is easy to skip it
       // entirely from there.
       Stream.ReadBlockEnd(); // Pop the abbrev block context.
@@ -1116,7 +1116,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
       resolveForwardRefsAndPlaceholders(Placeholders);
-      upgradeDebugInfo();
+      upgradeDebugInfo(ModuleLevel);
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -1633,7 +1633,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         // DICompositeType flag specifying whether template parameters are
         // required on declarations of this type.
         StringRef NameStr = Name->getString();
-        if (!NameStr.contains('<') || NameStr.startswith("_STN|"))
+        if (!NameStr.contains('<') || NameStr.starts_with("_STN|"))
           TemplateParams = getMDOrNull(Record[14]);
       }
     } else {

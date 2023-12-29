@@ -221,7 +221,7 @@ bool LVCodeViewReader::isSystemEntry(LVElement *Element, StringRef Name) const {
     return StringRef::npos != Name.find(String);
   };
   auto Starts = [=](const char *Pattern) -> bool {
-    return Name.startswith(Pattern);
+    return Name.starts_with(Pattern);
   };
   auto CheckExclude = [&]() -> bool {
     if (Starts("__") || Starts("_PMD") || Starts("_PMFN"))

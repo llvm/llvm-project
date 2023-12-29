@@ -2,10 +2,10 @@
 ## are combined during --garbage-collection optimisation.
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfutil --garbage-collection %t.o %t1
+# RUN: llvm-dwarfutil --no-odr --garbage-collection %t.o %t1
 # RUN: llvm-dwarfdump -a %t1 | FileCheck %s
 
-# RUN: llvm-dwarfutil --linker llvm --garbage-collection %t.o %t1
+# RUN: llvm-dwarfutil --no-odr --linker llvm --garbage-collection %t.o %t1
 # RUN: llvm-dwarfdump -a %t1 | FileCheck %s
 
 # CHECK: DW_TAG_compile_unit

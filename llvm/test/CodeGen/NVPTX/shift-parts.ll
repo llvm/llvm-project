@@ -4,7 +4,7 @@
 ; CHECK: shift_parts_left_128
 define void @shift_parts_left_128(ptr %val, ptr %amtptr) {
 ; CHECK: shl.b64
-; CHECK: mov.u32
+; CHECK: mov.b32
 ; CHECK: sub.s32
 ; CHECK: shr.u64
 ; CHECK: or.b64

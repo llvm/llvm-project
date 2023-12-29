@@ -17,12 +17,3 @@ define void @"NewCasts" (i17 %x) {
   %m = ptrtoint i32* %l to i64
   ret void
 }
-
-
-define i17 @"ZExtConst" () {
-  ret i17 trunc ( i32 zext ( i17 42 to i32) to i17 )
-}
-
-define i17 @"SExtConst" () {
-  ret i17 trunc (i32 sext (i17 42 to i32) to i17 )
-}

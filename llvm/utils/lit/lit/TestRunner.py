@@ -12,6 +12,8 @@ import shlex
 import shutil
 import tempfile
 import threading
+import typing
+from typing import Optional, Tuple
 
 import io
 
@@ -32,6 +34,17 @@ class InternalShellError(Exception):
     def __init__(self, command, message):
         self.command = command
         self.message = message
+
+
+class ScriptFatal(Exception):
+    """
+    A script had a fatal error such that there's no point in retrying.  The
+    message has not been emitted on stdout or stderr but is instead included in
+    this exception.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
 
 
 kIsWindows = platform.system() == "Windows"
@@ -1009,7 +1022,8 @@ def formatOutput(title, data, limit=None):
     return out
 
 
-# Normally returns out, err, exitCode, timeoutInfo.
+# Always either returns the tuple (out, err, exitCode, timeoutInfo) or raises a
+# ScriptFatal exception.
 #
 # If debug is True (the normal lit behavior), err is empty, and out contains an
 # execution trace, including stdout and stderr shown per command executed.
@@ -1017,7 +1031,9 @@ def formatOutput(title, data, limit=None):
 # If debug is False (set by some custom lit test formats that call this
 # function), out contains only stdout from the script, err contains only stderr
 # from the script, and there is no execution trace.
-def executeScriptInternal(test, litConfig, tmpBase, commands, cwd, debug=True):
+def executeScriptInternal(
+    test, litConfig, tmpBase, commands, cwd, debug=True
+) -> Tuple[str, str, int, Optional[str]]:
     cmds = []
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
@@ -1043,9 +1059,9 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd, debug=True):
                 ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse()
             )
         except:
-            return lit.Test.Result(
-                Test.FAIL, f"shell parser error on {dbg}: {command.lstrip()}\n"
-            )
+            raise ScriptFatal(
+                f"shell parser error on {dbg}: {command.lstrip()}\n"
+            ) from None
 
     cmd = cmds[0]
     for c in cmds[1:]:
@@ -1336,7 +1352,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
 
     substitutions.append(("%{pathsep}", os.pathsep))
     substitutions.append(("%basename_t", baseName))
-    
+
     substitutions.extend(
         [
             ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
@@ -1779,6 +1795,7 @@ class ParserKind(object):
     TAG: A keyword taking no value. Ex 'END.'
     COMMAND: A keyword taking a list of shell commands. Ex 'RUN:'
     LIST: A keyword taking a comma-separated list of values.
+    SPACE_LIST: A keyword taking a space-separated list of values.
     BOOLEAN_EXPR: A keyword taking a comma-separated list of
         boolean expressions. Ex 'XFAIL:'
     INTEGER: A keyword taking a single integer. Ex 'ALLOW_RETRIES:'
@@ -1792,11 +1809,12 @@ class ParserKind(object):
     TAG = 0
     COMMAND = 1
     LIST = 2
-    BOOLEAN_EXPR = 3
-    INTEGER = 4
-    CUSTOM = 5
-    DEFINE = 6
-    REDEFINE = 7
+    SPACE_LIST = 3
+    BOOLEAN_EXPR = 4
+    INTEGER = 5
+    CUSTOM = 6
+    DEFINE = 7
+    REDEFINE = 8
 
     @staticmethod
     def allowedKeywordSuffixes(value):
@@ -1804,6 +1822,7 @@ class ParserKind(object):
             ParserKind.TAG: ["."],
             ParserKind.COMMAND: [":"],
             ParserKind.LIST: [":"],
+            ParserKind.SPACE_LIST: [":"],
             ParserKind.BOOLEAN_EXPR: [":"],
             ParserKind.INTEGER: [":"],
             ParserKind.CUSTOM: [":", "."],
@@ -1817,6 +1836,7 @@ class ParserKind(object):
             ParserKind.TAG: "TAG",
             ParserKind.COMMAND: "COMMAND",
             ParserKind.LIST: "LIST",
+            ParserKind.SPACE_LIST: "SPACE_LIST",
             ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
             ParserKind.INTEGER: "INTEGER",
             ParserKind.CUSTOM: "CUSTOM",
@@ -1865,6 +1885,8 @@ class IntegratedTestKeywordParser(object):
             )
         elif kind == ParserKind.LIST:
             self.parser = self._handleList
+        elif kind == ParserKind.SPACE_LIST:
+            self.parser = self._handleSpaceList
         elif kind == ParserKind.BOOLEAN_EXPR:
             self.parser = self._handleBooleanExpr
         elif kind == ParserKind.INTEGER:
@@ -1937,6 +1959,14 @@ class IntegratedTestKeywordParser(object):
         if output is None:
             output = []
         output.extend([s.strip() for s in line.split(",")])
+        return output
+
+    @staticmethod
+    def _handleSpaceList(line_number, line, output):
+        """A parser for SPACE_LIST type keywords"""
+        if output is None:
+            output = []
+        output.extend([s.strip() for s in line.split(" ") if s.strip() != ""])
         return output
 
     @staticmethod
@@ -2130,8 +2160,11 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     return script
 
 
-def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
-    def runOnce(execdir):
+def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
+    # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
+    def runOnce(
+        execdir,
+    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
@@ -2158,12 +2191,16 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
                     command = buildPdbgCommand(dbg, command)
                 scriptCopy[i] = command
 
-        if useExternalSh:
-            res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
-        else:
-            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
-        if isinstance(res, lit.Test.Result):
-            return res
+        try:
+            if useExternalSh:
+                res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
+            else:
+                res = executeScriptInternal(
+                    test, litConfig, tmpBase, scriptCopy, execdir
+                )
+        except ScriptFatal as e:
+            out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
+            return out, "", 1, None, Test.UNRESOLVED
 
         out, err, exitCode, timeoutInfo = res
         if exitCode == 0:
@@ -2183,9 +2220,6 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     attempts = test.allowed_retries + 1
     for i in range(attempts):
         res = runOnce(execdir)
-        if isinstance(res, lit.Test.Result):
-            return res
-
         out, err, exitCode, timeoutInfo, status = res
         if status != Test.FAIL:
             break

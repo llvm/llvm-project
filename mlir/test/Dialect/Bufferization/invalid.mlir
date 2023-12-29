@@ -136,3 +136,10 @@ func.func @invalid_dealloc_wrong_number_of_results(%arg0: memref<2xf32>, %arg1: 
   %0:3 = "bufferization.dealloc"(%arg0, %arg1, %arg2, %arg2, %arg1) <{operandSegmentSizes = array<i32: 2, 2, 1>}> : (memref<2xf32>, memref<4xi32>, i1, i1, memref<4xi32>) -> (i1, i1, i1)
   return %0#0 : i1
 }
+
+// -----
+
+func.func @invalid_manual_deallocation() {
+  // expected-error @below{{op attribute 'bufferization.manual_deallocation' can be used only on ops that have an allocation and/or free side effect}}
+  arith.constant {bufferization.manual_deallocation} 0  : index
+}

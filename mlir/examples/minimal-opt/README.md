@@ -14,10 +14,10 @@ Below are some example measurements taken at the time of the LLVM 17 release,
 using clang-14 on a X86 Ubuntu and [bloaty](https://github.com/google/bloaty).
 
 |                                  | Base   | Os     | Oz     | Os LTO | Oz LTO |
-| :------------------------------: | ------ | ------ | ------ | ------ | ------ |
-| `mlir-cat`                       | 1018kB | 836KB  | 879KB  | 697KB  | 649KB  |
-| `mlir-minimal-opt`               | 1.54MB | 1.25MB | 1.29MB | 1.10MB | 1.00MB |
-| `mlir-minimal-opt-canonicalizer` | 2.24MB | 1.81MB | 1.86MB | 1.62MB | 1.48MB |
+| :-----------------------------: | ------ | ------ | ------ | ------ | ------ |
+| `mlir-cat`                      | 1018kB | 836KB  | 879KB  | 697KB  | 649KB  |
+| `mlir-minimal-opt`              | 1.54MB | 1.25MB | 1.29MB | 1.10MB | 1.00MB |
+| `mlir-minimal-opt-canonicalize` | 2.24MB | 1.81MB | 1.86MB | 1.62MB | 1.48MB |
 
 Base configuration:
 

@@ -141,14 +141,25 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  // When optimizing, if wasm-opt is available, run it.
+  std::string WasmOptPath;
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
+    if (WasmOptPath == "wasm-opt") {
+      WasmOptPath = {};
+    }
+  }
+
+  if (!WasmOptPath.empty()) {
+    CmdArgs.push_back("--keep-section=target_features");
+  }
+
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Linker, CmdArgs, Inputs, Output));
 
-  // When optimizing, if wasm-opt is available, run it.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    auto WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
-    if (WasmOptPath != "wasm-opt") {
+    if (!WasmOptPath.empty()) {
       StringRef OOpt = "s";
       if (A->getOption().matches(options::OPT_O4) ||
           A->getOption().matches(options::OPT_Ofast))
@@ -160,13 +171,13 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (OOpt != "0") {
         const char *WasmOpt = Args.MakeArgString(WasmOptPath);
-        ArgStringList CmdArgs;
-        CmdArgs.push_back(Output.getFilename());
-        CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
-        CmdArgs.push_back("-o");
-        CmdArgs.push_back(Output.getFilename());
+        ArgStringList OptArgs;
+        OptArgs.push_back(Output.getFilename());
+        OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+        OptArgs.push_back("-o");
+        OptArgs.push_back(Output.getFilename());
         C.addCommand(std::make_unique<Command>(
-            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, CmdArgs,
+            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, OptArgs,
             Inputs, Output));
       }
     }
@@ -317,7 +328,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
     StringRef Opt = A->getValue(0);
-    if (Opt.startswith("-emscripten-cxx-exceptions-allowed")) {
+    if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
       // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
       // '-mllvm -enable-emscripten-cxx-exceptions'
       bool EmEHArgExists = false;
@@ -344,7 +355,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    if (Opt.startswith("-wasm-enable-sjlj")) {
+    if (Opt.starts_with("-wasm-enable-sjlj")) {
       // '-mllvm -wasm-enable-sjlj' is not compatible with
       // '-mno-exception-handling'
       if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,

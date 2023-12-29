@@ -59,6 +59,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
@@ -93,6 +94,7 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -443,7 +445,12 @@ bool AsmPrinter::doInitialization(Module &M) {
   const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
       .getModuleMetadata(M);
 
-  OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+  // On AIX, we delay emitting any section information until
+  // after emitting the .file pseudo-op. This allows additional
+  // information (such as the embedded command line) to be associated
+  // with all sections in the object file rather than a single section.
+  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
+    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
 
   // Emit the version-min deployment target directive if needed.
   //
@@ -489,8 +496,21 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   // On AIX, emit bytes for llvm.commandline metadata after .file so that the
   // C_INFO symbol is preserved if any csect is kept by the linker.
-  if (TM.getTargetTriple().isOSBinFormatXCOFF())
+  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
+    // Now we can generate section information.
+    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+
+    // To work around an AIX assembler and/or linker bug, generate
+    // a rename for the default text-section symbol name.  This call has
+    // no effect when generating object code directly.
+    MCSection *TextSection =
+        OutStreamer->getContext().getObjectFileInfo()->getTextSection();
+    MCSymbolXCOFF *XSym =
+        static_cast<MCSectionXCOFF *>(TextSection)->getQualNameSymbol();
+    if (XSym->hasRename())
+      OutStreamer->emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  }
 
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
@@ -563,6 +583,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     [[fallthrough]];
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
+  case ExceptionHandling::ZOS:
     ES = new DwarfCFIException(this);
     break;
   case ExceptionHandling::ARM:
@@ -1372,7 +1393,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (BBAddrMapVersion > 1) {
       OutStreamer->AddComment("BB id");
       // Emit the BB ID for this basic block.
-      OutStreamer->emitULEB128IntValue(*MBB.getBBID());
+      // We only emit BaseID since CloneID is unset for
+      // basic-block-sections=labels.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
     }
     // Emit the basic block offset relative to the end of the previous block.
     // This is zero unless the block is padded due to alignment.
@@ -1469,9 +1494,10 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     }
   }
 
-  *StackUsageStream << MF.getFunction().getParent()->getName();
   if (const DISubprogram *DSP = MF.getFunction().getSubprogram())
-    *StackUsageStream << ':' << DSP->getLine();
+    *StackUsageStream << DSP->getFilename() << ':' << DSP->getLine();
+  else
+    *StackUsageStream << MF.getFunction().getParent()->getName();
 
   *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
   if (FrameInfo.hasVarSizedObjects())
@@ -1524,7 +1550,7 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         const size_t OptStart = SecWithOpt.find('!'); // likely npos
         const StringRef Sec = SecWithOpt.substr(0, OptStart);
         const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
-        ConstULEB128 = Opts.find('C') != StringRef::npos;
+        ConstULEB128 = Opts.contains('C');
 #ifndef NDEBUG
         for (char O : Opts)
           assert((O == '!' || O == 'C') && "Invalid !pcsections options");
@@ -1931,30 +1957,33 @@ void AsmPrinter::emitFunctionBody() {
   // MBB profile information has been set
   if (MBBProfileDumpFileOutput && !MF->empty() &&
       MF->getFunction().getEntryCount()) {
-    if (!MF->hasBBLabels())
+    if (!MF->hasBBLabels()) {
       MF->getContext().reportError(
           SMLoc(),
           "Unable to find BB labels for MBB profile dump. -mbb-profile-dump "
           "must be called with -basic-block-sections=labels");
-    MachineBlockFrequencyInfo &MBFI =
-        getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
-    // The entry count and the entry basic block frequency aren't the same. We
-    // want to capture "absolute" frequencies, i.e. the frequency with which a
-    // MBB is executed when the program is executed. From there, we can derive
-    // Function-relative frequencies (divide by the value for the first MBB).
-    // We also have the information about frequency with which functions
-    // were called. This helps, for example, in a type of integration tests
-    // where we want to cross-validate the compiler's profile with a real
-    // profile.
-    // Using double precision because uint64 values used to encode mbb
-    // "frequencies" may be quite large.
-    const double EntryCount =
-        static_cast<double>(MF->getFunction().getEntryCount()->getCount());
-    for (const auto &MBB : *MF) {
-      const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
-      const double AbsMBBFreq = MBBRelFreq * EntryCount;
-      *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getBBID() << "," << AbsMBBFreq << "\n";
+    } else {
+      MachineBlockFrequencyInfo &MBFI =
+          getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+      // The entry count and the entry basic block frequency aren't the same. We
+      // want to capture "absolute" frequencies, i.e. the frequency with which a
+      // MBB is executed when the program is executed. From there, we can derive
+      // Function-relative frequencies (divide by the value for the first MBB).
+      // We also have the information about frequency with which functions
+      // were called. This helps, for example, in a type of integration tests
+      // where we want to cross-validate the compiler's profile with a real
+      // profile.
+      // Using double precision because uint64 values used to encode mbb
+      // "frequencies" may be quite large.
+      const double EntryCount =
+          static_cast<double>(MF->getFunction().getEntryCount()->getCount());
+      for (const auto &MBB : *MF) {
+        const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
+        const double AbsMBBFreq = MBBRelFreq * EntryCount;
+        *MBBProfileDumpFileOutput.get()
+            << MF->getName() << "," << MBB.getBBID()->BaseID << ","
+            << AbsMBBFreq << "\n";
+      }
     }
   }
 }
@@ -2120,24 +2149,80 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
          "IFunc is not supported on AIX.");
 
-  MCSymbol *Name = getSymbol(&GI);
+  auto EmitLinkage = [&](MCSymbol *Sym) {
+    if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_WeakReference);
+    else
+      assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
+  };
 
-  if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
-  else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
-  else
-    assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    MCSymbol *Name = getSymbol(&GI);
+    EmitLinkage(Name);
+    OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
+    emitVisibility(Name, GI.getVisibility());
 
-  OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
-  emitVisibility(Name, GI.getVisibility());
+    // Emit the directives as assignments aka .set:
+    const MCExpr *Expr = lowerConstant(GI.getResolver());
+    OutStreamer->emitAssignment(Name, Expr);
+    MCSymbol *LocalAlias = getSymbolPreferLocal(GI);
+    if (LocalAlias != Name)
+      OutStreamer->emitAssignment(LocalAlias, Expr);
 
-  // Emit the directives as assignments aka .set:
-  const MCExpr *Expr = lowerConstant(GI.getResolver());
-  OutStreamer->emitAssignment(Name, Expr);
-  MCSymbol *LocalAlias = getSymbolPreferLocal(GI);
-  if (LocalAlias != Name)
-    OutStreamer->emitAssignment(LocalAlias, Expr);
+    return;
+  }
+
+  if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
+    llvm::report_fatal_error("IFuncs are not supported on this platform");
+
+  // On Darwin platforms, emit a manually-constructed .symbol_resolver that
+  // implements the symbol resolution duties of the IFunc.
+  //
+  // Normally, this would be handled by linker magic, but unfortunately there
+  // are a few limitations in ld64 and ld-prime's implementation of
+  // .symbol_resolver that mean we can't always use them:
+  //
+  //    *  resolvers cannot be the target of an alias
+  //    *  resolvers cannot have private linkage
+  //    *  resolvers cannot have linkonce linkage
+  //    *  resolvers cannot appear in executables
+  //    *  resolvers cannot appear in bundles
+  //
+  // This works around that by emitting a close approximation of what the
+  // linker would have done.
+
+  MCSymbol *LazyPointer =
+      GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
+  MCSymbol *StubHelper = GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
+
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+
+  const DataLayout &DL = M.getDataLayout();
+  emitAlignment(Align(DL.getPointerSize()));
+  OutStreamer->emitLabel(LazyPointer);
+  emitVisibility(LazyPointer, GI.getVisibility());
+  OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
+
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
+
+  const TargetSubtargetInfo *STI =
+      TM.getSubtargetImpl(*GI.getResolverFunction());
+  const TargetLowering *TLI = STI->getTargetLowering();
+  Align TextAlign(TLI->getMinFunctionAlignment());
+
+  MCSymbol *Stub = getSymbol(&GI);
+  EmitLinkage(Stub);
+  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitLabel(Stub);
+  emitVisibility(Stub, GI.getVisibility());
+  emitMachOIFuncStubBody(M, GI, LazyPointer);
+
+  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitLabel(StubHelper);
+  emitVisibility(StubHelper, GI.getVisibility());
+  emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
 }
 
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
@@ -2284,6 +2369,32 @@ bool AsmPrinter::doFinalization(Module &M) {
   // through user plugins.
   emitStackMaps();
 
+  // Print aliases in topological order, that is, for each alias a = b,
+  // b must be printed before a.
+  // This is because on some targets (e.g. PowerPC) linker expects aliases in
+  // such an order to generate correct TOC information.
+  SmallVector<const GlobalAlias *, 16> AliasStack;
+  SmallPtrSet<const GlobalAlias *, 16> AliasVisited;
+  for (const auto &Alias : M.aliases()) {
+    if (Alias.hasAvailableExternallyLinkage())
+      continue;
+    for (const GlobalAlias *Cur = &Alias; Cur;
+         Cur = dyn_cast<GlobalAlias>(Cur->getAliasee())) {
+      if (!AliasVisited.insert(Cur).second)
+        break;
+      AliasStack.push_back(Cur);
+    }
+    for (const GlobalAlias *AncestorAlias : llvm::reverse(AliasStack))
+      emitGlobalAlias(M, *AncestorAlias);
+    AliasStack.clear();
+  }
+
+  // IFuncs must come before deubginfo in case the backend decides to emit them
+  // as actual functions, since on Mach-O targets, we cannot create regular
+  // sections after DWARF.
+  for (const auto &IFunc : M.ifuncs())
+    emitGlobalIFunc(M, IFunc);
+
   // Finalize debug and EH information.
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
@@ -2314,7 +2425,7 @@ bool AsmPrinter::doFinalization(Module &M) {
       auto SymbolName = "swift_async_extendedFramePointerFlags";
       auto Global = M.getGlobalVariable(SymbolName);
       if (!Global) {
-        auto Int8PtrTy = Type::getInt8PtrTy(M.getContext());
+        auto Int8PtrTy = PointerType::getUnqual(M.getContext());
         Global = new GlobalVariable(M, Int8PtrTy, false,
                                     GlobalValue::ExternalWeakLinkage, nullptr,
                                     SymbolName);
@@ -2322,28 +2433,6 @@ bool AsmPrinter::doFinalization(Module &M) {
       }
     }
   }
-
-  // Print aliases in topological order, that is, for each alias a = b,
-  // b must be printed before a.
-  // This is because on some targets (e.g. PowerPC) linker expects aliases in
-  // such an order to generate correct TOC information.
-  SmallVector<const GlobalAlias *, 16> AliasStack;
-  SmallPtrSet<const GlobalAlias *, 16> AliasVisited;
-  for (const auto &Alias : M.aliases()) {
-    if (Alias.hasAvailableExternallyLinkage())
-      continue;
-    for (const GlobalAlias *Cur = &Alias; Cur;
-         Cur = dyn_cast<GlobalAlias>(Cur->getAliasee())) {
-      if (!AliasVisited.insert(Cur).second)
-        break;
-      AliasStack.push_back(Cur);
-    }
-    for (const GlobalAlias *AncestorAlias : llvm::reverse(AliasStack))
-      emitGlobalAlias(M, *AncestorAlias);
-    AliasStack.clear();
-  }
-  for (const auto &IFunc : M.ifuncs())
-    emitGlobalIFunc(M, IFunc);
 
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
@@ -2381,7 +2470,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values()) {
       if (!GV.use_empty() && !GV.isThreadLocal() &&
-          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
+          !GV.hasDLLImportStorageClass() &&
+          !GV.getName().starts_with("llvm.") &&
           !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->emitAddrsigSym(getSymbol(&GV));
     }
@@ -3044,9 +3134,12 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     // Handle casts to pointers by changing them into casts to the appropriate
     // integer type.  This promotes constant folding and simplifies this code.
     Constant *Op = CE->getOperand(0);
-    Op = ConstantExpr::getIntegerCast(Op, DL.getIntPtrType(CV->getType()),
-                                      false/*ZExt*/);
-    return lowerConstant(Op);
+    Op = ConstantFoldIntegerCast(Op, DL.getIntPtrType(CV->getType()),
+                                 /*IsSigned*/ false, DL);
+    if (Op)
+      return lowerConstant(Op);
+
+    break; // Error
   }
 
   case Instruction::PtrToInt: {
@@ -3493,12 +3586,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   //
   //    gotpcrelcst := <offset from @foo base> + <cst>
   //
-  // If gotpcrelcst is positive it means that we can safely fold the pc rel
-  // displacement into the GOTPCREL. We can also can have an extra offset <cst>
-  // if the target knows how to encode it.
   int64_t GOTPCRelCst = Offset + MV.getConstant();
-  if (GOTPCRelCst < 0)
-    return;
   if (!AP.getObjFileLowering().supportGOTPCRelWithOffset() && GOTPCRelCst != 0)
     return;
 
@@ -3719,7 +3807,7 @@ MCSymbol *AsmPrinter::getSymbolWithGlobalValueBase(const GlobalValue *GV,
 }
 
 /// Return the MCSymbol for the specified ExternalSymbol.
-MCSymbol *AsmPrinter::GetExternalSymbolSymbol(StringRef Sym) const {
+MCSymbol *AsmPrinter::GetExternalSymbolSymbol(Twine Sym) const {
   SmallString<60> NameStr;
   Mangler::getNameWithPrefix(NameStr, Sym, getDataLayout());
   return OutContext.getOrCreateSymbol(NameStr);

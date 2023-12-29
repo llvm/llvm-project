@@ -10,7 +10,9 @@ let Command = "target modules dump symtab" in {
 
 let Command = "target modules dump separate debug info" in {
   def tm_json : Option<"json", "j">, Group<1>,
-  Desc<"Output the details in JSON format.">;
+    Desc<"Output the details in JSON format.">;
+  def tm_errors_only : Option<"errors-only", "e">, Group<1>,
+    Desc<"Filter to show only debug info files with errors.">;
 }
 
 let Command = "help" in {
@@ -1113,6 +1115,12 @@ let Command = "thread plan list" in {
     "specified more than once.">;
   def thread_plan_list_unreported : Option<"unreported", "u">, Group<1>,
     Desc<"Display thread plans for unreported threads">;
+}
+
+let Command = "thread select" in {
+  def thread_select_thread_id : Option<"thread-id", "t">, Group<2>,
+    Arg<"ThreadID">, Completion<"ThreadID">,
+    Desc<"Provide a thread ID instead of a thread index.">;
 }
 
 let Command = "thread trace dump function calls" in {

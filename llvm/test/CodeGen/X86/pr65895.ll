@@ -58,3 +58,24 @@ for.end:
   store i64 %conv11, ptr @e, align 8
   ret i32 0
 }
+
+declare void @bar(i32)
+define void @foo(i8 %arg) nounwind {
+; CHECK-LABEL: foo:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    addb $-109, %dil
+; CHECK-NEXT:    movsbl %dil, %eax
+; CHECK-NEXT:    leal 1(%rax,%rax,2), %edi
+; CHECK-NEXT:    callq bar@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %0 = add nsw i8 %arg, -109
+  %1 = sext i8 %0 to i32
+  %reassoc = shl i32 %1, 1
+  %2 = add i32 %1, 1
+  %3 = add i32 %2, %reassoc
+  call void @bar(i32 %3)
+  ret void
+}

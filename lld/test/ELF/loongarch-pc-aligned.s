@@ -260,6 +260,32 @@
 # EXTREME15-NEXT: lu32i.d   $t0, -349526
 # EXTREME15-NEXT: lu52i.d   $t0, $t0, -1093
 
+## FIXME: Correct %pc64_lo20 should be 0xfffff (-1) and %pc64_hi12 should be 0xfff (-1), but current values are:
+## page delta = 0x0000000000000000, page offset = 0x888
+## %pc_lo12   = 0x888 = -1912
+## %pc_hi20   = 0x00000 = 0
+## %pc64_lo20 = 0x00000 = 0
+## %pc64_hi12 = 0x00000 = 0
+# RUN: ld.lld %t/extreme.o --section-start=.rodata=0x0000000012344888 --section-start=.text=0x0000000012345678 -o %t/extreme16
+# RUN: llvm-objdump -d --no-show-raw-insn %t/extreme16 | FileCheck %s --check-prefix=EXTREME16
+# EXTREME16:      addi.d $t0, $zero, -1912
+# EXTREME16-NEXT: pcalau12i $t1, 0
+# EXTREME16-NEXT: lu32i.d   $t0, 0
+# EXTREME16-NEXT: lu52i.d   $t0, $t0, 0
+
+## FIXME: Correct %pc64_lo20 should be 0x00000 (0) and %pc64_hi12 should be 0x000 (0), but current values are:
+## page delta = 0xffffffff80000000, page offset = 0x888
+## %pc_lo12   = 0x888 = -1912
+## %pc_hi20   = 0x80000 = -524288
+## %pc64_lo20 = 0xfffff = -1
+## %pc64_hi12 = 0xfff = -1
+# RUN: ld.lld %t/extreme.o --section-start=.rodata=0x000071238ffff888 --section-start=.text=0x0000712310000678 -o %t/extreme17
+# RUN: llvm-objdump -d --no-show-raw-insn %t/extreme17 | FileCheck %s --check-prefix=EXTREME17
+# EXTREME17:      addi.d $t0, $zero, -1912
+# EXTREME17-NEXT: pcalau12i $t1, -524288
+# EXTREME17-NEXT: lu32i.d   $t0, -1
+# EXTREME17-NEXT: lu52i.d   $t0, $t0, -1
+
 #--- a.s
 .rodata
 x:

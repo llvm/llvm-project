@@ -91,7 +91,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    markup(O, Markup::Immediate) << MO.getImm();
+    markup(O, Markup::Immediate) << formatImm(MO.getImm());
     return;
   }
 
@@ -113,7 +113,7 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
       Target &= 0xffffffff;
     markup(O, Markup::Target) << formatHex(Target);
   } else {
-    markup(O, Markup::Target) << MO.getImm();
+    markup(O, Markup::Target) << formatImm(MO.getImm());
   }
 }
 
@@ -128,7 +128,7 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
   else if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
     markup(O, Markup::Register) << SysReg->Name;
   else
-    markup(O, Markup::Register) << Imm;
+    markup(O, Markup::Register) << formatImm(Imm);
 }
 
 void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
@@ -212,7 +212,7 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   // or non-zero in bits 8 and above.
   if (RISCVVType::getVLMUL(Imm) == RISCVII::VLMUL::LMUL_RESERVED ||
       RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
-    O << Imm;
+    O << formatImm(Imm);
     return;
   }
   // Print the text form.
@@ -277,6 +277,22 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
     llvm_unreachable("invalid register list");
   }
   O << "}";
+}
+
+void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isReg() && "printRegReg can only print register operands");
+  if (MO.getReg() == RISCV::NoRegister)
+    return;
+  printRegName(O, MO.getReg());
+
+  O << "(";
+  const MCOperand &MO1 = MI->getOperand(OpNo + 1);
+  assert(MO1.isReg() && "printRegReg can only print register operands");
+  printRegName(O, MO1.getReg());
+  O << ")";
 }
 
 void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,

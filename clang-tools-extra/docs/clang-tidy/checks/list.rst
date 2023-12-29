@@ -82,6 +82,7 @@ Clang-Tidy Checks
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
+   :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
@@ -148,6 +149,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
@@ -225,6 +227,7 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
@@ -241,6 +244,7 @@ Clang-Tidy Checks
    :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
+   :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
@@ -290,6 +294,8 @@ Clang-Tidy Checks
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
+   :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"

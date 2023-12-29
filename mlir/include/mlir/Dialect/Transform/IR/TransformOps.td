@@ -481,8 +481,16 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     This operation consumes the operand and produces a new handle associated
     with the same payload. This is necessary to trigger invalidation of handles
     to any of the payload operations nested in the payload operations associated
-    with the operand, as those are likely to be modified by actions. Note that
-    the root payload operation associated with the operand are not matched.
+    with the operand, as those are likely to be modified by actions. 
+    
+    By default, the root payload operation associated with the operand is not
+    matched. This is to support the conservative case where applied actions may
+    invalidate the root payload operation. If the optional `restrict_root`
+    attribute is set, the root operand is guaranteed to not be invalidated by any
+    of the applied actions. In such cases, the root payload operation is also
+    matched. This is useful because matching the root payload operation is a
+    common idiom, when e.g. matching a func.func directly and operations nested
+    under it.
 
     The operation succeeds if none of the matchers produced a definite failure
     during application and if all of the applied actions produced success. Note
@@ -495,13 +503,19 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$root,
+                       UnitAttr:$restrict_root,
                        SymbolRefArrayAttr:$matchers,
                        SymbolRefArrayAttr:$actions);
   let results = (outs TransformHandleTypeInterface:$updated);
 
-  let assemblyFormat =
-      "`in` $root custom<ForeachMatchSymbols>($matchers, $actions) "
-      "attr-dict `:` functional-type($root, $updated)";
+  let assemblyFormat = [{
+    (`restrict_root` $restrict_root^)?
+    `in`
+    $root
+    custom<ForeachMatchSymbols>($matchers, $actions)
+    attr-dict
+    `:` functional-type($root, $updated)
+  }];
 
   let hasVerifier = 1;
 }
@@ -606,10 +620,11 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
     that case for each target op, the closest parent op that fulfills all
     requirements, is returned.
     - `isolated_from_above`: the parent op must be isolated from above
-    - `allow_empty_results`: get_parent_op is allowed to return an empty list and
-      still succeeds. In such a case, if get_parent_op fails for any operation
-      in the list, the entire transform returns an empty handle.
+    - `allow_empty_results`: get_parent_op is allowed to return an empty list
+      and still succeeds. In such a case, if get_parent_op fails for any
+      operation in the list, the entire transform returns an empty handle.
     - `op_name`: the parent op must have the specified name
+    - `nth_parent`: get the n-th parent of that satisfies the above requirements
 
     If `deduplicate` is set, the result handle does not contain any duplicate
     ops. For example, given the list
@@ -627,7 +642,9 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
                        UnitAttr:$isolated_from_above,
                        UnitAttr:$allow_empty_results,
                        OptionalAttr<StrAttr>:$op_name,
-                       UnitAttr:$deduplicate);
+                       UnitAttr:$deduplicate,
+                       DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
+                                         "1">:$nth_parent);
   let results = (outs TransformHandleTypeInterface:$parent);
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -866,6 +883,17 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    // Build a named sequence.
+    OpBuilder<(ins
+      "StringRef":$symName,
+      "Type":$rootType,
+      "TypeRange":$resultType,
+      "SequenceBodyBuilderFn":$bodyBuilder,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
+  ];
 
   let extraClassDeclaration = [{
     ::llvm::ArrayRef<::mlir::Type> getArgumentTypes() {

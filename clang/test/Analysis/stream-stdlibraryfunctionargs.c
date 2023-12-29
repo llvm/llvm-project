@@ -1,11 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.StdCLibraryFunctions,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stream,any %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stream,any %s
 
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stream,any %s
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stream,any %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.StdCLibraryFunctions,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stdfunc,any %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stdfunc,any %s
 
 #include "Inputs/system-header-simulator.h"
 

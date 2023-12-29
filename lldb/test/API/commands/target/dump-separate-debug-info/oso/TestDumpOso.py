@@ -12,7 +12,7 @@ from lldbsuite.test.decorators import *
 class TestDumpOso(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def get_osos_from_json(self):
+    def get_osos_from_json_output(self):
         """Returns a dictionary of `symfile` -> {`OSO_PATH` -> oso_info object}."""
         result = {}
         output = json.loads(self.res.GetOutput())
@@ -41,7 +41,7 @@ class TestDumpOso(lldbtest.TestBase):
         self.runCmd("target modules dump separate-debug-info --json")
 
         # Check the output
-        osos = self.get_osos_from_json()
+        osos = self.get_osos_from_json_output()
         self.assertTrue(osos[exe][main_o]["loaded"])
         self.assertTrue(osos[exe][foo_o]["loaded"])
 
@@ -55,7 +55,6 @@ class TestDumpOso(lldbtest.TestBase):
 
         # REMOVE the o files
         os.unlink(main_o)
-        os.unlink(foo_o)
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
@@ -63,9 +62,18 @@ class TestDumpOso(lldbtest.TestBase):
         self.runCmd("target modules dump separate-debug-info --json")
 
         # Check the output
-        osos = self.get_osos_from_json()
+        osos = self.get_osos_from_json_output()
         self.assertFalse(osos[exe][main_o]["loaded"])
-        self.assertFalse(osos[exe][foo_o]["loaded"])
+        self.assertIn("error", osos[exe][main_o])
+        self.assertTrue(osos[exe][foo_o]["loaded"])
+        self.assertNotIn("error", osos[exe][foo_o])
+
+        # Check with --errors-only
+        self.runCmd("target modules dump separate-debug-info --json --errors-only")
+        output = self.get_osos_from_json_output()
+        self.assertFalse(output[exe][main_o]["loaded"])
+        self.assertIn("error", output[exe][main_o])
+        self.assertNotIn(foo_o, output[exe])
 
     @skipIfRemote
     @skipUnlessDarwin
@@ -118,3 +126,33 @@ class TestDumpOso(lldbtest.TestBase):
                 "0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.o",
             ],
         )
+
+    @skipIfRemote
+    @skipUnlessDarwin
+    def test_osos_loaded_symbols_on_demand(self):
+        self.build(debug_info="dwarf")
+        exe = self.getBuildArtifact("a.out")
+        main_o = self.getBuildArtifact("main.o")
+        foo_o = self.getBuildArtifact("foo.o")
+
+        # Make sure o files exist
+        self.assertTrue(os.path.exists(main_o), f'Make sure "{main_o}" file exists')
+        self.assertTrue(os.path.exists(foo_o), f'Make sure "{foo_o}" file exists')
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, lldbtest.VALID_TARGET)
+
+        self.runCmd("target modules dump separate-debug-info --json")
+
+        # Load symbols on-demand
+        self.runCmd("settings set symbols.load-on-demand true")
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, lldbtest.VALID_TARGET)
+
+        self.runCmd("target modules dump separate-debug-info --json")
+
+        # Check the output
+        osos = self.get_osos_from_json_output()
+        self.assertTrue(osos[exe][main_o]["loaded"])
+        self.assertTrue(osos[exe][foo_o]["loaded"])

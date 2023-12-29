@@ -268,7 +268,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
-  BatchAAResults BatchAA(AA);
+  BatchAAResults BatchAA(AA, &EII);
   return getPointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst, Limit,
                                   BatchAA);
 }
@@ -373,7 +373,10 @@ static bool canSkipClobberingStore(const StoreInst *SI,
     return false;
   if (MemoryLocation::get(SI).Size != MemLoc.Size)
     return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() < MemLoc.Size.getValue())
+  if (MemLoc.Size.isScalable())
+    return false;
+  if (std::min(MemLocAlign, SI->getAlign()).value() <
+      MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
   auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
@@ -645,11 +648,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         continue;
 
     // See if this instruction (e.g. a call or vaarg) mod/ref's the pointer.
-    ModRefInfo MR = BatchAA.getModRefInfo(Inst, MemLoc);
-    // If necessary, perform additional analysis.
-    if (isModAndRefSet(MR))
-      MR = BatchAA.callCapturesBefore(Inst, MemLoc, &DT);
-    switch (MR) {
+    switch (BatchAA.getModRefInfo(Inst, MemLoc)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;
@@ -1103,7 +1102,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         // be conservative.
         ThrowOutEverything =
             CacheInfo->Size.isPrecise() != Loc.Size.isPrecise() ||
-            CacheInfo->Size.getValue() < Loc.Size.getValue();
+            !TypeSize::isKnownGE(CacheInfo->Size.getValue(),
+                                 Loc.Size.getValue());
       } else {
         // For our purposes, unknown size > all others.
         ThrowOutEverything = !Loc.Size.hasValue();
@@ -1227,7 +1227,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   bool GotWorklistLimit = false;
   LLVM_DEBUG(AssertSorted(*Cache));
 
-  BatchAAResults BatchAA(AA);
+  BatchAAResults BatchAA(AA, &EII);
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
 
@@ -1292,16 +1292,16 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         if (InsertRes.first->second != Pointer.getAddr()) {
           // Make sure to clean up the Visited map before continuing on to
           // PredTranslationFailure.
-          for (unsigned i = 0; i < NewBlocks.size(); i++)
-            Visited.erase(NewBlocks[i]);
+          for (auto *NewBlock : NewBlocks)
+            Visited.erase(NewBlock);
           goto PredTranslationFailure;
         }
       }
       if (NewBlocks.size() > WorklistEntries) {
         // Make sure to clean up the Visited map before continuing on to
         // PredTranslationFailure.
-        for (unsigned i = 0; i < NewBlocks.size(); i++)
-          Visited.erase(NewBlocks[i]);
+        for (auto *NewBlock : NewBlocks)
+          Visited.erase(NewBlock);
         GotWorklistLimit = true;
         goto PredTranslationFailure;
       }
@@ -1359,8 +1359,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
         // Make sure to clean up the Visited map before continuing on to
         // PredTranslationFailure.
-        for (unsigned i = 0, n = PredList.size(); i < n; ++i)
-          Visited.erase(PredList[i].first);
+        for (const auto &Pred : PredList)
+          Visited.erase(Pred.first);
 
         goto PredTranslationFailure;
       }
@@ -1371,9 +1371,9 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // any results for.  (getNonLocalPointerDepFromBB will modify our
     // datastructures in ways the code after the PredTranslationFailure label
     // doesn't expect.)
-    for (unsigned i = 0, n = PredList.size(); i < n; ++i) {
-      BasicBlock *Pred = PredList[i].first;
-      PHITransAddr &PredPointer = PredList[i].second;
+    for (auto &I : PredList) {
+      BasicBlock *Pred = I.first;
+      PHITransAddr &PredPointer = I.second;
       Value *PredPtrVal = PredPointer.getAddr();
 
       bool CanTranslate = true;
@@ -1539,6 +1539,8 @@ void MemoryDependenceResults::invalidateCachedPredecessors() {
 }
 
 void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
+  EII.removeInstruction(RemInst);
+
   // Walk through the Non-local dependencies, removing this one as the value
   // for any cached queries.
   NonLocalDepMapType::iterator NLDI = NonLocalDepsMap.find(RemInst);

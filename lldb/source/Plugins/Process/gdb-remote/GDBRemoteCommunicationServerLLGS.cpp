@@ -3094,6 +3094,12 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
+    if (reg_info->flags_type) {
+      response.IndentMore();
+      reg_info->flags_type->ToXML(response);
+      response.IndentLess();
+    }
+
     response.Indent();
     response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
                     "\" regnum=\"%d\" ",
@@ -3112,6 +3118,9 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
     if (!format.empty())
       response << "format=\"" << format << "\" ";
+
+    if (reg_info->flags_type)
+      response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
@@ -3912,7 +3921,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   std::string path_hint;
 
   StringRef packet_str{packet.GetStringRef()};
-  assert(packet_str.startswith("qSaveCore"));
+  assert(packet_str.starts_with("qSaveCore"));
   if (packet_str.consume_front("qSaveCore;")) {
     for (auto x : llvm::split(packet_str, ';')) {
       if (x.consume_front("path-hint:"))
@@ -3938,7 +3947,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
   Log *log = GetLog(LLDBLog::Process);
 
   StringRef packet_str{packet.GetStringRef()};
-  assert(packet_str.startswith("QNonStop:"));
+  assert(packet_str.starts_with("QNonStop:"));
   packet_str.consume_front("QNonStop:");
   if (packet_str == "0") {
     if (m_non_stop)
@@ -4297,7 +4306,7 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   std::string host_port = url_arg.str();
   // If host_and_port starts with ':', default the host to be "localhost" and
   // expect the remainder to be the port.
-  if (url_arg.startswith(":"))
+  if (url_arg.starts_with(":"))
     host_port.insert(0, "localhost");
 
   // Try parsing the (preprocessed) argument as host:port pair.
