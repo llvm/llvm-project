@@ -1453,4 +1453,88 @@ define ptr @const_gep_chain(ptr %p, i64 %a) {
   ret ptr %p4
 }
 
+define ptr @gep_sdiv(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define <2 x ptr> @gep_sdiv_vec(<2 x ptr> %p, <2 x i64> %off) {
+; CHECK-LABEL: @gep_sdiv_vec(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, <2 x ptr> [[P:%.*]], <2 x i64> [[OFF:%.*]]
+; CHECK-NEXT:    ret <2 x ptr> [[PTR]]
+;
+  %index = sdiv exact <2 x i64> %off, <i64 7, i64 7>
+  %ptr = getelementptr %struct.C, <2 x ptr> %p, <2 x i64> %index
+  ret <2 x ptr> %ptr
+}
+
+define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_inbounds(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr inbounds %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define ptr @gep_ashr(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_ashr(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = ashr exact i64 %off, 2
+  %ptr = getelementptr i32, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+; Negative tests
+
+define ptr @gep_i8(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_i8(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %ptr = getelementptr i8, ptr %p, i64 %off
+  ret ptr %ptr
+}
+
+define ptr @gep_sdiv_mismatched_size(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_mismatched_size(
+; CHECK-NEXT:    [[INDEX:%.*]] = sdiv exact i64 [[OFF:%.*]], 20
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 20
+  %ptr = getelementptr %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define ptr @gep_sdiv_without_exact(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_without_exact(
+; CHECK-NEXT:    [[INDEX:%.*]] = sdiv i64 [[OFF:%.*]], 7
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv i64 %off, 7
+  %ptr = getelementptr %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define ptr @gep_ashr_without_exact(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_ashr_without_exact(
+; CHECK-NEXT:    [[INDEX:%.*]] = ashr i64 [[OFF:%.*]], 2
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = ashr i64 %off, 2
+  %ptr = getelementptr i32, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}

@@ -14,35 +14,45 @@
 //===----------------------------------------------------------------------===//
 // AMX instructions
 
-let Predicates = [HasAMXTILE, In64BitMode] in {
-  let SchedRW = [WriteSystem] in {
-    let hasSideEffects = 1,
-        Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
-    def LDTILECFG : I <0x49, MRM0m, (outs), (ins opaquemem:$src),
-                       "ldtilecfg\t$src",
-                       [(int_x86_ldtilecfg addr:$src)]>, VEX, T8, PS;
-    let hasSideEffects = 1 in
-    def STTILECFG : I <0x49, MRM0m, (outs), (ins opaquemem:$src),
-                       "sttilecfg\t$src",
-                       [(int_x86_sttilecfg addr:$src)]>, VEX, T8, PD;
-    let mayLoad = 1 in
-    def TILELOADD : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
-                      (ins sibmem:$src),
-                      "tileloadd\t{$src, $dst|$dst, $src}", []>,
-                      VEX, T8, XD;
-    let mayLoad = 1 in
-    def TILELOADDT1 : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
-                        (ins sibmem:$src),
-                        "tileloaddt1\t{$src, $dst|$dst, $src}", []>,
-                        VEX, T8, PD;
+multiclass AMX_TILE_COMMON<string Suffix, Predicate HasEGPR> {
+let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
+  let hasSideEffects = 1,
+      Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
+  def LDTILECFG#Suffix : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
+                           "ldtilecfg\t$src",
+                           [(int_x86_ldtilecfg addr:$src)]>,
+                         T8, PS;
+  let hasSideEffects = 1 in
+  def STTILECFG#Suffix : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
+                           "sttilecfg\t$src",
+                           [(int_x86_sttilecfg addr:$src)]>,
+                         T8, PD;
+  let mayLoad = 1 in
+  def TILELOADD#Suffix : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
+                           (ins sibmem:$src),
+                           "tileloadd\t{$src, $dst|$dst, $src}", []>,
+                         T8, XD;
+  let mayLoad = 1 in
+  def TILELOADDT1#Suffix : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
+                             (ins sibmem:$src),
+                             "tileloaddt1\t{$src, $dst|$dst, $src}", []>,
+                           T8, PD;
+  let mayStore = 1 in
+  def TILESTORED#Suffix : I<0x4b, MRMDestMemFSIB, (outs),
+                            (ins sibmem:$dst, TILE:$src),
+                            "tilestored\t{$src, $dst|$dst, $src}", []>,
+                          T8, XS;
+}
+}
+
+let SchedRW = [WriteSystem] in {
+  defm "" : AMX_TILE_COMMON<"", NoEGPR>, VEX;
+  defm "" : AMX_TILE_COMMON<"_EVEX", HasEGPR>, EVEX, NoCD8;
+
+  let Predicates = [HasAMXTILE, In64BitMode] in {
     let Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
     def TILERELEASE : I<0x49, MRM_C0, (outs), (ins),
                         "tilerelease", [(int_x86_tilerelease)]>, VEX, T8, PS;
-    let mayStore = 1 in
-    def TILESTORED : I<0x4b, MRMDestMemFSIB, (outs),
-                       (ins sibmem:$dst, TILE:$src),
-                       "tilestored\t{$src, $dst|$dst, $src}", []>,
-                       VEX, T8, XS;
     def TILEZERO : I<0x49, MRMr0, (outs TILE:$dst), (ins),
                      "tilezero\t$dst", []>,
                      VEX, T8, XD;
@@ -82,8 +92,8 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
       def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
                               [(int_x86_tilezero timm:$src)]>;
     }
-  } // SchedRW
-} // HasAMXTILE
+  } // Predicates
+} // SchedRW
 
 let Predicates = [HasAMXINT8, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
@@ -103,7 +113,7 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
       def TDPBUUD : I<0x5e, MRMSrcReg4VOp3, (outs TILE:$dst),
                       (ins TILE:$src1, TILE:$src2, TILE:$src3),
                       "tdpbuud\t{$src3, $src2, $dst|$dst, $src2, $src3}", []>,
-                      VEX, VVVV, T8, PS;
+                      VEX, VVVV, T8;
     }
 
     // Pseduo instruction for RA.
@@ -226,7 +236,7 @@ let Predicates = [HasAMXCOMPLEX, In64BitMode] in {
       def TCMMRLFP16PS : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
                             (ins TILE:$src1, TILE:$src2, TILE:$src3),
                             "tcmmrlfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
-                            []>, VEX, VVVV, WIG, T8, PS;
+                            []>, VEX, VVVV, WIG, T8;
 
     } // Constraints = "$src1 = $dst"
 

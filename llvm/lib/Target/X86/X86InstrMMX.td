@@ -487,13 +487,13 @@ def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
 // -- Conversion Instructions
 defm MMX_CVTPS2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtps2pi,
                       f64mem, load, "cvtps2pi\t{$src, $dst|$dst, $src}",
-                      WriteCvtPS2I, SSEPackedSingle>, TB, PS, SIMD_EXC;
+                      WriteCvtPS2I, SSEPackedSingle>, TB, SIMD_EXC;
 defm MMX_CVTPD2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtpd2pi,
                       f128mem, memop, "cvtpd2pi\t{$src, $dst|$dst, $src}",
                       WriteCvtPD2I, SSEPackedDouble>, TB, PD, SIMD_EXC;
 defm MMX_CVTTPS2PI : sse12_cvt_pint<0x2C, VR128, VR64, int_x86_sse_cvttps2pi,
                        f64mem, load, "cvttps2pi\t{$src, $dst|$dst, $src}",
-                       WriteCvtPS2I, SSEPackedSingle>, TB, PS, SIMD_EXC;
+                       WriteCvtPS2I, SSEPackedSingle>, TB, SIMD_EXC;
 defm MMX_CVTTPD2PI : sse12_cvt_pint<0x2C, VR128, VR64, int_x86_sse_cvttpd2pi,
                        f128mem, memop, "cvttpd2pi\t{$src, $dst|$dst, $src}",
                        WriteCvtPD2I, SSEPackedDouble>, TB, PD, SIMD_EXC;
@@ -504,7 +504,7 @@ let Constraints = "$src1 = $dst" in {
   defm MMX_CVTPI2PS : sse12_cvt_pint_3addr<0x2A, VR64, VR128,
                          int_x86_sse_cvtpi2ps,
                          i64mem, load, "cvtpi2ps\t{$src2, $dst|$dst, $src2}",
-                         SSEPackedSingle>, TB, PS, SIMD_EXC;
+                         SSEPackedSingle>, TB, SIMD_EXC;
 }
 
 // Extract / Insert
