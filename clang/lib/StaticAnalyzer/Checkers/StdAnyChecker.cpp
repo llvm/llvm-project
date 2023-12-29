@@ -137,7 +137,7 @@ private:
     // Get the type we are trying to retrieve from any.
     const CallExpr *CE = cast<CallExpr>(Call.getOriginExpr());
     const FunctionDecl *FD = CE->getDirectCallee();
-    if (FD->getTemplateSpecializationArgs()->size() < 1)
+    if (FD->getTemplateSpecializationArgs()->size() != 1)
       return false;
 
     const auto &FirstTemplateArgument =
