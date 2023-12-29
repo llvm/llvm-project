@@ -146,6 +146,11 @@ Changes to the RISC-V Backend
   and is no longer experimental.  However, the C intrinsics for these extensions
   are still experimental.  To use the C intrinsics for these extensions,
   ``-menable-experimental-extensions`` needs to be passed to Clang.
+* XSfcie extension and SiFive CSRs and instructions that were associated with
+  it have been removed. None of these CSRs and instructions were part of
+  "SiFive Custom Instruction Extension" as SiFive defines it. The LLVM project
+  needs to work with SiFive to define and document real extension names for
+  individual CSRs and instructions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
