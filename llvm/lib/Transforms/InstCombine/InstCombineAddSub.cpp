@@ -1685,8 +1685,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       assert(NotLHS != nullptr && NotRHS != nullptr &&
              "isFreeToInvert desynced with getFreelyInverted");
       Value *LHSPlusRHS = Builder.CreateAdd(NotLHS, NotRHS);
-      return BinaryOperator::CreateSub(ConstantInt::get(RHS->getType(), -2),
-                                       LHSPlusRHS);
+      return BinaryOperator::CreateSub(
+          ConstantInt::getSigned(RHS->getType(), -2), LHSPlusRHS);
     }
   }
 

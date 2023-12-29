@@ -274,7 +274,7 @@ llvm::Expected<LanguageRuntime::VTableInfo>
                                    "no symbol found for 0x%" PRIx64,
                                    vtable_load_addr);
   llvm::StringRef name = symbol->GetMangled().GetDemangledName().GetStringRef();
-  if (name.startswith(vtable_demangled_prefix)) {
+  if (name.starts_with(vtable_demangled_prefix)) {
     VTableInfo info = {vtable_addr, symbol};
     std::lock_guard<std::mutex> locker(m_mutex);
     auto pos = m_vtable_info_map[vtable_addr] = info;
@@ -450,7 +450,7 @@ protected:
       // on behalf of the user.   This is the moral equivalent of the -_/-n
       // options to c++filt
       auto name = entry.ref();
-      if (name.startswith("__Z"))
+      if (name.starts_with("__Z"))
         name = name.drop_front();
 
       Mangled mangled(name);

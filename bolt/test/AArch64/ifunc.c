@@ -45,7 +45,7 @@
 
 // NON_DYN_CHECK-NOT: DYNAMIC
 
-// CHECK: b{{l?}} "{{resolver_foo|ifoo}}{{.*}}@PLT"
+// CHECK: {{(bl? "(resolver_foo|ifoo).*@PLT"|adr x[0-9]+, ifoo)}}
 
 // REL_CHECK: R_AARCH64_IRELATIVE [[#%x,REL_SYMB_ADDR:]]
 // REL_CHECK: [[#REL_SYMB_ADDR]] {{.*}} FUNC {{.*}} resolver_foo

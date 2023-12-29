@@ -3469,7 +3469,7 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 namespace {
 
 /// Packing one-dimensional tensor can be expressed as an expand shape op.
-struct SimplifyPackToExandShape : public OpRewritePattern<PackOp> {
+struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   using OpRewritePattern<PackOp>::OpRewritePattern;
 
   Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
@@ -3501,7 +3501,7 @@ struct SimplifyPackToExandShape : public OpRewritePattern<PackOp> {
 } // namespace
 
 void mlir::tensor::populateSimplifyTensorPack(RewritePatternSet &patterns) {
-  patterns.add<SimplifyPackToExandShape>(patterns.getContext());
+  patterns.add<SimplifyPackToExpandShape>(patterns.getContext());
 }
 
 template <typename OpTy>

@@ -540,10 +540,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        MVT::f16, Custom);
 
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
-
-    setOperationAction(
-        {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP},
-        MVT::f16, Promote);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
 
     // F16 - VOP2 Actions.
     setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, MVT::f16, Expand);
@@ -1145,11 +1142,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                     MachineMemOperand::MOStore |
                     MachineMemOperand::MODereferenceable;
 
-      // XXX - Should this be volatile without known ordering?
-      Info.flags |= MachineMemOperand::MOVolatile;
-
       switch (IntrID) {
       default:
+        // XXX - Should this be volatile without known ordering?
+        Info.flags |= MachineMemOperand::MOVolatile;
         break;
       case Intrinsic::amdgcn_raw_buffer_load_lds:
       case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
@@ -1157,6 +1153,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
         unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
         Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
+        Info.ptrVal = CI.getArgOperand(1);
         return true;
       }
       }
@@ -1289,8 +1286,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_VOID;
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
     Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
-                  MachineMemOperand::MOVolatile;
+    Info.ptrVal = CI.getArgOperand(1);
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
@@ -9231,7 +9228,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
 
     MachinePointerInfo StorePtrI = LoadPtrI;
-    StorePtrI.V = nullptr;
+    LoadPtrI.V = PoisonValue::get(
+        PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
+    LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
 
     auto F = LoadMMO->getFlags() &
@@ -9309,6 +9308,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
     LoadPtrI.Offset = Op->getConstantOperandVal(5);
     MachinePointerInfo StorePtrI = LoadPtrI;
+    LoadPtrI.V = PoisonValue::get(
+        PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
     LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
     auto F = LoadMMO->getFlags() &

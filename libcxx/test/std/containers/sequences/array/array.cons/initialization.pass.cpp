@@ -18,26 +18,33 @@ struct NoDefault {
     TEST_CONSTEXPR NoDefault(int) { }
 };
 
-// Test default initialization
-// This one isn't constexpr because omitting to initialize fundamental types
-// isn't valid in a constexpr context.
-struct test_default_initialization {
-    template <typename T>
-    void operator()() const
-    {
-        std::array<T, 0> a0; (void)a0;
-        std::array<T, 1> a1; (void)a1;
-        std::array<T, 2> a2; (void)a2;
-        std::array<T, 3> a3; (void)a3;
-
-        std::array<NoDefault, 0> nodefault; (void)nodefault;
-    }
-};
-
-struct test_nondefault_initialization {
+struct test_initialization {
     template <typename T>
     TEST_CONSTEXPR_CXX14 void operator()() const
     {
+        // Check default initalization
+        {
+            std::array<T, 0> a0; (void)a0;
+            // Before C++20, default initialization doesn't work inside constexpr for
+            // trivially default constructible types. This only apply to non-empty arrays,
+            // since empty arrays don't hold an element of type T.
+            if (TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED || !std::is_trivially_default_constructible<T>::value) {
+                std::array<T, 1> a1; (void)a1;
+                std::array<T, 2> a2; (void)a2;
+                std::array<T, 3> a3; (void)a3;
+            }
+
+            std::array<NoDefault, 0> nodefault; (void)nodefault;
+        }
+
+        // A const empty array can also be default-initialized regardless of the type
+        // it contains. For non-empty arrays, this doesn't work whenever T doesn't
+        // have a user-provided default constructor.
+        {
+            const std::array<T, 0> a0; (void)a0;
+            const std::array<NoDefault, 0> nodefault; (void)nodefault;
+        }
+
         // Check direct-list-initialization syntax (introduced in C++11)
     #if TEST_STD_VER >= 11
         {
@@ -174,13 +181,26 @@ TEST_CONSTEXPR_CXX14 bool with_all_types()
     return true;
 }
 
+// This is a regression test -- previously, libc++ would implement empty arrays by
+// storing an array of characters, which means that the array would be initializable
+// from nonsense like an integer (or anything else that can be narrowed to char).
+#if TEST_STD_VER >= 20
+template <class T>
+concept is_list_initializable_int = requires {
+    { T{123} };
+};
+
+struct Foo { };
+static_assert(!is_list_initializable_int<std::array<Foo, 0>>);
+static_assert(!is_list_initializable_int<std::array<Foo, 1>>);
+#endif
+
 int main(int, char**)
 {
-    with_all_types<test_nondefault_initialization>();
-    with_all_types<test_default_initialization>(); // not constexpr
+    with_all_types<test_initialization>();
     test_initializer_list();
 #if TEST_STD_VER >= 14
-    static_assert(with_all_types<test_nondefault_initialization>(), "");
+    static_assert(with_all_types<test_initialization>(), "");
     static_assert(test_initializer_list(), "");
 #endif
 

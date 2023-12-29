@@ -1003,7 +1003,7 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, static_cast<int>(getLayoutA())),
          mlir::NVVM::PTXRegisterMod::Read});
     asmValues.push_back(
-        {makeConstantI32(rewriter, static_cast<int>(getLayoutB())),
+        {makeConstantI32(rewriter, 1 - static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
 }
