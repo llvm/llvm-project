@@ -140,6 +140,11 @@ static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
       internal_strncmp(info->dlpi_name, "linux-", sizeof("linux-") - 1) == 0)
     return 0;
 #    endif
+#    if SANITIZER_FREEBSD
+  // Ignore vDSO.
+  if (internal_strcmp(info->dlpi_name, "[vdso]") == 0)
+    return 0;
+#    endif
 
   *name = info->dlpi_name;
   return 1;
