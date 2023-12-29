@@ -59,4 +59,3 @@ body:             |
     FLAT_STORE_DWORD %0, %20, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
-
