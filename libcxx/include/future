@@ -844,7 +844,7 @@ void __async_assoc_state<_Rp, _Func>::__execute() {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
-template <class _Rp, class w_Func>
+template <class _Rp, class _Func>
 void __async_assoc_state<_Rp, _Func>::__on_zero_shared() _NOEXCEPT {
   this->wait();
   base::__on_zero_shared();

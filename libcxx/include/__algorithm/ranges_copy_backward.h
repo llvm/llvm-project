@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template <class __InIter, class _OutIter>
+template <class _InIter, class _OutIter>
 using copy_backward_result = in_out_result<_InIter, _OutIter>;
 
 namespace __copy_backward {
