@@ -979,9 +979,9 @@ bool Sema::CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
   if (isa<CXXDestructorDecl>(New) && New->getParent()->isDependentType())
     return false;
 
-  // CWG1351: if either of the old function or the new function is defined as
-  // deleted, we don't need this check.
-  if (Old->isDeleted() || New->isDeleted())
+  // CWG1351: if the overriding function is defined as deleted, we don't need
+  // this check.
+  if (New->isDeleted())
     return false;
 
   // If the old exception specification hasn't been parsed yet, or the new
