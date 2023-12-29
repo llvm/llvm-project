@@ -1108,7 +1108,8 @@ class VPseudoUnaryMask_NoExcept<VReg RetClass,
 
 class VPseudoUnaryNoMask_FRM<VReg RetClass,
                              VReg OpClass,
-                             string Constraint = ""> :
+                             string Constraint = "",
+                             int TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$merge, OpClass:$rs2, ixlenimm:$frm,
                   AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
@@ -1117,6 +1118,7 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
   let mayStore = 0;
   let hasSideEffects = 0;
   let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let TargetOverlapConstraintType = TargetConstraintType;
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1125,7 +1127,8 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
 
 class VPseudoUnaryMask_FRM<VReg RetClass,
                            VReg OpClass,
-                           string Constraint = ""> :
+                           string Constraint = "",
+                           int TargetConstraintType = 1> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
                   VMaskOp:$vm, ixlenimm:$frm,
@@ -1135,6 +1138,7 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
   let mayStore = 0;
   let hasSideEffects = 0;
   let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let TargetOverlapConstraintType = TargetConstraintType;
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -3637,12 +3641,13 @@ multiclass VPseudoConversionRoundingMode<VReg RetClass,
 multiclass VPseudoConversionRM<VReg RetClass,
                                VReg Op1Class,
                                LMULInfo MInfo,
-                               string Constraint = ""> {
+                               string Constraint = "",
+                               int TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX : VPseudoUnaryNoMask_FRM<RetClass, Op1Class,
-                                                        Constraint>;
+                                                        Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask_FRM<RetClass, Op1Class,
-                                                        Constraint>,
+                                                        Constraint, TargetConstraintType>,
                                    RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
@@ -3770,7 +3775,7 @@ multiclass VPseudoVNCVTI_W_RM {
 multiclass VPseudoVNCVTI_RM_W {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListW in {
-    defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint>,
+    defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
               SchedUnary<"WriteVFNCvtFToIV", "ReadVFNCvtFToIV", m.MX,
                          forceMergeOpRead=true>;
   }
