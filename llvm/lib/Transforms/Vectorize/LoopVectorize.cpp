@@ -9475,8 +9475,8 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
   bool isMaskRequired = getMask();
   if (isMaskRequired) {
-    // Mask reversal is only neede for non-all-one (null) masks, as reverse of a
-    // null all-one mask is a null mask.
+    // Mask reversal is only needed for non-all-one (null) masks, as reverse of
+    // a null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Mask = State.get(getMask(), Part);
       if (isReverse())
