@@ -2827,6 +2827,7 @@ initialization, profile two specific hot regions, and skip profiling program
 cleanup:
 
 .. code-block:: c
+
     int main() {
       initialize();
 
@@ -2857,6 +2858,7 @@ treating weak symbols as ``null`` during linking. For example, the user can
 have
 
 .. code-block:: c
+
     __attribute__((weak)) int __llvm_profile_dump(void);
 
     // Then later in the same source file
@@ -2871,6 +2873,7 @@ Alternatively, the user program can include the header
 ``profile/instr_prof_interface.h``, which contains the API names. For example,
 
 .. code-block:: c
+
     #include "profile/instr_prof_interface.h"
 
     // Then later in the same source file
@@ -2893,6 +2896,7 @@ can execute code specifically intended for profile generate or profile use.
 For example, a user program can have special logging during profile generate:
 
 .. code-block:: c
+
     #if __LLVM_INSTR_PROFILE_GENERATE
     expensive_logging_of_full_program_state();
     #endif
