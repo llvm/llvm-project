@@ -134,14 +134,12 @@ let Form = MRMSrcMem;
 let SchedRW = [sched.Folded, sched.ReadAfterFold];
 }
 
-let Constraints = "$src1 = $dst" in {
 def IMUL16rr : IMulOpRR<Xi16, WriteIMul16Reg>, OpSize16;
 def IMUL32rr : IMulOpRR<Xi32, WriteIMul32Reg>, OpSize32;
 def IMUL64rr : IMulOpRR<Xi64, WriteIMul64Reg>;
 def IMUL16rm : IMulOpRM<Xi16, WriteIMul16Reg>, OpSize16;
 def IMUL32rm : IMulOpRM<Xi32, WriteIMul32Reg>, OpSize32;
 def IMUL64rm : IMulOpRM<Xi64, WriteIMul64Reg>;
-}
 
 class IMulOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpRI8<0x6B, "imul", binop_ndd_args, t, MRMSrcReg,
@@ -547,7 +545,6 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode] in {
-  let Constraints = "$src1 = $dst" in
   def NAME#8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
   def NAME#8mi8 : BinOpMI8_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
   }
@@ -719,7 +716,6 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode]  in {
-    let Constraints = "$src1 = $dst" in
     def NAME#8ri8 : BinOpRI8F_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
   def NAME#8mi8 : BinOpMI8F_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
   }
@@ -1122,17 +1118,15 @@ defm MULX64 : MulX<Xi64, WriteMULX64>, REX_W;
 //
 // We don't have patterns for these as there is no advantage over ADC for
 // most code.
-let Constraints = "$src1 = $dst" in {
-  let Form = MRMSrcReg in {
-  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
-  }
-  let Form = MRMSrcMem in {
-  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
-  }
+let Form = MRMSrcReg in {
+def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
+def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
+def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
+def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+}
+let Form = MRMSrcMem in {
+def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
+def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
+def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
+def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
 }

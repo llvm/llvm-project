@@ -14,7 +14,7 @@ declare void @llvm.dbg.kill(metadata) #0
 define dso_local i32 @single_block_referrer_live_until_terminator() #1 !dbg !5 {
   ; CHECK-LABEL: name: single_block_referrer_live_until_terminator
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
   ; CHECK-NEXT:   DBG_DEF !8, renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
@@ -33,7 +33,7 @@ entry:
 define dso_local i32 @single_block_referrer_live_until_kill() #1 !dbg !12 {
   ; CHECK-LABEL: name: single_block_referrer_live_until_kill
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
   ; CHECK-NEXT:   DBG_DEF !13, renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   DBG_KILL !13
@@ -53,9 +53,9 @@ entry:
 define dso_local void @single_block_dangling_referrer_live_until_terminator() #1 !dbg !16 {
   ; CHECK-LABEL: name: single_block_dangling_referrer_live_until_terminator
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   DBG_DEF !17, renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
@@ -75,9 +75,9 @@ entry:
 define dso_local void @single_block_dangling_referrer_live_until_kill() #1 !dbg !20 {
   ; CHECK-LABEL: name: single_block_dangling_referrer_live_until_kill
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   DBG_DEF !21, renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
@@ -100,9 +100,9 @@ entry:
 define dso_local void @single_block_dangling_referrer_live_until_clobber() #1 !dbg !24 {
   ; CHECK-LABEL: name: single_block_dangling_referrer_live_until_clobber
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   DBG_DEF !25, renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
@@ -133,8 +133,8 @@ define dso_local void @multi_block_dangling_referrer_kill_before() #1 !dbg !28 {
   ; CHECK-NEXT: bb.1.def:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   DBG_DEF !29, renamable $sgpr4
   ; CHECK-NEXT:   DBG_KILL !29
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -166,8 +166,8 @@ define dso_local void @multi_block_dangling_referrer_kill_after() #1 !dbg !32 {
   ; CHECK-NEXT: bb.1.def:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   DBG_DEF !33, renamable $sgpr4
   ; CHECK-NEXT:   DBG_KILL !33
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -199,8 +199,8 @@ define dso_local void @drop_dangling_with_kill_before() #1 !dbg !36 {
   ; CHECK-NEXT: bb.1.def:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -232,8 +232,8 @@ define dso_local void @drop_dangling_with_kill_after() #1 !dbg !40 {
   ; CHECK-NEXT: bb.1.def:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -258,8 +258,8 @@ exit:                                             ; preds = %def
 define dso_local void @drop_dangling_without_kill() #1 !dbg !44 {
   ; CHECK-LABEL: name: drop_dangling_without_kill
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2621450 /* regdef:SReg_32 */, def renamable $sgpr4
-  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2621449 /* reguse:SReg_32 */, killed renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 2359306 /* regdef:SReg_32 */, def renamable $sgpr4
+  ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 2359305 /* reguse:SReg_32 */, killed renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
   ; CHECK-NEXT:   SI_RETURN debug-location !47
 entry:
