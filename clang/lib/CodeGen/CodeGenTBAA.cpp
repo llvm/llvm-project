@@ -185,10 +185,33 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getChar();
 
   // Handle pointers and references.
-  // TODO: Implement C++'s type "similarity" and consider dis-"similar"
-  // pointers distinct.
-  if (Ty->isPointerType() || Ty->isReferenceType())
-    return createScalarTypeNode("any pointer", getChar(), Size);
+  if (Ty->isPointerType() || Ty->isReferenceType()) {
+    llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
+    if (CodeGenOpts.RelaxedPointerAliasing)
+      return AnyPtr;
+    // Compute the depth of the pointer and generate a tag of the form "p<depth>
+    // <base type tag>".
+    unsigned PtrDepth = 0;
+    do {
+      PtrDepth++;
+      Ty = Ty->getPointeeType().getTypePtr();
+    } while (Ty->isPointerType() || Ty->isReferenceType());
+    // TODO: Implement C++'s type "similarity" and consider dis-"similar"
+    // pointers distinct for non-builtin types.
+    if (isa<BuiltinType>(Ty)) {
+      llvm::MDNode *ScalarMD = getTypeInfoHelper(Ty);
+      StringRef Name =
+          cast<llvm::MDString>(
+              ScalarMD->getOperand(CodeGenOpts.NewStructPathTBAA ? 2 : 0))
+              ->getString();
+      SmallString<256> OutName("p");
+      OutName += std::to_string(PtrDepth);
+      OutName += " ";
+      OutName += Name;
+      return createScalarTypeNode(OutName, AnyPtr, Size);
+    }
+    return AnyPtr;
+  }
 
   // Accesses to arrays are accesses to objects of their element types.
   if (CodeGenOpts.NewStructPathTBAA && Ty->isArrayType())
