@@ -606,8 +606,7 @@ static bool isIgnored(StringRef FilePath) {
   if (!IgnoreFile.good())
     return false;
 
-  AbsPath = convert_to_slash(AbsPath);
-
+  const auto Pathname = convert_to_slash(AbsPath);
   for (std::string Line; std::getline(IgnoreFile, Line);) {
     auto Pattern = StringRef(Line).trim();
     if (Pattern.empty() || Pattern[0] == '#')
