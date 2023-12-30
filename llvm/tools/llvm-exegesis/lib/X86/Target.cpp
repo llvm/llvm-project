@@ -926,12 +926,12 @@ void generateSyscall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
   GeneratedCode.push_back(MCInstBuilder(X86::SYSCALL));
 }
 
-constexpr std::array<unsigned, 6> SyscallArgumentRegisters{
-    X86::RDI, X86::RSI, X86::RDX, X86::R10, X86::R8, X86::R9};
-
 // The functions below for saving and restoring system call registers are only
 // used when llvm-exegesis is built on Linux.
 #ifdef __linux__
+constexpr std::array<unsigned, 6> SyscallArgumentRegisters{
+    X86::RDI, X86::RSI, X86::RDX, X86::R10, X86::R8, X86::R9};
+
 static void saveSyscallRegisters(std::vector<MCInst> &GeneratedCode,
                                  unsigned ArgumentCount) {
   assert(ArgumentCount <= 6 &&
