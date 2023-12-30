@@ -95,9 +95,6 @@ public:
   /// Stops the measurement of the event.
   void stop();
 
-  /// Returns the current value of the counter or -1 if it cannot be read.
-  int64_t read() const;
-
   /// Returns the current value of the counter or error if it cannot be read.
   /// FunctionBytes: The benchmark function being executed.
   /// This is used to filter out the measurements to ensure they are only
