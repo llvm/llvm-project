@@ -35,15 +35,16 @@ using PolyhedronV = IntMatrix;
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 
-inline ConeH defineHRep(int num_ineqs, int num_vars, int num_params = 0) {
+inline ConeH defineHRep(int num_vars) {
   // We don't distinguish between domain and range variables, so
   // we set the number of domain variables as 0 and the number of
   // range variables as the number of actual variables.
-  // There are no symbols (non-parametric for now) and no local
+  // There are no symbols (we don't work with parametric cones) and no local
   // (existentially quantified) variables.
+  // Once the cone is defined, we use `addInequality()` to set inequalities.
   return ConeH(PresburgerSpace::getRelationSpace(/*numDomain=*/0,
                                                  /*numRange=*/num_vars,
-                                                 /*numSymbols=*/num_params,
+                                                 /*numSymbols=*/0,
                                                  /*numLocals=*/0));
 }
 
