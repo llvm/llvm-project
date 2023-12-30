@@ -12848,6 +12848,8 @@ namespace {
 // apply a combine.
 struct CombineResult;
 
+enum class SupportExt { ZExt, SExt };
+
 /// Helper class for folding sign/zero extensions.
 /// In particular, this class is used for the following combines:
 /// add | add_vl -> vwadd(u) | vwadd(u)_w
@@ -12912,13 +12914,22 @@ struct NodeExtensionHelper {
     return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL;
   }
 
+  unsigned getExtOpc(SupportExt Ext) const {
+    switch (Ext) {
+    case SupportExt::ZExt:
+      return RISCVISD::VZEXT_VL;
+    case SupportExt::SExt:
+      return RISCVISD::VSEXT_VL;
+    }
+  }
+
   /// Get or create a value that can feed \p Root with the given extension \p
   /// SExt. If \p SExt is std::nullopt, this returns the source of this operand.
   /// \see ::getSource().
   SDValue getOrCreateExtendedOp(SDNode *Root, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget,
-                                std::optional<bool> SExt) const {
-    if (!SExt.has_value())
+                                std::optional<SupportExt> Ext) const {
+    if (!Ext.has_value())
       return OrigOperand;
 
     MVT NarrowVT = getNarrowType(Root);
@@ -12927,7 +12938,7 @@ struct NodeExtensionHelper {
     if (Source.getValueType() == NarrowVT)
       return Source;
 
-    unsigned ExtOpc = *SExt ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
+    unsigned ExtOpc = getExtOpc(*Ext);
 
     // If we need an extension, we should be changing the type.
     SDLoc DL(Root);
@@ -12965,6 +12976,42 @@ struct NodeExtensionHelper {
     return NarrowVT;
   }
 
+  static unsigned getSignedDoubleWidenOpcode(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ADD:
+    case RISCVISD::ADD_VL:
+    case RISCVISD::VWADD_W_VL:
+      return RISCVISD::VWADD_VL;
+    case ISD::MUL:
+    case RISCVISD::MUL_VL:
+      return RISCVISD::VWMUL_VL;
+    case ISD::SUB:
+    case RISCVISD::SUB_VL:
+    case RISCVISD::VWSUB_W_VL:
+      return RISCVISD::VWSUB_VL;
+    default:
+      llvm_unreachable("Unexpected Opcode");
+    }
+  }
+
+  static unsigned getUnsignedDoubleWidenOpcode(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ADD:
+    case RISCVISD::ADD_VL:
+    case RISCVISD::VWADDU_W_VL:
+      return RISCVISD::VWADDU_VL;
+    case ISD::MUL:
+    case RISCVISD::MUL_VL:
+      return RISCVISD::VWMULU_VL;
+    case ISD::SUB:
+    case RISCVISD::SUB_VL:
+    case RISCVISD::VWSUBU_W_VL:
+      return RISCVISD::VWSUBU_VL;
+    default:
+      llvm_unreachable("Unexpected Opcode");
+    }
+  }
+
   /// Return the opcode required to materialize the folding of the sign
   /// extensions (\p IsSExt == true) or zero extensions (IsSExt == false) for
   /// both operands for \p Opcode.
@@ -12972,46 +13019,57 @@ struct NodeExtensionHelper {
   /// - ISExt == true: \p Opcode(sext(a), sext(b)) -> newOpcode(a, b)
   /// - ISExt == false: \p Opcode(zext(a), zext(b)) -> newOpcode(a, b)
   /// \pre \p Opcode represents a supported root (\see ::isSupportedRoot()).
-  static unsigned getSameExtensionOpcode(unsigned Opcode, bool IsSExt) {
-    switch (Opcode) {
-    case ISD::ADD:
-    case RISCVISD::ADD_VL:
-    case RISCVISD::VWADD_W_VL:
-    case RISCVISD::VWADDU_W_VL:
-      return IsSExt ? RISCVISD::VWADD_VL : RISCVISD::VWADDU_VL;
-    case ISD::MUL:
-    case RISCVISD::MUL_VL:
-      return IsSExt ? RISCVISD::VWMUL_VL : RISCVISD::VWMULU_VL;
-    case ISD::SUB:
-    case RISCVISD::SUB_VL:
-    case RISCVISD::VWSUB_W_VL:
-    case RISCVISD::VWSUBU_W_VL:
-      return IsSExt ? RISCVISD::VWSUB_VL : RISCVISD::VWSUBU_VL;
-    default:
-      llvm_unreachable("Unexpected opcode");
+  static unsigned getDoubleWidenOpcode(unsigned OrigOpcode, SupportExt Ext) {
+    switch (Ext) {
+    case SupportExt::SExt:
+      return getSignedDoubleWidenOpcode(OrigOpcode);
+    case SupportExt::ZExt:
+      return getUnsignedDoubleWidenOpcode(OrigOpcode);
     }
   }
 
   /// Get the opcode to materialize \p Opcode(sext(a), zext(b)) ->
   /// newOpcode(a, b).
-  static unsigned getSUOpcode(unsigned Opcode) {
+  static unsigned getSignedUnsignedWidenOpcode(unsigned Opcode) {
     assert((Opcode == RISCVISD::MUL_VL || Opcode == ISD::MUL) &&
            "SU is only supported for MUL");
     return RISCVISD::VWMULSU_VL;
   }
 
-  /// Get the opcode to materialize \p Opcode(a, s|zext(b)) ->
-  /// newOpcode(a, b).
-  static unsigned getWOpcode(unsigned Opcode, bool IsSExt) {
+  static unsigned getSignedSingleWidenOpcode(unsigned Opcode) {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
-      return IsSExt ? RISCVISD::VWADD_W_VL : RISCVISD::VWADDU_W_VL;
+      return RISCVISD::VWADD_W_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
-      return IsSExt ? RISCVISD::VWSUB_W_VL : RISCVISD::VWSUBU_W_VL;
+      return RISCVISD::VWSUB_W_VL;
     default:
       llvm_unreachable("Unexpected opcode");
+    }
+  }
+
+  static unsigned getUnsignedSingleWidenOpcode(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ADD:
+    case RISCVISD::ADD_VL:
+      return RISCVISD::VWADDU_W_VL;
+    case ISD::SUB:
+    case RISCVISD::SUB_VL:
+      return RISCVISD::VWSUBU_W_VL;
+    default:
+      llvm_unreachable("Unexpected opcode");
+    }
+  }
+
+  /// Get the opcode to materialize \p Opcode(a, s|zext(b)) ->
+  /// newOpcode(a, b).
+  static unsigned getSingleWidenOpcode(unsigned Opcode, SupportExt Ext) {
+    switch (Ext) {
+    case SupportExt::SExt:
+      return getSignedSingleWidenOpcode(Opcode);
+    case SupportExt::ZExt:
+      return getUnsignedSingleWidenOpcode(Opcode);
     }
   }
 
@@ -13227,22 +13285,23 @@ struct NodeExtensionHelper {
 struct CombineResult {
   /// Opcode to be generated when materializing the combine.
   unsigned TargetOpcode;
-  // No value means no extension is needed. If extension is needed, the value
-  // indicates if it needs to be sign extended.
-  std::optional<bool> SExtLHS;
-  std::optional<bool> SExtRHS;
-  /// Root of the combine.
-  SDNode *Root;
   /// LHS of the TargetOpcode.
   NodeExtensionHelper LHS;
+  /// Extension of the LHS
+  std::optional<SupportExt> ExtLHS;
   /// RHS of the TargetOpcode.
   NodeExtensionHelper RHS;
+  /// Extension of the RHS
+  std::optional<SupportExt> ExtRHS;
+  /// Root of the combine.
+  SDNode *Root;
 
-  CombineResult(unsigned TargetOpcode, SDNode *Root,
-                const NodeExtensionHelper &LHS, std::optional<bool> SExtLHS,
-                const NodeExtensionHelper &RHS, std::optional<bool> SExtRHS)
-      : TargetOpcode(TargetOpcode), SExtLHS(SExtLHS), SExtRHS(SExtRHS),
-        Root(Root), LHS(LHS), RHS(RHS) {}
+  CombineResult(
+      unsigned TargetOpcode, SDNode *Root,
+      std::pair<const NodeExtensionHelper &, std::optional<SupportExt>> LHS,
+      std::pair<const NodeExtensionHelper &, std::optional<SupportExt>> RHS)
+      : TargetOpcode(TargetOpcode), LHS(LHS.first), ExtLHS(LHS.second),
+        RHS(RHS.first), ExtRHS(RHS.second), Root(Root) {}
 
   /// Return a value that uses TargetOpcode and that can be used to replace
   /// Root.
@@ -13263,8 +13322,8 @@ struct CombineResult {
       break;
     }
     return DAG.getNode(TargetOpcode, SDLoc(Root), Root->getValueType(0),
-                       LHS.getOrCreateExtendedOp(Root, DAG, Subtarget, SExtLHS),
-                       RHS.getOrCreateExtendedOp(Root, DAG, Subtarget, SExtRHS),
+                       LHS.getOrCreateExtendedOp(Root, DAG, Subtarget, ExtLHS),
+                       RHS.getOrCreateExtendedOp(Root, DAG, Subtarget, ExtRHS),
                        Merge, Mask, VL);
   }
 };
@@ -13289,14 +13348,15 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
       !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
     return std::nullopt;
   if (AllowZExt && LHS.SupportsZExt && RHS.SupportsZExt)
-    return CombineResult(NodeExtensionHelper::getSameExtensionOpcode(
-                             Root->getOpcode(), /*IsSExt=*/false),
-                         Root, LHS, /*SExtLHS=*/false, RHS, /*SExtRHS=*/false);
+    return CombineResult(NodeExtensionHelper::getDoubleWidenOpcode(
+                             Root->getOpcode(), SupportExt::ZExt),
+                         Root, {LHS, SupportExt::ZExt},
+                         {RHS, SupportExt::ZExt});
   if (AllowSExt && LHS.SupportsSExt && RHS.SupportsSExt)
-    return CombineResult(NodeExtensionHelper::getSameExtensionOpcode(
-                             Root->getOpcode(), /*IsSExt=*/true),
-                         Root, LHS, /*SExtLHS=*/true, RHS,
-                         /*SExtRHS=*/true);
+    return CombineResult(NodeExtensionHelper::getDoubleWidenOpcode(
+                             Root->getOpcode(), SupportExt::SExt),
+                         Root, {LHS, SupportExt::SExt},
+                         {RHS, SupportExt::SExt});
   return std::nullopt;
 }
 
@@ -13330,13 +13390,13 @@ canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
   // Control this behavior behind an option (AllowSplatInVW_W) for testing
   // purposes.
   if (RHS.SupportsZExt && (!RHS.isSplat() || AllowSplatInVW_W))
-    return CombineResult(
-        NodeExtensionHelper::getWOpcode(Root->getOpcode(), /*IsSExt=*/false),
-        Root, LHS, /*SExtLHS=*/std::nullopt, RHS, /*SExtRHS=*/false);
+    return CombineResult(NodeExtensionHelper::getSingleWidenOpcode(
+                             Root->getOpcode(), SupportExt::ZExt),
+                         Root, {LHS, std::nullopt}, {RHS, SupportExt::ZExt});
   if (RHS.SupportsSExt && (!RHS.isSplat() || AllowSplatInVW_W))
-    return CombineResult(
-        NodeExtensionHelper::getWOpcode(Root->getOpcode(), /*IsSExt=*/true),
-        Root, LHS, /*SExtLHS=*/std::nullopt, RHS, /*SExtRHS=*/true);
+    return CombineResult(NodeExtensionHelper::getSingleWidenOpcode(
+                             Root->getOpcode(), SupportExt::SExt),
+                         Root, {LHS, std::nullopt}, {RHS, SupportExt::SExt});
   return std::nullopt;
 }
 
@@ -13378,8 +13438,9 @@ canFoldToVW_SU(SDNode *Root, const NodeExtensionHelper &LHS,
   if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
       !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
     return std::nullopt;
-  return CombineResult(NodeExtensionHelper::getSUOpcode(Root->getOpcode()),
-                       Root, LHS, /*SExtLHS=*/true, RHS, /*SExtRHS=*/false);
+  return CombineResult(
+      NodeExtensionHelper::getSignedUnsignedWidenOpcode(Root->getOpcode()),
+      Root, {LHS, SupportExt::SExt}, {RHS, SupportExt::ZExt});
 }
 
 SmallVector<NodeExtensionHelper::CombineToTry>
@@ -13481,9 +13542,9 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
           // All the inputs that are extended need to be folded, otherwise
           // we would be leaving the old input (since it is may still be used),
           // and the new one.
-          if (Res->SExtLHS.has_value())
+          if (Res->ExtLHS.has_value())
             AppendUsersIfNeeded(LHS);
-          if (Res->SExtRHS.has_value())
+          if (Res->ExtRHS.has_value())
             AppendUsersIfNeeded(RHS);
           break;
         }
