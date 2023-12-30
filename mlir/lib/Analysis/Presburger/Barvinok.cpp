@@ -1,0 +1,65 @@
+//===- QuasiPolynomial.cpp - Barvinok's Algorithm ---------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Analysis/Presburger/Barvinok.h"
+
+using namespace mlir;
+using namespace presburger;
+
+// Assuming that the input cone is pointed at the origin,
+// converts it to its dual in V-representation.
+// Essentially we just remove the all-zeroes constant column.
+ConeV mlir::presburger::getDual(ConeH cone)
+{
+    ConeV dual(cone.getNumInequalities(), cone.getNumCols()-1, 0, 0);
+    // Assuming that an inequality of the form
+    // a1*x1 + ... + an*xn + b ≥ 0
+    // is represented as a row [a1, ..., an, b]
+    // and that b = 0.
+
+    for (unsigned i = 0; i < cone.getNumInequalities(); i++)
+    {
+        assert(dual.at(i, cone.getNumCols()-1) == 0 && "H-representation of cone is not centred at the origin!");
+        for (unsigned j = 0; j < cone.getNumCols()-1; j++)
+        {
+            dual.at(i, j) = cone.atIneq(i, j);
+        }
+    }
+
+    // Now dual is of the form [ [a1, ..., an] , ... ]
+    // which is the V-representation of the dual.
+    return dual;
+}
+
+// Converts a cone in V-representation to the H-representation
+// of its dual, pointed at the origin (not at the original vertex).
+// Essentially adds a column consisting only of zeroes to the end.
+ConeH mlir::presburger::getDual(ConeV cone)
+{
+    ConeH dual = defineHRep(cone.getNumRows(), cone.getNumColumns());
+    cone.insertColumn(cone.getNumColumns());
+
+    for (unsigned i = 0; i < cone.getNumRows(); i++)
+        dual.addInequality(cone.getRow(i));
+
+    // Now dual is of the form [ [a1, ..., an, 0] , ... ]
+    // which is the H-representation of the dual.
+    return dual;
+}
+
+// Find the index of a cone in V-representation.
+// If there are more rays than variables, return 0.
+MPInt mlir::presburger::getIndex(ConeV cone)
+{
+    unsigned rows = cone.getNumRows();
+    unsigned cols = cone.getNumColumns();
+    if (rows > cols)
+        return MPInt(0);
+
+    return cone.determinant();
+}
