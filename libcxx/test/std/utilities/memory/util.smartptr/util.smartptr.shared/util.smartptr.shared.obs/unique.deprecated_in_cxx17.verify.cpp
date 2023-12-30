@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++20, c++23, c++26
+// UNSUPPORTED: c++03, c++11, c++14
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE
 
 // <memory>
 
