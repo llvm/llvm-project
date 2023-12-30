@@ -3068,6 +3068,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
                                            const MCRegisterInfo &MRI) {
   const unsigned VGPRClasses[] = {
+    AMDGPU::VGPR_16RegClassID,
     AMDGPU::VGPR_32RegClassID,
     AMDGPU::VReg_64RegClassID,
     AMDGPU::VReg_96RegClassID,
@@ -3081,9 +3082,7 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
     AMDGPU::VReg_352RegClassID,
     AMDGPU::VReg_384RegClassID,
     AMDGPU::VReg_512RegClassID,
-    AMDGPU::VReg_1024RegClassID,
-    AMDGPU::VGPR_LO16RegClassID,
-    AMDGPU::VGPR_HI16RegClassID
+    AMDGPU::VReg_1024RegClassID
   };
 
   for (unsigned RCID : VGPRClasses) {
