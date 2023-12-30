@@ -228,10 +228,13 @@ void CoarrayChecker::Leave(const parser::NotifyWaitStmt &x) {
     if (ExtractCoarrayRef(expr)) {
       context_.Say(parser::FindSourceLocation(notifyVar), // F2023 - C1178
           "A notify-variable in a NOTIFY WAIT statement may not be a coindexed object"_err_en_US);
-    } else if (!IsNotifyType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // F2023 - C1177
-       context_.Say(parser::FindSourceLocation(notifyVar), "The notify-variable must be of type NOTIFY_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else if (!IsNotifyType(evaluate::GetDerivedTypeSpec(
+                   expr->GetType()))) { // F2023 - C1177
+      context_.Say(parser::FindSourceLocation(notifyVar),
+          "The notify-variable must be of type NOTIFY_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
     } else if (!evaluate::IsCoarray(*expr)) { // F2023 - C1612
-       context_.Say(parser::FindSourceLocation(notifyVar), "The notify-variable must be a coarray"_err_en_US);
+      context_.Say(parser::FindSourceLocation(notifyVar),
+          "The notify-variable must be a coarray"_err_en_US);
     }
   }
 
