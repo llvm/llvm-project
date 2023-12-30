@@ -1,4 +1,5 @@
 add_mlir_library(MLIRPresburger
+  Barvinok.cpp
   IntegerRelation.cpp
   LinearTransform.cpp
   Matrix.cpp
