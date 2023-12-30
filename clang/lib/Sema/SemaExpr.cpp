@@ -7156,7 +7156,9 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
           break;
       }
       if (NSD && NSD->getIdentifier()) {
-        std::string Name = NSD->getIdentifier()->getName().str() + "::";
+        SmallString<32> Str;
+        StringRef Name =
+            (NSD->getIdentifier()->getName() + "::").toStringRef(Str);
         S.Diag(DRE->getLocation(),
                diag::warn_unqualified_call_to_std_cast_function)
             << FD->getQualifiedNameAsString()
