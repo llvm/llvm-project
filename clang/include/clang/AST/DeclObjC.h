@@ -482,6 +482,20 @@ public:
   /// True if the method is tagged as objc_direct
   bool isDirectMethod() const;
 
+  /// True if method is meant to be visible.
+  ///
+  /// TODO: For now this is only true for a very narrow case where the method
+  /// must be direct and must also be explicitly marked as
+  /// __attribute__((visibility("default"))). In the future it may be possible
+  /// to assume that all direct (or even both direct and indirect) methods are
+  /// visible but for the time being it is prudent to provide this default
+  /// visibility behavior as an opt-in only.
+  bool hasMethodVisibilityDefault() const {
+    return isDirectMethod() &&
+           getExplicitVisibility(VisibilityForValue)
+                   .value_or(HiddenVisibility) == DefaultVisibility;
+  }
+
   /// True if the method has a parameter that's destroyed in the callee.
   bool hasParamDestroyedInCallee() const;
 
