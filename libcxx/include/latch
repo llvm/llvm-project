@@ -40,22 +40,23 @@ namespace std
 
 */
 
+#include <__config>
+
+#ifdef _LIBCPP_HAS_NO_THREADS
+#  error "<latch> is not supported since libc++ has been configured without support for threads."
+#endif
+
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/memory_order.h>
 #include <__availability>
-#include <__config>
 #include <cstddef>
 #include <limits>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#endif
-
-#ifdef _LIBCPP_HAS_NO_THREADS
-#  error "<latch> is not supported since libc++ has been configured without support for threads."
 #endif
 
 _LIBCPP_PUSH_MACROS
