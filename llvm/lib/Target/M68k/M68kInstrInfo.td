@@ -513,9 +513,14 @@ def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
 // Pattern Fragments
 //===----------------------------------------------------------------------===//
 
-def MximmSExt8  : PatLeaf<(i8  imm)>;
-def MximmSExt16 : PatLeaf<(i16 imm)>;
-def MximmSExt32 : PatLeaf<(i32 imm)>;
+def Mxi8immSExt8  : PatLeaf<(i8  imm)>;
+def MximmSExt8    : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
+
+def Mxi16immSExt16 : PatLeaf<(i16 imm)>;
+def MximmSExt16    : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+
+def Mxi32immSExt32 : PatLeaf<(i32 imm)>;
+def MximmSExt32    : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 
 // Used for Shifts and Rotations, since M68k immediates in these instructions
 // are 1 <= i <= 8. Generally, if immediate is bigger than 8 it will be moved
@@ -708,7 +713,7 @@ foreach size = [8, 16, 32] in {
   // #imm
   def MxOp#size#AddrMode_i
     : MxImmOpBundle<size, !cast<MxOperand>("Mxi"#size#"imm"),
-                    !cast<PatFrag>("MximmSExt"#size)>;
+                    !cast<PatFrag>("Mxi"#size#"immSExt"#size)>;
 } // foreach size = [8, 16, 32]
 
 foreach size = [16, 32] in {
@@ -738,7 +743,7 @@ class MxType8Class<string rLet, MxOperand reg>
              MxAL8,    MxCP_AL,
              MxPCD8,   MxCP_PCD,
              MxPCI8,   MxCP_PCI,
-             Mxi8imm,  MximmSExt8,
+             Mxi8imm,  Mxi8immSExt8,
              Mxloadi8>;
 
 def MxType8 : MxType8Class<?,?>;
@@ -753,7 +758,7 @@ class MxType16Class<string rLet, MxOperand reg>
              MxAL16,    MxCP_AL,
              MxPCD16,   MxCP_PCD,
              MxPCI16,   MxCP_PCI,
-             Mxi16imm,  MximmSExt16,
+             Mxi16imm,  Mxi16immSExt16,
              Mxloadi16>;
 
 def MxType16 : MxType16Class<?,?>;
@@ -768,7 +773,7 @@ class MxType32Class<string rLet, MxOperand reg>
              MxAL32,    MxCP_AL,
              MxPCD32,   MxCP_PCD,
              MxPCI32,   MxCP_PCI,
-             Mxi32imm,  MximmSExt32,
+             Mxi32imm,  Mxi32immSExt32,
              Mxloadi32>;
 
 def MxType32 : MxType32Class<?,?>;

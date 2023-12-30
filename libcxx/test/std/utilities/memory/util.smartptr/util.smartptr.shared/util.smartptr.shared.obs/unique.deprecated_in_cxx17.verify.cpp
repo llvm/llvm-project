@@ -6,28 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE
+
 // <memory>
 
 // shared_ptr
 
 // bool unique() const; // deprecated in C++17, removed in C++20
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE
-
 #include <memory>
-#include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    const std::shared_ptr<int> p(new int(32));
-    assert(p.unique());
-    {
-    std::shared_ptr<int> p2 = p;
-    assert(!p.unique());
-    }
-    assert(p.unique());
-
-  return 0;
+void f() {
+  const std::shared_ptr<int> p;
+  p.unique(); // expected-warning {{'unique' is deprecated}}
 }

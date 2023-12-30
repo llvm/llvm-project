@@ -118,6 +118,7 @@
 // CHECK-NOT: __riscv_zfa {{.*$}}
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zicfilp {{.*$}}
+// CHECK-NOT: __riscv_zicfiss {{.*$}}
 // CHECK-NOT: __riscv_zicond {{.*$}}
 // CHECK-NOT: __riscv_zimop {{.*$}}
 // CHECK-NOT: __riscv_zcmop {{.*$}}
@@ -1287,3 +1288,11 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -E -dM %s \
 // RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // CHECK-MISALIGNED-FAST: __riscv_misaligned_fast 1
+
+// RUN: %clang -target riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32izicfiss0p4 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
+// RUN: %clang -target riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64izicfiss0p4 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICFISS-EXT %s
+// CHECK-ZICFISS-EXT: __riscv_zicfiss 4000{{$}}
