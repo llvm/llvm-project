@@ -19,6 +19,10 @@
 #include "test_macros.h"
 #include "make_string.h"
 
+#if _LIBCPP_STD_VER >= 26
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#endif
+
 template <class Context, class To, class From>
 void test(From value) {
   auto store = std::make_format_args<Context>(value);
