@@ -35,10 +35,20 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (packOp.getPaddingValue())
+      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
+
+    if (!packOp.getOuterDimsPerm().empty())
+      return rewriter.notifyMatchFailure(packOp, "expects no outer_dims_perm");
+
     RankedTensorType sourceType = packOp.getSourceType();
     RankedTensorType destType = packOp.getDestType();
-    if (sourceType.getRank() != 1 || packOp.getPaddingValue())
-      return failure();
+    ArrayRef<int64_t> dimsPos = packOp.getInnerDimsPos();
+    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != sourceType.getRank())) {
+      return rewriter.notifyMatchFailure(
+          packOp, "expects packing at the innermost dimension");
+    }
+
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
