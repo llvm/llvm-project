@@ -17,27 +17,28 @@
 #include "test_macros.h"
 
 struct Incomplete;
-template<class T> struct Holder { T t; };
+template <class T>
+struct Holder {
+  T t;
+};
 
-constexpr bool test(bool do_it)
-{
-    if (do_it) {
-        std::variant<Holder<Incomplete>*, int> v = nullptr;
-        std::visit([](auto){}, v);
-        std::visit([](auto) -> Holder<Incomplete>* { return nullptr; }, v);
+constexpr bool test(bool do_it) {
+  if (do_it) {
+    std::variant<Holder<Incomplete>*, int> v = nullptr;
+    std::visit([](auto) {}, v);
+    std::visit([](auto) -> Holder<Incomplete>* { return nullptr; }, v);
 #if TEST_STD_VER > 17
-        std::visit<void>([](auto){}, v);
-        std::visit<void*>([](auto) -> Holder<Incomplete>* { return nullptr; }, v);
+    std::visit<void>([](auto) {}, v);
+    std::visit<void*>([](auto) -> Holder<Incomplete>* { return nullptr; }, v);
 #endif
-    }
-    return true;
+  }
+  return true;
 }
 
-int main(int, char**)
-{
-    test(true);
+int main(int, char**) {
+  test(true);
 #if TEST_STD_VER > 17
-    static_assert(test(true));
+  static_assert(test(true));
 #endif
-    return 0;
+  return 0;
 }
