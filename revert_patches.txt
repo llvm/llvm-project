@@ -4,3 +4,5 @@ revert: breaks MIOpen composableKernel build
 
 Reverts: breaks ompt tests
 [Libomptarget] Remove __tgt_image_info and use the ELF directly (#75720)
+
+64f0681e97c6 [Libomptarget] Rework image checking further (#76120) 
