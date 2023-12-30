@@ -14,6 +14,7 @@ set(LIBCXX_SOURCES
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
   filesystem/path.cpp
+  fstream.cpp
   functional.cpp
   hash.cpp
   include/apple_availability.h

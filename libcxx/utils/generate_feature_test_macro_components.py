@@ -570,7 +570,6 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_function_ref",
