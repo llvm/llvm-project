@@ -19,7 +19,7 @@
 
 namespace mlir {
 namespace presburger {
-namespace internal {
+namespace public_namespace_name::detail {
 
 // A parametric point is a vector, each of whose elements
 // is an affine function of n parameters. Each row
