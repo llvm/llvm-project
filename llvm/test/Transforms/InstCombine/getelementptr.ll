@@ -1539,11 +1539,7 @@ define ptr @gep_ashr_without_exact(ptr %p, i64 %off) {
 
 define i1 @test_only_used_by_icmp(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @test_only_used_by_icmp(
-; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %pa = ptrtoint ptr %a to i64
@@ -1556,11 +1552,7 @@ define i1 @test_only_used_by_icmp(ptr %a, ptr %b, ptr %c) {
 
 define i64 @test_only_used_by_ptrtoint(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test_only_used_by_ptrtoint(
-; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
-; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[GEP]] to i64
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    ret i64 [[VAL]]
 ;
   %pa = ptrtoint ptr %a to i64
@@ -1573,14 +1565,10 @@ define i64 @test_only_used_by_ptrtoint(ptr %a, ptr %b) {
 
 define i64 @test_used_by_both(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @test_used_by_both(
-; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[GEP]] to i64
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    ret i64 [[VAL]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0
