@@ -24,7 +24,7 @@ ConeV mlir::presburger::getDual(ConeH cone) {
   // and that b = 0.
 
   for (unsigned i = 0; i < inequalities; i++) {
-    assert(dual.at(i, variables) == 0 &&
+    assert(cone.atIneq(i, variables) == 0 &&
            "H-representation of cone is not centred at the origin!");
     for (unsigned j = 0; j < variables; j++) {
       dual.at(i, j) = cone.atIneq(i, j);
@@ -42,7 +42,9 @@ ConeV mlir::presburger::getDual(ConeH cone) {
 ConeH mlir::presburger::getDual(ConeV cone) {
   unsigned rows = cone.getNumRows();
   unsigned columns = cone.getNumColumns();
-  ConeH dual = defineHRep(rows, columns);
+  ConeH dual = defineHRep(columns);
+  // Add a new column (for constants) at the end.
+  // This will be initialized to zero.
   cone.insertColumn(columns);
 
   for (unsigned i = 0; i < rows; i++)
