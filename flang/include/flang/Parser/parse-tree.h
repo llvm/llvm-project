@@ -2494,14 +2494,11 @@ struct StopStmt {
   std::tuple<Kind, std::optional<StopCode>, std::optional<ScalarLogicalExpr>> t;
 };
 
-// F2023: R1167 notify-variable -> scalar-variable
-using NotifyVariable = Scalar<Variable>;
-
 // F2023: R1166 notify-wait-stmt -> NOTIFY WAIT ( notify-variable [,
 // event-wait-spec-list] )
 struct NotifyWaitStmt {
   TUPLE_CLASS_BOILERPLATE(NotifyWaitStmt);
-  std::tuple<NotifyVariable, std::list<EventWaitSpec>> t;
+  std::tuple<Scalar<Variable>, std::list<EventWaitSpec>> t;
 };
 
 // R1164 sync-all-stmt -> SYNC ALL [( [sync-stat-list] )]

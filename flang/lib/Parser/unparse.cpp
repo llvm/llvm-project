@@ -1151,7 +1151,7 @@ public:
     Word("FAIL IMAGE");
   }
   void Unparse(const NotifyWaitStmt &x) { // F2023: R1166
-    Word("NOTIFY WAIT ("), Walk(std::get<NotifyVariable>(x.t));
+    Word("NOTIFY WAIT ("), Walk(std::get<Scalar<Variable>>(x.t));
     Walk(", ", std::get<std::list<EventWaitSpec>>(x.t), ", ");
     Put(')');
   }
