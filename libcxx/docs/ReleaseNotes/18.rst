@@ -57,6 +57,7 @@ Implemented Papers
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()
 - P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
+- P0521R0 - Proposed Resolution for CA 14 (shared_ptr use_count/unique)
 
 
 Improvements and New Features
@@ -82,6 +83,9 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
   the function ``std::basic_string<...>::reserve()`` available.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
+  the function ``std::shared_ptr<...>::unique()`` available.
 
 
 Deprecations and Removals
