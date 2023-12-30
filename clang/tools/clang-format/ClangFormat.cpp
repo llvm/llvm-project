@@ -627,7 +627,7 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path.str();
     }
 
-    if (clang::format::matchFilePath(Pattern, AbsPath.str()) == !IsNegated)
+    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
       return true;
   }
 
