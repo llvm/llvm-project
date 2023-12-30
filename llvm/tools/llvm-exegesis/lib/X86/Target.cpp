@@ -963,7 +963,7 @@ static void restoreSyscallRegisters(std::vector<MCInst> &GeneratedCode,
 
 static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
                                                         const APInt &Value) {
-#if defined(__x86_64__) and defined(__linux__)
+#if defined(__x86_64__) && defined(__linux__)
   assert(Value.getBitWidth() <= 64 && "Value must fit in the register.");
   std::vector<MCInst> loadSegmentRegisterCode;
   // Preserve the syscall registers here as we don't
@@ -990,7 +990,7 @@ static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
 #else
   llvm_unreachable("Loading immediate segment registers is only supported with "
                    "x86-64 llvm-exegesis");
-#endif // defined(__x86_64__) and defined(__linux__)
+#endif // defined(__x86_64__) && defined(__linux__)
 }
 
 std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
