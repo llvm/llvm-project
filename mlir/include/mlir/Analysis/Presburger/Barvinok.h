@@ -15,37 +15,46 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_BARVINOK_H
 #define MLIR_ANALYSIS_PRESBURGER_BARVINOK_H
 
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include <optional>
 
 namespace mlir {
 namespace presburger {
 
+// A polyhedron in H-representation is a set of relations
+// in d variables with integer coefficients.
 using PolyhedronH = IntegerRelation;
+
+// A polyhedron in V-representation is a set of rays, i.e.,
+// vectors, stored as rows of a matrix.
 using PolyhedronV = IntMatrix;
+
+// A cone in either representation is a special case of
+// a polyhedron in that representation.
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 
-inline ConeH defineHRep(int num_ineqs, int num_vars, int num_params = 0)
-{
-    // We don't distinguish between domain and range variables, so
-    // we set the number of domain variables as 0 and the number of
-    // range variables as the number of actual variables.
-    // There are no symbols (non-parametric for now) and no local
-    // (existentially quantified) variables.
-    ConeH cone(PresburgerSpace::getRelationSpace(0, num_vars, num_params, 0));
-    return cone;
+inline ConeH defineHRep(int num_ineqs, int num_vars, int num_params = 0) {
+  // We don't distinguish between domain and range variables, so
+  // we set the number of domain variables as 0 and the number of
+  // range variables as the number of actual variables.
+  // There are no symbols (non-parametric for now) and no local
+  // (existentially quantified) variables.
+  return ConeH(PresburgerSpace::getRelationSpace(/*numDomain=*/0,
+                                                 /*numRange=*/num_vars,
+                                                 /*numSymbols=*/num_params,
+                                                 /*numLocals=*/0));
 }
 
 // Get the index of a cone.
 // If it has more rays than the dimension, return 0.
 MPInt getIndex(ConeV);
 
-// Get the dual of a cone in H-representation, returning the V-representation of it.
+// Get the dual of a cone in H-representation, returning its V-representation.
 ConeV getDual(ConeH);
 
-// Get the dual of a cone in V-representation, returning the H-representation of it.
+// Get the dual of a cone in V-representation, returning its H-representation.
 ConeH getDual(ConeV);
 
 } // namespace presburger
