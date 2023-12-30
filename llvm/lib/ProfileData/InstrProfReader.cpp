@@ -554,14 +554,15 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
   if (VTableBegin != nullptr && VTableEnd != nullptr) {
     for (const RawInstrProf::VTableProfileData<IntPtrT> *I = VTableBegin;
          I != VTableEnd; ++I) {
-      const IntPtrT VPtr = I->VTablePointer;
+      const IntPtrT VPtr = swap(I->VTablePointer);
       if (!VPtr)
         continue;
       // Map both begin and end address to the name hash, since the instrumented
       // address could be somewhere in the middle.
       // VPtr is of type uint32_t or uint64_t so 'VPtr + I->VTableSize' marks
       // the end of vtable address.
-      Symtab.mapVTableAddress(VPtr, VPtr + I->VTableSize, I->VTableNameHash);
+      Symtab.mapVTableAddress(VPtr, VPtr + swap(I->VTableSize),
+                              swap(I->VTableNameHash));
     }
   }
   return success();
@@ -609,8 +610,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto NumBitmapBytes = swap(Header.NumBitmapBytes);
   auto PaddingBytesAfterBitmapBytes = swap(Header.PaddingBytesAfterBitmapBytes);
   auto NamesSize = swap(Header.NamesSize);
-  auto VTableNameSize = Header.VNamesSize;
-  auto NumVTables = Header.NumVTables;
+  auto VTableNameSize = swap(Header.VNamesSize);
+  auto NumVTables = swap(Header.NumVTables);
   ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
@@ -618,7 +619,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto PaddingBytesAfterVTableNames = getNumPaddingBytes(VTableNameSize);
 
   auto VTableSectionSize =
-      Header.NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
+      NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
   auto PaddingBytesAfterVTableProfData = getNumPaddingBytes(VTableSectionSize);
 
   // Profile data starts after profile header and binary ids if exist.
