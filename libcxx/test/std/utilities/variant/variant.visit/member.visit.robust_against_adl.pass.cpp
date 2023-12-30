@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 // <variant>
 
@@ -15,9 +15,6 @@
 //   constexpr decltype(auto) visit(this Self&&, Visitor&&); // since C++26
 // template<class R, class Self, class Visitor>
 //   constexpr R visit(this Self&&, Visitor&&);              // since C++26
-
-// template <class Visitor, class... Variants>
-// constexpr see below visit(Visitor&& vis, Variants&&... vars);
 
 #include <variant>
 
@@ -33,24 +30,10 @@ constexpr bool test(bool do_it) {
   if (do_it) {
     std::variant<Holder<Incomplete>*, int> v = nullptr;
 
-#if _LIBCPP_STD_VER >= 26
-    // member
-    {
-      v.visit([](auto) {});
-      v.visit([](auto) -> Holder<Incomplete>* { return nullptr; });
-      v.visit<void>([](auto) {});
-      v.visit<void*>([](auto) -> Holder<Incomplete>* { return nullptr; });
-    }
-#endif
-    // non-member
-    {
-      std::visit([](auto) {}, v);
-      std::visit([](auto) -> Holder<Incomplete>* { return nullptr; }, v);
-#if TEST_STD_VER > 17
-      std::visit<void>([](auto) {}, v);
-      std::visit<void*>([](auto) -> Holder<Incomplete>* { return nullptr; }, v);
-#endif
-    }
+    v.visit([](auto) {});
+    v.visit([](auto) -> Holder<Incomplete>* { return nullptr; });
+    v.visit<void>([](auto) {});
+    v.visit<void*>([](auto) -> Holder<Incomplete>* { return nullptr; });
   }
   return true;
 }
