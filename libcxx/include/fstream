@@ -195,7 +195,6 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
-#include <cassert>
 #include <cstdio>
 #include <filesystem>
 #include <istream>
@@ -223,24 +222,21 @@ _LIBCPP_PUSH_MACROS
 #    include <windows.h>
 #  endif
 
-#include <fcntl.h>
+// #  include <fcntl.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #  if _LIBCPP_STD_VER >= 26
 #    if defined(_LIBCPP_WIN32API)
-using __filebuf_native_handle_type = void*; // HANDLE
-#    else
-using __filebuf_native_handle_type = int; // POSIX file descriptor
+using __filebuf_native_handle_type = HANDLE;
+_LIBCPP_EXPORTED_FROM_ABI __filebuf_native_handle_type __filebuf_windows_native_handle(FILE* __file);
+#    else // POSIX
+using __filebuf_native_handle_type = int; // File descriptor
 #    endif
-_LIBCPP_HIDE_FROM_ABI __filebuf_native_handle_type __filebuf_native_handle(FILE* __file) noexcept;
-__filebuf_native_handle_type __filebuf_native_handle(FILE* __file) noexcept {
+
+_LIBCPP_HIDE_FROM_ABI inline __filebuf_native_handle_type __filebuf_native_handle(FILE* __file) noexcept {
 #    if defined(_LIBCPP_WIN32API)
-  // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/get-osfhandle?view=msvc-170
-  intptr_t __handle = _get_osfhandle(::fileno(__file));
-  if (__handle == -1)
-    return nullptr;
-  return reinterpret_cast<void*>(__handle);
+  return __filebuf_windows_native_handle(__file);
 #    else
   return ::fileno(__file);
 #    endif
@@ -287,7 +283,7 @@ public:
   basic_filebuf* close();
 #  if _LIBCPP_STD_VER >= 26
   _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
-    assert(is_open());
+    _LIBCPP_ASSERT_UNCATEGORIZED(this->is_open(), "File must be opened");
     return std::__filebuf_native_handle(__file_);
   }
 #  endif

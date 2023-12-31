@@ -14,45 +14,13 @@
 
 // native_handle_type native_handle() const noexcept;
 
-#include <cassert>
-#include <fstream>
-#include <filesystem>
-#include <utility>
-
-#if defined(_LIBCPP_WIN32API)
-#  define WIN32_LEAN_AND_MEAN
-#  define NOMINMAX
-#  include <io.h>
-#  include <windows.h>
-#endif
-
-#include "platform_support.h"
 #include "test_macros.h"
 #include "../test_helpers.h"
 
-template <typename CharT>
-void test() {
-  static_assert(std::is_same_v<typename std::basic_filebuf<CharT>::native_handle_type,
-                               typename std::basic_ofstream<CharT>::native_handle_type>);
-
-  std::basic_ofstream<CharT> f;
-  static_assert(noexcept(f.native_handle()));
-  assert(!f.is_open());
-  std::filesystem::path p = get_temp_file_name();
-  f.open(p);
-  assert(f.is_open());
-  assert(f.native_handle() == f.rdbuf()->native_handle());
-  assert(f.native_handle());
-  assert(std::as_const(f).native_handle());
-  assert(is_handle_valid(f.native_handle()));
-  assert(is_handle_valid(std::as_const(f).native_handle()));
-  static_assert(noexcept(f.native_handle()));
-}
-
 int main(int, char**) {
-  test<char>();
+  test_native_handle<char, std::basic_ofstream<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  test_native_handle<wchar_t, std::basic_ofstream<wchar_t>>();
 #endif
 
   return 0;
