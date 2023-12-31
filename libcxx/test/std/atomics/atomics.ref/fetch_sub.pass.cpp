@@ -47,8 +47,8 @@ void test_arithmetic() {
 
 template <typename T>
 void test_pointer() {
-  using X = std::remove_pointer_t<T>;
-  X t[9]  = {};
+  using U = std::remove_pointer_t<T>;
+  U t[9]  = {};
   T p{&t[7]};
   std::atomic_ref<T> a(p);
 
