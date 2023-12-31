@@ -702,6 +702,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                          AMDGPU::OpName::src2_modifiers);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::DS) &&
+      !AMDGPU::hasGDS(STI)) {
+    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::gds);
+  }
+
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
           (SIInstrFlags::MUBUF | SIInstrFlags::FLAT | SIInstrFlags::SMRD))) {
     int CPolPos = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
@@ -1279,9 +1284,8 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
 
 MCOperand AMDGPUDisassembler::createVGPR16Operand(unsigned RegIdx,
                                                   bool IsHi) const {
-  unsigned RCID =
-      IsHi ? AMDGPU::VGPR_HI16RegClassID : AMDGPU::VGPR_LO16RegClassID;
-  return createRegOperand(RCID, RegIdx);
+  unsigned RegIdxInVGPR16 = RegIdx * 2 + (IsHi ? 1 : 0);
+  return createRegOperand(AMDGPU::VGPR_16RegClassID, RegIdxInVGPR16);
 }
 
 // Decode Literals for insts which always have a literal in the encoding

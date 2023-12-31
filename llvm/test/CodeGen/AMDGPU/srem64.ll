@@ -124,18 +124,14 @@ define amdgpu_kernel void @s_test_srem(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-IR:       ; %bb.0: ; %_udiv-special-cases
 ; GCN-IR-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
 ; GCN-IR-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-IR-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-IR-NEXT:    s_mov_b32 s11, 0
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[4:5], 0
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[2:3], 0
-; GCN-IR-NEXT:    s_flbit_i32_b32 s10, s4
-; GCN-IR-NEXT:    s_or_b64 s[8:9], s[6:7], s[8:9]
-; GCN-IR-NEXT:    s_flbit_i32_b32 s6, s2
-; GCN-IR-NEXT:    s_flbit_i32_b32 s11, s5
-; GCN-IR-NEXT:    s_add_i32 s10, s10, 32
-; GCN-IR-NEXT:    s_add_i32 s6, s6, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s7, s3
-; GCN-IR-NEXT:    s_min_u32 s10, s10, s11
-; GCN-IR-NEXT:    s_min_u32 s18, s6, s7
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[4:5], 0
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[12:13], s[2:3], 0
+; GCN-IR-NEXT:    s_flbit_i32_b64 s10, s[4:5]
+; GCN-IR-NEXT:    s_flbit_i32_b64 s18, s[2:3]
+; GCN-IR-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
 ; GCN-IR-NEXT:    s_sub_u32 s12, s10, s18
 ; GCN-IR-NEXT:    s_subb_u32 s13, 0, 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[14:15], s[12:13], 63
@@ -145,9 +141,7 @@ define amdgpu_kernel void @s_test_srem(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    s_cselect_b32 s9, 0, s3
 ; GCN-IR-NEXT:    s_cselect_b32 s8, 0, s2
 ; GCN-IR-NEXT:    s_or_b64 s[14:15], s[14:15], s[16:17]
-; GCN-IR-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-IR-NEXT:    s_andn2_b64 vcc, exec, s[14:15]
-; GCN-IR-NEXT:    s_mov_b32 s11, 0
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB0_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s14, s12, 1
@@ -1029,15 +1023,9 @@ define amdgpu_kernel void @s_test_srem33_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_subb_u32 s9, s7, s10
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[8:9], 0
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[2:3], 0
+; GCN-IR-NEXT:    s_flbit_i32_b64 s12, s[8:9]
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
-; GCN-IR-NEXT:    s_flbit_i32_b32 s6, s8
-; GCN-IR-NEXT:    s_add_i32 s6, s6, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s7, s9
-; GCN-IR-NEXT:    s_min_u32 s12, s6, s7
-; GCN-IR-NEXT:    s_flbit_i32_b32 s6, s2
-; GCN-IR-NEXT:    s_add_i32 s6, s6, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s7, s3
-; GCN-IR-NEXT:    s_min_u32 s20, s6, s7
+; GCN-IR-NEXT:    s_flbit_i32_b64 s20, s[2:3]
 ; GCN-IR-NEXT:    s_sub_u32 s14, s12, s20
 ; GCN-IR-NEXT:    s_subb_u32 s15, 0, 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[16:17], s[14:15], 63
@@ -1180,15 +1168,9 @@ define amdgpu_kernel void @s_test_srem24_48(ptr addrspace(1) %out, i48 %x, i48 %
 ; GCN-IR-NEXT:    s_subb_u32 s7, s7, s10
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[6:7], 0
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[4:5], 0
+; GCN-IR-NEXT:    s_flbit_i32_b64 s12, s[6:7]
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[8:9], s[10:11]
-; GCN-IR-NEXT:    s_flbit_i32_b32 s8, s6
-; GCN-IR-NEXT:    s_add_i32 s8, s8, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s9, s7
-; GCN-IR-NEXT:    s_min_u32 s12, s8, s9
-; GCN-IR-NEXT:    s_flbit_i32_b32 s8, s4
-; GCN-IR-NEXT:    s_add_i32 s8, s8, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s9, s5
-; GCN-IR-NEXT:    s_min_u32 s20, s8, s9
+; GCN-IR-NEXT:    s_flbit_i32_b64 s20, s[4:5]
 ; GCN-IR-NEXT:    s_sub_u32 s14, s12, s20
 ; GCN-IR-NEXT:    s_subb_u32 s15, 0, 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[16:17], s[14:15], 63
@@ -1393,10 +1375,7 @@ define amdgpu_kernel void @s_test_srem_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_xor_b64 s[2:3], s[2:3], s[8:9]
 ; GCN-IR-NEXT:    s_sub_u32 s4, s2, s8
 ; GCN-IR-NEXT:    s_subb_u32 s5, s3, s8
-; GCN-IR-NEXT:    s_flbit_i32_b32 s2, s4
-; GCN-IR-NEXT:    s_add_i32 s2, s2, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s3, s5
-; GCN-IR-NEXT:    s_min_u32 s12, s2, s3
+; GCN-IR-NEXT:    s_flbit_i32_b64 s12, s[4:5]
 ; GCN-IR-NEXT:    s_add_u32 s2, s12, 0xffffffc5
 ; GCN-IR-NEXT:    s_addc_u32 s3, 0, -1
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[4:5], 0

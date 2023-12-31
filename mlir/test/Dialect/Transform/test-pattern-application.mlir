@@ -179,7 +179,6 @@ module {
 //       CHECK:   return %[[c5]]
 func.func @canonicalization(%t: tensor<5xf32>) -> index {
   %c0 = arith.constant 0 : index
-  // expected-remark @below {{op was replaced}}
   %dim = tensor.dim %t, %c0 : tensor<5xf32>
   return %dim : index
 }
@@ -191,7 +190,6 @@ transform.sequence failures(propagate) {
   transform.apply_patterns to %1 {
     transform.apply_patterns.canonicalization
   } : !transform.any_op
-  transform.test_print_remark_at_operand %0, "op was replaced" : !transform.any_op
 }
 
 // -----

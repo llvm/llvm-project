@@ -301,6 +301,17 @@ func.func @outerproduct(%arg0: vector<4xf32>, %arg1: vector<8xf32>, %arg2: vecto
   return %1 : vector<4x8xf32>
 }
 
+// CHECK-LABEL: @outerproduct_scalable
+func.func @outerproduct_scalable(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
+  // CHECK: vector.outerproduct {{.*}} : vector<[4]xf32>, vector<[8]xf32>
+  %0 = vector.outerproduct %arg0, %arg1 : vector<[4]xf32>, vector<[8]xf32>
+
+  %cst = arith.constant 1.0 : f32
+  // CHECK: vector.outerproduct {{.*}} : vector<[4]xf32>, f32
+  %1 = vector.outerproduct %arg0, %cst : vector<[4]xf32>, f32
+  return
+}
+
 // CHECK-LABEL: @insert_strided_slice
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [2, 2, 2], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
@@ -712,6 +723,16 @@ func.func @flat_transpose_int(%arg0: vector<16xi32>) -> vector<16xi32> {
   %0 = vector.flat_transpose %arg0 { rows = 2: i32, columns = 8: i32 } : vector<16xi32> -> vector<16xi32>
   // CHECK: return %[[X]] : vector<16xi32>
   return %0 : vector<16xi32>
+}
+
+// CHECK-LABEL: @vector_load_and_store_0d_scalar_memref
+func.func @vector_load_and_store_0d_scalar_memref(%memref : memref<200x100xf32>,
+                                                  %i : index, %j : index) {
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xf32>, vector<f32>
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xf32>, vector<f32>
+  vector.store %0, %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+  return
 }
 
 // CHECK-LABEL: @vector_load_and_store_1d_scalar_memref

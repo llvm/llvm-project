@@ -14,7 +14,7 @@
 #include "src/stdlib/strtof.h"
 #include "src/stdlib/strtold.h"
 
-#include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 #include <math.h>
 #include <stddef.h>

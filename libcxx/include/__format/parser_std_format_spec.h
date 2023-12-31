@@ -591,7 +591,7 @@ private:
           || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
 #    endif
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
         "undefined behavior by evaluating data not in the input");
@@ -624,7 +624,7 @@ private:
   template <contiguous_iterator _Iterator>
     requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
         "undefined behavior by evaluating data not in the input");
@@ -652,7 +652,7 @@ private:
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
         "undefined behavior by evaluating data not in the input");

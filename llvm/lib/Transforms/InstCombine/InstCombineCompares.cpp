@@ -111,8 +111,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, GlobalVariable *GV, CmpInst &ICI,
     ConstantInt *AndCst) {
   if (LI->isVolatile() || LI->getType() != GEP->getResultElementType() ||
-      GV->getValueType() != GEP->getSourceElementType() ||
-      !GV->isConstant() || !GV->hasDefinitiveInitializer())
+      GV->getValueType() != GEP->getSourceElementType() || !GV->isConstant() ||
+      !GV->hasDefinitiveInitializer())
     return nullptr;
 
   Constant *Init = GV->getInitializer();
@@ -128,8 +128,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // the simple index into a single-dimensional array.
   //
   // Require: GEP GV, 0, i {{, constant indices}}
-  if (GEP->getNumOperands() < 3 ||
-      !isa<ConstantInt>(GEP->getOperand(1)) ||
+  if (GEP->getNumOperands() < 3 || !isa<ConstantInt>(GEP->getOperand(1)) ||
       !cast<ConstantInt>(GEP->getOperand(1))->isZero() ||
       isa<Constant>(GEP->getOperand(2)))
     return nullptr;
@@ -142,15 +141,18 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   Type *EltTy = Init->getType()->getArrayElementType();
   for (unsigned i = 3, e = GEP->getNumOperands(); i != e; ++i) {
     ConstantInt *Idx = dyn_cast<ConstantInt>(GEP->getOperand(i));
-    if (!Idx) return nullptr;  // Variable index.
+    if (!Idx)
+      return nullptr; // Variable index.
 
     uint64_t IdxVal = Idx->getZExtValue();
-    if ((unsigned)IdxVal != IdxVal) return nullptr; // Too large array index.
+    if ((unsigned)IdxVal != IdxVal)
+      return nullptr; // Too large array index.
 
     if (StructType *STy = dyn_cast<StructType>(EltTy))
       EltTy = STy->getElementType(IdxVal);
     else if (ArrayType *ATy = dyn_cast<ArrayType>(EltTy)) {
-      if (IdxVal >= ATy->getNumElements()) return nullptr;
+      if (IdxVal >= ATy->getNumElements())
+        return nullptr;
       EltTy = ATy->getElementType();
     } else {
       return nullptr; // Unknown type.
@@ -191,7 +193,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   Constant *CompareRHS = cast<Constant>(ICI.getOperand(1));
   for (unsigned i = 0, e = ArrayElementCount; i != e; ++i) {
     Constant *Elt = Init->getAggregateElement(i);
-    if (!Elt) return nullptr;
+    if (!Elt)
+      return nullptr;
 
     // If this is indexing an array of structures, get the structure element.
     if (!LaterIndices.empty()) {
@@ -214,16 +217,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (isa<UndefValue>(C)) {
       // Extend range state machines to cover this element in case there is an
       // undef in the middle of the range.
-      if (TrueRangeEnd == (int)i-1)
+      if (TrueRangeEnd == (int)i - 1)
         TrueRangeEnd = i;
-      if (FalseRangeEnd == (int)i-1)
+      if (FalseRangeEnd == (int)i - 1)
         FalseRangeEnd = i;
       continue;
     }
 
     // If we can't compute the result for any of the elements, we have to give
     // up evaluating the entire conditional.
-    if (!isa<ConstantInt>(C)) return nullptr;
+    if (!isa<ConstantInt>(C))
+      return nullptr;
 
     // Otherwise, we know if the comparison is true or false for this element,
     // update our state machines.
@@ -233,7 +237,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (IsTrueForElt) {
       // Update the TrueElement state machine.
       if (FirstTrueElement == Undefined)
-        FirstTrueElement = TrueRangeEnd = i;  // First true element.
+        FirstTrueElement = TrueRangeEnd = i; // First true element.
       else {
         // Update double-compare state machine.
         if (SecondTrueElement == Undefined)
@@ -242,7 +246,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
           SecondTrueElement = Overdefined;
 
         // Update range state machine.
-        if (TrueRangeEnd == (int)i-1)
+        if (TrueRangeEnd == (int)i - 1)
           TrueRangeEnd = i;
         else
           TrueRangeEnd = Overdefined;
@@ -259,7 +263,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
           SecondFalseElement = Overdefined;
 
         // Update range state machine.
-        if (FalseRangeEnd == (int)i-1)
+        if (FalseRangeEnd == (int)i - 1)
           FalseRangeEnd = i;
         else
           FalseRangeEnd = Overdefined;
@@ -348,7 +352,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
     // False for two elements -> 'i != 47 & i != 72'.
     Value *C1 = Builder.CreateICmpNE(Idx, FirstFalseIdx);
-    Value *SecondFalseIdx = ConstantInt::get(Idx->getType(),SecondFalseElement);
+    Value *SecondFalseIdx =
+        ConstantInt::get(Idx->getType(), SecondFalseElement);
     Value *C2 = Builder.CreateICmpNE(Idx, SecondFalseIdx);
     return BinaryOperator::CreateAnd(C1, C2);
   }
@@ -365,8 +370,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
-    Value *End = ConstantInt::get(Idx->getType(),
-                                  TrueRangeEnd-FirstTrueElement+1);
+    Value *End =
+        ConstantInt::get(Idx->getType(), TrueRangeEnd - FirstTrueElement + 1);
     return new ICmpInst(ICmpInst::ICMP_ULT, Idx, End);
   }
 
@@ -380,8 +385,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       Idx = Builder.CreateAdd(Idx, Offs);
     }
 
-    Value *End = ConstantInt::get(Idx->getType(),
-                                  FalseRangeEnd-FirstFalseElement);
+    Value *End =
+        ConstantInt::get(Idx->getType(), FalseRangeEnd - FirstFalseElement);
     return new ICmpInst(ICmpInst::ICMP_UGT, Idx, End);
   }
 
@@ -4624,27 +4629,35 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   }
 
   bool NoOp0WrapProblem = false, NoOp1WrapProblem = false;
-  if (BO0 && isa<OverflowingBinaryOperator>(BO0))
-    NoOp0WrapProblem =
-        ICmpInst::isEquality(Pred) ||
-        (CmpInst::isUnsigned(Pred) && BO0->hasNoUnsignedWrap()) ||
-        (CmpInst::isSigned(Pred) && BO0->hasNoSignedWrap());
-  if (BO1 && isa<OverflowingBinaryOperator>(BO1))
-    NoOp1WrapProblem =
-        ICmpInst::isEquality(Pred) ||
-        (CmpInst::isUnsigned(Pred) && BO1->hasNoUnsignedWrap()) ||
-        (CmpInst::isSigned(Pred) && BO1->hasNoSignedWrap());
-
+  bool Op0HasNUW = false, Op1HasNUW = false;
+  bool Op0HasNSW = false, Op1HasNSW = false;
   // Analyze the case when either Op0 or Op1 is an add instruction.
   // Op0 = A + B (or A and B are null); Op1 = C + D (or C and D are null).
+  auto hasNoWrapProblem = [](const BinaryOperator &BO, CmpInst::Predicate Pred,
+                             bool &HasNSW, bool &HasNUW) -> bool {
+    if (isa<OverflowingBinaryOperator>(BO)) {
+      HasNUW = BO.hasNoUnsignedWrap();
+      HasNSW = BO.hasNoSignedWrap();
+      return ICmpInst::isEquality(Pred) ||
+             (CmpInst::isUnsigned(Pred) && HasNUW) ||
+             (CmpInst::isSigned(Pred) && HasNSW);
+    } else if (BO.getOpcode() == Instruction::Or) {
+      HasNUW = true;
+      HasNSW = true;
+      return true;
+    } else {
+      return false;
+    }
+  };
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
-  if (BO0 && BO0->getOpcode() == Instruction::Add) {
-    A = BO0->getOperand(0);
-    B = BO0->getOperand(1);
+
+  if (BO0) {
+    match(BO0, m_AddLike(m_Value(A), m_Value(B)));
+    NoOp0WrapProblem = hasNoWrapProblem(*BO0, Pred, Op0HasNSW, Op0HasNUW);
   }
-  if (BO1 && BO1->getOpcode() == Instruction::Add) {
-    C = BO1->getOperand(0);
-    D = BO1->getOperand(1);
+  if (BO1) {
+    match(BO1, m_AddLike(m_Value(C), m_Value(D)));
+    NoOp1WrapProblem = hasNoWrapProblem(*BO1, Pred, Op1HasNSW, Op1HasNUW);
   }
 
   // icmp (A+B), A -> icmp B, 0 for equalities or if there is no overflow.
@@ -4764,17 +4777,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       APInt AP2Abs = AP2->abs();
       if (AP1Abs.uge(AP2Abs)) {
         APInt Diff = *AP1 - *AP2;
-        bool HasNUW = BO0->hasNoUnsignedWrap() && Diff.ule(*AP1);
-        bool HasNSW = BO0->hasNoSignedWrap();
         Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
-        Value *NewAdd = Builder.CreateAdd(A, C3, "", HasNUW, HasNSW);
+        Value *NewAdd = Builder.CreateAdd(
+            A, C3, "", Op0HasNUW && Diff.ule(*AP1), Op0HasNSW);
         return new ICmpInst(Pred, NewAdd, C);
       } else {
         APInt Diff = *AP2 - *AP1;
-        bool HasNUW = BO1->hasNoUnsignedWrap() && Diff.ule(*AP2);
-        bool HasNSW = BO1->hasNoSignedWrap();
         Constant *C3 = Constant::getIntegerValue(BO0->getType(), Diff);
-        Value *NewAdd = Builder.CreateAdd(C, C3, "", HasNUW, HasNSW);
+        Value *NewAdd = Builder.CreateAdd(
+            C, C3, "", Op1HasNUW && Diff.ule(*AP2), Op1HasNSW);
         return new ICmpInst(Pred, A, NewAdd);
       }
     }
@@ -4868,16 +4879,14 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
                   isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
         // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
         //    X * Z eq/ne Y * Z -> X eq/ne Y
-        if (NonZero && BO0 && BO1 && BO0->hasNoSignedWrap() &&
-            BO1->hasNoSignedWrap())
+        if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
           return new ICmpInst(Pred, X, Y);
       } else
         NonZero = isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
 
       // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
       //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
-      if (NonZero && BO0 && BO1 && BO0->hasNoUnsignedWrap() &&
-          BO1->hasNoUnsignedWrap())
+      if (NonZero && BO0 && BO1 && Op0HasNUW && Op1HasNUW)
         return new ICmpInst(Pred, X, Y);
     }
   }
@@ -4966,7 +4975,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
 
     case Instruction::SDiv:
-      if (!I.isEquality() || !BO0->isExact() || !BO1->isExact())
+      if (!(I.isEquality() || match(BO0->getOperand(1), m_NonNegative())) ||
+          !BO0->isExact() || !BO1->isExact())
         break;
       return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
 
@@ -4976,8 +4986,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
 
     case Instruction::Shl: {
-      bool NUW = BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap();
-      bool NSW = BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap();
+      bool NUW = Op0HasNUW && Op1HasNUW;
+      bool NSW = Op0HasNSW && Op1HasNSW;
       if (!NUW && !NSW)
         break;
       if (!NSW && I.isSigned())
