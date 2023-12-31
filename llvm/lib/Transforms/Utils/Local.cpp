@@ -3593,7 +3593,8 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (isa<ConstantInt>(C))
     return createIntegerExpression(C);
 
-  if (auto *FP = dyn_cast<ConstantFP>(&C)) {
+  auto *FP = dyn_cast<ConstantFP>(&C);
+  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
     const APFloat &APF = FP->getValueAPF();
     return DIB.createConstantValueExpression(
         APF.bitcastToAPInt().getZExtValue());
