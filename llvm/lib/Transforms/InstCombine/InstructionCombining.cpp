@@ -2477,29 +2477,18 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *X = GEP.getPointerOperand();
         Value *Y;
         if (match(GEP.getOperand(1),
-                  m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X))))) {
-          std::optional<bool> HasSameUnderlyingObjectCache;
-          auto HasSameUnderlyingObject = [&] {
-            if (!HasSameUnderlyingObjectCache)
-              HasSameUnderlyingObjectCache =
-                  getUnderlyingObject(X) == getUnderlyingObject(Y);
-            return *HasSameUnderlyingObjectCache;
-          };
-          std::optional<Value *> CastedValueCache;
-          auto GetCastedValue = [&] {
-            if (!CastedValueCache)
-              CastedValueCache =
-                  Builder.CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
-            return *CastedValueCache;
-          };
-
+                  m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+            GEPType == Y->getType()) {
+          bool HasSameUnderlyingObject =
+              getUnderlyingObject(X) == getUnderlyingObject(Y);
           bool Changed = false;
-          for (User *U : GEP.users())
-            if (isa<ICmpInst>(U) || isa<PtrToIntInst>(U) ||
-                HasSameUnderlyingObject()) {
-              U->replaceUsesOfWith(&GEP, GetCastedValue());
-              Changed = true;
-            }
+          GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            bool ShouldReplace = HasSameUnderlyingObject ||
+                                 isa<ICmpInst>(U.getUser()) ||
+                                 isa<PtrToIntInst>(U.getUser());
+            Changed |= ShouldReplace;
+            return ShouldReplace;
+          });
           return Changed ? &GEP : nullptr;
         }
       } else {
