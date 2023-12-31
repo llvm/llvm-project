@@ -29,13 +29,12 @@
 #  include "platform_support.h"
 
 #  if defined(_LIBCPP_WIN32API)
-auto is_handle_valid([[maybe_unused]] HANDLE handle) {
+bool is_handle_valid([[maybe_unused]] HANDLE handle) {
   // TODO: Maybe test HANDLE with GetFileInformationByHandle??
   return true;
 };
-#  else
-// POSIX
-auto is_handle_valid(int fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
+#  else // POSIX
+bool is_handle_valid(int fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
 #  endif
 
 template <typename CharT, typename StreamT>
