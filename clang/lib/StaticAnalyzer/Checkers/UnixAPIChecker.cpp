@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/AST/FormatString.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -20,8 +21,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+
+#define DEBUG_TYPE "unix-api-checker"
 
 using namespace clang;
 using namespace ento;
@@ -64,7 +68,7 @@ public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
 private:
-  mutable std::unique_ptr<BugType> BT_mallocZero;
+  mutable std::unique_ptr<BugType> BT_mallocZero, BT_printNullPtr;
 
   void CheckCallocZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckMallocZero(CheckerContext &C, const CallExpr *CE) const;
@@ -73,16 +77,34 @@ private:
   void CheckAllocaZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckAllocaWithAlignZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckVallocZero(CheckerContext &C, const CallExpr *CE) const;
+  void CheckPrintNullPtr(CheckerContext &C, const CallExpr *CE) const;
 
   bool ReportZeroByteAllocation(CheckerContext &C,
                                 ProgramStateRef falseState,
                                 const Expr *arg,
                                 const char *fn_name) const;
+  bool ReportPrintNull(CheckerContext &C, ProgramStateRef falseState,
+                       const Expr *arg) const;
   void BasicAllocationCheck(CheckerContext &C,
                             const CallExpr *CE,
                             const unsigned numArgs,
                             const unsigned sizeArg,
                             const char *fn) const;
+};
+
+// Collect index of pArg(%p) in format string.
+class PArgFormatStringHandler
+    : public analyze_format_string::FormatStringHandler {
+public:
+  bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
+                             const char *startSpecifier, unsigned specifierLen,
+                             const TargetInfo &Target) override;
+
+  const std::vector<size_t> &getPArgIndex() const { return pArgIndex; }
+
+private:
+  std::vector<size_t> pArgIndex;
+  int curIndex = 0;
 };
 
 } //end anonymous namespace
@@ -455,6 +477,82 @@ void UnixAPIPortabilityChecker::CheckVallocZero(CheckerContext &C,
   BasicAllocationCheck(C, CE, 1, 0, "valloc");
 }
 
+bool PArgFormatStringHandler::HandlePrintfSpecifier(
+    const analyze_printf::PrintfSpecifier &FS,
+    const char * /* startSpecifier */, unsigned /* specifierLen */,
+    const TargetInfo & /* Target */) {
+  ++curIndex;
+  if (FS.getConversionSpecifier().getKind() ==
+      clang::analyze_format_string::ConversionSpecifier::Kind::pArg)
+    pArgIndex.push_back(curIndex);
+  return true;
+}
+
+bool UnixAPIPortabilityChecker::ReportPrintNull(CheckerContext &C,
+                                                ProgramStateRef falseState,
+                                                const Expr *arg) const {
+  ExplodedNode *N = C.generateErrorNode(falseState);
+  if (N == nullptr)
+    return false;
+  LazyInitialize(
+      this, BT_printNullPtr,
+      "Implementation defined behavior: printf %p with null pointer.");
+  auto report = std::make_unique<PathSensitiveBugReport>(
+      *BT_printNullPtr, "Output null pointer with printf %p", N);
+  report->addRange(arg->getSourceRange());
+  C.emitReport(std::move(report));
+  return true;
+}
+
+void UnixAPIPortabilityChecker::CheckPrintNullPtr(CheckerContext &C,
+                                                  const CallExpr *CE) const {
+  size_t numArgs = CE->getNumArgs();
+  LLVM_DEBUG(llvm::dbgs() << "numArgs: " << numArgs << "\n");
+  if (numArgs < 2)
+    return;
+  PArgFormatStringHandler handler;
+  CE->getArg(0)->dump();
+  const CastExpr *castExpr = dyn_cast<const CastExpr>(CE->getArg(0));
+  if (castExpr == nullptr) {
+    LLVM_DEBUG(llvm::dbgs() << "First arg of printf is not cast expr.\n");
+    return;
+  }
+  const StringLiteral *stringLiteralExpr =
+      dyn_cast<const StringLiteral>(castExpr->getSubExpr());
+  if (stringLiteralExpr == nullptr) {
+    LLVM_DEBUG(llvm::dbgs() << "First arg of printf is not string literal.\n");
+    return;
+  }
+  StringRef formatString = stringLiteralExpr->getString();
+  ParsePrintfString(handler, formatString.begin(), formatString.end(),
+                    C.getLangOpts(), C.getASTContext().getTargetInfo(),
+                    /* isFreeBSDKPrintf */ false);
+
+  const std::vector<size_t> &pArgIndex = handler.getPArgIndex();
+  ProgramStateRef state = C.getState();
+  LLVM_DEBUG(llvm::dbgs() << "pArgIndex size: " << pArgIndex.size() << "\n");
+  LLVM_DEBUG(
+      for (size_t id
+           : pArgIndex) { llvm::dbgs() << "pArgIndex: " << id << "\n"; });
+  for (size_t id : pArgIndex) {
+    if (id >= numArgs)
+      break;
+    const Expr *arg = CE->getArg(id);
+    const SVal argVal = C.getSVal(arg);
+    if (argVal.isUnknownOrUndef()) {
+      continue;
+    }
+    ProgramStateRef trueState, falseState;
+    std::tie(trueState, falseState) =
+        state->assume(argVal.castAs<DefinedSVal>());
+    // Report bug if pointer is always null.
+    if (!trueState && falseState) {
+      if (ReportPrintNull(C, falseState, arg))
+        break;
+    }
+  }
+}
+
 void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
                                              CheckerContext &C) const {
   const FunctionDecl *FD = C.getCalleeDecl(CE);
@@ -491,6 +589,9 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
 
   else if (FName == "valloc")
     CheckVallocZero(C, CE);
+
+  else if (FName == "printf")
+    CheckPrintNullPtr(C, CE);
 }
 
 //===----------------------------------------------------------------------===//
