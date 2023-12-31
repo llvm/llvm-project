@@ -100,7 +100,7 @@ constexpr bool test() {
     assert(it == view.end());
   }
 
-  // begin() over an 1-element range
+  // begin() over a 1-element range
   {
     RangeView range(buff, buff + 1);
 

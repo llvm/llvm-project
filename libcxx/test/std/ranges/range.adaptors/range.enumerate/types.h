@@ -37,7 +37,6 @@ struct RangeView : std::ranges::view_base {
 };
 
 LIBCPP_STATIC_ASSERT(std::ranges::__range_with_movable_references<RangeView>);
-static_assert(std::ranges::range<RangeView>);
 static_assert(std::ranges::view<RangeView>);
 
 struct MinimalDefaultConstructedView : std::ranges::view_base {

@@ -47,7 +47,7 @@ struct ForwardIteratorWithInputCategory {
 };
 static_assert(std::forward_iterator<ForwardIteratorWithInputCategory>);
 
-constexpr bool test() {
+constexpr void test() {
   // Check that value_type is range_value_t and difference_type is range_difference_t
   {
     auto test = []<class Iterator> {
@@ -65,6 +65,7 @@ constexpr bool test() {
     test.operator()<contiguous_iterator<int*>>();
     test.operator()<int*>();
   }
+
   // Check iterator_concept for various categories of ranges
   {
     static_assert(
@@ -100,13 +101,4 @@ constexpr bool test() {
         std::is_same_v<EnumerateIteratorFor<contiguous_iterator<int*>>::iterator_category, std::input_iterator_tag>);
     static_assert(std::is_same_v<EnumerateIteratorFor<int*>::iterator_category, std::input_iterator_tag>);
   }
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  return 0;
 }
