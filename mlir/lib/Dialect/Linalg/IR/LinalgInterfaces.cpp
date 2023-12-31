@@ -706,11 +706,11 @@ mlir::linalg::detail::grouped_convolution_impl::createCommonIndexingMaps(
     outExprs.push_back(sp);
   }
   SmallVector<AffineExpr> kExprs(ks);
-  inExprs.insert(inExprs.begin() + channelPos, gc.begin(), gc.end());
+  inExprs.insert(inExprs.begin() + channelPos - 1, gc.begin(), gc.end());
   kExprs.insert(channelPos == 0 ? kExprs.begin()
-                                : kExprs.begin() + channelPos - 1,
+                                : kExprs.begin() + channelPos - 2,
                 gfc.begin(), gfc.end());
-  outExprs.insert(outExprs.begin() + channelPos, gf.begin(), gf.end());
+  outExprs.insert(outExprs.begin() + channelPos - 1, gf.begin(), gf.end());
   SmallVector<AffineMap> maps(
       {AffineMap::get(4 + 2 * numSpatial, 0, inExprs, ctx),
        AffineMap::get(4 + 2 * numSpatial, 0, kExprs, ctx),

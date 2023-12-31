@@ -203,6 +203,35 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
   let verify = [{ return detail::verifyGroupedConvolutionInterface($_op); }];
   let methods = [
     InterfaceMethod<[{
+      Returns the channel position.
+    }],
+    "int64_t", "getChannelPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Get number of groups. 
+    }],
+    "int64_t", "getNumGroups", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getChannelPosition() - 1];
+    }]>,
+    InterfaceMethod<[{
+      Get number of input channels. 
+    }],
+    "int64_t", "getNumInputChannels", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getChannelPosition()];
+    }]>,
+    InterfaceMethod<[{
+      Get number of output channels. 
+    }],
+    "int64_t", "getNumOutputChannels", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+      return cast<ShapedType>($_op.getDpsInits()[0].getType()).getShape()[$_op.getChannelPosition()];
+    }]>,
+    InterfaceMethod<[{
       Returns indexing maps for any spatial dimension.
     }],
     "::mlir::ArrayAttr", "getIteratorTypes", (ins),

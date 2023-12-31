@@ -507,7 +507,7 @@ def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
       }
 
       int64_t getChannelPosition() {
-          return (getChannelFirstAttr().getValue()) ? 1 : getSpatialRank() + 1;
+          return (getChannelFirstAttr().getValue()) ? 2 : getSpatialRank() + 2;
       }
     }];
 }
