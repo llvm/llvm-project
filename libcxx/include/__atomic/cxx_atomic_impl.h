@@ -138,9 +138,11 @@ __cxx_atomic_store(_Tp* __a, typename __cxx_atomic_base_impl_traits<_Tp>::__unde
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t
 __cxx_atomic_load(const _Tp* __a, memory_order __order) {
-  typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t __ret;
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), __to_gcc_order(__order));
-  return __ret;
+  using _Ret = typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t;
+  alignas(alignof(_Ret)) unsigned char __mem[sizeof(_Ret)];
+  __atomic_load(
+      std::addressof(__a->__a_value), std::addressof(*reinterpret_cast<_Ret*>(__mem)), __to_gcc_order(__order));
+  return *reinterpret_cast<_Ret*>(__mem);
 }
 
 template <typename _Tp>
@@ -152,10 +154,14 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_load_inplace(
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t __cxx_atomic_exchange(
     _Tp* __a, typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t __value, memory_order __order) {
-  typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t __ret;
+  using _Ret = typename __cxx_atomic_base_impl_traits<_Tp>::__underlying_t;
+  alignas(alignof(_Ret)) unsigned char __mem[sizeof(_Ret)];
   __atomic_exchange(
-      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), __to_gcc_order(__order));
-  return __ret;
+      std::addressof(__a->__a_value),
+      std::addressof(__value),
+      std::addressof(*reinterpret_cast<_Ret*>(__mem)),
+      __to_gcc_order(__order));
+  return *reinterpret_cast<_Ret*>(__mem);
 }
 
 template <typename _Tp>
