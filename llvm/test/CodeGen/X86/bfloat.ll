@@ -2529,3 +2529,17 @@ define <8 x bfloat> @extract_v32bf16_v8bf16(<32 x bfloat> %x) {
   %a = shufflevector <32 x bfloat> %x, <32 x bfloat> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x bfloat> %a
 }
+
+define <16 x bfloat> @concat_zero_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y) {
+; SSE2-LABEL: concat_zero_v8bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: concat_zero_v8bf16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a = shufflevector <8 x bfloat> %x, <8 x bfloat> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x bfloat> %a
+}
