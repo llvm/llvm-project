@@ -965,3 +965,381 @@ define i1 @or_and3_wrong_operand(i1 %a, i1 %b, i32 %x, i32 %y, i1 %d) {
   %r = select i1 %cond, i1 %d, i1 %b
   ret i1 %r
 }
+
+define i8 @test_or_umax(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_or_umax(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %or = select i1 %cond, i1 true, i1 %cmp
+  %ret = select i1 %or, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_or_umin(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_or_umin(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[Y]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %or = select i1 %cond, i1 true, i1 %cmp
+  %ret = select i1 %or, i8 %y, i8 %x
+  ret i8 %ret
+}
+
+define i8 @test_and_umax(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_and_umax(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND:%.*]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[AND]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %and = select i1 %cond, i1 %cmp, i1 false
+  %ret = select i1 %and, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_and_umin(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_and_umin(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND:%.*]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[AND]], i8 [[Y]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %and = select i1 %cond, i1 %cmp, i1 false
+  %ret = select i1 %and, i8 %y, i8 %x
+  ret i8 %ret
+}
+
+define i8 @test_or_umax_bitwise1(i8 %x, i8 %y, i8 %val) {
+; CHECK-LABEL: @test_or_umax_bitwise1(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[VAL:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND]], [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = icmp eq i8 %val, 0 ; thwart complexity-based ordering
+  %cmp = icmp ugt i8 %x, %y
+  %or = or i1 %cond, %cmp
+  %ret = select i1 %or, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_or_umax_bitwise2(i8 %x, i8 %y, i8 %val) {
+; CHECK-LABEL: @test_or_umax_bitwise2(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[VAL:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[COND]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = icmp eq i8 %val, 0 ; thwart complexity-based ordering
+  %cmp = icmp ugt i8 %x, %y
+  %or = or i1 %cmp, %cond
+  %ret = select i1 %or, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_and_umax_bitwise1(i8 %x, i8 %y, i8 %val) {
+; CHECK-LABEL: @test_and_umax_bitwise1(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[VAL:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[AND]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = icmp eq i8 %val, 0 ; thwart complexity-based ordering
+  %cmp = icmp ugt i8 %x, %y
+  %and = and i1 %cond, %cmp
+  %ret = select i1 %and, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_and_umax_bitwise2(i8 %x, i8 %y, i8 %val) {
+; CHECK-LABEL: @test_and_umax_bitwise2(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[VAL:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[COND]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[AND]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = icmp eq i8 %val, 0 ; thwart complexity-based ordering
+  %cmp = icmp ugt i8 %x, %y
+  %and = and i1 %cmp, %cond
+  %ret = select i1 %and, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+; Other SPFs
+
+define i8 @test_or_smax(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_or_smax(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp sgt i8 %x, %y
+  %or = select i1 %cond, i1 true, i1 %cmp
+  %ret = select i1 %or, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_or_abs(i8 %x, i1 %cond) {
+; CHECK-LABEL: @test_or_abs(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp sgt i8 %x, -1
+  %neg = sub nsw i8 0, %x
+  %or = select i1 %cond, i1 true, i1 %cmp
+  %ret = select i1 %or, i8 %x, i8 %neg
+  ret i8 %ret
+}
+
+; TODO: fold SPF_FMAXNUM
+define float @test_or_fmaxnum(float %x, float %y, i1 %cond) {
+; CHECK-LABEL: @test_or_fmaxnum(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], float [[X]], float [[Y]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %cmp = fcmp nnan ogt float %x, %y
+  %or = select i1 %cond, i1 true, i1 %cmp
+  %ret = select i1 %or, float %x, float %y
+  ret float %ret
+}
+
+; Negative tests
+
+define i8 @test_or_umax_invalid_logical(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_or_umax_invalid_logical(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP]], i1 true, i1 [[COND:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %or = select i1 %cmp, i1 true, i1 %cond
+  %ret = select i1 %or, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_and_umax_invalid_logical(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_and_umax_invalid_logical(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i1 [[COND:%.*]], i1 false
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[AND]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %and = select i1 %cmp, i1 %cond, i1 false
+  %ret = select i1 %and, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+define i8 @test_or_umax_multiuse_cond(i8 %x, i8 %y, i1 %cond) {
+; CHECK-LABEL: @test_or_umax_multiuse_cond(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  %or = select i1 %cond, i1 true, i1 %cmp
+  call void @use(i1 %or)
+  %ret = select i1 %or, i8 %x, i8 %y
+  ret i8 %ret
+}
+
+; Tests from PR76203
+
+define i8 @test_or_eq_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_or_eq_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp eq i8 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_and_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_and_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp ne i8 %a, %b
+  %cond = and i1 %other_cond, %cmp
+  %select = select i1 %cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_or_eq_a_b_commuted(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_or_eq_a_b_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp eq i8 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i8 %b, i8 %a
+  ret i8 %select
+}
+
+define i8 @test_and_ne_a_b_commuted(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_and_ne_a_b_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp ne i8 %a, %b
+  %cond = and i1 %other_cond, %cmp
+  %select = select i1 %cond, i8 %b, i8 %a
+  ret i8 %select
+}
+
+define i8 @test_or_eq_different_operands(i8 %a, i8 %b, i8 %c)  {
+; CHECK-LABEL: @test_or_eq_different_operands(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[B:%.*]], [[A]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp eq i8 %a, %c
+  %cmp1 = icmp eq i8 %b, %a
+  %cond = or i1 %cmp, %cmp1
+  %select = select i1 %cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_or_eq_a_b_multi_use(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_or_eq_a_b_multi_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    call void @use(i1 [[COND]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp eq i8 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  call void @use(i1 %cmp)
+  call void @use(i1 %cond)
+  %select = select i1 %cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define <2 x i8> @test_or_eq_a_b_vec(<2 x i1> %other_cond, <2 x i8> %a, <2 x i8> %b)  {
+; CHECK-LABEL: @test_or_eq_a_b_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or <2 x i1> [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[COND]], <2 x i8> [[A]], <2 x i8> [[B]]
+; CHECK-NEXT:    ret <2 x i8> [[SELECT]]
+;
+  %cmp = icmp eq <2 x i8> %a, %b
+  %cond = or <2 x i1> %other_cond, %cmp
+  %select = select <2 x i1> %cond, <2 x i8> %a, <2 x i8> %b
+  ret <2 x i8> %select
+}
+
+define i8 @test_or_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_or_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp ne i8 %a, %b
+  %cond = or i1 %other_cond, %cmp
+  %select = select i1 %cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_and_ne_different_operands_fail(i8 %a, i8 %b, i8 %c)  {
+; CHECK-LABEL: @test_and_ne_different_operands_fail(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp ne i8 %a, %c
+  %cmp1 = icmp ne i8 %b, %c
+  %cond = and i1 %cmp, %cmp1
+  %select = select i1 %cond, i8 %b, i8 %a
+  ret i8 %select
+}
+
+define i8 @test_logical_or_eq_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_logical_or_eq_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[OTHER_COND:%.*]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp eq i8 %a, %b
+  %or.cond = select i1 %other_cond, i1 true, i1 %cmp
+  %select = select i1 %or.cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_logical_commuted_or_eq_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_logical_commuted_or_eq_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 [[OTHER_COND:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp eq i8 %a, %b
+  %or.cond = select i1 %cmp, i1 true, i1 %other_cond
+  %select = select i1 %or.cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_logical_and_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_logical_and_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[OTHER_COND:%.*]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp ne i8 %a, %b
+  %or.cond = select i1 %other_cond, i1 %cmp, i1 false
+  %select = select i1 %or.cond, i8 %a, i8 %b
+  ret i8 %select
+}
+
+define i8 @test_logical_commuted_and_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
+; CHECK-LABEL: @test_logical_commuted_and_ne_a_b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[OTHER_COND:%.*]], i1 false
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OR_COND]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp ne i8 %a, %b
+  %or.cond = select i1 %cmp, i1 %other_cond, i1 false
+  %select = select i1 %or.cond, i8 %a, i8 %b
+  ret i8 %select
+}
