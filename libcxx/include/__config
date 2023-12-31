@@ -1183,7 +1183,9 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 
 #  if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
 #    define _LIBCPP_HAS_C_ATOMIC_IMP
-#  elif defined(_LIBCPP_COMPILER_GCC)
+#  endif
+
+#  if defined(_LIBCPP_COMPILER_GCC) || (__has_builtin(__atomic_load) && __has_builtin(__atomic_store) && __has_builtin(__atomic_exchange) && __has_builtin(__atomic_compare_exchange))
 #    define _LIBCPP_HAS_GCC_ATOMIC_IMP
 #  endif
 
