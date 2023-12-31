@@ -265,7 +265,6 @@ static wasm::WasmTableType readTableType(WasmObjectFile::ReadContext &Ctx) {
 
 static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
                          WasmSectionOrderChecker &Checker) {
-  Section.Offset = Ctx.Ptr - Ctx.Start;
   Section.Type = readUint8(Ctx);
   LLVM_DEBUG(dbgs() << "readSection type=" << Section.Type << "\n");
   // When reading the section's size, store the size of the LEB used to encode
@@ -273,6 +272,7 @@ static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
   const uint8_t *PreSizePtr = Ctx.Ptr;
   uint32_t Size = readVaruint32(Ctx);
   Section.HeaderSecSizeEncodingLen = Ctx.Ptr - PreSizePtr;
+  Section.Offset = Ctx.Ptr - Ctx.Start;
   if (Size == 0)
     return make_error<StringError>("zero length section",
                                    object_error::parse_failed);
@@ -1484,6 +1484,11 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
     }
 
     uint32_t BodySize = FunctionEnd - Ctx.Ptr;
+    // Ensure that Function is within Ctx's buffer.
+    if (Ctx.Ptr + BodySize > Ctx.End) {
+      return make_error<GenericBinaryError>("Function extends beyond buffer",
+                                            object_error::parse_failed);
+    }
     Function.Body = ArrayRef<uint8_t>(Ctx.Ptr, BodySize);
     // This will be set later when reading in the linking metadata section.
     Function.Comdat = UINT32_MAX;

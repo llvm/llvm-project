@@ -2441,11 +2441,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
       }
       }] in {
-    let Log2LMUL = [0, 1, 2] in {
-      foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
-        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
-        def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
-      }
+    foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
+      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";

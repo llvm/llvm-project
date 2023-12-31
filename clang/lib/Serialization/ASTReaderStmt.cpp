@@ -2007,7 +2007,7 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
   E->QualifierLoc = Record.readNestedNameSpecifierLoc();
   // not ImplicitAccess
   if (CurrentUnpackingBits->getNextBit())
-    E->Base = Record.readSubExpr();  
+    E->Base = Record.readSubExpr();
   else
     E->Base = nullptr;
 

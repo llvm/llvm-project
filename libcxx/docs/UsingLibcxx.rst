@@ -296,6 +296,10 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
+**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**
+  This macro is used to re-enable the function
+  ``std::shared_ptr<...>::unique()``.
+
 **_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++20. The effect
   is equivalent to manually defining each macro listed below.

@@ -1176,6 +1176,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setTruncStoreAction(MVT::f128, MVT::f32, Expand);
 
       // No implementation for these ops for PowerPC.
+      setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
       setOperationAction(ISD::FSIN, MVT::f128, Expand);
       setOperationAction(ISD::FCOS, MVT::f128, Expand);
       setOperationAction(ISD::FPOW, MVT::f128, Expand);
@@ -1411,6 +1412,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::EXP2_F128, "exp2f128");
   setLibcallName(RTLIB::SIN_F128, "sinf128");
   setLibcallName(RTLIB::COS_F128, "cosf128");
+  setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
   setLibcallName(RTLIB::POW_F128, "powf128");
   setLibcallName(RTLIB::FMIN_F128, "fminf128");
   setLibcallName(RTLIB::FMAX_F128, "fmaxf128");

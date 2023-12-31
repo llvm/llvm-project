@@ -125,7 +125,7 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
 
 bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
                                    FileEntryRef APINotesFile) {
-  assert(Readers.find(HeaderDir) == Readers.end());
+  assert(!Readers.contains(HeaderDir));
   if (auto Reader = loadAPINotes(APINotesFile)) {
     Readers[HeaderDir] = Reader.release();
     return false;

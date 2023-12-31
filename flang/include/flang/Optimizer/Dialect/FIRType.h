@@ -436,6 +436,12 @@ inline bool isBoxAddressOrValue(mlir::Type t) {
   return fir::unwrapRefType(t).isa<fir::BaseBoxType>();
 }
 
+/// Is this a fir.boxproc address type?
+inline bool isBoxProcAddressType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t && t.isa<fir::BoxProcType>();
+}
+
 /// Return a string representation of `ty`.
 ///
 /// fir.array<10x10xf32> -> prefix_10x10xf32

@@ -641,6 +641,10 @@ module m
 end
 ```
 
+* When an intrinsic procedure appears in the specification part of a module
+  only in function references, but not an explicit `INTRINSIC` statement,
+  its name is not brought into other scopes by a `USE` statement.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the

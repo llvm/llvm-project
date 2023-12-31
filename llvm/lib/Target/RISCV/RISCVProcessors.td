@@ -174,8 +174,7 @@ def SIFIVE_S76 : RISCVProcessorModel<"sifive-s76",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
-                                      FeatureStdExtZihintpause,
-                                      FeatureVendorXSfcie],
+                                      FeatureStdExtZihintpause],
                                      [TuneSiFive7]>;
 
 def SIFIVE_U54 : RISCVProcessorModel<"sifive-u54",
@@ -273,7 +272,13 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                              FeatureStdExtZicbop,
                                              FeatureStdExtZicboz,
                                              FeatureVendorXVentanaCondOps],
-                                             [TuneVeyronFusions]>;
+                                             [TuneVentanaVeyron,
+                                              TuneLUIADDIFusion,
+                                              TuneAUIPCADDIFusion,
+                                              TuneZExtHFusion,
+                                              TuneZExtWFusion,
+                                              TuneShiftedZExtWFusion,
+                                              TuneLDADDFusion]>;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           NoSchedModel,

@@ -3403,7 +3403,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
       continue;
     }
     if (Tok->is(tok::kw_const) || Tok->isSimpleTypeSpecifier() ||
-        Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis)) {
+        Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis,
+                     TT_TypeName)) {
       return true;
     }
     if (Tok->isOneOf(tok::l_brace, TT_ObjCMethodExpr) || Tok->Tok.isLiteral())

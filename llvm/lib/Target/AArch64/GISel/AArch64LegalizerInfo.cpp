@@ -1406,7 +1406,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_umax:
   case Intrinsic::aarch64_neon_umin:
   case Intrinsic::aarch64_neon_fmax:
-  case Intrinsic::aarch64_neon_fmin: {
+  case Intrinsic::aarch64_neon_fmin:
+  case Intrinsic::aarch64_neon_fmaxnm:
+  case Intrinsic::aarch64_neon_fminnm: {
     MachineIRBuilder MIB(MI);
     if (IntrinsicID == Intrinsic::aarch64_neon_smax)
       MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
@@ -1421,6 +1423,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                      {MI.getOperand(2), MI.getOperand(3)});
     else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
       MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmaxnm)
+      MIB.buildInstr(TargetOpcode::G_FMAXNUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fminnm)
+      MIB.buildInstr(TargetOpcode::G_FMINNUM, {MI.getOperand(0)},
                      {MI.getOperand(2), MI.getOperand(3)});
     MI.eraseFromParent();
     return true;
