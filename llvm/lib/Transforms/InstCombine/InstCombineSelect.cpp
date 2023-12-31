@@ -1171,14 +1171,15 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
-static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
-                                    InstCombinerImpl &IC) {
+static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
+                              InstCombinerImpl &IC) {
   Value *LHS, *RHS;
   // TODO: What to do with pointer min/max patterns?
-  if (!Sel.getType()->isIntOrIntVectorTy())
+  if (!TrueVal->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
+  SelectPatternFlavor SPF =
+      matchDecomposedSelectPattern(&Cmp, TrueVal, FalseVal, LHS, RHS).Flavor;
   if (SPF == SelectPatternFlavor::SPF_ABS ||
       SPF == SelectPatternFlavor::SPF_NABS) {
     if (!Cmp.hasOneUse() && !RHS->hasOneUse())
@@ -1188,13 +1189,13 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
     bool IntMinIsPoison = SPF == SelectPatternFlavor::SPF_ABS &&
                           match(RHS, m_NSWNeg(m_Specific(LHS)));
     Constant *IntMinIsPoisonC =
-        ConstantInt::get(Type::getInt1Ty(Sel.getContext()), IntMinIsPoison);
+        ConstantInt::get(Type::getInt1Ty(Cmp.getContext()), IntMinIsPoison);
     Instruction *Abs =
         IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
 
     if (SPF == SelectPatternFlavor::SPF_NABS)
-      return BinaryOperator::CreateNeg(Abs); // Always without NSW flag!
-    return IC.replaceInstUsesWith(Sel, Abs);
+      return IC.Builder.CreateNeg(Abs); // Always without NSW flag!
+    return Abs;
   }
 
   if (SelectPatternResult::isMinOrMax(SPF)) {
@@ -1215,8 +1216,7 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
     default:
       llvm_unreachable("Unexpected SPF");
     }
-    return IC.replaceInstUsesWith(
-        Sel, IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS));
+    return IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS);
   }
 
   return nullptr;
@@ -1677,8 +1677,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
     return NewSel;
 
-  if (Instruction *NewSPF = canonicalizeSPF(SI, *ICI, *this))
-    return NewSPF;
+  if (Value *V =
+          canonicalizeSPF(*ICI, SI.getTrueValue(), SI.getFalseValue(), *this))
+    return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
     return replaceInstUsesWith(SI, V);
