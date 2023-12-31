@@ -16224,7 +16224,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       for (auto *V : Candidates) {
         auto *GEP = cast<GetElementPtrInst>(V);
         auto *GEPIdx = GEP->idx_begin()->get();
-        assert(GEP->getNumIndices() == 1 || !isa<Constant>(GEPIdx));
+        assert(GEP->getNumIndices() == 1 && !isa<Constant>(GEPIdx));
         Bundle[BundleIndex++] = GEPIdx;
       }
 
