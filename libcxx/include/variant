@@ -1137,51 +1137,18 @@ using __best_match_t = typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, 
 
 } // namespace __variant_detail
 
-#  define __VISIT_FORWARD_DECL
-
-#  ifdef __VISIT_FORWARD_DECL
 template < class _Visitor, class... _Vs, typename = void_t<decltype(std::__as_variant(std::declval<_Vs>()))...> >
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr decltype(auto)
 visit(_Visitor&& __visitor, _Vs&&... __vs);
 
-#    if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 20
 template < class _Rp,
            class _Visitor,
            class... _Vs,
            typename = void_t<decltype(std::__as_variant(std::declval<_Vs>()))...> >
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr _Rp
 visit(_Visitor&& __visitor, _Vs&&... __vs);
-#    endif
-#  else // __VISIT_FORWARD_DECL
-template <class... _Vs>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr void __throw_if_valueless(_Vs&&... __vs) {
-  const bool __valueless = (... || std::__as_variant(__vs).valueless_by_exception());
-  if (__valueless) {
-    __throw_bad_variant_access();
-  }
-}
-
-template < class _Visitor, class... _Vs, typename = void_t<decltype(std::__as_variant(std::declval<_Vs>()))...> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr decltype(auto)
-visit(_Visitor&& __visitor, _Vs&&... __vs) {
-  using __variant_detail::__visitation::__variant;
-  std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
-  return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
-}
-
-#    if _LIBCPP_STD_VER >= 20
-template < class _Rp,
-           class _Visitor,
-           class... _Vs,
-           typename = void_t<decltype(std::__as_variant(std::declval<_Vs>()))...> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr _Rp
-visit(_Visitor&& __visitor, _Vs&&... __vs) {
-  using __variant_detail::__visitation::__variant;
-  std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
-  return __variant::__visit_value<_Rp>(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
-}
-#    endif
-#  endif // __VISIT_FORWARD_DECL
+#  endif
 
 template <class... _Types>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES variant
@@ -1572,7 +1539,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const variant<_Types...>& __lhs,
   return __variant::__visit_value_at(__lhs.index(), __convert_to_bool<greater_equal<>>{}, __lhs, __rhs);
 }
 
-#  ifdef __VISIT_FORWARD_DECL
 template <class... _Vs>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr void __throw_if_valueless(_Vs&&... __vs) {
   const bool __valueless = (... || std::__as_variant(__vs).valueless_by_exception());
@@ -1589,7 +1555,7 @@ visit(_Visitor&& __visitor, _Vs&&... __vs) {
   return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
 }
 
-#    if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 20
 template < class _Rp, class _Visitor, class... _Vs, typename>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr _Rp
 visit(_Visitor&& __visitor, _Vs&&... __vs) {
@@ -1597,8 +1563,7 @@ visit(_Visitor&& __visitor, _Vs&&... __vs) {
   std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
   return __variant::__visit_value<_Rp>(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
 }
-#    endif
-#  endif // __VISIT_FORWARD_DECL
+#  endif
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI auto
