@@ -978,4 +978,3 @@ entry:
 declare i64 @llvm.cttz.i64(i64, i1 immarg)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
-

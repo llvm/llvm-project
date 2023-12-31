@@ -1429,4 +1429,3 @@ define <vscale x 8 x i64> @vandn_vx_vp_nxv8i64(i64 %a, <vscale x 8 x i64> %b, <v
   %x = call <vscale x 8 x i64> @llvm.vp.and.nxv8i64(<vscale x 8 x i64> %b, <vscale x 8 x i64> %splat.not.a, <vscale x 8 x i1> %mask, i32 %evl)
   ret <vscale x 8 x i64> %x
 }
-
