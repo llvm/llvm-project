@@ -11,7 +11,7 @@
 // <format>
 
 // template<class Visitor, class Context>
-//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
+//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // Deprecated in C++26
 
 #include <algorithm>
 #include <cassert>

@@ -279,6 +279,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
 #  if _LIBCPP_STD_VER >= 26
+  // This function is user facing, so it must wrap the non-standard types of
+  // the "variant" in a handle to stay conforming. See __arg_t for more details.
   template <class _Visitor>
   _LIBCPP_HIDE_FROM_ABI decltype(auto) visit(this basic_format_arg __arg, _Visitor&& __vis) {
     switch (__arg.__type_) {
@@ -298,6 +300,8 @@ public:
     }
   }
 
+  // This function is user facing, so it must wrap the non-standard types of
+  // the "variant" in a handle to stay conforming. See __arg_t for more details.
   template <class _Rp, class _Visitor>
   _LIBCPP_HIDE_FROM_ABI _Rp visit(this basic_format_arg __arg, _Visitor&& __vis) {
     switch (__arg.__type_) {

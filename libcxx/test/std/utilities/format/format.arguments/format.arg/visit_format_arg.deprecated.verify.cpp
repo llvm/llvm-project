@@ -19,8 +19,9 @@ void test() {
   // expected-warning@+1 {{std::basic_format_context<char *, char>>' is deprecated}}
   std::visit_format_arg([]([[maybe_unused]] auto a) -> char { return {}; },
                         std::basic_format_arg<std::basic_format_context<char*, char>>{});
-
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   // expected-warning@+1 {{std::basic_format_context<wchar_t *, wchar_t>>' is deprecated}}
   std::visit_format_arg([]([[maybe_unused]] auto a) -> wchar_t { return {}; },
                         std::basic_format_arg<std::basic_format_context<wchar_t*, wchar_t>>{});
+#endif
 }

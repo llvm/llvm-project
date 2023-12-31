@@ -163,7 +163,7 @@ public:
 #  endif
         __ctx_(std::addressof(__ctx)),
         __arg_([](void* __c, size_t __id) {
-          auto visitor = [&](auto __arg) -> basic_format_arg<basic_format_context> {
+          auto __visitor = [&](auto __arg) -> basic_format_arg<basic_format_context> {
             if constexpr (same_as<decltype(__arg), monostate>)
               return {};
             else if constexpr (same_as<decltype(__arg), typename basic_format_arg<_Context>::handle>)
@@ -176,9 +176,9 @@ public:
                   __basic_format_arg_value<basic_format_context>(__arg)};
           };
 #  if _LIBCPP_STD_VER >= 26
-          return static_cast<_Context*>(__c)->arg(__id).visit(std::move(visitor));
+          return static_cast<_Context*>(__c)->arg(__id).visit(std::move(__visitor));
 #  else
-          return std::visit_format_arg(std::move(visitor), static_cast<_Context*>(__c)->arg(__id));
+          return std::visit_format_arg(std::move(__visitor), static_cast<_Context*>(__c)->arg(__id));
 #  endif
         }) {
   }
