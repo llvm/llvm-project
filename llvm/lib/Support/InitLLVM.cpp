@@ -36,12 +36,13 @@ void CleanupStdHandles(void *Cookie) {
 using namespace llvm;
 using namespace llvm::sys;
 
-static std::atomic<unsigned> UsageCount{0};
-
 InitLLVM::InitLLVM(int &Argc, const char **&Argv,
                    bool InstallPipeSignalExitHandler) {
-  if (UsageCount++)
-    return;
+#ifndef NDEBUG
+  static std::atomic<bool> Initialized{false};
+  assert(!Initialized && "InitLLVM was already initialized!");
+  Initialized = true;
+#endif
 #ifdef __MVS__
   // Bring stdin/stdout/stderr into a known state.
   sys::AddSignalHandler(CleanupStdHandles, nullptr);
@@ -98,8 +99,6 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 }
 
 InitLLVM::~InitLLVM() {
-  if (--UsageCount)
-    return;
 #ifdef __MVS__
   CleanupStdHandles(nullptr);
 #endif

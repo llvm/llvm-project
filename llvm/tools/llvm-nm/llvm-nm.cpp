@@ -42,7 +42,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -2405,7 +2404,6 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
 }
 
 int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   NmOptTable Tbl;

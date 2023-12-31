@@ -20,7 +20,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
@@ -699,7 +698,6 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 // form specified command line after the positional parameter "--".
 static std::unique_ptr<tooling::CompilationDatabase>
 getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
-  llvm::InitLLVM X(argc, argv);
   ParseArgs(argc, argv);
 
   if (!CompilationDB.empty())

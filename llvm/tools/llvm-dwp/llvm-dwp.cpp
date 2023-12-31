@@ -27,7 +27,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -120,8 +119,6 @@ static Expected<Triple> readTargetTriple(StringRef FileName) {
 }
 
 int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
-
   DwpOptTable Tbl;
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
