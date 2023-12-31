@@ -18845,7 +18845,7 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
 
   // Check for a call expression or static_cast expression
   const CallExpr *CE = dyn_cast<CallExpr>(RHSExpr);
-  const CXXStaticCastExpr *CXXSCE = dyn_cast<CXXStaticCastExpr>(RHSExpr);
+  const auto *CXXSCE = dyn_cast<CXXStaticCastExpr>(RHSExpr);
   if (!CE && !CXXSCE)
     return;
 
