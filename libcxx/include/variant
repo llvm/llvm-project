@@ -72,9 +72,9 @@ namespace std {
 
     // [variant.visit], visitation
     template<class Self, class Visitor>
-      constexpr decltype(auto) visit(this Self&&, Visitor&&);
+      constexpr decltype(auto) visit(this Self&&, Visitor&&); // Since C++26
     template<class R, class Self, class Visitor>
-      constexpr R visit(this Self&&, Visitor&&);
+      constexpr R visit(this Self&&, Visitor&&);              // Since C++26
   };
 
   // 20.7.3, variant helper classes
