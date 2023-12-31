@@ -1590,13 +1590,13 @@ if.else:
 
 define i64 @test_used_by_both_invalid(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @test_used_by_both_invalid(
-; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP]], [[C:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    ret i64 [[VAL]]
 ; CHECK:       if.else:
