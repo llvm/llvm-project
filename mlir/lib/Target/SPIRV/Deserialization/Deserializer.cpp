@@ -378,7 +378,7 @@ void spirv::Deserializer::setArgAttrs(uint32_t argID) {
 
   // Replace a decoration as UnitAttr with DecorationAttr for the physical
   // buffer pointer in the function parameter.
-  // e.g. `aliased` -> `spirv.decoration = #spirv.decoration<Aliased>`).
+  // e.g. `aliased` -> `spirv.decoration = #spirv.decoration<Aliased>`.
   for (NamedAttribute decAttr : decorations[argID]) {
     for (auto decoration :
          {spirv::Decoration::Aliased, spirv::Decoration::Restrict,

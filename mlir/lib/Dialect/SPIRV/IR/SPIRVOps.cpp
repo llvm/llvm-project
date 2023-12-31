@@ -989,7 +989,7 @@ LogicalResult spirv::FuncOp::verifyType() {
   };
 
   for (unsigned i = 0, e = funcOp.getNumArguments(); i != e; ++i) {
-    auto param = fnType.getInputs()[i];
+    Type param = fnType.getInputs()[i];
     auto inputPtrType = dyn_cast<spirv::PointerType>(param);
     if (!inputPtrType)
       continue;
@@ -1014,30 +1014,29 @@ LogicalResult spirv::FuncOp::verifyType() {
         return emitOpError()
                << "with a pointer points to a physical buffer pointer must "
                   "be decorated either 'AliasedPointer' or 'RestrictPointer'";
-    } else {
-      // SPIR-V spec, from SPV_KHR_physical_storage_buffer:
-      // > If an OpFunctionParameter is a pointer (or contains a pointer) in
-      // > the PhysicalStorageBuffer storage class, the function parameter must
-      // > be decorated with exactly one of Aliased or Restrict.
-      if (auto pointeeArrayType =
-              dyn_cast<spirv::ArrayType>(inputPtrType.getPointeeType())) {
-        pointeePtrType =
-            dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
-      } else {
-        pointeePtrType = inputPtrType;
-      }
-
-      if (!pointeePtrType || pointeePtrType.getStorageClass() !=
-                                 spirv::StorageClass::PhysicalStorageBuffer)
-        continue;
-
-      bool hasAliased = hasDecorationAttr(spirv::Decoration::Aliased, i);
-      bool hasRestrict = hasDecorationAttr(spirv::Decoration::Restrict, i);
-      if (!hasAliased && !hasRestrict)
-        return emitOpError()
-               << "with physical buffer pointer must be decorated "
-                  "either 'Aliased' or 'Restrict'";
+      continue;
     }
+    // SPIR-V spec, from SPV_KHR_physical_storage_buffer:
+    // > If an OpFunctionParameter is a pointer (or contains a pointer) in
+    // > the PhysicalStorageBuffer storage class, the function parameter must
+    // > be decorated with exactly one of Aliased or Restrict.
+    if (auto pointeeArrayType =
+            dyn_cast<spirv::ArrayType>(inputPtrType.getPointeeType())) {
+      pointeePtrType =
+          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
+    } else {
+      pointeePtrType = inputPtrType;
+    }
+
+    if (!pointeePtrType || pointeePtrType.getStorageClass() !=
+                               spirv::StorageClass::PhysicalStorageBuffer)
+      continue;
+
+    bool hasAliased = hasDecorationAttr(spirv::Decoration::Aliased, i);
+    bool hasRestrict = hasDecorationAttr(spirv::Decoration::Restrict, i);
+    if (!hasAliased && !hasRestrict)
+      return emitOpError() << "with physical buffer pointer must be decorated "
+                              "either 'Aliased' or 'Restrict'";
   }
 
   return success();
