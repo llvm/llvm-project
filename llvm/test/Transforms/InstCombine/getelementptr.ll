@@ -1537,4 +1537,82 @@ define ptr @gep_ashr_without_exact(ptr %p, i64 %off) {
   ret ptr %ptr
 }
 
+define i1 @test_only_used_by_icmp(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test_only_used_by_icmp(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %cmp = icmp eq ptr %gep, %c
+  ret i1 %cmp
+}
+
+define i64 @test_only_used_by_ptrtoint(ptr %a, ptr %b) {
+; CHECK-LABEL: @test_only_used_by_ptrtoint(
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[VAL]]
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %val = ptrtoint ptr %gep to i64
+  ret i64 %val
+}
+
+define i64 @test_used_by_both(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test_used_by_both(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    ret i64 [[VAL]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %cmp = icmp eq ptr %gep, %c
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %val = ptrtoint ptr %gep to i64
+  ret i64 %val
+if.else:
+  ret i64 0
+}
+
+; Negative tests
+
+define i64 @test_used_by_both_invalid(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test_used_by_both_invalid(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret i64 [[VAL]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %cmp = icmp eq ptr %gep, %c
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %val = load i64, ptr %gep, align 8
+  ret i64 %val
+if.else:
+  ret i64 0
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}
