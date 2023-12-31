@@ -24,7 +24,7 @@
 
 // SAVE-RESTORE: "-target-feature" "+save-restore"
 // NO-SAVE-RESTORE: "-target-feature" "-save-restore"
-// DEFAULT: "-target-feature" "-save-restore"
+// DEFAULT-NOT: "-target-feature" "-save-restore"
 // DEFAULT-NOT: "-target-feature" "+save-restore"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -munaligned-access 2>&1 | FileCheck %s -check-prefix=FAST-UNALIGNED-ACCESS

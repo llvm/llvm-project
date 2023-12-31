@@ -887,7 +887,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Handle the procedure pointer actual arguments.
   if (actual.isProcedurePointer()) {
     // Procedure pointer actual to procedure pointer dummy.
-    if (hlfir::isBoxProcAddressType(dummyType))
+    if (fir::isBoxProcAddressType(dummyType))
       return PreparedDummyArgument{actual, /*cleanups=*/{}};
     // Procedure pointer actual to procedure dummy.
     if (hlfir::isFortranProcedureValue(dummyType)) {
@@ -898,7 +898,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 
   // NULL() actual to procedure pointer dummy
   if (Fortran::evaluate::IsNullProcedurePointer(expr) &&
-      hlfir::isBoxProcAddressType(dummyType)) {
+      fir::isBoxProcAddressType(dummyType)) {
     auto boxTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
     auto tempBoxProc{builder.createTemporary(loc, boxTy)};
     hlfir::Entity nullBoxProc(
@@ -909,7 +909,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 
   if (actual.isProcedure()) {
     // Procedure actual to procedure pointer dummy.
-    if (hlfir::isBoxProcAddressType(dummyType)) {
+    if (fir::isBoxProcAddressType(dummyType)) {
       auto tempBoxProc{builder.createTemporary(loc, actual.getType())};
       builder.create<fir::StoreOp>(loc, actual, tempBoxProc);
       return PreparedDummyArgument{tempBoxProc, /*cleanups=*/{}};
@@ -1555,8 +1555,6 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     }
 
     hlfir::Entity actual = arg.value()->getActual(loc, builder);
-    if (actual.isProcedurePointer())
-      TODO(loc, "Procedure pointer as actual argument to intrinsics.");
     switch (argRules.lowerAs) {
     case fir::LowerIntrinsicArgAs::Value:
       operands.emplace_back(

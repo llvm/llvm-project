@@ -39,7 +39,7 @@ multiclass RAOINT_BASE<string OpcodeStr> {
                Sched<[WriteALURMW]>, REX_W;
 }
 
-defm AADD : RAOINT_BASE<"add">, T8PS;
-defm AAND : RAOINT_BASE<"and">, T8PD;
-defm AOR  : RAOINT_BASE<"or" >, T8XD;
-defm AXOR : RAOINT_BASE<"xor">, T8XS;
+defm AADD : RAOINT_BASE<"add">, T8;
+defm AAND : RAOINT_BASE<"and">, T8, PD;
+defm AOR  : RAOINT_BASE<"or" >, T8, XD;
+defm AXOR : RAOINT_BASE<"xor">, T8, XS;
