@@ -129,7 +129,7 @@ private:
   std::vector<std::vector<Point>> denominators;
 };
 
-} // namespace internal
+} // namespace public_namespace_name::detail
 } // namespace presburger
 } // namespace mlir
 
