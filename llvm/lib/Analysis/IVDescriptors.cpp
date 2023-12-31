@@ -1454,7 +1454,13 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
   if (Assume && !AR)
     AR = PSE.getAsAddRec(Phi);
 
-  if (!AR) {
+  // Ensure that the incoming value is also an AddRecExpr
+  Value *Inc = Phi->getIncomingValueForBlock(TheLoop->getLoopLatch());
+  const auto *IncAR = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Inc));
+  if (Assume && !IncAR)
+    IncAR = PSE.getAsAddRec(Inc);
+
+  if (!AR || !IncAR) {
     LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
     return false;
   }
