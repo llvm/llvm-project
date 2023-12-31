@@ -42,10 +42,9 @@ inline ConeH defineHRep(int num_vars) {
   // There are no symbols (we don't work with parametric cones) and no local
   // (existentially quantified) variables.
   // Once the cone is defined, we use `addInequality()` to set inequalities.
-  return ConeH(PresburgerSpace::getRelationSpace(/*numDomain=*/0,
-                                                 /*numRange=*/num_vars,
-                                                 /*numSymbols=*/0,
-                                                 /*numLocals=*/0));
+  return ConeH(PresburgerSpace::getSetSpace(/*numDims=*/num_vars,
+                                            /*numSymbols=*/0,
+                                            /*numLocals=*/0));
 }
 
 // Get the index of a cone, i.e., the volume of the parallelepiped
