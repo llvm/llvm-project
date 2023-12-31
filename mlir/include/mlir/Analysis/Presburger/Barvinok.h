@@ -22,11 +22,11 @@
 namespace mlir {
 namespace presburger {
 
-// A polyhedron in H-representation is a set of relations
+// A polyhedron in H-representation is a set of inequalities
 // in d variables with integer coefficients.
 using PolyhedronH = IntegerRelation;
 
-// A polyhedron in V-representation is a set of rays, i.e.,
+// A polyhedron in V-representation is a set of rays and points, i.e.,
 // vectors, stored as rows of a matrix.
 using PolyhedronV = IntMatrix;
 
@@ -48,14 +48,21 @@ inline ConeH defineHRep(int num_vars) {
                                                  /*numLocals=*/0));
 }
 
-// Get the index of a cone.
+// Get the index of a cone, i.e., the volume of the parallelepiped
+// spanned by its generators, which is equal to the number of integer
+// points in its fundamental parallelepiped.
+// If the index is 1, the cone is unimodular.
+// Barvinok, A., and J. E. Pommersheim. "An algorithmic theory of lattice points in polyhedra."
+// p. 107
 // If it has more rays than the dimension, return 0.
 MPInt getIndex(ConeV);
 
 // Get the dual of a cone in H-representation, returning its V-representation.
+// This assumes that the input is pointed at the origin; it fails otherwise.
 ConeV getDual(ConeH);
 
 // Get the dual of a cone in V-representation, returning its H-representation.
+// The returned cone is pointed at the origin.
 ConeH getDual(ConeV);
 
 } // namespace presburger
