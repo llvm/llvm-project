@@ -2244,6 +2244,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
+    // int fflush(FILE *stream);
+    addToFunctionSummaryMap(
+        "fflush", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg));
+
     // long ftell(FILE *stream);
     // From 'The Open Group Base Specifications Issue 7, 2018 edition':
     // "The ftell() function shall not change the setting of errno if

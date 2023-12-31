@@ -19,8 +19,8 @@ using namespace llvm;
 namespace clang {
 namespace format {
 
-// Check whether `FilePath` matches `Pattern` based on POSIX (1003.1-2008)
-// 2.13.1, 2.13.2, and Rule 1 of 2.13.3.
+// Check whether `FilePath` matches `Pattern` based on POSIX 2.13.1, 2.13.2, and
+// Rule 1 of 2.13.3.
 bool matchFilePath(StringRef Pattern, StringRef FilePath) {
   assert(!Pattern.empty());
   assert(!FilePath.empty());

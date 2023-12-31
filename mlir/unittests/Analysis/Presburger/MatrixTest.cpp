@@ -251,6 +251,9 @@ TEST(MatrixTest, computeHermiteNormalForm) {
 }
 
 TEST(MatrixTest, inverse) {
+  IntMatrix mat1 = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
+  EXPECT_EQ(mat1.determinant(), -7);
+
   FracMatrix mat = makeFracMatrix(
       2, 2, {{Fraction(2), Fraction(1)}, {Fraction(7), Fraction(0)}});
   FracMatrix inverse = makeFracMatrix(

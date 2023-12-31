@@ -700,6 +700,15 @@ def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
                                AssemblerPredicate<(all_of FeatureStdExtZcmop),
                                "'Zcmop' (Compressed May-Be-Operations)">;
 
+def FeatureStdExtZicfiss
+    : SubtargetFeature<"experimental-zicfiss", "HasStdExtZicfiss", "true",
+                       "'Zicfiss' (Shadow stack)",
+                       [FeatureStdExtZicsr, FeatureStdExtZimop]>;
+def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZicfiss),
+                                 "'Zicfiss' (Shadow stack)">;
+def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
+
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Smaia encompasses all added CSRs and all "
