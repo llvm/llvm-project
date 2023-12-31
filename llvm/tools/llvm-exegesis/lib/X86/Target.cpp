@@ -681,6 +681,7 @@ public:
 
   Expected<std::unique_ptr<pfm::Counter>>
   createCounter(StringRef CounterName, const LLVMState &State,
+                ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID) const override {
     // If LbrSamplingPeriod was provided, then ignore the
     // CounterName because we only have one for LBR.
@@ -689,6 +690,13 @@ public:
       // __linux__ (for now)
 #if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES) &&                \
     defined(__linux__)
+      // TODO(boomanaiden154): Add in support for using validation counters when
+      // using LBR counters.
+      if (ValidationCounters.size() > 0)
+        return llvm::make_error<llvm::StringError>(
+            "Using LBR is not currently supported with validation counters",
+            llvm::errc::invalid_argument);
+
       return std::make_unique<X86LbrCounter>(
           X86LbrPerfEvent(LbrSamplingPeriod));
 #else
@@ -698,7 +706,8 @@ public:
           llvm::errc::invalid_argument);
 #endif
     }
-    return ExegesisTarget::createCounter(CounterName, State, ProcessID);
+    return ExegesisTarget::createCounter(CounterName, State, ValidationCounters,
+                                         ProcessID);
   }
 
   enum ArgumentRegisters { CodeSize = X86::R12, AuxiliaryMemoryFD = X86::R13 };

@@ -268,6 +268,22 @@ static cl::opt<unsigned> BenchmarkRepeatCount(
              "before aggregating the results"),
     cl::cat(BenchmarkOptions), cl::init(30));
 
+static cl::list<ValidationEvent> ValidationCounters(
+    "validation-counter",
+    cl::desc(
+        "The name of a validation counter to run concurrently with the main "
+        "counter to validate benchmarking assumptions"),
+    cl::CommaSeparated, cl::cat(BenchmarkOptions),
+    cl::values(clEnumValN(ValidationEvent::L1DCacheLoadMiss, "l1d-load-misses",
+                          "Count L1D cache load misses"),
+               clEnumValN(ValidationEvent::InstructionRetired,
+                          "instructions-retired", "Count retired instructions"),
+               clEnumValN(ValidationEvent::DataTLBLoadMiss,
+                          "data-tlb-load-misses", "Count data TLB load misses"),
+               clEnumValN(ValidationEvent::DataTLBStoreMiss,
+                          "data-tlb-store-misses",
+                          "Count data TLB store misses")));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -501,7 +517,7 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
-          BenchmarkRepeatCount, ResultAggMode));
+          BenchmarkRepeatCount, ValidationCounters, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }

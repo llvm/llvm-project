@@ -15,6 +15,7 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_LATENCY_H
 
 #include "BenchmarkRunner.h"
+#include "Target.h"
 
 namespace llvm {
 namespace exegesis {
@@ -25,6 +26,7 @@ public:
                          BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
                          Benchmark::ResultAggregationModeE ResultAggMode,
                          ExecutionModeE ExecutionMode,
+                         ArrayRef<ValidationEvent> ValCounters,
                          unsigned BenchmarkRepeatCount);
   ~LatencyBenchmarkRunner() override;
 
@@ -34,6 +36,7 @@ private:
 
   Benchmark::ResultAggregationModeE ResultAggMode;
   unsigned NumMeasurements;
+  SmallVector<ValidationEvent> ValidationCounters;
 };
 } // namespace exegesis
 } // namespace llvm

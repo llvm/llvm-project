@@ -107,15 +107,18 @@ StringRef PerfEvent::getPfmEventString() const {
   return FullQualifiedEventString;
 }
 
-Counter::Counter(PerfEvent &&E, pid_t ProcessID) : Event(std::move(E)) {
+Counter::Counter(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
+                 pid_t ProcessID)
+    : Event(std::move(E)), ValidationEvents(std::move(ValEvents)),
+      ValidationFDs(ValidationEvents.size(), -1) {
   assert(Event.valid());
   IsDummyEvent = Event.name() == PerfEvent::DummyEventString;
   if (!IsDummyEvent)
-    initRealEvent(E, ProcessID);
+    initRealEvent(ProcessID);
 }
 
 #ifdef HAVE_LIBPFM
-void Counter::initRealEvent(const PerfEvent &E, pid_t ProcessID) {
+void Counter::initRealEvent(pid_t ProcessID) {
   const int Cpu = -1;     // measure any processor.
   const int GroupFd = -1; // no grouping of counters.
   const uint32_t Flags = 0;
@@ -131,6 +134,17 @@ void Counter::initRealEvent(const PerfEvent &E, pid_t ProcessID) {
               "pass --use-dummy-perf-counters command line option.\n";
   }
   assert(FileDescriptor != -1 && "Unable to open event");
+
+  // Setup validation counters
+  assert(ValidationFDs.size() == ValidationEvents.size());
+  for (size_t I = 0; I < ValidationEvents.size(); ++I) {
+    perf_event_attr AttrCopy = *ValidationEvents[I].attribute();
+    ValidationFDs[I] =
+        perf_event_open(&AttrCopy, ProcessID, Cpu, FileDescriptor, Flags);
+    if (ValidationFDs[I] == -1)
+      errs() << "Unable to open validation event. ERRNO: " << strerror(errno)
+             << "\n";
+  }
 }
 
 Counter::~Counter() {
@@ -162,6 +176,23 @@ Counter::readOrError(StringRef /*unused*/) const {
 
   llvm::SmallVector<int64_t, 4> Result;
   Result.push_back(Count);
+  return Result;
+}
+
+llvm::Expected<llvm::SmallVector<int64_t>>
+Counter::readValidationCountersOrError() const {
+  llvm::SmallVector<int64_t, 4> Result;
+  for (const int ValidationFD : ValidationFDs) {
+    int64_t Count;
+    if (!IsDummyEvent) {
+      ssize_t ReadSize = ::read(ValidationFD, &Count, sizeof(Count));
+      if (ReadSize != sizeof(Count))
+        return llvm::make_error<llvm::StringError>(
+            "Failed to read validation ounter", llvm::errc::io_error);
+    } else
+      Count = -1;
+    Result.push_back(Count);
+  }
   return Result;
 }
 
