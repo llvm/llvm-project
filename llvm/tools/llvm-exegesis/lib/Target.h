@@ -32,12 +32,21 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <unordered_map>
+
 namespace llvm {
 namespace exegesis {
 
 extern cl::OptionCategory Options;
 extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
+
+enum ValidationEvent {
+  L1DCacheLoadMiss,
+  InstructionRetired,
+  DataTLBLoadMiss,
+  DataTLBStoreMiss
+};
 
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
@@ -58,6 +67,8 @@ struct PfmCountersInfo {
   // An optional list of IssueCounters.
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
+
+  std::unordered_map<ValidationEvent, const char *> ValidationCounters;
 
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;

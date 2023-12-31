@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "exegesis-emitter"
@@ -81,6 +83,11 @@ collectPfmCounters(const RecordKeeper &Records) {
                         "duplicate ResourceName " + ResourceName);
       AddPfmCounterName(IssueCounter);
     }
+
+    for (const Record *ValidationCounter :
+         Def->getValueAsListOfDefs("ValidationCounters"))
+      AddPfmCounterName(ValidationCounter);
+
     AddPfmCounterName(Def->getValueAsDef("CycleCounter"));
     AddPfmCounterName(Def->getValueAsDef("UopsCounter"));
   }
@@ -109,6 +116,8 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
       Def.getValueAsDef("UopsCounter")->getValueAsString("Counter");
   const size_t NumIssueCounters =
       Def.getValueAsListOfDefs("IssueCounters").size();
+  const size_t NumValidationCounters =
+      Def.getValueAsListOfDefs("ValidationCounters").size();
 
   OS << "\nstatic const PfmCountersInfo " << Target << Def.getName()
      << " = {\n";
@@ -129,10 +138,25 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
 
   // Issue Counters
   if (NumIssueCounters == 0)
-    OS << "  nullptr,  // No issue counters.\n  0\n";
+    OS << "  nullptr, 0, // No issue counters\n";
   else
     OS << "  " << Target << "PfmIssueCounters + " << IssueCountersTableOffset
-       << ", " << NumIssueCounters << " // Issue counters.\n";
+       << ", " << NumIssueCounters << ", // Issue counters.\n";
+
+  // Validation Counters
+  if (NumValidationCounters == 0)
+    OS << "  {} // No validation counters.\n";
+  else {
+    OS << "  {\n";
+    for (const Record *ValidationCounter :
+         Def.getValueAsListOfDefs("ValidationCounters")) {
+      OS << "    { " << ValidationCounter->getValueAsDef("EventType")->getName()
+         << ", " << Target << "PfmCounterNames["
+         << getPfmCounterId(ValidationCounter->getValueAsString("Counter"))
+         << "]}\n";
+    }
+    OS << "  } // Validation counters.\n";
+  }
 
   OS << "};\n";
   IssueCountersTableOffset += NumIssueCounters;

@@ -147,13 +147,14 @@ std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
                                                ExecutionMode);
 }
 
-static_assert(std::is_trivial_v<PfmCountersInfo>,
-              "We shouldn't have dynamic initialization here");
-const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
-                                                  0u};
+const PfmCountersInfo PfmCountersInfo::Default = {
+    nullptr, nullptr, nullptr, 0u, {}};
 const PfmCountersInfo PfmCountersInfo::Dummy = {
-    pfm::PerfEvent::DummyEventString, pfm::PerfEvent::DummyEventString, nullptr,
-    0u};
+    pfm::PerfEvent::DummyEventString,
+    pfm::PerfEvent::DummyEventString,
+    nullptr,
+    0u,
+    {}};
 
 const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
   assert(llvm::is_sorted(

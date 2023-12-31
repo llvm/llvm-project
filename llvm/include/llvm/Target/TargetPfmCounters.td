@@ -28,6 +28,22 @@ class PfmIssueCounter<string resource_name, string counter>
   string ResourceName = resource_name;
 }
 
+class ValidationEvent <int event_number> {
+  int EventNumber = event_number;
+}
+
+def L1DCacheLoadMiss    : ValidationEvent<0>;
+def InstructionRetired  : ValidationEvent<1>;
+def DataTLBLoadMiss     : ValidationEvent<2>;
+def DataTLBStoreMiss    : ValidationEvent<3>;
+
+// Validation counters can be tied to a specific event
+class PfmValidationCounter<ValidationEvent event_type, string counter>
+    : PfmCounter<counter> {
+  // The name of the event that the validation counter detects.
+  ValidationEvent EventType = event_type;
+}
+
 def NoPfmCounter : PfmCounter <""> {}
 
 // Set of PfmCounters for measuring sched model characteristics.
@@ -38,6 +54,9 @@ class ProcPfmCounters {
   PfmCounter UopsCounter = NoPfmCounter;
   // Processors can define how to measure issued uops by defining IssueCounters.
   list<PfmIssueCounter> IssueCounters = [];
+  // Processor can list mappings between validation events and real counters
+  // to measure the specified events.
+  list<PfmValidationCounter> ValidationCounters = [];
 }
 
 // A binding of a set of counters to a CPU.
