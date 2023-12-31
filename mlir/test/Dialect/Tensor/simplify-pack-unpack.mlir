@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -test-tensor-transform-patterns="test-simplify-pack-patterns" %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -test-tensor-transform-patterns="test-simplify-pack-unpack-patterns" %s | FileCheck %s
 
 // CHECK: func.func @single_dim_packing(
 // CHECK-SAME: %[[ARG0:.+]]: tensor<256xf32>)
