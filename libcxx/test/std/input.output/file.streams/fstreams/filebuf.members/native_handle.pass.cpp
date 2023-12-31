@@ -19,13 +19,6 @@
 #include <filesystem>
 #include <utility>
 
-#if defined(_LIBCPP_WIN32API)
-#  define WIN32_LEAN_AND_MEAN
-#  define NOMINMAX
-#  include <io.h>
-#  include <windows.h>
-#endif
-
 #include "platform_support.h"
 #include "test_macros.h"
 #include "../test_helpers.h"

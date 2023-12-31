@@ -30,7 +30,7 @@
 
 #  if defined(_LIBCPP_WIN32API)
 auto is_handle_valid([[maybe_unused]] HANDLE handle) {
-  // TODO: GetFileInformationByHandle
+  // TODO: Maybe test HANDLE with GetFileInformationByHandle??
   return true;
 };
 #  else
