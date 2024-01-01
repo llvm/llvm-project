@@ -29,7 +29,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%[0-9]+]]>
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
-; VPLANS-NEXT:     WIDEN store ir<%gep>, ir<%val>, vp<[[LANEMASK_PHI]]>
+; VPLANS-NEXT:     vp<[[VEC_PTR:%[0-9]+]]> = vector-pointer ir<%gep>
+; VPLANS-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%val>, vp<[[LANEMASK_PHI]]>
 ; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%[0-9]+]]> = add vp<[[INDV]]>, vp<[[VFxUF]]>
 ; VPLANS-NEXT:     EMIT vp<[[INC:%[0-9]+]]> = VF * Part + vp<[[INDV]]>
 ; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = active lane mask vp<[[INC]]>, vp<[[NEWTC]]>
