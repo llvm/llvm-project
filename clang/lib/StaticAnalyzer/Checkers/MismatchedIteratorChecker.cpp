@@ -34,13 +34,11 @@ class MismatchedIteratorChecker
                                   "Misuse of STL APIs",
                                   /*SuppressOnSink=*/true};
 
-  void verifyMatch(CheckerContext &C, const SVal &Iter,
-                   const MemRegion *Cont) const;
-  void verifyMatch(CheckerContext &C, const SVal &Iter1,
-                   const SVal &Iter2) const;
-  void reportBug(StringRef Message, const SVal &Val1, const SVal &Val2,
-                 CheckerContext &C, ExplodedNode *ErrNode) const;
-  void reportBug(StringRef Message, const SVal &Val, const MemRegion *Reg,
+  void verifyMatch(CheckerContext &C, SVal Iter, const MemRegion *Cont) const;
+  void verifyMatch(CheckerContext &C, SVal Iter1, SVal Iter2) const;
+  void reportBug(StringRef Message, SVal Val1, SVal Val2, CheckerContext &C,
+                 ExplodedNode *ErrNode) const;
+  void reportBug(StringRef Message, SVal Val, const MemRegion *Reg,
                  CheckerContext &C, ExplodedNode *ErrNode) const;
 
 public:
@@ -194,7 +192,7 @@ void MismatchedIteratorChecker::checkPreStmt(const BinaryOperator *BO,
   verifyMatch(C, LVal, RVal);
 }
 
-void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter,
+void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter,
                                             const MemRegion *Cont) const {
   // Verify match between a container and the container of an iterator
   Cont = Cont->getMostDerivedObjectRegion();
@@ -230,9 +228,8 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter,
   }
 }
 
-void MismatchedIteratorChecker::verifyMatch(CheckerContext &C,
-                                            const SVal &Iter1,
-                                            const SVal &Iter2) const {
+void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter1,
+                                            SVal Iter2) const {
   // Verify match between the containers of two iterators
   auto State = C.getState();
   const auto *Pos1 = getIteratorPosition(State, Iter1);
@@ -269,8 +266,8 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C,
   }
 }
 
-void MismatchedIteratorChecker::reportBug(StringRef Message, const SVal &Val1,
-                                          const SVal &Val2, CheckerContext &C,
+void MismatchedIteratorChecker::reportBug(StringRef Message, SVal Val1,
+                                          SVal Val2, CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(MismatchedBugType, Message,
                                                     ErrNode);
@@ -279,7 +276,7 @@ void MismatchedIteratorChecker::reportBug(StringRef Message, const SVal &Val1,
   C.emitReport(std::move(R));
 }
 
-void MismatchedIteratorChecker::reportBug(StringRef Message, const SVal &Val,
+void MismatchedIteratorChecker::reportBug(StringRef Message, SVal Val,
                                           const MemRegion *Reg,
                                           CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
