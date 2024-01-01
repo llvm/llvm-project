@@ -22,11 +22,10 @@ define void @inv_val_store_to_inv_address_conditional_diff_values_ic(ptr %a, i64
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX2]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[B]]
@@ -123,11 +122,10 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NTRUNC]], [[K:%.*]]
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX2]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[B]]
@@ -213,12 +211,11 @@ define i32 @variant_val_store_to_inv_address(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-LABEL: @variant_val_store_to_inv_address(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX2]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SMAX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[B]]

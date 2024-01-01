@@ -5047,8 +5047,16 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   Value *Y = MinMax->getRHS();
   if (ICmpInst::isSigned(Pred) && !MinMax->isSigned())
     return nullptr;
-  if (ICmpInst::isUnsigned(Pred) && MinMax->isSigned())
-    return nullptr;
+  if (ICmpInst::isUnsigned(Pred) && MinMax->isSigned()) {
+    // Revert the transform signed pred -> unsigned pred
+    // TODO: We can flip the signedness of predicate if both operands of icmp
+    // are negative.
+    if (isKnownNonNegative(Z, SQ.getWithInstruction(&I)) &&
+        isKnownNonNegative(MinMax, SQ.getWithInstruction(&I))) {
+      Pred = ICmpInst::getFlippedSignednessPredicate(Pred);
+    } else
+      return nullptr;
+  }
   SimplifyQuery Q = SQ.getWithInstruction(&I);
   auto IsCondKnownTrue = [](Value *Val) -> std::optional<bool> {
     if (!Val)

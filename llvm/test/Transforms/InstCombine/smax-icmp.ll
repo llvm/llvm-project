@@ -809,8 +809,7 @@ end:
 define i1 @test_smax_ugt(i32 %a) {
 ; CHECK-LABEL: @test_smax_ugt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_I:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 0)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[COND_I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
