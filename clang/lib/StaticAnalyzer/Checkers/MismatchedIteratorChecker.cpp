@@ -38,12 +38,10 @@ class MismatchedIteratorChecker
                    const MemRegion *Cont) const;
   void verifyMatch(CheckerContext &C, const SVal &Iter1,
                    const SVal &Iter2) const;
-  void reportBug(const StringRef &Message, const SVal &Val1,
-                 const SVal &Val2, CheckerContext &C,
-                 ExplodedNode *ErrNode) const;
-  void reportBug(const StringRef &Message, const SVal &Val,
-                 const MemRegion *Reg, CheckerContext &C,
-                 ExplodedNode *ErrNode) const;
+  void reportBug(StringRef Message, const SVal &Val1, const SVal &Val2,
+                 CheckerContext &C, ExplodedNode *ErrNode) const;
+  void reportBug(StringRef Message, const SVal &Val, const MemRegion *Reg,
+                 CheckerContext &C, ExplodedNode *ErrNode) const;
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -271,10 +269,8 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C,
   }
 }
 
-void MismatchedIteratorChecker::reportBug(const StringRef &Message,
-                                          const SVal &Val1,
-                                          const SVal &Val2,
-                                          CheckerContext &C,
+void MismatchedIteratorChecker::reportBug(StringRef Message, const SVal &Val1,
+                                          const SVal &Val2, CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(MismatchedBugType, Message,
                                                     ErrNode);
@@ -283,8 +279,8 @@ void MismatchedIteratorChecker::reportBug(const StringRef &Message,
   C.emitReport(std::move(R));
 }
 
-void MismatchedIteratorChecker::reportBug(const StringRef &Message,
-                                          const SVal &Val, const MemRegion *Reg,
+void MismatchedIteratorChecker::reportBug(StringRef Message, const SVal &Val,
+                                          const MemRegion *Reg,
                                           CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(MismatchedBugType, Message,
