@@ -3807,7 +3807,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
-      Value *LHS, *RHS;
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this))
           return SelectInst::Create(A, IsAnd ? V : TrueVal,
