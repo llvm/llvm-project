@@ -167,10 +167,6 @@ define <8 x i32> @v8i32_i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %d, <8 x i32> 
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    cmgt v0.4s, v2.4s, v0.4s
 ; CHECK-GI-NEXT:    cmgt v1.4s, v3.4s, v1.4s
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    bsl v0.16b, v4.16b, v6.16b
 ; CHECK-GI-NEXT:    bsl v1.16b, v5.16b, v7.16b
 ; CHECK-GI-NEXT:    ret
