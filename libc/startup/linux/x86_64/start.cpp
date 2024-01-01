@@ -25,11 +25,6 @@
 
 extern "C" int main(int, char **, char **);
 
-extern "C" void __stack_chk_fail() {
-  LIBC_NAMESPACE::write_to_stderr("stack smashing detected");
-  LIBC_NAMESPACE::abort();
-}
-
 namespace LIBC_NAMESPACE {
 
 #ifdef SYS_mmap2

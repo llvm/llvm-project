@@ -63,7 +63,10 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Disable target-specific conversion of CHARACTER.">,
     Option<"noComplexConversion", "no-complex-conversion",
            "bool", /*default=*/"false",
-           "Disable target-specific conversion of COMPLEX.">
+           "Disable target-specific conversion of COMPLEX.">,
+    Option<"noStructConversion", "no-struct-conversion",
+           "bool", /*default=*/"false",
+           "Disable target-specific conversion of derived type value.">
   ];
 }
 

@@ -330,24 +330,18 @@ JITEngine::process(const __tgt_device_image &Image,
   return &Image;
 }
 
-bool JITEngine::checkBitcodeImage(const __tgt_device_image &Image) {
+Expected<bool> JITEngine::checkBitcodeImage(StringRef Buffer) const {
   TimeTraceScope TimeScope("Check bitcode image");
 
-  if (!isImageBitcode(Image))
-    return false;
-
-  StringRef Data(reinterpret_cast<const char *>(Image.ImageStart),
-                 target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
-  auto MB = MemoryBuffer::getMemBuffer(Data, /*BufferName=*/"",
-                                       /*RequiresNullTerminator=*/false);
-  if (!MB)
-    return false;
+  assert(identify_magic(Buffer) == file_magic::bitcode &&
+         "Input is not bitcode");
 
   LLVMContext Context;
-  SMDiagnostic Diagnostic;
-  std::unique_ptr<Module> M =
-      llvm::getLazyIRModule(std::move(MB), Diagnostic, Context,
-                            /*ShouldLazyLoadMetadata=*/true);
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Buffer, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
 
-  return M && Triple(M->getTargetTriple()).getArch() == TT.getArch();
+  return Triple(M.getTargetTriple()).getArch() == TT.getArch();
 }

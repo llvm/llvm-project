@@ -19,10 +19,11 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrs.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
+include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
-include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -672,7 +673,8 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 
 def GPU_LaunchOp : GPU_Op<"launch", [
       AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
-      DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
+      DeclareOpInterfaceMethods<InferIntRangeInterface>,
+      RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
@@ -711,7 +713,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     ```
     operation ::= `gpu.launch` (`async` (`[` ssa-id-list `]`)? )?
-                             `block` `(` ssa-id-list `)` `in` ssa-reassignment
+                             `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
                              memory-attribution
@@ -937,11 +939,11 @@ def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 1, "mul">;
 def GPU_AllReduceOpMinUI : I32EnumAttrCase<"MINUI", 2, "minui">;
 def GPU_AllReduceOpMinSI : I32EnumAttrCase<"MINSI", 3, "minsi">;
 // Follows the `arith.minnumf` semantics.
-def GPU_AllReduceOpMinF : I32EnumAttrCase<"MINF", 4, "minf">;
+def GPU_AllReduceOpMinnumF : I32EnumAttrCase<"MINNUMF", 4, "minnumf">;
 def GPU_AllReduceOpMaxUI : I32EnumAttrCase<"MAXUI", 5, "maxui">;
 def GPU_AllReduceOpMaxSI : I32EnumAttrCase<"MAXSI", 6, "maxsi">;
 // Follows the `arith.maxnumf` semantics.
-def GPU_AllReduceOpMaxF : I32EnumAttrCase<"MAXF", 7, "maxf">;
+def GPU_AllReduceOpMaxnumF : I32EnumAttrCase<"MAXNUMF", 7, "maxnumf">;
 def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 8, "and">;
 def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  9, "or">;
 def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 10, "xor">;
@@ -957,10 +959,10 @@ def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
       GPU_AllReduceOpMul,
       GPU_AllReduceOpMinUI,
       GPU_AllReduceOpMinSI,
-      GPU_AllReduceOpMinF,
+      GPU_AllReduceOpMinnumF,
       GPU_AllReduceOpMaxUI,
       GPU_AllReduceOpMaxSI,
-      GPU_AllReduceOpMaxF,
+      GPU_AllReduceOpMaxnumF,
       GPU_AllReduceOpAnd,
       GPU_AllReduceOpOr,
       GPU_AllReduceOpXor,
@@ -999,7 +1001,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     accumulation as code region. The reduction operation must be one of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
-    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+    *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
        `maximumf`
 
     If `uniform` flag is set either none or all work items of a workgroup
@@ -1022,16 +1024,23 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let hasRegionVerifier = 1;
 }
 
+def AnyIntegerOrFloatOr1DVector :
+  AnyTypeOf<[AnyIntegerOrFloat, VectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the value of every work item across a
     subgroup. The result is equal for all work items of a subgroup.
 
+    When the reduced value is of a vector type, each vector element is reduced
+    independently. Only 1-d vector types are allowed.
+
     Example:
 
     ```mlir
-    %1 = gpu.subgroup_reduce add %0 : (f32) -> (f32)
+    %1 = gpu.subgroup_reduce add %a : (f32) -> (f32)
+    %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> (vector<4xf16>)
     ```
 
     If `uniform` flag is set either none or all work items of a subgroup
@@ -1039,16 +1048,16 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
-    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+    *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
        `maximumf`
   }];
 
   let arguments = (ins
-    AnyIntegerOrFloat:$value,
+    AnyIntegerOrFloatOr1DVector:$value,
     GPU_AllReduceOperationAttr:$op,
     UnitAttr:$uniform
   );
-  let results = (outs AnyIntegerOrFloat:$result);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? attr-dict

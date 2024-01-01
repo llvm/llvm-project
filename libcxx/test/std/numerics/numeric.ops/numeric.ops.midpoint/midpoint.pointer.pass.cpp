@@ -54,6 +54,12 @@ void runtime_test()
     assert(std::midpoint(array +    9, array) == array + 5);
     assert(std::midpoint(array +   10, array) == array + 5);
     assert(std::midpoint(array +   11, array) == array + 6);
+
+    // explicit instantiation
+    ASSERT_SAME_TYPE(decltype(std::midpoint<T>(array, array)), T*);
+    ASSERT_NOEXCEPT(std::midpoint<T>(array, array));
+    assert(std::midpoint<T>(array, array) == array);
+    assert(std::midpoint<T>(array, array + 1000) == array + 500);
 }
 
 template <typename T>

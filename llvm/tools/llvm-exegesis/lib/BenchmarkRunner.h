@@ -56,7 +56,7 @@ public:
   private:
     RunnableConfiguration() = default;
 
-    Benchmark InstrBenchmark;
+    Benchmark BenchmarkResult;
     object::OwningBinary<object::ObjectFile> ObjectFile;
   };
 

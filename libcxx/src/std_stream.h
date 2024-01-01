@@ -269,6 +269,8 @@ private:
 
   __stdoutbuf(const __stdoutbuf&);
   __stdoutbuf& operator=(const __stdoutbuf&);
+
+  _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 };
 
 template <class _CharT>
