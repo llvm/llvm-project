@@ -56,10 +56,9 @@ using NonEnumeratableRangeWithImmmovabaleReferences =
 
 static_assert(std::ranges::input_range<NonEnumeratableRangeWithImmmovabaleReferences>);
 static_assert(!CanEnumerate<NonEnumeratableRangeWithImmmovabaleReferences>);
+static_assert(!std::move_constructible<std::ranges::range_reference_t<NonEnumeratableRangeWithImmmovabaleReferences>>);
 static_assert(
-    !std::move_constructible<std::ranges::range_reference_t< NonEnumeratableRangeWithImmmovabaleReferences >>);
-static_assert(
-    !std::move_constructible<std::ranges::range_rvalue_reference_t< NonEnumeratableRangeWithImmmovabaleReferences >>);
+    !std::move_constructible<std::ranges::range_rvalue_reference_t<NonEnumeratableRangeWithImmmovabaleReferences>>);
 
 template <typename View, typename T>
 using ExpectedViewElement = std::tuple<typename std::ranges::iterator_t<View>::difference_type, T>;
