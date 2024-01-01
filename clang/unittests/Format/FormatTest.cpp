@@ -22983,16 +22983,19 @@ TEST_F(FormatTest, BreakBeforeLambdaBodyWrapping) {
                "    });",
                Style);
 
-  for (unsigned l : {0, 41}) {
-    Style.ColumnLimit = l;
-    verifyFormat("auto lambda = []() { return foo + bar; };", Style);
-  }
-  for (unsigned l : {40, 22}) {
-    Style.ColumnLimit = l;
-    verifyFormat("auto lambda = []()\n"
-                 "{ return foo + bar; };",
-                 Style);
-  }
+  Style.ColumnLimit = 0;
+  verifyFormat("auto noLimit = []() { return 0; };", Style);
+
+  Style.ColumnLimit = 41;
+  verifyFormat("auto lambda = []() { return foo + bar; };", Style);
+  Style.ColumnLimit = 40;
+  verifyFormat("auto lambda = []()\n"
+               "{ return foo + bar; };",
+               Style);
+  Style.ColumnLimit = 22;
+  verifyFormat("auto lambda = []()\n"
+               "{ return foo + bar; };",
+               Style);
   Style.ColumnLimit = 21;
   verifyFormat("auto lambda = []()\n"
                "{\n"
@@ -23000,12 +23003,10 @@ TEST_F(FormatTest, BreakBeforeLambdaBodyWrapping) {
                "};",
                Style);
 
-  for (unsigned l : {0, 67}) {
-    Style.ColumnLimit = l;
-    verifyFormat(
-        "auto result = [](int foo, int bar) { return foo + bar; }(foo, bar);",
-        Style);
-  }
+  Style.ColumnLimit = 67;
+  verifyFormat(
+      "auto result = [](int foo, int bar) { return foo + bar; }(foo, bar);",
+      Style);
   Style.ColumnLimit = 66;
   verifyFormat("auto result = [](int foo, int bar)\n"
                "{ return foo + bar; }(foo, bar);",
