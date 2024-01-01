@@ -26,7 +26,7 @@ static_assert(std::same_as<HANDLE, void*>);
 
 _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept {
   // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/get-osfhandle?view=msvc-170
-  intptr_t __handle = _get_osfhandle(::fileno(__file));
+  intptr_t __handle = _get_osfhandle(fileno(__file));
   if (__handle == -1)
     return nullptr;
   return reinterpret_cast<void*>(__handle);

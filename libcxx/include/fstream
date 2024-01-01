@@ -273,7 +273,7 @@ public:
 #    if defined(_LIBCPP_WIN32API)
     return __filebuf_windows_native_handle(__file_);
 #    elif __has_include(<unistd.h>)
-    return ::fileno(__file_);
+    return fileno(__file_);
 #    else
 #      error "Provide a way to determine the file native handle!"
 #    endif
