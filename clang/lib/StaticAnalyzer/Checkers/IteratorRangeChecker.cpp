@@ -66,7 +66,7 @@ public:
 bool isPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
 bool isAheadOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isBehindPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
-bool isZero(ProgramStateRef State, const NonLoc &Val);
+bool isZero(ProgramStateRef State, NonLoc Val);
 
 } //namespace
 
@@ -289,7 +289,7 @@ bool isLess(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 bool isGreater(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 bool isEqual(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 
-bool isZero(ProgramStateRef State, const NonLoc &Val) {
+bool isZero(ProgramStateRef State, NonLoc Val) {
   auto &BVF = State->getBasicVals();
   return compare(State, Val,
                  nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))),
