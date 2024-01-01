@@ -33,8 +33,8 @@
 #  if defined(_LIBCPP_WIN32API)
 using HandleT = void*; // HANDLE
 
-bool is_handle_valid([[HandleT handle) {
-  if (LPBY_HANDLE_FILE_INFORMATION & pFileInformation; !GetFileInformationByHandle(handle, &lpFileInformation))
+bool is_handle_valid(void* handle) {
+  if (BY_HANDLE_FILE_INFORMATION fileInformation; !GetFileInformationByHandle(handle, &fileInformation))
     return false;
   return true;
 };
