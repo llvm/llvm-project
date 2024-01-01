@@ -179,6 +179,10 @@ add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
 
+add_math_entrypoint_object(nan)
+add_math_entrypoint_object(nanf)
+add_math_entrypoint_object(nanl)
+
 add_math_entrypoint_object(nearbyint)
 add_math_entrypoint_object(nearbyintf)
 add_math_entrypoint_object(nearbyintl)

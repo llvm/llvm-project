@@ -1206,6 +1206,34 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   return {T(result), index, error};
 }
 
+LIBC_INLINE const char *nan_str_to_floatingpoint_str(const char *arg) {
+  ptrdiff_t index = 0;
+  while (isalnum(arg[index]) || arg[index] == '_')
+    ++index;
+
+  if (arg[index] == '\0') {
+    // 5 is the number of characters in string "NAN()".
+    ptrdiff_t size = 5 + index;
+    char *output_str = new char[size + 1];
+
+    output_str[0] = 'N';
+    output_str[1] = 'A';
+    output_str[2] = 'N';
+    output_str[3] = '(';
+
+    for (ptrdiff_t i = 0; i < index; ++i) {
+      output_str[4 + i] = arg[i];
+    }
+
+    output_str[size - 1] = ')';
+    output_str[size] = '\0';
+
+    return output_str;
+  }
+
+  return "NAN";
+}
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
