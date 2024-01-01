@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
 #include "FPBits.h"
-#include "FloatProperties.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
 
@@ -130,7 +129,7 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // early. Because the result of the ldexp operation can be a subnormal number,
   // we need to accommodate the (mantissaWidht + 1) worth of shift in
   // calculating the limit.
-  int exp_limit = FPBits<T>::MAX_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
     return bits.get_sign() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
 

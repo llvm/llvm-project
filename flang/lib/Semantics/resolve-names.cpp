@@ -2904,7 +2904,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
       if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
-          (!symbol->attrs().test(Attr::INTRINSIC) ||
+          (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
               symbol->has<UseDetails>()) &&
           !symbol->has<MiscDetails>() && useNames.count(name) == 0) {
         SourceName location{x.moduleName.source};
@@ -2998,7 +2998,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     details->add_occurrence(location, *useModuleScope_);
     return;
   }
-
+  const Symbol &useUltimate{useSymbol.GetUltimate()};
   if (localSymbol.has<UnknownDetails>()) {
     localSymbol.set_details(UseDetails{localName, useSymbol});
     localSymbol.attrs() =
@@ -3010,7 +3010,6 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   }
 
   Symbol &localUltimate{localSymbol.GetUltimate()};
-  const Symbol &useUltimate{useSymbol.GetUltimate()};
   if (&localUltimate == &useUltimate) {
     // use-associating the same symbol again -- ok
     return;
@@ -3044,13 +3043,19 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
           checkAmbiguousDerivedType(&useUltimate, localGeneric->derivedType());
     } else if (&useUltimate == &BypassGeneric(localUltimate).GetUltimate()) {
       return; // nothing to do; used subprogram is local's specific
+    } else if (useUltimate.attrs().test(Attr::INTRINSIC) &&
+        useUltimate.name() == localSymbol.name()) {
+      return; // local generic can extend intrinsic
     }
   } else if (useGeneric) {
     if (localUltimate.has<DerivedTypeDetails>()) {
       combine =
           checkAmbiguousDerivedType(&localUltimate, useGeneric->derivedType());
-    } else if (&localUltimate == &BypassGeneric(useUltimate).GetUltimate()) {
-      // Local is the specific of the used generic; replace it.
+    } else if (&localUltimate == &BypassGeneric(useUltimate).GetUltimate() ||
+        (localSymbol.attrs().test(Attr::INTRINSIC) &&
+            localUltimate.name() == useUltimate.name())) {
+      // Local is the specific of the used generic or an intrinsic with the
+      // same name; replace it.
       EraseSymbol(localSymbol);
       Symbol &newSymbol{MakeSymbol(localName,
           useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
@@ -3058,23 +3063,22 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       newSymbol.flags() = useSymbol.flags();
       return;
     }
+  } else if (localUltimate.name() != useUltimate.name()) {
+    // not the same procedure
+  } else if (localUltimate.attrs().test(Attr::INTRINSIC) &&
+      useUltimate.attrs().test(Attr::INTRINSIC)) {
+    return;
   } else {
     auto localClass{ClassifyProcedure(localUltimate)};
     auto useClass{ClassifyProcedure(useUltimate)};
-    if (localClass == useClass &&
-        (localClass == ProcedureDefinitionClass::Intrinsic ||
-            localClass == ProcedureDefinitionClass::External) &&
-        localUltimate.name() == useUltimate.name()) {
+    if (localClass == ProcedureDefinitionClass::External &&
+        useClass == ProcedureDefinitionClass::External) {
       auto localChars{evaluate::characteristics::Procedure::Characterize(
           localUltimate, GetFoldingContext())};
       auto useChars{evaluate::characteristics::Procedure::Characterize(
           useUltimate, GetFoldingContext())};
-      if (localChars && useChars) {
-        if (*localChars == *useChars) {
-          // Same intrinsic or external procedure defined identically in two
-          // modules
-          return;
-        }
+      if (localChars && useChars && *localChars == *useChars) {
+        return; // same procedure defined identically in two modules
       }
     }
   }
@@ -4794,9 +4798,15 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
       }
     }
   } else if (symbol && symbol->has<UseDetails>()) {
-    Say(currStmtSource().value(),
-        "Cannot change %s attribute on use-associated '%s'"_err_en_US,
-        EnumToString(attr), name.source);
+    if (symbol->GetUltimate().attrs().test(attr)) {
+      Say(currStmtSource().value(),
+          "Use-associated '%s' already has '%s' attribute"_warn_en_US,
+          name.source, EnumToString(attr));
+    } else {
+      Say(currStmtSource().value(),
+          "Cannot change %s attribute on use-associated '%s'"_err_en_US,
+          EnumToString(attr), name.source);
+    }
     return *symbol;
   }
   if (!symbol) {
@@ -6244,8 +6254,8 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     // recreated for it later on demand, but capturing its result type here
     // will make GetType() return a correct result without having to
     // probe the intrinsics table again.
-    Symbol &symbol{
-        MakeSymbol(InclusiveScope(), name.source, Attrs{Attr::INTRINSIC})};
+    Symbol &symbol{MakeSymbol(InclusiveScope(), name.source, Attrs{})};
+    SetImplicitAttr(symbol, Attr::INTRINSIC);
     CHECK(interface->functionResult.has_value());
     evaluate::DynamicType dyType{
         DEREF(interface->functionResult->GetTypeAndShape()).type()};
@@ -7708,8 +7718,8 @@ void ResolveNamesVisitor::HandleProcedureName(
   auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
   if (!symbol) {
     if (IsIntrinsic(name.source, flag)) {
-      symbol =
-          &MakeSymbol(InclusiveScope(), name.source, Attrs{Attr::INTRINSIC});
+      symbol = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
+      SetImplicitAttr(*symbol, Attr::INTRINSIC);
     } else if (const auto ppcBuiltinScope =
                    currScope().context().GetPPCBuiltinsScope()) {
       // Check if it is a builtin from the predefined module
@@ -8047,6 +8057,11 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
     } else if (ultimate.has<SubprogramDetails>() ||
         ultimate.has<SubprogramNameDetails>()) {
       genericDetails.set_specific(*existing);
+    } else if (ultimate.has<ProcEntityDetails>()) {
+      if (existing->name() != symbolName ||
+          !ultimate.attrs().test(Attr::INTRINSIC)) {
+        genericDetails.set_specific(*existing);
+      }
     } else if (ultimate.has<DerivedTypeDetails>()) {
       genericDetails.set_derivedType(*existing);
     } else if (&existing->owner() == &currScope()) {
