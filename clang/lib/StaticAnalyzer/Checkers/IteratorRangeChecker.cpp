@@ -43,7 +43,7 @@ class IteratorRangeChecker
   void verifyAdvance(CheckerContext &C, SVal LHS, SVal RHS) const;
   void verifyPrev(CheckerContext &C, SVal LHS, SVal RHS) const;
   void verifyNext(CheckerContext &C, SVal LHS, SVal RHS) const;
-  void reportBug(const StringRef &Message, SVal Val, CheckerContext &C,
+  void reportBug(StringRef Message, SVal Val, CheckerContext &C,
                  ExplodedNode *ErrNode) const;
 
 public:
@@ -66,7 +66,7 @@ public:
 bool isPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
 bool isAheadOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isBehindPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
-bool isZero(ProgramStateRef State, const NonLoc &Val);
+bool isZero(ProgramStateRef State, NonLoc Val);
 
 } //namespace
 
@@ -269,7 +269,7 @@ void IteratorRangeChecker::verifyNext(CheckerContext &C, SVal LHS,
   verifyRandomIncrOrDecr(C, OO_Plus, LHS, RHS);
 }
 
-void IteratorRangeChecker::reportBug(const StringRef &Message, SVal Val,
+void IteratorRangeChecker::reportBug(StringRef Message, SVal Val,
                                      CheckerContext &C,
                                      ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(OutOfRangeBugType, Message,
@@ -289,7 +289,7 @@ bool isLess(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 bool isGreater(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 bool isEqual(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 
-bool isZero(ProgramStateRef State, const NonLoc &Val) {
+bool isZero(ProgramStateRef State, NonLoc Val) {
   auto &BVF = State->getBasicVals();
   return compare(State, Val,
                  nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))),
