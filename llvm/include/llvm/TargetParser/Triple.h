@@ -1012,7 +1012,7 @@ public:
   /// Note: Android API level 29 (10) introduced ELF TLS.
   bool hasDefaultEmulatedTLS() const {
     return (isAndroid() && isAndroidVersionLT(29)) || isOSOpenBSD() ||
-           isWindowsCygwinEnvironment() || isOHOSFamily();
+           isOSCygMing() || isOHOSFamily();
   }
 
   /// Tests whether the target uses -data-sections as default.
