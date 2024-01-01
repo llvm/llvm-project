@@ -434,7 +434,7 @@ public:
 #else
       noexcept
 #endif
-      : __end_cap_(nullptr, __a) {
+      : __alloc_(__a) {
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n) {
@@ -448,7 +448,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 14
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n, const allocator_type& __a)
-      : __end_cap_(nullptr, __a) {
+      : __alloc_(__a) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     if (__n > 0) {
       __vallocate(__n);
@@ -470,7 +470,7 @@ public:
   template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(size_type __n, const value_type& __x, const allocator_type& __a)
-      : __end_cap_(nullptr, __a) {
+      : __alloc_(__a) {
     if (__n > 0) {
       __vallocate(__n);
       __construct_at_end(__n, __x);
@@ -508,7 +508,7 @@ public:
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI constexpr vector(
       from_range_t, _Range&& __range, const allocator_type& __alloc = allocator_type())
-      : __end_cap_(nullptr, __alloc) {
+      : __alloc_(__alloc) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
       __init_with_size(ranges::begin(__range), ranges::end(__range), __n);
@@ -764,8 +764,7 @@ public:
 private:
   pointer __begin_ = nullptr;
   pointer __end_   = nullptr;
-  __compressed_pair<pointer, allocator_type> __end_cap_ =
-      __compressed_pair<pointer, allocator_type>(nullptr, __default_init_tag());
+  _LIBCPP_COMPRESSED_PAIR(pointer, __cap_ = nullptr, allocator_type, __alloc_);
 
   //  Allocate space for __n objects
   //  throws length_error if __n > max_size()
@@ -961,17 +960,14 @@ private:
     ++__tx.__pos_;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT {
-    return this->__end_cap_.second();
-  }
+  // TODO: Remove these now redundant accessors
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT { return this->__alloc_; }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const allocator_type& __alloc() const _NOEXCEPT {
-    return this->__end_cap_.second();
+    return this->__alloc_;
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer& __end_cap() _NOEXCEPT {
-    return this->__end_cap_.first();
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer& __end_cap() _NOEXCEPT { return this->__cap_; }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const pointer& __end_cap() const _NOEXCEPT {
-    return this->__end_cap_.first();
+    return this->__cap_;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __clear() _NOEXCEPT {
@@ -1205,7 +1201,7 @@ template <class _InputIterator,
                         int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
-    : __end_cap_(nullptr, __a) {
+    : __alloc_(__a) {
   __init_with_sentinel(__first, __last);
 }
 
@@ -1226,21 +1222,21 @@ template <class _ForwardIterator,
                         int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
-    : __end_cap_(nullptr, __a) {
+    : __alloc_(__a) {
   size_type __n = static_cast<size_type>(std::distance(__first, __last));
   __init_with_size(__first, __last, __n);
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<_Tp, _Allocator>::vector(const vector& __x)
-    : __end_cap_(nullptr, __alloc_traits::select_on_container_copy_construction(__x.__alloc())) {
+    : __alloc_(__alloc_traits::select_on_container_copy_construction(__x.__alloc())) {
   __init_with_size(__x.__begin_, __x.__end_, __x.size());
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
-    : __end_cap_(nullptr, __a) {
+    : __alloc_(__a) {
   __init_with_size(__x.__begin_, __x.__end_, __x.size());
 }
 
@@ -1251,7 +1247,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
 #else
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
-    : __end_cap_(nullptr, std::move(__x.__alloc())) {
+    : __alloc_(std::move(__x.__alloc())) {
   this->__begin_    = __x.__begin_;
   this->__end_      = __x.__end_;
   this->__end_cap() = __x.__end_cap();
@@ -1261,7 +1257,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_type>& __a)
-    : __end_cap_(nullptr, __a) {
+    : __alloc_(__a) {
   if (__a == __x.__alloc()) {
     this->__begin_    = __x.__begin_;
     this->__end_      = __x.__end_;
@@ -1291,7 +1287,7 @@ vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocator_type& __a)
-    : __end_cap_(nullptr, __a) {
+    : __alloc_(__a) {
   auto __guard = std::__make_exception_guard(__destroy_vector(*this));
   if (__il.size() > 0) {
     __vallocate(__il.size());
@@ -1878,7 +1874,7 @@ private:
 
   __storage_pointer __begin_;
   size_type __size_;
-  __compressed_pair<size_type, __storage_allocator> __cap_alloc_;
+  _LIBCPP_COMPRESSED_PAIR(size_type, __cap_, __storage_allocator, __alloc_);
 
 public:
   typedef __bit_reference<vector> reference;
@@ -1889,15 +1885,12 @@ public:
 #endif
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type& __cap() _NOEXCEPT { return __cap_alloc_.first(); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const size_type& __cap() const _NOEXCEPT {
-    return __cap_alloc_.first();
-  }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __storage_allocator& __alloc() _NOEXCEPT {
-    return __cap_alloc_.second();
-  }
+  // TODO: Remove these now redundant accessors
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type& __cap() _NOEXCEPT { return __cap_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const size_type& __cap() const _NOEXCEPT { return __cap_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __storage_allocator& __alloc() _NOEXCEPT { return __alloc_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const __storage_allocator& __alloc() const _NOEXCEPT {
-    return __cap_alloc_.second();
+    return __alloc_;
   }
 
   static const unsigned __bits_per_word = static_cast<unsigned>(sizeof(__storage_type) * CHAR_BIT);
@@ -1960,7 +1953,7 @@ public:
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<bool> _Range>
   _LIBCPP_HIDE_FROM_ABI constexpr vector(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
-      : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+      : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
       __init_with_size(ranges::begin(__range), ranges::end(__range), __n);
@@ -2365,7 +2358,7 @@ vector<bool, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel _
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector()
     _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __default_init_tag()) {}
+    : __begin_(nullptr), __size_(0), __cap_(0) {}
 
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const allocator_type& __a)
@@ -2374,12 +2367,12 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocat
 #else
         _NOEXCEPT
 #endif
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
 }
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __default_init_tag()) {
+    : __begin_(nullptr), __size_(0), __cap_(0) {
   if (__n > 0) {
     __vallocate(__n);
     __construct_at_end(__n, false);
@@ -2389,7 +2382,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n)
 #if _LIBCPP_STD_VER >= 14
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, const allocator_type& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   if (__n > 0) {
     __vallocate(__n);
     __construct_at_end(__n, false);
@@ -2399,7 +2392,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, co
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, const value_type& __x)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __default_init_tag()) {
+    : __begin_(nullptr), __size_(0), __cap_(0) {
   if (__n > 0) {
     __vallocate(__n);
     __construct_at_end(__n, __x);
@@ -2409,7 +2402,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, co
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(size_type __n, const value_type& __x, const allocator_type& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   if (__n > 0) {
     __vallocate(__n);
     __construct_at_end(__n, __x);
@@ -2419,7 +2412,7 @@ vector<bool, _Allocator>::vector(size_type __n, const value_type& __x, const all
 template <class _Allocator>
 template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __default_init_tag()) {
+    : __begin_(nullptr), __size_(0), __cap_(0) {
   __init_with_sentinel(__first, __last);
 }
 
@@ -2427,14 +2420,14 @@ template <class _Allocator>
 template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   __init_with_sentinel(__first, __last);
 }
 
 template <class _Allocator>
 template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __default_init_tag()) {
+    : __begin_(nullptr), __size_(0), __cap_(0) {
   auto __n = static_cast<size_type>(std::distance(__first, __last));
   __init_with_size(__first, __last, __n);
 }
@@ -2443,7 +2436,7 @@ template <class _Allocator>
 template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   auto __n = static_cast<size_type>(std::distance(__first, __last));
   __init_with_size(__first, __last, __n);
 }
@@ -2452,7 +2445,7 @@ vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __la
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(initializer_list<value_type> __il)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __default_init_tag()) {
+    : __begin_(nullptr), __size_(0), __cap_(0) {
   size_type __n = static_cast<size_type>(__il.size());
   if (__n > 0) {
     __vallocate(__n);
@@ -2463,7 +2456,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(initializer_list<
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(initializer_list<value_type> __il, const allocator_type& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, static_cast<__storage_allocator>(__a)) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   size_type __n = static_cast<size_type>(__il.size());
   if (__n > 0) {
     __vallocate(__n);
@@ -2477,7 +2470,8 @@ template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v)
     : __begin_(nullptr),
       __size_(0),
-      __cap_alloc_(0, __storage_traits::select_on_container_copy_construction(__v.__alloc())) {
+      __cap_(0),
+      __alloc_(__storage_traits::select_on_container_copy_construction(__v.__alloc())) {
   if (__v.size() > 0) {
     __vallocate(__v.size());
     __construct_at_end(__v.begin(), __v.end(), __v.size());
@@ -2486,7 +2480,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v, const allocator_type& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __a) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
   if (__v.size() > 0) {
     __vallocate(__v.size());
     __construct_at_end(__v.begin(), __v.end(), __v.size());
@@ -2518,7 +2512,8 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocat
 #endif
     : __begin_(__v.__begin_),
       __size_(__v.__size_),
-      __cap_alloc_(std::move(__v.__cap_alloc_)) {
+      __cap_(__v.__cap_),
+      __alloc_(std::move(__v.__alloc_)) {
   __v.__begin_ = nullptr;
   __v.__size_  = 0;
   __v.__cap()  = 0;
@@ -2527,7 +2522,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocat
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator_type>& __a)
-    : __begin_(nullptr), __size_(0), __cap_alloc_(0, __a) {
+    : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
   if (__a == allocator_type(__v.__alloc())) {
     this->__begin_ = __v.__begin_;
     this->__size_  = __v.__size_;

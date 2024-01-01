@@ -1400,13 +1400,13 @@ class __packaged_task_func;
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
 class __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)> : public __packaged_task_base<_Rp(_ArgTypes...)> {
-  __compressed_pair<_Fp, _Alloc> __f_;
+  _LIBCPP_COMPRESSED_PAIR(_Fp, __func_, _Alloc, __alloc_);
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(const _Fp& __f) : __f_(__f, __default_init_tag()) {}
-  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(_Fp&& __f) : __f_(std::move(__f), __default_init_tag()) {}
-  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(const _Fp& __f, const _Alloc& __a) : __f_(__f, __a) {}
-  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(_Fp&& __f, const _Alloc& __a) : __f_(std::move(__f), __a) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(const _Fp& __f) : __func_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(_Fp&& __f) : __func_(std::move(__f)) {}
+  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(const _Fp& __f, const _Alloc& __a) : __func_(__f), __alloc_(__a) {}
+  _LIBCPP_HIDE_FROM_ABI __packaged_task_func(_Fp&& __f, const _Alloc& __a) : __func_(std::move(__f)), __alloc_(__a) {}
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __move_to(__packaged_task_base<_Rp(_ArgTypes...)>*) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy();
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy_deallocate();
@@ -1416,12 +1416,13 @@ public:
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
 void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__move_to(
     __packaged_task_base<_Rp(_ArgTypes...)>* __p) _NOEXCEPT {
-  ::new ((void*)__p) __packaged_task_func(std::move(__f_.first()), std::move(__f_.second()));
+  ::new ((void*)__p) __packaged_task_func(std::move(__func_), std::move(__alloc_));
 }
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
 void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy() {
-  __f_.~__compressed_pair<_Fp, _Alloc>();
+  __func_.~_Fp();
+  __alloc_.~_Alloc();
 }
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
@@ -1429,14 +1430,15 @@ void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy_deallocate() 
   typedef typename __allocator_traits_rebind<_Alloc, __packaged_task_func>::type _Ap;
   typedef allocator_traits<_Ap> _ATraits;
   typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-  _Ap __a(__f_.second());
-  __f_.~__compressed_pair<_Fp, _Alloc>();
+  _Ap __a(__alloc_);
+  __func_.~_Fp();
+  __alloc_.~_Alloc();
   __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
 _Rp __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::operator()(_ArgTypes&&... __arg) {
-  return std::__invoke(__f_.first(), std::forward<_ArgTypes>(__arg)...);
+  return std::__invoke(__func_, std::forward<_ArgTypes>(__arg)...);
 }
 
 template <class _Callable>
