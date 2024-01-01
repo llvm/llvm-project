@@ -25,6 +25,8 @@
 #  pragma GCC system_header
 #endif
 
+#ifndef _LIBCPP_ABI_MICROSOFT
+
 namespace __cxxabiv1 {
 
 extern "C" {
@@ -43,6 +45,8 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
 }
 
 } // namespace __cxxabiv1
+
+#endif
 
 namespace std { // purposefully not using versioning namespace
 
