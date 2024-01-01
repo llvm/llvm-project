@@ -1231,19 +1231,6 @@ unsigned AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
   // Only extend the RHS within the instruction if there is a valid extend type.
   if (ExtendType != AArch64_AM::InvalidShiftExtend && RHS->hasOneUse() &&
       isValueAvailable(RHS)) {
-    if (const auto *SI = dyn_cast<BinaryOperator>(RHS))
-      if (const auto *C = dyn_cast<ConstantInt>(SI->getOperand(1)))
-        if ((SI->getOpcode() == Instruction::Shl) && (C->getZExtValue() < 4) &&
-            !NeedExtend) {
-          // We can only fold instructions that doesn't need extension because
-          // in add/sub instruction, the instruction is first extended, then
-          // shifted
-          Register RHSReg = getRegForValue(SI->getOperand(0));
-          if (!RHSReg)
-            return 0;
-          return emitAddSub_rx(UseAdd, RetVT, LHSReg, RHSReg, ExtendType,
-                               C->getZExtValue(), SetFlags, WantResult);
-        }
     Register RHSReg = getRegForValue(RHS);
     if (!RHSReg)
       return 0;
