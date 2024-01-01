@@ -37,13 +37,15 @@ What's New in Libc++ 19.0.0?
 
 Implemented Papers
 ------------------
+
 - P2637R3 - Member ``visit``
 
 
 Improvements and New Features
 -----------------------------
-TODO
 
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``, resulting in reduced
+  compile times and smaller debug information as well as better code gen if optimizations are disabled.
 
 Deprecations and Removals
 -------------------------
@@ -91,8 +93,10 @@ TODO
 
 ABI Affecting Changes
 ---------------------
-TODO
 
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``. This change results in
+  empty final types being placed at the beginning of the object instead of where the beginning of the
+  ``__compressed_pair`` subobject was. This is only observable by checking the address of the subobject.
 
 Build System Changes
 --------------------

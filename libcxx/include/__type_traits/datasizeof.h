@@ -55,10 +55,16 @@ struct __libcpp_datasizeof {
   // the use as an extension.
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-offsetof")
+  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Winvalid-offsetof")
   static const size_t value = offsetof(_FirstPaddingByte<>, __first_padding_byte_);
   _LIBCPP_DIAGNOSTIC_POP
 #endif   // __has_extension(datasizeof)
 };
+
+#if !__has_extension(datasizeof)
+template <class _Tp>
+struct __libcpp_datasizeof<_Tp&> : __libcpp_datasizeof<_Tp> {};
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
