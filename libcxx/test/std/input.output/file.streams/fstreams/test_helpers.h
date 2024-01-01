@@ -31,7 +31,7 @@
 #  include "platform_support.h"
 
 #  if defined(_LIBCPP_WIN32API)
-using HandleT = void*;
+using HandleT = void*; // HANDLE
 
 bool is_handle_valid([[HandleT handle) {
   if (LPBY_HANDLE_FILE_INFORMATION & pFileInformation; !GetFileInformationByHandle(handle, &lpFileInformation))
@@ -39,7 +39,7 @@ bool is_handle_valid([[HandleT handle) {
   return true;
 };
 #  elif __has_include(<unistd.h>) // POSIX
-using HandleT = int;
+using HandleT = int; // POSIX file descriptor
 
 bool is_handle_valid(HandleT fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
 #  else
