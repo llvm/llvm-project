@@ -31,13 +31,17 @@
 #  include "platform_support.h"
 
 #  if defined(_LIBCPP_WIN32API)
-bool is_handle_valid([[void* handle) {
+using HandleT = void*;
+
+bool is_handle_valid([[HandleT handle) {
   if (LPBY_HANDLE_FILE_INFORMATION & pFileInformation; !GetFileInformationByHandle(handle, &lpFileInformation))
     return false;
   return true;
 };
 #  elif __has_include(<unistd.h>) // POSIX
-bool is_handle_valid(int fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
+using HandleT = int;
+
+bool is_handle_valid(HandleT fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
 #  else
 #    error "Provide a native file handle!"
 #  endif
@@ -54,13 +58,6 @@ void test_native_handle() {
   f.open(p);
   assert(f.is_open());
   assert(f.native_handle() == f.rdbuf()->native_handle());
-#  if defined(_LIBCPP_WIN32API)
-  using HandleT = void*;
-#  elif __has_include(<unistd.h>) // POSIX
-  using HandleT = int;
-#  else
-#    error "Provide a native file handle!"
-#  endif
   std::same_as<HandleT> decltype(auto) handle = f.native_handle();
   assert(is_handle_valid(handle));
   std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();

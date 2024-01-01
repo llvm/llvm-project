@@ -30,13 +30,6 @@ void test() {
   std::filesystem::path p = get_temp_file_name();
   f.open(p, std::ios_base::in);
   assert(f.is_open());
-#if defined(_LIBCPP_WIN32API)
-  using HandleT = void*;
-#elif __has_include(<unistd.h>) // POSIX
-  using HandleT = int;
-#else
-#  error "Provide a native file handle!"
-#endif
   std::same_as<HandleT> decltype(auto) handle = f.native_handle();
   assert(is_handle_valid(handle));
   std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
