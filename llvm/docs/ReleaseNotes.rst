@@ -146,6 +146,11 @@ Changes to the RISC-V Backend
   and is no longer experimental.  However, the C intrinsics for these extensions
   are still experimental.  To use the C intrinsics for these extensions,
   ``-menable-experimental-extensions`` needs to be passed to Clang.
+* XSfcie extension and SiFive CSRs and instructions that were associated with
+  it have been removed. None of these CSRs and instructions were part of
+  "SiFive Custom Instruction Extension" as SiFive defines it. The LLVM project
+  needs to work with SiFive to define and document real extension names for
+  individual CSRs and instructions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -172,6 +177,11 @@ Changes to the X86 Backend
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
 * ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 * ``-mapxf`` is supported.
+* Marking global variables with ``code_model = "small"/"large"`` in the IR now
+  overrides the global code model to allow 32-bit relocations or require 64-bit
+  relocations to the global variable.
+* The medium code model's code generation was audited to be more similar to the
+  small code model where possible.
 
 Changes to the OCaml bindings
 -----------------------------

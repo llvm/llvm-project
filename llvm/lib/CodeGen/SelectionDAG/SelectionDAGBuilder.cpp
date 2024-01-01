@@ -10627,8 +10627,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     else if (CLI.RetZExt)
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
-    for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
-      EVT VT = RetTys[I];
+    for (EVT VT : RetTys) {
       MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
                                                      CLI.CallConv, VT);
       unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),

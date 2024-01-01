@@ -2480,7 +2480,6 @@ define void @load_i8_stride5_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,7,7,7]
 ; SSE-NEXT:    psllq $48, %xmm0
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm7, %xmm4
 ; SSE-NEXT:    movdqa %xmm7, %xmm1
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
 ; SSE-NEXT:    pandn %xmm5, %xmm1
@@ -2537,7 +2536,7 @@ define void @load_i8_stride5_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pandn %xmm1, %xmm2
 ; SSE-NEXT:    movdqa %xmm8, %xmm1
 ; SSE-NEXT:    pandn {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm7, %xmm0
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
 ; SSE-NEXT:    pandn %xmm4, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill

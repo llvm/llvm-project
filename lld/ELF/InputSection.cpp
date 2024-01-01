@@ -898,10 +898,16 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const TargetInfo &target = *elf::target;
   const auto emachine = config->emachine;
   const bool isDebug = isDebugSection(*this);
-  const bool isDebugLocOrRanges =
-      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
+  if (isDebug) {
+    if (name == ".debug_loc" || name == ".debug_ranges")
+      tombstone = 1;
+    else if (name == ".debug_names")
+      tombstone = UINT64_MAX; // tombstone value
+    else
+      tombstone = 0;
+  }
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
@@ -946,8 +952,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       return;
     }
 
-    if (tombstone ||
-        (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
+    if (tombstone && (expr == R_ABS || expr == R_DTPREL)) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -978,8 +983,13 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // value. Enable -1 in a future release.
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
-        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
-                                         : (isDebugLocOrRanges ? 1 : 0);
+        uint64_t value = SignExtend64<bits>(*tombstone);
+        // For a 32-bit local TU reference in .debug_names, X86_64::relocate
+        // requires that the unsigned value for R_X86_64_32 is truncated to
+        // 32-bit. Other 64-bit targets's don't discern signed/unsigned 32-bit
+        // absolute relocations and do not need this change.
+        if (emachine == EM_X86_64 && type == R_X86_64_32)
+          value = static_cast<uint32_t>(value);
         target.relocateNoSym(bufLoc, type, value);
         continue;
       }

@@ -1625,6 +1625,22 @@ gentbl_cc_library(
     deps = [":EmitCTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "EmitCPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=EmitC",
+            ],
+            "include/mlir/Dialect/EmitC/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/EmitC/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
 cc_library(
     name = "TargetCpp",
     srcs = glob([
@@ -3645,6 +3661,25 @@ cc_library(
 )
 
 cc_library(
+    name = "EmitCTransforms",
+    srcs = glob([
+        "lib/Dialect/EmitC/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/EmitC/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+        ":EmitCPassIncGen",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "AsyncDialect",
     srcs = glob([
         "lib/Dialect/Async/IR/*.cpp",
@@ -5422,6 +5457,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":GPUPassIncGen",
+        ":IR",
         ":Pass",
         ":SPIRVDialect",
         ":Support",
@@ -8841,6 +8877,7 @@ cc_library(
         ":ConvertToLLVM",
         ":DLTIDialect",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":FuncDialect",
         ":FuncToLLVM",
         ":FuncToSPIRV",
@@ -9324,6 +9361,7 @@ cc_binary(
         ":MlirJitRunner",
         ":Pass",
         ":ReconcileUnrealizedCasts",
+	":SCFDialect",
         ":SPIRVDialect",
         ":SPIRVTransforms",
         ":ToLLVMIRTranslation",

@@ -332,10 +332,8 @@ enum NodeType : unsigned {
 
   // Vector select with an additional VL operand. This operation is unmasked.
   VSELECT_VL,
-  // Vector select with operand #2 (the value when the condition is false) tied
-  // to the destination and an additional VL operand. This operation is
-  // unmasked.
-  VP_MERGE_VL,
+  // General vmerge node with mask, true, false, passthru, and vl operands.
+  VMERGE_VL,
 
   // Mask binary operators.
   VMAND_VL,
@@ -910,6 +908,7 @@ private:
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;

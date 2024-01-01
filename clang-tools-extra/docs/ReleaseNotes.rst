@@ -119,14 +119,21 @@ Improvements to clang-tidy
 
 - Improved `--dump-config` to print check options in alphabetical order.
 
-- Improved :program:`clang-tidy-diff.py` script. It now returns exit code `1`
-  if any :program:`clang-tidy` subprocess exits with a non-zero code or if
-  exporting fixes fails. It now accepts a directory as a value for
-  `-export-fixes` to export individual yaml files for each compilation unit.
+- Improved :program:`clang-tidy-diff.py` script. 
+    * Return exit code `1` if any :program:`clang-tidy` subprocess exits with
+      a non-zero code or if exporting fixes fails.
+
+    * Accept a directory as a value for `-export-fixes` to export individual
+      yaml files for each compilation unit.
+
+    * Introduce a `-config-file` option that forwards a configuration file to
+      :program:`clang-tidy`. Corresponds to the `--config-file` option in
+      :program:`clang-tidy`.
 
 - Improved :program:`run-clang-tidy.py` script. It now accepts a directory
   as a value for `-export-fixes` to export individual yaml files for each
   compilation unit.
+
 
 New checks
 ^^^^^^^^^^
@@ -167,6 +174,11 @@ New checks
   Detects potentially unintentional and redundant conversions where a value is
   extracted from an optional-like type and then used to create a new instance
   of the same optional-like type.
+
+- New :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check.
+
+  Warns when a local non trivial variable is unused within a function.
 
 - New :doc:`cppcoreguidelines-no-suspend-with-lock
   <clang-tidy/checks/cppcoreguidelines/no-suspend-with-lock>` check.
@@ -396,7 +408,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to fix function pointer and
-  forward declared ``typedef`` correctly.
+  forward declared ``typedef`` correctly. Added option `IgnoreExternC` to ignore ``typedef``
+  declaration in ``extern "C"`` scope.
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
@@ -441,7 +454,10 @@ Changes in existing checks
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
   Added support for C++20 ``concept`` declarations. ``Camel_Snake_Case`` and
-  ``camel_Snake_Case`` now detect more invalid identifier names.
+  ``camel_Snake_Case`` now detect more invalid identifier names. Fields in
+  anonymous records (i.e. anonymous structs and unions) now can be checked with
+  the naming rules associated with their enclosing scopes rather than the naming
+  rules of public struct/union members.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
@@ -449,9 +465,17 @@ Changes in existing checks
   `AllowPointerConditions` options. It also now provides more consistent
   suggestions when parentheses are added to the return value.
 
+- Improved :doc:`readability-misleading-indentation
+  <clang-tidy/checks/readability/misleading-indentation>` check to ignore
+  false-positives for line started with empty macro.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
+
+- Improved :doc:`readability-simplify-subscript-expr
+  <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
+  the default value of the `Types` option to include ``std::span``.
 
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to

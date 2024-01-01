@@ -2353,14 +2353,14 @@ def int_amdgcn_s_get_waveid_in_workgroup :
   Intrinsic<[llvm_i32_ty], [],
     [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-class AMDGPUGlobalAtomicRtn<LLVMType vt> : Intrinsic <
+class AMDGPUAtomicRtn<LLVMType vt> : Intrinsic <
   [vt],
   [llvm_anyptr_ty,    // vaddr
    vt],               // vdata(VGPR)
   [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree], "",
   [SDNPMemOperand]>;
 
-def int_amdgcn_global_atomic_csub : AMDGPUGlobalAtomicRtn<llvm_i32_ty>;
+def int_amdgcn_global_atomic_csub : AMDGPUAtomicRtn<llvm_i32_ty>;
 
 // uint4 llvm.amdgcn.image.bvh.intersect.ray <node_ptr>, <ray_extent>, <ray_origin>,
 //                                           <ray_dir>, <ray_inv_dir>, <texture_descr>
@@ -2486,10 +2486,10 @@ def int_amdgcn_permlanex16_var : ClangBuiltin<"__builtin_amdgcn_permlanex16_var"
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]>;
 
-def int_amdgcn_flat_atomic_fmin_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmax_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_global_atomic_fmin_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_global_atomic_fmax_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmin_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmax_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmin_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
@@ -2692,7 +2692,7 @@ def int_amdgcn_udot8 :
 // gfx908 intrinsics
 // ===----------------------------------------------------------------------===//
 
-def int_amdgcn_global_atomic_fadd : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fadd : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 // llvm.amdgcn.mfma.*.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
 class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
@@ -2728,11 +2728,11 @@ def int_amdgcn_mfma_f32_16x16x8bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  llvm_v
 // gfx90a intrinsics
 // ===----------------------------------------------------------------------===//
 
-def int_amdgcn_global_atomic_fmin : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_global_atomic_fmax : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fadd   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmin   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmax   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmin : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmax : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fadd   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmin   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmax   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 def int_amdgcn_mfma_f32_32x32x4bf16_1k  : AMDGPUMfmaIntrinsic<llvm_v32f32_ty, llvm_v4i16_ty>;
 def int_amdgcn_mfma_f32_16x16x4bf16_1k  : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v4i16_ty>;
@@ -2751,8 +2751,8 @@ def int_amdgcn_mfma_f64_4x4x4f64        : AMDGPUMfmaIntrinsic<llvm_double_ty, ll
 // ===----------------------------------------------------------------------===//
 
 // bf16 atomics use v2i16 argument since there is no bf16 data type in the llvm.
-def int_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUGlobalAtomicRtn<llvm_v2i16_ty>;
-def int_amdgcn_flat_atomic_fadd_v2bf16   : AMDGPUGlobalAtomicRtn<llvm_v2i16_ty>;
+def int_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUAtomicRtn<llvm_v2i16_ty>;
+def int_amdgcn_flat_atomic_fadd_v2bf16   : AMDGPUAtomicRtn<llvm_v2i16_ty>;
 def int_amdgcn_ds_fadd_v2bf16 : DefaultAttrsIntrinsic<
     [llvm_v2i16_ty],
     [LLVMQualPointerType<3>, llvm_v2i16_ty],
