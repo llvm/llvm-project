@@ -14,7 +14,6 @@ set(LIBCXX_SOURCES
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
   filesystem/path.cpp
-  fstream.cpp
   functional.cpp
   hash.cpp
   include/apple_availability.h
@@ -86,6 +85,7 @@ endif()
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
     include/sso_allocator.h
+    fstream.cpp
     ios.cpp
     ios.instantiations.cpp
     iostream.cpp
