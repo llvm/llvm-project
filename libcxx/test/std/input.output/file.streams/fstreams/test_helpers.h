@@ -51,19 +51,29 @@ void test_native_handle() {
   static_assert(
       std::is_same_v<typename std::basic_filebuf<CharT>::native_handle_type, typename StreamT::native_handle_type>);
 
-  StreamT f;
+  HandleT native_handle{};
+  HandleT const_native_handle{};
 
-  assert(!f.is_open());
-  std::filesystem::path p = get_temp_file_name();
-  f.open(p);
-  assert(f.is_open());
-  assert(f.native_handle() == f.rdbuf()->native_handle());
-  std::same_as<HandleT> decltype(auto) handle = f.native_handle();
-  assert(is_handle_valid(handle));
-  std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
-  assert(is_handle_valid(const_handle));
-  static_assert(noexcept(f.native_handle()));
-  static_assert(noexcept(std::as_const(f).native_handle()));
+  {
+    StreamT f;
+
+    assert(!f.is_open());
+    std::filesystem::path p = get_temp_file_name();
+    f.open(p);
+    assert(f.is_open());
+    assert(f.native_handle() == f.rdbuf()->native_handle());
+    std::same_as<HandleT> decltype(auto) handle = f.native_handle();
+    native_handle                               = handle;
+    assert(is_handle_valid(native_handle));
+    std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
+    const_native_handle                               = const_handle;
+    assert(is_handle_valid(const_native_handle));
+    static_assert(noexcept(f.native_handle()));
+    static_assert(noexcept(std::as_const(f).native_handle()));
+  }
+
+  assert(!is_handle_valid(native_handle));
+  assert(!is_handle_valid(const_native_handle));
 }
 
 #endif // _LIBCPP_STD_VER >= 26
