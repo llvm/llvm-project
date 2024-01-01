@@ -245,6 +245,7 @@ set(files
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
+  __atomic/to_gcc_order.h
   __availability
   __bit/bit_cast.h
   __bit/bit_ceil.h

@@ -11,6 +11,7 @@
 
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
+#include <__atomic/to_gcc_order.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
@@ -60,32 +61,6 @@ struct __cxx_atomic_base_impl {
   _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp value) _NOEXCEPT : __a_value(value) {}
   _Tp __a_value;
 };
-
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_order(memory_order __order) {
-  // Avoid switch statement to make this a constexpr.
-  return __order == memory_order_relaxed
-           ? __ATOMIC_RELAXED
-           : (__order == memory_order_acquire
-                  ? __ATOMIC_ACQUIRE
-                  : (__order == memory_order_release
-                         ? __ATOMIC_RELEASE
-                         : (__order == memory_order_seq_cst
-                                ? __ATOMIC_SEQ_CST
-                                : (__order == memory_order_acq_rel ? __ATOMIC_ACQ_REL : __ATOMIC_CONSUME))));
-}
-
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_failure_order(memory_order __order) {
-  // Avoid switch statement to make this a constexpr.
-  return __order == memory_order_relaxed
-           ? __ATOMIC_RELAXED
-           : (__order == memory_order_acquire
-                  ? __ATOMIC_ACQUIRE
-                  : (__order == memory_order_release
-                         ? __ATOMIC_RELAXED
-                         : (__order == memory_order_seq_cst
-                                ? __ATOMIC_SEQ_CST
-                                : (__order == memory_order_acq_rel ? __ATOMIC_ACQUIRE : __ATOMIC_CONSUME))));
-}
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val) {

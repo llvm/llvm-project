@@ -21,6 +21,7 @@
 #include <__atomic/check_memory_order.h>
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/is_always_lock_free.h>
+#include <__atomic/to_gcc_order.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/is_floating_point.h>

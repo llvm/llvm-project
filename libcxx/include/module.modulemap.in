@@ -1094,6 +1094,7 @@ module std_private_atomic_fence               [system] { header "__atomic/fence.
 module std_private_atomic_is_always_lock_free [system] { header "__atomic/is_always_lock_free.h" }
 module std_private_atomic_kill_dependency     [system] { header "__atomic/kill_dependency.h" }
 module std_private_atomic_memory_order        [system] { header "__atomic/memory_order.h" }
+module std_private_atomic_to_gcc_order        [system] { header "__atomic/to_gcc_order.h" }
 
 module std_private_bit_bit_cast       [system] { header "__bit/bit_cast.h" }
 module std_private_bit_bit_ceil       [system] { header "__bit/bit_ceil.h" }
