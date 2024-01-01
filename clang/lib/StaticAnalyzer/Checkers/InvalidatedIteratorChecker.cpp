@@ -35,7 +35,7 @@ class InvalidatedIteratorChecker
                                    "Misuse of STL APIs"};
 
   void verifyAccess(CheckerContext &C, const SVal &Val) const;
-  void reportBug(const StringRef &Message, const SVal &Val, CheckerContext &C,
+  void reportBug(StringRef Message, SVal Val, CheckerContext &C,
                  ExplodedNode *ErrNode) const;
 
 public:
@@ -121,8 +121,8 @@ void InvalidatedIteratorChecker::verifyAccess(CheckerContext &C, const SVal &Val
   }
 }
 
-void InvalidatedIteratorChecker::reportBug(const StringRef &Message,
-                                           const SVal &Val, CheckerContext &C,
+void InvalidatedIteratorChecker::reportBug(StringRef Message, SVal Val,
+                                           CheckerContext &C,
                                            ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(InvalidatedBugType, Message,
                                                     ErrNode);
