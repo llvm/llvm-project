@@ -110,6 +110,20 @@ TEST(PresburgerSpaceTest, removeVarRangeIdentifier) {
   EXPECT_EQ(space.getId(VarKind::Range, 1), Identifier(&identifiers[5]));
 }
 
+TEST(PresburgerSpaceTest, IdentifierIsEqual) {
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(1, 2, 0, 0);
+  space.resetIds();
+
+  int identifiers[2] = {0, 1};
+  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
+  space.getId(VarKind::Range, 0) = Identifier(&identifiers[0]);
+  space.getId(VarKind::Range, 1) = Identifier(&identifiers[1]);
+
+  EXPECT_EQ(space.getId(VarKind::Domain, 0), space.getId(VarKind::Range, 0));
+  EXPECT_FALSE(
+      space.getId(VarKind::Range, 0).isEqual(space.getId(VarKind::Range, 1)));
+}
+
 TEST(PresburgerSpaceTest, convertVarKind) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 0, 0);
   space.resetIds();

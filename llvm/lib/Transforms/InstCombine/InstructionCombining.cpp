@@ -2471,14 +2471,26 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
       if (TyAllocSize == 1) {
         // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y),
-        // but only if both point to the same underlying object (otherwise
-        // provenance is not necessarily retained).
+        // but only if the result pointer is only used as if it were an integer,
+        // or both point to the same underlying object (otherwise provenance is
+        // not necessarily retained).
         Value *X = GEP.getPointerOperand();
         Value *Y;
         if (match(GEP.getOperand(1),
                   m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
-            getUnderlyingObject(X) == getUnderlyingObject(Y))
-          return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
+            GEPType == Y->getType()) {
+          bool HasSameUnderlyingObject =
+              getUnderlyingObject(X) == getUnderlyingObject(Y);
+          bool Changed = false;
+          GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            bool ShouldReplace = HasSameUnderlyingObject ||
+                                 isa<ICmpInst>(U.getUser()) ||
+                                 isa<PtrToIntInst>(U.getUser());
+            Changed |= ShouldReplace;
+            return ShouldReplace;
+          });
+          return Changed ? &GEP : nullptr;
+        }
       } else {
         // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
         Value *V;
