@@ -30,7 +30,8 @@ _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) no
   if (__handle == -1)
     return nullptr;
   return reinterpret_cast<void*>(__handle);
+}
 
 #endif
 
-  _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD
