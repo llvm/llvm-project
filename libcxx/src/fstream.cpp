@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
 
-// Confirm that `HANDLE` is `void*`
+// Confirm that `HANDLE` is `void*` as implemented in `basic_filebuf`
 static_assert(std::same_as<HANDLE, void*>);
 
 _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept {
