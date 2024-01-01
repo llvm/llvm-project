@@ -32,7 +32,8 @@ class IteratorRangeChecker
                    check::PreStmt<ArraySubscriptExpr>,
                    check::PreStmt<MemberExpr>> {
 
-  std::unique_ptr<BugType> OutOfRangeBugType;
+  const BugType OutOfRangeBugType{this, "Iterator out of range",
+                                  "Misuse of STL APIs"};
 
   void verifyDereference(CheckerContext &C, SVal Val) const;
   void verifyIncrement(CheckerContext &C, SVal Iter) const;
@@ -46,8 +47,6 @@ class IteratorRangeChecker
                  ExplodedNode *ErrNode) const;
 
 public:
-  IteratorRangeChecker();
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
@@ -70,11 +69,6 @@ bool isBehindPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
 bool isZero(ProgramStateRef State, const NonLoc &Val);
 
 } //namespace
-
-IteratorRangeChecker::IteratorRangeChecker() {
-  OutOfRangeBugType.reset(
-      new BugType(this, "Iterator out of range", "Misuse of STL APIs"));
-}
 
 void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
                                         CheckerContext &C) const {
@@ -278,7 +272,7 @@ void IteratorRangeChecker::verifyNext(CheckerContext &C, SVal LHS,
 void IteratorRangeChecker::reportBug(const StringRef &Message, SVal Val,
                                      CheckerContext &C,
                                      ExplodedNode *ErrNode) const {
-  auto R = std::make_unique<PathSensitiveBugReport>(*OutOfRangeBugType, Message,
+  auto R = std::make_unique<PathSensitiveBugReport>(OutOfRangeBugType, Message,
                                                     ErrNode);
 
   const auto *Pos = getIteratorPosition(C.getState(), Val);
