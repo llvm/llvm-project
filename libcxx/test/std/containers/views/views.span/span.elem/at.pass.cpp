@@ -82,6 +82,17 @@ void test_exceptions() {
     const std::span arrSpan{arr};
 
     try {
+      using SizeT = typename decltype(arrSpan)::size_type;
+      std::ignore = arrSpan.at(std::numeric_limits<SizeT>::max());
+      assert(false);
+    } catch ([[maybe_unused]] const std::out_of_range& e) {
+      // pass
+      LIBCPP_ASSERT(e.what() == "span"s);
+    } catch (...) {
+      assert(false);
+    }
+
+    try {
       std::ignore = arrSpan.at(arr.size());
       assert(false);
     } catch ([[maybe_unused]] const std::out_of_range& e) {
@@ -120,6 +131,17 @@ void test_exceptions() {
   {
     std::vector vec{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
     const std::span vecSpan{vec};
+
+    try {
+      using SizeT = typename decltype(vecSpan)::size_type;
+      std::ignore = vecSpan.at(std::numeric_limits<SizeT>::max());
+      assert(false);
+    } catch ([[maybe_unused]] const std::out_of_range& e) {
+      // pass
+      LIBCPP_ASSERT(e.what() == "span"s);
+    } catch (...) {
+      assert(false);
+    }
 
     try {
       std::ignore = vecSpan.at(vec.size());
