@@ -209,10 +209,20 @@ struct __atomic_ref_base<_Tp, /*_IsIntegral=*/false, /*_IsFloatingPoint=*/true>
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    return __atomic_fetch_add(this->__ptr_, __arg, __to_gcc_order(__order));
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = __old + __arg;
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = __old + __arg;
+    }
+    return __old;
   }
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    return __atomic_fetch_sub(this->__ptr_, __arg, __to_gcc_order(__order));
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new = __old - __arg;
+    while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
+      __new = __old - __arg;
+    }
+    return __old;
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
