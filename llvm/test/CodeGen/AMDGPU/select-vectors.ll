@@ -152,6 +152,52 @@ define amdgpu_kernel void @v_select_v8i16(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
+; GCN-LABEL: {{^}}v_select_v16i16:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define amdgpu_kernel void @v_select_v16i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
+  %a = load <16 x i16>, ptr addrspace(1) %a.ptr
+  %b = load <16 x i16>, ptr addrspace(1) %b.ptr
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <16 x i16> %a, <16 x i16> %b
+  store <16 x i16> %select, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_select_v32i16:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define amdgpu_kernel void @v_select_v32i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
+  %a = load <32 x i16>, ptr addrspace(1) %a.ptr
+  %b = load <32 x i16>, ptr addrspace(1) %b.ptr
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <32 x i16> %a, <32 x i16> %b
+  store <32 x i16> %select, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 ; FIXME: Expansion with bitwise operations may be better if doing a
 ; vector select with SGPR inputs.
 

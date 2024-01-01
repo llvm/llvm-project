@@ -5304,7 +5304,7 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v8i16 ||
          VT == MVT::v8f16 || VT == MVT::v4f32 || VT == MVT::v16i16 ||
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32);
+         VT == MVT::v32f32 || VT == MVT::v32f16 || VT == MVT::v32i16);
 
   SDValue Lo0, Hi0;
   SDValue Op0 = Op.getOperand(0);
