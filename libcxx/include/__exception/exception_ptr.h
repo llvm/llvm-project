@@ -38,9 +38,9 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
     void*,
     std::type_info*,
     void(
-#if defined(_WIN32)
+#  if defined(_WIN32)
         __thiscall
-#endif
+#  endif
             *)(void*)) throw();
 }
 
