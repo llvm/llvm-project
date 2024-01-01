@@ -30,7 +30,9 @@ namespace {
 class MismatchedIteratorChecker
   : public Checker<check::PreCall, check::PreStmt<BinaryOperator>> {
 
-  std::unique_ptr<BugType> MismatchedBugType;
+  const BugType MismatchedBugType{this, "Iterator(s) mismatched",
+                                  "Misuse of STL APIs",
+                                  /*SuppressOnSink=*/true};
 
   void verifyMatch(CheckerContext &C, const SVal &Iter,
                    const MemRegion *Cont) const;
@@ -44,20 +46,12 @@ class MismatchedIteratorChecker
                  ExplodedNode *ErrNode) const;
 
 public:
-  MismatchedIteratorChecker();
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
 
 };
 
 } // namespace
-
-MismatchedIteratorChecker::MismatchedIteratorChecker() {
-  MismatchedBugType.reset(
-      new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs",
-                  /*SuppressOnSink=*/true));
-}
 
 void MismatchedIteratorChecker::checkPreCall(const CallEvent &Call,
                                              CheckerContext &C) const {
@@ -282,7 +276,7 @@ void MismatchedIteratorChecker::reportBug(const StringRef &Message,
                                           const SVal &Val2,
                                           CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
-  auto R = std::make_unique<PathSensitiveBugReport>(*MismatchedBugType, Message,
+  auto R = std::make_unique<PathSensitiveBugReport>(MismatchedBugType, Message,
                                                     ErrNode);
   R->markInteresting(Val1);
   R->markInteresting(Val2);
@@ -293,7 +287,7 @@ void MismatchedIteratorChecker::reportBug(const StringRef &Message,
                                           const SVal &Val, const MemRegion *Reg,
                                           CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
-  auto R = std::make_unique<PathSensitiveBugReport>(*MismatchedBugType, Message,
+  auto R = std::make_unique<PathSensitiveBugReport>(MismatchedBugType, Message,
                                                     ErrNode);
   R->markInteresting(Val);
   R->markInteresting(Reg);
