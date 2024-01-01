@@ -22965,6 +22965,84 @@ TEST_F(FormatTest, EmptyLinesInLambdas) {
                "};");
 }
 
+TEST_F(FormatTest, BreakBeforeLambdaBodyWrapping) {
+  verifyFormat("connect([]() {\n"
+               "  foo();\n"
+               "  bar();\n"
+               "});");
+
+  auto Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+
+  verifyFormat("connect(\n"
+               "    []()\n"
+               "    {\n"
+               "      foo();\n"
+               "      bar();\n"
+               "    });",
+               Style);
+
+  for (unsigned l : {0, 41}) {
+    Style.ColumnLimit = l;
+    verifyFormat("auto lambda = []() { return foo + bar; };", Style);
+  }
+  for (unsigned l : {40, 22}) {
+    Style.ColumnLimit = l;
+    verifyFormat("auto lambda = []()\n"
+                 "{ return foo + bar; };",
+                 Style);
+  }
+  Style.ColumnLimit = 21;
+  verifyFormat("auto lambda = []()\n"
+               "{\n"
+               "  return foo + bar;\n"
+               "};",
+               Style);
+
+  for (unsigned l : {0, 67}) {
+    Style.ColumnLimit = l;
+    verifyFormat(
+        "auto result = [](int foo, int bar) { return foo + bar; }(foo, bar);",
+        Style);
+  }
+  Style.ColumnLimit = 66;
+  verifyFormat("auto result = [](int foo, int bar)\n"
+               "{ return foo + bar; }(foo, bar);",
+               Style);
+
+  Style.ColumnLimit = 36;
+  verifyFormat("myFunc([&]() { return foo + bar; });", Style);
+  Style.ColumnLimit = 35;
+  verifyFormat("myFunc([&]()\n"
+               "       { return foo + bar; });",
+               Style);
+
+  Style = getGoogleStyleWithColumns(100);
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.IndentWidth = 4;
+  verifyFormat(
+      "void Func()\n"
+      "{\n"
+      "    []()\n"
+      "    {\n"
+      "        return TestVeryLongThingName::TestVeryLongFunctionName()\n"
+      "            .TestAnotherVeryVeryLongFunctionName();\n"
+      "    }\n"
+      "}\n",
+      Style);
+  verifyFormat(
+      "void Func()\n"
+      "{\n"
+      "    []()\n"
+      "    {\n"
+      "        return TestVeryLongThingName::TestVeryLongFunctionName()\n"
+      "            .TestAnotherVeryVeryVeryLongFunctionName();\n"
+      "    }\n"
+      "}\n",
+      Style);
+}
+
 TEST_F(FormatTest, FormatsBlocks) {
   FormatStyle ShortBlocks = getLLVMStyle();
   ShortBlocks.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
