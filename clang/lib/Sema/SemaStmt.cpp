@@ -3200,7 +3200,7 @@ static void DiagnoseForRangeConstVariableCopies(Sema &SemaRef,
   // (The function `getTypeSize` returns the size in bits.)
   ASTContext &Ctx = SemaRef.Context;
   if (Ctx.getTypeSize(VariableType) <= 64 * 8 &&
-      (VariableType.isTriviallyCopyableType(Ctx) ||
+      (VariableType.isTriviallyCopyConstructibleType(Ctx) ||
        hasTrivialABIAttr(VariableType)))
     return;
 
