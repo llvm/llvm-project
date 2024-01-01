@@ -25,20 +25,31 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
+  mutable IdentifierInfo *IILockGuard = nullptr;
+  mutable IdentifierInfo *IIUniqueLock = nullptr;
+  mutable bool IdentifierInfoInitialized = false;
 
-  mutable IdentifierInfo *IILockGuard, *IIUniqueLock;
+  const CallDescription LockFn{{"lock"}};
+  const CallDescription UnlockFn{{"unlock"}};
+  const CallDescription SleepFn{{"sleep"}};
+  const CallDescription GetcFn{{"getc"}};
+  const CallDescription FgetsFn{{"fgets"}};
+  const CallDescription ReadFn{{"read"}};
+  const CallDescription RecvFn{{"recv"}};
+  const CallDescription PthreadLockFn{{"pthread_mutex_lock"}};
+  const CallDescription PthreadTryLockFn{{"pthread_mutex_trylock"}};
+  const CallDescription PthreadUnlockFn{{"pthread_mutex_unlock"}};
+  const CallDescription MtxLock{{"mtx_lock"}};
+  const CallDescription MtxTimedLock{{"mtx_timedlock"}};
+  const CallDescription MtxTryLock{{"mtx_trylock"}};
+  const CallDescription MtxUnlock{{"mtx_unlock"}};
 
-  CallDescription LockFn, UnlockFn, SleepFn, GetcFn, FgetsFn, ReadFn, RecvFn,
-                  PthreadLockFn, PthreadTryLockFn, PthreadUnlockFn,
-                  MtxLock, MtxTimedLock, MtxTryLock, MtxUnlock;
+  const llvm::StringLiteral ClassLockGuard{"lock_guard"};
+  const llvm::StringLiteral ClassUniqueLock{"unique_lock"};
 
-  StringRef ClassLockGuard, ClassUniqueLock;
-
-  mutable bool IdentifierInfoInitialized;
-
-  std::unique_ptr<BugType> BlockInCritSectionBugType;
+  const BugType BlockInCritSectionBugType{
+      this, "Call to blocking function in critical section", "Blocking Error"};
 
   void initIdentifierInfo(ASTContext &Ctx) const;
 
@@ -47,8 +58,6 @@ class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
                                 CheckerContext &C) const;
 
 public:
-  BlockInCriticalSectionChecker();
-
   bool isBlockingFunction(const CallEvent &Call) const;
   bool isLockFunction(const CallEvent &Call) const;
   bool isUnlockFunction(const CallEvent &Call) const;
@@ -62,22 +71,6 @@ public:
 } // end anonymous namespace
 
 REGISTER_TRAIT_WITH_PROGRAMSTATE(MutexCounter, unsigned)
-
-BlockInCriticalSectionChecker::BlockInCriticalSectionChecker()
-    : IILockGuard(nullptr), IIUniqueLock(nullptr), LockFn({"lock"}),
-      UnlockFn({"unlock"}), SleepFn({"sleep"}), GetcFn({"getc"}),
-      FgetsFn({"fgets"}), ReadFn({"read"}), RecvFn({"recv"}),
-      PthreadLockFn({"pthread_mutex_lock"}),
-      PthreadTryLockFn({"pthread_mutex_trylock"}),
-      PthreadUnlockFn({"pthread_mutex_unlock"}), MtxLock({"mtx_lock"}),
-      MtxTimedLock({"mtx_timedlock"}), MtxTryLock({"mtx_trylock"}),
-      MtxUnlock({"mtx_unlock"}), ClassLockGuard("lock_guard"),
-      ClassUniqueLock("unique_lock"), IdentifierInfoInitialized(false) {
-  // Initialize the bug type.
-  BlockInCritSectionBugType.reset(
-      new BugType(this, "Call to blocking function in critical section",
-                        "Blocking Error"));
-}
 
 void BlockInCriticalSectionChecker::initIdentifierInfo(ASTContext &Ctx) const {
   if (!IdentifierInfoInitialized) {
@@ -151,7 +144,7 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
   llvm::raw_string_ostream os(msg);
   os << "Call to blocking function '" << Call.getCalleeIdentifier()->getName()
      << "' inside of critical section";
-  auto R = std::make_unique<PathSensitiveBugReport>(*BlockInCritSectionBugType,
+  auto R = std::make_unique<PathSensitiveBugReport>(BlockInCritSectionBugType,
                                                     os.str(), ErrNode);
   R->addRange(Call.getSourceRange());
   R->markInteresting(BlockDescSym);
