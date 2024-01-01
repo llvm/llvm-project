@@ -275,7 +275,7 @@ public:
 #    elif __has_include(<unistd.h>)
     return ::fileno(__file_);
 #    else
-#      error "Provide a way to determine the file native handle!
+#      error "Provide a way to determine the file native handle!"
 #    endif
   }
 #  endif
