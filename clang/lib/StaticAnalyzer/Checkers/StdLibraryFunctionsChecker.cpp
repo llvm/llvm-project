@@ -823,7 +823,7 @@ class StdLibraryFunctionsChecker
   using FunctionSummaryMapType = llvm::DenseMap<const FunctionDecl *, Summary>;
   mutable FunctionSummaryMapType FunctionSummaryMap;
 
-  mutable std::unique_ptr<BugType> BT_InvalidArg;
+  const BugType BT_InvalidArg{this, "Function call with invalid argument"};
   mutable bool SummariesInitialized = false;
 
   static SVal getArgSVal(const CallEvent &Call, ArgNo ArgN) {
@@ -875,11 +875,7 @@ private:
     VC->describe(ValueConstraint::Violation, Call, C.getState(), Summary,
                  MsgOs);
     Msg[0] = toupper(Msg[0]);
-    if (!BT_InvalidArg)
-      BT_InvalidArg = std::make_unique<BugType>(
-          CheckName, "Function call with invalid argument",
-          categories::LogicError);
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT_InvalidArg, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(BT_InvalidArg, Msg, N);
 
     for (ArgNo ArgN : VC->getArgsToTrack()) {
       bugreporter::trackExpressionValue(N, Call.getArgExpr(ArgN), *R);
