@@ -12,9 +12,11 @@
 #if _LIBCPP_STD_VER >= 26
 
 #  include <cassert>
+#  include <concepts>
 #  include <cstdio>
 #  include <fstream>
 #  include <filesystem>
+#  include <type_traits>
 #  include <utility>
 
 #  if defined(_LIBCPP_WIN32API)
@@ -29,12 +31,15 @@
 #  include "platform_support.h"
 
 #  if defined(_LIBCPP_WIN32API)
-bool is_handle_valid([[maybe_unused]] HANDLE handle) {
-  // TODO: Maybe test HANDLE with GetFileInformationByHandle??
+bool is_handle_valid([[void* handle) {
+  if (LPBY_HANDLE_FILE_INFORMATION & pFileInformation; !GetFileInformationByHandle(handle, &lpFileInformation))
+    return false;
   return true;
 };
-#  else // POSIX
+#  elif __has_include(<unistd.h>) // POSIX
 bool is_handle_valid(int fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
+#  else
+#    error "Provide a native file handle!"
 #  endif
 
 template <typename CharT, typename StreamT>
@@ -43,15 +48,25 @@ void test_native_handle() {
       std::is_same_v<typename std::basic_filebuf<CharT>::native_handle_type, typename StreamT::native_handle_type>);
 
   StreamT f;
-  static_assert(noexcept(f.native_handle()));
+
   assert(!f.is_open());
   std::filesystem::path p = get_temp_file_name();
   f.open(p);
   assert(f.is_open());
   assert(f.native_handle() == f.rdbuf()->native_handle());
-  assert(is_handle_valid(f.native_handle()));
-  assert(is_handle_valid(std::as_const(f).native_handle()));
+#  if defined(_LIBCPP_WIN32API)
+  using HandleT = void*;
+#  elif __has_include(<unistd.h>) // POSIX
+  using HandleT = int;
+#  else
+#    error "Provide a native file handle!"
+#  endif
+  std::same_as<HandleT> decltype(auto) handle = f.native_handle();
+  assert(is_handle_valid(handle));
+  std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
+  assert(is_handle_valid(const_handle));
   static_assert(noexcept(f.native_handle()));
+  static_assert(noexcept(std::as_const(f).native_handle()));
 }
 
 #endif // _LIBCPP_STD_VER >= 26

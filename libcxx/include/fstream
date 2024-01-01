@@ -238,7 +238,7 @@ public:
 #    elif __has_include(<unistd.h>)
   using native_handle_type = int; // POSIX file descriptor
 #    else
-#      error "Provide a file native handle!"
+#      error "Provide a native file handle!"
 #    endif
 #  endif
 
