@@ -23,13 +23,10 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
-#include <cinttypes>
-#include <concepts>
+#include <__type_traits/is_trivially_copyable.h>
 #include <cstddef>
-#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -231,7 +228,7 @@ struct __atomic_ref_base<_Tp, /*_IsIntegral=*/false, /*_IsFloatingPoint=*/true>
 
 template <class _Tp>
 struct atomic_ref : public __atomic_ref_base<_Tp> {
-  static_assert(is_trivially_copyable<_Tp>::value, "std::atomic_ref<T> requires that 'T' be a trivially copyable type");
+  static_assert(is_trivially_copyable_v<_Tp>, "std::atomic_ref<T> requires that 'T' be a trivially copyable type");
 
   using __base = __atomic_ref_base<_Tp>;
 
