@@ -234,9 +234,8 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
   auto Spelling = SM.getDecomposedSpellingLoc(Loc);
   bool InvalidSLocEntry = false;
   const auto SLocEntry = SM.getSLocEntry(Spelling.first, &InvalidSLocEntry);
-  if (InvalidSLocEntry) {
+  if (InvalidSLocEntry)
     return false;
-  }
   const StringRef SpellingFile = SLocEntry.getFile().getName();
   if (SpellingFile == "<scratch space>")
     return false;
