@@ -26,6 +26,8 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   State.MBB = nullptr;
   State.MRI = &MF.getRegInfo();
   State.TII = MF.getSubtarget().getInstrInfo();
+  // Ensure State.DL is zeroed to avoid potential UAF
+  memset(&(State.DL), 0, sizeof(DebugLoc));
   State.DL = DebugLoc();
   State.PCSections = nullptr;
   State.II = MachineBasicBlock::iterator();

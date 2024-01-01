@@ -74,6 +74,7 @@ LLVMContextImpl::~LLVMContextImpl() {
   for (auto *I : CLASS##s)                                                     \
     I->dropAllReferences();
 #include "llvm/IR/Metadata.def"
+  DistinctMDNodes.clear();
 
   // Also drop references that come from the Value bridges.
   for (auto &Pair : ValuesAsMetadata)
