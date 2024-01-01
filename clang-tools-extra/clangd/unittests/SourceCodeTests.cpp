@@ -813,6 +813,21 @@ TEST(SourceCodeTests, isKeywords) {
   EXPECT_FALSE(isKeyword("override", LangOpts));
 }
 
+TEST(SourceCodeTests, isSpelledInSource) {
+  Annotations Test(R"cpp(
+        int abc = 1;
+    )cpp");
+
+  ParsedAST AST = TestTU::withCode(Test.code()).build();
+  llvm::errs() << Test.code();
+  const SourceManager &SM = AST.getSourceManager();
+
+  EXPECT_TRUE(
+      isSpelledInSource(SM.getLocForStartOfFile(SM.getMainFileID()), SM));
+  EXPECT_TRUE(isSpelledInSource(SourceLocation(), SM));
+  EXPECT_FALSE(isSpelledInSource(SourceLocation::getFromRawEncoding(-1), SM));
+}
+
 struct IncrementalTestStep {
   llvm::StringRef Src;
   llvm::StringRef Contents;
