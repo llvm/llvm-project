@@ -1550,6 +1550,46 @@ public:
 
   /// Read of memory from a process.
   ///
+  /// This function will read memory from the current process's address space
+  /// and remove any traps that may have been inserted into the memory.
+  ///
+  /// This overloads accepts an ExecutionContext as additional argument. By
+  /// default, it calls the previous overload without the ExecutionContext
+  /// argument, but it can be overridden by Process subclasses.
+  ///
+  /// \param[in] vm_addr
+  ///     A virtual load address that indicates where to start reading
+  ///     memory from.
+  ///
+  /// \param[out] buf
+  ///     A byte buffer that is at least \a size bytes long that
+  ///     will receive the memory bytes.
+  ///
+  /// \param[in] size
+  ///     The number of bytes to read.
+  ///
+  /// \param[in] exe_ctx
+  ///    The current execution context, if available.
+  ///
+  /// \param[out] error
+  ///     An error that indicates the success or failure of this
+  ///     operation. If error indicates success (error.Success()),
+  ///     then the value returned can be trusted, otherwise zero
+  ///     will be returned.
+  ///
+  /// \return
+  ///     The number of bytes that were actually read into \a buf. If
+  ///     the returned number is greater than zero, yet less than \a
+  ///     size, then this function will get called again with \a
+  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
+  ///     returned in the case of an error.
+  virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                            ExecutionContext *exe_ctx, Status &error) {
+    return ReadMemory(vm_addr, buf, size, error);
+  }
+
+  /// Read of memory from a process.
+  ///
   /// This function has the same semantics of ReadMemory except that it
   /// bypasses caching.
   ///
