@@ -34,7 +34,7 @@ class InvalidatedIteratorChecker
   const BugType InvalidatedBugType{this, "Iterator invalidated",
                                    "Misuse of STL APIs"};
 
-  void verifyAccess(CheckerContext &C, const SVal &Val) const;
+  void verifyAccess(CheckerContext &C, SVal Val) const;
   void reportBug(StringRef Message, SVal Val, CheckerContext &C,
                  ExplodedNode *ErrNode) const;
 
@@ -109,7 +109,8 @@ void InvalidatedIteratorChecker::checkPreStmt(const MemberExpr *ME,
   verifyAccess(C, BaseVal);
 }
 
-void InvalidatedIteratorChecker::verifyAccess(CheckerContext &C, const SVal &Val) const {
+void InvalidatedIteratorChecker::verifyAccess(CheckerContext &C,
+                                              SVal Val) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos && !Pos->isValid()) {
