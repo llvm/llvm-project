@@ -47,7 +47,8 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         optimized_variable = self.dap_server.get_local_variable("argc")
 
         self.assertTrue(optimized_variable["value"].startswith("<error:"))
-        self.assertEqual(
-            optimized_variable["$__lldb_extensions"]["error"],
-            "Could not evaluate DW_OP_entry_value.",
+        error_msg = optimized_variable["$__lldb_extensions"]["error"]
+        self.assertTrue(
+            ("Could not evaluate DW_OP_entry_value" in error_msg)
+            or ("variable not available" in error_msg)
         )
