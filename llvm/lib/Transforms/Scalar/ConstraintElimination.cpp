@@ -1010,22 +1010,14 @@ void State::addInfoFor(BasicBlock &BB) {
       continue;
     }
 
-    if (match(&I, m_Intrinsic<Intrinsic::ssub_with_overflow>())) {
-      WorkList.push_back(
-          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
-      continue;
-    }
-
-    if (isa<MinMaxIntrinsic>(&I)) {
-      WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
-      continue;
-    }
-
-    Value *A, *B;
-    CmpInst::Predicate Pred;
-    // For now, just handle assumes with a single compare as condition.
-    if (match(&I, m_Intrinsic<Intrinsic::assume>(
-                      m_ICmp(Pred, m_Value(A), m_Value(B))))) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    Intrinsic::ID ID = II ? II->getIntrinsicID() : Intrinsic::not_intrinsic;
+    switch (ID) {
+    case Intrinsic::assume: {
+      Value *A, *B;
+      CmpInst::Predicate Pred;
+      if (!match(I.getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+        break;
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
         // holds on entry to BB.
@@ -1035,7 +1027,23 @@ void State::addInfoFor(BasicBlock &BB) {
         WorkList.emplace_back(
             FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
       }
+      break;
     }
+    // Enqueue ssub_with_overflow for simplification.
+    case Intrinsic::ssub_with_overflow:
+      WorkList.push_back(
+          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
+      break;
+    // Enqueue the intrinsics to add extra info.
+    case Intrinsic::abs:
+    case Intrinsic::umin:
+    case Intrinsic::umax:
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+      WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
+      break;
+    }
+
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
 
@@ -1693,6 +1701,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
 
     ICmpInst::Predicate Pred;
     if (!CB.isConditionFact()) {
+      Value *X;
+      if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
+        // TODO: Add CB.Inst >= 0 fact.
+        AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
+        continue;
+      }
+
       if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
         Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
         AddFact(Pred, MinMax, MinMax->getLHS());
