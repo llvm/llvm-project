@@ -31758,7 +31758,7 @@ static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
 
 static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG) {
-  unsigned IsData = cast<ConstantSDNode>(Op.getOperand(4))->getZExtValue();
+  unsigned IsData = Op.getConstantOperandVal(4);
 
   // We don't support non-data prefetch without PREFETCHI.
   // Just preserve the chain.

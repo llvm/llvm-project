@@ -2422,8 +2422,7 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
 
   SDValue Chain = N->getOperand(0);
-  unsigned Lane =
-    cast<ConstantSDNode>(N->getOperand(Vec0Idx + NumVecs))->getZExtValue();
+  unsigned Lane = N->getConstantOperandVal(Vec0Idx + NumVecs);
   EVT VT = N->getOperand(Vec0Idx).getValueType();
   bool is64BitVector = VT.is64BitVector();
 
@@ -2587,7 +2586,7 @@ void ARMDAGToDAGISel::SelectMVE_WB(SDNode *N, const uint16_t *Opcodes,
 
   Ops.push_back(N->getOperand(2)); // vector of base addresses
 
-  int32_t ImmValue = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  int32_t ImmValue = N->getConstantOperandVal(3);
   Ops.push_back(getI32Imm(ImmValue, Loc)); // immediate offset
 
   if (Predicated)
@@ -2622,7 +2621,7 @@ void ARMDAGToDAGISel::SelectMVE_LongShift(SDNode *N, uint16_t Opcode,
 
   // The shift count
   if (Immediate) {
-    int32_t ImmValue = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+    int32_t ImmValue = N->getConstantOperandVal(3);
     Ops.push_back(getI32Imm(ImmValue, Loc)); // immediate shift count
   } else {
     Ops.push_back(N->getOperand(3));
@@ -2630,7 +2629,7 @@ void ARMDAGToDAGISel::SelectMVE_LongShift(SDNode *N, uint16_t Opcode,
 
   // The immediate saturation operand, if any
   if (HasSaturationOperand) {
-    int32_t SatOp = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+    int32_t SatOp = N->getConstantOperandVal(4);
     int SatBit = (SatOp == 64 ? 0 : 1);
     Ops.push_back(getI32Imm(SatBit, Loc));
   }
@@ -2685,7 +2684,7 @@ void ARMDAGToDAGISel::SelectMVE_VSHLC(SDNode *N, bool Predicated) {
   // and then an immediate shift count
   Ops.push_back(N->getOperand(1));
   Ops.push_back(N->getOperand(2));
-  int32_t ImmValue = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  int32_t ImmValue = N->getConstantOperandVal(3);
   Ops.push_back(getI32Imm(ImmValue, Loc)); // immediate shift count
 
   if (Predicated)
@@ -4138,14 +4137,13 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     if (InGlue.getOpcode() == ARMISD::CMPZ) {
       if (InGlue.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
         SDValue Int = InGlue.getOperand(0);
-        uint64_t ID = cast<ConstantSDNode>(Int->getOperand(1))->getZExtValue();
+        uint64_t ID = Int->getConstantOperandVal(1);
 
         // Handle low-overhead loops.
         if (ID == Intrinsic::loop_decrement_reg) {
           SDValue Elements = Int.getOperand(2);
-          SDValue Size = CurDAG->getTargetConstant(
-            cast<ConstantSDNode>(Int.getOperand(3))->getZExtValue(), dl,
-                                 MVT::i32);
+          SDValue Size = CurDAG->getTargetConstant(Int.getConstantOperandVal(3),
+                                                   dl, MVT::i32);
 
           SDValue Args[] = { Elements, Size, Int.getOperand(0) };
           SDNode *LoopDec =
@@ -4715,7 +4713,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    unsigned IntNo = N->getConstantOperandVal(1);
     switch (IntNo) {
     default:
       break;
@@ -4732,9 +4730,9 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
         Opc = (IntNo == Intrinsic::arm_mrrc ? ARM::MRRC : ARM::MRRC2);
 
       SmallVector<SDValue, 5> Ops;
-      Ops.push_back(getI32Imm(cast<ConstantSDNode>(N->getOperand(2))->getZExtValue(), dl)); /* coproc */
-      Ops.push_back(getI32Imm(cast<ConstantSDNode>(N->getOperand(3))->getZExtValue(), dl)); /* opc */
-      Ops.push_back(getI32Imm(cast<ConstantSDNode>(N->getOperand(4))->getZExtValue(), dl)); /* CRm */
+      Ops.push_back(getI32Imm(N->getConstantOperandVal(2), dl)); /* coproc */
+      Ops.push_back(getI32Imm(N->getConstantOperandVal(3), dl)); /* opc */
+      Ops.push_back(getI32Imm(N->getConstantOperandVal(4), dl)); /* CRm */
 
       // The mrrc2 instruction in ARM doesn't allow predicates, the top 4 bits of the encoded
       // instruction will always be '1111' but it is possible in assembly language to specify
@@ -5181,7 +5179,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+    unsigned IntNo = N->getConstantOperandVal(0);
     switch (IntNo) {
     default:
       break;

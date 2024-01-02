@@ -2895,7 +2895,7 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2934,7 +2934,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2963,7 +2963,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(0);
   SDNode *Result;
   switch (IID) {
   case Intrinsic::hexagon_V6_vaddcarry: {
