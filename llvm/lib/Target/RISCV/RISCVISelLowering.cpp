@@ -12942,7 +12942,7 @@ struct NodeExtensionHelper {
     if (!Ext.has_value())
       return OrigOperand;
 
-    MVT NarrowVT = getNarrowType(Root);
+    MVT NarrowVT = getNarrowType(Root, Subtarget);
 
     SDValue Source = getSource();
     if (Source.getValueType() == NarrowVT)
@@ -12979,21 +12979,20 @@ struct NodeExtensionHelper {
   /// element by 2. E.g., if Root's type <2xi16> -> narrow type <2xi8>.
   /// \pre The size of the type of the elements of Root must be a multiple of 2
   /// and be greater than 16.
-  static MVT getNarrowType(const SDNode *Root) {
+  static MVT getNarrowType(const SDNode *Root,
+                           const RISCVSubtarget &Subtarget) {
     MVT VT = Root->getSimpleValueType(0);
 
     // Determine the narrow size.
     unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
-    // Determine the minimum narrow size.
-    unsigned MinSize = VT.isInteger() ? 8 : 16;
-
-    assert(NarrowSize >= MinSize &&
-           "Trying to extend something we can't represent");
 
     MVT NarrowScalarVT = VT.isInteger() ? MVT::getIntegerVT(NarrowSize)
                                         : MVT::getFloatingPointVT(NarrowSize);
     MVT NarrowVectorVT =
         MVT::getVectorVT(NarrowScalarVT, VT.getVectorElementCount());
+
+    assert(Subtarget.getTargetLowering()->isTypeLegal(NarrowVectorVT) &&
+           "Trying to extend something we can't represent");
     return NarrowVectorVT;
   }
 
