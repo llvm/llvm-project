@@ -143,3 +143,12 @@ define i32 @test_noundef_prop() {
   %ret = call i32 @test_ret_constant()
   ret i32 %ret
 }
+
+; Don't deduce noundef for functions with sanitize_memory.
+define i32 @test_ret_constant_msan() sanitize_memory {
+; CHECK-LABEL: define i32 @test_ret_constant_msan(
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    ret i32 0
+;
+  ret i32 0
+}
