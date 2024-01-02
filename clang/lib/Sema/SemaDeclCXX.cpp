@@ -17132,6 +17132,9 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
         case BuiltinType::WChar_U: {
           unsigned TyWidth = Context.getIntWidth(T);
           assert(8 <= TyWidth && TyWidth <= 32 && "Unexpected integer width");
+          if (V.getInt() >= (1 << 64)) {
+            return false;
+          }
           uint32_t CodeUnit = static_cast<uint32_t>(V.getInt().getZExtValue());
           WriteCharTypePrefix(BTy->getKind(), OS);
           OS << '\'';
