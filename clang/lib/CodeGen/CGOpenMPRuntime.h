@@ -1674,6 +1674,10 @@ public:
   /// Returns true if the variable is a local variable in untied task.
   bool isLocalVarInUntiedTask(CodeGenFunction &CGF, const VarDecl *VD) const;
 
+  // Returns whether the hint expressions for an architecture should be
+  // evaluated to decide which kind of atomic ops should be generated.
+  virtual bool needsHintsForFastFPAtomics() { return false; }
+
   /// Returns whether the current architecture supports fast FP atomics
   virtual bool supportFastFPAtomics() { return false; }
 

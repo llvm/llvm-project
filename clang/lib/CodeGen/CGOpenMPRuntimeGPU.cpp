@@ -4200,16 +4200,20 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
   llvm_unreachable("No support for other types currently.");
 }
 
+bool CGOpenMPRuntimeGPU::needsHintsForFastFPAtomics() {
+  return getCudaArch(CGM) == CudaArch::GFX90a;
+}
+
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
-    CudaArch Arch = getCudaArch(CGM);
-    switch (Arch) {
-    case CudaArch::GFX90a:
-    case CudaArch::GFX942:
-      return true;
-    default:
-        break;
-    }
-    return false;
+  CudaArch Arch = getCudaArch(CGM);
+  switch (Arch) {
+  case CudaArch::GFX90a:
+  case CudaArch::GFX942:
+    return true;
+  default:
+    break;
+  }
+  return false;
 }
 
 std::pair<bool, RValue>
@@ -4246,7 +4250,8 @@ CGOpenMPRuntimeGPU::emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
   FPAtomicArgs.push_back(UpdateFixed.getScalarVal());
 
   llvm::Value *CallInst = nullptr;
-  if (Update.getScalarVal()->getType()->isFloatTy()) {
+  if (Update.getScalarVal()->getType()->isFloatTy() &&
+      (getCudaArch(CGF.CGM) == CudaArch::GFX90a)) {
     // Fast FP atomics are not available for single precision address located in
     // FLAT address space.
     // We need to check the address space at runtime to determine
