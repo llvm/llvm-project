@@ -3731,13 +3731,13 @@ def G_AMDGPU_S_BUFFER_LOAD : AMDGPUGenericInstruction {
   let mayStore = 0;
 }
 
-def G_AMDGPU_S_MUL_U64_U32_PSEUDO : AMDGPUGenericInstruction {
+def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;
 }
 
-def G_AMDGPU_S_MUL_I64_I32_PSEUDO : AMDGPUGenericInstruction {
+def G_AMDGPU_S_MUL_I64_I32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;

@@ -2576,16 +2576,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
-  case AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO:
-  case AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO: {
+  case AMDGPU::G_AMDGPU_S_MUL_I64_I32:
+  case AMDGPU::G_AMDGPU_S_MUL_U64_U32: {
     // This is a special case for s_mul_u64. We use
-    // G_AMDGPU_S_MUL_I64_I32_PSEUDO opcode to represent an s_mul_u64 operation
+    // G_AMDGPU_S_MUL_I64_I32 opcode to represent an s_mul_u64 operation
     // where the 33 higher bits are sign-extended and
-    // G_AMDGPU_S_MUL_U64_U32_PSEUDO opcode to represent an s_mul_u64 operation
+    // G_AMDGPU_S_MUL_U64_U32 opcode to represent an s_mul_u64 operation
     // where the 32 higher bits are zero-extended. In case scalar registers are
     // selected, both opcodes are lowered as s_mul_u64. If the vector registers
-    // are selected, then G_AMDGPU_S_MUL_I64_I32_PSEUDO and
-    // G_AMDGPU_S_MUL_U64_U32_PSEUDO are lowered with a vector mad instruction.
+    // are selected, then G_AMDGPU_S_MUL_I64_I32 and
+    // G_AMDGPU_S_MUL_U64_U32 are lowered with a vector mad instruction.
 
     // Insert basic copies.
     applyDefaultMapping(OpdMapper);
@@ -2600,7 +2600,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     const RegisterBank *DstBank =
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
 
-    // Replace G_AMDGPU_S_MUL_I64_I32_PSEUDO and G_AMDGPU_S_MUL_U64_U32_PSEUDO
+    // Replace G_AMDGPU_S_MUL_I64_I32 and G_AMDGPU_S_MUL_U64_U32
     // with s_mul_u64 operation.
     if (DstBank == &AMDGPU::SGPRRegBank) {
       MI.setDesc(TII->get(AMDGPU::S_MUL_U64));
@@ -2610,7 +2610,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
-    // Replace G_AMDGPU_S_MUL_I64_I32_PSEUDO and G_AMDGPU_S_MUL_U64_U32_PSEUDO
+    // Replace G_AMDGPU_S_MUL_I64_I32 and G_AMDGPU_S_MUL_U64_U32
     // with a vector mad.
     assert(MRI.getRegBankOrNull(DstReg) == &AMDGPU::VGPRRegBank &&
            "The destination operand should be in vector registers.");
@@ -2629,7 +2629,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MRI.setType(Op1L, S32);
     B.buildTrunc(Op1L, SrcReg1);
 
-    unsigned NewOpc = Opc == AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO
+    unsigned NewOpc = Opc == AMDGPU::G_AMDGPU_S_MUL_U64_U32
                           ? AMDGPU::G_AMDGPU_MAD_U64_U32
                           : AMDGPU::G_AMDGPU_MAD_I64_I32;
 
@@ -3944,8 +3944,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_SHUFFLE_VECTOR:
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
-  case AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO:
-  case AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO:
+  case AMDGPU::G_AMDGPU_S_MUL_I64_I32:
+  case AMDGPU::G_AMDGPU_S_MUL_U64_U32:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);

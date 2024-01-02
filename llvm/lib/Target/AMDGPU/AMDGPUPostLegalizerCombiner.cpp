@@ -436,14 +436,14 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
   KnownBits Op1KnownBits = KB->getKnownBits(Src1);
   unsigned Op1LeadingZeros = Op1KnownBits.countMinLeadingZeros();
   if (Op0LeadingZeros >= 32 && Op1LeadingZeros >= 32) {
-    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO;
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32;
     return true;
   }
 
   unsigned Op0SignBits = KB->computeNumSignBits(Src0);
   unsigned Op1SignBits = KB->computeNumSignBits(Src1);
   if (Op0SignBits >= 33 && Op1SignBits >= 33) {
-    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO;
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32;
     return true;
   }
   return false;
