@@ -3589,7 +3589,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // can be turned into:
   //    cmp     w12, w11, lsl #1
   if (!isa<ConstantSDNode>(RHS) ||
-      !isLegalArithImmed(cast<ConstantSDNode>(RHS)->getZExtValue())) {
+      !isLegalArithImmed(RHS->getAsConstantVal())) {
     SDValue TheLHS = isCMN(LHS, CC) ? LHS.getOperand(1) : LHS;
 
     if (getCmpOperandFoldingProfit(TheLHS) > getCmpOperandFoldingProfit(RHS)) {
@@ -3623,7 +3623,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         cast<LoadSDNode>(LHS)->getExtensionType() == ISD::ZEXTLOAD &&
         cast<LoadSDNode>(LHS)->getMemoryVT() == MVT::i16 &&
         LHS.getNode()->hasNUsesOfValue(1, 0)) {
-      int16_t ValueofRHS = cast<ConstantSDNode>(RHS)->getZExtValue();
+      int16_t ValueofRHS = RHS->getAsConstantVal();
       if (ValueofRHS < 0 && isLegalArithImmed(-ValueofRHS)) {
         SDValue SExt =
             DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, LHS.getValueType(), LHS,
@@ -5619,7 +5619,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   // SVE supports an index scaled by sizeof(MemVT.elt) only, everything else
   // must be calculated before hand.
-  uint64_t ScaleVal = cast<ConstantSDNode>(Scale)->getZExtValue();
+  uint64_t ScaleVal = Scale->getAsConstantVal();
   if (IsScaled && ScaleVal != MemVT.getScalarStoreSize()) {
     assert(isPowerOf2_64(ScaleVal) && "Expecting power-of-two types");
     EVT IndexVT = Index.getValueType();
@@ -5707,7 +5707,7 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
 
   // SVE supports an index scaled by sizeof(MemVT.elt) only, everything else
   // must be calculated before hand.
-  uint64_t ScaleVal = cast<ConstantSDNode>(Scale)->getZExtValue();
+  uint64_t ScaleVal = Scale->getAsConstantVal();
   if (IsScaled && ScaleVal != MemVT.getScalarStoreSize()) {
     assert(isPowerOf2_64(ScaleVal) && "Expecting power-of-two types");
     EVT IndexVT = Index.getValueType();
@@ -22011,7 +22011,7 @@ static SDValue performBRCONDCombine(SDNode *N,
   SDValue Cmp = N->getOperand(3);
 
   assert(isa<ConstantSDNode>(CCVal) && "Expected a ConstantSDNode here!");
-  unsigned CC = cast<ConstantSDNode>(CCVal)->getZExtValue();
+  unsigned CC = CCVal->getAsConstantVal();
   if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
     return SDValue();
 

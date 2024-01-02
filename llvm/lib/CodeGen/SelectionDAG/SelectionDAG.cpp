@@ -7193,8 +7193,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(isa<ConstantSDNode>(N3) &&
            "Insert subvector index must be constant");
     assert((VT.isScalableVector() != N2VT.isScalableVector() ||
-            (N2VT.getVectorMinNumElements() +
-             cast<ConstantSDNode>(N3)->getZExtValue()) <=
+            (N2VT.getVectorMinNumElements() + N3->getAsConstantVal()) <=
                 VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
     assert(cast<ConstantSDNode>(N3)->getAPIntValue().getBitWidth() ==
@@ -9978,13 +9977,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
             VTList.VTs[0].getVectorElementCount() ==
                 Ops[1].getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(VTList.VTs[0].isFloatingPoint() &&
-           Ops[1].getValueType().isFloatingPoint() &&
-           VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
-           isa<ConstantSDNode>(Ops[2]) &&
-           (cast<ConstantSDNode>(Ops[2])->getZExtValue() == 0 ||
-            cast<ConstantSDNode>(Ops[2])->getZExtValue() == 1) &&
-           "Invalid STRICT_FP_ROUND!");
+    assert(
+        VTList.VTs[0].isFloatingPoint() &&
+        Ops[1].getValueType().isFloatingPoint() &&
+        VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
+        isa<ConstantSDNode>(Ops[2]) &&
+        (Ops[2]->getAsConstantVal() == 0 || Ops[2]->getAsConstantVal() == 1) &&
+        "Invalid STRICT_FP_ROUND!");
     break;
 #if 0
   // FIXME: figure out how to safely handle things like
