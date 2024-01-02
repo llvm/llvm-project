@@ -377,13 +377,12 @@ define i32 @test_solve_select_at_use(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[C]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[A]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    ret i32 [[RETVAL]]
+; CHECK-NEXT:    ret i32 [[C]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    ret i32 [[RETVAL]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
   %cmp = icmp slt i32 %a, 0
