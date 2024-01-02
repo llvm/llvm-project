@@ -8500,6 +8500,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, SelectCond, SplattedVal,
                        Vec, DAG.getUNDEF(VT), VL);
   }
+  case Intrinsic::riscv_vfmv_s_f:
+    return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, Op.getSimpleValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   // EGS * EEW >= 128 bits
   case Intrinsic::riscv_vaesdf_vv:
   case Intrinsic::riscv_vaesdf_vs:

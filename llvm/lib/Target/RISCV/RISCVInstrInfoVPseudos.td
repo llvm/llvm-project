@@ -7416,32 +7416,6 @@ foreach vti = AllIntegerVectors in {
 }
 
 //===----------------------------------------------------------------------===//
-// 16.2. Floating-Point Scalar Move Instructions
-//===----------------------------------------------------------------------===//
-
-foreach fvti = AllFloatVectors in {
-  let Predicates = GetVTypePredicates<fvti>.Predicates in {
-    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
-                           (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMV_S_"#fvti.ScalarSuffix#"_" #
-                                  fvti.LMul.MX)
-               (fvti.Vector $rs1),
-               (fvti.Scalar fvti.ScalarRegClass:$rs2),
-               GPR:$vl, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
-                           (fvti.Scalar (fpimm0)), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
-               (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
-                           (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
-               (fvti.Vector $rs1), GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
-  }
-}
-
-//===----------------------------------------------------------------------===//
 // 16.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
 defm : VPatTernaryV_VX_VI<"int_riscv_vslideup", "PseudoVSLIDEUP", AllIntegerVectors, uimm5>;
