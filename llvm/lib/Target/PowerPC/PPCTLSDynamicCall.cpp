@@ -119,9 +119,13 @@ protected:
           Opc2 = PPC::GETtlsldADDR32;
           break;
         case PPC::TLSLDAIX:
+          // TLSLDAIX is expanded to one copy and GET_TLS_MOD, so we only set
+          // Opc2 here.
           Opc2 = PPC::GETtlsMOD32AIX;
           break;
         case PPC::TLSLDAIX8:
+          // TLSLDAIX8 is expanded to one copy and GET_TLS_MOD, so we only set
+          // Opc2 here.
           Opc2 = PPC::GETtlsMOD64AIX;
           break;
         case PPC::TLSGDAIX8:
@@ -182,14 +186,20 @@ protected:
                 if (Uses.count(&*UseIter))
                   break;
 
+              // Got some work to do when UseIter pointing to valid node. Check
+              // the pattern and do the movement if match.
               if (UseIter != MBB.end()) {
-                // Collect associated Load@toc nodes.
+                // Collect associated Load@toc nodes. Use hasOneDef to guard
+                // against unexpected scenarios.
                 std::set<MachineInstr *> LoadFromTocs;
                 for (MachineOperand &MO : UseIter->operands())
                   if (MO.isReg() && MO.isUse()) {
                     if (RegInfo.hasOneDef(MO.getReg())) {
                       MachineInstr *Temp =
                           RegInfo.getOneDef(MO.getReg())->getParent();
+                      // For current TLSLDAIX node, get the Load@toc node for
+                      // the InReg. Otherwise, Temp probably pointed to the
+                      // LoadOffset@toc node that we would like to move.
                       if (Temp == &MI && RegInfo.hasOneDef(InReg))
                         Temp = RegInfo.getOneDef(InReg)->getParent();
                       if (Temp->getOpcode() == LDTocOp)
@@ -207,6 +217,9 @@ protected:
                 if (LoadFromTocs.size() == 2) {
                   MachineBasicBlock::iterator TLSMLIter = MBB.end();
                   MachineBasicBlock::iterator OffsetIter = MBB.end();
+                  // Make sure the two LoadFromTocs are within current BB, and
+                  // one of them from the "_$TLSML" pseudo symbol, while the
+                  // other from the variable.
                   for (MachineBasicBlock::iterator I = MBB.begin(),
                                                    IE = MBB.end();
                        I != IE; ++I)
@@ -218,6 +231,8 @@ protected:
                       else
                         OffsetIter = I;
                     }
+                  // If both two iterators are valid, we should have identified
+                  // the scenario, and do the movement.
                   if (TLSMLIter != MBB.end() && OffsetIter != MBB.end())
                     OffsetIter->moveBefore(&*UseIter);
                 }
