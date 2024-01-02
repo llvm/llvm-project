@@ -487,7 +487,7 @@ namespace {
     // from PatFrags in tablegen.
     bool isUnneededShiftMask(SDNode *N, unsigned Width) const {
       assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
-      const APInt &Val = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+      const APInt &Val = N->getConstantOperandAPInt(1);
 
       if (Val.countr_one() >= Width)
         return true;
