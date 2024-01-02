@@ -54572,6 +54572,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           Op0.getValueType() == cast<MemSDNode>(SrcVec)->getMemoryVT())
         return Op0.getOperand(0);
     }
+
+    // concat_vectors(permq(x),permq(x)) -> permq(concat_vectors(x,x))
+    if (Op0.getOpcode() == X86ISD::VPERMI && Subtarget.useAVX512Regs() &&
+        !X86::mayFoldLoad(Op0.getOperand(0), Subtarget))
+      return DAG.getNode(Op0.getOpcode(), DL, VT,
+                         DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                                     Op0.getOperand(0), Op0.getOperand(0)),
+                         Op0.getOperand(1));
   }
 
   // concat(extract_subvector(v0,c0), extract_subvector(v1,c1)) -> vperm2x128.
