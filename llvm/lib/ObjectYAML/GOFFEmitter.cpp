@@ -22,8 +22,6 @@ using namespace llvm;
 
 namespace {
 
-static const uint8_t TXTMaxDataLength = 56;
-
 // Common flag values on records.
 enum {
   // Flag: This record is continued.
@@ -61,11 +59,6 @@ raw_ostream &operator<<(raw_ostream &OS, const ZerosImpl &Z) {
 }
 
 ZerosImpl zeros(const size_t NumBytes) { return ZerosImpl{NumBytes}; }
-
-raw_ostream &operator<<(raw_ostream &OS, const yaml::BinaryRef &Data) {
-  Data.writeAsBinary(OS);
-  return OS;
-}
 
 // The GOFFOstream is responsible to write the data into the fixed physical
 // records of the format. A user of this class announces the start of a new
@@ -183,7 +176,6 @@ class GOFFState {
   void writeHeader(GOFFYAML::FileHeader &FileHdr);
   void writeEnd();
   void writeSymbol(GOFFYAML::Symbol Sym);
-  void writeSection(GOFFYAML::Section Sec);
 
   void reportError(const Twine &Msg) {
     ErrHandler(Msg);
@@ -307,39 +299,6 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
 #undef BIT
 }
 
-void GOFFState::writeSection(GOFFYAML::Section Sec) {
-  if (Sec.SymbolID == 0 || Sec.SymbolID > SymbolID)
-    reportError("section symbol not defined: " + Twine(Sec.SymbolID));
-
-  size_t Size = 0;
-  if (Sec.Data) {
-    Size = Sec.Data->binary_size();
-    if (Size > GOFF::MaxDataLength) {
-      reportError("section content is too long: " + Twine(Size));
-      return;
-    }
-    if (Sec.DataLength && Sec.DataLength != Size) {
-      reportError("Section content length " + Twine(Size) +
-                  " does not match data length " + Twine(Sec.DataLength));
-      return;
-    }
-  } else
-    Size = Sec.DataLength;
-
-  GW.makeNewRecord(GOFF::RT_TXT, GOFF::PayloadLength - TXTMaxDataLength + Size);
-  GW << binaryBe(Sec.TextStyle)                // Text Record Style
-     << binaryBe(Sec.SymbolID)                 // Element ESDID
-     << binaryBe(uint32_t(0))                  // Reserved
-     << binaryBe(Sec.Offset)                   // Offset
-     << binaryBe(Sec.TrueLength)               // Text Field True Length
-     << binaryBe(Sec.TextEncoding)             // Text Encoding
-     << binaryBe(static_cast<uint16_t>(Size)); // Data Length
-  if (Sec.Data)
-    GW << *Sec.Data; // Data
-  else
-    GW << zeros(Size);
-}
-
 void GOFFState::writeEnd() {
   GW.makeNewRecord(GOFF::RT_END, GOFF::PayloadLength);
   GW << binaryBe(uint8_t(0)) // No entry point
@@ -356,9 +315,7 @@ bool GOFFState::writeObject() {
     return false;
   // Iterate over all records.
   for (auto &Rec : Doc.Records) {
-    if (auto *Sec = dyn_cast<GOFFYAML::Section>(Rec.get())) {
-      writeSection(*Sec);
-    } else if (auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get())) {
+    if (auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get())) {
       writeSymbol(*Sym);
     } else {
       reportError("Unknown record type");

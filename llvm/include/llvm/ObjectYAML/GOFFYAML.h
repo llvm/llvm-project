@@ -69,7 +69,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint64_t, GOFF_BAFLAGS)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_TEXTRECORDSTYLE)
 
 struct RecordBase {
-  enum RecordBaseKind { RBK_Symbol, RBK_Section };
+  enum RecordBaseKind { RBK_Symbol};
 
 private:
   const RecordBaseKind Kind;
@@ -81,24 +81,6 @@ public:
   RecordBaseKind getKind() const { return Kind; }
 };
 typedef std::unique_ptr<RecordBase> RecordPtr;
-
-struct Section : public RecordBase {
-  Section() : RecordBase(RBK_Section) {}
-
-  StringRef SymbolName;
-  uint32_t SymbolID;
-  uint32_t Offset;
-  uint32_t TrueLength;
-  uint16_t TextEncoding;
-  uint16_t DataLength;
-  GOFF_TEXTRECORDSTYLE TextStyle;
-
-  std::optional<yaml::BinaryRef> Data;
-
-  static bool classof(const RecordBase *Rec) {
-    return Rec->getKind() == RBK_Section;
-  }
-};
 
 struct Symbol : public RecordBase {
   Symbol() : RecordBase(RBK_Symbol) {}
@@ -174,7 +156,6 @@ LLVM_YAML_DECLARE_BITSET_TRAITS(GOFFYAML::GOFF_BAFLAGS)
 
 LLVM_YAML_DECLARE_ENUM_TRAITS(GOFFYAML::GOFF_TEXTRECORDSTYLE)
 
-LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Section)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Symbol)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::FileHeader)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Object)

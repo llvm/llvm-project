@@ -210,17 +210,6 @@ void ScalarBitSetTraits<GOFFYAML::GOFF_BAFLAGS>::bitset(
 #undef BCaseMask
 }
 
-void MappingTraits<GOFFYAML::Section>::mapping(IO &IO, GOFFYAML::Section &Sec) {
-  IO.mapRequired("SymbolName", Sec.SymbolName);
-  IO.mapRequired("SymbolID", Sec.SymbolID);
-  IO.mapOptional("Offset", Sec.Offset, 0);
-  IO.mapOptional("TrueLength", Sec.TrueLength, 0);
-  IO.mapOptional("TextEncoding", Sec.TextEncoding, 0);
-  IO.mapOptional("DataLength", Sec.DataLength, 0);
-  IO.mapOptional("TextStyle", Sec.TextStyle, GOFF::TXT_RS_Byte);
-  IO.mapOptional("Data", Sec.Data);
-}
-
 void MappingTraits<GOFFYAML::Symbol>::mapping(IO &IO, GOFFYAML::Symbol &Sym) {
   IO.mapRequired("Name", Sym.Name);
   IO.mapRequired("Type", Sym.Type);
@@ -268,11 +257,7 @@ void MappingTraits<GOFFYAML::FileHeader>::mapping(
 
 void CustomMappingTraits<GOFFYAML::RecordPtr>::inputOne(
     IO &IO, StringRef Key, GOFFYAML::RecordPtr &Elem) {
-  if (Key == "Section") {
-    GOFFYAML::Section Sec;
-    IO.mapRequired("Section", Sec);
-    Elem = std::make_unique<GOFFYAML::Section>(std::move(Sec));
-  } else if (Key == "Symbol") {
+  if (Key == "Symbol") {
     GOFFYAML::Symbol Sym;
     IO.mapRequired("Symbol", Sym);
     Elem = std::make_unique<GOFFYAML::Symbol>(std::move(Sym));
@@ -281,9 +266,7 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::inputOne(
 
 void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
     IO &IO, GOFFYAML::RecordPtr &Elem) {
-  if (auto *Sec = dyn_cast<GOFFYAML::Section>(Elem.get())) {
-    IO.mapRequired("Section", *Sec);
-  } else if (auto *Sym = dyn_cast<GOFFYAML::Symbol>(Elem.get())) {
+  if (auto *Sym = dyn_cast<GOFFYAML::Symbol>(Elem.get())) {
     IO.mapRequired("Symbol", *Sym);
   } else {
     IO.setError("Unknown record type");
