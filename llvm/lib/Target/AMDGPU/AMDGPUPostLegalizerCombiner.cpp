@@ -431,6 +431,9 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     MachineInstr &MI, unsigned &NewOpcode) const {
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
+  if (MRI.getType(Src0) != LLT::scalar(64))
+    return false;
+
   if (KB->getKnownBits(Src0).countMinLeadingZeros() >= 32 &&
       KB->getKnownBits(Src1).countMinLeadingZeros() >= 32) {
     NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32;
