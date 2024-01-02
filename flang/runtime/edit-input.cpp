@@ -244,7 +244,7 @@ bool EditIntegerInput(
   if (sign == '-') {
     value = -value;
   }
-  if (any || !io.GetConnectionState().IsAtEOF()) {
+  if (any || !io.GetIoErrorHandler().InError()) {
     // The value is stored in the lower order bits on big endian platform.
     // When memcpy, shift the value to the higher order bit.
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
@@ -255,8 +255,10 @@ bool EditIntegerInput(
     } else {
       std::memcpy(n, &value, kind); // a blank field means zero
     }
+    return true;
+  } else {
+    return false;
   }
-  return any;
 }
 
 // Parses a REAL input number from the input source as a normalized
