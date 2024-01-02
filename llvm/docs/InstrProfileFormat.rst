@@ -105,38 +105,46 @@ Header
   The byte size of binary id section.
 
 ``NumData``
-  The number of profile metadata. The byte size of profile metadata section
+  The number of profile metadata. The byte size of `profile metadata`_ section
   could be computed with this field.
 
 ``NumCounter``
-  The number of entries in the profile counter section. The byte size of counter
+  The number of entries in the profile counter section. The byte size of `counter`_
   section could be computed with this field.
 
 ``NumBitmapBytes``
-  The number of bytes in the profile bitmap section.
+  The number of bytes in the profile `bitmap`_ section.
 
 ``NamesSize``
   The number of bytes in the name section.
 
-``CountersDelta``
-  In the IRPGO case [4]_, this field records the in-memory address difference
-  between the metadata and counter section in the instrumented binary,
-  i.e., `start(__llvm_prf_cnts) - start(__llvm_prf_data)`.
+.. _`CountersDelta`:
 
-  It's used jointly with the in-memory address difference of profile metadata
-  record and its counter in the instrumented binary to compute the counter offset
+``CountersDelta``
+  This field records the in-memory address difference between the `profile metadata`_
+  and counter section in the instrumented binary, i.e., `start(__llvm_prf_cnts) - start(__llvm_prf_data)`.
+
+  It's used jointly with the `CounterPtr`_ field to compute the counter offset
   relative to `start(__llvm_prf_cnts)`. Check out calculation-of-counter-offset_
   for a visualized explanation.
 
-``BitmapDelta``
-  In the IRPGO case [4]_, this field records the in-memory address difference
-  between the metadata and bitmap section in the instrumented binary,
-  i.e., `start(__llvm_prf_bits) - start(__llvm_prf_data)`.
+  .. note::
+    Instrumentations might not load the `__llvm_prf_data` object file section
+    in memory or does not generate the profile metadata section in raw profiles.
+    In those cases, `CountersDelta` is not used and other mechanism are used to
+    match counters with instrumented code. See `lightweight instrumentation`_ and
+    `binary profile correlation`_ for examples.
 
-  It's used jointly with the in-memory address difference of a profile data record
-  and its bitmap in the instrumented binary to find the bitmap of a profile data
+``BitmapDelta``
+  This field records the in-memory address difference between the `profile metadata`_
+  and bitmap section in the instrumented binary, i.e., `start(__llvm_prf_bits) - start(__llvm_prf_data)`.
+
+  It's used jointly with the `BitmapPtr`_ to find the bitmap of a profile data
   record, in a similar way to how counters are referenced as explained by
   calculation-of-counter-offset_ .
+
+  Similar to `CountersDelta`_ field, this field may not be used in non-PGO variants
+  of profiles.
 
 ``NamesDelta``
   Records the in-memory address of name section. Not used except for raw profile
@@ -157,6 +165,8 @@ Stores the binary ids of the instrumented binaries to associate binaries with
 profiles for source code coverage. See `Binary Id RFC`_ for the design.
 
 .. _`Binary Id RFC`: https://lists.llvm.org/pipermail/llvm-dev/2021-June/151154.html
+
+.. _`profile metadata`:
 
 Profile Metadata
 ^^^^^^^^^^^^^^^^^^
@@ -184,6 +194,8 @@ The fields are documented as follows:
 
 .. _`computeCFGHash`: https://github.com/llvm/llvm-project/blob/7c3b67d2038cfb48a80299089f6a1308eee1df7f/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp#L616-L685
 
+.. _`CounterPtr`:
+
 ``CounterPtr``
   The in-memory address difference between profile data and the start of corresponding
   counters. Counter position is stored this way (as a link-time constant) to reduce
@@ -194,12 +206,17 @@ The fields are documented as follows:
 
   .. note::
     `CounterPtr` might represent a different value for non-IRPGO use case. For
-    example, for `binary profile correlation`_, it represents the counter address.
+    example, for `binary profile correlation`_, it represents the absolute address of counter.
     When in doubt, check source code.
+
+.. _`BitmapPtr`:
 
 ``BitmapPtr``
   The in-memory address difference between profile data and the start address of
   corresponding bitmap.
+
+  .. note::
+    Similar to `CounterPtr`_, this field may represent a different value for non-IRPGO use case.
 
 ``FunctionPointer``
   Records the function address when instrumented binary runs. This is used to
@@ -228,10 +245,12 @@ The fields are documented as follows:
 ``NumBitmapBytes``
   The number of bitmap bytes for the function.
 
+.. _`counter`:
+
 Profile Counters
 ^^^^^^^^^^^^^^^^^
 
-For PGO [5]_, the counters within an instrumented function of a specific `FuncHash`_
+For PGO [4]_, the counters within an instrumented function of a specific `FuncHash`_
 are stored contiguously and in an order that is consistent with instrumentation points selection.
 
 .. _calculation-of-counter-offset:
@@ -239,7 +258,7 @@ are stored contiguously and in an order that is consistent with instrumentation 
 As mentioned above, the recorded counter offset is relative to the profile metadata.
 So how are function counters associated with the profiled function?
 
-Basically, the profile reader iterates profile metadata (from the profile metadata
+Basically, the profile reader iterates profile metadata (from the `profile metadata`_
 section) and makes use of the recorded relative distances, as illustrated below.
 
 ::
@@ -290,6 +309,8 @@ is updated to `CounterDeltaInitVal - sizeof(ProfileData)`.
 Thus the byte offset relative to the start of the counter section is calculated
 as `CounterPtr2 - (CounterDeltaInitVal - sizeof(ProfileData))`.
 
+.. _`bitmap`:
+
 Bitmap
 ^^^^^^^
 This section is used for source-based `Modified Condition/Decision Coverage`_ code coverage. Check out `Bitmap RFC`_
@@ -316,7 +337,7 @@ This section contains the profile data for value profiling.
 The value profiles corresponding to a profile metadata are serialized contiguously
 as one record, and value profile records are stored in the same order as the
 respective profile data, such that a raw profile reader `advances`_ the pointer to
-profile data and the pointer to value profile records simutaneously [6]_ to find
+profile data and the pointer to value profile records simutaneously [5]_ to find
 value profiles for a per function, per `FuncHash`_ profile data.
 
 .. _`advances`: https://github.com/llvm/llvm-project/blob/7e15fa9161eda7497a5d6abf0d951a1d12d86550/llvm/include/llvm/ProfileData/InstrProfReader.h#L456-L457
@@ -440,14 +461,9 @@ based profile data. For supported usages, check out `llvm-profdata documentation
 .. [3] A raw profile file could contain the concatenation of multiple raw
    profiles, for example, from an executable and its shared libraries. Raw
    profile reader could parse all raw profiles from the file correctly.
-.. [4] Instrumentations might not load the `__llvm_prf_data` object file section
-   in memory or does not generate the profile metadata section in raw profiles.
-   In those cases, `CountersDelta` is not used and other mechanism are used to
-   match counters with instrumented code. See `lightweight instrumentation`_ and
-   `binary profile correlation`_ for examples.
-.. [5] The counter section is used by a few variant types (like temporal
+.. [4] The counter section is used by a few variant types (like temporal
    profiling) and might have different semantics there.
-.. [6] The step size of data pointer is the `sizeof(ProfileData)`, and the step
+.. [5] The step size of data pointer is the `sizeof(ProfileData)`, and the step
    size of value profile pointer is calcuated based on the number of collected
    values.
 
