@@ -3,7 +3,7 @@ LLVM core components:
 2. libc++ C++ standard library: ISO/IE 14882 standard; after object files/IR, references are resolved by linking with libc++ implementations
 3. LLD linker: makes one single .exe/library; static linking: all dependencies included; dynamic linking: dependencies linked at runtime)
 
-https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm 
+https://llvm.org/docs/GettingStarted.html#getting-started-with-the-llvm-system
 Directory Layout
 llvm/cmake
 llvm/examples
@@ -96,6 +96,28 @@ llvm/lib/Support - source code that corresponds to the header files in llvm/incl
 
 
 llvm/bindings
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 llvm/projects
 llvm/test
 test-suite
