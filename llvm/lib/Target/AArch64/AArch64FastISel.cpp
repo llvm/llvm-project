@@ -2417,7 +2417,7 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
       }
 
       // Emit the cmp.
-      if (!emitCmp(CI->getOperand(0), CI->getOperand(1), !CI->isSigned()))
+      if (!emitCmp(CI->getOperand(0), CI->getOperand(1), CI->isUnsigned()))
         return false;
 
       // FCMP_UEQ and FCMP_ONE cannot be checked with a single branch
