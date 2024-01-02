@@ -1,3 +1,5 @@
+@ RUN: not llvm-mc -filetype=obj --defsym=ERR=1 -o /dev/null %s 2>&1 -triple=thumbv7   | FileCheck %s --check-prefix=ERR
+@ RUN: not llvm-mc -filetype=obj --defsym=ERR=1 -o /dev/null %s 2>&1 -triple=thumbebv7 | FileCheck %s --check-prefix=ERR
 @ RUN: llvm-mc -filetype=obj -triple=armv7 %s -o %t
 @ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=ARM
 @ RUN: llvm-objdump -d --triple=armv7 %t | FileCheck %s --check-prefix=ARM_ADDEND
@@ -23,6 +25,11 @@ foo1:
     .word 0x11223344, 0x55667788
 foo2:
     .word 0x99aabbcc, 0xddeeff00
+
+.ifdef ERR
+  @ ERR:[[#@LINE-14]]:5: error: unsupported relocation type
+  @ ERR:[[#@LINE-14]]:5: error: unsupported relocation type
+.endif
 
 @ ARM: R_ARM_LDRS_PC_G0
 

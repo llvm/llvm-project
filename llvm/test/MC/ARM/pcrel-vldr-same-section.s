@@ -59,4 +59,3 @@ bar:
 @ THUMB_OFFSET: vldr	s0, [pc, #-48]          @ 0x0 <baz>
 @ THUMB_OFFSET: vldr	d0, [pc, #-52]          @ 0x0 <baz>
 @ THUMB_OFFSET: vldr.16	s0, [pc, #-56]          @ 0x0 <baz>
-
