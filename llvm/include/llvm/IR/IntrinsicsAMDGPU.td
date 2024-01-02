@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def global_ptr_ty : LLVMQualPointerType<1>;
+
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
@@ -2353,10 +2355,10 @@ def int_amdgcn_s_get_waveid_in_workgroup :
   Intrinsic<[llvm_i32_ty], [],
     [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-class AMDGPUAtomicRtn<LLVMType vt> : Intrinsic <
+class AMDGPUAtomicRtn<LLVMType vt, LLVMType pt = llvm_anyptr_ty> : Intrinsic <
   [vt],
-  [llvm_anyptr_ty,    // vaddr
-   vt],               // vdata(VGPR)
+  [pt,  // vaddr
+   vt], // vdata(VGPR)
   [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree], "",
   [SDNPMemOperand]>;
 
@@ -2485,6 +2487,8 @@ def int_amdgcn_permlanex16_var : ClangBuiltin<"__builtin_amdgcn_permlanex16_var"
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]>;
+
+def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicRtn<llvm_i64_ty, global_ptr_ty>;
 
 def int_amdgcn_flat_atomic_fmin_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmax_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
