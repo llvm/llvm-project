@@ -360,11 +360,14 @@ func.func @fold_unit_dims_entirely(%arg0 : vector<8xi32>,
 // -----
 
 // This test is to make sure there is no crash for empty stride.
-func.func @stride_empty_crash(%1: memref<i16>) -> vector<32x256xi16> {
+func.func @stride_empty_test(%1: memref<i16>) -> vector<32x256xi16> {
   %c0_i16 = arith.constant 0 : i16
   %3 = vector.transfer_read %1[], %c0_i16 {permutation_map = affine_map<() -> (0, 0)>} : memref<i16>, vector<32x256xi16>
   return %3 : vector<32x256xi16>
 
-  // CHECK-LABEL: func.func @stride_empty_crash
-  // CHECK: %c0_i16 = arith.constant 0 : i16
+  // CHECK-LABEL: func.func @stride_empty_test
+  // CHECK: %[[VAL:.*]] = arith.constant 0 : i16
+  // CHECK: %[[RET:.*]] = vector.transfer_read {{.*}} vector<32x256xi16>
+  // CHECK: return %[[RET]]
+  // CHECK-NOT: empty()
 }
