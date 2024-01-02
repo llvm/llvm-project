@@ -1632,16 +1632,13 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
   return Plugin::success();
 }
 
-Expected<bool> GenericPluginTy::checkELFImage(__tgt_device_image &Image) const {
-  StringRef Buffer(reinterpret_cast<const char *>(Image.ImageStart),
-                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
-
+Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
   // First check if this image is a regular ELF file.
-  if (!utils::elf::isELF(Buffer))
+  if (!utils::elf::isELF(Image))
     return false;
 
   // Check if this image is an ELF with a matching machine value.
-  auto MachineOrErr = utils::elf::checkMachine(Buffer, getMagicElfBits());
+  auto MachineOrErr = utils::elf::checkMachine(Image, getMagicElfBits());
   if (!MachineOrErr)
     return MachineOrErr.takeError();
 
@@ -1649,7 +1646,7 @@ Expected<bool> GenericPluginTy::checkELFImage(__tgt_device_image &Image) const {
     return false;
 
   // Perform plugin-dependent checks for the specific architecture if needed.
-  return isELFCompatible(Buffer);
+  return isELFCompatible(Image);
 }
 
 const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
@@ -1678,27 +1675,38 @@ int32_t __tgt_rtl_init_plugin() {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
-  // TODO: We should be able to perform a trivial ELF machine check without
-  // initializing the plugin first to save time if the plugin is not needed.
+int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   if (!Plugin::isActive())
     return false;
 
-  // Check if this is a valid ELF with a matching machine and processor.
-  auto MatchOrErr = Plugin::get().checkELFImage(*TgtImage);
-  if (Error Err = MatchOrErr.takeError()) {
+  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
+                   target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
+
+  auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failure to check validity of image %p: %s", TgtImage, ErrStr.c_str());
+    DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
     return false;
-  } else if (*MatchOrErr) {
-    return true;
+  };
+  switch (identify_magic(Buffer)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = Plugin::get().checkELFImage(Buffer);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
-
-  // Check if this is a valid LLVM-IR file with matching triple.
-  if (Plugin::get().getJIT().checkBitcodeImage(*TgtImage))
-    return true;
-
-  return false;
+  case file_magic::bitcode: {
+    auto MatchOrErr = Plugin::get().getJIT().checkBitcodeImage(Buffer);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
+    return false;
+  }
 }
 
 int32_t __tgt_rtl_supports_empty_images() {

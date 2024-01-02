@@ -1724,9 +1724,13 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 }
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
-  return derived && !IsIsoCType(derived) &&
-      !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
-      !derived->typeSymbol().get<DerivedTypeDetails>().sequence();
+  return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived);
+}
+
+bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {
+  return derived &&
+      (derived->typeSymbol().attrs().test(Attr::BIND_C) ||
+          derived->typeSymbol().get<DerivedTypeDetails>().sequence());
 }
 
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
