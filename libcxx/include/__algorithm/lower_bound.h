@@ -78,29 +78,15 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
   return __first;
 }
 
-template <class _AlgPolicy, class _InputIter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIter __lower_bound(
-    _InputIter __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj, std::input_iterator_tag) {
-  return std::__lower_bound_onesided<_AlgPolicy>(__first, __last, __value, __comp, __proj);
-}
-
 template <class _AlgPolicy, class _RandIter, class _Sent, class _Type, class _Proj, class _Comp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter __lower_bound(
     _RandIter __first,
     _Sent __last,
     const _Type& __value,
     _Comp& __comp,
-    _Proj& __proj,
-    std::random_access_iterator_tag) {
+    _Proj& __proj) {
   const auto __dist = _IterOps<_AlgPolicy>::distance(__first, __last);
   return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
-}
-
-template <class _AlgPolicy, class _Iter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
-__lower_bound(_Iter __first, _Sent __last, const _Type& __value, _Comp&& __comp, _Proj&& __proj) {
-  return std::__lower_bound<_AlgPolicy>(
-      __first, __last, __value, __comp, __proj, typename _IterOps<_AlgPolicy>::template __iterator_category<_Iter>());
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>
@@ -109,7 +95,7 @@ _ForwardIterator lower_bound(_ForwardIterator __first, _ForwardIterator __last, 
   static_assert(__is_callable<_Compare, decltype(*__first), const _Tp&>::value,
                 "The comparator has to be callable");
   auto __proj = std::__identity();
-  return std::__lower_bound<_ClassicAlgPolicy>(__first, __last, __value, std::move(__comp), std::move(__proj));
+  return std::__lower_bound<_ClassicAlgPolicy>(__first, __last, __value, __comp, __proj);
 }
 
 template <class _ForwardIterator, class _Tp>

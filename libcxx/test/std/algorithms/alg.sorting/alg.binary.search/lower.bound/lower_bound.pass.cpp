@@ -45,14 +45,14 @@ test(Iter first, Iter last, const T& value)
   stride_counting_iterator l(last, &strides, &displacement);
 
   auto i = std::lower_bound(f, l, value);
-  for (auto j = f; j != i; ++j)
+  for (auto j = base(f); j != base(i); ++j)
     assert(*j < value);
-  for (auto j = i; j != l; ++j)
+  for (auto j = base(i); j != base(l); ++j)
     assert(!(*j < value));
 
-  auto len = std::distance(first, last);
-  assert(strides <= 2.5 * len + 1);
-  assert(displacement <= 2.5 * len + 1);
+  auto len = static_cast<std::size_t>(std::distance(first, last));
+  assert(strides <= 2 * len);
+  assert(displacement <= 2 * len);
 }
 
 template <class Iter>
