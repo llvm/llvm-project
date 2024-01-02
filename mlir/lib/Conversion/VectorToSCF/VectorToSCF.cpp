@@ -867,7 +867,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
   }
 
   static void getMaskBufferLoadIndices(OpTy xferOp, Value castedMaskBuffer,
-                                       SmallVector<Value, 8> &loadIndices,
+                                       SmallVectorImpl<Value> &loadIndices,
                                        Value iv) {
     assert(xferOp.getMask() && "Expected transfer op to have mask");
 
@@ -876,9 +876,9 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // the indices quite complex, so this is why we need to "look back" to the
     // previous iteration to find the right indices.
     Value maskBuffer = getMaskBuffer(xferOp);
-    for (OpOperand &use : maskBuffer.getUses()) {
+    for (Operation *user : maskBuffer.getUsers()) {
       // If there is no previous load op, then the indices are empty.
-      if (auto loadOp = dyn_cast<memref::LoadOp>(use.getOwner())) {
+      if (auto loadOp = dyn_cast<memref::LoadOp>(user)) {
         Operation::operand_range prevIndices = loadOp.getIndices();
         loadIndices.append(prevIndices.begin(), prevIndices.end());
         break;
