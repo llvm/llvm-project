@@ -13112,8 +13112,10 @@ struct NodeExtensionHelper {
   /// Get half widening (2*SEW = 2*SEW +/- SEW) FP add/sub opcode.
   static unsigned getFloatHalfWidenOpcode(unsigned Opcode) {
     switch (Opcode) {
+    case ISD::FADD:
     case RISCVISD::FADD_VL:
       return RISCVISD::VFWADD_W_VL;
+    case ISD::FSUB:
     case RISCVISD::FSUB_VL:
       return RISCVISD::VFWSUB_W_VL;
     default:
@@ -13202,7 +13204,8 @@ struct NodeExtensionHelper {
       if (ScalarBits < EltBits)
         break;
 
-      if (VT.isFloatingPoint()) {
+      if (VT.isFloatingPoint() &&
+          EltBits >= (Subtarget.hasStdExtZvfh() ? 32 : 64)) {
         SupportsFPExt = true;
         break;
       }
@@ -13226,19 +13229,31 @@ struct NodeExtensionHelper {
   }
 
   /// Check if \p Root supports any extension folding combines.
-  static bool isSupportedRoot(const SDNode *Root, const SelectionDAG &DAG) {
+  static bool isSupportedRoot(const SDNode *Root, const SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
     switch (Root->getOpcode()) {
-    case ISD::ADD:
-    case ISD::SUB:
-    case ISD::MUL:
     case ISD::FADD:
     case ISD::FSUB:
-    case ISD::FMUL: {
+    case ISD::FMUL:
+      if (Root->getValueType(0).getScalarSizeInBits() <
+          (Subtarget.hasStdExtZvfh() ? 32 : 64))
+        return false;
+      [[fallthrough]];
+    case ISD::ADD:
+    case ISD::SUB:
+    case ISD::MUL: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       if (!TLI.isTypeLegal(Root->getValueType(0)))
         return false;
       return Root->getValueType(0).isScalableVector();
     }
+    case RISCVISD::FADD_VL:
+    case RISCVISD::FSUB_VL:
+    case RISCVISD::FMUL_VL:
+      if (Root->getValueType(0).getScalarSizeInBits() <
+          (Subtarget.hasStdExtZvfh() ? 32 : 64))
+        return false;
+      [[fallthrough]];
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
     case RISCVISD::VWADD_W_VL:
@@ -13246,9 +13261,6 @@ struct NodeExtensionHelper {
     case RISCVISD::SUB_VL:
     case RISCVISD::VWSUB_W_VL:
     case RISCVISD::VWSUBU_W_VL:
-    case RISCVISD::FADD_VL:
-    case RISCVISD::FSUB_VL:
-    case RISCVISD::FMUL_VL:
     case RISCVISD::VFWADD_W_VL:
     case RISCVISD::VFWSUB_W_VL:
       return true;
@@ -13260,8 +13272,9 @@ struct NodeExtensionHelper {
   /// Build a NodeExtensionHelper for \p Root.getOperand(\p OperandIdx).
   NodeExtensionHelper(SDNode *Root, unsigned OperandIdx, SelectionDAG &DAG,
                       const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root, DAG) && "Trying to build an helper with an "
-                                         "unsupported root");
+    assert(isSupportedRoot(Root, DAG, Subtarget) &&
+           "Trying to build an helper with an "
+           "unsupported root");
     assert(OperandIdx < 2 && "Requesting something else than LHS or RHS");
     OrigOperand = Root->getOperand(OperandIdx);
 
@@ -13310,7 +13323,7 @@ struct NodeExtensionHelper {
   static std::pair<SDValue, SDValue>
   getMaskAndVL(const SDNode *Root, SelectionDAG &DAG,
                const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root, DAG) && "Unexpected root");
+    assert(isSupportedRoot(Root, DAG, Subtarget) && "Unexpected root");
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
@@ -13621,7 +13634,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
                                            const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
 
-  if (!NodeExtensionHelper::isSupportedRoot(N, DAG))
+  if (!NodeExtensionHelper::isSupportedRoot(N, DAG, Subtarget))
     return SDValue();
 
   SmallVector<SDNode *> Worklist;
@@ -13632,7 +13645,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
 
   while (!Worklist.empty()) {
     SDNode *Root = Worklist.pop_back_val();
-    if (!NodeExtensionHelper::isSupportedRoot(Root, DAG))
+    if (!NodeExtensionHelper::isSupportedRoot(Root, DAG, Subtarget))
       return SDValue();
 
     NodeExtensionHelper LHS(N, 0, DAG, Subtarget);
