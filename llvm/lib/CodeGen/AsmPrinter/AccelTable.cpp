@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "DwarfCompileUnit.h"
 #include "DwarfUnit.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -211,7 +212,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   };
 
   Header Header;
-  DenseMap<uint32_t, SmallVector<DWARF5AccelTableData::AttributeEncoding, 2>>
+  DenseMap<uint32_t, SmallVector<DWARF5AccelTableData::AttributeEncoding, 3>>
       Abbreviations;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> TypeUnits;
@@ -234,7 +235,8 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitBuckets() const;
   void emitStringOffsets() const;
   void emitAbbrevs() const;
-  void emitEntry(const DataT &Entry);
+  void emitEntry(const DataT &Entry,
+                 const DenseSet<uint64_t> &OffsetsOfIndexedDIEs);
   void emitData();
 
 public:
@@ -511,7 +513,8 @@ void Dwarf5AccelTableWriter<DataT>::emitAbbrevs() const {
 }
 
 template <typename DataT>
-void Dwarf5AccelTableWriter<DataT>::emitEntry(const DataT &Entry) {
+void Dwarf5AccelTableWriter<DataT>::emitEntry(
+    const DataT &Entry, const DenseSet<uint64_t> &OffsetsOfIndexedDIEs) {
   std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
       getIndexForEntry(Entry);
   uint32_t AbbrvTag = constructAbbreviationTag(Entry.getDieTag(), EntryRet);
@@ -566,13 +569,20 @@ void Dwarf5AccelTableWriter<DataT>::emitEntry(const DataT &Entry) {
 }
 
 template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emitData() {
+  DenseSet<uint64_t> OffsetsOfIndexedDIEs;
+  for (auto &Bucket : Contents.getBuckets())
+    for (auto *Hash : Bucket)
+      for (const auto *Value : Hash->Values)
+        OffsetsOfIndexedDIEs.insert(
+            static_cast<const DataT *>(Value)->getDieOffset());
+
   Asm->OutStreamer->emitLabel(EntryPool);
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       // Remember to emit the label for our offset.
       Asm->OutStreamer->emitLabel(Hash->Sym);
       for (const auto *Value : Hash->Values)
-        emitEntry(*static_cast<const DataT *>(Value));
+        emitEntry(*static_cast<const DataT *>(Value), OffsetsOfIndexedDIEs);
       Asm->OutStreamer->AddComment("End of list: " + Hash->Name.getString());
       Asm->emitInt8(0);
     }
