@@ -817,7 +817,6 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
 static LegalizerHelper::LegalizeResult
 createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
 
   Type *RetTy;
   SmallVector<Register> RetRegs;
@@ -853,15 +852,10 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     auto [Ret, RetLLT, Mem, MemLLT, Val, ValLLT] = MI.getFirst3RegLLTs();
     RetRegs.push_back(Ret);
     RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
-    if (Opc == TargetOpcode::G_ATOMICRMW_AND) {
-      Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
-      MIRBuilder.buildXor(Tmp, MIRBuilder.buildConstant(ValLLT, -1), Val);
-      Val = Tmp;
-    } else if (Opc == TargetOpcode::G_ATOMICRMW_SUB) {
-      Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
-      MIRBuilder.buildSub(Tmp, MIRBuilder.buildConstant(ValLLT, 0), Val);
-      Val = Tmp;
-    }
+    if (Opc == TargetOpcode::G_ATOMICRMW_AND)
+      Val = MIRBuilder.buildXor(ValLLT, MIRBuilder.buildConstant(ValLLT, -1), Val).getReg(0);
+    else if (Opc == TargetOpcode::G_ATOMICRMW_SUB)
+      Val = MIRBuilder.buildSub(ValLLT, MIRBuilder.buildConstant(ValLLT, 0), Val).getReg(0);
     Args.push_back({Val, IntegerType::get(Ctx, ValLLT.getSizeInBits()), 0});
     Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
     break;
