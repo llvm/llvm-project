@@ -236,7 +236,7 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
   const auto SLocEntry = SM.getSLocEntry(Spelling.first, &InvalidSLocEntry);
   if (InvalidSLocEntry)
     return false;
-  const StringRef SpellingFile = SLocEntry.getFile().getName();
+  StringRef SpellingFile = SLocEntry.getFile().getName();
   if (SpellingFile == "<scratch space>")
     return false;
   if (SpellingFile == "<built-in>")

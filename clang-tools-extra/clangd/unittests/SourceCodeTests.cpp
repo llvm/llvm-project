@@ -814,18 +814,15 @@ TEST(SourceCodeTests, isKeywords) {
 }
 
 TEST(SourceCodeTests, isSpelledInSource) {
-  Annotations Test(R"cpp(
-        int abc = 1;
-    )cpp");
-
+  Annotations Test("");
   ParsedAST AST = TestTU::withCode(Test.code()).build();
-  llvm::errs() << Test.code();
   const SourceManager &SM = AST.getSourceManager();
 
   EXPECT_TRUE(
       isSpelledInSource(SM.getLocForStartOfFile(SM.getMainFileID()), SM));
   EXPECT_TRUE(isSpelledInSource(SourceLocation(), SM));
-  EXPECT_FALSE(isSpelledInSource(SourceLocation::getFromRawEncoding(-1), SM));
+  EXPECT_FALSE(isSpelledInSource(
+      SourceLocation::getFromRawEncoding(SourceLocation::UIntTy(1 << 31)), SM));
 }
 
 struct IncrementalTestStep {
