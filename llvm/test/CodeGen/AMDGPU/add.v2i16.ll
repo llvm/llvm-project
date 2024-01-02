@@ -990,6 +990,67 @@ define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i64(ptr addrspace(1) %out,
   ret void
 }
 
+define <2 x i16> @add_inline_imm_neg1_0(<2 x i16> %x) {
+; VI-LABEL: add_inline_imm_neg1_0:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; VI-NEXT:    v_add_u16_e32 v0, -1, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: add_inline_imm_neg1_0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_sub_u16 v0, v0, 1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: add_inline_imm_neg1_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_sub_u16 v0, v0, 1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: add_inline_imm_neg1_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_pk_sub_u16 v0, v0, 1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %y = add <2 x i16> %x, <i16 -1, i16 0>
+  ret <2 x i16> %y
+}
+
+; TODO: Translating this to v_pk_sub_u16 v0, v0, -1 is incorrect!
+define <2 x i16> @add_inline_imm_1_0(<2 x i16> %x) {
+; VI-LABEL: add_inline_imm_1_0:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; VI-NEXT:    v_add_u16_e32 v0, 1, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: add_inline_imm_1_0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_sub_u16 v0, v0, -1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: add_inline_imm_1_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_sub_u16 v0, v0, -1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: add_inline_imm_1_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_pk_sub_u16 v0, v0, -1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %y = add <2 x i16> %x, <i16 1, i16 0>
+  ret <2 x i16> %y
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
