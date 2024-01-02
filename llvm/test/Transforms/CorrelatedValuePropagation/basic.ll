@@ -1915,8 +1915,7 @@ define i1 @binop_eval_order(i32 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C]], 2
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = add nuw nsw i32 %x, 1
   %b = add nuw nsw i32 %a, 1
