@@ -14841,14 +14841,14 @@ static SDValue ParseBFI(SDNode *N, APInt &ToMask, APInt &FromMask) {
   assert(N->getOpcode() == ARMISD::BFI);
 
   SDValue From = N->getOperand(1);
-  ToMask = ~cast<ConstantSDNode>(N->getOperand(2))->getAPIntValue();
+  ToMask = ~N->getConstantOperandAPInt(2);
   FromMask = APInt::getLowBitsSet(ToMask.getBitWidth(), ToMask.popcount());
 
   // If the Base came from a SHR #C, we can deduce that it is really testing bit
   // #C in the base of the SHR.
   if (From->getOpcode() == ISD::SRL &&
       isa<ConstantSDNode>(From->getOperand(1))) {
-    APInt Shift = cast<ConstantSDNode>(From->getOperand(1))->getAPIntValue();
+    APInt Shift = From->getConstantOperandAPInt(1);
     assert(Shift.getLimitedValue() < 32 && "Shift too large!");
     FromMask <<= Shift.getLimitedValue(31);
     From = From->getOperand(0);

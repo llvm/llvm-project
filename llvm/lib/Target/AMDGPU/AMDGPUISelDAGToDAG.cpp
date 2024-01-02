@@ -724,7 +724,7 @@ bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
                                              unsigned ShAmtBits) const {
   assert(N->getOpcode() == ISD::AND);
 
-  const APInt &RHS = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+  const APInt &RHS = N->getConstantOperandAPInt(1);
   if (RHS.countr_one() >= ShAmtBits)
     return true;
 
