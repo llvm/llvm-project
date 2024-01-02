@@ -447,7 +447,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
 
 void AMDGPUPostLegalizerCombinerImpl::applyCombine_s_mul_u64(
     MachineInstr &MI, unsigned &NewOpcode) const {
-  MI.setDesc(TII.get(NewOpcode));
+  Helper.replaceOpcodeWith(MI, NewOpcode);
 }
 
 // Pass boilerplate
