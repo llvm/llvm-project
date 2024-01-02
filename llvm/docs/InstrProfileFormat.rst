@@ -316,7 +316,7 @@ This section contains the profile data for value profiling.
 The value profiles corresponding to a profile metadata are serialized contiguously
 as one record, and value profile records are stored in the same order as the
 respective profile data, such that a raw profile reader `advances`_ the pointer to
-profile data and the pointer to value profile records simutaneously _ to find
+profile data and the pointer to value profile records simutaneously [6]_ to find
 value profiles for a per function, per `FuncHash`_ profile data.
 
 .. _`advances`: https://github.com/llvm/llvm-project/blob/7e15fa9161eda7497a5d6abf0d951a1d12d86550/llvm/include/llvm/ProfileData/InstrProfReader.h#L456-L457
