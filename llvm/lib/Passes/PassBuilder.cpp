@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/Analysis/AliasSetTracker.h"
@@ -288,6 +289,10 @@ using namespace llvm;
 static const Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
+static cl::list<std::string>
+    DisablePasses("disable-passes", llvm::cl::desc("Disable specified passes"),
+                  cl::CommaSeparated, cl::Hidden);
+
 namespace llvm {
 cl::opt<bool> PrintPipelinePasses(
     "print-pipeline-passes",
@@ -406,7 +411,8 @@ AnalysisKey NoOpLoopAnalysis::Key;
 /// We currently only use this for --print-before/after.
 bool shouldPopulateClassToPassNames() {
   return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty() || !isFilterPassesEmpty();
+         !printAfterPasses().empty() || !isFilterPassesEmpty() ||
+         !DisablePasses.empty();
 }
 
 // A pass for testing -print-on-crash.
@@ -482,6 +488,16 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #include "PassRegistry.def"
+
+    if (!DisablePasses.empty()) {
+      SmallSet<StringRef, 8> S;
+      for (const auto &P : DisablePasses)
+        S.insert(P);
+      PIC->registerShouldRunOptionalPassCallback(
+          [PassNameSet = std::move(S), PIC](StringRef Name, Any IR) {
+            return !PassNameSet.contains(PIC->getPassNameForClassName(Name));
+          });
+    }
   }
 }
 
