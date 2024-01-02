@@ -1371,11 +1371,11 @@ multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
   def rr#Suffix : I<0xF5, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
                     !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (OpNode RC:$src1, RC:$src2))]>,
-                  VEX, VVVV, Sched<[WriteALU]>;
+                  VEX, NoCD8, VVVV, Sched<[WriteALU]>;
   def rm#Suffix : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
                     !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (OpNode RC:$src1, (ld_frag addr:$src2)))]>,
-                  VEX, VVVV, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
+                  VEX, NoCD8, VVVV, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
