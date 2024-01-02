@@ -273,8 +273,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     // subtract the index by one.
     Offset0Idx -= get(Opc0).NumDefs;
     Offset1Idx -= get(Opc1).NumDefs;
-    Offset0 = cast<ConstantSDNode>(Load0->getOperand(Offset0Idx))->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Load1->getOperand(Offset1Idx))->getZExtValue();
+    Offset0 = Load0->getConstantOperandVal(Offset0Idx);
+    Offset1 = Load1->getConstantOperandVal(Offset1Idx);
     return true;
   }
 

@@ -2079,7 +2079,7 @@ void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
                                                 unsigned BaseReg, unsigned Op) {
   unsigned TileNum = 0;
   if (BaseReg != AArch64::ZA)
-    TileNum = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+    TileNum = N->getConstantOperandVal(2);
 
   if (!SelectSMETile(BaseReg, TileNum))
     return;
@@ -2274,8 +2274,7 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
 
   const EVT ResTys[] = {MVT::Untyped, MVT::Other};
 
-  unsigned LaneNo =
-      cast<ConstantSDNode>(N->getOperand(NumVecs + 2))->getZExtValue();
+  unsigned LaneNo = N->getConstantOperandVal(NumVecs + 2);
 
   SDValue Ops[] = {RegSeq, CurDAG->getTargetConstant(LaneNo, dl, MVT::i64),
                    N->getOperand(NumVecs + 3), N->getOperand(0)};
@@ -2314,8 +2313,7 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
   const EVT ResTys[] = {MVT::i64, // Type of the write back register
                         RegSeq->getValueType(0), MVT::Other};
 
-  unsigned LaneNo =
-      cast<ConstantSDNode>(N->getOperand(NumVecs + 1))->getZExtValue();
+  unsigned LaneNo = N->getConstantOperandVal(NumVecs + 1);
 
   SDValue Ops[] = {RegSeq,
                    CurDAG->getTargetConstant(LaneNo, dl,
@@ -2366,8 +2364,7 @@ void AArch64DAGToDAGISel::SelectStoreLane(SDNode *N, unsigned NumVecs,
 
   SDValue RegSeq = createQTuple(Regs);
 
-  unsigned LaneNo =
-      cast<ConstantSDNode>(N->getOperand(NumVecs + 2))->getZExtValue();
+  unsigned LaneNo = N->getConstantOperandVal(NumVecs + 2);
 
   SDValue Ops[] = {RegSeq, CurDAG->getTargetConstant(LaneNo, dl, MVT::i64),
                    N->getOperand(NumVecs + 3), N->getOperand(0)};
@@ -2398,8 +2395,7 @@ void AArch64DAGToDAGISel::SelectPostStoreLane(SDNode *N, unsigned NumVecs,
   const EVT ResTys[] = {MVT::i64, // Type of the write back register
                         MVT::Other};
 
-  unsigned LaneNo =
-      cast<ConstantSDNode>(N->getOperand(NumVecs + 1))->getZExtValue();
+  unsigned LaneNo = N->getConstantOperandVal(NumVecs + 1);
 
   SDValue Ops[] = {RegSeq, CurDAG->getTargetConstant(LaneNo, dl, MVT::i64),
                    N->getOperand(NumVecs + 2), // Base Register
@@ -2705,8 +2701,8 @@ static bool isBitfieldExtractOp(SelectionDAG *CurDAG, SDNode *N, unsigned &Opc,
   case AArch64::UBFMXri:
     Opc = NOpc;
     Opd0 = N->getOperand(0);
-    Immr = cast<ConstantSDNode>(N->getOperand(1).getNode())->getZExtValue();
-    Imms = cast<ConstantSDNode>(N->getOperand(2).getNode())->getZExtValue();
+    Immr = N->getConstantOperandVal(1);
+    Imms = N->getConstantOperandVal(2);
     return true;
   }
   // Unreachable
@@ -4006,7 +4002,7 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
         assert(isa<ConstantSDNode>(N->getOperand(2)) &&
                "Expected a constant integer expression.");
         unsigned Reg = PMapper->Encoding;
-        uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+        uint64_t Immed = N->getConstantOperandVal(2);
         CurDAG->SelectNodeTo(
             N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
             CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
@@ -4302,8 +4298,7 @@ bool AArch64DAGToDAGISel::trySelectStackSlotTagP(SDNode *N) {
 
   SDValue IRG_SP = N->getOperand(2);
   if (IRG_SP->getOpcode() != ISD::INTRINSIC_W_CHAIN ||
-      cast<ConstantSDNode>(IRG_SP->getOperand(1))->getZExtValue() !=
-          Intrinsic::aarch64_irg_sp) {
+      IRG_SP->getConstantOperandVal(1) != Intrinsic::aarch64_irg_sp) {
     return false;
   }
 
@@ -4312,7 +4307,7 @@ bool AArch64DAGToDAGISel::trySelectStackSlotTagP(SDNode *N) {
   int FI = cast<FrameIndexSDNode>(N->getOperand(1))->getIndex();
   SDValue FiOp = CurDAG->getTargetFrameIndex(
       FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-  int TagOffset = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  int TagOffset = N->getConstantOperandVal(3);
 
   SDNode *Out = CurDAG->getMachineNode(
       AArch64::TAGPstack, DL, MVT::i64,
@@ -4332,7 +4327,7 @@ void AArch64DAGToDAGISel::SelectTagP(SDNode *N) {
 
   // General case for unrelated pointers in Op1 and Op2.
   SDLoc DL(N);
-  int TagOffset = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  int TagOffset = N->getConstantOperandVal(3);
   SDNode *N1 = CurDAG->getMachineNode(AArch64::SUBP, DL, MVT::i64,
                                       {N->getOperand(1), N->getOperand(2)});
   SDNode *N2 = CurDAG->getMachineNode(AArch64::ADDXrr, DL, MVT::i64,
@@ -4348,7 +4343,7 @@ bool AArch64DAGToDAGISel::trySelectCastFixedLengthToScalableVector(SDNode *N) {
   assert(N->getOpcode() == ISD::INSERT_SUBVECTOR && "Invalid Node!");
 
   // Bail when not a "cast" like insert_subvector.
-  if (cast<ConstantSDNode>(N->getOperand(2))->getZExtValue() != 0)
+  if (N->getConstantOperandVal(2) != 0)
     return false;
   if (!N->getOperand(0).isUndef())
     return false;
@@ -4379,7 +4374,7 @@ bool AArch64DAGToDAGISel::trySelectCastScalableToFixedLengthVector(SDNode *N) {
   assert(N->getOpcode() == ISD::EXTRACT_SUBVECTOR && "Invalid Node!");
 
   // Bail when not a "cast" like extract_subvector.
-  if (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue() != 0)
+  if (N->getConstantOperandVal(1) != 0)
     return false;
 
   // Bail when normal isel can do the job.
@@ -4551,7 +4546,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
     default:
       break;
@@ -5308,7 +5303,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {
     default:
       break;
@@ -5972,7 +5967,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::INTRINSIC_VOID: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     if (Node->getNumOperands() >= 3)
       VT = Node->getOperand(2)->getValueType(0);
     switch (IntNo) {
@@ -6996,7 +6991,7 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
   if (Opcode != ISD::INTRINSIC_VOID && Opcode != ISD::INTRINSIC_W_CHAIN)
     return EVT();
 
-  switch (cast<ConstantSDNode>(Root->getOperand(1))->getZExtValue()) {
+  switch (Root->getConstantOperandVal(1)) {
   default:
     return EVT();
   case Intrinsic::aarch64_sme_ldr:
