@@ -379,3 +379,123 @@ entry:
   %c = icmp ugt i64 %neg2, 0
   ret i1 %c
 }
+
+; FIXME: currently this incorrectly simplifies %c4 to true.
+define i1 @pr76713(i16 %i1, i16 %i3) {
+; CHECK-LABEL: @pr76713(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i16 [[I1:%.*]], -1
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i16 [[I1]], -3
+; CHECK-NEXT:    [[C3:%.*]] = icmp ult i16 [[I3:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[AND]], [[C3]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i16 [[I1]], -3
+; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = mul nuw nsw i16 [[I3]], 4
+; CHECK-NEXT:    [[I6:%.*]] = add nuw nsw i16 [[ARRAYIDX_IDX]], [[SUB]]
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %c1 = icmp ult i16 %i1, -1
+  %c2 = icmp uge i16 %i1, -3
+  %c3 = icmp ult i16 %i3, 2
+  %and = and i1 %c1, %c2
+  %and.2 = and i1 %and, %c3
+  br i1 %and, label %then, label %else
+
+then:
+  %sub = sub nuw nsw i16 %i1, -3
+  %arrayidx.idx = mul nuw nsw i16 %i3, 4
+  %i6 = add nuw nsw i16 %arrayidx.idx, %sub
+  %c4 = icmp ult i16 12, %i6
+  ret i1 %c4
+
+else:
+  ret i1 0
+}
+
+; FIXME: Currently gets mis-compiled.
+define void @sub_nuw_chained_positive_constants(i16 %a) {
+; CHECK-LABEL: @sub_nuw_chained_positive_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[A:%.*]], 10
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i16 [[SUB1]], 20
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 [[SUB2]], 90
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 120
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 121
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i16 [[A]], 120
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i16 [[A]], 121
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nuw i16 %a, 10
+  %sub2 = sub nuw i16 %sub1, 20
+  %c.1 = icmp ugt i16 %sub2, 90
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i16 %a, 120
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i16 %a, 121
+  call void @use(i1 %c.3)
+  ret void
+
+exit.2:
+  %c.4 = icmp ugt i16 %a, 120
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i16 %a, 121
+  call void @use(i1 %c.5)
+  ret void
+}
+
+; FIXME: Currently gets mis-compiled.
+define void @sub_nuw_chained_negative_constants(i8 %a) {
+; CHECK-LABEL: @sub_nuw_chained_negative_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i8 [[SUB1]], -126
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[SUB2]], 20
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[A]], -96
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[A]], -95
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit.2:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nuw i8 %a, 10
+  %sub2 = sub nuw i8 %sub1, 130
+  %c.1 = icmp ugt i8 %sub2, 20
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i8 %a, 160
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i8 %a, 161
+  call void @use(i1 %c.3)
+  ret void
+
+
+exit.2:
+  %c.4 = icmp ugt i8 %a, 160
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i8 %a, 161
+  call void @use(i1 %c.5)
+  ret void
+}
