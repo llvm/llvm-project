@@ -416,3 +416,86 @@ then:
 else:
   ret i1 0
 }
+
+; FIXME: Currently gets mis-compiled.
+define void @sub_nuw_chained_positive_constants(i16 %a) {
+; CHECK-LABEL: @sub_nuw_chained_positive_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[A:%.*]], 10
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i16 [[SUB1]], 20
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 [[SUB2]], 90
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 120
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 121
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i16 [[A]], 120
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i16 [[A]], 121
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nuw i16 %a, 10
+  %sub2 = sub nuw i16 %sub1, 20
+  %c.1 = icmp ugt i16 %sub2, 90
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i16 %a, 120
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i16 %a, 121
+  call void @use(i1 %c.3)
+  ret void
+
+exit.2:
+  %c.4 = icmp ugt i16 %a, 120
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i16 %a, 121
+  call void @use(i1 %c.5)
+  ret void
+}
+
+; FIXME: Currently gets mis-compiled.
+define void @sub_nuw_chained_negative_constants(i8 %a) {
+; CHECK-LABEL: @sub_nuw_chained_negative_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i8 [[SUB1]], -126
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[SUB2]], 20
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[A]], -96
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[A]], -95
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit.2:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nuw i8 %a, 10
+  %sub2 = sub nuw i8 %sub1, 130
+  %c.1 = icmp ugt i8 %sub2, 20
+  br i1 %c.1, label %exit.1, label %exit.2
+
+exit.1:
+  %c.2 = icmp ugt i8 %a, 160
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i8 %a, 161
+  call void @use(i1 %c.3)
+  ret void
+
+
+exit.2:
+  %c.4 = icmp ugt i8 %a, 160
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i8 %a, 161
+  call void @use(i1 %c.5)
+  ret void
+}
