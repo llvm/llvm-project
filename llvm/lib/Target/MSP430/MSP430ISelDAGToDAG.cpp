@@ -308,12 +308,12 @@ static bool isValidIndexedLoad(const LoadSDNode *LD) {
 
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::i8:
-    if (LD->getOffset()->getAsConstantVal() != 1)
+    if (LD->getOffset()->getAsZExtVal() != 1)
       return false;
 
     break;
   case MVT::i16:
-    if (LD->getOffset()->getAsConstantVal() != 2)
+    if (LD->getOffset()->getAsZExtVal() != 2)
       return false;
 
     break;

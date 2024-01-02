@@ -2076,7 +2076,7 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
     VTs = CurDAG->getVTList(EVTs);
   }
 
-  unsigned OffsetVal = Offset->getAsConstantVal();
+  unsigned OffsetVal = Offset->getAsZExtVal();
 
   SmallVector<SDValue, 2> Ops;
   Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
@@ -2091,7 +2091,7 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Offset = N->getOperand(1);
-  unsigned OffsetVal = Offset->getAsConstantVal();
+  unsigned OffsetVal = Offset->getAsZExtVal();
   MemSDNode *Mem = cast<MemSDNode>(N);
 
   // How many elements do we have?
@@ -2158,9 +2158,9 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Param = N->getOperand(1);
-  unsigned ParamVal = Param->getAsConstantVal();
+  unsigned ParamVal = Param->getAsZExtVal();
   SDValue Offset = N->getOperand(2);
-  unsigned OffsetVal = Offset->getAsConstantVal();
+  unsigned OffsetVal = Offset->getAsZExtVal();
   MemSDNode *Mem = cast<MemSDNode>(N);
   SDValue Glue = N->getOperand(N->getNumOperands() - 1);
 

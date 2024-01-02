@@ -1641,7 +1641,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     // If this is a 64-bit constant that is out of the range of LLILF,
     // LLIHF and LGFI, split it into two 32-bit pieces.
     if (Node->getValueType(0) == MVT::i64) {
-      uint64_t Val = Node->getAsConstantVal();
+      uint64_t Val = Node->getAsZExtVal();
       if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val) && !isInt<32>(Val)) {
         splitLargeImmediate(ISD::OR, Node, SDValue(), Val - uint32_t(Val),
                             uint32_t(Val));
@@ -1677,8 +1677,8 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
            isInt<16>(cast<ConstantSDNode>(Op0)->getSExtValue())))) {
       SDValue CCValid = Node->getOperand(2);
       SDValue CCMask = Node->getOperand(3);
-      uint64_t ConstCCValid = CCValid.getNode()->getAsConstantVal();
-      uint64_t ConstCCMask = CCMask.getNode()->getAsConstantVal();
+      uint64_t ConstCCValid = CCValid.getNode()->getAsZExtVal();
+      uint64_t ConstCCMask = CCMask.getNode()->getAsZExtVal();
       // Invert the condition.
       CCMask = CurDAG->getTargetConstant(ConstCCValid ^ ConstCCMask,
                                          SDLoc(Node), CCMask.getValueType());

@@ -1168,7 +1168,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool Invert = false;
   bool Shift = false;
   bool Convert = true;
-  switch (TargetCC->getAsConstantVal()) {
+  switch (TargetCC->getAsZExtVal()) {
   default:
     Convert = false;
     break;
