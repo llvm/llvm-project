@@ -316,12 +316,13 @@ define i1 @sub_nuw_neg_i16(i16 %a) {
 ; CHECK-LABEL: @sub_nuw_neg_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = sub nuw i16 [[A:%.*]], -305
-; CHECK-NEXT:    br i1 false, label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 0, [[NEG2]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
-; CHECK-NEXT:    ret i1 [[C_3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %neg2 = sub nuw i16 %a, -305
@@ -380,7 +381,6 @@ entry:
   ret i1 %c
 }
 
-; FIXME: currently this incorrectly simplifies %c4 to true.
 define i1 @pr76713(i16 %i1, i16 %i3) {
 ; CHECK-LABEL: @pr76713(
 ; CHECK-NEXT:  entry:
@@ -394,7 +394,8 @@ define i1 @pr76713(i16 %i1, i16 %i3) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i16 [[I1]], -3
 ; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = mul nuw nsw i16 [[I3]], 4
 ; CHECK-NEXT:    [[I6:%.*]] = add nuw nsw i16 [[ARRAYIDX_IDX]], [[SUB]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i16 12, [[I6]]
+; CHECK-NEXT:    ret i1 [[C4]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -417,7 +418,6 @@ else:
   ret i1 0
 }
 
-; FIXME: Currently gets mis-compiled.
 define void @sub_nuw_chained_positive_constants(i16 %a) {
 ; CHECK-LABEL: @sub_nuw_chained_positive_constants(
 ; CHECK-NEXT:  entry:
@@ -426,16 +426,13 @@ define void @sub_nuw_chained_positive_constants(i16 %a) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 [[SUB2]], 90
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 120
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 121
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i16 [[A]], 120
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i16 [[A]], 121
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -459,7 +456,6 @@ exit.2:
   ret void
 }
 
-; FIXME: Currently gets mis-compiled.
 define void @sub_nuw_chained_negative_constants(i8 %a) {
 ; CHECK-LABEL: @sub_nuw_chained_negative_constants(
 ; CHECK-NEXT:  entry:
@@ -468,14 +464,13 @@ define void @sub_nuw_chained_negative_constants(i8 %a) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[SUB2]], 20
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[A]], -96
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[A]], -95
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit.2:
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
