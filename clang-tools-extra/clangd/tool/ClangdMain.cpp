@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdMain.h"
+#include "Check.h"
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
@@ -62,10 +63,6 @@
 
 namespace clang {
 namespace clangd {
-
-// Implemented in Check.cpp.
-bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts);
 
 namespace {
 
@@ -551,6 +548,34 @@ opt<std::string> ProjectRoot{
 };
 #endif
 
+// These will never be shown in --help, ClangdMain doesn't list the category.
+// See clang-tools-extra/clangd/tool/Check.cpp for more information.
+llvm::cl::opt<std::string> CheckTidyTime{
+    "check-tidy-time",
+    llvm::cl::desc("Print the overhead of checks matching this glob"),
+    llvm::cl::init("")};
+llvm::cl::opt<std::string> CheckFileLines{
+    "check-lines",
+    llvm::cl::desc(
+        "Limits the range of tokens in -check file on which "
+        "various features are tested. Example --check-lines=3-7 restricts "
+        "testing to lines 3 to 7 (inclusive) or --check-lines=5 to restrict "
+        "to one line. Default is testing entire file."),
+    llvm::cl::init("")};
+llvm::cl::opt<bool> CheckLocations{
+    "check-locations",
+    llvm::cl::desc(
+        "Runs certain features (e.g. hover) at each point in the file. "
+        "Somewhat slow."),
+    llvm::cl::init(true)};
+llvm::cl::opt<bool> CheckCompletion{
+    "check-completion",
+    llvm::cl::desc("Run code-completion at each point (slow)"),
+    llvm::cl::init(false)};
+llvm::cl::opt<bool> CheckWarnings{
+    "check-warnings", llvm::cl::desc("Print warnings as well as errors"),
+    llvm::cl::init(false)};
+
 /// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
@@ -973,7 +998,17 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return 1;
     }
     log("Entering check mode (no LSP server)");
-    return check(Path, TFS, Opts)
+
+    ClangdCheckOptions CheckOpts;
+    if (CheckTidyTime.getNumOccurrences())
+      CheckOpts.CheckTidyTime = std::make_optional(CheckTidyTime.ValueStr);
+
+    CheckOpts.CheckFileLines = CheckFileLines;
+    CheckOpts.CheckCompletion = CheckCompletion;
+    CheckOpts.CheckLocations = CheckLocations;
+    CheckOpts.CheckWarnings = CheckWarnings;
+
+    return check(Path, TFS, Opts, CheckOpts)
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
