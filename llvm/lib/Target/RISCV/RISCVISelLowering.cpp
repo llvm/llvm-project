@@ -12985,7 +12985,7 @@ struct NodeExtensionHelper {
     // Determine the narrow size.
     unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
     // Determine the minimum narrow size.
-    unsigned MinSize = VT.isInteger() ? 8 : 32;
+    unsigned MinSize = VT.isInteger() ? 8 : 16;
 
     assert(NarrowSize >= MinSize &&
            "Trying to extend something we can't represent");
