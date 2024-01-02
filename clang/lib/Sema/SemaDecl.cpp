@@ -15845,7 +15845,7 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
 }
 
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
-  if (!FD)
+  if (!FD || FD->hasSkippedBody())
     return;
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
