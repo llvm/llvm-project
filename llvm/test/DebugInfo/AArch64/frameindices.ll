@@ -1,4 +1,5 @@
 ; RUN: llc -frame-pointer=all -O0 -fast-isel -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -frame-pointer=all -O0 -fast-isel -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
 ; Test that a variable with multiple entries in the MMI table makes it into the
 ; debug info.
 ;

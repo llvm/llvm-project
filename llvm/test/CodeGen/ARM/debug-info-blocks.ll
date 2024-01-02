@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -O0 < %s | llvm-dwarfdump -v - | FileCheck %s
 
 ; debug_info content
 ; CHECK: DW_AT_name {{.*}} "foobar_func_block_invoke_0"

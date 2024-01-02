@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj -o %t.o
 ; RUN: llvm-pdbutil dump -types %t.o | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj -o %t.o
+; RUN: llvm-pdbutil dump -types %t.o | FileCheck %s
+
 ; C++ source:
 ; // Note that MSVC doesn't emit anything about WrapTypedef or WrapTypedef::Inner!
 ; struct WrapTypedef {
