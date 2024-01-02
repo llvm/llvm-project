@@ -379,3 +379,40 @@ entry:
   %c = icmp ugt i64 %neg2, 0
   ret i1 %c
 }
+
+; FIXME: currently this incorrectly simplifies %c4 to true.
+define i1 @pr76713(i16 %i1, i16 %i3) {
+; CHECK-LABEL: @pr76713(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i16 [[I1:%.*]], -1
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i16 [[I1]], -3
+; CHECK-NEXT:    [[C3:%.*]] = icmp ult i16 [[I3:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[AND]], [[C3]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i16 [[I1]], -3
+; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = mul nuw nsw i16 [[I3]], 4
+; CHECK-NEXT:    [[I6:%.*]] = add nuw nsw i16 [[ARRAYIDX_IDX]], [[SUB]]
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %c1 = icmp ult i16 %i1, -1
+  %c2 = icmp uge i16 %i1, -3
+  %c3 = icmp ult i16 %i3, 2
+  %and = and i1 %c1, %c2
+  %and.2 = and i1 %and, %c3
+  br i1 %and, label %then, label %else
+
+then:
+  %sub = sub nuw nsw i16 %i1, -3
+  %arrayidx.idx = mul nuw nsw i16 %i3, 4
+  %i6 = add nuw nsw i16 %arrayidx.idx, %sub
+  %c4 = icmp ult i16 12, %i6
+  ret i1 %c4
+
+else:
+  ret i1 0
+}
