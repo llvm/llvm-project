@@ -668,8 +668,8 @@ template <> class FloatToString<long double> {
   LIBC_INLINE static constexpr void zero_leading_digits(
       cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> &int_num) {
     // 64 is the width of the numbers used to internally represent the UInt
-    for (size_t i = 0; i < EXTRA_INT_WIDTH / 64; ++i) {
-      int_num[i + (FLOAT_AS_INT_WIDTH / 64)] = 0;
+    for (size_t i = 0; i < EXTRA_INT_WIDTH / int_num.WORD_SIZE; ++i) {
+      int_num[i + (FLOAT_AS_INT_WIDTH / int_num.WORD_SIZE)] = 0;
     }
   }
 
@@ -807,10 +807,14 @@ public:
     // If we're currently after the requested block (remember these are
     // negative indices) we reset the number to the start. This is only
     // likely to happen in %g calls. This will also reset int_block_index.
-    if (block_index > int_block_index) {
-      init_convert();
-    }
+    // if (block_index > int_block_index) {
+    //   init_convert();
+    // }
 
+    // Printf is the only existing user of this code and it will only ever move
+    // downwards, except for %g but that currently creates a second
+    // float_to_string object so this assertion still holds. If a new user needs
+    // the ability to step backwards, uncomment the code above.
     LIBC_ASSERT(block_index <= int_block_index);
 
     // If we are currently before the requested block. Step until we reach the

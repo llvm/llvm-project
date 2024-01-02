@@ -2994,6 +2994,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xa.aaaaaaaaaaaaaabp-7L);
   ASSERT_STREQ_LEN(written, buff, "0.0833333");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 9.99999999999e-100L);
+  ASSERT_STREQ_LEN(written, buff, "1e-99");
+
 #endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
   // TODO: Uncomment the below tests after long double support is added

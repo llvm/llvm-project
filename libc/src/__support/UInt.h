@@ -27,6 +27,11 @@ namespace LIBC_NAMESPACE::cpp {
 
 template <size_t Bits, bool Signed> struct BigInt {
 
+  // This being hardcoded as 64 is okay because we're using uint64_t as our
+  // internal type which will always be 64 bits.
+  LIBC_INLINE_VAR static constexpr size_t WORD_SIZE = 64;
+
+  // TODO: Replace references to 64 with WORD_SIZE.
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in BigInt should be a multiple of 64.");
   LIBC_INLINE_VAR static constexpr size_t WORDCOUNT = Bits / 64;
