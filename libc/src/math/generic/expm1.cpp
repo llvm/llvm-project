@@ -61,6 +61,8 @@ constexpr double MLOG_2_EXP2_M12_MID = 0x1.718432a1b0e26p-47;
 constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
 
+namespace {
+
 // Polynomial approximations with double precision:
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
@@ -268,6 +270,8 @@ double set_exceptional(double x) {
   // x is +inf or nan
   return x + static_cast<double>(FPBits::inf());
 }
+
+} // namespace
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;

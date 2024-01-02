@@ -15,6 +15,7 @@ module iso_fortran_env
 
   use __fortran_builtins, only: &
     event_type => __builtin_event_type, &
+    notify_type => __builtin_notify_type, &
     lock_type => __builtin_lock_type, &
     team_type => __builtin_team_type, &
     atomic_int_kind => __builtin_atomic_int_kind, &
