@@ -716,10 +716,8 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
       return false;
 
     // Can't handle large objects yet.
-    if (auto *GO = dyn_cast<GlobalObject>(GV)) {
-      if (TM.isLargeGlobalObject(GO))
-        return false;
-    }
+    if (TM.isLargeGlobalValue(GV))
+      return false;
 
     // Can't handle TLS yet.
     if (GV->isThreadLocal())
@@ -1308,8 +1306,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                   TII.get(Subtarget->is64Bit() ? X86::RET64 : X86::RET32));
   }
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
   return true;
 }
 
@@ -3348,8 +3346,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign const &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     const Value *ArgVal = OutVals[VA.getValNo()];
     MVT ArgVT = OutVTs[VA.getValNo()];
 
@@ -3849,7 +3846,7 @@ unsigned X86FastISel::X86MaterializeGV(const GlobalValue *GV, MVT VT) {
   if (TM.getCodeModel() != CodeModel::Small &&
       TM.getCodeModel() != CodeModel::Medium)
     return 0;
-  if (!isa<GlobalObject>(GV) || TM.isLargeGlobalObject(cast<GlobalObject>(GV)))
+  if (TM.isLargeGlobalValue(GV))
     return 0;
 
   // Materialize addresses with LEA/MOV instructions.

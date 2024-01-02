@@ -734,7 +734,7 @@ LLVM_LIBC_FUNCTION(double, log, (double x)) {
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
-  int x_e = -FPBits_t::EXPONENT_BIAS;
+  int x_e = -FPBits_t::EXP_BIAS;
 
   if (LIBC_UNLIKELY(x_u == 0x3FF0'0000'0000'0000ULL)) {
     // log(1.0) = +0.0

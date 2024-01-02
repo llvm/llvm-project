@@ -9,7 +9,8 @@
 define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-LABEL: Checking a loop in 'test_unused_interleave'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = vector-trip-count
+; CHECK-NEXT: Live-in vp<%0> = VF * UF
+; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%length> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
@@ -17,14 +18,9 @@ define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%1> = CANONICAL-INDUCTION ir<0>, vp<%6>
-; CHECK-NEXT:     vp<%2> = SCALAR-STEPS vp<%1>, ir<1>
-; CHECK-NEXT:     CLONE ir<%next19.i.i> = getelementptr inbounds ir<%src>, vp<%2>, ir<0>
-; CHECK-NEXT:     INTERLEAVE-GROUP with factor 2 at %load_p1, ir<%next19.i.i>
-; CHECK-NEXT:       ir<%load_p1> = load from index 0
-; CHECK-NEXT:       ir<%load_p2> = load from index 1
-; CHECK-NEXT:     EMIT vp<%6> = VF * UF + nuw vp<%1>
-; CHECK-NEXT:     EMIT branch-on-count vp<%6>, vp<%0>
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%3>
+; CHECK-NEXT:     EMIT vp<%3> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%3>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 entry:

@@ -177,6 +177,7 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
                                            "roundeven");
   populatePatternsForOp<math::RoundOp>(patterns, ctx, "roundf", "round");
   populatePatternsForOp<math::SinOp>(patterns, ctx, "sinf", "sin");
+  populatePatternsForOp<math::SinhOp>(patterns, ctx, "sinhf", "sinh");
   populatePatternsForOp<math::TanOp>(patterns, ctx, "tanf", "tan");
   populatePatternsForOp<math::TanhOp>(patterns, ctx, "tanhf", "tanh");
   populatePatternsForOp<math::TruncOp>(patterns, ctx, "truncf", "trunc");

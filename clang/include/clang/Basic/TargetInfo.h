@@ -1372,6 +1372,7 @@ public:
     LangOptions::SignReturnAddressKeyKind SignKey =
         LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
+    bool BranchProtectionPAuthLR = false;
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
@@ -1423,6 +1424,8 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
+    if (getTriple().isOSBinFormatMachO())
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());

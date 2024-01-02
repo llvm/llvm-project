@@ -1487,8 +1487,18 @@ foreach Index = 0-31 in {
 // 16-bit bitcast
 def : BitConvert <i16, f16, VGPR_32>;
 def : BitConvert <f16, i16, VGPR_32>;
+def : BitConvert <f16, bf16, VGPR_32>;
+def : BitConvert <bf16, f16, VGPR_32>;
+
 def : BitConvert <i16, f16, SReg_32>;
 def : BitConvert <f16, i16, SReg_32>;
+def : BitConvert <f16, bf16, SReg_32>;
+def : BitConvert <bf16, f16, SReg_32>;
+
+def : BitConvert <i16, bf16, VGPR_32>;
+def : BitConvert <bf16, i16, VGPR_32>;
+def : BitConvert <i16, bf16, SReg_32>;
+def : BitConvert <bf16, i16, SReg_32>;
 
 // 32-bit bitcast
 def : BitConvert <i32, f32, VGPR_32>;

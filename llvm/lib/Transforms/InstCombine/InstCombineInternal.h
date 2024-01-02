@@ -278,6 +278,16 @@ private:
                                               IntrinsicInst &Tramp);
   Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
 
+  // Match a pair of Phi Nodes like
+  // phi [a, BB0], [b, BB1] & phi [b, BB0], [a, BB1]
+  // Return the matched two operands.
+  std::optional<std::pair<Value *, Value *>>
+  matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS);
+
+  // Tries to fold (op phi(a, b) phi(b, a)) -> (op a, b)
+  // while op is a commutative intrinsic call.
+  Instruction *foldCommutativeIntrinsicOverPhis(IntrinsicInst &II);
+
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
   Instruction *simplifyMaskedGather(IntrinsicInst &II);
@@ -492,6 +502,11 @@ public:
   /// X % (C0 * C1)
   Value *SimplifyAddWithRemainder(BinaryOperator &I);
 
+  // Tries to fold (Binop phi(a, b) phi(b, a)) -> (Binop a, b)
+  // while Binop is commutative.
+  Value *SimplifyPhiCommutativeBinaryOp(BinaryOperator &I, Value *LHS,
+                                        Value *RHS);
+
   // Binary Op helper for select operations where the expression can be
   // efficiently reorganized.
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
@@ -550,7 +565,7 @@ public:
   bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &UndefElts, unsigned Depth = 0,
+                                    APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
   /// Canonicalize the position of binops relative to shufflevector.

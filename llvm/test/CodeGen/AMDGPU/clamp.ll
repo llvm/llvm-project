@@ -4024,14 +4024,12 @@ define amdgpu_kernel void @v_clamp_diff_source_f32(ptr addrspace(1) %out, ptr ad
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
-; GFX12-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX12-NEXT:    s_load_b96 s[4:6], s[2:3], 0x0
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_add_f32 s3, s4, s5
-; GFX12-NEXT:    s_add_f32 s2, s4, s2
+; GFX12-NEXT:    s_add_f32 s2, s4, s5
+; GFX12-NEXT:    s_add_f32 s3, s4, s6
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX12-NEXT:    s_max_num_f32 s2, s3, s2
+; GFX12-NEXT:    s_max_num_f32 s2, s2, s3
 ; GFX12-NEXT:    v_max_num_f32_e64 v1, s2, s2 clamp
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1] offset:12
 ; GFX12-NEXT:    s_nop 0

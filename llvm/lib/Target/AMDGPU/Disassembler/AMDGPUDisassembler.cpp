@@ -209,10 +209,12 @@ DECODE_OPERAND_REG_8(VReg_512)
 DECODE_OPERAND_REG_8(VReg_1024)
 
 DECODE_OPERAND_REG_7(SReg_32, OPW32)
+DECODE_OPERAND_REG_7(SReg_32_XEXEC, OPW32)
 DECODE_OPERAND_REG_7(SReg_32_XM0_XEXEC, OPW32)
 DECODE_OPERAND_REG_7(SReg_32_XEXEC_HI, OPW32)
 DECODE_OPERAND_REG_7(SReg_64, OPW64)
 DECODE_OPERAND_REG_7(SReg_64_XEXEC, OPW64)
+DECODE_OPERAND_REG_7(SReg_96, OPW96)
 DECODE_OPERAND_REG_7(SReg_128, OPW128)
 DECODE_OPERAND_REG_7(SReg_256, OPW256)
 DECODE_OPERAND_REG_7(SReg_512, OPW512)
@@ -698,6 +700,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);
+  }
+
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::DS) &&
+      !AMDGPU::hasGDS(STI)) {
+    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::gds);
   }
 
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
@@ -1239,6 +1246,8 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
   case AMDGPU::TTMP_64RegClassID:
     shift = 1;
     break;
+  case AMDGPU::SGPR_96RegClassID:
+  case AMDGPU::TTMP_96RegClassID:
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::TTMP_128RegClassID:
   // ToDo: unclear if s[100:104] is available on VI. Can we use VCC as SGPR in
@@ -1275,9 +1284,8 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
 
 MCOperand AMDGPUDisassembler::createVGPR16Operand(unsigned RegIdx,
                                                   bool IsHi) const {
-  unsigned RCID =
-      IsHi ? AMDGPU::VGPR_HI16RegClassID : AMDGPU::VGPR_LO16RegClassID;
-  return createRegOperand(RCID, RegIdx);
+  unsigned RegIdxInVGPR16 = RegIdx * 2 + (IsHi ? 1 : 0);
+  return createRegOperand(AMDGPU::VGPR_16RegClassID, RegIdxInVGPR16);
 }
 
 // Decode Literals for insts which always have a literal in the encoding

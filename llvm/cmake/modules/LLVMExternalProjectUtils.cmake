@@ -319,6 +319,10 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
   endif()
 
+  if(CMAKE_VERBOSE_MAKEFILE)
+    set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${ARG_DEPENDS} llvm-config
     ${name}-clobber
@@ -330,6 +334,7 @@ function(llvm_ExternalProject_Add name source_dir)
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
                --no-warn-unused-cli
                ${compiler_args}
+               ${verbose}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                ${sysroot_arg}
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}

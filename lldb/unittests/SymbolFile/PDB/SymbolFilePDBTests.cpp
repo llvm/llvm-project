@@ -579,15 +579,15 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
 
   // Make a type query object we can use for all types and for one type
-  TypeQuery query("ClassTypedef");
+  TypeQuery query("NestedClass");
   {
     // Find all types that match
     TypeResults query_results;
     symfile->FindTypes(query, query_results);
     TypeMap &results = query_results.GetTypeMap();
-    EXPECT_GT(results.GetSize(), 1u);
+    // We expect to find Class::NestedClass and ClassTypedef::NestedClass.
+    EXPECT_EQ(results.GetSize(), 2u);
   }
-
   {
     // Find a single type that matches
     query.SetFindOne(true);

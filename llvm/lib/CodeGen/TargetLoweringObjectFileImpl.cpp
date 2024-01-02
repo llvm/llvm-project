@@ -472,6 +472,10 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covfun, Triple::ELF,
                                       /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covdata, Triple::ELF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covname, Triple::ELF,
+                                      /*AddSegmentInfo=*/false) ||
       Name == ".llvmbc" || Name == ".llvmcmd")
     return SectionKind::getMetadata();
 
@@ -645,7 +649,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name = ".rodata.cst";
     Name += utostr(EntrySize);
   } else {
-    Name = getSectionPrefixForGlobal(Kind, TM.isLargeGlobalObject(GO));
+    Name = getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
   }
 
   bool HasPrefix = false;
@@ -765,7 +769,7 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
   }
-  if (TM.isLargeGlobalObject(GO))
+  if (TM.isLargeGlobalValue(GO))
     Flags |= ELF::SHF_X86_64_LARGE;
   return {Group, IsComdat, Flags};
 }
@@ -2675,6 +2679,13 @@ TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);
+}
+
+MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
+    const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
+  std::string Name = ".gcc_exception_table." + F.getName().str();
+  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr,
+                                     nullptr);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(

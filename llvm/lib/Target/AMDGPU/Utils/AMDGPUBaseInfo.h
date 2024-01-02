@@ -1334,7 +1334,7 @@ std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
 std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                      int64_t ByteOffset);
 
-/// For FLAT segment the offset must be positive;
+/// For pre-GFX12 FLAT instructions the offset must be positive;
 /// MSB is ignored and forced to zero.
 ///
 /// \return The number of bits available for the signed offset field in flat

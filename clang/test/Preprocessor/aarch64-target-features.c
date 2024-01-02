@@ -600,6 +600,7 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1

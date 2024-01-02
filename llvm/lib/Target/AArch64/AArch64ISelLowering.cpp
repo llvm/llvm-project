@@ -13708,14 +13708,16 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
 
   APInt SplatValue;
   APInt SplatUndef;
-  unsigned SplatBitSize;
+  unsigned SplatBitSize = 0;
   bool HasAnyUndefs;
 
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(RHS.getNode());
   bool IsCnst = BVN && BVN->isConstantSplat(SplatValue, SplatUndef,
                                             SplatBitSize, HasAnyUndefs);
+
   bool IsZero = IsCnst && SplatValue == 0;
-  bool IsOne = IsCnst && SplatValue == 1;
+  bool IsOne =
+      IsCnst && SrcVT.getScalarSizeInBits() == SplatBitSize && SplatValue == 1;
   bool IsMinusOne = IsCnst && SplatValue.isAllOnes();
 
   if (SrcVT.getVectorElementType().isFloatingPoint()) {

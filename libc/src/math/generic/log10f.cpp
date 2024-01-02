@@ -158,7 +158,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
     }
   }
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
     if (xbits.is_zero()) {

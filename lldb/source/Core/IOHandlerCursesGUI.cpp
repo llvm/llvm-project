@@ -7052,7 +7052,7 @@ public:
           m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
                                         &lineStream);
           StringRef line = lineStream.GetString();
-          if (line.endswith("\n"))
+          if (line.ends_with("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
               1, line, m_first_visible_column, is_pc_line);

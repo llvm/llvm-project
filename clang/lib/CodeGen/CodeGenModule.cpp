@@ -995,12 +995,7 @@ void CodeGenModule::Release() {
                               uint32_t(CLANG_VERSION_MINOR));
     getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
-    std::string ProductId;
-#ifdef CLANG_VENDOR
-    ProductId = #CLANG_VENDOR;
-#else
-    ProductId = "clang";
-#endif
+    std::string ProductId = getClangVendor() + "clang";
     getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
                               llvm::MDString::get(VMContext, ProductId));
 
@@ -1110,6 +1105,9 @@ void CodeGenModule::Release() {
       Arch == llvm::Triple::aarch64_be) {
     if (LangOpts.BranchTargetEnforcement)
       getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
+                                1);
+    if (LangOpts.BranchProtectionPAuthLR)
+      getModule().addModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr",
                                 1);
     if (LangOpts.hasSignReturnAddress())
       getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 1);

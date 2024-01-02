@@ -1176,6 +1176,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setTruncStoreAction(MVT::f128, MVT::f32, Expand);
 
       // No implementation for these ops for PowerPC.
+      setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
       setOperationAction(ISD::FSIN, MVT::f128, Expand);
       setOperationAction(ISD::FCOS, MVT::f128, Expand);
       setOperationAction(ISD::FPOW, MVT::f128, Expand);
@@ -1411,6 +1412,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::EXP2_F128, "exp2f128");
   setLibcallName(RTLIB::SIN_F128, "sinf128");
   setLibcallName(RTLIB::COS_F128, "cosf128");
+  setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
   setLibcallName(RTLIB::POW_F128, "powf128");
   setLibcallName(RTLIB::FMIN_F128, "fminf128");
   setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
@@ -10984,7 +10986,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   switch (cast<ConstantSDNode>(Op.getOperand(ArgStart))->getZExtValue()) {
   case Intrinsic::ppc_cfence: {
     assert(ArgStart == 1 && "llvm.ppc.cfence must carry a chain argument.");
-    assert(Subtarget.isPPC64() && "Only 64-bit is supported for now.");
     SDValue Val = Op.getOperand(ArgStart + 1);
     EVT Ty = Val.getValueType();
     if (Ty == MVT::i128) {
@@ -10992,9 +10993,11 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       // ordering?
       Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Val);
     }
+    unsigned Opcode = Subtarget.isPPC64() ? PPC::CFENCE8 : PPC::CFENCE;
+    EVT FTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
     return SDValue(
-        DAG.getMachineNode(PPC::CFENCE8, DL, MVT::Other,
-                           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Val),
+        DAG.getMachineNode(Opcode, DL, MVT::Other,
+                           DAG.getNode(ISD::ANY_EXTEND, DL, FTy, Val),
                            Op.getOperand(0)),
         0);
   }
@@ -11825,7 +11828,7 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // See http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html and
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
-    if (isa<LoadInst>(Inst) && Subtarget.isPPC64())
+    if (isa<LoadInst>(Inst))
       return Builder.CreateCall(
           Intrinsic::getDeclaration(
               Builder.GetInsertBlock()->getParent()->getParent(),

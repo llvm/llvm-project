@@ -5213,10 +5213,13 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    auto *GV = new GlobalVariable(
-        M, Ty, /*IsConstant=*/false, GlobalValue::CommonLinkage,
-        Constant::getNullValue(Ty), Elem.first(),
-        /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal, AddressSpace);
+    auto Linkage = this->M.getTargetTriple().rfind("wasm32") == 0
+                       ? GlobalValue::ExternalLinkage
+                       : GlobalValue::CommonLinkage;
+    auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
+                                  Constant::getNullValue(Ty), Elem.first(),
+                                  /*InsertBefore=*/nullptr,
+                                  GlobalValue::NotThreadLocal, AddressSpace);
     const DataLayout &DL = M.getDataLayout();
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
     const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);

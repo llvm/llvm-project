@@ -498,7 +498,9 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx12 ||
-         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12;
+         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12;
 }
 
 bool isGenericAtomic(unsigned Opc) {
@@ -2294,8 +2296,6 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 // (move from MC* level to Target* level). Return size in bits.
 unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
-  case AMDGPU::VGPR_LO16RegClassID:
-  case AMDGPU::VGPR_HI16RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
   case AMDGPU::AGPR_LO16RegClassID:
     return 16;
@@ -2691,10 +2691,11 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
-  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
     return 12;
 
+  if (AMDGPU::isGFX12(ST))
+    return 24;
   return 13;
 }
 

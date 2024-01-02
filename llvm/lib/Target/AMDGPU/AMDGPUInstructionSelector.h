@@ -293,6 +293,9 @@ private:
                              Register &SOffset, int64_t &Offset) const;
 
   InstructionSelector::ComplexRendererFns
+  selectBUFSOffset(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectMUBUFAddr64(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
