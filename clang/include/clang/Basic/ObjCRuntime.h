@@ -102,15 +102,15 @@ public:
     // version 1.6 onwards
     if (getKind() == GNUstep && getVersion() >= VersionTuple(1, 6)) {
       switch (Arch) {
-        case llvm::Triple::arm:
-        case llvm::Triple::x86:
-        case llvm::Triple::x86_64:
-        case llvm::Triple::aarch64:
-        case llvm::Triple::mips64:
-        case llvm::Triple::riscv64:
-          return false;
-        default:
-          return true;
+      case llvm::Triple::arm:
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+      case llvm::Triple::aarch64:
+      case llvm::Triple::mips64:
+      case llvm::Triple::riscv64:
+        return false;
+      default:
+        return true;
       }
     }
     else if ((getKind() ==  MacOSX) && isNonFragile() &&
