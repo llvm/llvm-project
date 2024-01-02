@@ -17132,10 +17132,6 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
         case BuiltinType::WChar_U: {
           unsigned TyWidth = Context.getIntWidth(T);
           assert(8 <= TyWidth && TyWidth <= 32 && "Unexpected integer width");
-          if (V.getInt() > std::numeric_limits<uint64_t>::max() ||
-              V.getInt() < std::numeric_limits<int64_t>::min()) {
-            return false;
-          }
           uint32_t CodeUnit = static_cast<uint32_t>(V.getInt().getZExtValue());
           WriteCharTypePrefix(BTy->getKind(), OS);
           OS << '\'';
@@ -17151,6 +17147,10 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
         }
       }
       V.getInt().toString(Str);
+      if (V.getInt() > std::numeric_limits<uint64_t>::max() ||
+          V.getInt() < std::numeric_limits<int64_t>::min()) {
+        return false;
+      }
     }
 
     break;
