@@ -1,3 +1,5 @@
+// Test the linker feature that treats undefined weak symbols as null values.
+
 // RUN: %clang_pgogen -o %t %s
 // RUN: not %t
 // RUN: %clang -o %t %s

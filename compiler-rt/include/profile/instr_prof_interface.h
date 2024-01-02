@@ -67,8 +67,8 @@ void __llvm_profile_reset_counters(void);
  *      __llvm_profile_dump();
  *
  *  It is expected that on-line profile merging is on with \c %m specifier
- *  used in profile filename . If merging is  not turned on, user is expected
- *  to invoke __llvm_profile_set_filename  to specify different profile names
+ *  used in profile filename . If merging is not turned on, user is expected
+ *  to invoke __llvm_profile_set_filename to specify different profile names
  *  for different regions before dumping to avoid profile write clobbering.
  */
 int __llvm_profile_dump(void);
