@@ -1241,6 +1241,15 @@ let Predicates = [HasBMI, In64BitMode], Defs = [EFLAGS] in {
   defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64, "_EVEX">, EVEX;
 }
 
+let Predicates = [In64BitMode] in {
+  defm BLSR32 : Bls<"blsr", MRM1r, MRM1m, Xi32, "_NF">, EVEX, EVEX_NF;
+  defm BLSR64 : Bls<"blsr", MRM1r, MRM1m, Xi64, "_NF">, EVEX, EVEX_NF;
+  defm BLSMSK32 : Bls<"blsmsk", MRM2r, MRM2m, Xi32, "_NF">, EVEX, EVEX_NF;
+  defm BLSMSK64 : Bls<"blsmsk", MRM2r, MRM2m, Xi64, "_NF">, EVEX, EVEX_NF;
+  defm BLSI32 : Bls<"blsi", MRM3r, MRM3m, Xi32, "_NF">, EVEX, EVEX_NF;
+  defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64, "_NF">, EVEX, EVEX_NF;
+}
+
 multiclass Bls_Pats<string suffix> {
   // FIXME(1): patterns for the load versions are not implemented
   // FIXME(2): By only matching `add_su` and `ineg_su` we may emit
@@ -1313,6 +1322,13 @@ let Predicates = [HasBMI, HasEGPR, In64BitMode], Defs = [EFLAGS] in {
 let Predicates = [HasBMI2, HasEGPR, In64BitMode], Defs = [EFLAGS] in {
   defm BZHI32 : Bmi4VOp3<0xF5, "bzhi", Xi32, X86bzhi, WriteBZHI, "_EVEX">, EVEX;
   defm BZHI64 : Bmi4VOp3<0xF5, "bzhi", Xi64, X86bzhi, WriteBZHI, "_EVEX">, EVEX;
+}
+
+let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+  defm BEXTR32 : Bmi4VOp3<0xF7, "bextr", Xi32, X86bextr, WriteBEXTR, "_NF">, EVEX, EVEX_NF;
+  defm BEXTR64 : Bmi4VOp3<0xF7, "bextr", Xi64, X86bextr, WriteBEXTR, "_NF">, EVEX, EVEX_NF;
+  defm BZHI32 : Bmi4VOp3<0xF5, "bzhi", Xi32, X86bzhi, WriteBZHI, "_NF">, EVEX, EVEX_NF;
+  defm BZHI64 : Bmi4VOp3<0xF5, "bzhi", Xi64, X86bzhi, WriteBZHI, "_NF">, EVEX, EVEX_NF;
 }
 
 def CountTrailingOnes : SDNodeXForm<imm, [{

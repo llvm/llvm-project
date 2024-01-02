@@ -1336,6 +1336,10 @@ defm ANDN32 : AndN<Xi32, "">, VEX, Requires<[HasBMI, NoEGPR]>;
 defm ANDN64 : AndN<Xi64, "">, VEX, REX_W, Requires<[HasBMI, NoEGPR]>;
 defm ANDN32 : AndN<Xi32, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>;
 defm ANDN64 : AndN<Xi64, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>;
+let Pattern = [(null_frag)] in {
+defm ANDN32 : AndN<Xi32, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
+defm ANDN64 : AndN<Xi64, "_NF">, EVEX, EVEX_NF, REX_W, Requires<[In64BitMode]>;
+}
 }
 
 multiclass Andn_Pats<string suffix> {
