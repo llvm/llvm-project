@@ -58,7 +58,7 @@ intermediate LLVM representation.
    NVPTXUsage
    Phabricator
    Passes
-   PGOProfileFormat
+   InstrProfileFormat
    ReportingGuide
    ResponseGuide
    Remarks
@@ -178,7 +178,7 @@ Optimizations
    referencing, to determine variable locations for debug info in the final
    stages of compilation.
 
-:doc:`PGOProfileFormat`
+:doc:`InstrProfileFormat`
    This document explains two binary formats of IRPGO profiles.
 
 Code Generation
