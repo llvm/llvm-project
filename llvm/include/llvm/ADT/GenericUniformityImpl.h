@@ -36,8 +36,8 @@
 /// NOTE: In general, no interface exists for a transform to update
 /// (Machine)UniformityInfo. Additionally, (Machine)CycleAnalysis is a
 /// transitive dependence, but it also does not provide an interface for
-/// updation. Given that, transforms should not preserve uniformity in their
-/// getAnalysisUsage() callback.
+/// updating itself. Given that, transforms should not preserve uniformity in
+/// their getAnalysisUsage() callback.
 ///
 //===----------------------------------------------------------------------===//
 
