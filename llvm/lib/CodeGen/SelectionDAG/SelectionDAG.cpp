@@ -9977,13 +9977,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
             VTList.VTs[0].getVectorElementCount() ==
                 Ops[1].getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(
-        VTList.VTs[0].isFloatingPoint() &&
-        Ops[1].getValueType().isFloatingPoint() &&
-        VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
-        isa<ConstantSDNode>(Ops[2]) &&
-        (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
-        "Invalid STRICT_FP_ROUND!");
+    assert(VTList.VTs[0].isFloatingPoint() &&
+           Ops[1].getValueType().isFloatingPoint() &&
+           VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
+           isa<ConstantSDNode>(Ops[2]) &&
+           (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
+           "Invalid STRICT_FP_ROUND!");
     break;
 #if 0
   // FIXME: figure out how to safely handle things like

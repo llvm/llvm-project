@@ -6612,8 +6612,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
 
     // For us to materialize these using one instruction, we must be able to
     // represent them as signed 16-bit integers.
-    uint64_t True = TrueRes->getAsZExtVal(),
-             False = FalseRes->getAsZExtVal();
+    uint64_t True = TrueRes->getAsZExtVal(), False = FalseRes->getAsZExtVal();
     if (!isInt<16>(True) || !isInt<16>(False))
       break;
 

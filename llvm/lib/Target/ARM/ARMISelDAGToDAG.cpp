@@ -1101,8 +1101,7 @@ bool ARMDAGToDAGISel::SelectAddrModePC(SDValue N,
   if (N.getOpcode() == ARMISD::PIC_ADD && N.hasOneUse()) {
     Offset = N.getOperand(0);
     SDValue N1 = N.getOperand(1);
-    Label =
-        CurDAG->getTargetConstant(N1->getAsZExtVal(), SDLoc(N), MVT::i32);
+    Label = CurDAG->getTargetConstant(N1->getAsZExtVal(), SDLoc(N), MVT::i32);
     return true;
   }
 
