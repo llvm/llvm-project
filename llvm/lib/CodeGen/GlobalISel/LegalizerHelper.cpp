@@ -853,9 +853,13 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     RetRegs.push_back(Ret);
     RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
     if (Opc == TargetOpcode::G_ATOMICRMW_AND)
-      Val = MIRBuilder.buildXor(ValLLT, MIRBuilder.buildConstant(ValLLT, -1), Val).getReg(0);
+      Val =
+          MIRBuilder.buildXor(ValLLT, MIRBuilder.buildConstant(ValLLT, -1), Val)
+              .getReg(0);
     else if (Opc == TargetOpcode::G_ATOMICRMW_SUB)
-      Val = MIRBuilder.buildSub(ValLLT, MIRBuilder.buildConstant(ValLLT, 0), Val).getReg(0);
+      Val =
+          MIRBuilder.buildSub(ValLLT, MIRBuilder.buildConstant(ValLLT, 0), Val)
+              .getReg(0);
     Args.push_back({Val, IntegerType::get(Ctx, ValLLT.getSizeInBits()), 0});
     Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
     break;
