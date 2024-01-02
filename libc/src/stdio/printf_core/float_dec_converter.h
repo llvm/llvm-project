@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"

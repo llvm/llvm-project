@@ -1209,6 +1209,59 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPVectorPointerRecipe ::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    // Calculate the pointer for the specific unroll-part.
+    Value *PartPtr = nullptr;
+    // Use i32 for the gep index type when the value is constant,
+    // or query DataLayout for a more suitable index type otherwise.
+    const DataLayout &DL =
+        Builder.GetInsertBlock()->getModule()->getDataLayout();
+    Type *IndexTy = State.VF.isScalable() && (IsReverse || Part > 0)
+                        ? DL.getIndexType(IndexedTy->getPointerTo())
+                        : Builder.getInt32Ty();
+    Value *Ptr = State.get(getOperand(0), VPIteration(0, 0));
+    bool InBounds = false;
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
+      InBounds = GEP->isInBounds();
+    if (IsReverse) {
+      // If the address is consecutive but reversed, then the
+      // wide store needs to start at the last vector element.
+      // RunTimeVF =  VScale * VF.getKnownMinValue()
+      // For fixed-width VScale is 1, then RunTimeVF = VF.getKnownMinValue()
+      Value *RunTimeVF = getRuntimeVF(Builder, IndexTy, State.VF);
+      // NumElt = -Part * RunTimeVF
+      Value *NumElt = Builder.CreateMul(
+          ConstantInt::get(IndexTy, -(int64_t)Part), RunTimeVF);
+      // LastLane = 1 - RunTimeVF
+      Value *LastLane =
+          Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+      PartPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
+      PartPtr = Builder.CreateGEP(IndexedTy, PartPtr, LastLane, "", InBounds);
+    } else {
+      Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Part);
+      PartPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
+    }
+
+    State.set(this, PartPtr, Part);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = vector-pointer ";
+  if (IsReverse)
+    O << "(reverse) ";
+
+  printOperands(O, SlotTracker);
+}
+#endif
+
 void VPBlendRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   // We know that all PHIs in non-header blocks are converted into

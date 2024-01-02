@@ -18,6 +18,7 @@
 
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 void RTDEF(AllocatableInitIntrinsic)(Descriptor &descriptor,
     TypeCategory category, int kind, int rank, int corank) {
@@ -217,5 +218,7 @@ void RTDEF(AllocatableDeallocateNoFinal)(
 }
 
 // TODO: AllocatableCheckLengthParameter
+
+RT_EXT_API_GROUP_END
 }
 } // namespace Fortran::runtime

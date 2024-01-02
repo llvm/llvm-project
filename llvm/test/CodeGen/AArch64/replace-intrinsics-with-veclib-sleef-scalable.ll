@@ -3,8 +3,9 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; NOTE: The existing TLI mappings are not used since the -replace-with-veclib pass is broken for scalable vectors.
-
+;.
+; CHECK: @llvm.compiler.used = appending global [16 x ptr] [ptr @_ZGVsMxv_cos, ptr @_ZGVsMxv_cosf, ptr @_ZGVsMxv_exp, ptr @_ZGVsMxv_expf, ptr @_ZGVsMxv_exp2, ptr @_ZGVsMxv_exp2f, ptr @_ZGVsMxv_exp10, ptr @_ZGVsMxv_exp10f, ptr @_ZGVsMxv_log, ptr @_ZGVsMxv_logf, ptr @_ZGVsMxv_log10, ptr @_ZGVsMxv_log10f, ptr @_ZGVsMxv_log2, ptr @_ZGVsMxv_log2f, ptr @_ZGVsMxv_sin, ptr @_ZGVsMxv_sinf], section "llvm.metadata"
+;.
 define <vscale x 2 x double> @llvm_ceil_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_ceil_vscale_f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
@@ -43,7 +44,7 @@ define <vscale x 4 x float> @llvm_copysign_vscale_f32(<vscale x 4 x float> %mag,
 
 define <vscale x 2 x double> @llvm_cos_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_cos_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_cos(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double> %in)
@@ -52,7 +53,7 @@ define <vscale x 2 x double> @llvm_cos_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_cos_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_cos_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_cosf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %in)
@@ -61,7 +62,7 @@ define <vscale x 4 x float> @llvm_cos_vscale_f32(<vscale x 4 x float> %in) {
 
 define <vscale x 2 x double> @llvm_exp_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_exp_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_exp(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double> %in)
@@ -70,7 +71,7 @@ define <vscale x 2 x double> @llvm_exp_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_exp_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_exp_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_expf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %in)
@@ -79,7 +80,7 @@ define <vscale x 4 x float> @llvm_exp_vscale_f32(<vscale x 4 x float> %in) {
 
 define <vscale x 2 x double> @llvm_exp2_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_exp2_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp2.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_exp2(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.exp2.nxv2f64(<vscale x 2 x double> %in)
@@ -88,7 +89,7 @@ define <vscale x 2 x double> @llvm_exp2_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_exp2_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_exp2_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_exp2f(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> %in)
@@ -97,7 +98,7 @@ define <vscale x 4 x float> @llvm_exp2_vscale_f32(<vscale x 4 x float> %in) {
 
 define <vscale x 2 x double> @llvm_exp10_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_exp10_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_exp10(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double> %in)
@@ -106,7 +107,7 @@ define <vscale x 2 x double> @llvm_exp10_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_exp10_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_exp10_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_exp10f(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float> %in)
@@ -169,7 +170,7 @@ define <vscale x 4 x float> @llvm_fma_vscale_f32(<vscale x 4 x float> %a, <vscal
 
 define <vscale x 2 x double> @llvm_log_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_log_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.log.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_log(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.log.nxv2f64(<vscale x 2 x double> %in)
@@ -178,7 +179,7 @@ define <vscale x 2 x double> @llvm_log_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_log_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_log_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_logf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float> %in)
@@ -187,7 +188,7 @@ define <vscale x 4 x float> @llvm_log_vscale_f32(<vscale x 4 x float> %in) {
 
 define <vscale x 2 x double> @llvm_log10_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_log10_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.log10.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_log10(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.log10.nxv2f64(<vscale x 2 x double> %in)
@@ -196,7 +197,7 @@ define <vscale x 2 x double> @llvm_log10_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_log10_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_log10_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float> %in)
@@ -205,7 +206,7 @@ define <vscale x 4 x float> @llvm_log10_vscale_f32(<vscale x 4 x float> %in) {
 
 define <vscale x 2 x double> @llvm_log2_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_log2_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.log2.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_log2(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.log2.nxv2f64(<vscale x 2 x double> %in)
@@ -214,7 +215,7 @@ define <vscale x 2 x double> @llvm_log2_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_log2_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_log2_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_log2f(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float> %in)
@@ -331,7 +332,7 @@ define <vscale x 4 x float> @llvm_round_vscale_f32(<vscale x 4 x float> %in) {
 
 define <vscale x 2 x double> @llvm_sin_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_sin_vscale_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.sin.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @_ZGVsMxv_sin(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call fast <vscale x 2 x double> @llvm.sin.nxv2f64(<vscale x 2 x double> %in)
@@ -340,7 +341,7 @@ define <vscale x 2 x double> @llvm_sin_vscale_f64(<vscale x 2 x double> %in) {
 
 define <vscale x 4 x float> @llvm_sin_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-LABEL: @llvm_sin_vscale_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @_ZGVsMxv_sinf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %in)

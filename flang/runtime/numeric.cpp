@@ -261,12 +261,10 @@ template <int PREC, typename T> inline RT_API_ATTRS T Spacing(T x) {
 // NEAREST (16.9.139)
 template <int PREC, typename T>
 inline RT_API_ATTRS T Nearest(T x, bool positive) {
-  auto spacing{Spacing<PREC>(x)};
-  if (x == 0) {
-    auto least{std::numeric_limits<T>::denorm_min()};
-    return positive ? least : -least;
+  if (positive) {
+    return std::nextafter(x, std::numeric_limits<T>::infinity());
   } else {
-    return positive ? x + spacing : x - spacing;
+    return std::nextafter(x, -std::numeric_limits<T>::infinity());
   }
 }
 
@@ -304,6 +302,7 @@ RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
 }
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Ceiling4_1)(
     CppTypeFor<TypeCategory::Real, 4> x) {
@@ -969,5 +968,7 @@ CppTypeFor<TypeCategory::Real, 16> RTDEF(FPow16k)(
   return FPowI(b, e);
 }
 #endif
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

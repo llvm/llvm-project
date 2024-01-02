@@ -27,6 +27,7 @@ set(LIBS
   MLIRTransforms
   MLIRTransformUtils
   MLIRTranslateLib
+  MLIRVectorDialect
   MLIRVectorToLLVMPass
   )
 
