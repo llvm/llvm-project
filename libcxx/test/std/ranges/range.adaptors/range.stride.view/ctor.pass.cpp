@@ -17,7 +17,7 @@
 #include "types.h"
 
 // There is no default ctor for stride_view.
-using View = InputView<cpp17_input_iterator<int*>>;
+using View = BasicTestView<cpp17_input_iterator<int*>>;
 static_assert(!std::is_default_constructible_v<std::ranges::stride_view<View>>);
 
 // Test that the stride_view can only be explicitly constructed.
