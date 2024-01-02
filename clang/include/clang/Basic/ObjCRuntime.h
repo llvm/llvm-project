@@ -101,10 +101,17 @@ public:
     // The GNUstep runtime uses a newer dispatch method by default from
     // version 1.6 onwards
     if (getKind() == GNUstep && getVersion() >= VersionTuple(1, 6)) {
-      if (Arch == llvm::Triple::arm ||
-          Arch == llvm::Triple::x86 ||
-          Arch == llvm::Triple::x86_64)
-        return false;
+      switch (Arch) {
+        case llvm::Triple::arm:
+        case llvm::Triple::x86:
+        case llvm::Triple::x86_64:
+        case llvm::Triple::aarch64:
+        case llvm::Triple::mips64:
+        case llvm::Triple::riscv64:
+          return false;
+        default:
+          return true;
+      }
     }
     else if ((getKind() ==  MacOSX) && isNonFragile() &&
              (getVersion() >= VersionTuple(10, 0)) &&
