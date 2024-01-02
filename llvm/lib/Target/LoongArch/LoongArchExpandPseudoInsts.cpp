@@ -458,11 +458,11 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   }
   case CodeModel::Medium: {
     // CALL:
-    // pcalau12i  $ra, %pc_hi20(func)
-    // jirl       $ra, $ra, %pc_lo12(func)
+    // pcaddu18i $ra, %call36(func)
+    // jirl      $ra, $ra, 0
     // TAIL:
-    // pcalau12i  $scratch, %pc_hi20(func)
-    // jirl       $r0, $scratch, %pc_lo12(func)
+    // pcaddu18i $scratch, %call36(func)
+    // jirl      $r0, $scratch, 0
     Opcode =
         IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
     Register ScratchReg =
@@ -470,18 +470,15 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
             ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
             : LoongArch::R1;
     MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg);
-    CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg);
-    if (Func.isSymbol()) {
-      const char *FnName = Func.getSymbolName();
-      MIB.addExternalSymbol(FnName, LoongArchII::MO_PCREL_HI);
-      CALL.addExternalSymbol(FnName, LoongArchII::MO_PCREL_LO);
-      break;
-    }
-    assert(Func.isGlobal() && "Expected a GlobalValue at this time");
-    const GlobalValue *GV = Func.getGlobal();
-    MIB.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_HI);
-    CALL.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_LO);
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCADDU18I), ScratchReg);
+
+    CALL =
+        BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg).addImm(0);
+
+    if (Func.isSymbol())
+      MIB.addExternalSymbol(Func.getSymbolName(), LoongArchII::MO_CALL36);
+    else
+      MIB.addDisp(Func, 0, LoongArchII::MO_CALL36);
     break;
   }
   case CodeModel::Large: {
