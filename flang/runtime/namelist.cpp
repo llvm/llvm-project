@@ -247,6 +247,28 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+static void StorageSequenceExtension(
+    Descriptor &desc, const Descriptor &source) {
+  // Support the near-universal extension of NAMELIST input into a
+  // designatable storage sequence identified by its initial scalar array
+  // element.  For example, treat "A(1) = 1. 2. 3." as if it had been
+  // "A(1:) = 1. 2. 3.".
+  if (desc.rank() == 0 && (source.rank() == 1 || source.IsContiguous())) {
+    if (auto stride{source.rank() == 1
+                ? source.GetDimension(0).ByteStride()
+                : static_cast<SubscriptValue>(source.ElementBytes())};
+        stride != 0) {
+      desc.raw().attribute = CFI_attribute_pointer;
+      desc.raw().rank = 1;
+      desc.GetDimension(0)
+          .SetBounds(1,
+              source.Elements() -
+                  ((source.OffsetElement() - desc.OffsetElement()) / stride))
+          .SetByteStride(stride);
+    }
+  }
+}
+
 static bool HandleSubstring(
     IoStatementState &io, Descriptor &desc, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
@@ -480,10 +502,14 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     bool hadSubscripts{false};
     bool hadSubstring{false};
     if (next && (*next == '(' || *next == '%')) {
+      const Descriptor *lastSubscriptBase{nullptr};
+      Descriptor *lastSubscriptDescriptor{nullptr};
       do {
         Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
         whichStaticDesc ^= 1;
         io.HandleRelativePosition(byteCount); // skip over '(' or '%'
+        lastSubscriptDescriptor = nullptr;
+        lastSubscriptBase = nullptr;
         if (*next == '(') {
           if (!hadSubstring && (hadSubscripts || useDescriptor->rank() == 0)) {
             mutableDescriptor = *useDescriptor;
@@ -497,11 +523,12 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
                                 "NAMELIST group '%s'",
                 name, group.groupName);
             return false;
+          } else if (HandleSubscripts(
+                         io, mutableDescriptor, *useDescriptor, name)) {
+            lastSubscriptBase = useDescriptor;
+            lastSubscriptDescriptor = &mutableDescriptor;
           } else {
-            if (!HandleSubscripts(
-                    io, mutableDescriptor, *useDescriptor, name)) {
-              return false;
-            }
+            return false;
           }
           hadSubscripts = true;
         } else {
@@ -514,6 +541,9 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         useDescriptor = &mutableDescriptor;
         next = io.GetCurrentChar(byteCount);
       } while (next && (*next == '(' || *next == '%'));
+      if (lastSubscriptDescriptor) {
+        StorageSequenceExtension(*lastSubscriptDescriptor, *lastSubscriptBase);
+      }
     }
     // Skip the '='
     next = io.GetNextNonBlank(byteCount);
