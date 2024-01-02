@@ -3,10 +3,10 @@ Test lldb-dap variables/stackTrace request for optimized code
 """
 
 import dap_server
+import lldbdap_testcase
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
 
 
 class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
@@ -47,3 +47,7 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         optimized_variable = self.dap_server.get_local_variable("argc")
 
         self.assertTrue(optimized_variable["value"].startswith("<error:"))
+        self.assertEqual(
+            optimized_variable["$__lldb_extensions"]["error"],
+            "Could not evaluate DW_OP_entry_value.",
+        )
