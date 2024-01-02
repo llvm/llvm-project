@@ -655,6 +655,26 @@ gpu.module @kernels {
 
 // -----
 
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  // CHECK-LABEL:  spirv.func @test
+  //  CHECK-SAME: (%[[ARG:.*]]: i32)
+  gpu.func @test(%arg : vector<1xi32>) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax "Subgroup" "Reduce" %[[ARG]] : i32
+    %r0 = gpu.subgroup_reduce maxsi %arg : (vector<1xi32>) -> (vector<1xi32>)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
 // TODO: Handle boolean reductions.
 
 module attributes {
@@ -747,6 +767,24 @@ gpu.module @kernels {
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
     %r0 = gpu.subgroup_reduce maxui %arg : (i1) -> (i1)
+    gpu.return
+  }
+}
+}
+
+// -----
+
+// Vector reductions need to be lowered to scalar reductions first.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+gpu.module @kernels {
+  gpu.func @maxui(%arg : vector<2xi32>) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
+    %r0 = gpu.subgroup_reduce maxui %arg : (vector<2xi32>) -> (vector<2xi32>)
     gpu.return
   }
 }

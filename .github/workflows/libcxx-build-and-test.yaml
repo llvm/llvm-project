@@ -185,7 +185,7 @@ jobs:
           std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-32-set
+          machine: libcxx-runners-8-set
           std_modules: 'OFF'
     runs-on: ${{ matrix.machine }}
     steps:

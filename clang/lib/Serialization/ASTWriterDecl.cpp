@@ -1163,10 +1163,14 @@ void ASTDeclWriter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
 void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   VisitVarDecl(D);
 
+  // See the implementation of `ParmVarDecl::getParameterIndex()`, which may
+  // exceed the size of the normal bitfield. So it may be better to not pack
+  // these bits.
+  Record.push_back(D->getFunctionScopeIndex());
+
   BitsPacker ParmVarDeclBits;
   ParmVarDeclBits.addBit(D->isObjCMethodParameter());
   ParmVarDeclBits.addBits(D->getFunctionScopeDepth(), /*BitsWidth=*/7);
-  ParmVarDeclBits.addBits(D->getFunctionScopeIndex(), /*BitsWidth=*/8);
   // FIXME: stable encoding
   ParmVarDeclBits.addBits(D->getObjCDeclQualifier(), /*BitsWidth=*/7);
   ParmVarDeclBits.addBit(D->isKNRPromoted());
@@ -2350,10 +2354,11 @@ void ASTWriter::WriteDeclAbbrevs() {
                             // isARCPseudoStrong, Linkage, ModulesCodegen
   Abv->Add(BitCodeAbbrevOp(0));                          // VarKind (local enum)
   // ParmVarDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ScopeIndex
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      27)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
-            // ScopeIndex, ObjCDeclQualifier, KNRPromoted,
+      19)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
+            // ObjCDeclQualifier, KNRPromoted,
             // HasInheritedDefaultArg, HasUninstantiatedDefaultArg
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

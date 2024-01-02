@@ -84,6 +84,8 @@ module attributes {gpu.container_module} {
 
       %one = arith.constant 1.0 : f32
 
+      %vec = vector.broadcast %arg0 : f32 to vector<4xf32>
+
       // CHECK: %{{.*}} = gpu.all_reduce add %{{.*}} {
       // CHECK-NEXT: } : (f32) -> f32
       %sum = gpu.all_reduce add %one {} : (f32) -> (f32)
@@ -97,6 +99,9 @@ module attributes {gpu.container_module} {
 
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} uniform : (f32) -> f32
       %sum_subgroup1 = gpu.subgroup_reduce add %one uniform : (f32) -> f32
+
+      // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (vector<4xf32>) -> vector<4xf32>
+      %sum_subgroup2 = gpu.subgroup_reduce add %vec : (vector<4xf32>) -> vector<4xf32>
 
       %width = arith.constant 7 : i32
       %offset = arith.constant 3 : i32
