@@ -366,13 +366,13 @@ public:
 
 using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
-char *llvm::itaniumDemangle(std::string_view MangledName, bool ParseParams) {
+char *llvm::itaniumDemangle(std::string_view MangledName) {
   if (MangledName.empty())
     return nullptr;
 
   Demangler Parser(MangledName.data(),
                    MangledName.data() + MangledName.length());
-  Node *AST = Parser.parse(ParseParams);
+  Node *AST = Parser.parse();
   if (!AST)
     return nullptr;
 
