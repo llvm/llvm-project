@@ -679,9 +679,11 @@ ArrayAttr mlir::linalg::detail::grouped_convolution_impl::getIteratorTypes(
 
 ArrayAttr
 mlir::linalg::detail::grouped_convolution_impl::createCommonIndexingMaps(
-    MLIRContext *ctx, int64_t numSpatial, int64_t channelPos,
+    MLIRContext *ctx, int64_t numSpatial,
+    const SmallVector<SmallVector<utils::GroupedConvDim>> &layouts,
     const SmallVectorImpl<int64_t> &strides,
     const SmallVectorImpl<int64_t> &dilations) {
+  assert(layouts.size() == 3 && "expected 3 layouts: image, filter, init");
 
   // Domain: (n, g, f, os, c, ks)
   AffineExpr n = getAffineDimExpr(0, ctx);
@@ -695,26 +697,51 @@ mlir::linalg::detail::grouped_convolution_impl::createCommonIndexingMaps(
       llvm::seq<int64_t>(numSpatial + 4, 2 * (numSpatial + 1) + 2),
       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
 
-  // Initialze operand accesses in nw order and insert c according to channel
-  // position
-  SmallVector<AffineExpr> inExprs = {n}, outExprs = {n};
-  SmallVector<AffineExpr> gc = {g, c};
-  SmallVector<AffineExpr> gf = {g, f};
-  SmallVector<AffineExpr> gfc = {g, f, c};
+  SmallVector<AffineExpr> inSpatials;
+  inSpatials.reserve(numSpatial);
   for (const auto &[sp, ksp, st, di] : llvm::zip(s, ks, strides, dilations)) {
-    inExprs.push_back(sp * st + ksp * di);
-    outExprs.push_back(sp);
+    inSpatials.push_back(sp * st + ksp * di);
   }
-  SmallVector<AffineExpr> kExprs(ks);
-  inExprs.insert(inExprs.begin() + channelPos - 1, gc.begin(), gc.end());
-  kExprs.insert(channelPos == 0 ? kExprs.begin()
-                                : kExprs.begin() + channelPos - 2,
-                gfc.begin(), gfc.end());
-  outExprs.insert(outExprs.begin() + channelPos - 1, gf.begin(), gf.end());
+
+  auto getExprs = [&](const SmallVector<utils::GroupedConvDim> &layout,
+                      const SmallVector<AffineExpr> &spatials) {
+    SmallVector<AffineExpr> exprs(layout.size());
+    int64_t spatialDim;
+    for (const auto &[i, dim] : llvm::enumerate(layout)) {
+      switch (dim) {
+      case utils::GroupedConvDim::n:
+        exprs[i] = n;
+        break;
+      case utils::GroupedConvDim::g:
+        exprs[i] = g;
+        break;
+      case utils::GroupedConvDim::f:
+        exprs[i] = f;
+        break;
+      case utils::GroupedConvDim::s:
+        exprs[i] = spatials[0];
+        spatialDim = i;
+        break;
+      case utils::GroupedConvDim::c:
+        exprs[i] = c;
+        break;
+      default:
+        assert(false);
+      }
+    }
+    if (spatials.size() > 1)
+      exprs.insert(exprs.begin() + spatialDim + 1, spatials.begin() + 1,
+                   spatials.end());
+    return exprs;
+  };
+  SmallVector<AffineExpr> inExprs = getExprs(layouts[0], inSpatials);
+  SmallVector<AffineExpr> kExprs = getExprs(layouts[1], ks);
+  SmallVector<AffineExpr> outExprs = getExprs(layouts[2], s);
   SmallVector<AffineMap> maps(
-      {AffineMap::get(4 + 2 * numSpatial, 0, inExprs, ctx),
-       AffineMap::get(4 + 2 * numSpatial, 0, kExprs, ctx),
-       AffineMap::get(4 + 2 * numSpatial, 0, outExprs, ctx)});
+      {AffineMap::get(4 + 2 * numSpatial, 0, getExprs(layouts[0], inSpatials),
+                      ctx),
+       AffineMap::get(4 + 2 * numSpatial, 0, getExprs(layouts[1], ks), ctx),
+       AffineMap::get(4 + 2 * numSpatial, 0, getExprs(layouts[2], s), ctx)});
 
   return Builder(ctx).getAffineMapArrayAttr(maps);
 }

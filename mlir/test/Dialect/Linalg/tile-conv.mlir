@@ -52,7 +52,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG: #[[MAP5:.*]] = affine_map<(d0)[s0] -> (d0 + s0 - 1)>
 
 func.func @grouped_conv_2D(%arg0 : memref<?x?x?x?x?xf32>, %arg1 : memref<?x?x?x?x?xf32>, %arg2 : memref<?x?x?x?x?xf32>) {
-  linalg.grouped_conv_nd ins(%arg0, %arg1 : memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>) outs(%arg2 : memref<?x?x?x?x?xf32>)
+  linalg.grouped_conv_nd {layouts = ["ngcs", "gfcs", "ngfs"]} ins(%arg0, %arg1 : memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>) outs(%arg2 : memref<?x?x?x?x?xf32>)
   return
 }
 
@@ -98,6 +98,6 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:           %[[SVIN:.*]] = memref.subview %[[ARG0]][%[[I]], %[[J]], 0, %[[L]], %[[M]]] [%[[T4]], %[[T5]], %[[IN_CHANNELS]], %[[T9]], %[[T10]]]
 //   CHECK-DAG:           %[[SVKER:.*]] = memref.subview %[[ARG1]][%[[J]], %[[K]], 0, 0, 0] [%[[T5]], %[[T6]], %[[IN_CHANNELS]], %[[KW]], %[[KH]]]
 //   CHECK-DAG:           %[[SVOUT:.*]] = memref.subview %[[ARG2]][%[[I]], %[[J]], %[[K]], %[[L]], %[[M]]] [%[[T4]], %[[T5]], %[[T6]], %[[T7]], %[[T8]]]
-//       CHECK:           linalg.grouped_conv_nd {channel_first = true}
+//       CHECK:           linalg.grouped_conv_nd {layouts = ["ngcs", "gfcs", "ngfs"]}
 //  CHECK-SAME:             ins(%[[SVIN]], %[[SVKER]]
 //  CHECK-SAME:             outs(%[[SVOUT]]

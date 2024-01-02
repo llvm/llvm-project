@@ -203,9 +203,24 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
   let verify = [{ return detail::verifyGroupedConvolutionInterface($_op); }];
   let methods = [
     InterfaceMethod<[{
-      Returns the channel position.
+      Returns the groups position for the input.
     }],
-    "int64_t", "getChannelPosition", (ins)
+    "SmallVector<SmallVector<::mlir::utils::GroupedConvDim>>", "getLayoutsEnums", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns the groups position for the input.
+    }],
+    "int64_t", "getInputGroupsPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns the channel position for the input.
+    }],
+    "int64_t", "getInputChannelPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns the channel position for the output.
+    }],
+    "int64_t", "getOutputChannelPosition", (ins)
     >,
     InterfaceMethod<[{
       Get number of groups. 
@@ -213,7 +228,7 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
     "int64_t", "getNumGroups", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getChannelPosition() - 1];
+      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getInputGroupsPosition() - 1];
     }]>,
     InterfaceMethod<[{
       Get number of input channels. 
@@ -221,7 +236,7 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
     "int64_t", "getNumInputChannels", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getChannelPosition()];
+      return cast<ShapedType>($_op.image().getType()).getShape()[$_op.getInputChannelPosition()];
     }]>,
     InterfaceMethod<[{
       Get number of output channels. 
@@ -229,7 +244,7 @@ def LinalgGroupedConvolutionOpInterface : OpInterface<"GroupedConvolutionOpInter
     "int64_t", "getNumOutputChannels", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-      return cast<ShapedType>($_op.getDpsInits()[0].getType()).getShape()[$_op.getChannelPosition()];
+      return cast<ShapedType>($_op.getDpsInits()[0].getType()).getShape()[$_op.getOutputChannelPosition()];
     }]>,
     InterfaceMethod<[{
       Returns indexing maps for any spatial dimension.

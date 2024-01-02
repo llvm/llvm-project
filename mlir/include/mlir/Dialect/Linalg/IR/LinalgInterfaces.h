@@ -141,10 +141,11 @@ void print(LinalgOp op, OpAsmPrinter &p);
 // Common implementations for GroupedConvolutionOpInterface
 namespace grouped_convolution_impl {
 int64_t getSpatialRank(GroupedConvolutionOpInterface op);
-ArrayAttr createCommonIndexingMaps(MLIRContext *ctx, int64_t numSpatial,
-                                   int64_t channelPos,
-                                   const SmallVectorImpl<int64_t> &strides,
-                                   const SmallVectorImpl<int64_t> &dilations);
+ArrayAttr createCommonIndexingMaps(
+    MLIRContext *ctx, int64_t numSpatial,
+    const SmallVector<SmallVector<utils::GroupedConvDim>> &layouts,
+    const SmallVectorImpl<int64_t> &strides,
+    const SmallVectorImpl<int64_t> &dilations);
 ArrayAttr getIteratorTypes(GroupedConvolutionOpInterface op);
 } // namespace grouped_convolution_impl
 

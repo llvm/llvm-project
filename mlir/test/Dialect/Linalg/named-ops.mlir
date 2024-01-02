@@ -4,8 +4,8 @@
 
 // CHECK-LABEL: func @gen_grouped_1D_channel_first_memref
 func.func @gen_grouped_1D_channel_first_memref(%arg0: memref<64x8x16x10xf32>, %arg1: memref<8x32x16x3xf32>, %arg2: memref<64x8x32x8xf32>) {
-  // CHECK: grouped_conv_nd {{.*}}channel_first = true
-    linalg.grouped_conv_nd {channel_first = true} ins(%arg0, %arg1: memref<64x8x16x10xf32>, memref<8x32x16x3xf32>) outs(%arg2: memref<64x8x32x8xf32>)
+  // CHECK: grouped_conv_nd 
+    linalg.grouped_conv_nd ins(%arg0, %arg1: memref<64x8x16x10xf32>, memref<8x32x16x3xf32>) outs(%arg2: memref<64x8x32x8xf32>)
     return
 }
 

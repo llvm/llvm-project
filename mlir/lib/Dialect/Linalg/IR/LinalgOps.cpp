@@ -1761,7 +1761,7 @@ ArrayAttr GroupedConvNDOp::getIndexingMaps() {
     return cached;
 
   cached = detail::grouped_convolution_impl::createCommonIndexingMaps(
-      getContext(), getSpatialRank(), getChannelPosition(), getStridesVector(),
+      getContext(), getSpatialRank(), getLayoutsEnums(), getStridesVector(),
       getDilationsVector());
 
   (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
