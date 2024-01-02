@@ -12910,6 +12910,8 @@ struct NodeExtensionHelper {
     case RISCVISD::VZEXT_VL:
     case RISCVISD::FP_EXTEND_VL:
       return OrigOperand.getOperand(0);
+    case ISD::SPLAT_VECTOR:
+      return OrigOperand.getOperand(0)->getOperand(0);
     default:
       return OrigOperand;
     }
@@ -12918,7 +12920,8 @@ struct NodeExtensionHelper {
   /// Check if this instance represents a splat.
   bool isSplat() const {
     return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL ||
-           OrigOperand.getOpcode() == RISCVISD::VFMV_V_F_VL;
+           (OrigOperand.getOpcode() == ISD::SPLAT_VECTOR &&
+            OrigOperand.getOperand(0).getOpcode() == ISD::FP_EXTEND);
   }
 
   /// Get the extended opcode.
@@ -12962,7 +12965,8 @@ struct NodeExtensionHelper {
       unsigned ExtOpc = getExtOpc(*Ext);
       return DAG.getNode(ExtOpc, DL, NarrowVT, Source, Mask, VL);
     }
-    case RISCVISD::VFMV_V_F_VL:
+    case ISD::SPLAT_VECTOR:
+      return DAG.getNode(ISD::SPLAT_VECTOR, DL, NarrowVT, Source);
     case RISCVISD::VMV_V_X_VL:
       return DAG.getNode(OrigOpc, DL, NarrowVT, DAG.getUNDEF(NarrowVT),
                          Source.getOperand(1), VL);
@@ -13177,7 +13181,20 @@ struct NodeExtensionHelper {
       Mask = OrigOperand.getOperand(1);
       VL = OrigOperand.getOperand(2);
       break;
-    case RISCVISD::VFMV_V_F_VL:
+    case ISD::SPLAT_VECTOR: {
+      if (OrigOperand.getOperand(0)->getOpcode() != ISD::FP_EXTEND)
+        break;
+
+      MVT VT = Root->getSimpleValueType(0);
+      if (VT.isFloatingPoint() &&
+          VT.getScalarSizeInBits() >= (Subtarget.hasStdExtZvfh() ? 32 : 64)) {
+        SupportsFPExt = true;
+        SDLoc DL(Root);
+        std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
+        break;
+      }
+      break;
+    }
     case RISCVISD::VMV_V_X_VL: {
       // Historically, we didn't care about splat values not disappearing during
       // combines.
@@ -13203,12 +13220,6 @@ struct NodeExtensionHelper {
       // FIXME: Support implicit sign extension of vmv.v.x?
       if (ScalarBits < EltBits)
         break;
-
-      if (VT.isFloatingPoint() &&
-          EltBits >= (Subtarget.hasStdExtZvfh() ? 32 : 64)) {
-        SupportsFPExt = true;
-        break;
-      }
 
       unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
       // If the narrow type cannot be expressed with a legal VMV,
