@@ -932,6 +932,9 @@ public:
   /// Helper method returns the APInt of a ConstantSDNode operand.
   inline const APInt &getConstantOperandAPInt(unsigned Num) const;
 
+  /// Helper method returns the APInt value of a ConstantSDNode.
+  inline const APInt &getAsAPIntVal() const;
+
   const SDValue &getOperand(unsigned Num) const {
     assert(Num < NumOperands && "Invalid child # of SDNode!");
     return OperandList[Num];
@@ -1647,6 +1650,10 @@ uint64_t SDNode::getConstantOperandVal(unsigned Num) const {
 
 const APInt &SDNode::getConstantOperandAPInt(unsigned Num) const {
   return cast<ConstantSDNode>(getOperand(Num))->getAPIntValue();
+}
+
+const APInt &SDNode::getAsAPIntVal() const {
+  return cast<ConstantSDNode>(this)->getAPIntValue();
 }
 
 class ConstantFPSDNode : public SDNode {

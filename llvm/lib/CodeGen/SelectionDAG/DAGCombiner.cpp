@@ -4380,7 +4380,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   } else {
     N1IsConst = isa<ConstantSDNode>(N1);
     if (N1IsConst) {
-      ConstValue1 = cast<ConstantSDNode>(N1)->getAPIntValue();
+      ConstValue1 = N1->getAsAPIntVal();
       N1IsOpaqueConst = cast<ConstantSDNode>(N1)->isOpaque();
     }
   }
@@ -12087,8 +12087,8 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
     if (N1Elt.getValueType() != N2Elt.getValueType())
       continue;
 
-    const APInt &C1 = cast<ConstantSDNode>(N1Elt)->getAPIntValue();
-    const APInt &C2 = cast<ConstantSDNode>(N2Elt)->getAPIntValue();
+    const APInt &C1 = N1Elt->getAsAPIntVal();
+    const APInt &C2 = N2Elt->getAsAPIntVal();
     if (C1 != C2 + 1)
       AllAddOne = false;
     if (C1 != C2 - 1)
@@ -12764,7 +12764,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
     SDLoc DL(Op);
     // Get the constant value and if needed trunc it to the size of the type.
     // Nodes like build_vector might have constants wider than the scalar type.
-    APInt C = cast<ConstantSDNode>(Op)->getAPIntValue().zextOrTrunc(EVTBits);
+    APInt C = Op->getAsAPIntVal().zextOrTrunc(EVTBits);
     if (Opcode == ISD::SIGN_EXTEND || Opcode == ISD::SIGN_EXTEND_VECTOR_INREG)
       Elts.push_back(DAG.getConstant(C.sext(VTBits), DL, SVT));
     else
@@ -17942,10 +17942,10 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
       SDValue AndOp1 = Op0.getOperand(1);
 
       if (AndOp1.getOpcode() == ISD::Constant) {
-        const APInt &AndConst = cast<ConstantSDNode>(AndOp1)->getAPIntValue();
+        const APInt &AndConst = AndOp1->getAsAPIntVal();
 
         if (AndConst.isPowerOf2() &&
-            cast<ConstantSDNode>(Op1)->getAPIntValue() == AndConst.logBase2()) {
+            Op1->getAsAPIntVal() == AndConst.logBase2()) {
           SDLoc DL(N);
           return DAG.getSetCC(DL, getSetCCResultType(Op0.getValueType()),
                               Op0, DAG.getConstant(0, DL, Op0.getValueType()),
@@ -18266,7 +18266,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
 
     auto *CN = cast<ConstantSDNode>(OtherUses[i]->getOperand(OffsetIdx));
     const APInt &Offset0 = CN->getAPIntValue();
-    const APInt &Offset1 = cast<ConstantSDNode>(Offset)->getAPIntValue();
+    const APInt &Offset1 = Offset->getAsAPIntVal();
     int X0 = (OtherUses[i]->getOpcode() == ISD::SUB && OffsetIdx == 1) ? -1 : 1;
     int Y0 = (OtherUses[i]->getOpcode() == ISD::SUB && OffsetIdx == 0) ? -1 : 1;
     int X1 = (AM == ISD::PRE_DEC && !Swapped) ? -1 : 1;
@@ -19573,7 +19573,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     // Find the type to narrow it the load / op / store to.
     SDValue N1 = Value.getOperand(1);
     unsigned BitWidth = N1.getValueSizeInBits();
-    APInt Imm = cast<ConstantSDNode>(N1)->getAPIntValue();
+    APInt Imm = N1->getAsAPIntVal();
     if (Opc == ISD::AND)
       Imm ^= APInt::getAllOnes(BitWidth);
     if (Imm == 0 || Imm.isAllOnes())
@@ -26543,7 +26543,7 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
 
       APInt Bits;
       if (isa<ConstantSDNode>(Elt))
-        Bits = cast<ConstantSDNode>(Elt)->getAPIntValue();
+        Bits = Elt->getAsAPIntVal();
       else if (isa<ConstantFPSDNode>(Elt))
         Bits = cast<ConstantFPSDNode>(Elt)->getValueAPF().bitcastToAPInt();
       else
