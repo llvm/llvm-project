@@ -83,7 +83,7 @@ static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
   }
   for (MachineInstr *MI : ToErase) {
     Register Reg = MI->getOperand(2).getReg();
-    if (RegsAlreadyAddedToDT.find(MI) != RegsAlreadyAddedToDT.end())
+    if (RegsAlreadyAddedToDT.contains(MI))
       Reg = RegsAlreadyAddedToDT[MI];
     auto *RC = MRI.getRegClassOrNull(MI->getOperand(0).getReg());
     if (!MRI.getRegClassOrNull(Reg) && RC)

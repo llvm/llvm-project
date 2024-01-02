@@ -98,8 +98,8 @@ static StringRef getBestNamespaceSubstr(const DeclContext *DeclA,
     // from NewName if it has an identical prefix.
     std::string NS =
         "::" + cast<NamespaceDecl>(DeclA)->getQualifiedNameAsString() + "::";
-    if (NewName.starts_with(NS))
-      return NewName.substr(NS.size());
+    if (NewName.consume_front(NS))
+      return NewName;
 
     // No match yet. Strip of a namespace from the end of the chain and try
     // again. This allows to get optimal qualifications even if the old and new

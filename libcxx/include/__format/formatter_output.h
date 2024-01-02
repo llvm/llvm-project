@@ -246,7 +246,7 @@ __write(_Iterator __first,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
         ptrdiff_t __size) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
   return __formatter::__write(basic_string_view{__first, __last}, std::move(__out_it), __specs, __size);
 }
 
@@ -259,7 +259,7 @@ __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
   return __formatter::__write(__first, __last, std::move(__out_it), __specs, __last - __first);
 }
 
@@ -273,7 +273,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_ParserCharT> __specs,
     _UnaryOperation __op) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
 
   ptrdiff_t __size = __last - __first;
   if (__size >= __specs.__width_)

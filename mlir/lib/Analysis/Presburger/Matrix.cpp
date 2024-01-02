@@ -452,6 +452,9 @@ MPInt IntMatrix::determinant(IntMatrix *inverse) const {
   if (detM == 0)
     return MPInt(0);
 
+  if (!inverse)
+    return detM;
+
   *inverse = IntMatrix(nRows, nColumns);
   for (unsigned i = 0; i < nRows; i++)
     for (unsigned j = 0; j < nColumns; j++)
@@ -642,5 +645,4 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
-  return;
 }
