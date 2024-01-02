@@ -1283,9 +1283,11 @@ LazyValueInfoImpl::getValueFromCondition(Value *Val, Value *Cond,
 
   std::optional<ValueLatticeElement> LV =
       getValueFromCondition(Val, L, IsTrueDest, UseBlockValue, Depth);
+  if (!LV)
+    return std::nullopt;
   std::optional<ValueLatticeElement> RV =
       getValueFromCondition(Val, R, IsTrueDest, UseBlockValue, Depth);
-  if (!LV || !RV)
+  if (!RV)
     return std::nullopt;
 
   // if (L && R) -> intersect L and R
