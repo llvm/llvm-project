@@ -5039,10 +5039,10 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 }
 
 /// Fold icmp Pred min|max(X, Y), Z.
-Instruction *
-InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
-                                         MinMaxIntrinsic *MinMax, Value *Z,
-                                         ICmpInst::Predicate Pred) {
+Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
+                                                  MinMaxIntrinsic *MinMax,
+                                                  Value *Z,
+                                                  ICmpInst::Predicate Pred) {
   Value *X = MinMax->getLHS();
   Value *Y = MinMax->getRHS();
   if (ICmpInst::isSigned(Pred) && !MinMax->isSigned())
@@ -5167,24 +5167,6 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
   }
   default:
     break;
-  }
-
-  return nullptr;
-}
-Instruction *InstCombinerImpl::foldICmpWithMinMax(ICmpInst &Cmp) {
-  ICmpInst::Predicate Pred = Cmp.getPredicate();
-  Value *Lhs = Cmp.getOperand(0);
-  Value *Rhs = Cmp.getOperand(1);
-
-  if (MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(Lhs)) {
-    if (Instruction *Res = foldICmpWithMinMaxImpl(Cmp, MinMax, Rhs, Pred))
-      return Res;
-  }
-
-  if (MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(Rhs)) {
-    if (Instruction *Res = foldICmpWithMinMaxImpl(
-            Cmp, MinMax, Lhs, ICmpInst::getSwappedPredicate(Pred)))
-      return Res;
   }
 
   return nullptr;
@@ -6853,6 +6835,34 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
   return nullptr;
 }
 
+// This helper will be called with icmp operands in both orders.
+Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
+                                                   Value *Op0, Value *Op1,
+                                                   ICmpInst &CxtI) {
+  // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
+  if (auto *GEP = dyn_cast<GEPOperator>(Op0))
+    if (Instruction *NI = foldGEPICmp(GEP, Op1, Pred, CxtI))
+      return NI;
+
+  if (auto *SI = dyn_cast<SelectInst>(Op0))
+    if (Instruction *NI = foldSelectICmp(Pred, SI, Op1, CxtI))
+      return NI;
+
+  if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0))
+    if (Instruction *Res = foldICmpWithMinMax(CxtI, MinMax, Op1, Pred))
+      return Res;
+
+  {
+    Value *X;
+    const APInt *C;
+    // icmp X+Cst, X
+    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
+      return foldICmpAddOpConst(X, *C, Pred);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
@@ -6976,20 +6986,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;
 
-  // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
-  if (auto *GEP = dyn_cast<GEPOperator>(Op0))
-    if (Instruction *NI = foldGEPICmp(GEP, Op1, I.getPredicate(), I))
-      return NI;
-  if (auto *GEP = dyn_cast<GEPOperator>(Op1))
-    if (Instruction *NI = foldGEPICmp(GEP, Op0, I.getSwappedPredicate(), I))
-      return NI;
-
-  if (auto *SI = dyn_cast<SelectInst>(Op0))
-    if (Instruction *NI = foldSelectICmp(I.getPredicate(), SI, Op1, I))
-      return NI;
-  if (auto *SI = dyn_cast<SelectInst>(Op1))
-    if (Instruction *NI = foldSelectICmp(I.getSwappedPredicate(), SI, Op0, I))
-      return NI;
+  if (Instruction *Res = foldICmpCommutative(I.getPredicate(), Op0, Op1, I))
+    return Res;
+  if (Instruction *Res =
+          foldICmpCommutative(I.getSwappedPredicate(), Op1, Op0, I))
+    return Res;
 
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
@@ -7039,9 +7040,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   // TODO: Hoist this above the min/max bailout.
   if (Instruction *R = foldICmpWithCastOp(I))
     return R;
-
-  if (Instruction *Res = foldICmpWithMinMax(I))
-    return Res;
 
   {
     Value *X, *Y;
@@ -7143,18 +7141,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         if (EVI->getIndices()[0] == 0 && ACXI->getCompareOperand() == Op1 &&
             !ACXI->isWeak())
           return ExtractValueInst::Create(ACXI, 1);
-
-  {
-    Value *X;
-    const APInt *C;
-    // icmp X+Cst, X
-    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
-      return foldICmpAddOpConst(X, *C, I.getPredicate());
-
-    // icmp X, X+Cst
-    if (match(Op1, m_Add(m_Value(X), m_APInt(C))) && Op0 == X)
-      return foldICmpAddOpConst(X, *C, I.getSwappedPredicate());
-  }
 
   if (Instruction *Res = foldICmpWithHighBitMask(I, Builder))
     return Res;
