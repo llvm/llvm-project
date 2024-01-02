@@ -1,4 +1,7 @@
-// RUN: %clangxx_msan -O0 %s -o %t && %run %t 2>&1
+/* RUN: %clangxx_msan -O0 %s -o %t && %run %t 2>&1
+
+   REQUIRES: target={{.*(linux|freebsd).*}}
+*/
 
 #include <assert.h>
 #include <sys/eventfd.h>

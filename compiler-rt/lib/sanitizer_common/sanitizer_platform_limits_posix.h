@@ -938,6 +938,8 @@ struct __sanitizer_cookie_io_functions_t {
   __sanitizer_cookie_io_seek seek;
   __sanitizer_cookie_io_close close;
 };
+
+typedef unsigned long long __sanitizer_eventfd_t;
 #endif
 
 #define IOC_NRBITS 8
