@@ -1436,7 +1436,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     StringRef TripleVersionName = Triple.getVersionName();
     StringRef TripleArch = Triple.getArchName();
     StringRef TripleOS = Triple.getOSName();
-    StringRef TripleEnvironmentType = Triple.getEnvironmentTypeName(Triple.getEnvironment());
+    StringRef TripleEnvironmentType =
+        Triple.getEnvironmentTypeName(Triple.getEnvironment());
 
     if (TripleVersion == 0 && TripleVersionName != "" &&
         TripleEnvironmentType == "android" && TripleOS != "unknown") {

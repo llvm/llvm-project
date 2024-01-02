@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Driver/ToolChain.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
+#include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -40,7 +40,8 @@ TEST(DriverTest, InvalidAndroidVersion) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
   Driver TheDriver("/bin/clang", "aarch64-linux-androidabiS", Diags);
-  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation({"/bin/clang", "foo.cpp"}));
+  std::unique_ptr<Compilation> C(
+      gitTheDriver.BuildCompilation({"/bin/clang", "foo.cpp"}));
   EXPECT_TRUE(C);
   EXPECT_TRUE(C->containsError());
 }
