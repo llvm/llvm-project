@@ -498,16 +498,17 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFrom(CI.getDebugLoc());
 
+  bool UseIntrinsic = VectorIntrinsicID != Intrinsic::not_intrinsic;
   FunctionType *VFTy = nullptr;
   if (Variant)
     VFTy = Variant->getFunctionType();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     SmallVector<Type *, 2> TysForDecl;
     // Add return type if intrinsic is overloaded on it.
-    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1)) {
+    if (UseIntrinsic &&
+        isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
       TysForDecl.push_back(
           VectorType::get(CI.getType()->getScalarType(), State.VF));
-    }
     SmallVector<Value *, 4> Args;
     for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
@@ -516,18 +517,19 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
       // e.g. linear parameters for pointers.
       Value *Arg;
       if ((VFTy && !VFTy->getParamType(I.index())->isVectorTy()) ||
-          (VectorIntrinsicID != Intrinsic::not_intrinsic &&
+          (UseIntrinsic &&
            isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index())))
         Arg = State.get(I.value(), VPIteration(0, 0));
       else
         Arg = State.get(I.value(), Part);
-      if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
+      if (UseIntrinsic &&
+          isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
         TysForDecl.push_back(Arg->getType());
       Args.push_back(Arg);
     }
 
     Function *VectorF;
-    if (VectorIntrinsicID != Intrinsic::not_intrinsic) {
+    if (UseIntrinsic) {
       // Use vector version of the intrinsic.
       Module *M = State.Builder.GetInsertBlock()->getModule();
       VectorF = Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
