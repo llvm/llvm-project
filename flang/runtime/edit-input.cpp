@@ -625,31 +625,6 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
       fraction <<= 1;
       --expo;
     }
-    // Rounding
-    bool increase{false};
-    switch (rounding) {
-    case decimal::RoundNearest: // RN & RP
-      increase = roundingBit && (guardBit | ((int)fraction & 1));
-      break;
-    case decimal::RoundUp: // RU
-      increase = !isNegative && (roundingBit | guardBit);
-      break;
-    case decimal::RoundDown: // RD
-      increase = isNegative && (roundingBit | guardBit);
-      break;
-    case decimal::RoundToZero: // RZ
-      break;
-    case decimal::RoundCompatible: // RC
-      increase = roundingBit != 0;
-      break;
-    }
-    if (increase) {
-      ++fraction;
-      if (fraction >> binaryPrecision) {
-        fraction >>= 1;
-        ++expo;
-      }
-    }
   }
   // Package & return result
   constexpr RawType significandMask{(one << RealType::significandBits) - 1};
@@ -660,16 +635,9 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
     expo = 0; // subnormal
     flags |= decimal::Underflow;
   } else if (expo >= RealType::maxExponent) {
-    if (rounding == decimal::RoundToZero ||
-        (rounding == decimal::RoundDown && !isNegative) ||
-        (rounding == decimal::RoundUp && isNegative)) {
-      expo = RealType::maxExponent - 1; // +/-HUGE()
-      fraction = significandMask;
-    } else {
-      expo = RealType::maxExponent; // +/-Inf
-      fraction = 0;
-      flags |= decimal::Overflow;
-    }
+    expo = RealType::maxExponent; // +/-Inf
+    fraction = 0;
+    flags |= decimal::Overflow;
   } else {
     fraction &= significandMask; // remove explicit normalization unless x87
   }
