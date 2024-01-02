@@ -6352,12 +6352,11 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   LLT CondTy = MRI.getType(Select->getCondReg());
   LLT TrueTy = MRI.getType(Select->getTrueReg());
 
-  // Only do this before legalization to avoid conflicting with target-specific
-  // transforms in the other direction.
+  // We only do this combine for scalar boolean conditions.
   if (CondTy != LLT::scalar(1))
     return false;
 
-  // Noth are scalars.
+  // Both are scalars.
   std::optional<ValueAndVReg> TrueOpt =
       getIConstantVRegValWithLookThrough(True, MRI);
   std::optional<ValueAndVReg> FalseOpt =
@@ -6368,13 +6367,6 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
 
   APInt TrueValue = TrueOpt->Value;
   APInt FalseValue = FalseOpt->Value;
-
-  // Boolean or fixed vector of booleans.
-  if (CondTy.isScalableVector() ||
-      (CondTy.isFixedVector() &&
-       CondTy.getElementType().getScalarSizeInBits() != 1) ||
-      CondTy.getScalarSizeInBits() != 1)
-    return false;
 
   // select Cond, 1, 0 --> zext (Cond)
   if (TrueValue.isOne() && FalseValue.isZero()) {
