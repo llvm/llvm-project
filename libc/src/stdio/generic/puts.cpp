@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   // We need to lock the stream to ensure the newline is always appended.
   ScopedLock lock(LIBC_NAMESPACE::stdout);
 
-  auto result = LIBC_NAMESPACE::stdout->write(str, str_view.size());
+  auto result = LIBC_NAMESPACE::stdout->write_unlocked(str, str_view.size());
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
@@ -42,7 +42,7 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  result = LIBC_NAMESPACE::stdout->write("\n", 1);
+  result = LIBC_NAMESPACE::stdout->write_unlocked("\n", 1);
   if (result.has_error())
     libc_errno = result.error;
   written = result.value;
