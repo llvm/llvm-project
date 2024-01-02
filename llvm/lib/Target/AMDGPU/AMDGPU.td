@@ -2234,6 +2234,10 @@ def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 
 def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 
+def HasVectorPrefetch :
+  Predicate<"Subtarget->hasVectorPrefetch()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"

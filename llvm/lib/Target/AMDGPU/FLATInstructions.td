@@ -371,6 +371,28 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
   let sve = 0;
 }
 
+class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+  FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
+  let has_vdst = 0;
+  let has_data = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let VM_CNT = 0;
+  let LGKM_CNT = 0;
+}
+
+multiclass FLAT_Global_Prefetch_Pseudo<string opName> {
+  let is_flat_global = 1, has_saddr = 1 in {
+    def "" : FLAT_Prefetch_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+      GlobalSaddrTable<1, opName> {
+      let enabled_saddr = 1;
+      let PseudoInstr = opName#"_SADDR";
+    }
+  }
+}
+
 class FlatScratchInst <string sv_op, string mode> {
   string SVOp = sv_op;
   string Mode = mode;
@@ -1059,6 +1081,11 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 } // End is_flat_global = 1
+
+let SubtargetPredicate = HasVectorPrefetch in {
+  def FLAT_PREFETCH_B8    : FLAT_Prefetch_Pseudo<"flat_prefetch_b8">;
+  defm GLOBAL_PREFETCH_B8 : FLAT_Global_Prefetch_Pseudo<"global_prefetch_b8">;
+}
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns
@@ -2817,3 +2844,8 @@ defm SCRATCH_STORE_D16_HI_B16      : VSCRATCH_Real_AllAddr_gfx12<0x25, "SCRATCH_
 
 defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53>;
 defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
+
+let SubtargetPredicate = isGFX12_10Plus in {
+defm FLAT_PREFETCH_B8              : VFLAT_Real_Base_gfx12<0x05d>;
+defm GLOBAL_PREFETCH_B8            : VGLOBAL_Real_AllAddr_gfx12<0x05d>;
+}

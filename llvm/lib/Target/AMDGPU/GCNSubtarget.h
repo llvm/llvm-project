@@ -865,7 +865,7 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-  bool hasVectorPrefetch() const { return false; }
+  bool hasVectorPrefetch() const { return GFX12_10Insts; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }

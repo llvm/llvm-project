@@ -5121,7 +5121,7 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
       return PrintError("scope and th combination is not valid");
   }
 
-  bool IsStore = TID.mayStore();
+  bool IsStore = TID.mayStore() && !TID.mayLoad();
   bool IsAtomic =
       TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
 

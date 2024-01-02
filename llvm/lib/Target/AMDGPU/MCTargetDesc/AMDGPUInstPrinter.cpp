@@ -245,7 +245,7 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
 
   const unsigned Opcode = MI->getOpcode();
   const MCInstrDesc &TID = MII.get(Opcode);
-  bool IsStore = TID.mayStore();
+  bool IsStore = TID.mayStore() && !TID.mayLoad();
   bool IsAtomic =
       TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
 
