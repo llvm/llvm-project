@@ -1517,7 +1517,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // machine operand (which is a TargetGlobalTLSAddress) is expected to be
     // the same operand for both loads and stores.
     for (const MachineOperand &TempMO : MI->operands()) {
-      if (((TempMO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) &&
+      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG)) &&
           TempMO.getOperandNo() == 1)
         OpNum = 1;
     }

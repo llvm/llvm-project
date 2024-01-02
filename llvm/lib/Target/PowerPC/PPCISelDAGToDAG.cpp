@@ -7600,7 +7600,7 @@ static bool isEligibleToFoldADDIForLocalExecAccesses(SDNode *N,
   // The local-exec TLS variable should only have the MO_TPREL_FLAG target flag,
   // so this optimization is not performed otherwise if the flag is not set.
   unsigned TargetFlags = GA->getTargetFlags();
-  if ((TargetFlags & PPCII::MO_TPREL_FLAG) == 0)
+  if (TargetFlags != PPCII::MO_TPREL_FLAG)
     return false;
 
   // If all conditions are satisfied, the ADDI is valid for folding.
