@@ -2363,6 +2363,9 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   Value *FVal = Sel.getFalseValue();
   Type *SelType = Sel.getType();
 
+  if (ICmpInst::makeCmpResultType(TVal->getType()) != Cond->getType())
+    return nullptr;
+
   // Match select ?, TC, FC where the constants are equal but negated.
   // TODO: Generalize to handle a negated variable operand?
   const APFloat *TC, *FC;
@@ -2440,9 +2443,9 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
     return nullptr;
 
   unsigned NumElts = VecTy->getNumElements();
-  APInt UndefElts(NumElts, 0);
+  APInt PoisonElts(NumElts, 0);
   APInt AllOnesEltMask(APInt::getAllOnes(NumElts));
-  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, UndefElts)) {
+  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, PoisonElts)) {
     if (V != &Sel)
       return replaceInstUsesWith(Sel, V);
     return &Sel;

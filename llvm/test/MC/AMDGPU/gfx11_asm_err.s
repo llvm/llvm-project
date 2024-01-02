@@ -152,3 +152,15 @@ v_fmac_f32_e64_dpp v5, v2, 0x1234 quad_perm:[3,2,1,0]
 
 s_load_dword s1, s[2:3], s0 0x1
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+scratch_store_b128 off, v[2:5], s0 offset:8000000
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 13-bit signed offset
+
+flat_atomic_add_f32 v1, v[0:1], v2 offset:-1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 12-bit unsigned offset
+
+s_load_b96 s[20:22], s[2:3], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_buffer_load_b96 s[20:22], s[4:7], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

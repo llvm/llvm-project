@@ -14,23 +14,25 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
-#include "msan.h"
-#include "msan_report.h"
-#include "msan_thread.h"
+#  include <elf.h>
+#  include <link.h>
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <sys/resource.h>
+#  include <sys/time.h>
+#  include <unistd.h>
+#  include <unwind.h>
 
-#include <elf.h>
-#include <link.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <unwind.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
+#  include "msan.h"
+#  include "msan_allocator.h"
+#  include "msan_chained_origin_depot.h"
+#  include "msan_report.h"
+#  include "msan_thread.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __msan {
 
@@ -254,7 +256,27 @@ void MsanTSDDtor(void *tsd) {
   atomic_signal_fence(memory_order_seq_cst);
   MsanThread::TSDDtor(tsd);
 }
-#endif
+#  endif
+
+static void BeforeFork() {
+  // Usually we lock ThreadRegistry, but msan does not have one.
+  LockAllocator();
+  StackDepotLockBeforeFork();
+  ChainedOriginDepotBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  ChainedOriginDepotAfterFork(fork_child);
+  StackDepotUnlockAfterFork(fork_child);
+  UnlockAllocator();
+  // Usually we unlock ThreadRegistry, but msan does not have one.
+}
+
+void InstallAtForkHandler() {
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
+}
 
 } // namespace __msan
 

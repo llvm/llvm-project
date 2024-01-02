@@ -19,6 +19,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::size_type pos, typename S::size_type n) {
@@ -29,6 +30,8 @@ TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::size_type pos, typename S
     typename S::size_type rlen = std::min(n, s.size() - pos);
     assert(str.size() == rlen);
     assert(S::traits_type::compare(s.data() + pos, str.data(), rlen) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+    LIBCPP_ASSERT(is_string_asan_correct(str));
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
@@ -117,6 +120,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
 
   return true;

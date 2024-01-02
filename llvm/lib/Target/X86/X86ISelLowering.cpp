@@ -2267,6 +2267,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
@@ -2282,6 +2284,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
@@ -2674,34 +2678,33 @@ SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy(DAG.getDataLayout()));
 }
 
-bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model M,
-                                       bool hasSymbolicDisplacement) {
+bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model CM,
+                                       bool HasSymbolicDisplacement) {
   // Offset should fit into 32 bit immediate field.
   if (!isInt<32>(Offset))
     return false;
 
   // If we don't have a symbolic displacement - we don't have any extra
   // restrictions.
-  if (!hasSymbolicDisplacement)
+  if (!HasSymbolicDisplacement)
     return true;
 
-  // FIXME: Some tweaks might be needed for medium code model.
-  if (M != CodeModel::Small && M != CodeModel::Kernel)
-    return false;
-
-  // For small code model we assume that latest object is 16MB before end of 31
-  // bits boundary. We may also accept pretty large negative constants knowing
-  // that all objects are in the positive half of address space.
-  if (M == CodeModel::Small && Offset < 16*1024*1024)
+  // We can fold large offsets in the large code model because we always use
+  // 64-bit offsets.
+  if (CM == CodeModel::Large)
     return true;
 
   // For kernel code model we know that all object resist in the negative half
   // of 32bits address space. We may not accept negative offsets, since they may
   // be just off and we may accept pretty large positive ones.
-  if (M == CodeModel::Kernel && Offset >= 0)
-    return true;
+  if (CM == CodeModel::Kernel)
+    return Offset >= 0;
 
-  return false;
+  // For other non-large code models we assume that latest small object is 16MB
+  // before end of 31 bits boundary. We may also accept pretty large negative
+  // constants knowing that all objects are in the positive half of address
+  // space.
+  return Offset < 16 * 1024 * 1024;
 }
 
 /// Return true if the condition is an signed comparison operation.
@@ -4554,7 +4557,7 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
+static ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
@@ -4562,7 +4565,7 @@ static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
 }
 
 static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
-  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
+  ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
   return CNode->getConstVal();
@@ -7563,8 +7566,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   } else
     DstVec = DAG.getUNDEF(VT);
 
-  for (unsigned i = 0, e = NonConstIdx.size(); i != e; ++i) {
-    unsigned InsertIdx = NonConstIdx[i];
+  for (unsigned InsertIdx : NonConstIdx) {
     DstVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, DstVec,
                          Op.getOperand(InsertIdx),
                          DAG.getIntPtrConstant(InsertIdx, dl));
@@ -18327,13 +18329,6 @@ unsigned X86TargetLowering::getGlobalWrapperKind(
   if (Subtarget.isPICStyleRIPRel() &&
       (OpFlags == X86II::MO_NO_FLAG || OpFlags == X86II::MO_COFFSTUB ||
        OpFlags == X86II::MO_DLLIMPORT))
-    return X86ISD::WrapperRIP;
-
-  // In the medium model, functions can always be referenced RIP-relatively,
-  // since they must be within 2GiB. This is also possible in non-PIC mode, and
-  // shorter than the 64-bit absolute immediate that would otherwise be emitted.
-  if (getTargetMachine().getCodeModel() == CodeModel::Medium &&
-      isa_and_nonnull<Function>(GV))
     return X86ISD::WrapperRIP;
 
   // GOTPCREL references must always use RIP.
@@ -40864,7 +40859,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
   SDValue BC = peekThroughOneUseBitcasts(Mask);
   EVT BCVT = BC.getValueType();
   auto *Load = dyn_cast<LoadSDNode>(BC);
-  if (!Load)
+  if (!Load || !Load->getBasePtr().hasOneUse())
     return false;
 
   const Constant *C = getTargetConstantFromNode(Load);
@@ -49951,41 +49946,35 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           Extract = DAG.getBitcast(RegVT, Extract);
           return DCI.CombineTo(N, Extract, SDValue(User, 1));
         }
-        if (User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
-            getTargetConstantFromBasePtr(Ptr)) {
-          // See if we are loading a constant that has also been broadcast.
-          APInt Undefs, UserUndefs;
-          SmallVector<APInt> Bits, UserBits;
-          if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-              getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                            UserBits)) {
-            UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-            UserBits.truncate(Bits.size());
-            if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
-              SDValue Extract = extractSubVector(
-                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
-              Extract = DAG.getBitcast(RegVT, Extract);
-              return DCI.CombineTo(N, Extract, SDValue(User, 1));
-            }
+        auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
+                               ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
+          for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
+            if (Undefs[I])
+              continue;
+            if (UserUndefs[I] || Bits[I] != UserBits[I])
+              return false;
           }
-        }
-        if (ISD::isNormalLoad(User)) {
-          // See if we are loading a constant that matches in the lower
-          // bits of a longer constant (but from a different constant pool ptr).
-          SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
-          const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
-          const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
-          if (LdC && UserC && UserPtr != Ptr &&
-              LdC->getType()->getPrimitiveSizeInBits() <
-                  UserC->getType()->getPrimitiveSizeInBits()) {
+          return true;
+        };
+        // See if we are loading a constant that matches in the lower
+        // bits of a longer constant (but from a different constant pool ptr).
+        EVT UserVT = User->getValueType(0);
+        SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
+        const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+        const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
+        if (LdC && UserC && UserPtr != Ptr) {
+          unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
+          unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
+          if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
             APInt Undefs, UserUndefs;
             SmallVector<APInt> Bits, UserBits;
-            if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-                getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                              UserBits)) {
-              UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-              UserBits.truncate(Bits.size());
-              if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
+            unsigned NumBits = std::min(RegVT.getScalarSizeInBits(),
+                                        UserVT.getScalarSizeInBits());
+            if (getTargetConstantBitsFromNode(SDValue(N, 0), NumBits, Undefs,
+                                              Bits) &&
+                getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
+                                              UserUndefs, UserBits)) {
+              if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
                 SDValue Extract = extractSubVector(
                     SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
                 Extract = DAG.getBitcast(RegVT, Extract);

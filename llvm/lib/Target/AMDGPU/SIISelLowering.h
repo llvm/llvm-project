@@ -416,6 +416,8 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
+
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 

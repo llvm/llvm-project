@@ -941,6 +941,15 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: call ptr @llvm.invariant.start
+  %1 = llvm.intr.invariant.start 16, %p : !llvm.ptr
+  // CHECK: call void @llvm.invariant.end
+  llvm.intr.invariant.end %1, 16, %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @ssa_copy
 llvm.func @ssa_copy(%arg: f32) -> f32 {
   // CHECK: call float @llvm.ssa.copy
@@ -1101,6 +1110,9 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()

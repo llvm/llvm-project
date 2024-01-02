@@ -2112,12 +2112,14 @@ include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
 // Integer
+include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

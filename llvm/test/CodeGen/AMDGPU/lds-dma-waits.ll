@@ -9,15 +9,10 @@ declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture %gptr, ptr 
 
 ; FIXME: vmcnt(0) is too strong, it shall use vmcnt(2) before the first
 ;        ds_read_b32 and vmcnt(0) before the second.
-; FIXME: GFX10 does not get a waitcount at all.
 
 ; GCN-LABEL: {{^}}buffer_load_lds_dword_2_arrays:
 ; GCN-COUNT-4: buffer_load_dword
-; GFX9: s_waitcnt vmcnt(0)
-
-; FIXME:
-; GFX10-NOT: s_waitcnt
-
+; GCN: s_waitcnt vmcnt(0)
 ; GCN: ds_read_b32
 
 ; FIXME:
@@ -49,9 +44,9 @@ main_body:
 ; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-COUNT-2: ds_read_b32
 
-; FIXME:
-; GFX10-NOT: s_waitcnt
+; FIXME: can be vmcnt(2)
 
+; GFX10: s_waitcnt vmcnt(0)
 ; GFX10: ds_read_b32
 
 ; FIXME:

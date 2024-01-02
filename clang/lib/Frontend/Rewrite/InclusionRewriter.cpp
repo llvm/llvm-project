@@ -307,7 +307,7 @@ void InclusionRewriter::OutputContentUpTo(const MemoryBufferRef &FromFile,
       Rest = Rest.substr(Idx);
     }
   }
-  if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
+  if (EnsureNewline && !TextToWrite.ends_with(LocalEOL))
     OS << MainEOL;
 
   WriteFrom = WriteTo;

@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for zext_v16i10_v16i16
+
 define i16 @zext_i8_to_i16(i8 %a) {
 ; CHECK-LABEL: zext_i8_to_i16:
 ; CHECK:       // %bb.0: // %entry
@@ -333,18 +335,14 @@ define <3 x i32> @zext_v3i16_v3i32(<3 x i16> %a) {
 ; CHECK-GI-LABEL: zext_v3i16_v3i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    uxth w8, w8
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    uxth w9, w9
-; CHECK-GI-NEXT:    uxth w8, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w9
-; CHECK-GI-NEXT:    mov v0.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    umov w8, v0.h[2]
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i16> %a to <3 x i32>
@@ -366,15 +364,10 @@ define <3 x i64> @zext_v3i16_v3i64(<3 x i16> %a) {
 ; CHECK-GI-LABEL: zext_v3i16_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    ubfx x8, x8, #0, #16
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    fmov w10, s2
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ubfx x9, x9, #0, #16
-; CHECK-GI-NEXT:    ubfx x10, x10, #0, #16
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    ret
@@ -396,12 +389,10 @@ define <3 x i64> @zext_v3i32_v3i64(<3 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v3i32_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[0]
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
+; CHECK-GI-NEXT:    mov w10, v0.s[2]
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    fmov w10, s2
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    ret

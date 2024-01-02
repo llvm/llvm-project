@@ -149,6 +149,13 @@ static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+static bool isNonZeroLoadImmediate(MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::ADDI &&
+    MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
+    MI.getOperand(1).getReg() == RISCV::X0 &&
+    MI.getOperand(2).getImm() != 0;
+}
+
 /// Return true if this is an operation on mask registers.  Note that
 /// this includes both arithmetic/logical ops and load/store (vlm/vsm).
 static bool isMaskRegOp(const MachineInstr &MI) {
@@ -501,10 +508,7 @@ public:
       if (getAVLReg() == RISCV::X0)
         return true;
       if (MachineInstr *MI = MRI.getVRegDef(getAVLReg());
-          MI && MI->getOpcode() == RISCV::ADDI &&
-          MI->getOperand(1).isReg() && MI->getOperand(2).isImm() &&
-          MI->getOperand(1).getReg() == RISCV::X0 &&
-          MI->getOperand(2).getImm() != 0)
+          MI && isNonZeroLoadImmediate(*MI))
         return true;
       return false;
     }
@@ -1291,9 +1295,20 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       if (RISCVII::hasVLOp(TSFlags)) {
         MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
         if (VLOp.isReg()) {
+          Register Reg = VLOp.getReg();
+          MachineInstr *VLOpDef = MRI->getVRegDef(Reg);
+
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);
           VLOp.setIsKill(false);
+
+          // If the AVL was an immediate > 31, then it would have been emitted
+          // as an ADDI. However, the ADDI might not have been used in the
+          // vsetvli, or a vsetvli might not have been emitted, so it may be
+          // dead now.
+          if (VLOpDef && TII->isAddImmediate(*VLOpDef, Reg) &&
+              MRI->use_nodbg_empty(Reg))
+            VLOpDef->eraseFromParent();
         }
         MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
                                                 /*isImp*/ true));
@@ -1444,9 +1459,16 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-static bool isNonZeroAVL(const MachineOperand &MO) {
-  if (MO.isReg())
-    return RISCV::X0 == MO.getReg();
+static bool isNonZeroAVL(const MachineOperand &MO,
+                         const MachineRegisterInfo &MRI) {
+  if (MO.isReg()) {
+    if (MO.getReg() == RISCV::X0)
+      return true;
+    if (MachineInstr *MI = MRI.getVRegDef(MO.getReg());
+        MI && isNonZeroLoadImmediate(*MI))
+      return true;
+    return false;
+  }
   assert(MO.isImm());
   return 0 != MO.getImm();
 }
@@ -1455,7 +1477,8 @@ static bool isNonZeroAVL(const MachineOperand &MO) {
 // fields which would be observed.
 static bool canMutatePriorConfig(const MachineInstr &PrevMI,
                                  const MachineInstr &MI,
-                                 const DemandedFields &Used) {
+                                 const DemandedFields &Used,
+                                 const MachineRegisterInfo &MRI) {
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
@@ -1468,8 +1491,8 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLZeroness) {
       if (isVLPreservingConfig(PrevMI))
         return false;
-      if (!isNonZeroAVL(MI.getOperand(1)) ||
-          !isNonZeroAVL(PrevMI.getOperand(1)))
+      if (!isNonZeroAVL(MI.getOperand(1), MRI) ||
+          !isNonZeroAVL(PrevMI.getOperand(1), MRI))
         return false;
     }
 
@@ -1513,14 +1536,23 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged
         continue;
-      } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
+      } else if (canMutatePriorConfig(MI, *NextMI, Used, *MRI)) {
         if (!isVLPreservingConfig(*NextMI)) {
           MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
           MI.getOperand(0).setIsDead(false);
+          Register OldVLReg;
+          if (MI.getOperand(1).isReg())
+            OldVLReg = MI.getOperand(1).getReg();
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
             MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+          if (OldVLReg) {
+            MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
+            if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
+                MRI->use_nodbg_empty(OldVLReg))
+              VLOpDef->eraseFromParent();
+          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());

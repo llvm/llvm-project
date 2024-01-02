@@ -9,12 +9,17 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
 namespace {
+
+static LLVMContext Ctx;
+
 /// Perform tests against VFABI Rules. `invokeParser` creates a VFInfo object
 /// and a scalar FunctionType, which are used by tests to check that:
 /// 1. The scalar and vector names are correct.
@@ -45,7 +50,6 @@ private:
   }
 
   // Data needed to load the optional IR passed to invokeParser
-  LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
   FunctionType *ScalarFTy = nullptr;
@@ -91,8 +95,36 @@ protected:
   bool matchParametersNum() {
     return (Parameters.size() - isMasked()) == ScalarFTy->getNumParams();
   }
+
+  FunctionType *getFunctionType() {
+    return VFABI::createFunctionType(Info, ScalarFTy);
+  }
 };
 } // unnamed namespace
+
+// Function Types commonly used in tests
+FunctionType *FTyMaskVLen2_i32 = FunctionType::get(
+    Type::getVoidTy(Ctx),
+    {
+        VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+        VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getFixed(2)),
+    },
+    false);
+
+FunctionType *FTyNoMaskVLen2_i32 = FunctionType::get(
+    Type::getVoidTy(Ctx),
+    {
+        VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+    },
+    false);
+
+FunctionType *FTyMaskedVLA_i32 = FunctionType::get(
+    Type::getVoidTy(Ctx),
+    {
+        VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(4)),
+        VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(4)),
+    },
+    false);
 
 // This test makes sure that the demangling method succeeds only on
 // valid values of the string.
@@ -130,7 +162,14 @@ TEST_F(VFABIParserTest, ParamListParsing) {
       invokeParser("_ZGVnN2vl16Ls32R3l_foo", "void(i32, i32, i32, ptr, i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(false, isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx)},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)5);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_Linear, 16}));
@@ -145,7 +184,8 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_01) {
   EXPECT_TRUE(invokeParser("_ZGVnM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(true, isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
 }
@@ -154,7 +194,8 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_02) {
   EXPECT_TRUE(invokeParser("_ZGVnM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(true, isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
 }
@@ -164,7 +205,8 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_03) {
       invokeParser("_ZGVnM2v___foo_bar_abc(fooBarAbcVec)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(true, isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(ScalarName, "__foo_bar_abc");
   EXPECT_EQ(VectorName, "fooBarAbcVec");
 }
@@ -185,7 +227,22 @@ TEST_F(VFABIParserTest, Parse) {
                    "void(i32, i32, i32, i32, ptr, i32, i32, i32, ptr)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)9);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -205,7 +262,8 @@ TEST_F(VFABIParserTest, ParseVectorName) {
   EXPECT_TRUE(invokeParser("_ZGVnN2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyNoMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -218,7 +276,13 @@ TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
                            "void(i32, i32, i32, ptr)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo()},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, -1}));
@@ -233,7 +297,8 @@ TEST_F(VFABIParserTest, ParseScalableSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskedVLA_i32);
   EXPECT_EQ(VF, ElementCount::getScalable(4));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -246,7 +311,8 @@ TEST_F(VFABIParserTest, ParseFixedWidthSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -280,7 +346,15 @@ TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
                            "void(i32, i32, ptr, i32, i32, i32, ptr, i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx)},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)8);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, 1}));
@@ -299,7 +373,8 @@ TEST_F(VFABIParserTest, LLVM_ISA) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyNoMaskVLen2_i32);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(ScalarName, "foo");
@@ -318,12 +393,14 @@ TEST_F(VFABIParserTest, Align) {
   EXPECT_TRUE(invokeParser("_ZGVsN2l2a2_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0].Alignment, Align(2));
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
-
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+  EXPECT_EQ(getFunctionType(), FTy);
   // Missing alignment value.
   EXPECT_FALSE(invokeParser("_ZGVsM2l2a_foo"));
   // Invalid alignment token "x".
@@ -341,7 +418,10 @@ TEST_F(VFABIParserTest, ParseUniform) {
   EXPECT_TRUE(invokeParser("_ZGVnN2u_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));
@@ -357,6 +437,15 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
   // independent on the <isa> token.
   const StringRef IRTy =
       "void(i32, i32, i32, i32, ptr, i32, i32, i32, i32, i32)";
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)},
+      false);
+
   const SmallVector<VFParameter, 8> ExpectedParams = {
       VFParameter({0, VFParamKind::Vector, 0}),
       VFParameter({1, VFParamKind::OMP_LinearPos, 2}),
@@ -374,8 +463,8 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
   do {                                                                         \
     EXPECT_EQ(VF, ElementCount::getFixed(2));                                  \
     EXPECT_FALSE(isMasked());                                                  \
-    EXPECT_TRUE(matchParametersNum())                                          \
-        << "Different number of scalar parameters";                            \
+    EXPECT_TRUE(matchParametersNum());                                         \
+    EXPECT_EQ(getFunctionType(), FTy);                                         \
     EXPECT_EQ(Parameters.size(), (unsigned)10);                                \
     EXPECT_EQ(Parameters, ExpectedParams);                                     \
     EXPECT_EQ(ScalarName, "foo");                                              \
@@ -450,7 +539,8 @@ TEST_F(VFABIParserTest, ParseMaskingNEON) {
   EXPECT_TRUE(invokeParser("_ZGVnM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -463,7 +553,8 @@ TEST_F(VFABIParserTest, ParseMaskingSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -476,7 +567,8 @@ TEST_F(VFABIParserTest, ParseMaskingSSE) {
   EXPECT_TRUE(invokeParser("_ZGVbM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SSE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -489,7 +581,8 @@ TEST_F(VFABIParserTest, ParseMaskingAVX) {
   EXPECT_TRUE(invokeParser("_ZGVcM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AVX);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -502,7 +595,8 @@ TEST_F(VFABIParserTest, ParseMaskingAVX2) {
   EXPECT_TRUE(invokeParser("_ZGVdM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -515,7 +609,8 @@ TEST_F(VFABIParserTest, ParseMaskingAVX512) {
   EXPECT_TRUE(invokeParser("_ZGVeM2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -528,7 +623,8 @@ TEST_F(VFABIParserTest, ParseMaskingLLVM) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_M2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -546,19 +642,28 @@ TEST_F(VFABIParserTest, LLVM_InternalISA) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyNoMaskVLen2_i32);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
 }
 
-TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
+TEST_F(VFABIParserTest, LLVM_Intrinsics) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)",
                            "void(float, float)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_FALSE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(4)),
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(4)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(4));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -573,7 +678,8 @@ TEST_F(VFABIParserTest, ParseScalableRequiresDeclaration) {
   EXPECT_TRUE(invokeParser(MangledName, "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  EXPECT_EQ(getFunctionType(), FTyMaskedVLA_i32);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
@@ -592,7 +698,13 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "i32(i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(4)),
+      {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(4)),
+       VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(4))},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getScalable(4));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -606,7 +718,17 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
                            "void(double, ptr, ptr)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getDoubleTy(Ctx), ElementCount::getScalable(2)),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -623,7 +745,16 @@ TEST_F(VFABIParserTest, ParseWiderReturnTypeSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsMxvv_foo(vector_foo)", "i64(i32, i32)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      VectorType::get(Type::getInt64Ty(Ctx), ElementCount::getScalable(2)),
+      {
+          VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)3);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::Vector}));
@@ -638,7 +769,15 @@ TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "void(i16)"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
-  EXPECT_TRUE(matchParametersNum()) << "Different number of scalar parameters";
+  EXPECT_TRUE(matchParametersNum());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getInt16Ty(Ctx), ElementCount::getScalable(8)),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(8)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
@@ -656,6 +795,7 @@ TEST_F(VFABIParserTest, ParseUnsupportedElementTypeSVE) {
 TEST_F(VFABIParserTest, ParseUnsupportedReturnTypeSVE) {
   EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "fp128(float)"));
 }
+
 class VFABIAttrTest : public testing::Test {
 protected:
   void SetUp() override {

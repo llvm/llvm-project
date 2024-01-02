@@ -1259,6 +1259,7 @@ if( LLVM_INCLUDE_TESTS )
   add_custom_target(test-depends
       DEPENDS ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
   set_target_properties(test-depends PROPERTIES FOLDER "Tests")
+  add_dependencies(check-all test-depends)
 endif()
 
 if (LLVM_INCLUDE_DOCS)

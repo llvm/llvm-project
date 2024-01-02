@@ -16,10 +16,6 @@
 ; OPT: %llvm.amdgcn.kernel.k23.lds.t = type { i64, i8 }
 ; OPT: %llvm.amdgcn.kernel.k123.lds.t = type { i16, i8, [5 x i8], i64 }
 
-; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t poison, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t poison, align 16, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t poison, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t poison, align 16, !absolute_symbol !0
 
 ; Salient parts of the IR lookup table check:
 ; It has (top level) size 3 as there are 3 kernels that call functions which use lds
@@ -221,8 +217,8 @@ define amdgpu_kernel void @kernel_no_table() {
 ; Access two variables, will allocate those two
 define amdgpu_kernel void @k01() {
 ; OPT-LABEL: define amdgpu_kernel void @k01(
-; OPT-SAME: ) #[[ATTR0]] !llvm.amdgcn.lds.kernel.id !1 {
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds) ], !alias.scope !2, !noalias !5
+; OPT-SAME: ) #[[ATTR0]] !llvm.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds) ], !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
 ; OPT-NEXT:    call void @f0()
 ; OPT-NEXT:    call void @f1()
 ; OPT-NEXT:    ret void
@@ -241,18 +237,18 @@ define amdgpu_kernel void @k01() {
 ; GCN-NEXT:    s_addc_u32 s5, s5, f0@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b32 s15, 0
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, f1@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, f1@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_endpgm
-; GCN:         .amdhsa_group_segment_fixed_size 8
+
   call void @f0()
   call void @f1()
   ret void
@@ -260,8 +256,8 @@ define amdgpu_kernel void @k01() {
 
 define amdgpu_kernel void @k23() {
 ; OPT-LABEL: define amdgpu_kernel void @k23(
-; OPT-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id !7 {
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope !8, !noalias !11
+; OPT-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META8:![0-9]+]] {
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    call void @f3()
 ; OPT-NEXT:    ret void
@@ -280,18 +276,17 @@ define amdgpu_kernel void @k23() {
 ; GCN-NEXT:    s_addc_u32 s5, s5, f2@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b32 s15, 2
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, f3@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, f3@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_endpgm
-; GCN:         .amdhsa_group_segment_fixed_size 16
   call void @f2()
   call void @f3()
   ret void
@@ -300,12 +295,12 @@ define amdgpu_kernel void @k23() {
 ; Access and allocate three variables
 define amdgpu_kernel void @k123() {
 ; OPT-LABEL: define amdgpu_kernel void @k123(
-; OPT-SAME: ) #[[ATTR1]] !llvm.amdgcn.lds.kernel.id !13 {
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope !14, !noalias !17
+; OPT-SAME: ) #[[ATTR1]] !llvm.amdgcn.lds.kernel.id [[META14:![0-9]+]] {
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META15:![0-9]+]], !noalias [[META18:![0-9]+]]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !20, !noalias !21
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META21:![0-9]+]], !noalias [[META22:![0-9]+]]
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !20, !noalias !21
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META21]], !noalias [[META22]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;
@@ -323,7 +318,7 @@ define amdgpu_kernel void @k123() {
 ; GCN-NEXT:    s_addc_u32 s5, s5, f1@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b32 s15, 1
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -336,10 +331,9 @@ define amdgpu_kernel void @k123() {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
 ; GCN-NEXT:    ds_write_b8 v0, v1 offset:2
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_endpgm
-; GCN:         .amdhsa_group_segment_fixed_size 16
   call void @f1()
   %ld = load i8, ptr addrspace(3) @v3
   %mul = mul i8 %ld, 8
@@ -349,7 +343,6 @@ define amdgpu_kernel void @k123() {
 }
 
 
-; OPT: declare i32 @llvm.amdgcn.lds.kernel.id()
 
 ; OPT: attributes #0 = { "amdgpu-lds-size"="8" }
 ; OPT: attributes #1 = { "amdgpu-lds-size"="16" }
@@ -378,3 +371,6 @@ define amdgpu_kernel void @k123() {
 ; GCN-NEXT: .long	0
 ; GCN-NEXT: .long	0+8
 ; GCN-NEXT: .size	llvm.amdgcn.lds.offset.table, 48
+
+!llvm.module.flags = !{!4}
+!4 = !{i32 1, !"amdgpu_code_object_version", i32 500}

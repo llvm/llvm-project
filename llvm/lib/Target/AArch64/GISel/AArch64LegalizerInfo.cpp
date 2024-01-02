@@ -758,18 +758,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
       .customIf([](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() == 128;
       })
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
        G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
        G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({p0});
 
@@ -1406,7 +1406,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_umax:
   case Intrinsic::aarch64_neon_umin:
   case Intrinsic::aarch64_neon_fmax:
-  case Intrinsic::aarch64_neon_fmin: {
+  case Intrinsic::aarch64_neon_fmin:
+  case Intrinsic::aarch64_neon_fmaxnm:
+  case Intrinsic::aarch64_neon_fminnm: {
     MachineIRBuilder MIB(MI);
     if (IntrinsicID == Intrinsic::aarch64_neon_smax)
       MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
@@ -1421,6 +1423,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                      {MI.getOperand(2), MI.getOperand(3)});
     else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
       MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmaxnm)
+      MIB.buildInstr(TargetOpcode::G_FMAXNUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fminnm)
+      MIB.buildInstr(TargetOpcode::G_FMINNUM, {MI.getOperand(0)},
                      {MI.getOperand(2), MI.getOperand(3)});
     MI.eraseFromParent();
     return true;

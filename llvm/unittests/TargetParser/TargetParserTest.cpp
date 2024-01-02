@@ -55,7 +55,7 @@ std::string FormatExtensionFlags(int64_t Flags) {
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
   Features.erase(std::remove_if(Features.begin(), Features.end(),
                                 [](StringRef extension) {
-                                  return extension.startswith("-");
+                                  return extension.starts_with("-");
                                 }),
                  Features.end());
 
@@ -75,7 +75,7 @@ std::string FormatExtensionFlags(AArch64::ExtensionBitset Flags) {
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
   Features.erase(std::remove_if(Features.begin(), Features.end(),
                                 [](StringRef extension) {
-                                  return extension.startswith("-");
+                                  return extension.starts_with("-");
                                 }),
                  Features.end());
 
@@ -1811,7 +1811,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSVE_FP8DOT2, AArch64::AEK_FP8DOT4,
       AArch64::AEK_SSVE_FP8DOT4, AArch64::AEK_LUT,
       AArch64::AEK_SME_LUTv2,    AArch64::AEK_SMEF8F16,
-      AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64};
+      AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64,
+      AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
+      AArch64::AEK_TLBIW,
+  };
 
   std::vector<StringRef> Features;
 
@@ -1897,6 +1900,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f32"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-fa64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+cpa"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+pauth-lr"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tlbiw"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the

@@ -480,6 +480,12 @@ def IsolatedRegionsOp : TEST_Op<"isolated_regions", [IsolatedFromAbove]> {
   let assemblyFormat = "attr-dict-with-keyword $regions";
 }
 
+def AllocaScopeRegionOp : TEST_Op<"alloca_scope_region",
+                                  [AutomaticAllocationScope]> {
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
@@ -1360,13 +1366,6 @@ def TestOpFoldWithFoldAdaptor
     $op `,` `[` $variadic `]` `,` `{` $var_of_var `}` $body attr-dict-with-keyword
   }];
 
-  let hasFolder = 1;
-}
-
-// An op that always fold itself.
-def TestPassthroughFold : TEST_Op<"passthrough_fold"> {
-  let arguments = (ins AnyType:$op);
-  let results = (outs AnyType);
   let hasFolder = 1;
 }
 

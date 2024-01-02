@@ -1511,6 +1511,21 @@ define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
   ret <2 x i12> %r
 }
 
+define i32 @mul_no_common_bits_commute2(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @mul_no_common_bits_commute2(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p1, 7
+  %y = shl i32 %p2, 3
+  %m = mul i32 %y, %x
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
 define i32 @mul_no_common_bits_disjoint(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_no_common_bits_disjoint(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 1
@@ -1620,4 +1635,99 @@ define i32 @assoc_cast_assoc_disjoint(i16 %x) {
   %b = zext i16 %a to i32
   %c = or disjoint i32 %b, 65536
   ret i32 %c
+}
+
+; (X & C1) | C2 -> X & (C1 | C2) iff (X & C2) == C2
+define i32 @test_or_and_disjoint(i32 %a) {
+; CHECK-LABEL: @test_or_and_disjoint(
+; CHECK-NEXT:    [[A0:%.*]] = and i32 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A0]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[A2:%.*]] = and i32 [[A]], 15
+; CHECK-NEXT:    ret i32 [[A2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %a0 = and i32 %a, 24
+  %cmp = icmp eq i32 %a0, 8
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %a1 = and i32 %a, 7
+  %a2 = or i32 %a1, 8
+  ret i32 %a2
+if.else:
+  ret i32 0
+}
+
+define i32 @test_or_and_mixed(i32 %a) {
+; CHECK-LABEL: @test_or_and_mixed(
+; CHECK-NEXT:    [[A0:%.*]] = and i32 [[A:%.*]], 27
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A0]], 11
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[A2:%.*]] = and i32 [[A]], 15
+; CHECK-NEXT:    ret i32 [[A2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %a0 = and i32 %a, 27
+  %cmp = icmp eq i32 %a0, 11
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %a1 = and i32 %a, 7
+  %a2 = or i32 %a1, 11
+  ret i32 %a2
+if.else:
+  ret i32 0
+}
+
+; Negative tests
+
+define i32 @test_or_and_disjoint_fail(i32 %a) {
+; CHECK-LABEL: @test_or_and_disjoint_fail(
+; CHECK-NEXT:    [[A0:%.*]] = and i32 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A0]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A]], 7
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i32 [[A1]], 8
+; CHECK-NEXT:    ret i32 [[A2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %a0 = and i32 %a, 24
+  %cmp = icmp eq i32 %a0, 16
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %a1 = and i32 %a, 7
+  %a2 = or i32 %a1, 8
+  ret i32 %a2
+if.else:
+  ret i32 0
+}
+
+define i32 @test_or_and_disjoint_multiuse(i32 %a) {
+; CHECK-LABEL: @test_or_and_disjoint_multiuse(
+; CHECK-NEXT:    [[A0:%.*]] = and i32 [[A:%.*]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A0]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A]], 7
+; CHECK-NEXT:    call void @use(i32 [[A1]])
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i32 [[A1]], 8
+; CHECK-NEXT:    ret i32 [[A2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %a0 = and i32 %a, 24
+  %cmp = icmp eq i32 %a0, 8
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %a1 = and i32 %a, 7
+  call void @use(i32 %a1)
+  %a2 = or i32 %a1, 8
+  ret i32 %a2
+if.else:
+  ret i32 0
 }

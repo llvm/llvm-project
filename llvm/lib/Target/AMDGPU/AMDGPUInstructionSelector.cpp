@@ -1791,6 +1791,19 @@ bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
       return true;
     }
   }
+
+  // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
+  if (STI.hasSplitBarriers()) {
+    MachineBasicBlock *MBB = MI.getParent();
+    const DebugLoc &DL = MI.getDebugLoc();
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
+        .addImm(AMDGPU::Barrier::WORKGROUP);
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_WAIT))
+        .addImm(AMDGPU::Barrier::WORKGROUP);
+    MI.eraseFromParent();
+    return true;
+  }
+
   return selectImpl(MI, *CoverageInfo);
 }
 
@@ -1819,6 +1832,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned IntrOpcode = Intr->BaseOpcode;
   const bool IsGFX10Plus = AMDGPU::isGFX10Plus(STI);
   const bool IsGFX11Plus = AMDGPU::isGFX11Plus(STI);
+  const bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
 
   const unsigned ArgOffset = MI.getNumExplicitDefs() + 1;
 
@@ -1903,7 +1917,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~AMDGPU::CPol::ALL)
+  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
     return false;
 
   int NumVAddrRegs = 0;
@@ -1938,7 +1952,10 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     ++NumVDataDwords;
 
   int Opcode = -1;
-  if (IsGFX11Plus) {
+  if (IsGFX12Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX11Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx11NSA
                                           : AMDGPU::MIMGEncGfx11Default,
@@ -2011,7 +2028,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   if (IsGFX10Plus)
     MIB.addImm(DimInfo->Encoding);
-  MIB.addImm(Unorm);
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::unorm))
+    MIB.addImm(Unorm);
 
   MIB.addImm(CPol);
   MIB.addImm(IsA16 &&  // a16 or r128
@@ -2026,7 +2044,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     return false;
   }
 
-  MIB.addImm(LWE); // lwe
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::lwe))
+    MIB.addImm(LWE); // lwe
   if (!IsGFX10Plus)
     MIB.addImm(DimInfo->DA ? -1 : 0);
   if (BaseOpcode->HasD16)
@@ -2137,6 +2156,16 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     return selectDSBvhStackIntrinsic(I);
+  case Intrinsic::amdgcn_s_barrier_init:
+  case Intrinsic::amdgcn_s_barrier_join:
+  case Intrinsic::amdgcn_s_wakeup_barrier:
+  case Intrinsic::amdgcn_s_get_barrier_state:
+    return selectNamedBarrierInst(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+  case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
+    return selectSBarrierSignalIsfirst(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_barrier_leave:
+    return selectSBarrierLeave(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -3200,6 +3229,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 }
 
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
+  assert(!AMDGPU::isGFX12Plus(STI));
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -3266,8 +3296,8 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   MIB.add(MI.getOperand(5 + OpOffset)); // soffset
   MIB.add(MI.getOperand(6 + OpOffset)); // imm offset
   unsigned Aux = MI.getOperand(7 + OpOffset).getImm();
-  MIB.addImm(Aux & AMDGPU::CPol::ALL);  // cpol
-  MIB.addImm((Aux >> 3) & 1);           // swz
+  MIB.addImm(Aux & AMDGPU::CPol::ALL);                  // cpol
+  MIB.addImm(Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0); // swz
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
@@ -4407,7 +4437,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
     // TODO: Should this be inside the render function? The iterator seems to
     // move.
-    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
             HighBits)
         .addImm(Offset & ~MaxOffset);
@@ -4439,7 +4469,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
     int64_t ConstOffset;
     std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
     if (ConstOffset != 0) {
-      if (SIInstrInfo::isLegalMUBUFImmOffset(ConstOffset) &&
+      if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
           (!STI.privateMemoryResourceIsRangeChecked() ||
            KB->signBitIsZero(PtrBase))) {
         const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
@@ -4516,6 +4546,11 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegal(Register Addr) const {
   MachineInstr *AddrMI = getDefIgnoringCopies(Addr, *MRI);
 
   if (isNoUnsignedWrap(AddrMI))
+    return true;
+
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(STI))
     return true;
 
   Register LHS = AddrMI->getOperand(1).getReg();
@@ -4622,7 +4657,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   if (mi_match(Reg, *MRI,
                m_GPtrAdd(m_Reg(BasePtr),
                          m_any_of(m_ICst(Offset), m_Copy(m_ICst(Offset)))))) {
-    if (!SIInstrInfo::isLegalMUBUFImmOffset(Offset))
+    if (!TII.isLegalMUBUFImmOffset(Offset))
       return {};
     MachineInstr *BasePtrDef = getDefIgnoringCopies(BasePtr, *MRI);
     Register WaveBase = getWaveAddress(BasePtrDef);
@@ -4641,7 +4676,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   }
 
   if (!mi_match(Root.getReg(), *MRI, m_ICst(Offset)) ||
-      !SIInstrInfo::isLegalMUBUFImmOffset(Offset))
+      !TII.isLegalMUBUFImmOffset(Offset))
     return {};
 
   return {{
@@ -4884,7 +4919,7 @@ bool AMDGPUInstructionSelector::shouldUseAddr64(MUBUFAddressData Addr) const {
 /// component.
 void AMDGPUInstructionSelector::splitIllegalMUBUFOffset(
   MachineIRBuilder &B, Register &SOffset, int64_t &ImmOffset) const {
-  if (SIInstrInfo::isLegalMUBUFImmOffset(ImmOffset))
+  if (TII.isLegalMUBUFImmOffset(ImmOffset))
     return;
 
   // Illegal offset, store it in soffset.
@@ -4993,6 +5028,8 @@ AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { // soffset
         if (SOffset)
           MIB.addReg(SOffset);
+        else if (STI.hasRestrictedSOffset())
+          MIB.addReg(AMDGPU::SGPR_NULL);
         else
           MIB.addImm(0);
       },
@@ -5021,6 +5058,8 @@ AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { // soffset
         if (SOffset)
           MIB.addReg(SOffset);
+        else if (STI.hasRestrictedSOffset())
+          MIB.addReg(AMDGPU::SGPR_NULL);
         else
           MIB.addImm(0);
       },
@@ -5029,6 +5068,17 @@ AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
       addZeroImm, //  tfe
       addZeroImm, //  swz
     }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectBUFSOffset(MachineOperand &Root) const {
+
+  Register SOffset = Root.getReg();
+
+  if (STI.hasRestrictedSOffset() && mi_match(SOffset, *MRI, m_ZeroInt()))
+    SOffset = AMDGPU::SGPR_NULL;
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); }}};
 }
 
 /// Get an immediate that must be 32-bits, and treated as zero extended.
@@ -5239,6 +5289,135 @@ AMDGPUInstructionSelector::selectVOP3PMadMixMods(MachineOperand &Root) const {
   }};
 }
 
+bool AMDGPUInstructionSelector::selectSBarrierSignalIsfirst(
+    MachineInstr &I, Intrinsic::ID IntrID) const {
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register CCReg = I.getOperand(0).getReg();
+
+  bool HasM0 = IntrID == Intrinsic::amdgcn_s_barrier_signal_isfirst_var;
+
+  if (HasM0) {
+    auto CopyMIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+                       .addReg(I.getOperand(2).getReg());
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0));
+    if (!constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI))
+      return false;
+  } else {
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM))
+        .addImm(I.getOperand(2).getImm());
+  }
+
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), CCReg).addReg(AMDGPU::SCC);
+
+  I.eraseFromParent();
+  return RBI.constrainGenericRegister(CCReg, AMDGPU::SReg_32_XM0_XEXECRegClass,
+                                      *MRI);
+}
+
+unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
+  if (HasInlineConst) {
+    switch (IntrID) {
+    default:
+      llvm_unreachable("not a named barrier op");
+    case Intrinsic::amdgcn_s_barrier_init:
+      return AMDGPU::S_BARRIER_INIT_IMM;
+    case Intrinsic::amdgcn_s_barrier_join:
+      return AMDGPU::S_BARRIER_JOIN_IMM;
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_IMM;
+    case Intrinsic::amdgcn_s_get_barrier_state:
+      return AMDGPU::S_GET_BARRIER_STATE_IMM;
+    };
+  } else {
+    switch (IntrID) {
+    default:
+      llvm_unreachable("not a named barrier op");
+    case Intrinsic::amdgcn_s_barrier_init:
+      return AMDGPU::S_BARRIER_INIT_M0;
+    case Intrinsic::amdgcn_s_barrier_join:
+      return AMDGPU::S_BARRIER_JOIN_M0;
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_M0;
+    case Intrinsic::amdgcn_s_get_barrier_state:
+      return AMDGPU::S_GET_BARRIER_STATE_M0;
+    };
+  }
+}
+
+bool AMDGPUInstructionSelector::selectNamedBarrierInst(
+    MachineInstr &I, Intrinsic::ID IntrID) const {
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  MachineOperand BarOp = IntrID == Intrinsic::amdgcn_s_get_barrier_state
+                             ? I.getOperand(2)
+                             : I.getOperand(1);
+  std::optional<int64_t> BarValImm =
+      getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
+  Register M0Val;
+  Register TmpReg0;
+
+  // For S_BARRIER_INIT, member count will always be read from M0[16:22]
+  if (IntrID == Intrinsic::amdgcn_s_barrier_init) {
+    Register MemberCount = I.getOperand(2).getReg();
+    TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    // TODO: This should be expanded during legalization so that the the S_LSHL
+    // and S_OR can be constant-folded
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg0)
+        .addImm(16)
+        .addReg(MemberCount);
+    M0Val = TmpReg0;
+  }
+
+  // If not inlinable, get reference to barrier depending on the instruction
+  if (!BarValImm) {
+    if (IntrID == Intrinsic::amdgcn_s_barrier_init) {
+      // If reference to barrier id is not an inlinable constant then it must be
+      // referenced with M0[4:0]. Perform an OR with the member count to include
+      // it in M0 for S_BARRIER_INIT.
+      Register TmpReg1 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_OR_B32), TmpReg1)
+          .addReg(BarOp.getReg())
+          .addReg(TmpReg0);
+      M0Val = TmpReg1;
+    } else {
+      M0Val = BarOp.getReg();
+    }
+  }
+
+  // Build copy to M0 if needed. For S_BARRIER_INIT, M0 is always required.
+  if (M0Val) {
+    auto CopyMIB =
+        BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(M0Val);
+    constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
+  }
+
+  MachineInstrBuilder MIB;
+  unsigned Opc = getNamedBarrierOp(BarValImm.has_value(), IntrID);
+  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+
+  if (IntrID == Intrinsic::amdgcn_s_get_barrier_state)
+    MIB.addDef(I.getOperand(0).getReg());
+
+  if (BarValImm)
+    MIB.addImm(*BarValImm);
+
+  I.eraseFromParent();
+  return true;
+}
+bool AMDGPUInstructionSelector::selectSBarrierLeave(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register CCReg = I.getOperand(0).getReg();
+
+  BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_BARRIER_LEAVE));
+  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), CCReg).addReg(AMDGPU::SCC);
+
+  I.eraseFromParent();
+  return RBI.constrainGenericRegister(CCReg, AMDGPU::SReg_32_XM0_XEXECRegClass,
+                                      *MRI);
+}
+
 void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
                                                  const MachineInstr &MI,
                                                  int OpIdx) const {
@@ -5296,14 +5475,19 @@ void AMDGPUInstructionSelector::renderExtractCPol(MachineInstrBuilder &MIB,
                                                   const MachineInstr &MI,
                                                   int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm(MI.getOperand(OpIdx).getImm() & AMDGPU::CPol::ALL);
+  MIB.addImm(MI.getOperand(OpIdx).getImm() &
+             (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::ALL
+                                       : AMDGPU::CPol::ALL_pregfx12));
 }
 
 void AMDGPUInstructionSelector::renderExtractSWZ(MachineInstrBuilder &MIB,
                                                  const MachineInstr &MI,
                                                  int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm((MI.getOperand(OpIdx).getImm() >> 3) & 1);
+  const bool Swizzle = MI.getOperand(OpIdx).getImm() &
+                       (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::SWZ
+                                                 : AMDGPU::CPol::SWZ_pregfx12);
+  MIB.addImm(Swizzle);
 }
 
 void AMDGPUInstructionSelector::renderSetGLC(MachineInstrBuilder &MIB,

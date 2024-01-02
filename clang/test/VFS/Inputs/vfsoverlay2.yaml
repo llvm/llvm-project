@@ -3,7 +3,7 @@
   'roots': [
     { 'name': 'OUT_DIR', 'type': 'directory',
       'contents': [
-        { 'name': 'module.map', 'type': 'file',
+        { 'name': 'module.modulemap', 'type': 'file',
           'external-contents': 'INPUT_DIR/actual_module2.map'
         }
       ]

@@ -130,9 +130,9 @@ struct Configuration {
   bool forceMultipleRes = false;
   bool forceUnresolved = false;
   bool debug = false;
-  bool debugDwarf = false;
+  bool includeDwarfChunks = false;
   bool debugGHashes = false;
-  bool debugSymtab = false;
+  bool writeSymtab = false;
   bool driver = false;
   bool driverUponly = false;
   bool driverWdm = false;
