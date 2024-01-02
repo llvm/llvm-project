@@ -62,7 +62,7 @@ subroutine acc_kernels_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {asyncAttr}
+! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
 
   !$acc kernels loop async(1)
   DO i = 1, n
@@ -103,7 +103,7 @@ subroutine acc_kernels_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {waitAttr}
+! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
 
   !$acc kernels loop wait(1)
   DO i = 1, n
@@ -111,7 +111,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.kernels wait([[WAIT1]] : i32) {
+! CHECK:      acc.kernels wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -126,7 +126,7 @@ subroutine acc_kernels_loop
 
 ! CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 ! CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.kernels wait([[WAIT2]], [[WAIT3]] : i32, i32) {
+! CHECK:      acc.kernels wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -141,7 +141,7 @@ subroutine acc_kernels_loop
 
 ! CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.kernels wait([[WAIT4]], [[WAIT5]] : i32, i32) {
+! CHECK:      acc.kernels wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -155,7 +155,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      [[NUMGANGS1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.kernels num_gangs([[NUMGANGS1]] : i32) {
+! CHECK:      acc.kernels num_gangs({[[NUMGANGS1]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -169,7 +169,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      [[NUMGANGS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.kernels num_gangs([[NUMGANGS2]] : i32) {
+! CHECK:      acc.kernels num_gangs({[[NUMGANGS2]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield

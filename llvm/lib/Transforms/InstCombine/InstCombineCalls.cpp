@@ -1539,6 +1539,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
       return I;
 
+    if (Instruction *I = foldCommutativeIntrinsicOverPhis(*II))
+      return I;
+
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
   }
@@ -1792,6 +1795,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
+
+    // Try to fold minmax with constant RHS based on range information
+    const APInt *RHSC;
+    if (match(I1, m_APIntAllowUndef(RHSC))) {
+      ICmpInst::Predicate Pred =
+          ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
+      bool IsSigned = MinMaxIntrinsic::isSigned(IID);
+      ConstantRange LHS_CR = computeConstantRangeIncludingKnownBits(
+          I0, IsSigned, SQ.getWithInstruction(II));
+      if (!LHS_CR.isFullSet()) {
+        if (LHS_CR.icmp(Pred, *RHSC))
+          return replaceInstUsesWith(*II, I0);
+        if (LHS_CR.icmp(ICmpInst::getSwappedPredicate(Pred), *RHSC))
+          return replaceInstUsesWith(*II,
+                                     ConstantInt::get(II->getType(), *RHSC));
+      }
+    }
 
     break;
   }
@@ -3830,6 +3850,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   if (Callee->hasFnAttribute("thunk"))
     return false;
 
+  // If this is a call to a naked function, the assembly might be
+  // using an argument, or otherwise rely on the frame layout,
+  // the function prototype will mismatch.
+  if (Callee->hasFnAttribute(Attribute::Naked))
+    return false;
+
   // If this is a musttail call, the callee's prototype must match the caller's
   // prototype with the exception of pointee types. The code below doesn't
   // implement that, so we can't do this transform.
@@ -4232,6 +4258,25 @@ InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
             m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
     replaceOperand(II, 0, B);
     replaceOperand(II, 1, C);
+    return &II;
+  }
+
+  return nullptr;
+}
+
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
+  assert(II.isCommutative() && "Instruction should be commutative");
+
+  PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
+  PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
+    replaceOperand(II, 0, P->first);
+    replaceOperand(II, 1, P->second);
     return &II;
   }
 

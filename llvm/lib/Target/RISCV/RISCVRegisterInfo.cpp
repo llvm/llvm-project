@@ -127,6 +127,9 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, RISCV::X27);
   }
 
+  // Shadow stack pointer.
+  markSuperRegs(Reserved, RISCV::SSP);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }

@@ -17,7 +17,7 @@ func.func @structured_cfg() {
       "use2"(%i) : (index) -> ()
     }
     "use3"(%i) : (index) -> ()
-  }
+  } {walk_blocks, walk_regions}
   return
 }
 
@@ -87,6 +87,26 @@ func.func @structured_cfg() {
 // CHECK:       Visiting op 'arith.constant'
 // CHECK:       Visiting op 'func.func'
 // CHECK:       Visiting op 'builtin.module'
+
+// CHECK-LABEL: Invoke block pre-order visits on blocks
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.for'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.if'
+// CHECK:       Visiting block ^bb0 from region 1 from operation 'scf.if'
+
+// CHECK-LABEL: Invoke block post-order visits on blocks
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.if'
+// CHECK:       Visiting block ^bb0 from region 1 from operation 'scf.if'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.for'
+
+// CHECK-LABEL: Invoke region pre-order visits on region
+// CHECK:       Visiting region 0 from operation 'scf.for'
+// CHECK:       Visiting region 0 from operation 'scf.if'
+// CHECK:       Visiting region 1 from operation 'scf.if'
+
+// CHECK-LABEL: Invoke region post-order visits on region
+// CHECK:       Visiting region 0 from operation 'scf.if'
+// CHECK:       Visiting region 1 from operation 'scf.if'
+// CHECK:       Visiting region 0 from operation 'scf.for'
 
 // CHECK-LABEL: Op pre-order erasures
 // CHECK:       Erasing op 'scf.for'

@@ -38,10 +38,10 @@ convertReductionKind(gpu::AllReduceOperation mode) {
     MAP_CASE(MUL);
     MAP_CASE(MINUI);
     MAP_CASE(MINSI);
-    MAP_CASE(MINF);
+    MAP_CASE(MINNUMF);
     MAP_CASE(MAXSI);
     MAP_CASE(MAXUI);
-    MAP_CASE(MAXF);
+    MAP_CASE(MAXNUMF);
     MAP_CASE(AND);
     MAP_CASE(OR);
     MAP_CASE(XOR);

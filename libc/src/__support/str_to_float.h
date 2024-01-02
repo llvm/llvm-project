@@ -338,7 +338,7 @@ simple_decimal_conversion(const char *__restrict numStart,
   // float, return inf.
   if (hpd.get_decimal_point() > 0 &&
       exp10_to_exp2(hpd.get_decimal_point() - 1) > FloatProp::EXP_BIAS) {
-    output.num = {0, fputil::FPBits<T>::MAX_EXPONENT};
+    output.num = {0, fputil::FPBits<T>::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
@@ -388,8 +388,8 @@ simple_decimal_conversion(const char *__restrict numStart,
   exp2 += FloatProp::EXP_BIAS;
 
   // Handle the exponent being too large (and return inf).
-  if (exp2 >= FPBits::MAX_EXPONENT) {
-    output.num = {0, FPBits::MAX_EXPONENT};
+  if (exp2 >= FPBits::MAX_BIASED_EXPONENT) {
+    output.num = {0, FPBits::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
@@ -424,7 +424,7 @@ simple_decimal_conversion(const char *__restrict numStart,
     // Check if this rounding causes exp2 to go out of range and make the result
     // INF. If this is the case, then finalMantissa and exp2 are already the
     // correct values for an INF result.
-    if (exp2 >= FPBits::MAX_EXPONENT) {
+    if (exp2 >= FPBits::MAX_BIASED_EXPONENT) {
       output.error = ERANGE;
     }
   }
@@ -658,7 +658,7 @@ decimal_exp_to_float(ExpandedFloat<T> init_num, const char *__restrict numStart,
   // float, return inf. These bounds are relatively loose, but are mostly
   // serving as a first pass. Some close numbers getting through is okay.
   if (exp10 > get_upper_bound<T>()) {
-    output.num = {0, FPBits::MAX_EXPONENT};
+    output.num = {0, FPBits::MAX_BIASED_EXPONENT};
     output.error = ERANGE;
     return output;
   }
@@ -920,10 +920,10 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
 
       // If the result is in the valid range, then we use it. The valid range is
       // also within the int32 range, so this prevents overflow issues.
-      if (temp_exponent > FPBits::MAX_EXPONENT) {
-        exponent = FPBits::MAX_EXPONENT;
-      } else if (temp_exponent < -FPBits::MAX_EXPONENT) {
-        exponent = -FPBits::MAX_EXPONENT;
+      if (temp_exponent > FPBits::MAX_BIASED_EXPONENT) {
+        exponent = FPBits::MAX_BIASED_EXPONENT;
+      } else if (temp_exponent < -FPBits::MAX_BIASED_EXPONENT) {
+        exponent = -FPBits::MAX_BIASED_EXPONENT;
       } else {
         exponent = static_cast<int32_t>(temp_exponent);
       }
@@ -1034,10 +1034,10 @@ hexadecimal_string_to_float(const char *__restrict src,
 
       // If the result is in the valid range, then we use it. The valid range is
       // also within the int32 range, so this prevents overflow issues.
-      if (temp_exponent > FPBits::MAX_EXPONENT) {
-        exponent = FPBits::MAX_EXPONENT;
-      } else if (temp_exponent < -FPBits::MAX_EXPONENT) {
-        exponent = -FPBits::MAX_EXPONENT;
+      if (temp_exponent > FPBits::MAX_BIASED_EXPONENT) {
+        exponent = FPBits::MAX_BIASED_EXPONENT;
+      } else if (temp_exponent < -FPBits::MAX_BIASED_EXPONENT) {
+        exponent = -FPBits::MAX_BIASED_EXPONENT;
       } else {
         exponent = static_cast<int32_t>(temp_exponent);
       }
