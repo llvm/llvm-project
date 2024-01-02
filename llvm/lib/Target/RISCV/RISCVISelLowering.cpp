@@ -1374,13 +1374,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
 
   setTargetDAGCombine({ISD::INTRINSIC_VOID, ISD::INTRINSIC_W_CHAIN,
-                       ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::MUL,
-                       ISD::AND, ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT});
+                       ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::AND,
+                       ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT});
   if (Subtarget.is64Bit())
     setTargetDAGCombine(ISD::SRA);
 
   if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM});
+    setTargetDAGCombine(
+        {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM});
 
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
@@ -12848,7 +12849,8 @@ namespace {
 // apply a combine.
 struct CombineResult;
 
-enum class SupportExt { ZExt, SExt };
+// Supported extension kind to be folded.
+enum class SupportExt { ZExt, SExt, FPExt };
 
 /// Helper class for folding sign/zero extensions.
 /// In particular, this class is used for the following combines:
@@ -12880,6 +12882,8 @@ struct NodeExtensionHelper {
   /// instance, a splat constant (e.g., 3), would support being both sign and
   /// zero extended.
   bool SupportsSExt;
+  /// Records if this operand is like being floating-point extended.
+  bool SupportsFPExt;
   /// This boolean captures whether we care if this operand would still be
   /// around after the folding happens.
   bool EnforceOneUse;
@@ -12901,8 +12905,10 @@ struct NodeExtensionHelper {
     switch (OrigOperand.getOpcode()) {
     case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND:
+    case ISD::FP_EXTEND:
     case RISCVISD::VSEXT_VL:
     case RISCVISD::VZEXT_VL:
+    case RISCVISD::FP_EXTEND_VL:
       return OrigOperand.getOperand(0);
     default:
       return OrigOperand;
@@ -12911,15 +12917,19 @@ struct NodeExtensionHelper {
 
   /// Check if this instance represents a splat.
   bool isSplat() const {
-    return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL;
+    return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL ||
+           OrigOperand.getOpcode() == RISCVISD::VFMV_V_F_VL;
   }
 
+  /// Get the extended opcode.
   unsigned getExtOpc(SupportExt Ext) const {
     switch (Ext) {
     case SupportExt::ZExt:
       return RISCVISD::VZEXT_VL;
     case SupportExt::SExt:
       return RISCVISD::VSEXT_VL;
+    case SupportExt::FPExt:
+      return RISCVISD::FP_EXTEND_VL;
     }
   }
 
@@ -12938,20 +12948,24 @@ struct NodeExtensionHelper {
     if (Source.getValueType() == NarrowVT)
       return Source;
 
-    unsigned ExtOpc = getExtOpc(*Ext);
-
+    unsigned OrigOpc = OrigOperand.getOpcode();
     // If we need an extension, we should be changing the type.
     SDLoc DL(Root);
     auto [Mask, VL] = getMaskAndVL(Root, DAG, Subtarget);
-    switch (OrigOperand.getOpcode()) {
+    switch (OrigOpc) {
     case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND:
+    case ISD::FP_EXTEND:
     case RISCVISD::VSEXT_VL:
     case RISCVISD::VZEXT_VL:
+    case RISCVISD::FP_EXTEND_VL: {
+      unsigned ExtOpc = getExtOpc(*Ext);
       return DAG.getNode(ExtOpc, DL, NarrowVT, Source, Mask, VL);
+    }
+    case RISCVISD::VFMV_V_F_VL:
     case RISCVISD::VMV_V_X_VL:
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
-                         DAG.getUNDEF(NarrowVT), Source.getOperand(1), VL);
+      return DAG.getNode(OrigOpc, DL, NarrowVT, DAG.getUNDEF(NarrowVT),
+                         Source.getOperand(1), VL);
     default:
       // Other opcodes can only come from the original LHS of VW(ADD|SUB)_W_VL
       // and that operand should already have the right NarrowVT so no
@@ -12970,13 +12984,22 @@ struct NodeExtensionHelper {
 
     // Determine the narrow size.
     unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
-    assert(NarrowSize >= 8 && "Trying to extend something we can't represent");
-    MVT NarrowVT = MVT::getVectorVT(MVT::getIntegerVT(NarrowSize),
-                                    VT.getVectorElementCount());
-    return NarrowVT;
+    // Determine the minimum narrow size.
+    unsigned MinSize = VT.isInteger() ? 8 : 32;
+
+    assert(NarrowSize >= MinSize &&
+           "Trying to extend something we can't represent");
+
+    MVT NarrowScalarVT = VT.isInteger() ? MVT::getIntegerVT(NarrowSize)
+                                        : MVT::getFloatingPointVT(NarrowSize);
+    MVT NarrowVectorVT =
+        MVT::getVectorVT(NarrowScalarVT, VT.getVectorElementCount());
+    return NarrowVectorVT;
   }
 
-  static unsigned getSignedDoubleWidenOpcode(unsigned Opcode) {
+  /// Get full widening (2*SEW = SEW +/-/* SEW) signed integer add/sub/mul
+  /// opcode.
+  static unsigned getSignedFullWidenOpcode(unsigned Opcode) {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
@@ -12994,7 +13017,9 @@ struct NodeExtensionHelper {
     }
   }
 
-  static unsigned getUnsignedDoubleWidenOpcode(unsigned Opcode) {
+  /// Get full widening (2*SEW = SEW +/-/* SEW) unsigned integer add/sub/mul
+  /// opcode.
+  static unsigned getUnsignedFullWidenOpcode(unsigned Opcode) {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
@@ -13012,6 +13037,25 @@ struct NodeExtensionHelper {
     }
   }
 
+  /// Get full widening (2*SEW = SEW +/-/* SEW) FP add/sub/mul opcode.
+  static unsigned getFloatFullWidenOpcode(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::FADD:
+    case RISCVISD::FADD_VL:
+    case RISCVISD::VFWADD_W_VL:
+      return RISCVISD::VFWADD_VL;
+    case ISD::FSUB:
+    case RISCVISD::FSUB_VL:
+    case RISCVISD::VFWSUB_W_VL:
+      return RISCVISD::VFWSUB_VL;
+    case ISD::FMUL:
+    case RISCVISD::FMUL_VL:
+      return RISCVISD::VFWMUL_VL;
+    default:
+      llvm_unreachable("Unexpected Opcode");
+    }
+  }
+
   /// Return the opcode required to materialize the folding of the sign
   /// extensions (\p IsSExt == true) or zero extensions (IsSExt == false) for
   /// both operands for \p Opcode.
@@ -13019,12 +13063,14 @@ struct NodeExtensionHelper {
   /// - ISExt == true: \p Opcode(sext(a), sext(b)) -> newOpcode(a, b)
   /// - ISExt == false: \p Opcode(zext(a), zext(b)) -> newOpcode(a, b)
   /// \pre \p Opcode represents a supported root (\see ::isSupportedRoot()).
-  static unsigned getDoubleWidenOpcode(unsigned OrigOpcode, SupportExt Ext) {
+  static unsigned getFullWidenOpcode(unsigned OrigOpcode, SupportExt Ext) {
     switch (Ext) {
     case SupportExt::SExt:
-      return getSignedDoubleWidenOpcode(OrigOpcode);
+      return getSignedFullWidenOpcode(OrigOpcode);
     case SupportExt::ZExt:
-      return getUnsignedDoubleWidenOpcode(OrigOpcode);
+      return getUnsignedFullWidenOpcode(OrigOpcode);
+    case SupportExt::FPExt:
+      return getFloatFullWidenOpcode(OrigOpcode);
     }
   }
 
@@ -13036,7 +13082,8 @@ struct NodeExtensionHelper {
     return RISCVISD::VWMULSU_VL;
   }
 
-  static unsigned getSignedSingleWidenOpcode(unsigned Opcode) {
+  /// Get half widening (2*SEW = 2*SEW +/- SEW) signed integer add/sub opcode.
+  static unsigned getSignedHalfWidenOpcode(unsigned Opcode) {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
@@ -13049,7 +13096,8 @@ struct NodeExtensionHelper {
     }
   }
 
-  static unsigned getUnsignedSingleWidenOpcode(unsigned Opcode) {
+  /// Get half widening (2*SEW = 2*SEW +/- SEW) unsigned integer add/sub opcode.
+  static unsigned getUnsignedHalfWidenOpcode(unsigned Opcode) {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
@@ -13062,14 +13110,28 @@ struct NodeExtensionHelper {
     }
   }
 
+  /// Get half widening (2*SEW = 2*SEW +/- SEW) FP add/sub opcode.
+  static unsigned getFloatHalfWidenOpcode(unsigned Opcode) {
+    switch (Opcode) {
+    case RISCVISD::FADD_VL:
+      return RISCVISD::VFWADD_W_VL;
+    case RISCVISD::FSUB_VL:
+      return RISCVISD::VFWSUB_W_VL;
+    default:
+      llvm_unreachable("Unexpected opcode");
+    }
+  }
+
   /// Get the opcode to materialize \p Opcode(a, s|zext(b)) ->
   /// newOpcode(a, b).
-  static unsigned getSingleWidenOpcode(unsigned Opcode, SupportExt Ext) {
+  static unsigned getHalfWidenOpcode(unsigned Opcode, SupportExt Ext) {
     switch (Ext) {
     case SupportExt::SExt:
-      return getSignedSingleWidenOpcode(Opcode);
+      return getSignedHalfWidenOpcode(Opcode);
     case SupportExt::ZExt:
-      return getUnsignedSingleWidenOpcode(Opcode);
+      return getUnsignedHalfWidenOpcode(Opcode);
+    case SupportExt::FPExt:
+      return getFloatHalfWidenOpcode(Opcode);
     }
   }
 
@@ -13087,15 +13149,18 @@ struct NodeExtensionHelper {
                               const RISCVSubtarget &Subtarget) {
     SupportsZExt = false;
     SupportsSExt = false;
+    SupportsFPExt = false;
     EnforceOneUse = true;
     CheckMask = true;
     unsigned Opc = OrigOperand.getOpcode();
     switch (Opc) {
     case ISD::ZERO_EXTEND:
-    case ISD::SIGN_EXTEND: {
+    case ISD::SIGN_EXTEND:
+    case ISD::FP_EXTEND: {
       if (OrigOperand.getValueType().isVector()) {
         SupportsZExt = Opc == ISD::ZERO_EXTEND;
         SupportsSExt = Opc == ISD::SIGN_EXTEND;
+        SupportsFPExt = Opc == ISD::FP_EXTEND;
         SDLoc DL(Root);
         MVT VT = Root->getSimpleValueType(0);
         std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
@@ -13112,6 +13177,12 @@ struct NodeExtensionHelper {
       Mask = OrigOperand.getOperand(1);
       VL = OrigOperand.getOperand(2);
       break;
+    case RISCVISD::FP_EXTEND_VL:
+      SupportsFPExt = true;
+      Mask = OrigOperand.getOperand(1);
+      VL = OrigOperand.getOperand(2);
+      break;
+    case RISCVISD::VFMV_V_F_VL:
     case RISCVISD::VMV_V_X_VL: {
       // Historically, we didn't care about splat values not disappearing during
       // combines.
@@ -13138,6 +13209,11 @@ struct NodeExtensionHelper {
       if (ScalarBits < EltBits)
         break;
 
+      if (VT.isFloatingPoint()) {
+        SupportsFPExt = true;
+        break;
+      }
+
       unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
       // If the narrow type cannot be expressed with a legal VMV,
       // this is not a valid candidate.
@@ -13161,7 +13237,10 @@ struct NodeExtensionHelper {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
-    case ISD::MUL: {
+    case ISD::MUL:
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       if (!TLI.isTypeLegal(Root->getValueType(0)))
         return false;
@@ -13174,6 +13253,11 @@ struct NodeExtensionHelper {
     case RISCVISD::SUB_VL:
     case RISCVISD::VWSUB_W_VL:
     case RISCVISD::VWSUBU_W_VL:
+    case RISCVISD::FADD_VL:
+    case RISCVISD::FSUB_VL:
+    case RISCVISD::FMUL_VL:
+    case RISCVISD::VFWADD_W_VL:
+    case RISCVISD::VFWSUB_W_VL:
       return true;
     default:
       return false;
@@ -13196,10 +13280,15 @@ struct NodeExtensionHelper {
     case RISCVISD::VWADDU_W_VL:
     case RISCVISD::VWSUB_W_VL:
     case RISCVISD::VWSUBU_W_VL:
+    case RISCVISD::VFWADD_W_VL:
+    case RISCVISD::VFWSUB_W_VL:
       if (OperandIdx == 1) {
         SupportsZExt =
             Opc == RISCVISD::VWADDU_W_VL || Opc == RISCVISD::VWSUBU_W_VL;
-        SupportsSExt = !SupportsZExt;
+        SupportsSExt =
+            Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWSUB_W_VL;
+        SupportsFPExt =
+            Opc == RISCVISD::VFWADD_W_VL || Opc == RISCVISD::VFWSUB_W_VL;
         std::tie(Mask, VL) = getMaskAndVL(Root, DAG, Subtarget);
         CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
@@ -13232,7 +13321,10 @@ struct NodeExtensionHelper {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
-    case ISD::MUL: {
+    case ISD::MUL:
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL: {
       SDLoc DL(Root);
       MVT VT = Root->getSimpleValueType(0);
       return getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
@@ -13255,15 +13347,23 @@ struct NodeExtensionHelper {
     switch (N->getOpcode()) {
     case ISD::ADD:
     case ISD::MUL:
+    case ISD::FADD:
+    case ISD::FMUL:
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
+    case RISCVISD::FADD_VL:
+    case RISCVISD::FMUL_VL:
+    case RISCVISD::VFWADD_W_VL:
       return true;
     case ISD::SUB:
+    case ISD::FSUB:
     case RISCVISD::SUB_VL:
     case RISCVISD::VWSUB_W_VL:
     case RISCVISD::VWSUBU_W_VL:
+    case RISCVISD::FSUB_VL:
+    case RISCVISD::VFWSUB_W_VL:
       return false;
     default:
       llvm_unreachable("Unexpected opcode");
@@ -13318,6 +13418,9 @@ struct CombineResult {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
       Merge = DAG.getUNDEF(Root->getValueType(0));
       break;
     }
@@ -13338,25 +13441,30 @@ struct CombineResult {
 ///
 /// \returns std::nullopt if the pattern doesn't match or a CombineResult that
 /// can be used to apply the pattern.
-static std::optional<CombineResult>
-canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
-                                 const NodeExtensionHelper &RHS, bool AllowSExt,
-                                 bool AllowZExt, SelectionDAG &DAG,
-                                 const RISCVSubtarget &Subtarget) {
-  assert((AllowSExt || AllowZExt) && "Forgot to set what you want?");
+static std::optional<CombineResult> canFoldToVWWithSameExtensionImpl(
+    SDNode *Root, const NodeExtensionHelper &LHS,
+    const NodeExtensionHelper &RHS, bool AllowSExt, bool AllowZExt,
+    bool AllowFPExt, SelectionDAG &DAG, const RISCVSubtarget &Subtarget) {
+  assert((AllowSExt || AllowZExt || AllowFPExt) &&
+         "Forgot to set what you want?");
   if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
       !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
     return std::nullopt;
   if (AllowZExt && LHS.SupportsZExt && RHS.SupportsZExt)
-    return CombineResult(NodeExtensionHelper::getDoubleWidenOpcode(
+    return CombineResult(NodeExtensionHelper::getFullWidenOpcode(
                              Root->getOpcode(), SupportExt::ZExt),
                          Root, {LHS, SupportExt::ZExt},
                          {RHS, SupportExt::ZExt});
   if (AllowSExt && LHS.SupportsSExt && RHS.SupportsSExt)
-    return CombineResult(NodeExtensionHelper::getDoubleWidenOpcode(
+    return CombineResult(NodeExtensionHelper::getFullWidenOpcode(
                              Root->getOpcode(), SupportExt::SExt),
                          Root, {LHS, SupportExt::SExt},
                          {RHS, SupportExt::SExt});
+  if (AllowFPExt && LHS.SupportsFPExt && RHS.SupportsFPExt)
+    return CombineResult(NodeExtensionHelper::getFullWidenOpcode(
+                             Root->getOpcode(), SupportExt::FPExt),
+                         Root, {LHS, SupportExt::FPExt},
+                         {RHS, SupportExt::FPExt});
   return std::nullopt;
 }
 
@@ -13371,7 +13479,8 @@ canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
                              const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                              const RISCVSubtarget &Subtarget) {
   return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/true,
-                                          /*AllowZExt=*/true, DAG, Subtarget);
+                                          /*AllowZExt=*/true, true, DAG,
+                                          Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(LHS, ext(RHS))
@@ -13390,13 +13499,17 @@ canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
   // Control this behavior behind an option (AllowSplatInVW_W) for testing
   // purposes.
   if (RHS.SupportsZExt && (!RHS.isSplat() || AllowSplatInVW_W))
-    return CombineResult(NodeExtensionHelper::getSingleWidenOpcode(
+    return CombineResult(NodeExtensionHelper::getHalfWidenOpcode(
                              Root->getOpcode(), SupportExt::ZExt),
                          Root, {LHS, std::nullopt}, {RHS, SupportExt::ZExt});
   if (RHS.SupportsSExt && (!RHS.isSplat() || AllowSplatInVW_W))
-    return CombineResult(NodeExtensionHelper::getSingleWidenOpcode(
+    return CombineResult(NodeExtensionHelper::getHalfWidenOpcode(
                              Root->getOpcode(), SupportExt::SExt),
                          Root, {LHS, std::nullopt}, {RHS, SupportExt::SExt});
+  if (RHS.SupportsFPExt && (!RHS.isSplat() || AllowSplatInVW_W))
+    return CombineResult(NodeExtensionHelper::getHalfWidenOpcode(
+                             Root->getOpcode(), SupportExt::FPExt),
+                         Root, {LHS, std::nullopt}, {RHS, SupportExt::FPExt});
   return std::nullopt;
 }
 
@@ -13409,7 +13522,8 @@ canFoldToVWWithSEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                     const RISCVSubtarget &Subtarget) {
   return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/true,
-                                          /*AllowZExt=*/false, DAG, Subtarget);
+                                          /*AllowZExt=*/false, false, DAG,
+                                          Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(zext(LHS), zext(RHS))
@@ -13421,7 +13535,17 @@ canFoldToVWWithZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                     const RISCVSubtarget &Subtarget) {
   return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/false,
-                                          /*AllowZExt=*/true, DAG, Subtarget);
+                                          /*AllowZExt=*/true, false, DAG,
+                                          Subtarget);
+}
+
+static std::optional<CombineResult>
+canFoldToVFWWithFPEXT(SDNode *Root, const NodeExtensionHelper &LHS,
+                      const NodeExtensionHelper &RHS, SelectionDAG &DAG,
+                      const RISCVSubtarget &Subtarget) {
+  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/false,
+                                          /*AllowZExt=*/false, true, DAG,
+                                          Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(sext(LHS), zext(RHS))
@@ -13449,12 +13573,20 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   switch (Root->getOpcode()) {
   case ISD::ADD:
   case ISD::SUB:
+  case ISD::FADD:
+  case ISD::FSUB:
   case RISCVISD::ADD_VL:
   case RISCVISD::SUB_VL:
+  case RISCVISD::FADD_VL:
+  case RISCVISD::FSUB_VL:
     // add|sub -> vwadd(u)|vwsub(u)
     Strategies.push_back(canFoldToVWWithSameExtension);
     // add|sub -> vwadd(u)_w|vwsub(u)_w
     Strategies.push_back(canFoldToVW_W);
+    break;
+  case ISD::FMUL:
+  case RISCVISD::FMUL_VL:
+    Strategies.push_back(canFoldToVWWithSameExtension);
     break;
   case ISD::MUL:
   case RISCVISD::MUL_VL:
@@ -13472,6 +13604,10 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   case RISCVISD::VWSUBU_W_VL:
     // vwaddu_w|vwsubu_w -> vwaddu|vwsubu
     Strategies.push_back(canFoldToVWWithZEXT);
+    break;
+  case RISCVISD::VFWADD_W_VL:
+  case RISCVISD::VFWSUB_W_VL:
+    Strategies.push_back(canFoldToVFWWithFPEXT);
     break;
   default:
     llvm_unreachable("Unexpected opcode");
@@ -14051,7 +14187,8 @@ static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG,
                      N->getOperand(2), Mask, VL);
 }
 
-static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performVFMUL_VLCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI,
                                       const RISCVSubtarget &Subtarget) {
   if (N->getValueType(0).isScalableVector() &&
       N->getValueType(0).getVectorElementType() == MVT::f32 &&
@@ -14063,36 +14200,11 @@ static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG,
   // FIXME: Ignore strict opcodes for now.
   assert(!N->isTargetStrictFPOpcode() && "Unexpected opcode");
 
-  // Try to form widening multiply.
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  SDValue Merge = N->getOperand(2);
-  SDValue Mask = N->getOperand(3);
-  SDValue VL = N->getOperand(4);
-
-  if (Op0.getOpcode() != RISCVISD::FP_EXTEND_VL ||
-      Op1.getOpcode() != RISCVISD::FP_EXTEND_VL)
-    return SDValue();
-
-  // TODO: Refactor to handle more complex cases similar to
-  // combineBinOp_VLToVWBinOp_VL.
-  if ((!Op0.hasOneUse() || !Op1.hasOneUse()) &&
-      (Op0 != Op1 || !Op0->hasNUsesOfValue(2, 0)))
-    return SDValue();
-
-  // Check the mask and VL are the same.
-  if (Op0.getOperand(1) != Mask || Op0.getOperand(2) != VL ||
-      Op1.getOperand(1) != Mask || Op1.getOperand(2) != VL)
-    return SDValue();
-
-  Op0 = Op0.getOperand(0);
-  Op1 = Op1.getOperand(0);
-
-  return DAG.getNode(RISCVISD::VFWMUL_VL, SDLoc(N), N->getValueType(0), Op0,
-                     Op1, Merge, Mask, VL);
+  return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
 }
 
-static SDValue performFADDSUB_VLCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performFADDSUB_VLCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
                                         const RISCVSubtarget &Subtarget) {
   if (N->getValueType(0).isScalableVector() &&
       N->getValueType(0).getVectorElementType() == MVT::f32 &&
@@ -14101,55 +14213,7 @@ static SDValue performFADDSUB_VLCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  SDValue Merge = N->getOperand(2);
-  SDValue Mask = N->getOperand(3);
-  SDValue VL = N->getOperand(4);
-
-  bool IsAdd = N->getOpcode() == RISCVISD::FADD_VL;
-
-  // Look for foldable FP_EXTENDS.
-  bool Op0IsExtend =
-      Op0.getOpcode() == RISCVISD::FP_EXTEND_VL &&
-      (Op0.hasOneUse() || (Op0 == Op1 && Op0->hasNUsesOfValue(2, 0)));
-  bool Op1IsExtend =
-      (Op0 == Op1 && Op0IsExtend) ||
-      (Op1.getOpcode() == RISCVISD::FP_EXTEND_VL && Op1.hasOneUse());
-
-  // Check the mask and VL.
-  if (Op0IsExtend && (Op0.getOperand(1) != Mask || Op0.getOperand(2) != VL))
-    Op0IsExtend = false;
-  if (Op1IsExtend && (Op1.getOperand(1) != Mask || Op1.getOperand(2) != VL))
-    Op1IsExtend = false;
-
-  // Canonicalize.
-  if (!Op1IsExtend) {
-    // Sub requires at least operand 1 to be an extend.
-    if (!IsAdd)
-      return SDValue();
-
-    // Add is commutable, if the other operand is foldable, swap them.
-    if (!Op0IsExtend)
-      return SDValue();
-
-    std::swap(Op0, Op1);
-    std::swap(Op0IsExtend, Op1IsExtend);
-  }
-
-  // Op1 is a foldable extend. Op0 might be foldable.
-  Op1 = Op1.getOperand(0);
-  if (Op0IsExtend)
-    Op0 = Op0.getOperand(0);
-
-  unsigned Opc;
-  if (IsAdd)
-    Opc = Op0IsExtend ? RISCVISD::VFWADD_VL : RISCVISD::VFWADD_W_VL;
-  else
-    Opc = Op0IsExtend ? RISCVISD::VFWSUB_VL : RISCVISD::VFWSUB_W_VL;
-
-  return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), Op0, Op1, Merge, Mask,
-                     VL);
+  return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
 }
 
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
@@ -15170,7 +15234,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
       return V;
     return performMULCombine(N, DAG);
+  case ISD::FSUB:
+  case ISD::FMUL:
+    return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
   case ISD::FADD:
+    if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+      return V;
+    [[fallthrough]];
   case ISD::UMAX:
   case ISD::UMIN:
   case ISD::SMAX:
@@ -15665,10 +15735,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::STRICT_VFNMSUB_VL:
     return performVFMADD_VLCombine(N, DAG, Subtarget);
   case RISCVISD::FMUL_VL:
-    return performVFMUL_VLCombine(N, DAG, Subtarget);
+    return performVFMUL_VLCombine(N, DCI, Subtarget);
   case RISCVISD::FADD_VL:
   case RISCVISD::FSUB_VL:
-    return performFADDSUB_VLCombine(N, DAG, Subtarget);
+    return performFADDSUB_VLCombine(N, DCI, Subtarget);
   case ISD::LOAD:
   case ISD::STORE: {
     if (DCI.isAfterLegalizeDAG())
