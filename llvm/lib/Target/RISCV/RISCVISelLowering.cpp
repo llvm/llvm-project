@@ -13167,17 +13167,11 @@ struct NodeExtensionHelper {
       break;
     }
     case RISCVISD::VZEXT_VL:
-      SupportsZExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
-      break;
     case RISCVISD::VSEXT_VL:
-      SupportsSExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
-      break;
     case RISCVISD::FP_EXTEND_VL:
-      SupportsFPExt = true;
+      SupportsZExt = Opc == RISCVISD::VZEXT_VL;
+      SupportsSExt = Opc == RISCVISD::VSEXT_VL;
+      SupportsFPExt = Opc == RISCVISD::FP_EXTEND_VL;
       Mask = OrigOperand.getOperand(1);
       VL = OrigOperand.getOperand(2);
       break;
