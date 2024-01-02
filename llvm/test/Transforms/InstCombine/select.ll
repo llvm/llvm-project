@@ -3658,3 +3658,106 @@ loop:
 exit:
   ret i32 %rem
 }
+
+
+define i4 @select_icmp_eq_nsw_shl_nsw_add(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_eq_nsw_shl_nsw_add(
+; CHECK-NEXT:    [[SELECT:%.*]] = add nsw i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp eq i4 %x, %y
+  %add = add nsw i4 %y, %x
+  %shl = shl nsw i4 %x, 1
+  %select = select i1 %icmp, i4 %shl, i4 %add
+  ret i4 %select
+}
+
+define i4 @select_icmp_eq_shl_nsw_add(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_eq_shl_nsw_add(
+; CHECK-NEXT:    [[SELECT:%.*]] = add i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp eq i4 %x, %y
+  %add = add nsw i4 %y, %x
+  %shl = shl i4 %x, 1
+  %select = select i1 %icmp, i4 %shl, i4 %add
+  ret i4 %select
+}
+
+define i4 @select_icmp_ne_shl_nsw_add(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_ne_shl_nsw_add(
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i4 [[Y]], [[X]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i4 [[X]], 1
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP_NOT]], i4 [[ADD]], i4 [[SHL]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp ne i4 %x, %y
+  %add = add nsw i4 %y, %x
+  %shl = shl i4 %x, 1
+  %select = select i1 %icmp, i4 %shl, i4 %add
+  ret i4 %select
+}
+
+define i4 @select_icmp_ne_nsw_add_nsw_shl(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_ne_nsw_add_nsw_shl(
+; CHECK-NEXT:    [[SELECT:%.*]] = add nsw i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp ne i4 %x, %y
+  %shl = shl nsw i4 %x, 1
+  %add = add nsw i4 %y, %x
+  %select = select i1 %icmp, i4 %add, i4 %shl
+  ret i4 %select
+}
+
+define i4 @select_icmp_eq_nsw_add_nsw_shl(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_eq_nsw_add_nsw_shl(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i4 [[X]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i4 [[Y]], [[X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], i4 [[ADD]], i4 [[SHL]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp eq i4 %y, %x
+  %shl = shl nsw i4 %x, 1
+  %add = add nsw i4 %y, %x
+  %select = select i1 %icmp, i4 %add ,i4 %shl
+  ret i4 %select
+}
+
+define i4 @select_icmp_eq_nuw_shl_nuw_add(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_eq_nuw_shl_nuw_add(
+; CHECK-NEXT:    [[SELECT:%.*]] = add nuw i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp eq i4 %x, %y
+  %add = add nuw i4 %y, %x
+  %shl = shl nuw i4 %x, 1
+  %select = select i1 %icmp, i4 %shl, i4 %add
+  ret i4 %select
+}
+
+define i4 @select_icmp_eq_nuw_shl_add(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_eq_nuw_shl_add(
+; CHECK-NEXT:    [[SELECT:%.*]] = add i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp eq i4 %x, %y
+  %add = add i4 %y, %x
+  %shl = shl nuw i4 %x, 1
+  %select = select i1 %icmp, i4 %shl, i4 %add
+  ret i4 %select
+}
+
+define i4 @select_icmp_eq_nsw_shl_nsw_add_swap(i4 %x, i4 %y) {
+; CHECK-LABEL: @select_icmp_eq_nsw_shl_nsw_add_swap(
+; CHECK-NEXT:    [[SELECT:%.*]] = add nsw i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i4 [[SELECT]]
+;
+  %icmp = icmp eq i4 %y, %x
+  %add = add nsw i4 %y, %x
+  %shl = shl nsw i4 %x, 1
+  %select = select i1 %icmp, i4 %shl, i4 %add
+  ret i4 %select
+}
