@@ -5188,7 +5188,7 @@ def err_template_arg_not_object_or_func : Error<
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
 def err_template_arg_member_ptr_base_derived_not_supported : Error<
-  "non-type template argument of a pointer to member type %1, that refers "
+  "non-type template argument of pointer-to-member type %1 that refers "
   "to member %q0 of a different class is not supported yet">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
@@ -9916,8 +9916,8 @@ def warn_unsupported_lifetime_extension : Warning<
   "lifetime extension of "
   "%select{temporary|backing array of initializer list}0 created "
   "by aggregate initialization using a default member initializer "
-  "is not supported; lifetime of %select{temporary|backing array}0 "
-  "will terminate at the end of the full-expression">, InGroup<Dangling>;
+  "is not yet supported; lifetime of %select{temporary|backing array}0 "
+  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
