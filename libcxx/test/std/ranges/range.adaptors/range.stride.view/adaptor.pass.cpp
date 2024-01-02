@@ -22,14 +22,14 @@ concept CanBePiped = requires(View&& view, T&& t) {
   { std::forward<View>(view) | std::forward<T>(t) };
 };
 
-constexpr InputView<cpp17_input_iterator<int*>> make_input_view(int* begin, int* end) {
-  return InputView<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(begin), cpp17_input_iterator<int*>(end));
+constexpr BasicTestView<cpp17_input_iterator<int*>> make_input_view(int* begin, int* end) {
+  return BasicTestView<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(begin), cpp17_input_iterator<int*>(end));
 }
 
-using ForwardStrideView      = std::ranges::stride_view<InputView<forward_iterator<int*>>>;
-using BidirStrideView        = std::ranges::stride_view<InputView<bidirectional_iterator<int*>>>;
-using RandomAccessStrideView = std::ranges::stride_view<InputView<random_access_iterator<int*>>>;
-using SizedForwardStrideView = std::ranges::stride_view<InputView<SizedForwardIterator>>;
+using ForwardStrideView      = std::ranges::stride_view<BasicTestView<forward_iterator<int*>>>;
+using BidirStrideView        = std::ranges::stride_view<BasicTestView<bidirectional_iterator<int*>>>;
+using RandomAccessStrideView = std::ranges::stride_view<BasicTestView<random_access_iterator<int*>>>;
+using SizedForwardStrideView = std::ranges::stride_view<BasicTestView<SizedForwardIterator>>;
 
 static_assert(std::ranges::forward_range<ForwardStrideView>);
 static_assert(std::ranges::bidirectional_range<BidirStrideView>);
@@ -47,7 +47,7 @@ constexpr bool test() {
 
   // view | stride
   {
-    using View                                                          = InputView<cpp17_input_iterator<int*>>;
+    using View                                                          = BasicTestView<cpp17_input_iterator<int*>>;
     auto view                                                           = make_input_view(arr, arr + N);
     std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
     auto strided_iter                                                   = strided.begin();
@@ -60,7 +60,7 @@ constexpr bool test() {
     assert(*strided_iter == arr[2]);
   }
   {
-    using View                                                          = InputView<cpp17_input_iterator<int*>>;
+    using View                                                          = BasicTestView<cpp17_input_iterator<int*>>;
     auto view                                                           = make_input_view(arr, arr + N);
     std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(2);
     auto strided_iter                                                   = strided.begin();
@@ -92,7 +92,7 @@ constexpr bool test() {
   }
 
   {
-    using View = InputView<SizedForwardIterator>;
+    using View = BasicTestView<SizedForwardIterator>;
     auto view  = View(SizedForwardIterator(arr), SizedForwardIterator(arr + N));
     std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
     auto strided_iter                                                   = strided.begin();
@@ -108,7 +108,7 @@ constexpr bool test() {
   // Check SFINAE friendliness
   {
     struct NotAViewableRange {};
-    using View = InputView<bidirectional_iterator<int*>>;
+    using View = BasicTestView<bidirectional_iterator<int*>>;
 
     static_assert(!std::is_invocable_v<decltype(std::views::stride)>);
     static_assert(!std::is_invocable_v<decltype(std::views::stride), NotAViewableRange, int>);
@@ -118,6 +118,7 @@ constexpr bool test() {
     static_assert(!CanBePiped<NotAViewableRange, decltype(std::views::stride(5))>);
     static_assert(!CanBePiped<View&, decltype(std::views::stride(NotAViewableRange{}))>);
   }
+
   // A final sanity check.
   { static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>); }
 

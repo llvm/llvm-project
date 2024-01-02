@@ -18,7 +18,7 @@
 #include "types.h"
 
 constexpr bool test() {
-  using View = InputView<cpp17_input_iterator<int*>>;
+  using View = BasicTestView<cpp17_input_iterator<int*>>;
   int arr[]{1, 2, 3};
   auto arrv(View(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3)));
   // Mark str const so that we confirm that stride is a const member function.

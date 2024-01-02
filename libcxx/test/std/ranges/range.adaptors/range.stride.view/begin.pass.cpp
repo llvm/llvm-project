@@ -48,12 +48,12 @@ struct UnsimpleConstView : std::ranges::view_base {
   int* end() const;
 };
 static_assert(HasOnlyNonConstBegin<std::ranges::stride_view<NoConstView>>);
-static_assert(HasOnlyConstBegin<std::ranges::stride_view<SimpleView>>);
+static_assert(HasOnlyConstBegin<std::ranges::stride_view<BasicTestView<int*, int*>>>);
 static_assert(HasConstAndNonConstBegin<std::ranges::stride_view<UnsimpleConstView>>);
 
 int main(int, char**) {
   int buffer[] = {1, 2, 3};
-  auto sv      = std::ranges::stride_view(SimpleView(buffer, buffer + 3), 1);
+  auto sv      = std::ranges::stride_view(BasicTestView<int*, int*>(buffer, buffer + 3), 1);
   assert(1 == *(sv.begin()));
 
   return 0;
