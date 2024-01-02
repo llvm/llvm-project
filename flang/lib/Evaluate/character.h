@@ -13,9 +13,7 @@
 #include <string>
 
 // Provides implementations of intrinsic functions operating on character
-// scalars. No assumption is made regarding character encodings other than they
-// must be compatible with ASCII (else, NEW_LINE, ACHAR and IACHAR need to be
-// adapted).
+// scalars.
 
 namespace Fortran::evaluate {
 
@@ -34,13 +32,8 @@ public:
   // contain ASCII
   static std::int64_t ICHAR(const Character &c) {
     CHECK(c.length() == 1);
-    if constexpr (std::is_same_v<CharT, char>) {
-      // char may be signed, so cast it first to unsigned to avoid having
-      // ichar(char(128_4)) returning -128
-      return static_cast<unsigned char>(c[0]);
-    } else {
-      return c[0];
-    }
+    // Convert first to an unsigned integer type to avoid sign extension
+    return static_cast<common::HostUnsignedIntType<(8 * KIND)>>(c[0]);
   }
 
   static Character NEW_LINE() { return Character{{NewLine()}}; }

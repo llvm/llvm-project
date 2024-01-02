@@ -237,6 +237,23 @@ void EmitQuotedChar(char32_t ch, const NORMAL &emit, const INSERTED &insert,
   }};
   if (ch <= 0x7f) {
     emitOneByte(ch);
+  } else if (useHexadecimalEscapeSequences) {
+    insert('\\');
+    insert('u');
+    if (ch > 0xffff) {
+      unsigned c1{(ch >> 28) & 0xf}, c2{(ch >> 24) & 0xf}, c3{(ch >> 20) & 0xf},
+          c4{(ch >> 16) & 0xf};
+      insert(c1 > 9 ? 'a' + c1 - 10 : '0' + c1);
+      insert(c2 > 9 ? 'a' + c2 - 10 : '0' + c2);
+      insert(c3 > 9 ? 'a' + c3 - 10 : '0' + c3);
+      insert(c4 > 9 ? 'a' + c4 - 10 : '0' + c4);
+    }
+    unsigned c1{(ch >> 12) & 0xf}, c2{(ch >> 8) & 0xf}, c3{(ch >> 4) & 0xf},
+        c4{ch & 0xf};
+    insert(c1 > 9 ? 'a' + c1 - 10 : '0' + c1);
+    insert(c2 > 9 ? 'a' + c2 - 10 : '0' + c2);
+    insert(c3 > 9 ? 'a' + c3 - 10 : '0' + c3);
+    insert(c4 > 9 ? 'a' + c4 - 10 : '0' + c4);
   } else {
     EncodedCharacter encoded{EncodeCharacter(encoding, ch)};
     for (int j{0}; j < encoded.bytes; ++j) {
