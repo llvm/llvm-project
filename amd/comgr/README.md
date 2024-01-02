@@ -2,14 +2,14 @@ Code Object Manager (Comgr)
 ===========================
 
 The Comgr library provides APIs for compiling and inspecting AMDGPU code
-objects. The API is documented in the [header file](include/amd_comgr.h).
+objects. The API is documented in the [header file](include/amd_comgr.h.in).
 
 Building the Code Object Manager
 --------------------------------
 
-Comgr depends on [LLVM](https://github.com/RadeonOpenCompute/llvm-project) and
-[AMDDeviceLibs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs). One way
-to make these visible to the Comgr build process is by setting the
+Comgr depends on [LLVM](https://github.com/ROCm/llvm-project) and
+[AMDDeviceLibs](https://github.com/ROCm/llvm-project/tree/amd-stg-open/amd/device-libs).
+One way to make these visible to the Comgr build process is by setting the
 `CMAKE_PREFIX_PATH` to include either the build directory or install prefix of
 each of these components, separated by a semicolon. Both should be built using
 either sources with the same ROCm release tag, or from the `amd-stg-open`
