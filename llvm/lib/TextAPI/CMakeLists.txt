@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMTextAPI
   TextAPIError.cpp
   TextStub.cpp
   TextStubCommon.cpp
+  Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/TextAPI"

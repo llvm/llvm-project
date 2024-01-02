@@ -6785,7 +6785,7 @@ INTERCEPTOR(SSIZE_T, sendto, int fd, void *buf, SIZE_T len, int flags,
 #endif
 
 #if SANITIZER_INTERCEPT_EVENTFD_READ_WRITE
-INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
+INTERCEPTOR(int, eventfd_read, int fd, __sanitizer_eventfd_t *value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_read, fd, value);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
@@ -6796,7 +6796,7 @@ INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
   }
   return res;
 }
-INTERCEPTOR(int, eventfd_write, int fd, u64 value) {
+INTERCEPTOR(int, eventfd_write, int fd, __sanitizer_eventfd_t value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_write, fd, value);
   if (fd >= 0) {

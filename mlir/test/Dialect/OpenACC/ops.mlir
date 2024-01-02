@@ -137,7 +137,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
   %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
   acc.data dataOperands(%pa, %pb, %pc, %pd: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
     %private = acc.private varPtr(%c : memref<10xf32>) -> memref<10xf32>
-    acc.parallel num_gangs(%numGangs: i64) num_workers(%numWorkers: i64) private(@privatization_memref_10_f32 -> %private : memref<10xf32>) {
+    acc.parallel num_gangs({%numGangs: i64}) num_workers(%numWorkers: i64 [#acc.device_type<nvidia>]) private(@privatization_memref_10_f32 -> %private : memref<10xf32>) {
       acc.loop gang {
         scf.for %x = %lb to %c10 step %st {
           acc.loop worker {
@@ -180,7 +180,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:   [[NUMWORKERS:%.*]] = arith.constant 10 : i64
 // CHECK:        acc.data dataOperands(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
 // CHECK-NEXT:     %[[P_ARG2:.*]] = acc.private varPtr([[ARG2]] : memref<10xf32>) -> memref<10xf32> 
-// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]] : i64) num_workers([[NUMWORKERS]] : i64) private(@privatization_memref_10_f32 -> %[[P_ARG2]] : memref<10xf32>) {
+// CHECK-NEXT:     acc.parallel num_gangs({[[NUMGANG]] : i64}) num_workers([[NUMWORKERS]] : i64 [#acc.device_type<nvidia>]) private(@privatization_memref_10_f32 -> %[[P_ARG2]] : memref<10xf32>) {
 // CHECK-NEXT:       acc.loop gang {
 // CHECK-NEXT:         scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:           acc.loop worker {
@@ -439,25 +439,25 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel async(%idxValue: index) {
   }
-  acc.parallel wait(%i64value: i64) {
+  acc.parallel wait({%i64value: i64}) {
   }
-  acc.parallel wait(%i32value: i32) {
+  acc.parallel wait({%i32value: i32}) {
   }
-  acc.parallel wait(%idxValue: index) {
+  acc.parallel wait({%idxValue: index}) {
   }
-  acc.parallel wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  acc.parallel wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
-  acc.parallel num_gangs(%i64value: i64) {
+  acc.parallel num_gangs({%i64value: i64}) {
   }
-  acc.parallel num_gangs(%i32value: i32) {
+  acc.parallel num_gangs({%i32value: i32}) {
   }
-  acc.parallel num_gangs(%idxValue: index) {
+  acc.parallel num_gangs({%idxValue: index}) {
   }
-  acc.parallel num_gangs(%i64value, %i64value, %idxValue : i64, i64, index) {
+  acc.parallel num_gangs({%i64value: i64, %i64value: i64, %idxValue: index}) {
   }
-  acc.parallel num_workers(%i64value: i64) {
+  acc.parallel num_workers(%i64value: i64 [#acc.device_type<nvidia>]) {
   }
-  acc.parallel num_workers(%i32value: i32) {
+  acc.parallel num_workers(%i32value: i32 [#acc.device_type<default>]) {
   }
   acc.parallel num_workers(%idxValue: index) {
   }
@@ -492,25 +492,25 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: }
 // CHECK:      acc.parallel async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]] : i64) {
+// CHECK:      acc.parallel wait({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I32VALUE]] : i32) {
+// CHECK:      acc.parallel wait({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[IDXVALUE]] : index) {
+// CHECK:      acc.parallel wait({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK:      acc.parallel wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I64VALUE]] : i64) {
+// CHECK:      acc.parallel num_gangs({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I32VALUE]] : i32) {
+// CHECK:      acc.parallel num_gangs({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[IDXVALUE]] : index) {
+// CHECK:      acc.parallel num_gangs({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I64VALUE]], [[I64VALUE]], [[IDXVALUE]] : i64, i64, index) {
+// CHECK:      acc.parallel num_gangs({[[I64VALUE]] : i64, [[I64VALUE]] : i64, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I64VALUE]] : i64) {
+// CHECK:      acc.parallel num_workers([[I64VALUE]] : i64 [#acc.device_type<nvidia>]) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I32VALUE]] : i32) {
+// CHECK:      acc.parallel num_workers([[I32VALUE]] : i32 [#acc.device_type<default>]) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel num_workers([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
@@ -590,13 +590,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial async(%idxValue: index) {
   }
-  acc.serial wait(%i64value: i64) {
+  acc.serial wait({%i64value: i64}) {
   }
-  acc.serial wait(%i32value: i32) {
+  acc.serial wait({%i32value: i32}) {
   }
-  acc.serial wait(%idxValue: index) {
+  acc.serial wait({%idxValue: index}) {
   }
-  acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  acc.serial wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
   %firstprivate = acc.firstprivate varPtr(%b : memref<10xf32>) -> memref<10xf32>
   acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) {
@@ -627,13 +627,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.serial async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[I64VALUE]] : i64) {
+// CHECK:      acc.serial wait({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[I32VALUE]] : i32) {
+// CHECK:      acc.serial wait({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[IDXVALUE]] : index) {
+// CHECK:      acc.serial wait({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK:      acc.serial wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
 // CHECK:      %[[FIRSTP:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) -> memref<10xf32>
 // CHECK:      acc.serial firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTP]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
@@ -665,13 +665,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.kernels async(%idxValue: index) {
   }
-  acc.kernels wait(%i64value: i64) {
+  acc.kernels wait({%i64value: i64}) {
   }
-  acc.kernels wait(%i32value: i32) {
+  acc.kernels wait({%i32value: i32}) {
   }
-  acc.kernels wait(%idxValue: index) {
+  acc.kernels wait({%idxValue: index}) {
   }
-  acc.kernels wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  acc.kernels wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
   acc.kernels {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -699,13 +699,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.kernels async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[I64VALUE]] : i64) {
+// CHECK:      acc.kernels wait({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[I32VALUE]] : i32) {
+// CHECK:      acc.kernels wait({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[IDXVALUE]] : index) {
+// CHECK:      acc.kernels wait({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK:      acc.kernels wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}

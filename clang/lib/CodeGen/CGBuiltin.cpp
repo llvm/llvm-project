@@ -10318,6 +10318,30 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
+static void swapCommutativeSMEOperands(unsigned BuiltinID,
+                                       SmallVectorImpl<Value *> &Ops) {
+  unsigned MultiVec;
+  switch (BuiltinID) {
+  default:
+    return;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x1:
+    MultiVec = 1;
+    break;
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x2:
+  case SME::BI__builtin_sme_svsudot_za32_s8_vg1x2:
+    MultiVec = 2;
+    break;
+  case SME::BI__builtin_sme_svsudot_za32_s8_vg1x4:
+  case SME::BI__builtin_sme_svsumla_za32_s8_vg4x4:
+    MultiVec = 4;
+    break;
+  }
+
+  if (MultiVec > 0)
+    for (unsigned I = 0; I < MultiVec; ++I)
+      std::swap(Ops[I + 1], Ops[I + 1 + MultiVec]);
+}
+
 Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
   auto *Builtin = findARMVectorIntrinsicInMap(AArch64SMEIntrinsicMap, BuiltinID,
@@ -10339,6 +10363,9 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
            BuiltinID == SME::BI__builtin_sme_svldr_za ||
            BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+
+  // Handle builtins which require their multi-vector operands to be swapped
+  swapCommutativeSMEOperands(BuiltinID, Ops);
 
   // Should not happen!
   if (Builtin->LLVMIntrinsic == 0)
@@ -10401,6 +10428,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (HintID != static_cast<unsigned>(-1)) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hint);
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
+  }
+
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
+    // Create call to __arm_sme_state and store the results to the two pointers.
+    CallInst *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(StructType::get(CGM.Int64Ty, CGM.Int64Ty), {},
+                                false),
+        "__arm_sme_state"));
+    auto Attrs =
+        AttributeList()
+            .addFnAttribute(getLLVMContext(), "aarch64_pstate_sm_compatible")
+            .addFnAttribute(getLLVMContext(), "aarch64_pstate_za_preserved");
+    CI->setAttributes(Attrs);
+    CI->setCallingConv(
+        llvm::CallingConv::
+            AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2);
+    Builder.CreateStore(Builder.CreateExtractValue(CI, 0),
+                        EmitPointerWithAlignment(E->getArg(0)));
+    return Builder.CreateStore(Builder.CreateExtractValue(CI, 1),
+                               EmitPointerWithAlignment(E->getArg(1)));
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rbit) {

@@ -3521,4 +3521,3 @@ define void @bit_64_1_nz_branch_i64(i64 %0) {
 5:
   ret void
 }
-
