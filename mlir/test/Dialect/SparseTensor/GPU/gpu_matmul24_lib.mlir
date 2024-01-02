@@ -1,5 +1,13 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
+#NV_24 = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i            : dense,
+    j floordiv 4 : dense,
+    j mod 4      : block2_4
+  )
+}>
+
 // CHECK-LABEL:   func.func @matmul(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<?x?xf16>,
 // CHECK-SAME:      %[[VAL_1:.*1]]: tensor<?x?xf16>,
@@ -51,18 +59,14 @@
 // CHECK:           %[[VAL_55:.*]] = bufferization.to_tensor %[[VAL_19]] : memref<?x?xf16>
 // CHECK:           return %[[VAL_55]] : tensor<?x?xf16>
 // CHECK:         }
-
-#map = affine_map<(d0, d1, d2) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
 module {
-  func.func @matmul(%arg0: tensor<?x?xf16>, %arg1: tensor<?x?xf16>, %arg2: tensor<?x?xf16>) -> tensor<?x?xf16> {
-    %0 = linalg.generic { DENSE24, indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "reduction"]} ins(%arg0, %arg1 : tensor<?x?xf16>, tensor<?x?xf16>) outs(%arg2 : tensor<?x?xf16>) {
-    ^bb0(%in: f16, %in_0: f16, %out: f16):
-      %1 = arith.mulf %in, %in_0 : f16
-      %2 = arith.addf %out, %1 : f16
-      linalg.yield %2 : f16
-    } -> tensor<?x?xf16>
-    return %0 : tensor<?x?xf16>
+  func.func @matmul(%Ad: tensor<?x?xf16>,
+                    %B: tensor<?x?xf16>,
+		    %Cin: tensor<?x?xf16>) -> tensor<?x?xf16> {
+    %A = sparse_tensor.convert %Ad : tensor<?x?xf16> to tensor<?x?xf16, #NV_24>
+    %C = linalg.matmul
+      ins(%A, %B: tensor<?x?xf16, #NV_24>, tensor<?x?xf16>)
+      outs(%Cin: tensor<?x?xf16>) -> tensor<?x?xf16>
+    return %C : tensor<?x?xf16>
   }
 }

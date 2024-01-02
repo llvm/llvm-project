@@ -1,5 +1,6 @@
 // Tests use-after-scope detection and reporting.
-// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O2 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hwasan -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // RUN: %clang_hwasan -mllvm -hwasan-use-after-scope=false -g %s -o %t && %run %t 2>&1
