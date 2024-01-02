@@ -83,8 +83,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __advance_and_maybe_add_result(_Iter& __iter, const _Sent& __sentinel, const _Value& __value) {
     // use one-sided lower bound for improved algorithmic complexity bounds
-    const auto __tmp =
-        std::exchange(__iter, std::__lower_bound_onesided<_AlgPolicy>(__iter, __sentinel, __value, __comp_, __proj_));
+    const auto __tmp = std::move(__iter);
+    __iter = std::__lower_bound_onesided<_AlgPolicy>(__iter, __sentinel, __value, __comp_, __proj_);
     __add_output_unless(__tmp != __iter);
   }
 
