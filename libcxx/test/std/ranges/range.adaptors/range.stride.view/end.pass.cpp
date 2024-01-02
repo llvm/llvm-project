@@ -64,18 +64,18 @@ struct SimpleUnCommonView : std::ranges::view_base {
 };
 
 static_assert(HasOnlyNonConstEnd<std::ranges::stride_view<NoConstView>>);
-static_assert(HasOnlyConstEnd<std::ranges::stride_view<SimpleView>>);
+static_assert(HasOnlyConstEnd<std::ranges::stride_view<BasicTestView<int*, int*>>>);
 static_assert(HasConstAndNonConstEnd<std::ranges::stride_view<UnsimpleConstView>>);
 
 constexpr bool test_non_default_sentinel() {
   {
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleView>);
-    static_assert(std::ranges::common_range<SimpleView>);
-    static_assert(std::ranges::sized_range<SimpleView>);
-    static_assert(std::ranges::forward_range<SimpleView>);
+    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<BasicTestView<int*, int*>>);
+    static_assert(std::ranges::common_range<BasicTestView<int*, int*>>);
+    static_assert(std::ranges::sized_range<BasicTestView<int*, int*>>);
+    static_assert(std::ranges::forward_range<BasicTestView<int*, int*>>);
 
-    auto v  = SimpleView{nullptr, nullptr};
-    auto sv = std::ranges::stride_view<SimpleView>(v, 1);
+    auto v  = BasicTestView<int*, int*>{nullptr, nullptr};
+    auto sv = std::ranges::stride_view<BasicTestView<int*, int*>>(v, 1);
     static_assert(!std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
   }
 

@@ -18,45 +18,10 @@
 template <typename T>
 concept iter_moveable = requires(T&& t) { std::ranges::iter_move(t); };
 
-template <bool NoExcept = true>
-struct MaybeExceptIterSwapIterator : InputIterBase<MaybeExceptIterSwapIterator<NoExcept>> {
-  int* counter_{nullptr};
-  constexpr MaybeExceptIterSwapIterator()                                                    = default;
-  constexpr MaybeExceptIterSwapIterator(const MaybeExceptIterSwapIterator&)                  = default;
-  constexpr MaybeExceptIterSwapIterator(MaybeExceptIterSwapIterator&&)                       = default;
-  constexpr MaybeExceptIterSwapIterator& operator=(const MaybeExceptIterSwapIterator& other) = default;
-  constexpr MaybeExceptIterSwapIterator& operator=(MaybeExceptIterSwapIterator&& other)      = default;
-
-  constexpr explicit MaybeExceptIterSwapIterator(int* counter) : counter_(counter) {}
-
-  friend constexpr int iter_move(const MaybeExceptIterSwapIterator& t) {
-    (*t.counter_)++;
-    return 5;
-  }
-  friend constexpr int iter_move(const MaybeExceptIterSwapIterator& t) noexcept
-    requires NoExcept
-  {
-    (*t.counter_)++;
-    return 5;
-  }
-
-  constexpr int operator*() const { return 5; }
-};
-
-template <bool NoExcept = true>
-struct IterSwapRange : std::ranges::view_base {
-  MaybeExceptIterSwapIterator<NoExcept> begin_;
-  MaybeExceptIterSwapIterator<NoExcept> end_;
-  constexpr IterSwapRange(int* counter)
-      : begin_(MaybeExceptIterSwapIterator<NoExcept>(counter)), end_(MaybeExceptIterSwapIterator<NoExcept>(counter)) {}
-  constexpr MaybeExceptIterSwapIterator<NoExcept> begin() const { return begin_; }
-  constexpr MaybeExceptIterSwapIterator<NoExcept> end() const { return end_; }
-};
-
 constexpr bool test() {
   {
     int iter_move_counter(0);
-    using View       = IterSwapRange<true>;
+    using View       = IterSwapRange<true, true>;
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(&iter_move_counter), 1).begin();
 
@@ -70,7 +35,7 @@ constexpr bool test() {
 
   {
     int iter_move_counter(0);
-    using View       = IterSwapRange<false>;
+    using View       = IterSwapRange<true, false>;
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(&iter_move_counter), 1).begin();
 
