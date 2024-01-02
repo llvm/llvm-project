@@ -20,44 +20,6 @@
 template <typename T>
 concept swappable = requires(T&& t, T&& u) { std::ranges::iter_swap(t, u); };
 
-template <bool Swappable = true, bool NoExcept = true>
-struct MaybeExceptIterSwapIterator : InputIterBase<MaybeExceptIterSwapIterator<Swappable, NoExcept>> {
-  int* counter_{nullptr};
-  constexpr MaybeExceptIterSwapIterator()                                                    = default;
-  constexpr MaybeExceptIterSwapIterator(const MaybeExceptIterSwapIterator&)                  = default;
-  constexpr MaybeExceptIterSwapIterator(MaybeExceptIterSwapIterator&&)                       = default;
-  constexpr MaybeExceptIterSwapIterator& operator=(const MaybeExceptIterSwapIterator& other) = default;
-  constexpr MaybeExceptIterSwapIterator& operator=(MaybeExceptIterSwapIterator&& other)      = default;
-
-  constexpr explicit MaybeExceptIterSwapIterator(int* counter) : counter_(counter) {}
-
-  friend constexpr void iter_swap(const MaybeExceptIterSwapIterator& t, const MaybeExceptIterSwapIterator& u) noexcept
-    requires Swappable && NoExcept
-  {
-    (*t.counter_)++;
-    (*u.counter_)++;
-  }
-
-  friend constexpr void iter_swap(const MaybeExceptIterSwapIterator& t, const MaybeExceptIterSwapIterator& u)
-    requires Swappable && (!NoExcept)
-  {
-    (*t.counter_)++;
-    (*u.counter_)++;
-  }
-  constexpr int operator*() const { return 5; }
-};
-
-template <bool Swappable = true, bool NoExcept = true>
-struct IterSwapRange : std::ranges::view_base {
-  MaybeExceptIterSwapIterator<Swappable, NoExcept> begin_;
-  MaybeExceptIterSwapIterator<Swappable, NoExcept> end_;
-  constexpr IterSwapRange(int* counter)
-      : begin_(MaybeExceptIterSwapIterator<Swappable, NoExcept>(counter)),
-        end_(MaybeExceptIterSwapIterator<Swappable, NoExcept>(counter)) {}
-  constexpr MaybeExceptIterSwapIterator<Swappable, NoExcept> begin() const { return begin_; }
-  constexpr MaybeExceptIterSwapIterator<Swappable, NoExcept> end() const { return end_; }
-};
-
 constexpr bool test() {
   {
     int iter_move_counter_one(0);

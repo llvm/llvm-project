@@ -18,8 +18,8 @@
 
 // There is no size member function on a stride view over a view that
 // is *not* a sized range
-static_assert(!std::ranges::sized_range<UnsizedBasicRange>);
-static_assert(!std::ranges::sized_range<std::ranges::stride_view<UnsizedBasicRange>>);
+static_assert(!std::ranges::sized_range<UnsizedBasicView>);
+static_assert(!std::ranges::sized_range<std::ranges::stride_view<UnsizedBasicView>>);
 
 constexpr bool test() {
   {
