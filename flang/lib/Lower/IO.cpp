@@ -1850,24 +1850,25 @@ static mlir::Value genIOUnit(Fortran::lower::AbstractConverter &converter,
                              mlir::Location loc,
                              const Fortran::parser::IoUnit *iounit,
                              mlir::Type ty, ConditionSpecInfo &csi,
-                             Fortran::lower::StatementContext &stmtCtx) {
+                             Fortran::lower::StatementContext &stmtCtx,
+                             int defaultUnitNumber) {
   auto &builder = converter.getFirOpBuilder();
   if (iounit)
     if (auto *e = std::get_if<Fortran::parser::FileUnitNumber>(&iounit->u))
       return genIOUnitNumber(converter, loc, Fortran::semantics::GetExpr(*e),
                              ty, csi, stmtCtx);
   return builder.create<mlir::arith::ConstantOp>(
-      loc, builder.getIntegerAttr(ty, Fortran::runtime::io::DefaultUnit));
+      loc, builder.getIntegerAttr(ty, defaultUnitNumber));
 }
 
 template <typename A>
-static mlir::Value getIOUnit(Fortran::lower::AbstractConverter &converter,
-                             mlir::Location loc, const A &stmt, mlir::Type ty,
-                             ConditionSpecInfo &csi,
-                             Fortran::lower::StatementContext &stmtCtx) {
+static mlir::Value
+getIOUnit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+          const A &stmt, mlir::Type ty, ConditionSpecInfo &csi,
+          Fortran::lower::StatementContext &stmtCtx, int defaultUnitNumber) {
   const Fortran::parser::IoUnit *iounit =
       stmt.iounit ? &*stmt.iounit : getIOControl<Fortran::parser::IoUnit>(stmt);
-  return genIOUnit(converter, loc, iounit, ty, csi, stmtCtx);
+  return genIOUnit(converter, loc, iounit, ty, csi, stmtCtx, defaultUnitNumber);
 }
 //===----------------------------------------------------------------------===//
 // Generators for each IO statement type.
@@ -2091,7 +2092,7 @@ getBeginDataTransferFunc(mlir::Location loc, fir::FirOpBuilder &builder,
 }
 
 /// Generate the arguments of a begin data transfer statement call.
-template <bool hasIOCtrl, typename A>
+template <bool hasIOCtrl, int defaultUnitNumber, typename A>
 void genBeginDataTransferCallArgs(
     llvm::SmallVectorImpl<mlir::Value> &ioArgs,
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -2149,14 +2150,14 @@ void genBeginDataTransferCallArgs(
         TODO(loc, "asynchronous");
       maybeGetFormatArgs();
       ioArgs.push_back(getIOUnit(converter, loc, stmt,
-                                 ioFuncTy.getInput(ioArgs.size()), csi,
-                                 stmtCtx));
+                                 ioFuncTy.getInput(ioArgs.size()), csi, stmtCtx,
+                                 defaultUnitNumber));
     }
   } else { // PRINT - maybe explicit format; default unit
     maybeGetFormatArgs();
     ioArgs.push_back(builder.create<mlir::arith::ConstantOp>(
         loc, builder.getIntegerAttr(ioFuncTy.getInput(ioArgs.size()),
-                                    Fortran::runtime::io::DefaultUnit)));
+                                    defaultUnitNumber)));
   }
   // File name and line number are always the last two arguments.
   ioArgs.push_back(
@@ -2193,7 +2194,9 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
       loc, builder, isFormatted, isList || isNml, isInternal,
       isInternalWithDesc, isAsync);
   llvm::SmallVector<mlir::Value> ioArgs;
-  genBeginDataTransferCallArgs<hasIOCtrl>(
+  genBeginDataTransferCallArgs<
+      hasIOCtrl, isInput ? Fortran::runtime::io::DefaultInputUnit
+                         : Fortran::runtime::io::DefaultOutputUnit>(
       ioArgs, converter, loc, stmt, ioFunc.getFunctionType(), isFormatted,
       isList || isNml, isInternal, isAsync, descRef, csi, stmtCtx);
   mlir::Value cookie =
