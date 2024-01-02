@@ -13715,11 +13715,10 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
   bool IsCnst = BVN && BVN->isConstantSplat(SplatValue, SplatUndef,
                                             SplatBitSize, HasAnyUndefs);
 
-  bool IsSplatUniform =
-      SrcVT.getVectorElementType().getSizeInBits() >= SplatBitSize;
-  bool IsZero = IsCnst && SplatValue == 0 && IsSplatUniform;
-  bool IsOne = IsCnst && SplatValue == 1 && IsSplatUniform;
-  bool IsMinusOne = IsCnst && SplatValue.isAllOnes() && IsSplatUniform;
+  bool IsZero = IsCnst && SplatValue == 0;
+  bool IsOne =
+      IsCnst && SrcVT.getScalarSizeInBits() == SplatBitSize && SplatValue == 1;
+  bool IsMinusOne = IsCnst && SplatValue.isAllOnes();
 
   if (SrcVT.getVectorElementType().isFloatingPoint()) {
     switch (CC) {
