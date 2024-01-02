@@ -31,7 +31,7 @@ RUN: printf '\xc8\xff\3\0\1\0\0\0' >> %t
 RUN: printf '\xc3\xff\3\0\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
-RUN: printf '\02\0\0\0'
+RUN: printf '\02\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\1\0\0\0' >> %t
 
