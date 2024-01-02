@@ -7198,6 +7198,18 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     Register DstReg = Inst.getOperand(0).getReg();
     const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(Inst);
 
+    // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
+    // hope for the best.
+    if (Inst.isCopy() && DstReg.isPhysical() &&
+        RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
+      // TODO: Only works for 32 bit registers.
+      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+              get(AMDGPU::V_READFIRSTLANE_B32), Inst.getOperand(0).getReg())
+          .add(Inst.getOperand(1));
+      Inst.eraseFromParent();
+      return;
+    }
+
     if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual() &&
         NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
       // Instead of creating a copy where src and dst are the same register
