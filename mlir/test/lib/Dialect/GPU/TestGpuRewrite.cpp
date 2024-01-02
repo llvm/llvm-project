@@ -72,6 +72,9 @@ struct TestGpuSubgroupReduceLoweringPass
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
+
+    // Since both pattern sets match on the same ops, set higher benefit to
+    // perform fewer failing matches.
     populateGpuBreakDownSubgrupReducePatterns(patterns,
                                               /*maxShuffleBitwidth=*/32,
                                               PatternBenefit(2));

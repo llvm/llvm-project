@@ -144,8 +144,11 @@ struct ScalarizeSingleElementReduce final
 };
 
 /// Emits a subgroup reduction using a sequence of shuffles. Uses the `packFn`
-/// and `unpackFn` to convert to/from the native shuffle type. Assumes that the
-/// subgroup is `subgroupSize` lanes wide and reduces across all of them.
+/// and `unpackFn` to convert to the native shuffle type and to the reduction
+/// type, respectively. For example, with `input` of type `f16`, `packFn` could
+/// build ops to cast the value to `i32` to perform shuffles, while `unpackFn`
+/// would cast it back to `f16` to perform arithmetic reduction on. Assumes that
+/// the subgroup is `subgroupSize` lanes wide and reduces across all of them.
 static Value createSubgroupShuffleReduction(
     OpBuilder &builder, Location loc, Value input, gpu::AllReduceOperation mode,
     unsigned subgroupSize, function_ref<Value(Value)> packFn,
