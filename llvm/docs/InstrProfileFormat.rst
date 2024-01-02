@@ -376,9 +376,9 @@ General Storage Layout
             |   |   |    |  +-----------------------+   P
             |   |   +------>|  Function PGO data    |   A
             |   |        |  +-----------------------+   Y
-            |   +---------- |  MemProf profile data |   L
+            |   +---------->|  MemProf profile data |   L
             |            |  +-----------------------+   O
-            |            +--|    Binary Ids         |   A
+            |            +->|    Binary Ids         |   A
             |               +-----------------------+   D
             +-------------->|  Temporal profiles    |   |
                             +-----------------------+---+
