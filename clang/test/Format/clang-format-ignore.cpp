@@ -29,5 +29,18 @@
 // RUN: grep "Formatting \[1/2] foo.c" %t.stderr
 // RUN: not grep "Formatting \[2/2] foo.js" %t.stderr
 
-// RUN: cd ../../..
-// RUN: rm -rf %t.dir
+// RUN: cd ../..
+// RUN: clang-format -verbose *.cc level1/*.c* level1/level2/foo.* 2> %t.stderr
+// RUN: grep "Formatting \[1/5] level1/level2/foo.c" %t.stderr
+// RUN: not grep "Formatting \[2/5] level1/level2/foo.js" %t.stderr
+
+// RUN: rm .clang-format-ignore
+// RUN: clang-format -verbose *.cc level1/*.c* level1/level2/foo.* 2> %t.stderr
+// RUN: grep "Formatting \[1/5] foo.cc" %t.stderr
+// RUN: grep "Formatting \[2/5] level1/bar.cc" %t.stderr
+// RUN: grep "Formatting \[3/5] level1/baz.c" %t.stderr
+// RUN: grep "Formatting \[4/5] level1/level2/foo.c" %t.stderr
+// RUN: not grep "Formatting \[5/5] level1/level2/foo.js" %t.stderr
+
+// RUN: cd ..
+// RUN: rm -r %t.dir
