@@ -630,8 +630,9 @@ define void @add_v16i64(ptr %x, ptr %y) vscale_range(2,2) {
 define <vscale x 2 x float> @fp_reduction_vfmv_s_f(float %0, <vscale x 8 x float> %1, i64  %2) {
 ; CHECK-LABEL: fp_reduction_vfmv_s_f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v12
 ; CHECK-NEXT:    ret
   %4 = tail call <vscale x 8 x float> @llvm.riscv.vfmv.s.f.nxv8f32.i64(<vscale x 8 x float> poison, float %0, i64 %2)
