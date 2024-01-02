@@ -401,7 +401,7 @@ d2(
 
 We want to copy the the data between devices in slices/tiles.
 What are the source/target tile coordinates?
-Fro a fixed (m, n, p, q) what is the range of (k, l, u, v)?
+For a fixed (m, n, p, q) what is the range of (k, l, u, v)?
 TODO
 
 --------------------------------------------------------------
