@@ -1137,7 +1137,7 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
 static bool isNFnotMap4(InternalInstruction *insn) {
   // Promoted BMI instrs below has nf version.
   if (insn->opcodeType == THREEBYTE_38 &&
-      ppFromXOP3of3(insn->vectorExtensionPrefix[2]) == VEX_PREFIX_NONE) {
+      ppFromEVEX3of4(insn->vectorExtensionPrefix[2]) == VEX_PREFIX_NONE) {
     switch (insn->opcode) {
     case 0xf2: // ANDN
     case 0xf3: // BLSI, BLSR, BLSMSK
