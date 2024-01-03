@@ -6,9 +6,16 @@ add_clang_library(clangdMain
   Check.cpp
   )
 
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ClangdOptsTableGen)
+
 add_clang_tool(clangd
   ClangdToolMain.cpp
   $<TARGET_OBJECTS:obj.clangDaemonTweaks>
+
+  DEPENDS
+  ClangdOptsTableGen
   )
 
 set(LLVM_LINK_COMPONENTS
