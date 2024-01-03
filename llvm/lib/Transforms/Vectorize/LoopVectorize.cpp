@@ -6950,24 +6950,27 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
         Legal->isInvariant(Op2))
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
+    SmallVector<const Value *, 4> Operands(I->operand_values());
+    auto InstrCost = TTI.getArithmeticInstrCost(
+        I->getOpcode(), VectorTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        Op2Info, Operands, I);
+
     // Some targets replace frem with vector library calls.
-    if (I->getOpcode() == Instruction::FRem && VectorTy->isScalableTy()) {
+    if (I->getOpcode() == Instruction::FRem) {
       LibFunc Func;
       if (TLI->getLibFunc(I->getOpcode(), I->getType(), Func)) {
         if (TLI->isFunctionVectorizable(TLI->getName(Func))) {
           SmallVector<Type *, 4> OpTypes;
           for (auto &Op : I->operands())
             OpTypes.push_back(Op->getType());
-          return TTI.getCallInstrCost(nullptr, VectorTy, OpTypes, CostKind);
+          auto CallCost =
+              TTI.getCallInstrCost(nullptr, VectorTy, OpTypes, CostKind);
+          return std::min(InstrCost, CallCost);
         }
       }
     }
-
-    SmallVector<const Value *, 4> Operands(I->operand_values());
-    return TTI.getArithmeticInstrCost(
-        I->getOpcode(), VectorTy, CostKind,
-        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        Op2Info, Operands, I);
+    return InstrCost;
   }
   case Instruction::FNeg: {
     return TTI.getArithmeticInstrCost(
