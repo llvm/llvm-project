@@ -61,6 +61,47 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   }
 };
 
+struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  Value insertCollapse(RewriterBase &rewriter, Location loc, Value operand,
+                       Type newOperandType, ArrayAttr reassociation) const {
+    if (operand.getType() == newOperandType)
+      return operand;
+    return rewriter.create<tensor::CollapseShapeOp>(loc, newOperandType,
+                                                    operand, reassociation);
+  }
+
+  LogicalResult matchAndRewrite(UnPackOp unpackOp,
+                                PatternRewriter &rewriter) const override {
+    if (!unpackOp.getOuterDimsPerm().empty()) {
+      return rewriter.notifyMatchFailure(unpackOp,
+                                         "expects no outer_dims_perm");
+    }
+
+    RankedTensorType sourceType = unpackOp.getSourceType();
+    RankedTensorType destType = unpackOp.getDestType();
+    if (!sourceType.hasStaticShape() || !destType.hasStaticShape())
+      return rewriter.notifyMatchFailure(unpackOp, "expects static shapes");
+
+    ArrayRef<int64_t> dimsPos = unpackOp.getInnerDimsPos();
+    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != destType.getRank())) {
+      return rewriter.notifyMatchFailure(
+          unpackOp, "expects unpacking at the innermost dimension");
+    }
+
+    auto reassociation =
+        getReassociationIndicesForReshape(sourceType, destType);
+    if (!reassociation)
+      return failure();
+    Value collapsed = insertCollapse(
+        rewriter, unpackOp.getLoc(), unpackOp.getSource(), destType,
+        getReassociationIndicesAttribute(rewriter, *reassociation));
+    rewriter.replaceOp(unpackOp, collapsed);
+    return success();
+  }
+};
+
 /// Fold a `pad` -> `pack` into `pack` if they have the same padding values and
 /// the pad op has zero low paddings, or if `pack` has no padding values.
 struct FoldPadWithPackOp : public OpRewritePattern<PackOp> {
@@ -191,7 +232,8 @@ void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns) {
 }
 
 void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns) {
-  patterns.add<SimplifyPackToExpandShape>(patterns.getContext());
+  patterns.add<SimplifyPackToExpandShape, SimplifyUnPackToCollapseShape>(
+      patterns.getContext());
 }
 
 } // namespace tensor
