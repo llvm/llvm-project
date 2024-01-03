@@ -1,4 +1,4 @@
-//===-- LDSDIRInstructions.td - LDS/DS Direct Instruction Definitions --------===//
+//===-- DSDIRInstructions.td - LDS/VDS Direct Instruction Definitions -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,13 +59,14 @@ class LDSDIR_getIns<bit direct> {
 
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc)
+    (ins wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst,
+         wait_va_vsrc:$waitvsrc)
   );
 }
 
-class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> : InstSI<
-    (outs VGPR_32:$vdst), ins, asm> {
+class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> :
+  InstSI<(outs VGPR_32:$vdst), ins, asm> {
   let LDSDIR = 1;
   let EXP_CNT = 1;
 
@@ -116,7 +117,7 @@ class DSDIR_Real<DSDIR_Pseudo lds, dag ins, string asm, int subtarget> :
 }
 
 //===----------------------------------------------------------------------===//
-// LDS/DS Direct Instructions
+// LDS/VDS Direct Instructions
 //===----------------------------------------------------------------------===//
 
 let SubtargetPredicate = isGFX11Only in {
@@ -157,9 +158,11 @@ def : GCNPat <
 // GFX11
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx11<bits<2> op, DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx11<bits<2> op,
+                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
   def _gfx11 : DSDIR_Real<lds, lds.InOperandList,
-                           LDSDIR_getAsm<lds.is_direct>.ret, SIEncodingFamily.GFX11>,
+                          LDSDIR_getAsm<lds.is_direct>.ret,
+                          SIEncodingFamily.GFX11>,
                LDSDIRe<op, lds.is_direct> {
     let AssemblerPredicate = isGFX11Only;
     let DecoderNamespace = "GFX11";
@@ -173,9 +176,11 @@ defm LDS_DIRECT_LOAD : DSDIR_Real_gfx11<0x1>;
 // GFX12+
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx12<bits<2> op, DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx12<bits<2> op,
+                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
   def _gfx12 : DSDIR_Real<lds, lds.InOperandList,
-                           VDSDIR_getAsm<lds.is_direct>.ret, SIEncodingFamily.GFX12>,
+                          VDSDIR_getAsm<lds.is_direct>.ret,
+                          SIEncodingFamily.GFX12>,
                VDSDIRe<op, lds.is_direct> {
     let AssemblerPredicate = isGFX12Plus;
     let DecoderNamespace = "GFX12";
