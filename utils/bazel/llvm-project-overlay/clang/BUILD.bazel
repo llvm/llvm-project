@@ -2386,6 +2386,7 @@ cc_binary(
     name = "clang-format",
     srcs = [
         "tools/clang-format/ClangFormat.cpp",
+        "lib/Format/MatchFilePath.h",
     ],
     stamp = 0,
     deps = [

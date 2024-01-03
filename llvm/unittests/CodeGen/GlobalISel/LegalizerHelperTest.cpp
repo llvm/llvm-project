@@ -3656,12 +3656,14 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
+  LostDebugLocObserver DummyLocObserver("");
 
   LLVMContext &Ctx = MF->getFunction().getContext();
   auto *RetTy = Type::getVoidTy(Ctx);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C));
+            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C,
+                          DummyLocObserver, nullptr));
 
   auto CheckStr = R"(
   CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp

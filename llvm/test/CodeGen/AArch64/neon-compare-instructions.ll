@@ -1792,7 +1792,8 @@ define <8 x i1> @not_cmle8xi8(<8 x i8> %0) {
 define <4 x i1> @not_cmle16xi8(<4 x i32> %0) {
 ; CHECK-SD-LABEL: not_cmle16xi8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmle v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    movi v1.8h, #1
+; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4551,10 +4552,6 @@ define <4 x i64> @fcmoeq4xdouble(<4 x double> %A, <4 x double> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmeq v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    fcmeq v1.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    shl v1.2d, v1.2d, #63
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #63
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp oeq <4 x double> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i64>
@@ -4572,10 +4569,6 @@ define <8 x i32> @fcmoeq8xfloat(<8 x float> %A, <8 x float> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    fcmeq v1.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp oeq <8 x float> %A, %B
   %tmp4 = sext <8 x i1> %tmp3 to <8 x i32>
