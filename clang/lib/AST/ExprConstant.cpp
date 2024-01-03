@@ -641,6 +641,10 @@ namespace {
       return false;
     }
 
+    /// Whether we're in a context where [[msvc::constexpr]] evaluation is
+    /// permitted. See MSConstexprDocs for description of permitted contexts.
+    bool CanEvalMSConstexpr = false;
+
   private:
     APValue &createLocal(APValue::LValueBase Base, const void *Key, QualType T,
                          ScopeKind Scope);
@@ -673,6 +677,19 @@ namespace {
 
   private:
     llvm::TimeTraceScope TimeScope;
+  };
+
+  /// RAII object used to change the current ability of
+  /// [[msvc::constexpr]] evaulation.
+  struct MSConstexprContextRAII {
+    CallStackFrame &Frame;
+    bool OldValue;
+    explicit MSConstexprContextRAII(CallStackFrame &Frame, bool Value)
+        : Frame(Frame), OldValue(Frame.CanEvalMSConstexpr) {
+      Frame.CanEvalMSConstexpr = Value;
+    }
+
+    ~MSConstexprContextRAII() { Frame.CanEvalMSConstexpr = OldValue; }
   };
 }
 
@@ -4623,11 +4640,13 @@ struct IncDecSubobjectHandler {
     if (Old) *Old = APValue(Value);
 
     APFloat One(Value.getSemantics(), 1);
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    APFloat::opStatus St;
     if (AccessKind == AK_Increment)
-      Value.add(One, APFloat::rmNearestTiesToEven);
+      St = Value.add(One, RM);
     else
-      Value.subtract(One, APFloat::rmNearestTiesToEven);
-    return true;
+      St = Value.subtract(One, RM);
+    return checkFloatingPointResult(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))
@@ -5544,11 +5563,14 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::LabelStmtClass:
     return EvaluateStmt(Result, Info, cast<LabelStmt>(S)->getSubStmt(), Case);
 
-  case Stmt::AttributedStmtClass:
-    // As a general principle, C++11 attributes can be ignored without
-    // any semantic impact.
-    return EvaluateStmt(Result, Info, cast<AttributedStmt>(S)->getSubStmt(),
-                        Case);
+  case Stmt::AttributedStmtClass: {
+    const auto *AS = cast<AttributedStmt>(S);
+    const auto *SS = AS->getSubStmt();
+    MSConstexprContextRAII ConstexprContext(
+        *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
+                               isa<ReturnStmt>(SS));
+    return EvaluateStmt(Result, Info, SS, Case);
+  }
 
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
@@ -5619,7 +5641,9 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   }
 
   // Can we evaluate this function call?
-  if (Definition && Definition->isConstexpr() && Body)
+  if (Definition && Body &&
+      (Definition->isConstexpr() || (Info.CurrentCall->CanEvalMSConstexpr &&
+                                        Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -8490,14 +8514,24 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return false;
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
+      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+
+      // Static lambda function call operators can't have captures. We already
+      // diagnosed this, so bail out here.
+      if (MD->isStatic()) {
+        assert(Info.CurrentCall->This == nullptr &&
+               "This should not be set for a static call operator");
+        return false;
+      }
+
       // Start with 'Result' referring to the complete closure object...
-      if (auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-          MD->isExplicitObjectMemberFunction()) {
+      if (MD->isExplicitObjectMemberFunction()) {
         APValue *RefValue =
             Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
         Result.setFrom(Info.Ctx, *RefValue);
       } else
         Result = *Info.CurrentCall->This;
+
       // ... then update it to refer to the field of the closure object
       // that represents the capture.
       if (!HandleLValueMember(Info, E, Result, FD))
@@ -8616,7 +8650,7 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
     Result.set(E);
   } else {
     Value = &Info.CurrentCall->createTemporary(
-        E, E->getType(),
+        E, Inner->getType(),
         E->getStorageDuration() == SD_FullExpression ? ScopeKind::FullExpression
                                                      : ScopeKind::Block,
         Result);

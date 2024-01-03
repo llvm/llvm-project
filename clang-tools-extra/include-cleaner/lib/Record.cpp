@@ -277,7 +277,7 @@ public:
     int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
 
     if (InMainFile) {
-      if (Pragma->startswith("keep")) {
+      if (Pragma->starts_with("keep")) {
         KeepStack.push_back({CommentLine, false});
       } else if (Pragma->starts_with("begin_keep")) {
         KeepStack.push_back({CommentLine, true});
@@ -300,9 +300,10 @@ public:
       StringRef PublicHeader;
       if (Pragma->consume_front(", include ")) {
         // We always insert using the spelling from the pragma.
-        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
-                                ? (*Pragma)
-                                : ("\"" + *Pragma + "\"").str());
+        PublicHeader =
+            save(Pragma->starts_with("<") || Pragma->starts_with("\"")
+                     ? (*Pragma)
+                     : ("\"" + *Pragma + "\"").str());
       }
       Out->IWYUPublic.insert({CommentUID, PublicHeader});
       return false;
@@ -313,11 +314,11 @@ public:
     }
     auto Filename = FE->getName();
     // Record export pragma.
-    if (Pragma->startswith("export")) {
+    if (Pragma->starts_with("export")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
-    } else if (Pragma->startswith("begin_exports")) {
+    } else if (Pragma->starts_with("begin_exports")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
-    } else if (Pragma->startswith("end_exports")) {
+    } else if (Pragma->starts_with("end_exports")) {
       // FIXME: be robust on unmatching cases. We should only pop the stack if
       // the begin_exports and end_exports is in the same file.
       if (!ExportStack.empty()) {

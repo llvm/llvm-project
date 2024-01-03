@@ -53,7 +53,7 @@ module {
   }
 
   //
-  // The first test suite (for non-singleton DimLevelTypes).
+  // The first test suite (for non-singleton LevelTypes).
   //
   func.func @entry() {
     //

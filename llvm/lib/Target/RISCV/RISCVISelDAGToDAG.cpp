@@ -22,7 +22,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 
 using namespace llvm;
 
@@ -151,6 +150,10 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
       continue;
 
     MadeChange |= doPeepholeSExtW(N);
+
+    // FIXME: This is here only because the VMerge transform doesn't
+    // know how to handle masked true inputs.  Once that has been moved
+    // to post-ISEL, this can be deleted as well.
     MadeChange |= doPeepholeMaskedRVV(cast<MachineSDNode>(N));
   }
 
@@ -912,8 +915,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Opc = RISCV::FMV_H_X;
       break;
     case MVT::f16:
-      Opc =
-          Subtarget->hasStdExtZhinxOrZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
+      Opc = Subtarget->hasStdExtZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
       break;
     case MVT::f32:
       Opc = Subtarget->hasStdExtZfinx() ? RISCV::COPY : RISCV::FMV_W_X;
@@ -1358,7 +1360,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (N0.getOpcode() != ISD::AND || !isa<ConstantSDNode>(N0.getOperand(1)))
       break;
 
-    uint64_t C2 = cast<ConstantSDNode>(N0.getOperand(1))->getZExtValue();
+    uint64_t C2 = N0.getConstantOperandVal(1);
 
     // Constant should be a mask.
     if (!isMask_64(C2))
@@ -1602,7 +1604,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
       // By default we do not custom select any intrinsic.
     default:
@@ -1823,7 +1825,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::INTRINSIC_VOID: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
     case Intrinsic::riscv_vsseg2:
     case Intrinsic::riscv_vsseg3:
@@ -3711,8 +3713,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   for (unsigned Idx = 1; Idx < True->getNumValues(); ++Idx)
     ReplaceUses(True.getValue(Idx), SDValue(Result, Idx));
 
-  // Try to transform Result to unmasked intrinsic.
-  doPeepholeMaskedRVV(Result);
   return true;
 }
 

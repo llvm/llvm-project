@@ -986,6 +986,10 @@ MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand) {
   return wrap(unwrap(opOperand)->getOwner());
 }
 
+MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand) {
+  return wrap(unwrap(opOperand)->get());
+}
+
 unsigned mlirOpOperandGetOperandNumber(MlirOpOperand opOperand) {
   return unwrap(opOperand)->getOperandNumber();
 }

@@ -14,7 +14,9 @@ using Real2 = Scalar<Type<TypeCategory::Real, 2>>;
 using Real3 = Scalar<Type<TypeCategory::Real, 3>>;
 using Real4 = Scalar<Type<TypeCategory::Real, 4>>;
 using Real8 = Scalar<Type<TypeCategory::Real, 8>>;
+#ifdef __x86_64__
 using Real10 = Scalar<Type<TypeCategory::Real, 10>>;
+#endif
 using Real16 = Scalar<Type<TypeCategory::Real, 16>>;
 using Integer4 = Scalar<Type<TypeCategory::Integer, 4>>;
 using Integer8 = Scalar<Type<TypeCategory::Integer, 8>>;
@@ -538,7 +540,9 @@ void roundTest(int rm, Rounding rounding, std::uint32_t opds) {
   basicTests<Real3>(rm, rounding);
   basicTests<Real4>(rm, rounding);
   basicTests<Real8>(rm, rounding);
+#ifdef __x86_64__
   basicTests<Real10>(rm, rounding);
+#endif
   basicTests<Real16>(rm, rounding);
   ScopedHostFloatingPointEnvironment::SetRounding(rounding);
   subsetTests<std::uint32_t, float, Real4>(rm, rounding, opds);

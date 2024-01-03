@@ -30,11 +30,17 @@ class RISCVLegalizerInfo : public LegalizerInfo {
 public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
+
+  bool legalizeIntrinsic(LegalizerHelper &Helper,
+                         MachineInstr &MI) const override;
 
 private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
+
+  bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
 };
 } // end namespace llvm
 #endif

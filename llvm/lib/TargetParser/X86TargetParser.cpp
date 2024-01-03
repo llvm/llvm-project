@@ -162,8 +162,6 @@ constexpr FeatureBitset FeaturesAlderlake =
 constexpr FeatureBitset FeaturesSierraforest =
     FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
     FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
-constexpr FeatureBitset FeaturesGrandridge =
-    FeaturesSierraforest | FeatureRAOINT;
 constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
     FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
@@ -369,7 +367,7 @@ constexpr ProcInfo Processors[] = {
   // Sierraforest microarchitecture based processors.
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
-  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge, 'p', false },
+  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Granite Rapids microarchitecture based processors.
   { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
   // Granite Rapids D microarchitecture based processors.
@@ -627,6 +625,14 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512FP16;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
+
+// APX Features
+constexpr FeatureBitset ImpliedFeaturesEGPR = {};
+constexpr FeatureBitset ImpliedFeaturesPush2Pop2 = {};
+constexpr FeatureBitset ImpliedFeaturesPPX = {};
+constexpr FeatureBitset ImpliedFeaturesNDD = {};
+constexpr FeatureBitset ImpliedFeaturesCCMP = {};
+constexpr FeatureBitset ImpliedFeaturesCF = {};
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},

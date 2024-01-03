@@ -21,7 +21,7 @@
 # READELF: Section to Segment mapping:
 # READELF: 04 .got
 
-# RUN: llvm-bolt %t.exe --relocs -o /dev/null -v=1 \
+# RUN: llvm-bolt %t.exe --relocs -o %t.null -v=1 \
 # RUN:   |& FileCheck --check-prefix=BOLT %s
 # BOLT: BOLT-INFO: marking .got as GNU_RELRO
 

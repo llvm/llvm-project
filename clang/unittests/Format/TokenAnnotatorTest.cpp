@@ -298,6 +298,17 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_TypeName);
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("class Foo {\n"
+                    "  void operator<() {}\n"
+                    "  Foo &f;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1707,6 +1718,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
+
+  auto Style = getLLVMStyle();
+  Style.TypeNames.push_back("time_t");
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsCtorAndDtorDeclNames) {
@@ -1851,6 +1869,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandHashInMacro) {
+  auto Tokens = annotate("#define Foo(Bar) \\\n"
+                         "  { \\\n"
+                         "    #Bar \\\n"
+                         "  }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+
+  Tokens = annotate("#define Foo(Bar) \\\n"
+                    "  { #Bar }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
   // '__attribute__' has special handling.
   auto Tokens = annotate("__attribute__(X) void Foo(void);");
@@ -1980,17 +2014,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // joined operators, we don't have a separate type, so we only test for their
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
-      {prec::Comma, "<->"},       {prec::Assignment, "+="},
-      {prec::Assignment, "-="},   {prec::Assignment, "*="},
-      {prec::Assignment, "/="},   {prec::Assignment, "%="},
-      {prec::Assignment, "&="},   {prec::Assignment, "^="},
-      {prec::Assignment, "<<="},  {prec::Assignment, ">>="},
-      {prec::Assignment, "<<<="}, {prec::Assignment, ">>>="},
-      {prec::LogicalOr, "||"},    {prec::LogicalAnd, "&&"},
-      {prec::Equality, "=="},     {prec::Equality, "!="},
-      {prec::Equality, "==="},    {prec::Equality, "!=="},
-      {prec::Equality, "==?"},    {prec::Equality, "!=?"},
-      {prec::ExclusiveOr, "~^"},  {prec::ExclusiveOr, "^~"},
+      {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Assignment, "+="},   {prec::Assignment, "-="},
+      {prec::Assignment, "*="},   {prec::Assignment, "/="},
+      {prec::Assignment, "%="},   {prec::Assignment, "&="},
+      {prec::Assignment, "^="},   {prec::Assignment, "<<="},
+      {prec::Assignment, ">>="},  {prec::Assignment, "<<<="},
+      {prec::Assignment, ">>>="}, {prec::LogicalOr, "||"},
+      {prec::LogicalAnd, "&&"},   {prec::Equality, "=="},
+      {prec::Equality, "!="},     {prec::Equality, "==="},
+      {prec::Equality, "!=="},    {prec::Equality, "==?"},
+      {prec::Equality, "!=?"},    {prec::ExclusiveOr, "~^"},
+      {prec::ExclusiveOr, "^~"},
   };
   for (auto Operator : JoinedBinary) {
     auto Tokens = Annotate(std::string("x = x ") + Operator.second + " x;");

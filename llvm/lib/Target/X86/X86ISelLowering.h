@@ -1753,9 +1753,6 @@ namespace llvm {
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
 
-    bool lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const override;
-    bool lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const override;
-
     bool needsCmpXchgNb(Type *MemType) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,

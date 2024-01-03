@@ -132,6 +132,9 @@ if config.enable_rocm_runner:
 if config.enable_cuda_runner:
     tools.extend([add_runtime("mlir_cuda_runtime")])
 
+if config.enable_sycl_runner:
+    tools.extend([add_runtime("mlir_sycl_runtime")])
+
 if config.mlir_run_arm_sme_tests:
     config.substitutions.append(
         (

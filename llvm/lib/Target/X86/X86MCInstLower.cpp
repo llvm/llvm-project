@@ -1865,8 +1865,8 @@ static void addConstantComments(const MachineInstr *MI,
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
     CASE_ALL_MOV_RM()
-  case X86::VBROADCASTF128:
-  case X86::VBROADCASTI128:
+  case X86::VBROADCASTF128rm:
+  case X86::VBROADCASTI128rm:
   case X86::VBROADCASTF32X4Z256rm:
   case X86::VBROADCASTF32X4rm:
   case X86::VBROADCASTF32X8rm:
@@ -1891,8 +1891,8 @@ static void addConstantComments(const MachineInstr *MI,
       CASE_128_MOV_RM()                NumLanes = 1; BitWidth = 128; break;
       CASE_256_MOV_RM()                NumLanes = 1; BitWidth = 256; break;
       CASE_512_MOV_RM()                NumLanes = 1; BitWidth = 512; break;
-      case X86::VBROADCASTF128:        NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTI128:        NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTF128rm:      NumLanes = 2; BitWidth = 128; break;
+      case X86::VBROADCASTI128rm:      NumLanes = 2; BitWidth = 128; break;
       case X86::VBROADCASTF32X4Z256rm: NumLanes = 2; BitWidth = 128; break;
       case X86::VBROADCASTF32X4rm:     NumLanes = 4; BitWidth = 128; break;
       case X86::VBROADCASTF32X8rm:     NumLanes = 2; BitWidth = 256; break;

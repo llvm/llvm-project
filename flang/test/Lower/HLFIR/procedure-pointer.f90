@@ -103,7 +103,7 @@ use m
 ! CHECK: fir.store %[[VAL_6]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 
   res = p1(r)
-! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
+! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 ! CHECK: %[[VAL_8:.*]] = fir.box_addr %[[VAL_7]] : (!fir.boxproc<(!fir.ref<f32>) -> f32>) -> ((!fir.ref<f32>) -> f32)
 ! CHECK: %[[VAL_9:.*]] = fir.call %[[VAL_8]](%5#1) fastmath<contract> : (!fir.ref<f32>) -> f32
 
@@ -138,7 +138,7 @@ use m
 ! CHECK: fir.store %[[VAL_11]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
 
   res = p2(i)
-! CHECK: %[[VAL_12:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
+! CHECK: %[[VAL_12:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK: %[[VAL_13:.*]] = fir.box_addr %[[VAL_12]] : (!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>) -> ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>)
 ! CHECK: %[[VAL_14:.*]] = fir.call %[[VAL_13]](%2#1) fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 end subroutine
@@ -175,7 +175,7 @@ use m
 ! CHECK: fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 
   call p4(r)
-! CHECK: %[[VAL_6:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK: %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK: %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<f32>) -> ())
 ! CHECK: fir.call %[[VAL_7]](%5#1) fastmath<contract> : (!fir.ref<f32>) -> ()
 end subroutine

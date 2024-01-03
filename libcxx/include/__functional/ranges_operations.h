@@ -29,10 +29,10 @@ namespace ranges {
 
 struct equal_to {
   template <class _Tp, class _Up>
-  requires equality_comparable_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
-      noexcept(noexcept(bool(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u)))) {
-    return _VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u);
+    requires equality_comparable_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
+      noexcept(noexcept(bool(std::forward<_Tp>(__t) == std::forward<_Up>(__u)))) {
+    return std::forward<_Tp>(__t) == std::forward<_Up>(__u);
   }
 
   using is_transparent = void;
@@ -40,10 +40,10 @@ struct equal_to {
 
 struct not_equal_to {
   template <class _Tp, class _Up>
-  requires equality_comparable_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
-      noexcept(noexcept(bool(!(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u))))) {
-    return !(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u));
+    requires equality_comparable_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
+      noexcept(noexcept(bool(!(std::forward<_Tp>(__t) == std::forward<_Up>(__u))))) {
+    return !(std::forward<_Tp>(__t) == std::forward<_Up>(__u));
   }
 
   using is_transparent = void;
@@ -51,10 +51,10 @@ struct not_equal_to {
 
 struct less {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
-      noexcept(noexcept(bool(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u)))) {
-    return _VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u);
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
+      noexcept(noexcept(bool(std::forward<_Tp>(__t) < std::forward<_Up>(__u)))) {
+    return std::forward<_Tp>(__t) < std::forward<_Up>(__u);
   }
 
   using is_transparent = void;
@@ -62,10 +62,10 @@ struct less {
 
 struct less_equal {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
-      noexcept(noexcept(bool(!(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t))))) {
-    return !(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t));
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
+      noexcept(noexcept(bool(!(std::forward<_Up>(__u) < std::forward<_Tp>(__t))))) {
+    return !(std::forward<_Up>(__u) < std::forward<_Tp>(__t));
   }
 
   using is_transparent = void;
@@ -73,10 +73,10 @@ struct less_equal {
 
 struct greater {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
-      noexcept(noexcept(bool(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t)))) {
-    return _VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t);
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
+      noexcept(noexcept(bool(std::forward<_Up>(__u) < std::forward<_Tp>(__t)))) {
+    return std::forward<_Up>(__u) < std::forward<_Tp>(__t);
   }
 
   using is_transparent = void;
@@ -84,10 +84,10 @@ struct greater {
 
 struct greater_equal {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
-      noexcept(noexcept(bool(!(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u))))) {
-    return !(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u));
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
+      noexcept(noexcept(bool(!(std::forward<_Tp>(__t) < std::forward<_Up>(__u))))) {
+    return !(std::forward<_Tp>(__t) < std::forward<_Up>(__u));
   }
 
   using is_transparent = void;

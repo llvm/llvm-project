@@ -142,7 +142,10 @@ llvm::DWARFContext &DWARFContext::GetAsLLVM() {
     AddSection("debug_line_str", getOrLoadLineStrData());
     AddSection("debug_cu_index", getOrLoadCuIndexData());
     AddSection("debug_tu_index", getOrLoadTuIndexData());
-
+    if (isDwo()) {
+      AddSection("debug_info.dwo", getOrLoadDebugInfoData());
+      AddSection("debug_types.dwo", getOrLoadDebugTypesData());
+    }
     m_llvm_context = llvm::DWARFContext::create(section_map, addr_size);
   }
   return *m_llvm_context;

@@ -154,6 +154,8 @@ class Symbolizer final {
 
   void InvalidateModuleList();
 
+  const ListOfModules &GetRefreshedListOfModules();
+
  private:
   // GetModuleNameAndOffsetForPC has to return a string to the caller.
   // Since the corresponding module might get unloaded later, we should create

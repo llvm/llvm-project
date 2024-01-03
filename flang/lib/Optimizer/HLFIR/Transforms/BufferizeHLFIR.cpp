@@ -452,7 +452,7 @@ struct AssociateOpConversion
       //   %0 = hlfir.as_expr %x move %true :
       //       (!fir.box<!fir.heap<!fir.type<_T{y:i32}>>>, i1) ->
       //       !hlfir.expr<!fir.type<_T{y:i32}>>
-      //   %1:3 = hlfir.associate %0 {uniq_name = "adapt.valuebyref"} :
+      //   %1:3 = hlfir.associate %0 {adapt.valuebyref} :
       //       (!hlfir.expr<!fir.type<_T{y:i32}>>) ->
       //       (!fir.ref<!fir.type<_T{y:i32}>>,
       //        !fir.ref<!fir.type<_T{y:i32}>>,
@@ -525,8 +525,15 @@ struct AssociateOpConversion
       return mlir::success();
     }
     if (isTrivialValue) {
-      auto temp = builder.createTemporary(loc, bufferizedExpr.getType(),
-                                          associate.getUniqName());
+      llvm::SmallVector<mlir::NamedAttribute, 1> attrs;
+      if (associate->hasAttr(fir::getAdaptToByRefAttrName())) {
+        attrs.push_back(fir::getAdaptToByRefAttr(builder));
+      }
+      llvm::StringRef name = "";
+      if (associate.getUniqName())
+        name = *associate.getUniqName();
+      auto temp =
+          builder.createTemporary(loc, bufferizedExpr.getType(), name, attrs);
       builder.create<fir::StoreOp>(loc, bufferizedExpr, temp);
       mlir::Value mustFree = builder.createBool(loc, false);
       replaceWith(temp, temp, mustFree);

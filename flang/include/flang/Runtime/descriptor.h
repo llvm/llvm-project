@@ -67,16 +67,16 @@ public:
   }
   // Do not use this API to cause the LB of an empty dimension
   // to be anything other than 1.  Use SetBounds() instead if you can.
-  Dimension &SetLowerBound(SubscriptValue lower) {
+  RT_API_ATTRS Dimension &SetLowerBound(SubscriptValue lower) {
     raw_.lower_bound = lower;
     return *this;
   }
-  Dimension &SetUpperBound(SubscriptValue upper) {
+  RT_API_ATTRS Dimension &SetUpperBound(SubscriptValue upper) {
     auto lower{raw_.lower_bound};
     raw_.extent = upper >= lower ? upper - lower + 1 : 0;
     return *this;
   }
-  Dimension &SetExtent(SubscriptValue extent) {
+  RT_API_ATTRS Dimension &SetExtent(SubscriptValue extent) {
     raw_.extent = extent;
     return *this;
   }
@@ -467,5 +467,6 @@ public:
 private:
   char storage_[byteSize]{};
 };
+
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_DESCRIPTOR_H_

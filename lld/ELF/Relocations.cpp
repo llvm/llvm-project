@@ -1158,8 +1158,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   // When producing an executable, we can perform copy relocations (for
-  // STT_OBJECT) and canonical PLT (for STT_FUNC).
-  if (!config->shared) {
+  // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
+  if (!config->shared && sym.isShared()) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
                   getLocation(*sec, sym, offset));

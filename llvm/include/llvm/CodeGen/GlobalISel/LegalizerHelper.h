@@ -288,11 +288,14 @@ private:
 
   // Implements floating-point environment read/write via library function call.
   LegalizeResult createGetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI);
+                                       MachineInstr &MI,
+                                       LostDebugLocObserver &LocObserver);
   LegalizeResult createSetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI);
+                                       MachineInstr &MI,
+                                       LostDebugLocObserver &LocObserver);
   LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                         MachineInstr &MI);
+                                         MachineInstr &MI,
+                                         LostDebugLocObserver &LocObserver);
 
 public:
   /// Return the alignment to use for a stack temporary object with the given
@@ -410,6 +413,8 @@ public:
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  Register getDynStackAllocTargetPtr(Register SPReg, Register AllocSize,
+                                     Align Alignment, LLT PtrTy);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LegalizeResult lowerStackSave(MachineInstr &MI);
   LegalizeResult lowerStackRestore(MachineInstr &MI);
@@ -430,6 +435,7 @@ public:
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
+  LegalizeResult lowerVAArg(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given
@@ -437,13 +443,15 @@ public:
 LegalizerHelper::LegalizeResult
 createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
               const CallLowering::ArgInfo &Result,
-              ArrayRef<CallLowering::ArgInfo> Args, CallingConv::ID CC);
+              ArrayRef<CallLowering::ArgInfo> Args, CallingConv::ID CC,
+              LostDebugLocObserver &LocObserver, MachineInstr *MI = nullptr);
 
 /// Helper function that creates the given libcall.
 LegalizerHelper::LegalizeResult
 createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
               const CallLowering::ArgInfo &Result,
-              ArrayRef<CallLowering::ArgInfo> Args);
+              ArrayRef<CallLowering::ArgInfo> Args,
+              LostDebugLocObserver &LocObserver, MachineInstr *MI = nullptr);
 
 /// Create a libcall to memcpy et al.
 LegalizerHelper::LegalizeResult

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra -Wno-c++23-lambda-attributes
 #include "Inputs/std-coroutine.h"
 
 using std::suspend_always;
@@ -45,11 +45,6 @@ Co<int> non_marked_wrapper(int b) { return foo_coro(b); }
 } // namespace using_decl
 
 namespace lambdas {
-#define CORO_WRAPPER \
-  _Pragma("clang diagnostic push") \
-  _Pragma("clang diagnostic ignored \"-Wc++23-extensions\"") \
-  [[clang::coro_wrapper]] \
-  _Pragma("clang diagnostic pop")
 
 void foo() {
   auto coro_lambda = []() -> Gen<int> {
@@ -59,7 +54,7 @@ void foo() {
   auto not_allowed_wrapper = []() -> Gen<int> {
     return foo_coro(1);
   };
-  auto allowed_wrapper = [] CORO_WRAPPER() -> Gen<int> {
+  auto allowed_wrapper = [] [[clang::coro_wrapper]] () -> Gen<int> {
     return foo_coro(1);
   };
 }

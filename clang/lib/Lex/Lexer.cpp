@@ -1990,6 +1990,10 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   while (isPreprocessingNumberBody(C)) {
     CurPtr = ConsumeChar(CurPtr, Size, Result);
     PrevCh = C;
+    if (LangOpts.HLSL && C == '.' && (*CurPtr == 'x' || *CurPtr == 'r')) {
+      CurPtr -= Size;
+      break;
+    }
     C = getCharAndSize(CurPtr, Size);
   }
 
@@ -3208,8 +3212,8 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
     return false;
 
   // Check to see if we have <<<<<<< or >>>>.
-  if (!StringRef(CurPtr, BufferEnd - CurPtr).startswith("<<<<<<<") &&
-      !StringRef(CurPtr, BufferEnd - CurPtr).startswith(">>>> "))
+  if (!StringRef(CurPtr, BufferEnd - CurPtr).starts_with("<<<<<<<") &&
+      !StringRef(CurPtr, BufferEnd - CurPtr).starts_with(">>>> "))
     return false;
 
   // If we have a situation where we don't care about conflict markers, ignore

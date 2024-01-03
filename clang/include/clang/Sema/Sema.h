@@ -2102,7 +2102,7 @@ public:
                                  SourceLocation AttrLoc);
 
   CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
-  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+  bool CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs);
 
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
@@ -3737,6 +3737,9 @@ public:
                                               int X, int Y, int Z);
   HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                       HLSLShaderAttr::ShaderType ShaderType);
+  HLSLParamModifierAttr *
+  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
+                             HLSLParamModifierAttr::Spelling Spelling);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
@@ -3849,6 +3852,12 @@ public:
                                   const FunctionProtoType *NewType,
                                   unsigned *ArgPos = nullptr,
                                   bool Reversed = false);
+
+  bool FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
+                                           const FunctionDecl *NewFunction,
+                                           unsigned *ArgPos = nullptr,
+                                           bool Reversed = false);
+
   void HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                                   QualType FromType, QualType ToType);
 
@@ -3922,6 +3931,11 @@ public:
   ExprResult CheckConvertedConstantExpression(Expr *From, QualType T,
                                               APValue &Value, CCEKind CCE,
                                               NamedDecl *Dest = nullptr);
+
+  ExprResult
+  EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
+                                      CCEKind CCE, bool RequireInt,
+                                      const APValue &PreNarrowingValue);
 
   /// Abstract base class used to perform a contextual implicit
   /// conversion from an expression to any type passing a filter.
@@ -4785,8 +4799,6 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
-  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
-
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5630,7 +5642,6 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
-                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
@@ -7297,8 +7308,7 @@ public:
 
   /// ActOnLambdaExpr - This is called when the body of a lambda expression
   /// was successfully completed.
-  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                             Scope *CurScope);
+  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body);
 
   /// Does copying/destroying the captured variable have side effects?
   bool CaptureHasSideEffects(const sema::Capture &From);
@@ -8547,6 +8557,10 @@ public:
                                      TemplateParameterList *Params,
                                      TemplateArgumentLoc &Arg);
 
+  void NoteTemplateLocation(const NamedDecl &Decl,
+                            std::optional<SourceRange> ParamRange = {});
+  void NoteTemplateParameterLocation(const NamedDecl &Decl);
+
   ExprResult
   BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
                                           QualType ParamType,
@@ -9340,8 +9354,7 @@ public:
 
   QualType DeduceTemplateSpecializationFromInitializer(
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
-      const InitializationKind &Kind, MultiExprArg Init,
-      ParenListExpr *PL = nullptr);
+      const InitializationKind &Kind, MultiExprArg Init);
 
   QualType deduceVarTypeFromInitializer(VarDecl *VDecl, DeclarationName Name,
                                         QualType Type, TypeSourceInfo *TSI,
@@ -10996,11 +11009,19 @@ public:
 
   /// Called on well formed
   /// \#pragma clang fp reassociate
-  void ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled);
+  /// or
+  /// \#pragma clang fp reciprocal
+  void ActOnPragmaFPValueChangingOption(SourceLocation Loc, PragmaFPKind Kind,
+                                        bool IsEnabled);
 
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
   void ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled);
+
+  /// ActOnPragmaCXLimitedRange - Called on well formed
+  /// \#pragma STDC CX_LIMITED_RANGE
+  void ActOnPragmaCXLimitedRange(SourceLocation Loc,
+                                 LangOptions::ComplexRangeKind Range);
 
   /// Called on well formed '\#pragma clang fp' that has option 'exceptions'.
   void ActOnPragmaFPExceptions(SourceLocation Loc,
@@ -13824,6 +13845,9 @@ private:
                                     CallExpr *TheCall);
   bool CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool ParseSVEImmChecks(CallExpr *TheCall,
+                         SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
+  bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckARMCoprocessorImmediate(const TargetInfo &TI, const Expr *CoprocArg,

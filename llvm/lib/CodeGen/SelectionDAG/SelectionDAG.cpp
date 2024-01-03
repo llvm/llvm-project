@@ -2881,6 +2881,12 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   }
   }
 
+  // Fallback - this is a splat if all demanded elts are the same constant.
+  if (computeKnownBits(V, DemandedElts, Depth).isConstant()) {
+    UndefElts = ~DemandedElts;
+    return true;
+  }
+
   return false;
 }
 
@@ -5016,7 +5022,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
   case ISD::AND:
-  case ISD::OR:
   case ISD::XOR:
   case ISD::ROTL:
   case ISD::ROTR:
@@ -5055,6 +5060,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // Matches hasPoisonGeneratingFlags().
     return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
                              Op->getFlags().hasNoUnsignedWrap());
+
+  // Matches hasPoisonGeneratingFlags().
+  case ISD::OR:
+    return ConsiderFlags && Op->getFlags().hasDisjoint();
 
   case ISD::INSERT_VECTOR_ELT:{
     // Ensure that the element index is in bounds.
@@ -5464,7 +5473,7 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
         Ops[i].getOperand(0).getValueType() != VT ||
         (IdentitySrc && Ops[i].getOperand(0) != IdentitySrc) ||
         !isa<ConstantSDNode>(Ops[i].getOperand(1)) ||
-        cast<ConstantSDNode>(Ops[i].getOperand(1))->getAPIntValue() != i) {
+        Ops[i].getConstantOperandAPInt(1) != i) {
       IsIdentity = false;
       break;
     }
@@ -5718,12 +5727,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // Skip unnecessary zext_inreg pattern:
     // (zext (trunc x)) -> x iff the upper bits are known zero.
-    // TODO: Generalize to just the MaskedValueIsZero check?
+    // TODO: Remove (zext (trunc (and x, c))) exception which some targets
+    // use to recognise zext_inreg patterns.
     if (OpOpcode == ISD::TRUNCATE) {
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        if (OpOp.getOpcode() == ISD::AssertZext ||
-            OpOp.getOpcode() == ISD::SRL) {
+        if (OpOp.getOpcode() != ISD::AND) {
           APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
                                                N1.getScalarValueSizeInBits());
           if (MaskedValueIsZero(OpOp, HiBits)) {
@@ -6852,8 +6861,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // expanding copies of large vectors from registers. This only works for
     // fixed length vectors, since we need to know the exact number of
     // elements.
-    if (N2C && N1.getOperand(0).getValueType().isFixedLengthVector() &&
-        N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0) {
+    if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
+        N1.getOperand(0).getValueType().isFixedLengthVector()) {
       unsigned Factor =
         N1.getOperand(0).getValueType().getVectorNumElements();
       return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
@@ -6970,7 +6979,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
     // the concat have the same type as the extract.
-    if (N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0 &&
+    if (N1.getOpcode() == ISD::CONCAT_VECTORS &&
         VT == N1.getOperand(0).getValueType()) {
       unsigned Factor = VT.getVectorMinNumElements();
       return N1.getOperand(N2C->getZExtValue() / Factor);
@@ -7402,7 +7411,7 @@ static bool isMemSrcFromConstant(SDValue Src, ConstantDataArraySlice &Slice) {
            Src.getOperand(0).getOpcode() == ISD::GlobalAddress &&
            Src.getOperand(1).getOpcode() == ISD::Constant) {
     G = cast<GlobalAddressSDNode>(Src.getOperand(0));
-    SrcDelta = cast<ConstantSDNode>(Src.getOperand(1))->getZExtValue();
+    SrcDelta = Src.getConstantOperandVal(1);
   }
   if (!G)
     return false;

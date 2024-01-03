@@ -49,10 +49,12 @@
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: llvm-ar rcs %t.a %t.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld.lld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
+// RUN:   --linker-path=/usr/bin/ld.lld -- --whole-archive %t.a --no-whole-archive \
+// RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
 
-// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared
+// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -mllvm -openmp-opt-disable \
@@ -123,8 +125,8 @@
 // RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b -- \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LINKER-ARGS
 
-// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}-Wl,a
-// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}-Wl,a -Wl,b
+// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}a
+// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}a b
 
 // RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -ldummy \
 // RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b -- \

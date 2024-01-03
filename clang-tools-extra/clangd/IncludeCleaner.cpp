@@ -95,7 +95,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if (AST.tuPath().endswith(PHeader))
+      if (AST.tuPath().ends_with(PHeader))
         return false;
     }
   }
@@ -397,10 +397,10 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
-  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
-                                .getHeaderSearchInfo()
-                                .getModuleMap()
-                                .getBuiltinDir();
+  OptionalDirectoryEntryRef ResourceDir = AST.getPreprocessor()
+                                              .getHeaderSearchInfo()
+                                              .getModuleMap()
+                                              .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
       AST.getPragmaIncludes().get(), AST.getPreprocessor(),

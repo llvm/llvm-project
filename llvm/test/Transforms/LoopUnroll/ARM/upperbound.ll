@@ -18,8 +18,8 @@ define void @test(ptr %x, i32 %n) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[REM]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY_1:%.*]], label [[WHILE_END]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[REM]], 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY_1:%.*]]
 ; CHECK:       while.body.1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[TMP1]], 10
