@@ -1089,6 +1089,7 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
 }
 
 defm : SMPrefetchPat<"INST", i32imm_zero>;
+let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
 defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 //===----------------------------------------------------------------------===//

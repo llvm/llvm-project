@@ -4024,7 +4024,9 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
-  if (!Subtarget->hasVectorPrefetch() && Op->isDivergent())
+  if (Op->isDivergent() &&
+      (!Subtarget->hasVectorPrefetch() || !Op.getConstantOperandVal(4)))
+    // Cannot do I$ prefetch with divergent pointer.
     return SDValue();
 
   switch (cast<MemSDNode>(Op)->getAddressSpace()) {

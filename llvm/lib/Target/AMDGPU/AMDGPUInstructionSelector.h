@@ -364,6 +364,9 @@ private:
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;
 
+  void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
+
   bool isInlineImmediate16(int64_t Imm) const;
   bool isInlineImmediate32(int64_t Imm) const;
   bool isInlineImmediate64(int64_t Imm) const;

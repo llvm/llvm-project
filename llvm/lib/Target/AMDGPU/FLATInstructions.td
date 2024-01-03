@@ -1805,6 +1805,69 @@ defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2f
 
 } // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
 
+def PrefetchLoc: SDNodeXForm<timm, [{
+  uint32_t V = N->getZExtValue();
+  return CurDAG->getTargetConstant((AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK)) <<
+                                   AMDGPU::CPol::SCOPE_SHIFT, SDLoc(N), MVT::i32);
+}]>;
+
+def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                             (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                             [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+  }];
+}
+
+def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                               (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+  }];
+}
+
+let SubtargetPredicate = HasVectorPrefetch in {
+  def : GCNPat <
+    (prefetch_flat (FlatOffset i64:$vaddr, i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
+    (FLAT_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  >;
+
+  def : GCNPat <
+    (prefetch_global (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
+    (GLOBAL_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  >;
+
+  def : GCNPat <
+    (prefetch_global (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), i32imm_zero, (i32 timm:$loc), i32imm_one),
+    (GLOBAL_PREFETCH_B8_SADDR $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = 11;
+  }
+
+  // Patterns for forced vector prefetch with rw = 1.
+  def : GCNPat <
+    (prefetch_flat (FlatOffset i64:$vaddr, i32:$offset), i32imm_one, (i32 timm:$loc), i32imm_one),
+    (FLAT_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = 25;
+  }
+
+  def : GCNPat <
+    (prefetch_global (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), i32imm_one, (i32 timm:$loc), i32imm_one),
+    (GLOBAL_PREFETCH_B8 $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = 25;
+  }
+
+  def : GCNPat <
+    (prefetch_global (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), i32imm_one, (i32 timm:$loc), i32imm_one),
+    (GLOBAL_PREFETCH_B8_SADDR $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = 30;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Target
 //===----------------------------------------------------------------------===//

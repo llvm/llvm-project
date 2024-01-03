@@ -6174,6 +6174,14 @@ void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
   MIB.addImm(ExpVal);
 }
 
+void AMDGPUInstructionSelector::renderPrefetchLoc(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  uint32_t V = MI.getOperand(2).getImm();
+  MIB.addImm((AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK))
+             << AMDGPU::CPol::SCOPE_SHIFT);
+}
+
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
   return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
 }
