@@ -45,7 +45,8 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG drop_while_view
+    : public view_interface<drop_while_view<_View, _Pred>> {
 public:
   _LIBCPP_HIDE_FROM_ABI drop_while_view()
     requires default_initializable<_View> && default_initializable<_Pred>
