@@ -1,8 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  )
-
 set(LIBS
   MLIRIR
   MLIRSupport
