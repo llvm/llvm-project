@@ -35,7 +35,8 @@ public:
           Entry.addInstruction(Instructions[I % Instructions.size()]);
         }
       }
-      Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
+      Entry.addReturn(State.getExegesisTarget(), CleanupMemory,
+                      State.usingDummyPerfCounters());
     };
   }
 
@@ -67,7 +68,8 @@ public:
         const MCInstrDesc &MCID = Filler.MCII->get(Opcode);
         if (!MCID.isTerminator())
           continue;
-        Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
+        Entry.addReturn(State.getExegesisTarget(), CleanupMemory,
+                        State.usingDummyPerfCounters());
         return;
       }
 
@@ -112,7 +114,8 @@ public:
 
       // Set up the exit basic block.
       Loop.MBB->addSuccessor(Exit.MBB, BranchProbability::getZero());
-      Exit.addReturn(State.getExegesisTarget(), CleanupMemory);
+      Exit.addReturn(State.getExegesisTarget(), CleanupMemory,
+                     State.usingDummyPerfCounters());
     };
   }
 

@@ -82,7 +82,7 @@ private:
     Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
                                   RegisterInitialValues, Fill, AsmStream, Key,
-                                  false));
+                                  false, false));
     Expected<ExecutableFunction> ExecFunc = ExecutableFunction::create(
         createTargetMachine(), getObjectFromBuffer(AsmStream.str()));
 

@@ -80,6 +80,8 @@ public:
     return *RegNameToRegNoMapping;
   }
 
+  bool usingDummyPerfCounters() const { return UseDummyPerfCounters; }
+
 private:
   std::unique_ptr<const DenseMap<StringRef, unsigned>>
   createOpcodeNameToOpcodeIdxMapping() const;
@@ -88,7 +90,7 @@ private:
   createRegNameToRegNoMapping() const;
 
   LLVMState(std::unique_ptr<const TargetMachine> TM, const ExegesisTarget *ET,
-            const PfmCountersInfo *PCI);
+            const PfmCountersInfo *PCI, bool UseDummyPerfCounters_);
 
   const ExegesisTarget *TheExegesisTarget;
   std::unique_ptr<const TargetMachine> TheTargetMachine;
@@ -98,6 +100,8 @@ private:
   std::unique_ptr<const DenseMap<StringRef, unsigned>>
       OpcodeNameToOpcodeIdxMapping;
   std::unique_ptr<const DenseMap<StringRef, unsigned>> RegNameToRegNoMapping;
+
+  const bool UseDummyPerfCounters;
 };
 
 } // namespace exegesis
