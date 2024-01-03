@@ -149,3 +149,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i1 @llvm.amdgcn.is.shared(ptr nocapture) #0
 
 attributes #0 = { nounwind readnone speculatable }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

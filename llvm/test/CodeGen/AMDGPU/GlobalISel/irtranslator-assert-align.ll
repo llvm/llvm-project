@@ -209,3 +209,6 @@ entry:
   %call = tail call ptr addrspace(1) @returns_ptr_align8()
   ret ptr addrspace(1) %call
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

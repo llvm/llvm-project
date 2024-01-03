@@ -23,3 +23,6 @@ entry:
   store volatile i64 0, ptr addrspace(5) %alloca, align 4
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

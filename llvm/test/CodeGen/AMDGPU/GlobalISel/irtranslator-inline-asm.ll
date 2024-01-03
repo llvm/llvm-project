@@ -7,7 +7,7 @@ define amdgpu_kernel void @asm_convergent() convergent{
   ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   INLINEASM &s_barrier, 33 /* sideeffect isconvergent attdialect */, !0
+  ; CHECK-NEXT:   INLINEASM &s_barrier, 33 /* sideeffect isconvergent attdialect */, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "s_barrier", ""() convergent, !srcloc !0
   ret void
@@ -19,8 +19,8 @@ define amdgpu_kernel void @asm_simple_memory_clobber() {
   ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, !0
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, !0
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, !1
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "", "~{memory}"(), !srcloc !0
   call void asm sideeffect "", ""(), !srcloc !0
@@ -33,7 +33,7 @@ define amdgpu_kernel void @asm_simple_vgpr_clobber() {
   ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 v0, 7", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0, !0
+  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 v0, 7", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "v_mov_b32 v0, 7", "~{v0}"(), !srcloc !0
   ret void
@@ -45,7 +45,7 @@ define amdgpu_kernel void @asm_simple_sgpr_clobber() {
   ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, 7", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $sgpr0, !0
+  ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, 7", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $sgpr0, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "s_mov_b32 s0, 7", "~{s0}"(), !srcloc !0
   ret void
@@ -57,7 +57,7 @@ define amdgpu_kernel void @asm_simple_agpr_clobber() {
   ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   INLINEASM &"; def a0", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $agpr0, !0
+  ; CHECK-NEXT:   INLINEASM &"; def a0", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $agpr0, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "; def a0", "~{a0}"(), !srcloc !0
   ret void
@@ -66,7 +66,7 @@ define amdgpu_kernel void @asm_simple_agpr_clobber() {
 define i32 @asm_vgpr_early_clobber() {
   ; CHECK-LABEL: name: asm_vgpr_early_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 7; v_mov_b32 $1, 7", 1 /* sideeffect attdialect */, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %7, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %8, !0
+  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 7; v_mov_b32 $1, 7", 1 /* sideeffect attdialect */, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %7, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %8, !1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %7
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %8
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
@@ -331,4 +331,6 @@ define amdgpu_kernel void @asm_constraint_n_n()  {
   ret void
 }
 
+!llvm.module.flags = !{!1}
 !0 = !{i32 70}
+!1 = !{i32 1, !"amdgpu_code_object_version", i32 500}
