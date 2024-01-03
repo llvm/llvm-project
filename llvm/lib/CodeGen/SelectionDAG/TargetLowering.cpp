@@ -1064,10 +1064,9 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
   SDValue ResultAVG =
-      DAG.getNode(AVGOpc, DL, NVT, DAG.getNode(ISD::TRUNCATE, DL, NVT, ExtOpA),
-                  DAG.getNode(ISD::TRUNCATE, DL, NVT, ExtOpB));
-  return DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL, VT,
-                     ResultAVG);
+      DAG.getNode(AVGOpc, DL, NVT, DAG.getExtOrTrunc(IsSigned, ExtOpA, DL, NVT),
+                  DAG.getExtOrTrunc(IsSigned, ExtOpB, DL, NVT));
+  return DAG.getExtOrTrunc(IsSigned, ResultAVG, DL, VT);
 }
 
 /// Look at Op. At this point, we know that only the OriginalDemandedBits of the
