@@ -5,12 +5,12 @@
 // - Merge indexed profiles with supplementary sample-pgo profiles
 // - Check that the block counters for function foo is scaled up.
 
-// REQUIRES: linux
 // REQUIRES: lld-available
 
-// The test failed on ppc when building the instrumented binary.
+// Building the instrumented binary will fail because lld doesn't support
+// big-endian ELF for PPC (aka ABI 1).
 // ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
-// UNSUPPORTED: ppc
+// UNSUPPORTED: ppc && host-byteorder-big-endian
 
 // This compiler-rt test aims to have test coverage for the IRPGO name format
 // of local-linkage functions during raw profile generation. The C++ functions
