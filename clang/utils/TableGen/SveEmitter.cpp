@@ -1603,6 +1603,25 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
 
+  OS << "void __arm_za_disable(void) __arm_streaming_compatible;\n\n";
+
+  OS << "__ai bool __arm_has_sme(void) __arm_streaming_compatible {\n";
+  OS << "  uint64_t x0, x1;\n";
+  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
+  OS << "  return x0 & (1ULL << 63);\n";
+  OS << "}\n\n";
+
+  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
+        "{\n";
+  OS << "  uint64_t x0, x1;\n";
+  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
+  OS << "  return x0 & 1;\n";
+  OS << "}\n\n";
+
+  OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
+        "__arm_streaming_compatible __arm_shared_za "
+        "{ }\n\n";
+
   createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
 
   OS << "#ifdef __cplusplus\n";
