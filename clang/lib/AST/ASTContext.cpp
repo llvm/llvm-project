@@ -2748,21 +2748,20 @@ bool ASTContext::hasUniqueObjectRepresentations(
     QualType Ty, bool CheckIfTriviallyCopyable) const {
   // C++17 [meta.unary.prop]:
   //   The predicate condition for a template specialization
-  //   has_unique_object_representations<T> shall be
-  //   satisfied if and only if:
+  //   has_unique_object_representations<T> shall be satisfied if and only if:
   //     (9.1) - T is trivially copyable, and
   //     (9.2) - any two objects of type T with the same value have the same
-  //     object representation, where two objects
-  //   of array or non-union class type are considered to have the same value
-  //   if their respective sequences of
-  //   direct subobjects have the same values, and two objects of union type
-  //   are considered to have the same
-  //   value if they have the same active member and the corresponding members
-  //   have the same value.
+  //     object representation, where:
+  //     - two objects of array or non-union class type are considered to have
+  //       the same value if their respective sequences of direct subobjects
+  //       have the same values, and
+  //     - two objects of union type are considered to have the same value if
+  //       they have the same active member and the corresponding members have
+  //       the same value.
   //   The set of scalar types for which this condition holds is
-  //   implementation-defined. [ Note: If a type has padding
-  //   bits, the condition does not hold; otherwise, the condition holds true
-  //   for unsigned integral types. -- end note ]
+  //   implementation-defined. [ Note: If a type has padding bits, the condition
+  //   does not hold; otherwise, the condition holds true for unsigned integral
+  //   types. -- end note ]
   assert(!Ty.isNull() && "Null QualType sent to unique object rep check");
 
   // Arrays are unique only if their element type is unique.
