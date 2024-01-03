@@ -31,6 +31,8 @@ func.func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // -----
 
+// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
+
 // CHECK-LABEL: func @vec1d_2
 func.func @vec1d_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
@@ -47,8 +49,10 @@ func.func @vec1d_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    %P = memref.dim %B, %c2 : memref<?x?x?xf32>
 
 // CHECK:for [[IV3:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
+// CHECK-NEXT: %[[S1:.*]] = affine.apply #[[$map_id1]]([[IV3]])[[[ARG_M]]]
+// CHECK-NEXT: %[[S2:.*]] = vector.create_mask %[[S1]] : vector<128xi1>
 // CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}}: f32
-// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %[[CST]] : memref<?x?xf32>, vector<128xf32>
+// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %[[CST]], %[[S2]] : memref<?x?xf32>, vector<128xf32>
    affine.for %i3 = 0 to %M { // vectorized
      %a3 = affine.load %A[%c0, %i3] : memref<?x?xf32>
    }
@@ -88,6 +92,8 @@ func.func @vec1d_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // -----
 
+// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
+
 // CHECK-LABEL: func @vector_add_2d
 func.func @vector_add_2d(%M : index, %N : index) -> f32 {
   %A = memref.alloc (%M, %N) : memref<?x?xf32, 0>
@@ -115,8 +121,10 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
     affine.for %i5 = 0 to %N {
       // CHECK: %[[SPLAT2:.*]] = arith.constant dense<2.000000e+00> : vector<128xf32>
       // CHECK: %[[SPLAT1:.*]] = arith.constant dense<1.000000e+00> : vector<128xf32>
-      // CHECK: %[[A5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
-      // CHECK: %[[B5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
+      // CHECK: %[[S1:.*]] = affine.apply #[[$map_id1]]
+      // CHECK: %[[S2:.*]] = vector.create_mask %[[S1]] : vector<128xi1>
+      // CHECK: %[[A5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}}, %[[S2]] : memref<?x?xf32>, vector<128xf32>
+      // CHECK: %[[B5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}}, %[[S2]] : memref<?x?xf32>, vector<128xf32>
       // CHECK: %[[S5:.*]] = arith.addf %[[A5]], %[[B5]] : vector<128xf32>
       // CHECK: %[[S6:.*]] = arith.addf %[[S5]], %[[SPLAT1]] : vector<128xf32>
       // CHECK: %[[S7:.*]] = arith.addf %[[S5]], %[[SPLAT2]] : vector<128xf32>

@@ -1200,8 +1200,32 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = state.builder.create<vector::TransferReadOp>(
-      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices, permutationMap);
+  VectorType inferredMaskType =
+      inferTransferOpMaskType(vectorType, permutationMap);
+  auto inferredShape = inferredMaskType.getShape();
+  Value mask = Value();
+  int vectorRank = state.strategy->vectorSizes.size();
+  if (vectorRank == 1 && inferredShape.size() == 1 &&
+      inferredShape[0] == state.strategy->vectorSizes[0]) {
+    Operation *loopOp = state.builder.getInsertionBlock()->getParentOp();
+    auto affineFor = cast<AffineForOp>(loopOp);
+    if (affineFor.getStep() == state.strategy->vectorSizes[0])
+      mask = createMask(affineFor, state);
+  }
+
+  Operation *transfer;
+  Location loc = loadOp.getLoc();
+  if (mask) {
+    Value padding = state.builder.create<arith::ConstantOp>(
+        loc, elementType, state.builder.getZeroAttr(elementType));
+    SmallVector<bool> inBounds(vectorRank, false);
+    transfer = state.builder.create<vector::TransferReadOp>(
+        loc, vectorType, loadOp.getMemRef(), indices, permutationMap, padding,
+        mask, state.builder.getBoolArrayAttr(inBounds));
+  } else {
+    transfer = state.builder.create<vector::TransferReadOp>(
+        loc, vectorType, loadOp.getMemRef(), indices, permutationMap);
+  }
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);
@@ -1243,9 +1267,34 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = state.builder.create<vector::TransferWriteOp>(
-      storeOp.getLoc(), vectorValue, storeOp.getMemRef(), indices,
-      permutationMap);
+  Type elementType = memRefType.getElementType();
+  auto vectorType = VectorType::get(state.strategy->vectorSizes, elementType);
+  VectorType inferredMaskType =
+      inferTransferOpMaskType(vectorType, permutationMap);
+  auto inferredShape = inferredMaskType.getShape();
+  Value mask = Value();
+  int vectorRank = state.strategy->vectorSizes.size();
+  if (vectorRank == 1 && inferredShape.size() == 1 &&
+      inferredShape[0] == state.strategy->vectorSizes[0]) {
+    Operation *loopOp = state.builder.getInsertionBlock()->getParentOp();
+    auto affineFor = cast<AffineForOp>(loopOp);
+    if (affineFor.getStep() == state.strategy->vectorSizes[0])
+      mask = createMask(affineFor, state);
+  }
+
+  Operation *transfer;
+  Location loc = storeOp.getLoc();
+  if (mask) {
+    SmallVector<bool> inBounds(vectorRank, false);
+    transfer = state.builder.create<vector::TransferWriteOp>(
+        loc, vectorValue, storeOp.getMemRef(), indices,
+        AffineMapAttr::get(permutationMap), mask,
+        state.builder.getBoolArrayAttr(inBounds));
+  } else {
+    transfer = state.builder.create<vector::TransferWriteOp>(
+        loc, vectorValue, storeOp.getMemRef(), indices, permutationMap);
+  }
+
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << transfer);
 
   // Register replacement for future uses in the scope.
