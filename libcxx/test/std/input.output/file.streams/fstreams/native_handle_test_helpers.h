@@ -9,36 +9,40 @@
 #ifndef TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H
 #define TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H
 
-#include <cassert>
-#include <concepts>
-#include <cstdio>
-#include <fstream>
-#include <filesystem>
-#include <type_traits>
-#include <utility>
+#include "test_macros.h"
 
-#if defined(_WIN32)
-#  define WIN32_LEAN_AND_MEAN
-#  define NOMINMAX
-#  include <io.h>
-#  include <windows.h>
-#else
-#  include <fcntl.h>
-#endif
+#if TEST_STD_VER >= 26
 
-#include "check_assertion.h"
-#include "platform_support.h"
-#include "types.h"
+#  include <cassert>
+#  include <concepts>
+#  include <cstdio>
+#  include <fstream>
+#  include <filesystem>
+#  include <type_traits>
+#  include <utility>
+
+#  if defined(_WIN32)
+#    define WIN32_LEAN_AND_MEAN
+#    define NOMINMAX
+#    include <io.h>
+#    include <windows.h>
+#  else
+#    include <fcntl.h>
+#  endif
+
+#  include "check_assertion.h"
+#  include "platform_support.h"
+#  include "types.h"
 
 inline bool is_handle_valid(NativeHandleT handle) {
-#if defined(_WIN32)
+#  if defined(_WIN32)
   BY_HANDLE_FILE_INFORMATION fileInformation;
   return GetFileInformationByHandle(handle, &fileInformation));
-#elif __has_include(<unistd.h>) // POSIX
+#  elif __has_include(<unistd.h>) // POSIX
   return fcntl(handle, F_GETFL) != -1 || errno != EBADF;
-#else
-#  error "Provide a native file handle!"
-#endif
+#  else
+#    error "Provide a native file handle!"
+#  endif
 }
 
 template <typename CharT, typename StreamT>
@@ -91,5 +95,7 @@ inline void test_native_handle_type() {
   static_assert(std::semiregular<typename StreamT::native_handle_type>);
   static_assert(std::is_same_v<typename StreamT::native_handle_type, NativeHandleT>);
 }
+
+#endif // #if TEST_STD_VER >= 26
 
 #endif // TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H

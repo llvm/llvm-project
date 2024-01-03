@@ -23,10 +23,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
-
-#if TEST_STD_VER >= 26
-#  include "../native_handle_test_helpers.h"
-#endif
+#include "../native_handle_test_helpers.h"
 
 int main(int, char**)
 {
