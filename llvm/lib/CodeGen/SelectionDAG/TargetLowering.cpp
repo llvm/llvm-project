@@ -3353,8 +3353,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // Try to transform the select condition based on the current demanded
     // elements.
-    APInt UndefSel, UndefZero;
-    if (SimplifyDemandedVectorElts(Sel, DemandedElts, UndefSel, UndefZero, TLO,
+    APInt UndefSel, ZeroSel;
+    if (SimplifyDemandedVectorElts(Sel, DemandedElts, UndefSel, ZeroSel, TLO,
                                    Depth + 1))
       return true;
 
@@ -3377,7 +3377,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // select value element.
     APInt DemandedSel = DemandedElts & ~KnownZero;
     if (DemandedSel != DemandedElts)
-      if (SimplifyDemandedVectorElts(Sel, DemandedSel, UndefSel, UndefZero, TLO,
+      if (SimplifyDemandedVectorElts(Sel, DemandedSel, UndefSel, ZeroSel, TLO,
                                      Depth + 1))
         return true;
 
