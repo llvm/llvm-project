@@ -2902,21 +2902,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (!Ty->getScalarType()->isFP128Ty())
       return LT.first;
     [[fallthrough]];
-  case ISD::FREM: {
-    // Scalable frem instructions will be replaced with Vector library calls.
-    if (Ty->isScalableTy()) {
-      SmallVector<Type *, 4> OpTypes;
-      for (auto &Op : CxtI->operands())
-        OpTypes.push_back(Op->getType());
-
-      InstructionCost ScalableCost =
-          getCallInstrCost(nullptr, Ty, OpTypes, CostKind);
-      return ScalableCost;
-    } else {
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info);
-    }
-  }
   case ISD::FMUL:
   case ISD::FDIV:
     // These nodes are marked as 'custom' just to lower them to SVE.

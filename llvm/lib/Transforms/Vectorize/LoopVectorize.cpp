@@ -6950,6 +6950,19 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
         Legal->isInvariant(Op2))
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
+    // Some targets replace frem with vector library calls.
+    if (I->getOpcode() == Instruction::FRem && VectorTy->isScalableTy()) {
+      LibFunc Func;
+      if (TLI->getLibFunc(I->getOpcode(), I->getType(), Func)) {
+        if (TLI->isFunctionVectorizable(TLI->getName(Func))) {
+          SmallVector<Type *, 4> OpTypes;
+          for (auto &Op : I->operands())
+            OpTypes.push_back(Op->getType());
+          return TTI.getCallInstrCost(nullptr, VectorTy, OpTypes, CostKind);
+        }
+      }
+    }
+
     SmallVector<const Value *, 4> Operands(I->operand_values());
     return TTI.getArithmeticInstrCost(
         I->getOpcode(), VectorTy, CostKind,
