@@ -330,8 +330,6 @@ enum NodeType : unsigned {
   // operand is VL.
   SETCC_VL,
 
-  // Vector select with an additional VL operand. This operation is unmasked.
-  VSELECT_VL,
   // General vmerge node with mask, true, false, passthru, and vl operands.
   VMERGE_VL,
 
