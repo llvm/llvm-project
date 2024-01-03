@@ -6558,7 +6558,8 @@ bool CombinerHelper::tryFoldSelectOfBinOps(GSelect *Select,
   if (LHS->getRHSReg() == RHS->getRHSReg()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      auto Sel = B.buildSelect(DstTy, Cond, LHS->getLHSReg(), RHS->getLHSReg());
+      auto Sel = B.buildSelect(DstTy, Cond, LHS->getLHSReg(), RHS->getLHSReg(),
+                               Select->getFlags());
       B.buildInstr(Opcode, {DstReg}, {Sel, LHS->getRHSReg()}, Flags);
     };
     return true;
@@ -6569,7 +6570,8 @@ bool CombinerHelper::tryFoldSelectOfBinOps(GSelect *Select,
   if (LHS->getLHSReg() == RHS->getLHSReg()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      auto Sel = B.buildSelect(DstTy, Cond, LHS->getRHSReg(), RHS->getRHSReg());
+      auto Sel = B.buildSelect(DstTy, Cond, LHS->getRHSReg(), RHS->getRHSReg(),
+                               Select->getFlags());
       B.buildInstr(Opcode, {DstReg}, {LHS->getLHSReg(), Sel}, Flags);
     };
     return true;
