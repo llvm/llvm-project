@@ -79,7 +79,7 @@ transform.sequence failures(propagate) {
 
 ## Transform Dialect Interpreter
 
-Since we don’t want to recompile the compiler every time we change a transformation, we can use a transform dialect interpreter pass to apply this transformation sequence to the payload IR. As we will see in the next chapter, it is possible to define custom passes or even integrate the transform interpreter into a larger pass. For now, we can use the existing test pass:
+Since we don’t want to recompile the compiler every time we change a transformation, we can use a Transform dialect interpreter pass to apply this transformation sequence to the payload IR. As we will see in the next chapter, it is possible to define custom passes or even integrate the transform interpreter into a larger pass. For now, we can use the existing test pass:
 
 
 ```sh
@@ -168,7 +168,7 @@ Besides producing new handles, the tiling transform operation _consumes_ the ope
 
 ## Handle Invalidation and Expensive Checks Mode
 
-Undefined behavior is difficult to grapple with when it does happen, so the transform dialect interpreter provides a set of additional expensive checks that detect most undefined behavior in the transform IR. For example, if we wanted to  use the `%arg1` handle after it is consumed, it would cause undefined behavior that manifests as an assertion in the debug build, and likely as a segmentation fault in the release mode.
+Undefined behavior is difficult to grapple with when it does happen, so the Transform dialect interpreter provides a set of additional expensive checks that detect most undefined behavior in the transform IR. For example, if we wanted to  use the `%arg1` handle after it is consumed, it would cause undefined behavior that manifests as an assertion in the debug build, and likely as a segmentation fault in the release mode.
 
 ```mlir
 transform.sequence failures(propagate) {
@@ -379,7 +379,7 @@ Finally, we would like to replace the call to the outlined function with a call 
 
 ## Tracking IR Modifications
 
-The transform dialect automatically tracks all IR changes that are made as part
+The Transform dialect automatically tracks all IR changes that are made as part
 of transform ops. (Implementations must use the provided rewriter to modify IR.)
 If a payload op is erased, it is automatically removed from all handles that it
 is currently associated with. If a payload op is replaced, the transform dialect
