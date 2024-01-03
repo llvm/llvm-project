@@ -55015,6 +55015,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
+    case X86ISD::BLENDI:
+      if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
+        uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
+        uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
+        uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
+        MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
+        MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+        SDValue Sel =
+            DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
+        return DAG.getSelect(DL, VT, Sel, ConcatSubOperand(VT, Ops, 1),
+                             ConcatSubOperand(VT, Ops, 0));
+      }
+      break;
     case ISD::VSELECT:
       if (!IsSplat && Subtarget.hasAVX512() &&
           (VT.is256BitVector() ||
