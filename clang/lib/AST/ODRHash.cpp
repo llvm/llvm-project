@@ -1316,3 +1316,6 @@ void ODRHash::AddStructuralValue(const APValue &Value) {
     Value.Profile(ID);
   }
 }
+
+void ODRHash::AddInteger(unsigned Value) { ID.AddInteger(Value); }
+

@@ -104,6 +104,9 @@ public:
 
   void AddStructuralValue(const APValue &);
 
+  // Add intergers to ID.
+  void AddInteger(unsigned Value);
+
   static bool isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent);
 
 private:

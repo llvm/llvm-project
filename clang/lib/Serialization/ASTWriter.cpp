@@ -29,6 +29,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
@@ -3935,6 +3936,147 @@ public:
 
 } // namespace
 
+namespace {
+class SpecializationsLookupTrait {
+  ASTWriter &Writer;
+  llvm::SmallVector<DeclID, 64> DeclIDs;
+
+public:
+  using key_type = unsigned;
+  using key_type_ref = key_type;
+
+  /// A start and end index into DeclIDs, representing a sequence of decls.
+  using data_type = std::pair<unsigned, unsigned>;
+  using data_type_ref = const data_type &;
+
+  using hash_value_type = unsigned;
+  using offset_type = unsigned;
+
+  explicit SpecializationsLookupTrait(ASTWriter &Writer) : Writer(Writer) {}
+
+  template <typename Col> data_type getData(Col &&C) {
+    unsigned Start = DeclIDs.size();
+    for (auto *D : C)
+      DeclIDs.push_back(Writer.GetDeclRef(getDeclForLocalLookup(
+          Writer.getLangOpts(), const_cast<NamedDecl *>(D))));
+    return std::make_pair(Start, DeclIDs.size());
+  }
+
+  data_type
+  ImportData(const reader::SpecializationsLookupTrait::data_type &FromReader) {
+    unsigned Start = DeclIDs.size();
+    for (auto ID : FromReader)
+      DeclIDs.push_back(ID);
+    return std::make_pair(Start, DeclIDs.size());
+  }
+
+  static bool EqualKey(key_type_ref a, key_type_ref b) { return a == b; }
+
+  hash_value_type ComputeHash(key_type Name) { return Name; }
+
+  void EmitFileRef(raw_ostream &Out, ModuleFile *F) const {
+    assert(Writer.hasChain() &&
+           "have reference to loaded module file but no chain?");
+
+    using namespace llvm::support;
+    endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
+                            llvm::endianness::little);
+  }
+
+  std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &Out,
+                                                  key_type HashValue,
+                                                  data_type_ref Lookup) {
+    // 4 bytes for each slot.
+    unsigned KeyLen = 4;
+    unsigned DataLen = 4 * (Lookup.second - Lookup.first);
+
+    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type HashValue, unsigned) {
+    using namespace llvm::support;
+
+    endian::Writer LE(Out, llvm::endianness::little);
+    LE.write<uint32_t>(HashValue);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref, data_type Lookup,
+                unsigned DataLen) {
+    using namespace llvm::support;
+
+    endian::Writer LE(Out, llvm::endianness::little);
+    uint64_t Start = Out.tell();
+    (void)Start;
+    for (unsigned I = Lookup.first, N = Lookup.second; I != N; ++I)
+      LE.write<uint32_t>(DeclIDs[I]);
+    assert(Out.tell() - Start == DataLen && "Data length is wrong");
+  }
+};
+
+unsigned CalculateODRHashForSpecs(const Decl *Spec) {
+  assert(!isa<ClassTemplatePartialSpecializationDecl>(Spec) &&
+         !isa<VarTemplatePartialSpecializationDecl>(Spec) &&
+         "We shouldn't see partial specializations here.");
+
+  if (auto *FD = dyn_cast<FunctionDecl>(Spec)) {
+    auto *FDInfo = FD->getTemplateSpecializationInfo();
+    assert(FDInfo);
+    return GetTemplateArgsStableHash(FDInfo->TemplateArguments->asArray());
+  }
+
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Spec))
+    return GetTemplateArgsStableHash(CTSD->getTemplateArgs().asArray());
+
+  if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Spec))
+    return GetTemplateArgsStableHash(VTSD->getTemplateArgs().asArray());
+
+  llvm_unreachable("Unimaged specialization kind?");
+}
+} // namespace
+
+uint64_t ASTWriter::WriteSpecializationsLookupTable(
+    const NamedDecl *D,
+    llvm::SmallVectorImpl<const NamedDecl *> &Specializations) {
+  assert(D->isFirstDecl());
+
+  // Create the on-disk hash table representation.
+  MultiOnDiskHashTableGenerator<reader::SpecializationsLookupTrait,
+                                SpecializationsLookupTrait>
+      Generator;
+  SpecializationsLookupTrait Trait(*this);
+
+  llvm::DenseMap<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
+      SpecializationMaps;
+
+  for (auto *Specialization : Specializations) {
+    unsigned HashedValue = CalculateODRHashForSpecs(Specialization);
+
+    auto Iter = SpecializationMaps.find(HashedValue);
+    if (Iter == SpecializationMaps.end())
+      Iter = SpecializationMaps
+                 .try_emplace(HashedValue,
+                              llvm::SmallVector<const NamedDecl *, 4>())
+                 .first;
+
+    Iter->second.push_back(Specialization);
+  }
+
+  for (auto Iter : SpecializationMaps)
+    Generator.insert(Iter.first, Trait.getData(Iter.second), Trait);
+
+  uint64_t Offset = Stream.GetCurrentBitNo();
+
+  auto *Lookups =
+      Chain ? Chain->getLoadedSpecializationsLookupTables(D) : nullptr;
+  llvm::SmallString<4096> LookupTable;
+  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+
+  RecordData::value_type Record[] = {DECL_SPECIALIZATIONS};
+  Stream.EmitRecordWithBlob(DeclSpecializationsAbbrev, Record, LookupTable);
+
+  return Offset;
+}
+
 bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
                                        DeclContext *DC) {
   return Result.hasExternalDecls() &&
@@ -5085,7 +5227,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   // Keep writing types, declarations, and declaration update records
   // until we've emitted all of them.
-  Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/5);
+  Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/ 6);
   DeclTypesBlockStartOffset = Stream.GetCurrentBitNo();
   WriteTypeAbbrevs();
   WriteDeclAbbrevs();

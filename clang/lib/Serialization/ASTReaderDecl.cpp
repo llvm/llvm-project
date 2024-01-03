@@ -274,9 +274,10 @@ namespace clang {
       // FIXME: We should avoid this pattern of getting the ASTContext.
       ASTContext &C = D->getASTContext();
 
-      auto *&LazySpecializations = D->getCommonPtr()->LazySpecializations;
+      auto *&ExternalSpecializations =
+          D->getCommonPtr()->ExternalSpecializations;
 
-      if (auto &Old = LazySpecializations) {
+      if (auto &Old = ExternalSpecializations) {
         IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0]);
         llvm::sort(IDs);
         IDs.erase(std::unique(IDs.begin(), IDs.end()), IDs.end());
@@ -286,7 +287,7 @@ namespace clang {
       *Result = IDs.size();
       std::copy(IDs.begin(), IDs.end(), Result + 1);
 
-      LazySpecializations = Result;
+      ExternalSpecializations = Result;
     }
 
     template <typename DeclT>
@@ -425,6 +426,9 @@ namespace clang {
     void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
     std::pair<uint64_t, uint64_t> VisitDeclContext(DeclContext *DC);
+
+    void ReadSpecializations(ModuleFile &M, Decl *D,
+                             llvm::BitstreamCursor &Cursor);
 
     template<typename T>
     RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
@@ -2447,10 +2451,14 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   mergeRedeclarableTemplate(D, Redecl);
 
   if (ThisDeclID == Redecl.getFirstID()) {
-    // This ClassTemplateDecl owns a CommonPtr; read it to keep track of all of
-    // the specializations.
+    // This ClassTemplateDecl owns a CommonPtr; read it to keep track of all
+    // of the specializations.
     SmallVector<serialization::DeclID, 32> SpecIDs;
     readDeclIDList(SpecIDs);
+
+    if (Record.readInt())
+      ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
+
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
   }
 
@@ -2479,6 +2487,10 @@ void ASTDeclReader::VisitVarTemplateDecl(VarTemplateDecl *D) {
     // the specializations.
     SmallVector<serialization::DeclID, 32> SpecIDs;
     readDeclIDList(SpecIDs);
+
+    if (Record.readInt())
+      ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
+
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
   }
 }
@@ -2582,6 +2594,9 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
     SmallVector<serialization::DeclID, 32> SpecIDs;
     readDeclIDList(SpecIDs);
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+
+    if (Record.readInt())
+      ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
   }
 }
 
@@ -2769,6 +2784,14 @@ ASTDeclReader::VisitDeclContext(DeclContext *DC) {
   uint64_t LexicalOffset = ReadLocalOffset();
   uint64_t VisibleOffset = ReadLocalOffset();
   return std::make_pair(LexicalOffset, VisibleOffset);
+}
+
+void ASTDeclReader::ReadSpecializations(ModuleFile &M, Decl *D,
+                                        llvm::BitstreamCursor &DeclsCursor) {
+  uint64_t Offset = ReadLocalOffset();
+  bool Failed = Reader.ReadSpecializations(M, DeclsCursor, Offset, D);
+  (void)Failed;
+  assert(!Failed);
 }
 
 template <typename T>
@@ -3821,6 +3844,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   switch ((DeclCode)MaybeDeclCode.get()) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
+  case DECL_SPECIALIZATIONS:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
   case DECL_TYPEDEF:
     D = TypedefDecl::CreateDeserialized(Context, ID);
@@ -4133,6 +4157,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
         ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, Offsets.second, ID))
       return nullptr;
   }
+
   assert(Record.getIdx() == Record.size());
 
   // Load any relevant update records.

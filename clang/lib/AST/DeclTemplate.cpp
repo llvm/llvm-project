@@ -331,14 +331,14 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   return Common;
 }
 
-void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
+void RedeclarableTemplateDecl::loadExternalSpecializations() const {
   // Grab the most recent declaration to ensure we've loaded any lazy
   // redeclarations of this template.
   CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
-  if (CommonBasePtr->LazySpecializations) {
+  if (CommonBasePtr->ExternalSpecializations) {
     ASTContext &Context = getASTContext();
-    uint32_t *Specs = CommonBasePtr->LazySpecializations;
-    CommonBasePtr->LazySpecializations = nullptr;
+    uint32_t *Specs = CommonBasePtr->ExternalSpecializations;
+    CommonBasePtr->ExternalSpecializations = nullptr;
     for (uint32_t I = 0, N = *Specs++; I != N; ++I)
       (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);
   }
@@ -356,6 +356,16 @@ RedeclarableTemplateDecl::findSpecializationImpl(
                      getASTContext());
   EntryType *Entry = Specs.FindNodeOrInsertPos(ID, InsertPos);
   return Entry ? SETraits::getDecl(Entry)->getMostRecentDecl() : nullptr;
+}
+
+void RedeclarableTemplateDecl::loadLazySpecializationsWithArgs(
+    ArrayRef<TemplateArgument> TemplateArgs) {
+  auto *ExternalSource = getASTContext().getExternalSource();
+  if (!ExternalSource)
+    return;
+
+  ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
+                                              TemplateArgs);
 }
 
 template<class Derived, class EntryType>
@@ -430,24 +440,23 @@ FunctionTemplateDecl::newCommon(ASTContext &C) const {
   return CommonPtr;
 }
 
-void FunctionTemplateDecl::LoadLazySpecializations() const {
-  loadLazySpecializationsImpl();
-}
-
 llvm::FoldingSetVector<FunctionTemplateSpecializationInfo> &
 FunctionTemplateDecl::getSpecializations() const {
-  LoadLazySpecializations();
+  loadExternalSpecializations();
   return getCommonPtr()->Specializations;
 }
 
 FunctionDecl *
 FunctionTemplateDecl::findSpecialization(ArrayRef<TemplateArgument> Args,
                                          void *&InsertPos) {
+  loadLazySpecializationsWithArgs(Args);
   return findSpecializationImpl(getSpecializations(), InsertPos, Args);
 }
 
 void FunctionTemplateDecl::addSpecialization(
       FunctionTemplateSpecializationInfo *Info, void *InsertPos) {
+  using SETraits = SpecEntryTraits<FunctionTemplateSpecializationInfo>;
+  loadLazySpecializationsWithArgs(SETraits::getTemplateArgs(Info));
   addSpecializationImpl<FunctionTemplateDecl>(getSpecializations(), Info,
                                               InsertPos);
 }
@@ -508,19 +517,15 @@ ClassTemplateDecl *ClassTemplateDecl::CreateDeserialized(ASTContext &C,
                                        DeclarationName(), nullptr, nullptr);
 }
 
-void ClassTemplateDecl::LoadLazySpecializations() const {
-  loadLazySpecializationsImpl();
-}
-
 llvm::FoldingSetVector<ClassTemplateSpecializationDecl> &
 ClassTemplateDecl::getSpecializations() const {
-  LoadLazySpecializations();
+  loadExternalSpecializations();
   return getCommonPtr()->Specializations;
 }
 
 llvm::FoldingSetVector<ClassTemplatePartialSpecializationDecl> &
 ClassTemplateDecl::getPartialSpecializations() const {
-  LoadLazySpecializations();
+  loadExternalSpecializations();
   return getCommonPtr()->PartialSpecializations;
 }
 
@@ -534,11 +539,14 @@ ClassTemplateDecl::newCommon(ASTContext &C) const {
 ClassTemplateSpecializationDecl *
 ClassTemplateDecl::findSpecialization(ArrayRef<TemplateArgument> Args,
                                       void *&InsertPos) {
+  loadLazySpecializationsWithArgs(Args);
   return findSpecializationImpl(getSpecializations(), InsertPos, Args);
 }
 
 void ClassTemplateDecl::AddSpecialization(ClassTemplateSpecializationDecl *D,
                                           void *InsertPos) {
+  using SETraits = SpecEntryTraits<ClassTemplateSpecializationDecl>;
+  loadLazySpecializationsWithArgs(SETraits::getTemplateArgs(D));
   addSpecializationImpl<ClassTemplateDecl>(getSpecializations(), D, InsertPos);
 }
 
@@ -546,6 +554,7 @@ ClassTemplatePartialSpecializationDecl *
 ClassTemplateDecl::findPartialSpecialization(
     ArrayRef<TemplateArgument> Args,
     TemplateParameterList *TPL, void *&InsertPos) {
+  loadLazySpecializationsWithArgs(Args);
   return findSpecializationImpl(getPartialSpecializations(), InsertPos, Args,
                                 TPL);
 }
@@ -900,6 +909,11 @@ FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
       FD, Template, TSK, TemplateArgs, ArgsAsWritten, POI, MSInfo);
 }
 
+void FunctionTemplateSpecializationInfo::loadExternalRedecls() {
+  getTemplate()->loadExternalSpecializations();
+  getTemplate()->loadLazySpecializationsWithArgs(TemplateArguments->asArray());
+}
+
 //===----------------------------------------------------------------------===//
 // ClassTemplateSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -1022,6 +1036,12 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
     return inst_from.get<ClassTemplatePartialSpecializationDecl *>()
       ->getSourceRange();
   }
+}
+
+void ClassTemplateSpecializationDecl::loadExternalRedecls() {
+  getSpecializedTemplate()->loadExternalSpecializations();
+  getSpecializedTemplate()->loadLazySpecializationsWithArgs(
+      getTemplateArgs().asArray());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1226,19 +1246,15 @@ VarTemplateDecl *VarTemplateDecl::CreateDeserialized(ASTContext &C,
                                      DeclarationName(), nullptr, nullptr);
 }
 
-void VarTemplateDecl::LoadLazySpecializations() const {
-  loadLazySpecializationsImpl();
-}
-
 llvm::FoldingSetVector<VarTemplateSpecializationDecl> &
 VarTemplateDecl::getSpecializations() const {
-  LoadLazySpecializations();
+  loadExternalSpecializations();
   return getCommonPtr()->Specializations;
 }
 
 llvm::FoldingSetVector<VarTemplatePartialSpecializationDecl> &
 VarTemplateDecl::getPartialSpecializations() const {
-  LoadLazySpecializations();
+  loadExternalSpecializations();
   return getCommonPtr()->PartialSpecializations;
 }
 
@@ -1252,17 +1268,21 @@ VarTemplateDecl::newCommon(ASTContext &C) const {
 VarTemplateSpecializationDecl *
 VarTemplateDecl::findSpecialization(ArrayRef<TemplateArgument> Args,
                                     void *&InsertPos) {
+  loadLazySpecializationsWithArgs(Args);
   return findSpecializationImpl(getSpecializations(), InsertPos, Args);
 }
 
 void VarTemplateDecl::AddSpecialization(VarTemplateSpecializationDecl *D,
                                         void *InsertPos) {
+  using SETraits = SpecEntryTraits<VarTemplateSpecializationDecl>;
+  loadLazySpecializationsWithArgs(SETraits::getTemplateArgs(D));
   addSpecializationImpl<VarTemplateDecl>(getSpecializations(), D, InsertPos);
 }
 
 VarTemplatePartialSpecializationDecl *
 VarTemplateDecl::findPartialSpecialization(ArrayRef<TemplateArgument> Args,
      TemplateParameterList *TPL, void *&InsertPos) {
+  loadLazySpecializationsWithArgs(Args);
   return findSpecializationImpl(getPartialSpecializations(), InsertPos, Args,
                                 TPL);
 }
@@ -1393,6 +1413,11 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
   return VarDecl::getSourceRange();
 }
 
+void VarTemplateSpecializationDecl::loadExternalRedecls() {
+  getSpecializedTemplate()->loadExternalSpecializations();
+  getSpecializedTemplate()->loadLazySpecializationsWithArgs(
+      getTemplateArgs().asArray());
+}
 
 //===----------------------------------------------------------------------===//
 // VarTemplatePartialSpecializationDecl Implementation
