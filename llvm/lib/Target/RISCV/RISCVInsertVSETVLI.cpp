@@ -1482,10 +1482,6 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
         return false;
     }
 
-    if (MI.getOperand(1).isReg() &&
-        RISCV::X0 != MI.getOperand(1).getReg())
-      return false;
-
     // Taken from MachineDominatorTree::dominates
     auto Dominates = [](const MachineInstr &A, const MachineInstr &B) {
       assert(A.getParent() == B.getParent());
@@ -1518,11 +1514,12 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 
     auto &AVL = MI.getOperand(1);
     auto &PrevAVL = PrevMI.getOperand(1);
-    bool AreSameAVL = AVL.isReg() && PrevAVL.isReg() &&
-                      AVL.getReg() == PrevAVL.getReg() &&
-                      !IsDefinedBetween(AVL.getReg(), PrevMI, MI);
-    if (AVL.isReg() && AVL.getReg() != RISCV::X0 && !AreSameAVL)
-      return false;
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
+      bool AreSameAVL = PrevAVL.isReg() && AVL.getReg() == PrevAVL.getReg() &&
+                        !IsDefinedBetween(AVL.getReg(), PrevMI, MI);
+      if (!AreSameAVL)
+        return false;
+    }
   }
 
   if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
