@@ -1,29 +1,17 @@
-; REQUIRES: native && x86_64-linux
+; REQUIRES: native && target-x86_64
 
-; RUN: lli --jit-linker=rtdyld \
-; RUN:     --generate=__dump_jit_debug_descriptor %s | FileCheck %s
+; RUN: lli --jit-linker=rtdyld --orc-lazy-debug=jit-debug-descriptor %s 2>&1 | FileCheck %s
+; RUN: lli --jit-linker=jitlink --orc-lazy-debug=jit-debug-descriptor %s 2>&1 | FileCheck %s
 ;
-; RUN: lli --jit-linker=jitlink \
-; RUN:     --generate=__dump_jit_debug_descriptor %s | FileCheck %s
+; Initial entry should be empty:
+; CHECK: jit_debug_descriptor 0x0000000000000000
 ;
-; CHECK: Reading __jit_debug_descriptor at 0x{{.*}}
-; CHECK: Version: 1
-; CHECK: Action: JIT_REGISTER_FN
-; CHECK:       Entry               Symbol File             Size  Previous Entry
-; CHECK: [ 0]  0x{{.*}}            0x{{.*}}              {{.*}}  0x0000000000000000
-
-target triple = "x86_64-unknown-unknown-elf"
-
-; Built-in symbol provided by the JIT
-declare void @__dump_jit_debug_descriptor(ptr)
-
-; Host-process symbol from the GDB JIT interface
-@__jit_debug_descriptor = external global i8, align 1
+; After adding the module it must not be empty anymore:
+; CHECK: jit_debug_descriptor 0x
+; CHECK-NOT:                    000000000000000
+; CHECK-SAME:                               {{[048c]}}
 
 define i32 @main() !dbg !9 {
-  %1 = alloca i32, align 4
-  store i32 0, ptr %1, align 4
-  call void @__dump_jit_debug_descriptor(ptr @__jit_debug_descriptor), !dbg !13
   ret i32 0, !dbg !14
 }
 
