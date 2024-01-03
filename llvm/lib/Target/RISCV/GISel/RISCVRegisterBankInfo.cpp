@@ -25,9 +25,14 @@ namespace llvm {
 namespace RISCV {
 
 const RegisterBankInfo::PartialMapping PartMappings[] = {
-    {0, 32, GPRBRegBank}, {0, 64, GPRBRegBank}, {0, 32, FPRBRegBank},
-    {0, 64, FPRBRegBank}, {0, 64, VRBRegBank},  {0, 128, VRBRegBank},
-    {0, 256, VRBRegBank}, {0, 512, VRBRegBank},
+    {0, 32, GPRBRegBank},
+    {0, 64, GPRBRegBank},
+    {0, 32, FPRBRegBank},
+    {0, 64, FPRBRegBank},
+    {0, 64, VRBRegBank},
+    {0, 128, VRBRegBank},
+    {0, 256, VRBRegBank},
+    {0, 512, VRBRegBank},
 };
 
 enum PartialMappingIdx {
