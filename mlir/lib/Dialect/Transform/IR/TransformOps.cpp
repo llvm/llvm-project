@@ -32,6 +32,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -1972,6 +1973,42 @@ void transform::NamedSequenceOp::build(OpBuilder &builder,
 
   buildSequenceBody(builder, state, rootType,
                     /*extraBindingTypes=*/TypeRange(), bodyBuilder);
+}
+
+//===----------------------------------------------------------------------===//
+// NumAssociationsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
+                                    transform::TransformState &state) {
+  size_t numAssociations =
+      llvm::TypeSwitch<Type, size_t>(getHandle().getType())
+          .Case([&](TransformHandleTypeInterface opHandle) {
+            return llvm::range_size(state.getPayloadOps(getHandle()));
+          })
+          .Case([&](TransformValueHandleTypeInterface valueHandle) {
+            return llvm::range_size(state.getPayloadValues(getHandle()));
+          })
+          .Case([&](TransformParamTypeInterface param) {
+            return llvm::range_size(state.getParams(getHandle()));
+          })
+          .Default([](Type) {
+            llvm_unreachable("unknown kind of transform dialect type");
+            return 0;
+          });
+  results.setParams(getNum().cast<OpResult>(),
+                    rewriter.getI64IntegerAttr(numAssociations));
+  return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::NumAssociationsOp::verify() {
+  // Verify that the result type accepts an i64 attribute as payload.
+  auto resultType = getNum().getType().cast<TransformParamTypeInterface>();
+  return resultType
+      .checkPayload(getLoc(), {Builder(getContext()).getI64IntegerAttr(0)})
+      .checkAndReport();
 }
 
 //===----------------------------------------------------------------------===//
