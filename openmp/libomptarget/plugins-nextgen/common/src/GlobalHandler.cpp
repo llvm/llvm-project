@@ -178,10 +178,12 @@ Expected<GPUProfGlobals>
 GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
                                              DeviceImageTy &Image) {
   GPUProfGlobals profdata;
-  const auto *elf = getOrCreateELFObjectFile(Device, Image);
-  profdata.targetTriple = elf->makeTriple();
-  // Iterate through
-  for (auto &sym : elf->symbols()) {
+  auto ELFObj = getELFObjectFile(Image);
+  if (!ELFObj)
+    return ELFObj.takeError();
+  profdata.targetTriple = ELFObj->makeTriple();
+  // Iterate through elf symbols
+  for (auto &sym : ELFObj->symbols()) {
     if (auto name = sym.getName()) {
       // Check if given current global is a profiling global based
       // on name
