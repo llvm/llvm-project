@@ -383,7 +383,7 @@ def hlfir_AnyOp : hlfir_Op<"any", [DeclareOpInterfaceMethods<MemoryEffectsOpInte
   let hasVerifier = 1;
 }
 
-def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def hlfir_CountOp : hlfir_Op<"count", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "COUNT transformational intrinsic";
   let description = [{
     Takes a logical and counts the number of true values.
@@ -391,14 +391,13 @@ def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments, DeclareOpInterf
 
   let arguments = (ins
     AnyFortranLogicalArrayObject:$mask,
-    Optional<AnyIntegerType>:$dim,
-    Optional<AnyIntegerType>:$kind
+    Optional<AnyIntegerType>:$dim
   );
 
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $mask  (`dim` $dim^)? (`kind` $kind^)?  attr-dict `:` functional-type(operands, results)
+    $mask  (`dim` $dim^)?  attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -464,6 +463,32 @@ def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
   let summary = "MINLOC transformational intrinsic";
   let description = [{
     Minlocs of an array.
+  }];
+
+  let arguments = (ins
+    AnyFortranArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    Optional<Type<AnyLogicalLike.predicate>>:$back,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "MAXLOC transformational intrinsic";
+  let description = [{
+    Maxlocs of an array.
   }];
 
   let arguments = (ins

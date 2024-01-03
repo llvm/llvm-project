@@ -974,7 +974,8 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%0> = load ir<%gep>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
+; CHECK-NEXT:   WIDEN ir<%0> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%pred> = fcmp oeq ir<%0>, ir<0.000000e+00>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = not ir<%pred>
 ; CHECK-NEXT: Successor(s): pred.store
@@ -1114,7 +1115,8 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION ir<%start>, -1
 ; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds ir<%ptr.iv>, ir<-1>
-; CHECK-NEXT:     WIDEN ir<%l> = load ir<%ptr.iv.next>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%ptr.iv.next>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
 ; CHECK-NEXT:     EMIT vp<[[NEG:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:   Successor(s): pred.store

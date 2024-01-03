@@ -79,7 +79,7 @@ void mlir::tblgen::emitDescriptionComment(StringRef description,
   raw_indented_ostream ros(os);
   StringRef trimmed = description.rtrim(" \t");
   ros.printReindented(trimmed, (Twine(prefix) + "/// ").str());
-  if (!trimmed.endswith("\n"))
+  if (!trimmed.ends_with("\n"))
     ros << "\n";
 }
 
@@ -123,6 +123,12 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
   os << "```\n\n";
 }
 
+/// Place `text` between backticks so that the Markdown processor renders it as
+/// inline code.
+static std::string backticks(const std::string &text) {
+  return '`' + text + '`';
+}
+
 static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
   // TODO: We should link to the trait/documentation of it. That also means we
   // should add descriptions to traits that can be queried.
@@ -137,7 +143,7 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
     StringRef traitName = trait.getDef().getValueAsString("trait");
     traitName.consume_back("::Trait");
     traitName.consume_back("::Impl");
-    if (ref.startswith("anonymous_"))
+    if (ref.starts_with("anonymous_"))
       name = traitName.str();
     if (isa<InterfaceTrait>(&trait)) {
       if (trait.getDef().isSubClassOf("SideEffectsTraitBase")) {
@@ -155,14 +161,14 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
           os << effect << " on " << rec->getValueAsString("resource");
         });
         os << "}";
-        effects.insert(os.str());
+        effects.insert(backticks(os.str()));
         name.append(llvm::formatv(" ({0})", traitName).str());
       }
-      interfaces.insert(name);
+      interfaces.insert(backticks(name));
       continue;
     }
 
-    traits.insert(name);
+    traits.insert(backticks(name));
   }
   if (!traits.empty()) {
     llvm::interleaveComma(traits, os << "\nTraits: ");

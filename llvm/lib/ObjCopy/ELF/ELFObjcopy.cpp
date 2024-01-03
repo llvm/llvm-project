@@ -180,7 +180,7 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return std::make_unique<BinaryWriter>(Obj, Out);
+    return std::make_unique<BinaryWriter>(Obj, Out, Config);
   case FileFormat::IHex:
     return std::make_unique<IHexWriter>(Obj, Out);
   default:

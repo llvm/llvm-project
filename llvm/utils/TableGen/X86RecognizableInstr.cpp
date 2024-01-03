@@ -125,6 +125,7 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   HasEVEX_K = Rec->getValueAsBit("hasEVEX_K");
   HasEVEX_KZ = Rec->getValueAsBit("hasEVEX_Z");
   HasEVEX_B = Rec->getValueAsBit("hasEVEX_B");
+  HasEVEX_NF = Rec->getValueAsBit("hasEVEX_NF");
   IsCodeGenOnly = Rec->getValueAsBit("isCodeGenOnly");
   IsAsmParserOnly = Rec->getValueAsBit("isAsmParserOnly");
   ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
@@ -185,6 +186,9 @@ void RecognizableInstr::processInstr(DisassemblerTables &tables,
               : (HasEVEX_KZ ? n##_KZ                                           \
                             : (HasEVEX_K ? n##_K : (HasEVEX_B ? n##_B : n)))))
 
+#define EVEX_NF(n) (HasEVEX_NF ? n##_NF : n)
+#define EVEX_B_NF(n) (HasEVEX_B ? EVEX_NF(n##_B) : EVEX_NF(n))
+
 InstructionContext RecognizableInstr::insnContext() const {
   InstructionContext insnContext;
 
@@ -193,8 +197,15 @@ InstructionContext RecognizableInstr::insnContext() const {
       errs() << "Don't support VEX.L if EVEX_L2 is enabled: " << Name << "\n";
       llvm_unreachable("Don't support VEX.L if EVEX_L2 is enabled");
     }
-    // VEX_L & VEX_W
-    if (!EncodeRC && HasVEX_L && HasREX_W) {
+    if (HasEVEX_NF) {
+      if (OpPrefix == X86Local::PD)
+        insnContext = EVEX_B_NF(IC_EVEX_OPSIZE);
+      else if (HasREX_W)
+        insnContext = EVEX_B_NF(IC_EVEX_W);
+      else
+        insnContext = EVEX_B_NF(IC_EVEX);
+    } else if (!EncodeRC && HasVEX_L && HasREX_W) {
+      // VEX_L & VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_W_OPSIZE);
       else if (OpPrefix == X86Local::XS)
@@ -265,9 +276,12 @@ InstructionContext RecognizableInstr::insnContext() const {
       }
     }
     // No L, no W
-    else if (OpPrefix == X86Local::PD)
-      insnContext = EVEX_KB(IC_EVEX_OPSIZE);
-    else if (OpPrefix == X86Local::XD)
+    else if (OpPrefix == X86Local::PD) {
+      if (AdSize == X86Local::AdSize32)
+        insnContext = IC_EVEX_OPSIZE_ADSIZE;
+      else
+        insnContext = EVEX_KB(IC_EVEX_OPSIZE);
+    } else if (OpPrefix == X86Local::XD)
       insnContext = EVEX_KB(IC_EVEX_XD);
     else if (OpPrefix == X86Local::XS)
       insnContext = EVEX_KB(IC_EVEX_XS);
@@ -483,6 +497,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     ++additionalOperands;
 #endif
 
+  bool IsND = OpMap == X86Local::T_MAP4 && HasEVEX_B && HasVEX_4V;
   switch (Form) {
   default:
     llvm_unreachable("Unhandled form");
@@ -533,11 +548,14 @@ void RecognizableInstr::emitInstructionSpecifier() {
            numPhysicalOperands <= 3 + additionalOperands &&
            "Unexpected number of operands for MRMDestReg");
 
+    if (IsND)
+      HANDLE_OPERAND(vvvvRegister)
+
     HANDLE_OPERAND(rmRegister)
     if (HasEVEX_K)
       HANDLE_OPERAND(writemaskRegister)
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       // FIXME: In AVX, the register below becomes the one encoded
       // in ModRMVEX and the one above the one in the VEX.VVVV field
       HANDLE_OPERAND(vvvvRegister)
@@ -567,12 +585,15 @@ void RecognizableInstr::emitInstructionSpecifier() {
            numPhysicalOperands <= 3 + additionalOperands &&
            "Unexpected number of operands for MRMDestMemFrm with VEX_4V");
 
+    if (IsND)
+      HANDLE_OPERAND(vvvvRegister)
+
     HANDLE_OPERAND(memory)
 
     if (HasEVEX_K)
       HANDLE_OPERAND(writemaskRegister)
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       // FIXME: In AVX, the register below becomes the one encoded
       // in ModRMVEX and the one above the one in the VEX.VVVV field
       HANDLE_OPERAND(vvvvRegister)
@@ -591,12 +612,15 @@ void RecognizableInstr::emitInstructionSpecifier() {
            numPhysicalOperands <= 4 + additionalOperands &&
            "Unexpected number of operands for MRMSrcRegFrm");
 
+    if (IsND)
+      HANDLE_OPERAND(vvvvRegister)
+
     HANDLE_OPERAND(roRegister)
 
     if (HasEVEX_K)
       HANDLE_OPERAND(writemaskRegister)
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       // FIXME: In AVX, the register below becomes the one encoded
       // in ModRMVEX and the one above the one in the VEX.VVVV field
       HANDLE_OPERAND(vvvvRegister)
@@ -638,13 +662,15 @@ void RecognizableInstr::emitInstructionSpecifier() {
     assert(numPhysicalOperands >= 2 + additionalOperands &&
            numPhysicalOperands <= 4 + additionalOperands &&
            "Unexpected number of operands for MRMSrcMemFrm");
+    if (IsND)
+      HANDLE_OPERAND(vvvvRegister)
 
     HANDLE_OPERAND(roRegister)
 
     if (HasEVEX_K)
       HANDLE_OPERAND(writemaskRegister)
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       // FIXME: In AVX, the register below becomes the one encoded
       // in ModRMVEX and the one above the one in the VEX.VVVV field
       HANDLE_OPERAND(vvvvRegister)
@@ -1213,6 +1239,8 @@ RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
 OperandEncoding
 RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
                                                   uint8_t OpSize) {
+  ENCODING("GR8", ENCODING_VVVV)
+  ENCODING("GR16", ENCODING_VVVV)
   ENCODING("GR32", ENCODING_VVVV)
   ENCODING("GR64", ENCODING_VVVV)
   ENCODING("FR32", ENCODING_VVVV)

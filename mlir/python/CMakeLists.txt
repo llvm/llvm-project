@@ -21,13 +21,20 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
-    extras/types.py
     dialects/_ods_common.py
 
     # The main _mlir module has submodules: include stubs from each.
     _mlir_libs/_mlir/__init__.pyi
     _mlir_libs/_mlir/ir.pyi
     _mlir_libs/_mlir/passmanager.pyi
+)
+
+declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Core.Python
+  SOURCES
+    extras/types.py
+    extras/meta.py
 )
 
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
@@ -165,6 +172,14 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Transform/IR/TransformAttrs.td"
 )
+
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.transform.extras
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  GEN_ENUM_BINDINGS
+  SOURCES
+    dialects/transform/extras/__init__.py)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -362,6 +377,13 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 )
+
+declare_mlir_dialect_python_bindings(
+    ADD_TO_PARENT MLIRPythonSources.Dialects
+    ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+    TD_FILE dialects/SPIRVOps.td
+    SOURCES dialects/spirv.py
+    DIALECT_NAME spirv)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects

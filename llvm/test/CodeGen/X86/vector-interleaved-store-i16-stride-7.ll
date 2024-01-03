@@ -1343,10 +1343,9 @@ define void @store_i16_stride7_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,1],xmm3[3,3]
 ; SSE-NEXT:    movdqa %xmm15, %xmm10
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4],xmm5[4],xmm10[5],xmm5[5],xmm10[6],xmm5[6],xmm10[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm5, %xmm1
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm15 = xmm15[0],xmm5[0],xmm15[1],xmm5[1],xmm15[2],xmm5[2],xmm15[3],xmm5[3]
 ; SSE-NEXT:    movdqa %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,3,3,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm5[3,3,3,3,4,5,6,7]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm9[0,2]
 ; SSE-NEXT:    andps %xmm8, %xmm1
 ; SSE-NEXT:    orps %xmm6, %xmm1
@@ -5468,8 +5467,7 @@ define void @store_i16_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-FAST-NEXT:    vpermi2q %zmm2, %zmm21, %zmm29
 ; AVX512F-FAST-NEXT:    vmovdqa 32(%rax), %ymm8
 ; AVX512F-FAST-NEXT:    vpshufb %ymm1, %ymm8, %ymm1
-; AVX512F-FAST-NEXT:    vbroadcasti64x4 {{.*#+}} zmm21 = [0,13,4,0,0,14,5,0,0,13,4,0,0,14,5,0]
-; AVX512F-FAST-NEXT:    # zmm21 = mem[0,1,2,3,0,1,2,3]
+; AVX512F-FAST-NEXT:    vmovdqa64 {{.*#+}} zmm21 = [0,1,4,5,4,5,5,7,12,13,10,10,14,14,14,14]
 ; AVX512F-FAST-NEXT:    vpermd %ymm8, %ymm21, %ymm2
 ; AVX512F-FAST-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm16
@@ -5537,8 +5535,7 @@ define void @store_i16_stride7_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-FAST-NEXT:    vpblendw {{.*#+}} ymm4 = ymm7[0,1],ymm4[2],ymm7[3,4],ymm4[5],ymm7[6,7,8,9],ymm4[10],ymm7[11,12],ymm4[13],ymm7[14,15]
 ; AVX512F-FAST-NEXT:    vpermt2q %zmm3, %zmm13, %zmm4
 ; AVX512F-FAST-NEXT:    vmovdqa64 (%rax), %zmm3
-; AVX512F-FAST-NEXT:    vbroadcasti64x4 {{.*#+}} zmm7 = [30,5,0,0,31,6,0,31,30,5,0,0,31,6,0,31]
-; AVX512F-FAST-NEXT:    # zmm7 = mem[0,1,2,3,0,1,2,3]
+; AVX512F-FAST-NEXT:    vmovdqa64 {{.*#+}} zmm7 = [4,5,2,2,6,6,6,6,30,31,27,27,31,31,30,31]
 ; AVX512F-FAST-NEXT:    vpermi2d %zmm3, %zmm8, %zmm7
 ; AVX512F-FAST-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm6, %zmm7
 ; AVX512F-FAST-NEXT:    vpbroadcastd 36(%rax), %ymm6

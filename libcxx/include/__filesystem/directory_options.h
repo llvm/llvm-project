@@ -21,53 +21,33 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-enum class directory_options : unsigned char {
-  none = 0,
-  follow_directory_symlink = 1,
-  skip_permission_denied = 2
-};
+enum class directory_options : unsigned char { none = 0, follow_directory_symlink = 1, skip_permission_denied = 2 };
 
-_LIBCPP_HIDE_FROM_ABI
-inline constexpr directory_options operator&(directory_options __lhs,
-                                             directory_options __rhs) {
-  return static_cast<directory_options>(static_cast<unsigned char>(__lhs) &
-                                        static_cast<unsigned char>(__rhs));
+_LIBCPP_HIDE_FROM_ABI inline constexpr directory_options operator&(directory_options __lhs, directory_options __rhs) {
+  return static_cast<directory_options>(static_cast<unsigned char>(__lhs) & static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI
-inline constexpr directory_options operator|(directory_options __lhs,
-                                             directory_options __rhs) {
-  return static_cast<directory_options>(static_cast<unsigned char>(__lhs) |
-                                        static_cast<unsigned char>(__rhs));
+_LIBCPP_HIDE_FROM_ABI inline constexpr directory_options operator|(directory_options __lhs, directory_options __rhs) {
+  return static_cast<directory_options>(static_cast<unsigned char>(__lhs) | static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI
-inline constexpr directory_options operator^(directory_options __lhs,
-                                             directory_options __rhs) {
-  return static_cast<directory_options>(static_cast<unsigned char>(__lhs) ^
-                                        static_cast<unsigned char>(__rhs));
+_LIBCPP_HIDE_FROM_ABI inline constexpr directory_options operator^(directory_options __lhs, directory_options __rhs) {
+  return static_cast<directory_options>(static_cast<unsigned char>(__lhs) ^ static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI
-inline constexpr directory_options operator~(directory_options __lhs) {
+_LIBCPP_HIDE_FROM_ABI inline constexpr directory_options operator~(directory_options __lhs) {
   return static_cast<directory_options>(~static_cast<unsigned char>(__lhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI
-inline directory_options& operator&=(directory_options& __lhs,
-                                     directory_options __rhs) {
+_LIBCPP_HIDE_FROM_ABI inline directory_options& operator&=(directory_options& __lhs, directory_options __rhs) {
   return __lhs = __lhs & __rhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI
-inline directory_options& operator|=(directory_options& __lhs,
-                                     directory_options __rhs) {
+_LIBCPP_HIDE_FROM_ABI inline directory_options& operator|=(directory_options& __lhs, directory_options __rhs) {
   return __lhs = __lhs | __rhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI
-inline directory_options& operator^=(directory_options& __lhs,
-                                     directory_options __rhs) {
+_LIBCPP_HIDE_FROM_ABI inline directory_options& operator^=(directory_options& __lhs, directory_options __rhs) {
   return __lhs = __lhs ^ __rhs;
 }
 

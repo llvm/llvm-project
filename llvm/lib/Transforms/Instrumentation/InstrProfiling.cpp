@@ -64,10 +64,24 @@ using namespace llvm;
 #define DEBUG_TYPE "instrprof"
 
 namespace llvm {
-cl::opt<bool>
-    DebugInfoCorrelate("debug-info-correlate",
-                       cl::desc("Use debug info to correlate profiles."),
-                       cl::init(false));
+// TODO: Remove -debug-info-correlate in next LLVM release, in favor of
+// -profile-correlate=debug-info.
+cl::opt<bool> DebugInfoCorrelate(
+    "debug-info-correlate",
+    cl::desc("Use debug info to correlate profiles. (Deprecated, use "
+             "-profile-correlate=debug-info)"),
+    cl::init(false));
+
+cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+    "profile-correlate",
+    cl::desc("Use debug info or binary file to correlate profiles."),
+    cl::init(InstrProfCorrelator::NONE),
+    cl::values(clEnumValN(InstrProfCorrelator::NONE, "",
+                          "No profile correlation"),
+               clEnumValN(InstrProfCorrelator::DEBUG_INFO, "debug-info",
+                          "Use debug info to correlate"),
+               clEnumValN(InstrProfCorrelator::BINARY, "binary",
+                          "Use binary to correlate")));
 } // namespace llvm
 
 namespace {
@@ -792,7 +806,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
   assert(
-      !DebugInfoCorrelate &&
+      !DebugInfoCorrelate && ProfileCorrelate == InstrProfCorrelator::NONE &&
       "Value profiling is not yet supported with lightweight instrumentation");
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
@@ -1219,8 +1233,9 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
 
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if (DebugInfoCorrelate && TT.isOSBinFormatMachO() &&
-      Linkage == GlobalValue::PrivateLinkage)
+  if ((DebugInfoCorrelate ||
+       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) &&
+      TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
   // Due to the limitation of binder as of 2021/09/28, the duplicate weak
@@ -1341,7 +1356,8 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
 
-  if (DebugInfoCorrelate) {
+  if (DebugInfoCorrelate ||
+      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
     if (auto *SP = Fn->getSubprogram()) {
@@ -1386,7 +1402,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
-  if (DebugInfoCorrelate)
+  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     return;
 
   GlobalVariable *NamePtr = Inc->getName();
@@ -1484,20 +1500,28 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   }
   auto *Data =
       new GlobalVariable(M, DataTy, false, Linkage, nullptr, DataVarName);
-  // Reference the counter variable with a label difference (link-time
-  // constant).
-  auto *RelativeCounterPtr =
-      ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
-                           ConstantExpr::getPtrToInt(Data, IntPtrTy));
-
-  // Bitmaps are relative to the same data variable as profile counters.
+  Constant *RelativeCounterPtr;
   GlobalVariable *BitmapPtr = PD.RegionBitmaps;
   Constant *RelativeBitmapPtr = ConstantInt::get(IntPtrTy, 0);
-
-  if (BitmapPtr != nullptr) {
-    RelativeBitmapPtr =
-        ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
+  InstrProfSectKind DataSectionKind;
+  // With binary profile correlation, profile data is not loaded into memory.
+  // profile data must reference profile counter with an absolute relocation.
+  if (ProfileCorrelate == InstrProfCorrelator::BINARY) {
+    DataSectionKind = IPSK_covdata;
+    RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
+    if (BitmapPtr != nullptr)
+      RelativeBitmapPtr = ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy);
+  } else {
+    // Reference the counter variable with a label difference (link-time
+    // constant).
+    DataSectionKind = IPSK_data;
+    RelativeCounterPtr =
+        ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
                              ConstantExpr::getPtrToInt(Data, IntPtrTy));
+    if (BitmapPtr != nullptr)
+      RelativeBitmapPtr =
+          ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
+                               ConstantExpr::getPtrToInt(Data, IntPtrTy));
   }
 
   Constant *DataVals[] = {
@@ -1507,7 +1531,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Data->setInitializer(ConstantStruct::get(DataTy, DataVals));
 
   Data->setVisibility(Visibility);
-  Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
+  Data->setSection(
+      getInstrProfSectionName(DataSectionKind, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   maybeSetComdat(Data, Fn, CntsVarName);
 
@@ -1595,7 +1620,9 @@ void InstrLowerer::emitNameData() {
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
   NamesVar->setSection(
-      getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
+      ProfileCorrelate == InstrProfCorrelator::BINARY
+          ? getInstrProfSectionName(IPSK_covname, TT.getObjectFormat())
+          : getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
   // linker from inserting padding before the start of the names section or
   // between names entries.

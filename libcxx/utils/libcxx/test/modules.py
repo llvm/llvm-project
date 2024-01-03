@@ -141,14 +141,6 @@ class module_test_generator:
                 f"#  include <{header}>{nl}"
                 f"#endif{nl}"
             )
-        elif header == "chrono":
-            # When localization is disabled the header string is not included.
-            # When string is included chrono's operator""s is a named declaration
-            #   using std::chrono_literals::operator""s;
-            # else it is a named declaration
-            #   using std::operator""s;
-            # TODO MODULES investigate why
-            include = f"#include <string>{nl}#include <chrono>{nl}"
         else:
             include = f"#include <{header}>{nl}"
 

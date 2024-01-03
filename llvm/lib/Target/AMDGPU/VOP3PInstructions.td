@@ -108,6 +108,11 @@ defm V_PK_MIN_I16 : VOP3PInst<"v_pk_min_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umin>;
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
+
+let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fmaximum>;
+defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fminimum>;
+} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 }
 
 defm V_PK_SUB_U16 : VOP3PInst<"v_pk_sub_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>>;
@@ -185,9 +190,9 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   // because dealing with the write to high half of the register is
   // difficult.
   def : GCNPat <
-    (build_vector f16:$elt0, (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                                                (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                                                (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))),
+    (build_vector f16:$elt0, (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                                                     (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                                                     (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
     (v2f16 (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        $src2_modifiers, $src2,
@@ -198,9 +203,9 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   def : GCNPat <
     (build_vector
       f16:$elt0,
-      (AMDGPUclamp (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+      (AMDGPUclamp (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                                       (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                                      (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
+                                      (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))))),
     (v2f16 (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        $src2_modifiers, $src2,
@@ -210,12 +215,12 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
 
   def : GCNPat <
     (AMDGPUclamp (build_vector
-      (fpround (fma_like (f32 (VOP3PMadMixMods f16:$lo_src0, i32:$lo_src0_modifiers)),
+      (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$lo_src0, i32:$lo_src0_modifiers)),
                          (f32 (VOP3PMadMixMods f16:$lo_src1, i32:$lo_src1_modifiers)),
-                         (f32 (VOP3PMadMixMods f16:$lo_src2, i32:$lo_src2_modifiers)))),
-      (fpround (fma_like (f32 (VOP3PMadMixMods f16:$hi_src0, i32:$hi_src0_modifiers)),
+                         (f32 (VOP3PMadMixMods f16:$lo_src2, i32:$lo_src2_modifiers))))),
+      (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$hi_src0, i32:$hi_src0_modifiers)),
                          (f32 (VOP3PMadMixMods f16:$hi_src1, i32:$hi_src1_modifiers)),
-                         (f32 (VOP3PMadMixMods f16:$hi_src2, i32:$hi_src2_modifiers)))))),
+                         (f32 (VOP3PMadMixMods f16:$hi_src2, i32:$hi_src2_modifiers))))))),
     (v2f16 (mixhi_inst $hi_src0_modifiers, $hi_src0,
                        $hi_src1_modifiers, $hi_src1,
                        $hi_src2_modifiers, $hi_src2,
@@ -238,8 +243,8 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   >;
 
   def : GCNPat <
-    (build_vector f16:$elt0, (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
-                                            (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (build_vector f16:$elt0, (f16 (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                                            (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers)))))),
     (v2f16 (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        (i32 0), (i32 0),
@@ -1002,6 +1007,9 @@ multiclass VOP3P_Real_with_name_gfx12<bits<7> op,
 
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
+
+defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
+defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
 
 //===----------------------------------------------------------------------===//
 // GFX11

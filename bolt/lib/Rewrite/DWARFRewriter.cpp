@@ -554,7 +554,7 @@ void DWARFRewriter::addStringHelper(DIEBuilder &DIEBldr, DIE &Die,
                                     const DWARFUnit &Unit,
                                     DIEValue &DIEAttrInfo, StringRef Str) {
   uint32_t NewOffset = StrWriter->addString(Str);
-  if (Unit.getVersion() == 5) {
+  if (Unit.getVersion() >= 5) {
     StrOffstsWriter->updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
                                       NewOffset);
     return;
@@ -696,9 +696,6 @@ void DWARFRewriter::updateDebugInfo() {
     std::optional<DWARFUnit *> SplitCU;
     std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
-    if (Unit->getVersion() >= 5)
-      StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
-                                  Unit->getStringOffsetsTableContribution());
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
     DebugLocWriter *DebugLocWriter = createRangeLocList(*Unit);
@@ -753,7 +750,7 @@ void DWARFRewriter::updateDebugInfo() {
   };
 
   DIEBuilder DIEBlder(BC.DwCtx.get());
-  DIEBlder.buildTypeUnits();
+  DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
       std::make_unique<raw_svector_ostream>(OutBuffer);

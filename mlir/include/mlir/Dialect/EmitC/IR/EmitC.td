@@ -19,6 +19,7 @@ include "mlir/Dialect/EmitC/IR/EmitCTypes.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/RegionKindInterface.td"
 
 //===----------------------------------------------------------------------===//
 // EmitC op definitions
@@ -245,6 +246,83 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
 
   let arguments = (ins FloatIntegerIndexOrOpaqueType, FloatIntegerIndexOrOpaqueType);
   let results = (outs FloatIntegerIndexOrOpaqueType);
+}
+
+def EmitC_ExpressionOp : EmitC_Op<"expression",
+      [HasOnlyGraphRegion, SingleBlockImplicitTerminator<"emitc::YieldOp">,
+       NoRegionArguments]> {
+  let summary = "Expression operation";
+  let description = [{
+    The `expression` operation returns a single SSA value which is yielded by
+    its single-basic-block region. The operation doesn't take any arguments.
+
+    As the operation is to be emitted as a C expression, the operations within
+    its body must form a single Def-Use tree of emitc ops whose result is
+    yielded by a terminating `yield`.
+
+    Example:
+
+    ```mlir
+    %r = emitc.expression : () -> i32 {
+      %0 = emitc.add %a, %b : (i32, i32) -> i32
+      %1 = emitc.call "foo"(%0) : () -> i32
+      %2 = emitc.add %c, %d : (i32, i32) -> i32
+      %3 = emitc.mul %1, %2 : (i32, i32) -> i32
+      yield %3
+    }
+    ```
+
+    May be emitted as
+
+    ```c++
+    int32_t v7 = foo(v1 + v2) * (v3 + v4);
+    ```
+
+    The operations allowed within expression body are emitc.add, emitc.apply,
+    emitc.call, emitc.cast, emitc.cmp, emitc.div, emitc.mul, emitc.rem and
+    emitc.sub.
+
+    When specified, the optional `do_not_inline` indicates that the expression is
+    to be emitted as seen above, i.e. as the rhs of an EmitC SSA value
+    definition. Otherwise, the expression may be emitted inline, i.e. directly
+    at its use.
+  }];
+
+  let arguments = (ins UnitAttr:$do_not_inline);
+  let results = (outs AnyType:$result);
+  let regions = (region SizedRegion<1>:$region);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "attr-dict (`noinline` $do_not_inline^)? `:` type($result) $region";
+
+  let extraClassDeclaration = [{
+    static bool isCExpression(Operation &op) {
+      return isa<emitc::AddOp, emitc::ApplyOp, emitc::CallOpaqueOp,
+                 emitc::CastOp, emitc::CmpOp, emitc::DivOp, emitc::MulOp,
+                 emitc::RemOp, emitc::SubOp>(op);
+    }
+    bool hasSideEffects() {
+      auto predicate = [](Operation &op) {
+        assert(isCExpression(op) && "Expected a C expression");
+        // Conservatively assume calls to read and write memory.
+        if (isa<emitc::CallOpaqueOp>(op))
+          return true;
+        // De-referencing reads modifiable memory, address-taking has no
+        // side-effect.
+        auto applyOp = dyn_cast<emitc::ApplyOp>(op);
+        if (applyOp)
+          return applyOp.getApplicableOperator() == "*";
+        // Any operation using variables is assumed to have a side effect of
+        // reading memory mutable by emitc::assign ops.
+        return llvm::any_of(op.getOperands(), [](Value operand) {
+          Operation *def = operand.getDefiningOp();
+          return def && isa<emitc::VariableOp>(def);
+        });
+      };
+      return llvm::any_of(getRegion().front().without_terminator(), predicate);
+    };
+    Operation *getRootOp();
+  }];
 }
 
 def EmitC_ForOp : EmitC_Op<"for",
@@ -494,18 +572,24 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 }
 
 def EmitC_YieldOp : EmitC_Op<"yield",
-      [Pure, Terminator, ParentOneOf<["IfOp", "ForOp"]>]> {
+      [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp"]>]> {
   let summary = "block termination operation";
   let description = [{
-    "yield" terminates blocks within EmitC control-flow operations. Since
-    control-flow constructs in C do not return values, this operation doesn't
-    take any arguments.
+    "yield" terminates its parent EmitC op's region, optionally yielding
+    an SSA value. The semantics of how the values are yielded is defined by the
+    parent operation.
+    If "yield" has an operand, the operand must match the parent operation's
+    result. If the parent operation defines no values, then the "emitc.yield"
+    may be left out in the custom syntax and the builders will insert one
+    implicitly. Otherwise, it has to be present in the syntax to indicate which
+    value is yielded.
   }];
 
-  let arguments = (ins);
+  let arguments = (ins Optional<AnyType>:$result);
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
-  let assemblyFormat = [{ attr-dict }];
+  let hasVerifier = 1;
+  let assemblyFormat = [{ attr-dict ($result^ `:` type($result))? }];
 }
 
 def EmitC_IfOp : EmitC_Op<"if",

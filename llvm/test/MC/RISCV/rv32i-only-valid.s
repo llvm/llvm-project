@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: addi a0, a1, -1

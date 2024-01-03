@@ -7,3 +7,5 @@
 `LWG3360 <https://wg21.link/LWG3360>`_,three_way_comparable_with is inconsistent with similar concepts,|Nothing To Do|,
 `LWG3380 <https://wg21.link/LWG3380>`_,common_type and comparison categories,|Nothing To Do|,
 `LWG3395 <https://wg21.link/LWG3395>`_,Definition for three-way comparison needs to be updated,|Nothing To Do|,
+`P0905R1 <https://wg21.link/P0905R1>`_,Symmetry for spaceship,,
+`P1120R0 <https://wg21.link/P1120R0>`_,Consistency improvements for <=> and other comparison operators,,

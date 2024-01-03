@@ -12683,7 +12683,7 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       break;
     }
     case OMPC_fail: {
-      if (AtomicKind != OMPC_compare) {
+      if (!EncounteredAtomicKinds.contains(OMPC_compare)) {
         Diag(C->getBeginLoc(), diag::err_omp_atomic_fail_no_compare)
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         return StmtError();
@@ -14657,6 +14657,19 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDirective(ArrayRef<OMPClause *> Clauses,
     CS->getCapturedDecl()->setNothrow();
   }
   setFunctionHasBranchProtectedScope();
+
+  const OMPClause *BareClause = nullptr;
+  bool HasThreadLimitAndNumTeamsClause = hasClauses(Clauses, OMPC_num_teams) &&
+                                         hasClauses(Clauses, OMPC_thread_limit);
+  bool HasBareClause = llvm::any_of(Clauses, [&](const OMPClause *C) {
+    BareClause = C;
+    return C->getClauseKind() == OMPC_ompx_bare;
+  });
+
+  if (HasBareClause && !HasThreadLimitAndNumTeamsClause) {
+    Diag(BareClause->getBeginLoc(), diag::err_ompx_bare_no_grid);
+    return StmtError();
+  }
 
   return OMPTargetTeamsDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                          AStmt);

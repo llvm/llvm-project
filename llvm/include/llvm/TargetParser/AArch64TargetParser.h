@@ -173,6 +173,9 @@ enum ArchExtKind : unsigned {
   AEK_SMEF8F16 =      69, // FEAT_SME_F8F16
   AEK_SMEF8F32 =      70, // FEAT_SME_F8F32
   AEK_SMEFA64 =       71, // FEAT_SME_FA64
+  AEK_CPA =           72, // FEAT_CPA
+  AEK_PAUTHLR =       73, // FEAT_PAuth_LR
+  AEK_TLBIW =         74, // FEAT_TLBIW
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -295,6 +298,9 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme-f8f16", AArch64::AEK_SMEF8F16, "+sme-f8f16", "-sme-f8f16", FEAT_INIT, "+sme2,+fp8", 0},
     {"sme-f8f32", AArch64::AEK_SMEF8F32, "+sme-f8f32", "-sme-f8f32", FEAT_INIT, "+sme2,+fp8", 0},
     {"sme-fa64",  AArch64::AEK_SMEFA64,  "+sme-fa64", "-sme-fa64",  FEAT_INIT, "", 0},
+    {"cpa", AArch64::AEK_CPA, "+cpa", "-cpa", FEAT_INIT, "", 0},
+    {"pauth-lr", AArch64::AEK_PAUTHLR, "+pauth-lr", "-pauth-lr", FEAT_INIT, "", 0},
+    {"tlbiw", AArch64::AEK_TLBIW, "+tlbiw", "-tlbiw", FEAT_INIT, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };
@@ -378,7 +384,8 @@ inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a
                                         AArch64::ExtensionBitset({AArch64::AEK_MOPS, AArch64::AEK_HBC}))};
 inline constexpr ArchInfo ARMV9_4A  = { VersionTuple{9, 4}, AProfile, "armv9.4-a", "+v9.4a", (ARMV9_3A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SPECRES2, AArch64::AEK_CSSC, AArch64::AEK_RASv2}))};
-inline constexpr ArchInfo ARMV9_5A  = { VersionTuple{9, 5}, AProfile, "armv9.5-a", "+v9.5a", (ARMV9_4A.DefaultExts)};
+inline constexpr ArchInfo ARMV9_5A  = { VersionTuple{9, 5}, AProfile, "armv9.5-a", "+v9.5a", (ARMV9_4A.DefaultExts |
+                                        AArch64::ExtensionBitset({AArch64::AEK_CPA}))};
 // For v8-R, we do not enable crypto and align with GCC that enables a more minimal set of optional architecture extensions.
 inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", (ARMV8_5A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SSBS,

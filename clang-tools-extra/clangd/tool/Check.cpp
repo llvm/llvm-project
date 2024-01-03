@@ -24,6 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Check.h"
 #include "../clang-tidy/ClangTidyModule.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
@@ -82,36 +83,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// These will never be shown in --help, ClangdMain doesn't list the category.
-llvm::cl::opt<std::string> CheckTidyTime{
-    "check-tidy-time",
-    llvm::cl::desc("Print the overhead of checks matching this glob"),
-    llvm::cl::init("")};
-llvm::cl::opt<std::string> CheckFileLines{
-    "check-lines",
-    llvm::cl::desc(
-        "Limits the range of tokens in -check file on which "
-        "various features are tested. Example --check-lines=3-7 restricts "
-        "testing to lines 3 to 7 (inclusive) or --check-lines=5 to restrict "
-        "to one line. Default is testing entire file."),
-    llvm::cl::init("")};
-llvm::cl::opt<bool> CheckLocations{
-    "check-locations",
-    llvm::cl::desc(
-        "Runs certain features (e.g. hover) at each point in the file. "
-        "Somewhat slow."),
-    llvm::cl::init(true)};
-llvm::cl::opt<bool> CheckCompletion{
-    "check-completion",
-    llvm::cl::desc("Run code-completion at each point (slow)"),
-    llvm::cl::init(false)};
-llvm::cl::opt<bool> CheckWarnings{
-    "check-warnings",
-    llvm::cl::desc("Print warnings as well as errors"),
-    llvm::cl::init(false)};
-
 // Print the diagnostics meeting severity threshold, and return count of errors.
-unsigned showErrors(llvm::ArrayRef<Diag> Diags) {
+unsigned showErrors(llvm::ArrayRef<Diag> Diags, bool CheckWarnings) {
   unsigned ErrCount = 0;
   for (const auto &D : Diags) {
     if (D.Severity >= DiagnosticsEngine::Error || CheckWarnings)
@@ -144,6 +117,7 @@ class Checker {
   // from constructor
   std::string File;
   ClangdLSPServer::Options Opts;
+  ClangdCheckOptions CheckOpts;
   // from buildCommand
   tooling::CompileCommand Cmd;
   // from buildInvocation
@@ -159,8 +133,9 @@ public:
   // Number of non-fatal errors seen.
   unsigned ErrCount = 0;
 
-  Checker(llvm::StringRef File, const ClangdLSPServer::Options &Opts)
-      : File(File), Opts(Opts) {}
+  Checker(llvm::StringRef File, const ClangdLSPServer::Options &Opts,
+          const ClangdCheckOptions &CheckOpts)
+      : File(File), Opts(Opts), CheckOpts(CheckOpts) {}
 
   // Read compilation database and choose a compile command for the file.
   bool buildCommand(const ThreadsafeFS &TFS) {
@@ -217,7 +192,7 @@ public:
     Invocation =
         buildCompilerInvocation(Inputs, CaptureInvocationDiags, &CC1Args);
     auto InvocationDiags = CaptureInvocationDiags.take();
-    ErrCount += showErrors(InvocationDiags);
+    ErrCount += showErrors(InvocationDiags, CheckOpts.CheckWarnings);
     log("internal (cc1) args are: {0}", printArgv(CC1Args));
     if (!Invocation) {
       elog("Failed to parse command line");
@@ -248,7 +223,7 @@ public:
       elog("Failed to build preamble");
       return false;
     }
-    ErrCount += showErrors(Preamble->Diags);
+    ErrCount += showErrors(Preamble->Diags, CheckOpts.CheckWarnings);
 
     log("Building AST...");
     AST = ParsedAST::build(File, Inputs, std::move(Invocation),
@@ -258,16 +233,17 @@ public:
       return false;
     }
     ErrCount +=
-        showErrors(AST->getDiagnostics().drop_front(Preamble->Diags.size()));
+        showErrors(AST->getDiagnostics().drop_front(Preamble->Diags.size()),
+                   CheckOpts.CheckWarnings);
 
     if (Opts.BuildDynamicSymbolIndex) {
       log("Indexing AST...");
       Index.updateMain(File, *AST);
     }
 
-    if (!CheckTidyTime.empty()) {
+    if (CheckOpts.CheckTidyTime) {
       if (!CLANGD_TIDY_CHECKS) {
-        elog("-{0} requires -DCLANGD_TIDY_CHECKS!", CheckTidyTime.ArgStr);
+        elog("-check-tidy-time requires -DCLANGD_TIDY_CHECKS!");
         return false;
       }
       #ifndef NDEBUG
@@ -349,7 +325,8 @@ public:
       }
     };
 
-    for (const auto& Check : listTidyChecks(CheckTidyTime)) {
+    for (const auto &Check :
+         listTidyChecks(CheckOpts.CheckTidyTime.value_or(""))) {
       // vlog the check name in case we crash!
       vlog("  Timing {0}", Check);
       double Fraction = Measure(Check);
@@ -433,7 +410,7 @@ public:
       unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
       vlog("    documentHighlight: {0}", DocHighlights);
 
-      if (CheckCompletion) {
+      if (CheckOpts.CheckCompletion) {
         Position EndPos = offsetToPosition(Inputs.Contents, End);
         auto CC = codeComplete(File, EndPos, Preamble.get(), Inputs, CCOpts);
         vlog("    code completion: {0}",
@@ -446,11 +423,12 @@ public:
 } // namespace
 
 bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts) {
+           const ClangdLSPServer::Options &Opts,
+           const ClangdCheckOptions &CheckOpts) {
   std::optional<Range> LineRange;
-  if (!CheckFileLines.empty()) {
+  if (!CheckOpts.CheckFileLines.empty()) {
     uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
-    StringRef RangeStr(CheckFileLines);
+    StringRef RangeStr(CheckOpts.CheckFileLines);
     bool ParseError = RangeStr.consumeInteger(0, Begin);
     if (RangeStr.empty()) {
       End = Begin;
@@ -483,17 +461,23 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
   log("Testing on source file {0}", File);
 
   class OverrideConfigProvider : public config::Provider {
+    bool CheckTidyTime;
     std::vector<config::CompiledFragment>
     getFragments(const config::Params &,
                  config::DiagnosticCallback Diag) const override {
       config::Fragment F;
-      // If we're timing clang-tidy checks, implicitly disabling the slow ones
-      // is counterproductive! 
-      if (CheckTidyTime.getNumOccurrences())
+      // If we're timing clang-tidy checks, implicitly disabling the slow
+      // ones is counterproductive!
+      if (CheckTidyTime)
         F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
       return {std::move(F).compile(Diag)};
     }
-  } OverrideConfig;
+
+  public:
+    OverrideConfigProvider(bool CheckTidyTime) : CheckTidyTime(CheckTidyTime) {}
+
+  } OverrideConfig{CheckOpts.CheckTidyTime.has_value()};
+
   auto ConfigProvider =
       config::Provider::combine({Opts.ConfigProvider, &OverrideConfig});
 
@@ -503,13 +487,13 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
       FakeFile.empty()
           ? File
           : /*Don't turn on local configs for an arbitrary temp path.*/ ""));
-  Checker C(File, Opts);
+  Checker C(File, Opts, CheckOpts);
   if (!C.buildCommand(TFS) || !C.buildInvocation(TFS, Contents) ||
       !C.buildAST())
     return false;
   C.buildInlayHints(LineRange);
   C.buildSemanticHighlighting(LineRange);
-  if (CheckLocations)
+  if (CheckOpts.CheckLocations)
     C.testLocationFeatures(LineRange);
 
   log("All checks completed, {0} errors", C.ErrCount);
