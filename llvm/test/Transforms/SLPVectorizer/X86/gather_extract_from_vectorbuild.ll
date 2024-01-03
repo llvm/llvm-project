@@ -31,3 +31,30 @@ loop:
   %i4 = extractelement <2 x float> %ins1, i64 0
   br label %loop
 }
+
+define void @test1() {
+; CHECK-LABEL: define void @test1() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP2]] = select <2 x i1> zeroinitializer, <2 x float> [[TMP1]], <2 x float> zeroinitializer
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %ph0 = phi float [ 0.000000e+00, %entry ], [ %i4, %loop ]
+  %ph1 = phi float [ 0.000000e+00, %entry ], [ %i5, %loop ]
+  %i = fadd float 0.000000e+00, %ph0
+  %i1 = fadd float 0.000000e+00, %ph1
+  %i2 = select i1 false, float %i, float 0.000000e+00
+  %i3 = select i1 false, float %i1, float 0.000000e+00
+  %ins0 = insertelement <2 x float> zeroinitializer, float %i2, i64 0
+  %ins1 = insertelement <2 x float> %ins0, float %i3, i64 1
+  %i4 = extractelement <2 x float> %ins1, i64 0
+  %i5 = extractelement <2 x float> %ins1, i64 1
+  br label %loop
+}
