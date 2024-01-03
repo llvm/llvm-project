@@ -395,6 +395,12 @@ TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
   EXPECT_EQ(op->getAttrs().size(), 2u);
   EXPECT_TRUE(op->getInherentAttr("inherent_attr") != std::nullopt);
   EXPECT_TRUE(op->getDiscardableAttr("other_attr") != Attribute());
+
+  std::string output;
+  llvm::raw_string_ostream os(output);
+  op->print(os);
+  EXPECT_TRUE(StringRef(os.str()).contains("inherent_attr = 42"));
+  EXPECT_TRUE(StringRef(os.str()).contains("other_attr = 56"));
 }
 
 } // namespace
