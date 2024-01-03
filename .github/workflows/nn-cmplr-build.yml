@@ -1,0 +1,26 @@
+name: Build LLVM
+on: [push, pull_request]
+
+jobs:
+  ubuntu-gcc-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Setup environment
+        run: |
+          sudo apt-get install -y \
+            build-essential \
+            ninja-build \
+      - name: Build
+        run: |
+          cmake -S llvm -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS='clang;mlir' \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -G Ninja
+          cmake --build build
+      - name: Test
+        run: |
+          cmake --build build -t check-llvm check-clang check-mlir
