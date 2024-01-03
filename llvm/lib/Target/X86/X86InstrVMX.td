@@ -21,10 +21,10 @@ def INVEPT32 : I<0x80, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
                Requires<[Not64BitMode]>;
 def INVEPT64 : I<0x80, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                "invept\t{$src2, $src1|$src1, $src2}", []>, T8, PD,
-               Requires<[In64BitMode]>;
+               Requires<[In64BitMode, NoEGPR]>;
 def INVEPT64_EVEX : I<0xF0, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                       "invept\t{$src2, $src1|$src1, $src2}", []>,
-                    EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode]>;
+                    EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode, HasEGPR]>;
 
 // 66 0F 38 81
 def INVVPID32 : I<0x81, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
@@ -32,10 +32,10 @@ def INVVPID32 : I<0x81, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
                 Requires<[Not64BitMode]>;
 def INVVPID64 : I<0x81, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                 "invvpid\t{$src2, $src1|$src1, $src2}", []>, T8, PD,
-                Requires<[In64BitMode]>;
+                Requires<[In64BitMode, NoEGPR]>;
 def INVVPID64_EVEX : I<0xF1, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                        "invvpid\t{$src2, $src1|$src1, $src2}", []>,
-                     EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode]>;
+                     EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode, HasEGPR]>;
 
 // 0F 01 C1
 def VMCALL : I<0x01, MRM_C1, (outs), (ins), "vmcall", []>, TB;

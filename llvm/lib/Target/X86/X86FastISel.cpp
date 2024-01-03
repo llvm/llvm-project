@@ -3047,19 +3047,19 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     default:
       llvm_unreachable("Unexpected intrinsic.");
     case Intrinsic::x86_sse42_crc32_32_8:
-      Opc = X86::CRC32r32r8;
+      Opc = Subtarget->hasCRC32() ? X86::CRC32r32r8_EVEX : X86::CRC32r32r8;
       RC = &X86::GR32RegClass;
       break;
     case Intrinsic::x86_sse42_crc32_32_16:
-      Opc = X86::CRC32r32r16;
+      Opc = Subtarget->hasCRC32() ? X86::CRC32r32r16_EVEX : X86::CRC32r32r16;
       RC = &X86::GR32RegClass;
       break;
     case Intrinsic::x86_sse42_crc32_32_32:
-      Opc = X86::CRC32r32r32;
+      Opc = Subtarget->hasCRC32() ? X86::CRC32r32r32_EVEX : X86::CRC32r32r32;
       RC = &X86::GR32RegClass;
       break;
     case Intrinsic::x86_sse42_crc32_64_64:
-      Opc = X86::CRC32r64r64;
+      Opc = Subtarget->hasCRC32() ? X86::CRC32r64r64_EVEX : X86::CRC32r64r64;
       RC = &X86::GR64RegClass;
       break;
     }
