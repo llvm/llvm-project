@@ -121,7 +121,7 @@ private:
 
     auto ArgSVal = Call.getArgSVal(0);
 
-    // The argument is ether a const reference or a right value reference.
+    // The argument is either a const reference or a right value reference.
     // We need the type referred.
     const auto *ArgType = ArgSVal.getType(C.getASTContext())
                               .getTypePtr()
