@@ -518,7 +518,6 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
-- Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 
 
 Improvements to Clang's time-trace
