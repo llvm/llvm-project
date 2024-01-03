@@ -153,29 +153,6 @@ def TestSucceedIfOperandOfOpKind
   let cppNamespace = "::mlir::test";
 }
 
-def TestPrintRemarkAtOperandOp
-  : Op<Transform_Dialect, "test_print_remark_at_operand",
-       [MatchOpInterface,
-        DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins
-    TransformHandleTypeInterface:$operand,
-    StrAttr:$message);
-  let assemblyFormat =
-    "$operand `,` $message attr-dict `:` type($operand)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintRemarkAtOperandValue
-  : Op<Transform_Dialect, "test_print_remark_at_operand_value",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformValueHandleTypeInterface:$in,
-                       StrAttr:$message);
-  let assemblyFormat = "$in `,` $message attr-dict `:` type($in)";
-  let cppNamespace = "::mlir::test";
-}
-
 def TestAddTestExtensionOp
   : Op<Transform_Dialect, "test_add_test_extension",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -360,19 +337,6 @@ def TestReportNumberOfTrackedHandlesNestedUnder
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins TransformHandleTypeInterface:$target);
   let assemblyFormat = "$target attr-dict `:` type($target)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintParamOp
-  : Op<Transform_Dialect, "test_print_param",
-       [MatchOpInterface,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-        DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TransformParamTypeInterface:$param,
-                       Optional<TransformHandleTypeInterface>:$anchor,
-                       OptionalAttr<StrAttr>:$message);
-  let assemblyFormat = "$param (`,` $message^)?  (`at` $anchor^)?"
-                       "attr-dict `:` type($param) (`,` type($anchor)^)?";
   let cppNamespace = "::mlir::test";
 }
 
