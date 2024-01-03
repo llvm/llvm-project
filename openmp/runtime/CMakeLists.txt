@@ -30,7 +30,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32/ppc).")
+    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
@@ -91,7 +91,7 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32 ppc)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -185,6 +185,8 @@ elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # 
   set(INTEL64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "arm") # ARM architecture
   set(ARM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "ppc") # PPC32 architecture
+  set(PPC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "ppc64") # PPC64BE architecture
   set(PPC64BE TRUE)
   set(PPC64 TRUE)
@@ -211,8 +213,6 @@ elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
     set(WASM TRUE)
-elseif("${LIBOMP_ARCH}" STREQUAL "ppc") # PPC32 architecture
-  set(PPC TRUE)
 endif()
 
 # Set some flags based on build_type
