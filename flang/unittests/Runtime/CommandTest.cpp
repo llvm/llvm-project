@@ -226,26 +226,21 @@ TEST_F(NoArgv, FdateGetDate) {
   char input[]{"24LengthCharIsJustRight"};
   const std::size_t charLen = sizeof(input);
 
-  FORTRAN_PROCEDURE_NAME(fdate)
-  (reinterpret_cast<std::byte *>(input), charLen);
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
 
   // Tue May 26 21:51:03 2015\n\0
   // index at 3, 7, 10, 19 should be space
-  for (std::size_t i{0}; i < charLen; i++) {
-    if (i == 3 || i == 7 || i == 10 || i == 19) {
-      EXPECT_EQ(input[i], ' ');
-      continue;
-    }
-    EXPECT_NE(input[i], ' ');
-  }
+  EXPECT_EQ(input[3], ' ');
+  EXPECT_EQ(input[7], ' ');
+  EXPECT_EQ(input[10], ' ');
+  EXPECT_EQ(input[19], ' ');
 }
 
 TEST_F(NoArgv, FdateGetDateTooShort) {
   char input[]{"TooShortAllPadSpace"};
   const std::size_t charLen = sizeof(input);
 
-  FORTRAN_PROCEDURE_NAME(fdate)
-  (reinterpret_cast<std::byte *>(input), charLen);
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
 
   for (std::size_t i{0}; i < charLen; i++) {
     EXPECT_EQ(input[i], ' ');
@@ -256,8 +251,7 @@ TEST_F(NoArgv, FdateGetDatePadSpace) {
   char input[]{"All char after 23 pad spaces"};
   const std::size_t charLen = sizeof(input);
 
-  FORTRAN_PROCEDURE_NAME(fdate)
-  (reinterpret_cast<std::byte *>(input), charLen);
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
 
   for (std::size_t i{24}; i < charLen; i++) {
     EXPECT_EQ(input[i], ' ');
@@ -268,8 +262,7 @@ TEST_F(NoArgv, FdateGetDatePadSpace) {
 TEST_F(NoArgv, FdateNotSupported) {
   char input[]{"No change due to crash"};
 
-  EXPECT_DEATH(FORTRAN_PROCEDURE_NAME(fdate)(
-                   reinterpret_cast<std::byte *>(input), sizeof(input)),
+  EXPECT_DEATH(FORTRAN_PROCEDURE_NAME(fdate)(input, sizeof(input)),
       "fdate is not supported.");
 
   CheckCharEqStr(input, "No change due to crash");
