@@ -305,28 +305,28 @@ constexpr bool test_properly_handling_missing() {
 
   auto strider_iter = strider.end();
 
-  strider_iter--;
+  (void)strider_iter--;
   assert(*strider_iter == 8);
 
   // Now that we are back among the valid, we should
   // have a normal stride length back (i.e., __missing_
   // should be equal to 0).
-  strider_iter--;
+  (void)strider_iter--;
   assert(*strider_iter == 1);
 
-  strider_iter++;
+  (void)strider_iter++;
   assert(*strider_iter == 8);
 
   // By striding past the end, we are going to generate
   // another __missing_ != 0 value. Let's make sure
   // that it gets generated and used.
-  strider_iter++;
+  (void)strider_iter++;
   assert(strider_iter == strider.end());
 
-  strider_iter--;
+  (void)strider_iter--;
   assert(*strider_iter == 8);
 
-  strider_iter--;
+  (void)strider_iter--;
   assert(*strider_iter == 1);
   return true;
 }

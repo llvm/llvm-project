@@ -17,7 +17,24 @@
 #include "../types.h"
 #include "test_iterators.h"
 
-struct NotSimpleViewIterBegin : InputIterBase<NotSimpleViewIterBegin> {};
+struct NotSimpleViewIterEnd;
+template <bool, bool>
+struct NotSimpleViewConstIterEnd;
+template <bool, bool>
+struct NotSimpleViewConstIterBegin;
+
+struct NotSimpleViewIterBegin : InputIterBase<NotSimpleViewIterBegin> {
+  template <bool CopyConvertible, bool MoveConvertible>
+  friend constexpr bool
+  operator==(const NotSimpleViewIterBegin&, const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&) {
+    return true;
+  }
+  template <bool CopyConvertible, bool MoveConvertible>
+  friend constexpr bool
+  operator==(const NotSimpleViewIterBegin&, const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&) {
+    return true;
+  }
+};
 
 template <bool CopyConvertible, bool MoveConvertible>
 struct NotSimpleViewConstIterBegin : InputIterBase<NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>> {
@@ -33,9 +50,31 @@ struct NotSimpleViewConstIterBegin : InputIterBase<NotSimpleViewConstIterBegin<C
   constexpr NotSimpleViewConstIterBegin(NotSimpleViewIterBegin&&)
     requires MoveConvertible
   {}
+
+  friend constexpr bool
+  operator==(const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterEnd&) {
+    return true;
+  }
+  friend constexpr bool
+  operator==(const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterBegin&) {
+    return true;
+  }
 };
 
-struct NotSimpleViewIterEnd : InputIterBase<NotSimpleViewIterEnd> {};
+struct NotSimpleViewIterEnd : InputIterBase<NotSimpleViewIterEnd> {
+  template <bool CopyConvertible, bool MoveConvertible>
+  friend constexpr bool
+  operator==(const NotSimpleViewIterEnd&, const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&) {
+    return true;
+  }
+  template <bool CopyConvertible, bool MoveConvertible>
+  friend constexpr bool
+  operator==(const NotSimpleViewIterEnd&, const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&) {
+    return true;
+  }
+
+  friend constexpr bool operator==(const NotSimpleViewIterEnd&, const NotSimpleViewIterBegin&) { return true; }
+};
 
 template <bool CopyConvertible, bool MoveConvertible>
 struct NotSimpleViewConstIterEnd : InputIterBase<NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>> {
@@ -51,52 +90,16 @@ struct NotSimpleViewConstIterEnd : InputIterBase<NotSimpleViewConstIterEnd<CopyC
   constexpr NotSimpleViewConstIterEnd(NotSimpleViewIterEnd&&)
     requires MoveConvertible
   {}
+
+  friend constexpr bool
+  operator==(const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterEnd&) {
+    return true;
+  }
+  friend constexpr bool
+  operator==(const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterBegin&) {
+    return true;
+  }
 };
-
-constexpr bool operator==(const NotSimpleViewIterBegin&, const NotSimpleViewIterEnd&) { return true; }
-constexpr bool operator==(const NotSimpleViewIterEnd&, const NotSimpleViewIterBegin&) { return true; }
-
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterEnd&) {
-  return true;
-}
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterBegin&) {
-  return true;
-}
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewIterBegin&, const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&) {
-  return true;
-}
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewIterBegin&, const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&) {
-  return true;
-}
-
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterEnd&) {
-  return true;
-}
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&, const NotSimpleViewIterBegin&) {
-  return true;
-}
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewIterEnd&, const NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>&) {
-  return true;
-}
-template <bool CopyConvertible, bool MoveConvertible>
-constexpr bool
-operator==(const NotSimpleViewIterEnd&, const NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>&) {
-  return true;
-}
 
 /*
  * Goal: We will need a way to get a stride_view<true>::__iterator and a
@@ -151,8 +154,8 @@ constexpr bool non_const_iterator_copy_ctor() {
   // 2. std::ranges::iterator_t<const StrideView> base's type is NotSimpleViewBeingStridedConstIterator
   // 3. NotSimpleViewBeingStridedIterator is ONLY move-convertible to NotSimpleViewBeingStridedConstIterator
   // 4. std::ranges::sentinel_t are the same whether SV is const or not.
-  // 4. the type of StrideView::end is the same whether StrideView is const or not.
-  // 5. the type of StrideView::begin is stride_view::iterator<true> when StrideView is const and
+  // 5. the type of StrideView::end is the same whether StrideView is const or not.
+  // 6. the type of StrideView::begin is stride_view::iterator<true> when StrideView is const and
   //    stride_view::iterator<false> when StrideView is non const.
   // Visually, it looks like this:
   //
