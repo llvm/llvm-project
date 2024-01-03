@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::object;
 
 namespace {
 
@@ -525,11 +526,19 @@ bool XCOFFWriter::writeRelocations() {
 }
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
+  uint8_t SymAlignAndType = AuxSym.SymbolAlignmentAndType.value_or(0);
+  if (AuxSym.SymbolType)
+    SymAlignAndType = (SymAlignAndType & ~XCOFFCsectAuxRef::SymbolTypeMask) |
+                      *AuxSym.SymbolType;
+  if (AuxSym.SymbolAlignment)
+    SymAlignAndType =
+        (SymAlignAndType & ~XCOFFCsectAuxRef::SymbolAlignmentMask) |
+        (*AuxSym.SymbolAlignment << XCOFFCsectAuxRef::SymbolAlignmentBitOffset);
   if (Is64Bit) {
     W.write<uint32_t>(AuxSym.SectionOrLengthLo.value_or(0));
     W.write<uint32_t>(AuxSym.ParameterHashIndex.value_or(0));
     W.write<uint16_t>(AuxSym.TypeChkSectNum.value_or(0));
-    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.value_or(0));
+    W.write<uint8_t>(SymAlignAndType);
     W.write<uint8_t>(AuxSym.StorageMappingClass.value_or(XCOFF::XMC_PR));
     W.write<uint32_t>(AuxSym.SectionOrLengthHi.value_or(0));
     W.write<uint8_t>(0);
@@ -538,7 +547,7 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
     W.write<uint32_t>(AuxSym.SectionOrLength.value_or(0));
     W.write<uint32_t>(AuxSym.ParameterHashIndex.value_or(0));
     W.write<uint16_t>(AuxSym.TypeChkSectNum.value_or(0));
-    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.value_or(0));
+    W.write<uint8_t>(SymAlignAndType);
     W.write<uint8_t>(AuxSym.StorageMappingClass.value_or(XCOFF::XMC_PR));
     W.write<uint32_t>(AuxSym.StabInfoIndex.value_or(0));
     W.write<uint16_t>(AuxSym.StabSectNum.value_or(0));
