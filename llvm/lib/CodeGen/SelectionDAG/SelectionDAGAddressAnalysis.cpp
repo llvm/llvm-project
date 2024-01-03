@@ -91,10 +91,13 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
                                       const SelectionDAG &DAG, bool &IsAlias) {
 
   BaseIndexOffset BasePtr0 = match(Op0, DAG);
-  BaseIndexOffset BasePtr1 = match(Op1, DAG);
-
-  if (!(BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()))
+  if (!BasePtr0.getBase().getNode())
     return false;
+
+  BaseIndexOffset BasePtr1 = match(Op1, DAG);
+  if (!BasePtr1.getBase().getNode())
+    return false;
+
   int64_t PtrDiff;
   if (NumBytes0 && NumBytes1 &&
       BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
