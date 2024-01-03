@@ -28,17 +28,21 @@ void test() {
   std::basic_filebuf<CharT> f;
   std::filesystem::path p = get_temp_file_name();
 
+  // non-const
   {
     assert(f.open(p, std::ios_base::in) != nullptr);
-    std::same_as<HandleT> decltype(auto) handle = f.native_handle();
+    std::same_as<NativeHandleT> decltype(auto) handle = f.native_handle();
     assert(is_handle_valid(handle));
     f.close();
     assert(!is_handle_valid(handle));
     static_assert(noexcept(f.native_handle()));
   }
+  // const
   {
+    const std::basic_filebuf<CharT> cf;
+
     assert(f.open(p, std::ios_base::in) != nullptr);
-    std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
+    std::same_as<NativeHandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
     assert(is_handle_valid(const_handle));
     f.close();
     assert(!is_handle_valid(const_handle));

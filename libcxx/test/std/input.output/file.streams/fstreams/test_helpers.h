@@ -15,6 +15,7 @@
 #include <fstream>
 #include <filesystem>
 #include <type_traits>
+#include <utility>
 
 #if defined(_WIN32)
 #  define WIN32_LEAN_AND_MEAN
@@ -45,30 +46,30 @@ void test_native_handle() {
   static_assert(
       std::is_same_v<typename std::basic_filebuf<CharT>::native_handle_type, typename StreamT::native_handle_type>);
 
+  StreamT f;
   std::filesystem::path p = get_temp_file_name();
 
   // non-const
   {
-    StreamT f;
-
-    assert(f.open(p) != nullptr);
-    assert(f.native_handle() == f.rdbuf()->native_handle());
+    f.open(p);
     std::same_as<NativeHandleT> decltype(auto) handle = f.native_handle();
     assert(is_handle_valid(handle));
+    assert(f.rdbuf()->native_handle() == handle);
+    assert(std::as_const(f).rdbuf()->native_handle() == handle);
     f.close();
-    assert(is_handle_valid(handle));
+    assert(!is_handle_valid(handle));
     static_assert(noexcept(f.native_handle()));
   }
   // const
   {
-    StreamT cf;
-
-    assert(cf.open(p) != nullptr);
-    std::same_as<NativeHandleT> decltype(auto) const_handle = cf.native_handle();
+    f.open(p);
+    std::same_as<NativeHandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
     assert(is_handle_valid(const_handle));
-    cf.close();
+    assert(f.rdbuf()->native_handle() == const_handle);
+    assert(std::as_const(f).rdbuf()->native_handle() == const_handle);
+    f.close();
     assert(!is_handle_valid(const_handle));
-    static_assert(noexcept(cf.native_handle()));
+    static_assert(noexcept(std::as_const(f).native_handle()));
   }
 }
 
@@ -76,18 +77,12 @@ template <typename StreamT>
 void test_native_handle_assertion() {
   std::filesystem::path p = get_temp_file_name();
 
+  StreamT f;
+
   // non-const
-  {
-    StreamT f;
-
-    TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened");
-  }
+  { TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened"); }
   // const
-  {
-    StreamT cf;
-
-    TEST_LIBCPP_ASSERT_FAILURE(cf.native_handle(), "File must be opened");
-  }
+  { TEST_LIBCPP_ASSERT_FAILURE(std::as_const(f).native_handle(), "File must be opened"); }
 }
 
 #endif // TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H

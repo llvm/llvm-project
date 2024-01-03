@@ -19,8 +19,8 @@
 #include "../test_helpers.h"
 
 int main(int, char**) {
-  test_assertion<std::basic_ofstream<char>>();
+  test_native_handle_assertion<std::basic_ofstream<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test_assertion<std::basic_ofstream<wchar_t>>();
+  test_native_handle_assertion<std::basic_ofstream<wchar_t>>();
 #endif
 }
