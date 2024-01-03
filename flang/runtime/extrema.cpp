@@ -135,7 +135,7 @@ template <bool IS_MAX> struct CharacterMaxOrMinLocHelper {
     RT_API_ATTRS void operator()(const char *intrinsic, Descriptor &result,
         const Descriptor &x, int kind, const char *source, int line,
         const Descriptor *mask, bool back) const {
-      DoMaxOrMinLoc<TypeCategory::Character, KIND, IS_MAX, NumericCompare>(
+      DoMaxOrMinLoc<TypeCategory::Character, KIND, IS_MAX, CharacterCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
     }
   };
