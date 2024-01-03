@@ -149,7 +149,7 @@ private:
     auto TypeOut = FirstTemplateArgument.getAsType();
     const auto *TypeStored = State->get<AnyHeldTypeMap>(AnyMemRegion);
 
-    // Report when we try to use std::any_cast on an std::any that held a null
+    // Report when we try to use std::any_cast on a std::any that held a null
     // type.
     if (TypeStored->isNull()) {
       ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
