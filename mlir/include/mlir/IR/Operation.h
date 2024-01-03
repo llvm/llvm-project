@@ -476,8 +476,8 @@ public:
   }
 
   /// Return a range of all of discardable attributes on this operation. Note
-  /// that for unregistered operations, all attributes are considered
-  /// discardable.
+  /// that for unregistered operations that are not storing inherent attributes
+  /// as properties, all attributes are considered discardable.
   auto getDiscardableAttrs() {
     std::optional<RegisteredOperationName> opName = getRegisteredInfo();
     ArrayRef<StringAttr> attributeNames =
