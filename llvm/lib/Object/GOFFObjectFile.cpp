@@ -462,7 +462,7 @@ uint64_t GOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
 }
 
 // Unravel TXT records and expand fill characters to produce
-// a contiguous sequence of bytes
+// a contiguous sequence of bytes.
 Expected<ArrayRef<uint8_t>>
 GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   if (SectionDataCache.count(Sec.d.a)) {
@@ -507,7 +507,7 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
 
     SmallString<256> CompleteData;
     CompleteData.reserve(TxtDataSize);
-    if (auto Err = TXTRecord::getData(TxtRecordPtr, CompleteData))
+    if (Error Err = TXTRecord::getData(TxtRecordPtr, CompleteData))
       return std::move(Err);
     assert(CompleteData.size() == TxtDataSize && "Wrong length of data");
     memcpy(Data + TxtDataOffset, CompleteData.data(), TxtDataSize);
@@ -521,7 +521,7 @@ uint64_t GOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
   const uint8_t *EsdRecord = getSectionEdEsdRecord(Sec);
   GOFF::ESDAlignment Pow2Alignment;
   ESDRecord::getAlignment(EsdRecord, Pow2Alignment);
-  return 1 << (uint64_t)Pow2Alignment;
+  return 1 << static_cast<uint64_t>(Pow2Alignment);
 }
 
 bool GOFFObjectFile::isSectionText(DataRefImpl Sec) const {

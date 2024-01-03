@@ -78,7 +78,6 @@ public:
   /// \brief Maximum length of data; any more must go in continuation.
   static const uint8_t TXTMaxDataLength = 56;
 
-  // Get routines.
   static Error getData(const uint8_t *Record, SmallString<256> &CompleteData);
 
   static void getElementEsdId(const uint8_t *Record, uint32_t &EsdId) {
