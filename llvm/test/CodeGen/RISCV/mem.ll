@@ -338,3 +338,29 @@ bb:
 }
 
 declare void @snork(ptr)
+
+define i8 @disjoint_or_lb(ptr %a, i32 %off) nounwind {
+; RV32I-LABEL: disjoint_or_lb:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lbu a0, 3(a0)
+; RV32I-NEXT:    ret
+  %b = or disjoint i32 %off, 3
+  %1 = getelementptr i8, ptr %a, i32 %b
+  %2 = load i8, ptr %1
+  ret i8 %2
+}
+
+define i32 @disjoint_or_lw(ptr %a, i32 %off) nounwind {
+; RV32I-LABEL: disjoint_or_lw:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 2
+; RV32I-NEXT:    ori a1, a1, 12
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    ret
+  %b = or disjoint i32 %off, 3
+  %1 = getelementptr i32, ptr %a, i32 %b
+  %2 = load i32, ptr %1
+  ret i32 %2
+}
