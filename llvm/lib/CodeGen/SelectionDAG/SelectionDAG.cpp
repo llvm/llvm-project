@@ -5022,7 +5022,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
   case ISD::AND:
-  case ISD::OR:
   case ISD::XOR:
   case ISD::ROTL:
   case ISD::ROTR:
@@ -5061,6 +5060,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // Matches hasPoisonGeneratingFlags().
     return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
                              Op->getFlags().hasNoUnsignedWrap());
+
+  // Matches hasPoisonGeneratingFlags().
+  case ISD::OR:
+    return ConsiderFlags && Op->getFlags().hasDisjoint();
 
   case ISD::INSERT_VECTOR_ELT:{
     // Ensure that the element index is in bounds.
@@ -5470,7 +5473,7 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
         Ops[i].getOperand(0).getValueType() != VT ||
         (IdentitySrc && Ops[i].getOperand(0) != IdentitySrc) ||
         !isa<ConstantSDNode>(Ops[i].getOperand(1)) ||
-        cast<ConstantSDNode>(Ops[i].getOperand(1))->getAPIntValue() != i) {
+        Ops[i].getConstantOperandAPInt(1) != i) {
       IsIdentity = false;
       break;
     }
@@ -7408,7 +7411,7 @@ static bool isMemSrcFromConstant(SDValue Src, ConstantDataArraySlice &Slice) {
            Src.getOperand(0).getOpcode() == ISD::GlobalAddress &&
            Src.getOperand(1).getOpcode() == ISD::Constant) {
     G = cast<GlobalAddressSDNode>(Src.getOperand(0));
-    SrcDelta = cast<ConstantSDNode>(Src.getOperand(1))->getZExtValue();
+    SrcDelta = Src.getConstantOperandVal(1);
   }
   if (!G)
     return false;

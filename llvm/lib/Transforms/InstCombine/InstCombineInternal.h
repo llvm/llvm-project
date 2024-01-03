@@ -648,9 +648,8 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
-  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
-                                      Value *Z, ICmpInst::Predicate Pred);
-  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
+  Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
+                                  Value *Z, ICmpInst::Predicate Pred);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -708,6 +707,8 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
+  Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
+                                   Value *Op1, ICmpInst &CxtI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);

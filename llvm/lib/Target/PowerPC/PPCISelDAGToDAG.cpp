@@ -4902,8 +4902,7 @@ bool PPCDAGToDAGISel::trySelectLoopCountIntrinsic(SDNode *N) {
     return false;
 
   if (LHS.getOperand(0).getOpcode() != ISD::INTRINSIC_W_CHAIN ||
-      cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1))->getZExtValue() !=
-          Intrinsic::loop_decrement)
+      LHS.getOperand(0).getConstantOperandVal(1) != Intrinsic::loop_decrement)
     return false;
 
   if (!isa<ConstantSDNode>(RHS))
@@ -6011,7 +6010,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // Op #3 is the Dest MBB
     // Op #4 is the Flag.
     // Prevent PPC::PRED_* from being selected into LI.
-    unsigned PCC = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    unsigned PCC = N->getConstantOperandVal(1);
     if (EnableBranchHint)
       PCC |= getBranchHint(PCC, *FuncInfo, N->getOperand(3));
 

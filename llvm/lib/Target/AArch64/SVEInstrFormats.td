@@ -10082,6 +10082,12 @@ multiclass sve2p1_vector_to_pred<string mnemonic, SDPatternOperator Op_lane, SDP
 
   def : InstAlias<mnemonic # "\t$Pd, $Zn",
                  (!cast<Instruction>(NAME # _B) PPR8:$Pd, ZPRAny:$Zn, 0), 1>;
+  def : InstAlias<mnemonic # "\t$Pd, $Zn",
+                 (!cast<Instruction>(NAME # _H) PPR16:$Pd, ZPRAny:$Zn, 0), 0>;
+  def : InstAlias<mnemonic # "\t$Pd, $Zn",
+                 (!cast<Instruction>(NAME # _S) PPR32:$Pd, ZPRAny:$Zn, 0), 0>;
+  def : InstAlias<mnemonic # "\t$Pd, $Zn",
+                 (!cast<Instruction>(NAME # _D) PPR64:$Pd, ZPRAny:$Zn, 0), 0>;
 
   // any_lane
   def : Pat<(nxv16i1 (Op_lane (nxv16i8 ZPRAny:$Zn), (i32 timm32_0_0:$Idx))),
@@ -10143,6 +10149,12 @@ multiclass sve2p1_pred_to_vector<string mnemonic, SDPatternOperator MergeOp,
 
   def : InstAlias<mnemonic # "\t$Zd, $Pn",
                  (!cast<Instruction>(NAME # _B) ZPRAny:$Zd, 0, PPR8:$Pn), 1>;
+  def : InstAlias<mnemonic # "\t$Zd, $Pn",
+                 (!cast<Instruction>(NAME # _H) ZPRAny:$Zd, 0, PPR16:$Pn), 0>;
+  def : InstAlias<mnemonic # "\t$Zd, $Pn",
+                 (!cast<Instruction>(NAME # _S) ZPRAny:$Zd, 0, PPR32:$Pn), 0>;
+  def : InstAlias<mnemonic # "\t$Zd, $Pn",
+                 (!cast<Instruction>(NAME # _D) ZPRAny:$Zd, 0, PPR64:$Pn), 0>;
 
   // Merge
   def : Pat<(nxv8i16 (MergeOp (nxv8i16 ZPRAny:$Zd), (nxv8i1 PPR16:$Pn), (i32 timm32_1_1:$Idx))),
