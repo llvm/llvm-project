@@ -3543,7 +3543,7 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
   }
 
   auto attrs = op->getDiscardableAttrs();
-  printOptionalAttrDict(attrs);
+  printOptionalAttrDict(llvm::to_vector(attrs));
 
   // Print the type signature of the operation.
   os << " : ";
