@@ -7721,9 +7721,10 @@ Both coroutines and coroutine wrappers are part of this analysis.
     return coro(a); // warning: returning address of stack variable `a`.
   }
 
-This analysis can be disabled for a particular function by annotating it with function attribute
-``[[clang::coro_not_lifetimebound]]``. For example, this could be useful for coroutine wrappers
-which accept reference parameters but do not pass them to the underlying coroutine or pass them by value.
+This analysis can be disabled for all calls to a particular function by annotating the function
+with function attribute ``[[clang::coro_not_lifetimebound]]``.
+For example, this could be useful for coroutine wrappers which accept reference parameters
+but do not pass them to the underlying coroutine or pass them by value.
 
 .. code-block:: c++
 
@@ -7732,7 +7733,7 @@ which accept reference parameters but do not pass them to the underlying corouti
     return coro(a + 1);
   }
   void use() {
-    auto task = coro_wrapper(1); // use of temporary is fine as coro_wrapper is not lifetime bound.
+    auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
   }
 
 .. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
