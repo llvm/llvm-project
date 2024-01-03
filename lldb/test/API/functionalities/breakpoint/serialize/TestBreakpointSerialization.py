@@ -54,21 +54,24 @@ class BreakpointSerialization(TestBase):
         self.build()
         self.setup_targets_and_cleanup()
 
-        sym_ctx_list = self.orig_target.FindFunctions("main")
-        self.assertTrue(sym_ctx_list.GetSize() == 1, "Unable to find function `main'")
+        exe_path = self.getBuildArtifact("a.out")
+        exe_module = self.orig_target.module[exe_path]
+        self.assertTrue(exe_module.IsValid(), "Failed to find the executable module in target")
+        sym_ctx_list = exe_module.FindFunctions("main")
+        self.assertTrue(sym_ctx_list.GetSize() == 1, "Unable to find function 'main'")
         sym_ctx = sym_ctx_list.GetContextAtIndex(0)
         self.assertTrue(
-            sym_ctx.IsValid(), "SBSymbolContext representing function `main' is invalid"
+            sym_ctx.IsValid(), "SBSymbolContext representing function 'main' is invalid"
         )
         main_func = sym_ctx.GetFunction()
         self.assertTrue(
-            main_func.IsValid(), "SBFunction representing `main' is invalid"
+            main_func.IsValid(), "SBFunction representing 'main' is invalid"
         )
         main_addr = main_func.GetStartAddress()
 
         bkpt = self.orig_target.BreakpointCreateBySBAddress(main_addr)
         self.assertTrue(
-            bkpt.IsValid(), "Could not place breakpoint on `main' by address"
+            bkpt.IsValid(), "Could not place breakpoint on 'main' by address"
         )
         stream = lldb.SBStream()
         sd = bkpt.SerializeToStructuredData()
@@ -76,7 +79,7 @@ class BreakpointSerialization(TestBase):
         serialized_data = json.loads(stream.GetData())
 
         self.assertIn(
-            "a.out",
+            exe_path,
             serialized_data["Breakpoint"]["BKPTResolver"]["Options"]["ModuleName"],
         )
 
