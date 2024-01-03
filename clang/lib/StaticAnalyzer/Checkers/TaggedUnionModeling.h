@@ -23,8 +23,8 @@ bool isCopyAssignmentCall(const CallEvent &Call);
 bool isMoveAssignmentCall(const CallEvent &Call);
 bool isMoveConstructorCall(const CallEvent &Call);
 bool isStdType(const Type *Type, const std::string &TypeName);
-bool isStdVariant(const Type *Type);
 bool isStdAny(const Type *Type);
+bool isStdVariant(const Type *Type);
 bool isVowel(char a);
 llvm::StringRef indefiniteArticleBasedOnVowel(char a);
 
