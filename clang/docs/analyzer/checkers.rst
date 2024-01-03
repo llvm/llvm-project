@@ -2099,10 +2099,12 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
 
 alpha.core.StdAny (C++)
 """""""""""""""""""""""
-Check if a value of active type is retrieved from an ``std::any`` instance with ``std::any_cats``
-or if the ``std::any`` instance holds type. In case of bad any type access
-(the accessed type differs from the active type, or the instance has no stored value)
-a warning is emitted. Currently, this checker does not take exception handling into account.
+Check if a value of active type is retrieved from a ``std::any`` instance with ``std::any_cast``
+or if the instance holds a value. In case of bad access
+(the accessed type differs from the active type, or the instance is empty)
+a warning is emitted.
+
+**Limitation:** The checker does not take exception handling into account.
 
 .. code-block:: cpp
 
