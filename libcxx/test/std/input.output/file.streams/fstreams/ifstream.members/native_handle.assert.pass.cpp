@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: availability-verbose_abort-missing
+
 // <fstream>
 
 // class basic_ifstream;
