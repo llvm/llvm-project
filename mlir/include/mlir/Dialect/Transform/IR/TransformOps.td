@@ -474,8 +474,10 @@ def CollectMatchingOp : TransformDialectOp<"collect_matching", [
     matcher sequence produces a silenceable failure, the matcher advances to the
     next payload operation in the walk order without finishing the sequence.
 
-    The results of this operation are constructed by concatenating values
-    yielded by successful application of the matcher named sequence.
+    The i-th result of this operation is constructed by concatenating the i-th
+    yielded payload IR objects of all successful matcher sequence applications.
+    All results are guaranteed to be mapped to the same number of payload IR
+    objects.
 
     The operation succeeds unless the matcher sequence produced a definite
     failure for any invocation.

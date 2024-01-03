@@ -2409,3 +2409,21 @@ module attributes { transform.with_named_sequence } {
 
   transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op
 }
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-remark @below {{matched}}
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-remark @below {{matched}}
+    %0 = transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.test_print_remark_at_operand %0, "matched" : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    transform.match.operation_name %arg0 ["transform.sequence", "transform.collect_matching"] : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+}

@@ -896,7 +896,7 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
     assert(!maybeFailure && "failure set but the walk was not interrupted");
 
     for (auto &&[opResult, rawResult] :
-         llvm::zip(getOperation()->getResults(), rawResults)) {
+         llvm::zip_equal(getOperation()->getResults(), rawResults)) {
       results.setMappedValues(opResult, rawResult);
     }
   }
