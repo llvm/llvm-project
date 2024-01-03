@@ -39,8 +39,6 @@ void test() {
   }
   // const
   {
-    const std::basic_filebuf<CharT> cf;
-
     assert(f.open(p, std::ios_base::in) != nullptr);
     std::same_as<NativeHandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
     assert(is_handle_valid(const_handle));
