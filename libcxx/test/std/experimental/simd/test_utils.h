@@ -28,7 +28,7 @@ struct TestAllSimdAbiFunctor {
 
   template <class T, std::size_t... Ns>
   void instantiate_with_n(std::index_sequence<Ns...>) {
-    (types::for_each(sized_abis<T, Ns + 1>{}, F<T, Ns + 1>{}), ...);
+    (types::for_each(sized_abis<T, Ns>{}, F<T, Ns>{}), ...);
   }
 
   template <class T>
@@ -36,7 +36,8 @@ struct TestAllSimdAbiFunctor {
     using abis = types::type_list<ex::simd_abi::scalar, ex::simd_abi::native<T>, ex::simd_abi::compatible<T>>;
     types::for_each(abis{}, F<T, 1>());
 
-    instantiate_with_n<T>(std::make_index_sequence<max_simd_size - 1>{});
+    instantiate_with_n<T>(
+        std::index_sequence<1, 2, 3, 4, 8, 16, max_simd_size - 2, max_simd_size - 1, max_simd_size>{});
   }
 };
 

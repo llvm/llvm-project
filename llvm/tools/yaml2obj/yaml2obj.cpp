@@ -78,9 +78,9 @@ static std::optional<std::string> preprocess(StringRef Buf,
 
   std::string Preprocessed;
   while (!Buf.empty()) {
-    if (Buf.startswith("[[")) {
+    if (Buf.starts_with("[[")) {
       size_t I = Buf.find_first_of("[]", 2);
-      if (Buf.substr(I).startswith("]]")) {
+      if (Buf.substr(I).starts_with("]]")) {
         StringRef MacroExpr = Buf.substr(2, I - 2);
         StringRef Macro;
         StringRef Default;
@@ -92,7 +92,7 @@ static std::optional<std::string> preprocess(StringRef Buf,
         std::optional<StringRef> Value;
         if (It != Defines.end())
           Value = It->second;
-        else if (!Default.empty() || MacroExpr.endswith("="))
+        else if (!Default.empty() || MacroExpr.ends_with("="))
           Value = Default;
 
         if (Value) {

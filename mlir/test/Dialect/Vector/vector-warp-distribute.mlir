@@ -1,8 +1,20 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if | FileCheck %s --check-prefix=CHECK-SCF-IF
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform" | FileCheck --check-prefixes=CHECK-HOIST %s
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform distribute-transfer-write" | FileCheck --check-prefixes=CHECK-D %s
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute=propagate-distribution -canonicalize | FileCheck --check-prefixes=CHECK-PROP %s
-// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" -canonicalize | FileCheck --check-prefixes=CHECK-DIST-AND-PROP %s
+// RUN: mlir-opt %s --allow-unregistered-dialect --split-input-file \
+// RUN:   --test-vector-warp-distribute=rewrite-warp-ops-to-scf-if | FileCheck %s --check-prefix=CHECK-SCF-IF
+
+// RUN: mlir-opt %s --allow-unregistered-dialect --split-input-file \
+// RUN:   --test-vector-warp-distribute="hoist-uniform" | FileCheck --check-prefixes=CHECK-HOIST %s
+
+// RUN: mlir-opt %s --allow-unregistered-dialect --split-input-file \
+// RUN:   --test-vector-warp-distribute="hoist-uniform distribute-transfer-write max-transfer-write-elements=4" \
+// RUN:   | FileCheck --check-prefixes=CHECK-D %s
+
+// RUN: mlir-opt %s --allow-unregistered-dialect --split-input-file \
+// RUN:  --test-vector-warp-distribute=propagate-distribution --canonicalize \
+// RUN:  | FileCheck --check-prefixes=CHECK-PROP %s
+
+// RUN: mlir-opt %s --allow-unregistered-dialect --split-input-file \
+// RUN:   --test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" \
+// RUN:   --canonicalize | FileCheck --check-prefixes=CHECK-DIST-AND-PROP %s
 
 // CHECK-SCF-IF-DAG: #[[$TIMES2:.*]] = affine_map<()[s0] -> (s0 * 2)>
 // CHECK-SCF-IF-DAG: #[[$TIMES4:.*]] = affine_map<()[s0] -> (s0 * 4)>
@@ -128,6 +140,84 @@ func.func @warp_extract(%laneid: index, %arg1: memref<1024x1024xf32>, %gid : ind
     %v1 = "test.dummy_op"() : () -> (vector<1x1xf32>)
     vector.transfer_write %v1, %arg1[%c0, %c0] : vector<1x1xf32>, memref<1024x1024xf32>
     vector.transfer_write %v, %arg1[%c0, %c0] : vector<1xf32>, memref<1024x1024xf32>
+  }
+  return
+}
+
+// -----
+
+// Check that we can distribute writes of the maximum allowed number of elements.
+
+// CHECK-D-LABEL: func @warp_extract_4_elems(
+//       CHECK-D:   %[[WARPOP:.*]]:2 = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<4xf32>, vector<4x1xf32>)
+//       CHECK-D:     "test.dummy_op"
+//       CHECK-D:     "test.dummy_op"
+//       CHECK-D:     vector.yield %{{.*}}, %{{.*}} : vector<4xf32>, vector<4x1xf32>
+//       CHECK-D:   }
+//       CHECK-D:   vector.warp_execute_on_lane_0(%{{.*}})[32] {
+//       CHECK-D:     vector.transfer_write %[[WARPOP]]#1, %{{.*}}[%{{.*}}] {{.*}} : vector<4x1xf32>
+//       CHECK-D:   }
+//       CHECK-D:   vector.warp_execute_on_lane_0(%{{.*}})[32] {
+//       CHECK-D:     vector.transfer_write %[[WARPOP]]#0, %{{.*}}[%{{.*}}] {{.*}} : vector<4xf32>
+//       CHECK-D:   }
+
+func.func @warp_extract_4_elems(%laneid: index, %arg1: memref<1024x1024xf32>, %gid : index) {
+  vector.warp_execute_on_lane_0(%laneid)[32] {
+    %c0 = arith.constant 0 : index
+    %v = "test.dummy_op"() : () -> (vector<4xf32>)
+    %v1 = "test.dummy_op"() : () -> (vector<4x1xf32>)
+    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<4x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] : vector<4xf32>, memref<1024x1024xf32>
+  }
+  return
+}
+
+// -----
+
+// Check that we do not distribute writes larger than the maximum allowed
+// number of elements.
+
+// CHECK-D-LABEL: func @warp_extract_5_elems(
+//       CHECK-D:   arith.constant 0 : index
+//       CHECK-D:   vector.warp_execute_on_lane_0(%{{.*}})[32] {
+//       CHECK-D:     %[[V:.+]] = "test.dummy_op"
+//       CHECK-D:     %[[V1:.+]] = "test.dummy_op"
+//       CHECK-D:     vector.transfer_write %[[V1]], %{{.*}}[%{{.*}}] {{.*}} : vector<5x1xf32>
+//       CHECK-D:     vector.transfer_write %[[V]], %{{.*}}[%{{.*}}] {{.*}} : vector<5xf32>
+//       CHECK-D:   }
+
+func.func @warp_extract_5_elems(%laneid: index, %arg1: memref<1024x1024xf32>, %gid : index) {
+  vector.warp_execute_on_lane_0(%laneid)[32] {
+    %c0 = arith.constant 0 : index
+    %v = "test.dummy_op"() : () -> (vector<5xf32>)
+    %v1 = "test.dummy_op"() : () -> (vector<5x1xf32>)
+    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<5x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] : vector<5xf32>, memref<1024x1024xf32>
+  }
+  return
+}
+
+// -----
+
+// Check that we do not distribute writes larger than the maximum allowed
+// number of elements, or multiples of the maximum number of elements.
+
+// CHECK-D-LABEL: func @warp_extract_8_elems(
+//       CHECK-D:   arith.constant 0 : index
+//       CHECK-D:   vector.warp_execute_on_lane_0(%{{.*}})[32] {
+//       CHECK-D:     %[[V:.+]] = "test.dummy_op"
+//       CHECK-D:     %[[V1:.+]] = "test.dummy_op"
+//       CHECK-D:     vector.transfer_write %[[V1]], %{{.*}}[%{{.*}}] {{.*}} : vector<8x1xf32>
+//       CHECK-D:     vector.transfer_write %[[V]], %{{.*}}[%{{.*}}] {{.*}} : vector<8xf32>
+//       CHECK-D:   }
+
+func.func @warp_extract_8_elems(%laneid: index, %arg1: memref<1024x1024xf32>, %gid : index) {
+  vector.warp_execute_on_lane_0(%laneid)[32] {
+    %c0 = arith.constant 0 : index
+    %v = "test.dummy_op"() : () -> (vector<8xf32>)
+    %v1 = "test.dummy_op"() : () -> (vector<8x1xf32>)
+    vector.transfer_write %v1, %arg1[%c0, %c0] : vector<8x1xf32>, memref<1024x1024xf32>
+    vector.transfer_write %v, %arg1[%c0, %c0] : vector<8xf32>, memref<1024x1024xf32>
   }
   return
 }
@@ -1348,6 +1438,32 @@ func.func @warp_propagate_masked_transfer_read(%laneid: index, %src: memref<4096
 //       CHECK-PROP:   vector.transfer_read {{.*}}[%[[DIST_READ_IDX0]], %[[ARG2]]], {{.*}}, %[[R]]#1 {{.*}} vector<2x2xf32>
 //       CHECK-PROP:   %[[DIST_READ_IDX1:.+]] = affine.apply #[[$MAP1]]()[%[[ARG2]], %[[ARG0]]]
 //       CHECK-PROP:   vector.transfer_read {{.*}}[%[[C0]], %[[DIST_READ_IDX1]]], {{.*}}, %[[R]]#0 {{.*}} vector<2xf32>
+
+// -----
+
+func.func @warp_propagate_nontrivial_map_masked_transfer_read(%laneid: index, %src: memref<4096x4096xf32>, %index: index) -> vector<2xf32> {
+  %f0 = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %r = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<2xf32>) {
+    %mask = "mask_def_0"() : () -> (vector<128xi1>)
+    %0 = vector.transfer_read %src[%index, %c0], %f0, %mask {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<4096x4096xf32>, vector<128xf32>
+    vector.yield %0 : vector<128xf32>
+  }
+  return %r : vector<2xf32>
+}
+
+//   CHECK-PROP-DAG: #[[$MAP0:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 2)>
+//   CHECK-PROP-DAG: #[[$MAP1:.+]] = affine_map<(d0, d1) -> (d0)>
+// CHECK-PROP-LABEL: func.func @warp_propagate_nontrivial_map_masked_transfer_read
+//  CHECK-PROP-SAME:   %[[ARG0:.+]]: index, {{.*}}, %[[ARG2:.+]]: index
+//       CHECK-PROP:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK-PROP:   %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[64] -> (vector<2xi1>) {
+//       CHECK-PROP:     %[[M0:.*]] = "mask_def_0"
+//       CHECK-PROP:     vector.yield %[[M0]] : vector<128xi1>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[DIST_READ_IDX0:.+]] = affine.apply #[[$MAP0]]()[%[[ARG2]], %[[ARG0]]]
+//       CHECK-PROP:   vector.transfer_read {{.*}}[%[[DIST_READ_IDX0]], %[[C0]]], {{.*}}, %[[R]]
+//  CHECK-PROP-SAME:   permutation_map = #[[$MAP1]]} {{.*}} vector<2xf32>
 
 // -----
 

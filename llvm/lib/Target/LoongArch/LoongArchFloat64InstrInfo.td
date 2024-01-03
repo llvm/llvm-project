@@ -263,7 +263,11 @@ def : Pat<(fma_nsz (fneg FPR64:$fj), FPR64:$fk, (fneg FPR64:$fa)),
           (FNMADD_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
 
 // fnmsub.d: -(fj * fk - fa)
-def : Pat<(fma (fneg FPR64:$fj), FPR64:$fk, FPR64:$fa),
+def : Pat<(fneg (fma FPR64:$fj, FPR64:$fk, (fneg FPR64:$fa))),
+          (FNMSUB_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
+
+// fnmsub.d: -fj * fk + fa (the nsz flag on the FMA)
+def : Pat<(fma_nsz (fneg FPR64:$fj), FPR64:$fk, FPR64:$fa),
           (FNMSUB_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
 } // Predicates = [HasBasicD]
 

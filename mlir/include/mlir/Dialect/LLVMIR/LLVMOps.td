@@ -55,6 +55,26 @@ class LLVM_IntArithmeticOp<string mnemonic, string instName,
     $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
   }];
 }
+class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
+                                   list<Trait> traits = []> :
+    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName,
+    !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
+  dag iofArg = (
+    ins DefaultValuedAttr<LLVM_IntegerOverflowFlagsAttr, "{}">:$overflowFlags);
+  let arguments = !con(commonArgs, iofArg);
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
+    moduleImport.setIntegerOverflowFlagsAttr(inst, op);
+    $res = op;
+  }];
+  let assemblyFormat = [{
+    $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
+    custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+  }];
+  string llvmBuilder =
+    "$res = builder.Create" # instName #
+    "($lhs, $rhs, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());";
+}
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
@@ -90,9 +110,11 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
 }
 
 // Integer binary operations.
-def LLVM_AddOp : LLVM_IntArithmeticOp<"add", "Add", [Commutative]>;
-def LLVM_SubOp : LLVM_IntArithmeticOp<"sub", "Sub">;
-def LLVM_MulOp : LLVM_IntArithmeticOp<"mul", "Mul", [Commutative]>;
+def LLVM_AddOp : LLVM_IntArithmeticOpWithOverflowFlag<"add", "Add",
+    [Commutative]>;
+def LLVM_SubOp : LLVM_IntArithmeticOpWithOverflowFlag<"sub", "Sub", []>;
+def LLVM_MulOp : LLVM_IntArithmeticOpWithOverflowFlag<"mul", "Mul",
+    [Commutative]>;
 def LLVM_UDivOp : LLVM_IntArithmeticOp<"udiv", "UDiv">;
 def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "SDiv">;
 def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
@@ -102,7 +124,7 @@ def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or"> {
   let hasFolder = 1;
 }
 def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;
-def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl"> {
+def LLVM_ShlOp : LLVM_IntArithmeticOpWithOverflowFlag<"shl", "Shl", []> {
   let hasFolder = 1;
 }
 def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "LShr">;
@@ -262,10 +284,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
   }];
 
   let builders = [
-    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+    OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+    OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
@@ -1087,6 +1109,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<SymbolRefAttr>:$comdat,
+    DefaultValuedAttr<LLVM_DIGlobalVariableExpressionAttr, "{}">:$dbg_expr,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect global.";
@@ -1196,7 +1219,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"bool", "false">:$dsoLocal,
       CArg<"bool", "false">:$thread_local_,
       CArg<"SymbolRefAttr", "{}">:$comdat,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"DIGlobalVariableExpressionAttr", "{}">:$dbgExpr)>
   ];
 
   let extraClassDeclaration = [{
@@ -1387,11 +1411,14 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     OptionalAttr<UnitAttr>:$arm_streaming,
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
+    OptionalAttr<UnitAttr>:$arm_streaming_compatible,
     OptionalAttr<UnitAttr>:$arm_new_za,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
-    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range
+    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
+    OptionalAttr<FramePointerKindAttr>:$frame_pointer,
+    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
   );
 
   let regions = (region AnyRegion:$body);

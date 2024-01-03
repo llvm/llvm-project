@@ -962,15 +962,13 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   }
 
   // Compute what we know about shift count.
-  KnownBits KnownCnt =
-      computeKnownBits(I.getOperand(1), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+  KnownBits KnownCnt = computeKnownBits(I.getOperand(1), /* Depth */ 0, Q);
   unsigned BitWidth = KnownCnt.getBitWidth();
   // Since shift produces a poison value if RHS is equal to or larger than the
   // bit width, we can safely assume that RHS is less than the bit width.
   uint64_t MaxCnt = KnownCnt.getMaxValue().getLimitedValue(BitWidth - 1);
 
-  KnownBits KnownAmt =
-      computeKnownBits(I.getOperand(0), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+  KnownBits KnownAmt = computeKnownBits(I.getOperand(0), /* Depth */ 0, Q);
   bool Changed = false;
 
   if (I.getOpcode() == Instruction::Shl) {
@@ -1047,7 +1045,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // If C1 < C: (X >>?,exact C1) << C --> X << (C - C1)
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShrAmt);
         auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
-        NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+        NewShl->setHasNoUnsignedWrap(
+            I.hasNoUnsignedWrap() ||
+            (ShrAmt &&
+             cast<Instruction>(Op0)->getOpcode() == Instruction::LShr &&
+             I.hasNoSignedWrap()));
         NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
         return NewShl;
       }
@@ -1068,7 +1070,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // If C1 < C: (X >>? C1) << C --> (X << (C - C1)) & (-1 << C)
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmtC - ShrAmt);
         auto *NewShl = BinaryOperator::CreateShl(X, ShiftDiff);
-        NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+        NewShl->setHasNoUnsignedWrap(
+            I.hasNoUnsignedWrap() ||
+            (ShrAmt &&
+             cast<Instruction>(Op0)->getOpcode() == Instruction::LShr &&
+             I.hasNoSignedWrap()));
         NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
         Builder.Insert(NewShl);
         APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));

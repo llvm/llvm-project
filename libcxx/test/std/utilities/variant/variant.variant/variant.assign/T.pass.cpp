@@ -146,8 +146,10 @@ void test_T_assignment_sfinae() {
     };
     static_assert(!std::is_assignable<V, X>::value,
                   "no boolean conversion in operator=");
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     static_assert(std::is_assignable<V, std::false_type>::value,
                   "converted to bool in operator=");
+#endif
   }
   {
     struct X {};
@@ -297,11 +299,13 @@ void test_T_assignment_performs_assignment() {
 }
 
 void test_T_assignment_vector_bool() {
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
   std::vector<bool> vec = {true};
   std::variant<bool, int> v;
   v = vec[0];
   assert(v.index() == 0);
   assert(std::get<0>(v) == true);
+#endif
 }
 
 int main(int, char**) {

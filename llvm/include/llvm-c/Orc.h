@@ -346,7 +346,7 @@ typedef struct LLVMOrcOpaqueLookupState *LLVMOrcLookupStateRef;
  * into.
  *
  * The JDLookupFlags argument can be inspected to determine whether the original
- * lookup included non-exported symobls.
+ * lookup included non-exported symbols.
  *
  * Finally, the LookupSet argument contains the set of symbols that could not
  * be found in JD already (the set of generation candidates).

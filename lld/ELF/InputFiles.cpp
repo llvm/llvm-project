@@ -30,6 +30,7 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1582,7 +1583,9 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
   case Triple::r600:
     return EM_AMDGPU;
   case Triple::arm:
+  case Triple::armeb:
   case Triple::thumb:
+  case Triple::thumbeb:
     return EM_ARM;
   case Triple::avr:
     return EM_AVR;

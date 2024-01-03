@@ -23,9 +23,7 @@ def Mesh_Dialect : Dialect {
   let cppNamespace = "::mlir::mesh";
 
   let description = [{
-    The `mesh` dialect contains a set of attributes, operations, interfaces that
-    are useful for representing sharding and communication on device mesh
-    cluster.
+    See [Mesh dialect documentation](mlir/docs/Dialects/Mesh.md).
   }];
 
   let dependentDialects = [
@@ -35,6 +33,10 @@ def Mesh_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
 }
+
+def Mesh_MeshAxis : I<16>;
+def Mesh_MeshAxesAttr : DenseArrayAttrBase<"DenseI16ArrayAttr", "int16_t", "i16">;
+
 //===----------------------------------------------------------------------===//
 // Mesh Enums.
 //===----------------------------------------------------------------------===//
@@ -47,6 +49,10 @@ def Mesh_Partial : I32EnumAttr<"Partial", "partial type of a distributed tensor"
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::mesh";
+}
+
+def Mesh_PartialAttr : EnumAttr<Mesh_Dialect, Mesh_Partial, "partial"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 // Mesh_IteratorType and Mesh_Partial are used to annotate different aspects of
@@ -123,7 +129,7 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
     // it is also a partial_sum along mesh axis 1.
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [], [1]]>
+    tensor<4x8xf32, #mesh.shard<@mesh0, [[0], []], partial = sum[1]>
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
     // it is also a partial_max along mesh axis 1.
@@ -155,6 +161,11 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
       return MeshShardingAttr::get($_ctxt, cluster, split_axes, {}, Partial::Sum);
     }]>
   ];
+
+  let extraClassDeclaration = [{
+    bool operator==(::mlir::Attribute rhs) const;
+    bool operator==(::mlir::mesh::MeshShardingAttr rhs) const;
+  }];
 
   let genVerifyDecl = 1;
 }

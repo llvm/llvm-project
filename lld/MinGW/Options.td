@@ -196,6 +196,9 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
+  MetaVarName<"<arg>">;
+def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -213,7 +216,6 @@ def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 // Ignored options
 def: Joined<["-"], "O">;
 def: F<"as-needed">;
-def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
 def: F<"end-group">;

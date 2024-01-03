@@ -1055,7 +1055,8 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             VMCnt ? 0 : getVmcntBitMask(IV),
                             getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(WaitCntImmediate);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
+        .addImm(WaitCntImmediate);
     Changed = true;
   }
 
@@ -1963,14 +1964,15 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             VMCnt ? 0 : getVmcntBitMask(IV),
                             getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(WaitCntImmediate);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
+        .addImm(WaitCntImmediate);
     Changed = true;
   }
 
   if (VSCnt) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
-      .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-      .addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
+        .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+        .addImm(0);
     Changed = true;
   }
 

@@ -48,7 +48,7 @@
 int main(int, char**) {
   constexpr size_t D = std::dynamic_extent;
   std::array<float, 10> data;
-  typename layout_wrapping_integral<4>::template mapping<std::dextents<int, 2>> src_map(
+  layout_wrapping_integral<4>::mapping<std::dextents<int, 2>> src_map(
       std::dextents<int, 2>(5, 2), not_extents_constructible_tag());
   std::mdspan<float, std::dextents<int, 2>, layout_wrapping_integral<4>> arg(data.data(), src_map);
 

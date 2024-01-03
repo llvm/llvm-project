@@ -203,7 +203,7 @@ void RVVType::initBuiltinStr() {
     }
     break;
   case ScalarTypeKind::BFloat:
-    BuiltinStr += "b";
+    BuiltinStr += "y";
     break;
   default:
     llvm_unreachable("ScalarType is invalid!");
@@ -464,7 +464,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   PrototypeDescriptorStr = PrototypeDescriptorStr.drop_back();
 
   // Compute the vector type transformers, it can only appear one time.
-  if (PrototypeDescriptorStr.startswith("(")) {
+  if (PrototypeDescriptorStr.starts_with("(")) {
     assert(VTM == VectorTypeModifier::NoModifier &&
            "VectorTypeModifier should only have one modifier");
     size_t Idx = PrototypeDescriptorStr.find(')');
@@ -1217,7 +1217,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << (int)Record.PrototypeLength << ",";
   OS << (int)Record.SuffixLength << ",";
   OS << (int)Record.OverloadedSuffixSize << ",";
-  OS << (int)Record.RequiredExtensions << ",";
+  OS << Record.RequiredExtensions << ",";
   OS << (int)Record.TypeRangeMask << ",";
   OS << (int)Record.Log2LMULMask << ",";
   OS << (int)Record.NF << ",";

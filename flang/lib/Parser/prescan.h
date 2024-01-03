@@ -218,6 +218,7 @@ private:
   bool slashInCurrentStatement_{false};
   bool preventHollerith_{false}; // CHARACTER*4HIMOM not Hollerith
   bool inCharLiteral_{false};
+  bool continuationInCharLiteral_{false};
   bool inPreprocessorDirective_{false};
 
   // In some edge cases of compiler directive continuation lines, it

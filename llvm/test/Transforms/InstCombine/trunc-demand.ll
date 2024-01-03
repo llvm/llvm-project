@@ -130,7 +130,7 @@ define i6 @or_trunc_lshr(i8 %x) {
 ; CHECK-LABEL: @or_trunc_lshr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i6
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i6 [[TMP1]], 1
-; CHECK-NEXT:    [[R:%.*]] = or i6 [[TMP2]], -32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i6 [[TMP2]], -32
 ; CHECK-NEXT:    ret i6 [[R]]
 ;
   %s = lshr i8 %x, 1
@@ -143,7 +143,7 @@ define i6 @or_trunc_lshr_more(i8 %x) {
 ; CHECK-LABEL: @or_trunc_lshr_more(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i6
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i6 [[TMP1]], 4
-; CHECK-NEXT:    [[R:%.*]] = or i6 [[TMP2]], -4
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i6 [[TMP2]], -4
 ; CHECK-NEXT:    ret i6 [[R]]
 ;
   %s = lshr i8 %x, 4

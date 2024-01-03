@@ -21,10 +21,12 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer
+    )
+  set(test_libs
+    ${test_libs}
     MLIRTestRewrite
     MLIRTestTransformDialect
-    MLIRTestTransforms
-    )
+    MLIRTestTransforms)
 endif()
 
 set(LIBS

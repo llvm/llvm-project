@@ -24,18 +24,25 @@ enum class OpenACCDirectiveKind {
   Serial,
   Kernels,
 
-  // Data Environment.
+  // Data Environment. "enter data" and "exit data" are also referred to in the
+  // Executable Directives section, but just as a back reference to the Data
+  // Environment.
   Data,
-  // FIXME: 'enter data', 'exit data'.
+  EnterData,
+  ExitData,
   HostData,
 
   // Misc.
   Loop,
-  // FIXME: 'cache'
+  Cache,
 
-  // FIXME: Combined Constructs.
+  // Combined Constructs.
+  ParallelLoop,
+  SerialLoop,
+  KernelsLoop,
 
-  // FIXME: atomic Construct variants.
+  // Atomic Construct.
+  Atomic,
 
   // Declare Directive.
   Declare,
@@ -46,11 +53,44 @@ enum class OpenACCDirectiveKind {
   Shutdown,
   Set,
   Update,
-  // FIXME: wait construct.
+  Wait,
 
-  // FIXME: routine construct.
+  // Procedure Calls in Compute Regions.
+  Routine,
 
   // Invalid.
+  Invalid,
+};
+
+enum class OpenACCAtomicKind {
+  Read,
+  Write,
+  Update,
+  Capture,
+  Invalid,
+};
+
+/// Represents the kind of an OpenACC clause.
+enum class OpenACCClauseKind {
+  // 'finalize' clause, allowed on 'exit data' directive.
+  Finalize,
+  // 'if_present' clause, allowed on 'host_data' and 'update' directives.
+  IfPresent,
+  // 'seq' clause, allowed on 'loop' and 'routine' directives.
+  Seq,
+  // 'independent' clause, allowed on 'loop' directives.
+  Independent,
+  // 'auto' clause, allowed on 'loop' directives.
+  Auto,
+  // 'worker' clause, allowed on 'loop' and 'routine' directives.
+  Worker,
+  // 'vector' clause, allowed on 'loop' and 'routine' directives. Takes no
+  // arguments for 'routine', so the 'loop' version is not yet implemented
+  // completely.
+  Vector,
+  // 'nohost' clause, allowed on 'routine' directives.
+  NoHost,
+  // Represents an invalid clause, for the purposes of parsing.
   Invalid,
 };
 } // namespace clang

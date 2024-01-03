@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -1338,8 +1339,10 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Scan the entire function and update all machine operands that use frame
   // indices to use the remapped frame index.
-  expungeSlotMap(SlotRemap, NumSlots);
-  remapInstructions(SlotRemap);
+  if (!SlotRemap.empty()) {
+    expungeSlotMap(SlotRemap, NumSlots);
+    remapInstructions(SlotRemap);
+  }
 
   return removeAllMarkers();
 }

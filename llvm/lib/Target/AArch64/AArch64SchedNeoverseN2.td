@@ -19,7 +19,7 @@ def NeoverseN2Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-                                                    [HasSVE2p1]);
+    [HasSVE2p1, HasPAuthLR, HasCPA]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2082,10 +2082,10 @@ def : InstRW<[N2Write_6cyc_1L], (instrs LDR_ZXI)>;
 def : InstRW<[N2Write_6cyc_1L_1M], (instrs LDR_PXI)>;
 
 // Contiguous load, scalar + imm
-def : InstRW<[N2Write_6cyc_1L], (instregex "^LD1[BHWD]_IMM_REAL$",
-                                           "^LD1S?B_[HSD]_IMM_REAL$",
-                                           "^LD1S?H_[SD]_IMM_REAL$",
-                                           "^LD1S?W_D_IMM_REAL$" )>;
+def : InstRW<[N2Write_6cyc_1L], (instregex "^LD1[BHWD]_IMM$",
+                                           "^LD1S?B_[HSD]_IMM$",
+                                           "^LD1S?H_[SD]_IMM$",
+                                           "^LD1S?W_D_IMM$" )>;
 // Contiguous load, scalar + scalar
 def : InstRW<[N2Write_6cyc_1L01], (instregex "^LD1[BHWD]$",
                                              "^LD1S?B_[HSD]$",

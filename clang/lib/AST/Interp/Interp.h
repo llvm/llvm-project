@@ -37,7 +37,6 @@
 namespace clang {
 namespace interp {
 
-using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
@@ -1004,7 +1003,7 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Block *B = S.P.getGlobal(I);
   if (B->isExtern())
     return false;
   S.Stk.push<T>(B->deref<T>());
@@ -1619,7 +1618,11 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
       QualType Type = E->getType();
 
       S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-      return S.noteUndefinedBehavior();
+      if (S.noteUndefinedBehavior()) {
+        S.Stk.push<T>(T(Result));
+        return true;
+      }
+      return false;
     }
 
     S.Stk.push<T>(T(Result));
@@ -1822,10 +1825,12 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
 /// Just takes a pointer and checks if its' an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!Ptr.isUnknownSizeArray())
+  if (!Ptr.isUnknownSizeArray()) {
+    S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
+  }
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_unsupported_unsized_array);

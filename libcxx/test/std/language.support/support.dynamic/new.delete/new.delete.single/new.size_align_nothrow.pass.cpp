@@ -60,8 +60,9 @@ int main(int, char**) {
         assert(reinterpret_cast<std::uintptr_t>(x) % alignof(TrackLifetimeOverAligned) == 0);
         assert(info.address_constructed == x);
 
+        const auto old_x = x;
         delete x;
-        assert(info.address_destroyed == x);
+        assert(info.address_destroyed == old_x);
     }
 
     return 0;

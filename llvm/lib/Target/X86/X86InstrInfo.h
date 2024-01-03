@@ -659,6 +659,9 @@ protected:
     return false;
   }
 
+  void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
+                             int FI) const override;
+
 private:
   /// This is a helper for convertToThreeAddress for 8 and 16-bit instructions.
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit

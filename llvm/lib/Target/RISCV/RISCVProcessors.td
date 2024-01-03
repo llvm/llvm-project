@@ -19,6 +19,8 @@ class RISCVTuneInfo {
   bits<16> PrefetchDistance = 0;
   bits<16> MinPrefetchStride = 1;
   bits<32> MaxPrefetchIterationsAhead = -1;
+
+  bits<32> MinimumJumpTableEntries = 5;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -26,7 +28,8 @@ def RISCVTuneInfoTable : GenericTable {
   let CppTypeName = "RISCVTuneInfo";
   let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
                 "CacheLineSize", "PrefetchDistance",
-                "MinPrefetchStride", "MaxPrefetchIterationsAhead"];
+                "MinPrefetchStride", "MaxPrefetchIterationsAhead",
+                "MinimumJumpTableEntries"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -171,8 +174,7 @@ def SIFIVE_S76 : RISCVProcessorModel<"sifive-s76",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
-                                      FeatureStdExtZihintpause,
-                                      FeatureVendorXSfcie],
+                                      FeatureStdExtZihintpause],
                                      [TuneSiFive7]>;
 
 def SIFIVE_U54 : RISCVProcessorModel<"sifive-u54",
@@ -213,6 +215,25 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [TuneSiFive7,
                                        TuneDLenFactor2]>;
 
+def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", NoSchedModel,
+                                      [Feature64Bit,
+                                       FeatureStdExtZifencei,
+                                       FeatureStdExtM,
+                                       FeatureStdExtA,
+                                       FeatureStdExtF,
+                                       FeatureStdExtD,
+                                       FeatureStdExtC,
+                                       FeatureStdExtZicbop,
+                                       FeatureStdExtZicbom,
+                                       FeatureStdExtZicboz,
+                                       FeatureStdExtZihintntl,
+                                       FeatureStdExtZihintpause,
+                                       FeatureStdExtZihpm,
+                                       FeatureStdExtZba,
+                                       FeatureStdExtZbb,
+                                       FeatureStdExtZbs,
+                                       FeatureStdExtZfhmin]>;
+
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
                                               [Feature32Bit,
@@ -251,7 +272,13 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                              FeatureStdExtZicbop,
                                              FeatureStdExtZicboz,
                                              FeatureVendorXVentanaCondOps],
-                                             [TuneVentanaVeyron]>;
+                                             [TuneVentanaVeyron,
+                                              TuneLUIADDIFusion,
+                                              TuneAUIPCADDIFusion,
+                                              TuneZExtHFusion,
+                                              TuneZExtWFusion,
+                                              TuneShiftedZExtWFusion,
+                                              TuneLDADDFusion]>;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           NoSchedModel,

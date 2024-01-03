@@ -1476,7 +1476,7 @@ Error Decoder::dumpProcedureData(const COFFObjectFile &COFF) {
     if (!NameOrErr)
       return NameOrErr.takeError();
 
-    if (NameOrErr->startswith(".pdata"))
+    if (NameOrErr->starts_with(".pdata"))
       dumpProcedureData(COFF, Section);
   }
   return Error::success();

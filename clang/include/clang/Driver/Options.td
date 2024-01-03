@@ -994,7 +994,7 @@ def all__load : Flag<["-"], "all_load">;
 def allowable__client : Separate<["-"], "allowable_client">;
 def ansi : Flag<["-", "--"], "ansi">, Group<CompileOnly_Group>;
 def arch__errors__fatal : Flag<["-"], "arch_errors_fatal">;
-def arch : Separate<["-"], "arch">, Flags<[NoXarchOption]>;
+def arch : Separate<["-"], "arch">, Flags<[NoXarchOption,TargetSpecific]>;
 def arch__only : Separate<["-"], "arch_only">;
 def autocomplete : Joined<["--"], "autocomplete=">;
 def bind__at__load : Flag<["-"], "bind_at_load">;
@@ -1009,6 +1009,30 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
+
+def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">;
+
+def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are disabled.">;
+
+def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is enabled for complex arithmetic operations.">;
+
+def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+
+def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
+  Visibility<[CC1Option]>,
+  Values<"full,limited,fortran">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran"]>,
+  MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
 
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,
@@ -1452,7 +1476,7 @@ def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;
-def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
+def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
@@ -1754,6 +1778,18 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
+defm apinotes : BoolOption<"f", "apinotes",
+    LangOpts<"APINotes">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable">,
+    NegFlag<SetFalse, [], [ClangOption], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], "external API notes support">>,
+    Group<f_clang_Group>;
+defm apinotes_modules : BoolOption<"f", "apinotes-modules",
+    LangOpts<"APINotesModules">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable">,
+    NegFlag<SetFalse, [], [ClangOption], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], "module-based external API notes support">>,
+    Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
@@ -1806,6 +1842,9 @@ def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Gr
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
   MetaVarName<"<arg>">, MarshallingInfoStringVector<LangOpts<"CommentOpts.BlockCommandNames">>;
+defm define_target_os_macros : OptInCC1FFlag<"define-target-os-macros",
+  "Enable", "Disable", " predefined target OS macros",
+  [ClangOption, CC1Option]>;
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
@@ -2857,9 +2896,11 @@ defm asm_blocks : BoolFOption<"asm-blocks",
   LangOpts<"AsmBlocks">, Default<fms_extensions.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
   NegFlag<SetFalse>>;
-def fms_volatile : Flag<["-"], "fms-volatile">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"MSVolatile">>;
+defm ms_volatile : BoolFOption<"ms-volatile",
+  LangOpts<"MSVolatile">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Volatile loads and stores have acquire and release semantics">,
+  NegFlag<SetFalse>>;
 def fmsc_version : Joined<["-"], "fmsc-version=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))">;
@@ -3160,7 +3201,8 @@ def fno_ms_compatibility : Flag<["-"], "fno-ms-compatibility">, Group<f_Group>,
 def fno_objc_legacy_dispatch : Flag<["-"], "fno-objc-legacy-dispatch">, Group<f_Group>;
 def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>;
-def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>;
+def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 defm operator_names : BoolFOption<"operator-names",
   LangOpts<"CXXOperatorNames">, Default<cplusplus.KeyPath>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -3286,6 +3328,7 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
 
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Omit the frame pointer from functions that don't need it. "
   "Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. "
   "On many targets, -O1 and higher omit the frame pointer by default. "
@@ -4709,9 +4752,9 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5">,
-  NormalizedValuesScope<"TargetOptions">,
+  NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
@@ -5157,8 +5200,8 @@ def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
 def nomultidefs : Flag<["-"], "nomultidefs">;
-def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>;
-def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>, Alias<nopie>;
+def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>, Flags<[TargetSpecific]>; // OpenBSD
+def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>;
 def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
@@ -5265,7 +5308,8 @@ def rewrite_objc : Flag<["-"], "rewrite-objc">, Flags<[NoXarchOption]>,
 def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
   Flags<[NoXarchOption]>,
   HelpText<"Rewrite Legacy Objective-C source to C++">;
-def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>;
+def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -5985,6 +6029,15 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
                  HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
+def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
+def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
+// Features egpr, push2pop2 and ppx are validated with llvm-test-suite && cpu2017 on Intel SDE.
+// For stability, we turn on these features only for -mapxf. After a feature pass the validation,
+// we will add it to -mapxf.
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
@@ -6321,15 +6374,18 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
-defm alias_analysis : BoolOptionWithoutMarshalling<"f", "alias-analysis",
-  PosFlag<SetTrue, [], [], "Pass alias information on to LLVM (default when optimizing for speed)">,
-  NegFlag<SetFalse, [], [], "Do not pass alias information on to LLVM (default for unoptimized builds)">>;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
   Group<gfortran_Group>,
   Alias<module_dir>;
+
+let Visibility = [FlangOption] in {
+def no_fortran_main : Flag<["-"], "fno-fortran-main">,
+  Visibility<[FlangOption]>, Group<f_Group>,
+  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
+} // let Visibility = [ FlangOption ]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options
@@ -6774,10 +6830,6 @@ def new_struct_path_tbaa : Flag<["-"], "new-struct-path-tbaa">,
 def mdebug_pass : Separate<["-"], "mdebug-pass">,
   HelpText<"Enable additional debug output">,
   MarshallingInfoString<CodeGenOpts<"DebugPass">>;
-def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
-  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
-  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
-  MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
@@ -6948,6 +7000,8 @@ def msign_return_address_key_EQ : Joined<["-"], "msign-return-address-key=">,
     Values<"a_key,b_key">;
 def mbranch_target_enforce : Flag<["-"], "mbranch-target-enforce">,
   MarshallingInfoFlag<LangOpts<"BranchTargetEnforcement">>;
+def mbranch_protection_pauth_lr : Flag<["-"], "mbranch-protection-pauth-lr">,
+  MarshallingInfoFlag<LangOpts<"BranchProtectionPAuthLR">>;
 def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">,
   MarshallingInfoNegativeFlag<LangOpts<"DllExportInlines">>;
 def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,
@@ -7387,6 +7441,11 @@ def pic_level : Separate<["-"], "pic-level">,
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
+
+def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
+  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
+  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 
 
 def dependent_lib : Joined<["--"], "dependent-lib=">,
@@ -8163,7 +8222,7 @@ def _SLASH_winsysroot : CLJoinedOrSeparate<"winsysroot">,
   HelpText<"Same as \"/diasdkdir <dir>/DIA SDK\" /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> \"/winsdkdir <dir>/Windows Kits/10\"">,
   MetaVarName<"<dir>">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
-  Group<_SLASH_volatile_Group>, Flags<[NoXarchOption]>, Visibility<[CLOption]>,
+  Visibility<[CLOption]>, Alias<fno_ms_volatile>,
   HelpText<"Volatile loads and stores have standard semantics">;
 def _SLASH_vmb : CLFlag<"vmb">,
   HelpText<"Use a best-case representation method for member pointers">;
@@ -8178,7 +8237,7 @@ def _SLASH_vmv : CLFlag<"vmv">,
   HelpText<"Set the default most-general representation to "
            "virtual inheritance">;
 def _SLASH_volatile_ms  : Option<["/", "-"], "volatile:ms", KIND_FLAG>,
-  Group<_SLASH_volatile_Group>, Flags<[NoXarchOption]>, Visibility<[CLOption]>,
+  Visibility<[CLOption]>, Alias<fms_volatile>,
   HelpText<"Volatile loads and stores have acquire and release semantics">;
 def _SLASH_clang : CLJoined<"clang:">,
   HelpText<"Pass <arg> to the clang driver">, MetaVarName<"<arg>">;

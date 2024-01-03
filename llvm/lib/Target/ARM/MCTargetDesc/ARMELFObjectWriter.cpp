@@ -158,6 +158,18 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       default:
         return ELF::R_ARM_THM_CALL;
       }
+    case ARM::fixup_arm_ldst_pcrel_12:
+      return ELF::R_ARM_LDR_PC_G0;
+    case ARM::fixup_arm_pcrel_10_unscaled:
+      return ELF::R_ARM_LDRS_PC_G0;
+    case ARM::fixup_t2_ldst_pcrel_12:
+      return ELF::R_ARM_THM_PC12;
+    case ARM::fixup_arm_adr_pcrel_12:
+      return ELF::R_ARM_ALU_PC_G0;
+    case ARM::fixup_thumb_adr_pcrel_10:
+      return ELF::R_ARM_THM_PC8;
+    case ARM::fixup_t2_adr_pcrel_12:
+      return ELF::R_ARM_THM_ALU_PREL_11_0;
     case ARM::fixup_bf_target:
       return ELF::R_ARM_THM_BF16;
     case ARM::fixup_bfc_target:

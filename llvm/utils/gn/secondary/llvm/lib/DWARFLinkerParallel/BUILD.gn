@@ -10,15 +10,18 @@ static_library("DWARFLinkerParallel") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AcceleratorRecordsSaver.cpp",
     "DIEAttributeCloner.cpp",
     "DWARFEmitterImpl.cpp",
     "DWARFFile.cpp",
     "DWARFLinker.cpp",
     "DWARFLinkerCompileUnit.cpp",
     "DWARFLinkerImpl.cpp",
+    "DWARFLinkerTypeUnit.cpp",
     "DWARFLinkerUnit.cpp",
     "DependencyTracker.cpp",
     "OutputSections.cpp",
     "StringPool.cpp",
+    "SyntheticTypeNameBuilder.cpp",
   ]
 }

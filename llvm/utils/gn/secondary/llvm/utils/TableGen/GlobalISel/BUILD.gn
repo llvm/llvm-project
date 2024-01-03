@@ -4,5 +4,10 @@ static_library("GlobalISel") {
     "//llvm/lib/CodeGen:CodeGenTypes",
     "//llvm/lib/Support",
   ]
-  sources = [ "CodeExpander.cpp" ]
+  sources = [
+    "CXXPredicates.cpp",
+    "CodeExpander.cpp",
+    "MatchDataInfo.cpp",
+    "Patterns.cpp",
+  ]
 }

@@ -95,7 +95,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if (AST.tuPath().endswith(PHeader))
+      if (AST.tuPath().ends_with(PHeader))
         return false;
     }
   }
@@ -311,7 +311,7 @@ getUnused(ParsedAST &AST,
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     if (ReferencedFiles.contains(IncludeID))
       continue;
-    if (!mayConsiderUnused(MFI, AST, AST.getPragmaIncludes().get())) {
+    if (!mayConsiderUnused(MFI, AST, &AST.getPragmaIncludes())) {
       dlog("{0} was not used, but is not eligible to be diagnosed as unused",
            MFI.Written);
       continue;
@@ -397,13 +397,13 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
-  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
-                                .getHeaderSearchInfo()
-                                .getModuleMap()
-                                .getBuiltinDir();
+  OptionalDirectoryEntryRef ResourceDir = AST.getPreprocessor()
+                                              .getHeaderSearchInfo()
+                                              .getModuleMap()
+                                              .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         bool Satisfied = false;

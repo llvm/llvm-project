@@ -290,6 +290,9 @@ def OMPC_To : Clause<"to"> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpObjectList";
 }
+def OMPC_Enter : Clause<"enter"> {
+  let flangClass = "OmpObjectList";
+}
 def OMPC_From : Clause<"from"> {
   let clangClass = "OMPFromClause";
   let flangClass = "OmpObjectList";
@@ -1126,7 +1129,8 @@ def OMP_DeclareTarget : Directive<"declare target"> {
   let allowedClauses = [
     VersionedClause<OMPC_To>,
     VersionedClause<OMPC_Link>,
-    VersionedClause<OMPC_Indirect>
+    VersionedClause<OMPC_Indirect>,
+    VersionedClause<OMPC_Enter, 52>
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_DeviceType, 50>
@@ -2014,8 +2018,16 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   ];
 }
 def OMP_Workshare : Directive<"workshare"> {}
-def OMP_EndDo : Directive<"end do"> {}
-def OMP_EndDoSimd : Directive<"end do simd"> {}
+def OMP_EndDo : Directive<"end do"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_EndDoSimd : Directive<"end do simd"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
 def OMP_EndSections : Directive<"end sections"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>

@@ -10,10 +10,10 @@ define void @v4xi8_concat_vector_insert_idx0(ptr %a, ptr %b, i8 %x) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v1 = load <2 x i8>, ptr %a
@@ -30,12 +30,10 @@ define void @v4xi8_concat_vector_insert_idx1(ptr %a, ptr %b, i8 %x) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vmv.s.x v9, a2
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v1 = load <2 x i8>, ptr %a
@@ -50,15 +48,13 @@ define void @v4xi8_concat_vector_insert_idx2(ptr %a, ptr %b, i8 %x) {
 ; CHECK-LABEL: v4xi8_concat_vector_insert_idx2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vmv.s.x v9, a2
-; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vslideup.vi v9, v8, 2
+; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
   %v1 = load <2 x i8>, ptr %a
   %v2 = load <2 x i8>, ptr %b
@@ -72,13 +68,13 @@ define void @v4xi8_concat_vector_insert_idx3(ptr %a, ptr %b, i8 %x) {
 ; CHECK-LABEL: v4xi8_concat_vector_insert_idx3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
-; CHECK-NEXT:    vmv.s.x v9, a2
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vslideup.vi v9, v8, 2
+; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
   %v1 = load <2 x i8>, ptr %a
   %v2 = load <2 x i8>, ptr %b
@@ -94,12 +90,11 @@ define void @v4xi64_concat_vector_insert_idx0(ptr %a, ptr %b, i64 %x) {
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vle64.v v10, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v10, 2
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
@@ -108,10 +103,10 @@ define void @v4xi64_concat_vector_insert_idx0(ptr %a, ptr %b, i64 %x) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vle64.v v10, (a1)
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
+; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
   %v1 = load <2 x i64>, ptr %a
@@ -128,14 +123,13 @@ define void @v4xi64_concat_vector_insert_idx1(ptr %a, ptr %b, i64 %x) {
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vle64.v v10, (a1)
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; RV32-NEXT:    vslide1down.vx v9, v8, a2
+; RV32-NEXT:    vslide1down.vx v9, v9, a3
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v10, v8, a2
-; RV32-NEXT:    vslide1down.vx v10, v10, a3
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 1
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
@@ -144,12 +138,10 @@ define void @v4xi64_concat_vector_insert_idx1(ptr %a, ptr %b, i64 %x) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vle64.v v10, (a1)
+; RV64-NEXT:    vmv.s.x v9, a2
+; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vmv.s.x v10, a2
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 1
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
   %v1 = load <2 x i64>, ptr %a
@@ -164,31 +156,26 @@ define void @v4xi64_concat_vector_insert_idx2(ptr %a, ptr %b, i64 %x) {
 ; RV32-LABEL: v4xi64_concat_vector_insert_idx2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    vle64.v v10, (a1)
+; RV32-NEXT:    vle64.v v8, (a1)
+; RV32-NEXT:    vle64.v v10, (a0)
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; RV32-NEXT:    vslide1down.vx v10, v8, a2
-; RV32-NEXT:    vslide1down.vx v10, v10, a3
-; RV32-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vse64.v v8, (a0)
+; RV32-NEXT:    vslideup.vi v10, v8, 2
+; RV32-NEXT:    vse64.v v10, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v4xi64_concat_vector_insert_idx2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vle64.v v10, (a1)
+; RV64-NEXT:    vle64.v v8, (a1)
+; RV64-NEXT:    vle64.v v10, (a0)
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
+; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vmv.s.x v10, a2
-; RV64-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vslideup.vi v10, v8, 2
+; RV64-NEXT:    vse64.v v10, (a0)
 ; RV64-NEXT:    ret
   %v1 = load <2 x i64>, ptr %a
   %v2 = load <2 x i64>, ptr %b
@@ -204,26 +191,26 @@ define void @v4xi64_concat_vector_insert_idx3(ptr %a, ptr %b, i64 %x) {
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vle64.v v10, (a1)
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; RV32-NEXT:    vslide1down.vx v9, v8, a2
+; RV32-NEXT:    vslide1down.vx v9, v9, a3
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v10, v9, 1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; RV32-NEXT:    vslide1down.vx v10, v8, a2
-; RV32-NEXT:    vslide1down.vx v10, v10, a3
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 3
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v4xi64_concat_vector_insert_idx3:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vle64.v v10, (a1)
+; RV64-NEXT:    vle64.v v8, (a1)
+; RV64-NEXT:    vle64.v v10, (a0)
+; RV64-NEXT:    vmv.s.x v9, a2
+; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vmv.s.x v10, a2
-; RV64-NEXT:    vslideup.vi v8, v10, 3
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vslideup.vi v10, v8, 2
+; RV64-NEXT:    vse64.v v10, (a0)
 ; RV64-NEXT:    ret
   %v1 = load <2 x i64>, ptr %a
   %v2 = load <2 x i64>, ptr %b
@@ -232,4 +219,3 @@ define void @v4xi64_concat_vector_insert_idx3(ptr %a, ptr %b, i64 %x) {
   store <4 x i64> %ins, ptr %a
   ret void
 }
-

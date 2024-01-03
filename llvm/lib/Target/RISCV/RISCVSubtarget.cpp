@@ -57,6 +57,10 @@ static cl::opt<unsigned> RISCVMaxBuildIntsCost(
 static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
 
+static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
+    "riscv-min-jump-table-entries", cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on RISCV"));
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -189,3 +193,9 @@ void RISCVSubtarget::getPostRAMutations(
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
+
+unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
+  return RISCVMinimumJumpTableEntries.getNumOccurrences() > 0
+             ? RISCVMinimumJumpTableEntries
+             : TuneInfo->MinimumJumpTableEntries;
+}

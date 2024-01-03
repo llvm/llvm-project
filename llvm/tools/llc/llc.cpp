@@ -186,6 +186,13 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -203,7 +210,7 @@ struct RunPassOption {
       getRunPassNames().push_back(std::string(PassName));
   }
 };
-}
+} // namespace
 
 static RunPassOption RunPassOpt;
 
@@ -242,9 +249,9 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
     else {
       // If InputFilename ends in .bc or .ll, remove it.
       StringRef IFN = InputFilename;
-      if (IFN.endswith(".bc") || IFN.endswith(".ll"))
+      if (IFN.ends_with(".bc") || IFN.ends_with(".ll"))
         OutputFilename = std::string(IFN.drop_back(3));
-      else if (IFN.endswith(".mir"))
+      else if (IFN.ends_with(".mir"))
         OutputFilename = std::string(IFN.drop_back(4));
       else
         OutputFilename = std::string(IFN);
@@ -300,15 +307,11 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 }
 
 struct LLCDiagnosticHandler : public DiagnosticHandler {
-  bool *HasError;
-  LLCDiagnosticHandler(bool *HasErrorPtr) : HasError(HasErrorPtr) {}
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    DiagnosticHandler::handleDiagnostics(DI);
     if (DI.getKind() == llvm::DK_SrcMgr) {
       const auto &DISM = cast<DiagnosticInfoSrcMgr>(DI);
       const SMDiagnostic &SMD = DISM.getSMDiag();
-
-      if (SMD.getKind() == SourceMgr::DK_Error)
-        *HasError = true;
 
       SMD.print(nullptr, errs());
 
@@ -318,9 +321,6 @@ struct LLCDiagnosticHandler : public DiagnosticHandler {
 
       return true;
     }
-
-    if (DI.getSeverity() == DS_Error)
-      *HasError = true;
 
     if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
       if (!Remark->isEnabled())
@@ -377,6 +377,17 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
 
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+  }
+#endif
+  (void)TryUseNewDbgInfoFormat;
+
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
   auto TimeTraceScopeExit = make_scope_exit([]() {
@@ -395,9 +406,7 @@ int main(int argc, char **argv) {
   Context.setDiscardValueNames(DiscardValueNames);
 
   // Set a diagnostic handler that doesn't exit on the first error
-  bool HasError = false;
-  Context.setDiagnosticHandler(
-      std::make_unique<LLCDiagnosticHandler>(&HasError));
+  Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
@@ -566,7 +575,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
-        (InputLanguage == "" && StringRef(InputFilename).endswith(".mir"))) {
+        (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context,
                                     setMIRFunctionAttributes);
       if (MIR)
@@ -739,9 +748,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     PM.run(*M);
 
-    auto HasError =
-        ((const LLCDiagnosticHandler *)(Context.getDiagHandlerPtr()))->HasError;
-    if (*HasError)
+    if (Context.getDiagHandlerPtr()->HasErrors)
       return 1;
 
     // Compare the two outputs and make sure they're the same

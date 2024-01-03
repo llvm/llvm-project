@@ -12,8 +12,11 @@
 
 #include <__bit/bit_ceil.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <cstddef>
-#include <experimental/__simd/internal_declaration.h>
+#include <experimental/__config>
+#include <experimental/__simd/declaration.h>
+#include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
@@ -27,16 +30,19 @@ struct __vec_ext {
 };
 } // namespace simd_abi
 
+template <int _Np>
+inline constexpr bool is_abi_tag_v<simd_abi::__vec_ext<_Np>> = _Np > 0 && _Np <= 32;
+
 template <class _Tp, int _Np>
 struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
   _Tp __data __attribute__((__vector_size__(std::__bit_ceil((sizeof(_Tp) * _Np)))));
 
   _LIBCPP_HIDE_FROM_ABI _Tp __get(size_t __idx) const noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     return __data[__idx];
   }
   _LIBCPP_HIDE_FROM_ABI void __set(size_t __idx, _Tp __v) noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     __data[__idx] = __v;
   }
 };

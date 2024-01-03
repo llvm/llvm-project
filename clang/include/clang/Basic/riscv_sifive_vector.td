@@ -78,29 +78,29 @@ let SupportOverloading = false in {
   defm sf_vc_iv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvKz",  [0, 2, 3],  UseGPR=0>;
   defm sf_vc_vv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvUv",  [0, 2, 3],  UseGPR=0>;
   defm sf_vc_fv    : RVVVCIXBuiltinSet<["si",  "l"], "0KzKzUvFe",  [0, 2, 3],  UseGPR=0>;
-  defm sf_vc_xvv   : RVVVCIXBuiltinSet<["csi", "l"], "0KzUvUvUe",  [0, 1, 3],  UseGPR=1>;
-  defm sf_vc_ivv   : RVVVCIXBuiltinSet<["csi", "l"], "0KzUvUvKz",  [0, 1, 3],  UseGPR=0>;
-  defm sf_vc_vvv   : RVVVCIXBuiltinSet<["csi", "l"], "0KzUvUvUv",  [0, 1, 3],  UseGPR=0>;
-  defm sf_vc_fvv   : RVVVCIXBuiltinSet<["si",  "l"], "0KzUvUvFe",  [0, 1, 3],  UseGPR=0>;
+  defm sf_vc_xvv   : RVVVCIXBuiltinSet<["csi", "l"], "0KzUvUvUe",  [0, 1, 2, 3],  UseGPR=1>;
+  defm sf_vc_ivv   : RVVVCIXBuiltinSet<["csi", "l"], "0KzUvUvKz",  [0, 1, 2, 3],  UseGPR=0>;
+  defm sf_vc_vvv   : RVVVCIXBuiltinSet<["csi", "l"], "0KzUvUvUv",  [0, 1, 2, 3],  UseGPR=0>;
+  defm sf_vc_fvv   : RVVVCIXBuiltinSet<["si",  "l"], "0KzUvUvFe",  [0, 1, 2, 3],  UseGPR=0>;
   defm sf_vc_v_x   : RVVVCIXBuiltinSet<["csi", "l"], "UvKzKzUe",   [-1, 1, 2], UseGPR=1>;
   defm sf_vc_v_i   : RVVVCIXBuiltinSet<["csi", "l"], "UvKzKzKz",   [-1, 1, 2], UseGPR=0>;
-  defm sf_vc_v_xv  : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUe",   [-1, 0, 2], UseGPR=1>;
-  defm sf_vc_v_iv  : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvKz",   [-1, 0, 2], UseGPR=0>;
-  defm sf_vc_v_vv  : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUv",   [-1, 0, 2], UseGPR=0>;
-  defm sf_vc_v_fv  : RVVVCIXBuiltinSet<["si",  "l"], "UvKzUvFe",   [-1, 0, 2], UseGPR=0>;
-  defm sf_vc_v_xvv : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUvUe", [-1, 0, 3], UseGPR=1>;
-  defm sf_vc_v_ivv : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUvKz", [-1, 0, 3], UseGPR=0>;
-  defm sf_vc_v_vvv : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUvUv", [-1, 0, 3], UseGPR=0>;
-  defm sf_vc_v_fvv : RVVVCIXBuiltinSet<["si",  "l"], "UvKzUvUvFe", [-1, 0, 3], UseGPR=0>;
+  defm sf_vc_v_xv  : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUe",   [-1, 0, 1, 2], UseGPR=1>;
+  defm sf_vc_v_iv  : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvKz",   [-1, 0, 1, 2], UseGPR=0>;
+  defm sf_vc_v_vv  : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUv",   [-1, 0, 1, 2], UseGPR=0>;
+  defm sf_vc_v_fv  : RVVVCIXBuiltinSet<["si",  "l"], "UvKzUvFe",   [-1, 0, 1, 2], UseGPR=0>;
+  defm sf_vc_v_xvv : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUvUe", [-1, 0, 1, 2, 3], UseGPR=1>;
+  defm sf_vc_v_ivv : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUvKz", [-1, 0, 1, 2, 3], UseGPR=0>;
+  defm sf_vc_v_vvv : RVVVCIXBuiltinSet<["csi", "l"], "UvKzUvUvUv", [-1, 0, 1, 2, 3], UseGPR=0>;
+  defm sf_vc_v_fvv : RVVVCIXBuiltinSet<["si",  "l"], "UvKzUvUvFe", [-1, 0, 1, 2, 3], UseGPR=0>;
   let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
     defm sf_vc_xvw   : RVVVCIXBuiltinSet<["csi"], "0KzUwUvUe",  [0, 1, 2, 3],  UseGPR=1>;
     defm sf_vc_ivw   : RVVVCIXBuiltinSet<["csi"], "0KzUwUvKz",  [0, 1, 2, 3],  UseGPR=0>;
     defm sf_vc_vvw   : RVVVCIXBuiltinSet<["csi"], "0KzUwUvUv",  [0, 1, 2, 3],  UseGPR=0>;
     defm sf_vc_fvw   : RVVVCIXBuiltinSet<["si"],  "0KzUwUvFe",  [0, 1, 2, 3],  UseGPR=0>;
-    defm sf_vc_v_xvw : RVVVCIXBuiltinSet<["csi"], "UwKzUwUvUe", [-1, 0, 2, 3], UseGPR=1>;
-    defm sf_vc_v_ivw : RVVVCIXBuiltinSet<["csi"], "UwKzUwUvKz", [-1, 0, 2, 3], UseGPR=0>;
-    defm sf_vc_v_vvw : RVVVCIXBuiltinSet<["csi"], "UwKzUwUvUv", [-1, 0, 2, 3], UseGPR=0>;
-    defm sf_vc_v_fvw : RVVVCIXBuiltinSet<["si"],  "UwKzUwUvFe", [-1, 0, 2, 3], UseGPR=0>;
+    defm sf_vc_v_xvw : RVVVCIXBuiltinSet<["csi"], "UwKzUwUvUe", [-1, 0, 1, 2, 3], UseGPR=1>;
+    defm sf_vc_v_ivw : RVVVCIXBuiltinSet<["csi"], "UwKzUwUvKz", [-1, 0, 1, 2, 3], UseGPR=0>;
+    defm sf_vc_v_vvw : RVVVCIXBuiltinSet<["csi"], "UwKzUwUvUv", [-1, 0, 1, 2, 3], UseGPR=0>;
+    defm sf_vc_v_fvw : RVVVCIXBuiltinSet<["si"],  "UwKzUwUvFe", [-1, 0, 1, 2, 3], UseGPR=0>;
   }
 }
 
@@ -109,15 +109,23 @@ multiclass RVVVFWMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
       Name = NAME,
       HasMasked = false,
       Log2LMUL = [-2, -1, 0, 1, 2] in
-    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "b", suffixes_prototypes>;
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "y", suffixes_prototypes>;
 }
 
-multiclass RVVVQMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
+multiclass RVVVQMACCDODBuiltinSet<list<list<string>> suffixes_prototypes> {
   let OverloadedName = NAME,
       Name = NAME,
       HasMasked = false,
       Log2LMUL = [0, 1, 2, 3] in
     defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "i", suffixes_prototypes>;
+}
+
+multiclass RVVVQMACCQOQBuiltinSet<list<list<string>> suffixes_prototypes> {
+   let OverloadedName = NAME,
+       Name = NAME,
+       HasMasked = false,
+       Log2LMUL = [-1, 0, 1, 2] in
+     defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "s", suffixes_prototypes>;
 }
 
 multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_range> {
@@ -130,18 +138,18 @@ multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_ra
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["Xsfvqmaccdod"] in {
-    defm sf_vqmaccu_2x8x2 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
-    defm sf_vqmacc_2x8x2 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)v"]]>;
-    defm sf_vqmaccus_2x8x2 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
-    defm sf_vqmaccsu_2x8x2 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
+    defm sf_vqmaccu_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
+    defm sf_vqmacc_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)v"]]>;
+    defm sf_vqmaccus_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
+    defm sf_vqmaccsu_2x8x2 : RVVVQMACCDODBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
   }
 
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["Xsfvqmaccqoq"] in {
-    defm sf_vqmaccu_4x8x4 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
-    defm sf_vqmacc_4x8x4 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)v"]]>;
-    defm sf_vqmaccus_4x8x4 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
-    defm sf_vqmaccsu_4x8x4 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
+    defm sf_vqmaccu_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
+    defm sf_vqmacc_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)Sv(FixedSEW:8)v"]]>;
+    defm sf_vqmaccus_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
+    defm sf_vqmaccsu_4x8x4 : RVVVQMACCQOQBuiltinSet<[["", "w", "ww(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
   }
 
 let UnMaskedPolicyScheme = HasPolicyOperand in

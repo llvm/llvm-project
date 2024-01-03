@@ -32,6 +32,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Tiling.cpp
   TilingInterfaceImpl.cpp
   Transforms.cpp
+  TransposeConv2D.cpp
   Vectorization.cpp
 
   ADDITIONAL_HEADER_DIRS

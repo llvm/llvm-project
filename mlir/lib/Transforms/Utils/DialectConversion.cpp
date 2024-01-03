@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -3312,6 +3313,7 @@ auto ConversionTarget::getOpInfo(OperationName op) const
   return std::nullopt;
 }
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 //===----------------------------------------------------------------------===//
 // PDL Configuration
 //===----------------------------------------------------------------------===//
@@ -3382,6 +3384,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
         return std::move(remappedTypes);
       });
 }
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

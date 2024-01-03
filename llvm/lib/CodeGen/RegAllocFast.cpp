@@ -62,6 +62,118 @@ static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
 
 namespace {
 
+/// Assign ascending index for instructions in machine basic block. The index
+/// can be used to determine dominance between instructions in same MBB.
+class InstrPosIndexes {
+public:
+  void unsetInitialized() { IsInitialized = false; }
+
+  void init(const MachineBasicBlock &MBB) {
+    CurMBB = &MBB;
+    Instr2PosIndex.clear();
+    uint64_t LastIndex = 0;
+    for (const MachineInstr &MI : MBB) {
+      LastIndex += InstrDist;
+      Instr2PosIndex[&MI] = LastIndex;
+    }
+  }
+
+  /// Set \p Index to index of \p MI. If \p MI is new inserted, it try to assign
+  /// index without affecting existing instruction's index. Return true if all
+  /// instructions index has been reassigned.
+  bool getIndex(const MachineInstr &MI, uint64_t &Index) {
+    if (!IsInitialized) {
+      init(*MI.getParent());
+      IsInitialized = true;
+      Index = Instr2PosIndex.at(&MI);
+      return true;
+    }
+
+    assert(MI.getParent() == CurMBB && "MI is not in CurMBB");
+    auto It = Instr2PosIndex.find(&MI);
+    if (It != Instr2PosIndex.end()) {
+      Index = It->second;
+      return false;
+    }
+
+    // Distance is the number of consecutive unassigned instructions including
+    // MI. Start is the first instruction of them. End is the next of last
+    // instruction of them.
+    // e.g.
+    // |Instruction|  A   |  B   |  C   |  MI  |  D   |  E   |
+    // |   Index   | 1024 |      |      |      |      | 2048 |
+    //
+    // In this case, B, C, MI, D are unassigned. Distance is 4, Start is B, End
+    // is E.
+    unsigned Distance = 1;
+    MachineBasicBlock::const_iterator Start = MI.getIterator(),
+                                      End = std::next(Start);
+    while (Start != CurMBB->begin() &&
+           !Instr2PosIndex.count(&*std::prev(Start))) {
+      --Start;
+      ++Distance;
+    }
+    while (End != CurMBB->end() && !Instr2PosIndex.count(&*(End))) {
+      ++End;
+      ++Distance;
+    }
+
+    // LastIndex is initialized to last used index prior to MI or zero.
+    // In previous example, LastIndex is 1024, EndIndex is 2048;
+    uint64_t LastIndex =
+        Start == CurMBB->begin() ? 0 : Instr2PosIndex.at(&*std::prev(Start));
+    uint64_t Step;
+    if (End == CurMBB->end())
+      Step = static_cast<uint64_t>(InstrDist);
+    else {
+      // No instruction uses index zero.
+      uint64_t EndIndex = Instr2PosIndex.at(&*End);
+      assert(EndIndex > LastIndex && "Index must be ascending order");
+      unsigned NumAvailableIndexes = EndIndex - LastIndex - 1;
+      // We want index gap between two adjacent MI is as same as possible. Given
+      // total A available indexes, D is number of consecutive unassigned
+      // instructions, S is the step.
+      // |<- S-1 -> MI <- S-1 -> MI <- A-S*D ->|
+      // There're S-1 available indexes between unassigned instruction and its
+      // predecessor. There're A-S*D available indexes between the last
+      // unassigned instruction and its successor.
+      // Ideally, we want
+      //    S-1 = A-S*D
+      // then
+      //    S = (A+1)/(D+1)
+      // An valid S must be integer greater than zero, so
+      //    S <= (A+1)/(D+1)
+      // =>
+      //    A-S*D >= 0
+      // That means we can safely use (A+1)/(D+1) as step.
+      // In previous example, Step is 204, Index of B, C, MI, D is 1228, 1432,
+      // 1636, 1840.
+      Step = (NumAvailableIndexes + 1) / (Distance + 1);
+    }
+
+    // Reassign index for all instructions if number of new inserted
+    // instructions exceed slot or all instructions are new.
+    if (LLVM_UNLIKELY(!Step || (!LastIndex && Step == InstrDist))) {
+      init(*CurMBB);
+      Index = Instr2PosIndex.at(&MI);
+      return true;
+    }
+
+    for (auto I = Start; I != End; ++I) {
+      LastIndex += Step;
+      Instr2PosIndex[&*I] = LastIndex;
+    }
+    Index = Instr2PosIndex.at(&MI);
+    return false;
+  }
+
+private:
+  bool IsInitialized = false;
+  enum { InstrDist = 1024 };
+  const MachineBasicBlock *CurMBB = nullptr;
+  DenseMap<const MachineInstr *, uint64_t> Instr2PosIndex;
+};
+
 class RegAllocFast : public MachineFunctionPass {
 public:
   static char ID;
@@ -152,6 +264,9 @@ private:
   SmallVector<uint16_t, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
+
+  // Assign index for each instruction to quickly determine dominance.
+  InstrPosIndexes PosIndexes;
 
   void setPhysRegState(MCPhysReg PhysReg, unsigned NewState);
   bool isPhysRegFree(MCPhysReg PhysReg) const;
@@ -268,7 +383,7 @@ private:
                                 Register VirtReg);
   bool defineVirtReg(MachineInstr &MI, unsigned OpNum, Register VirtReg,
                      bool LookAtPhysRegUses = false);
-  bool useVirtReg(MachineInstr &MI, unsigned OpNum, Register VirtReg);
+  bool useVirtReg(MachineInstr &MI, MachineOperand &MO, Register VirtReg);
 
   MachineBasicBlock::iterator
   getMBBBeginInsertionPoint(MachineBasicBlock &MBB,
@@ -339,18 +454,13 @@ int RegAllocFast::getStackSpaceFor(Register VirtReg) {
   return FrameIdx;
 }
 
-static bool dominates(MachineBasicBlock &MBB,
-                      MachineBasicBlock::const_iterator A,
-                      MachineBasicBlock::const_iterator B) {
-  auto MBBEnd = MBB.end();
-  if (B == MBBEnd)
-    return true;
-
-  MachineBasicBlock::const_iterator I = MBB.begin();
-  for (; &*I != A && &*I != B; ++I)
-    ;
-
-  return &*I == A;
+static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
+                      const MachineInstr &B) {
+  uint64_t IndexA, IndexB;
+  PosIndexes.getIndex(A, IndexA);
+  if (LLVM_UNLIKELY(PosIndexes.getIndex(B, IndexB)))
+    PosIndexes.getIndex(A, IndexA);
+  return IndexA < IndexB;
 }
 
 /// Returns false if \p VirtReg is known to not live out of the current block.
@@ -371,7 +481,7 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
         MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
         return true;
       } else {
-        if (!SelfLoopDef || dominates(*MBB, DefInst.getIterator(), SelfLoopDef))
+        if (!SelfLoopDef || dominates(PosIndexes, DefInst, *SelfLoopDef))
           SelfLoopDef = &DefInst;
       }
     }
@@ -396,7 +506,7 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
       // Try to handle some simple cases to avoid spilling and reloading every
       // value inside a self looping block.
       if (SelfLoopDef == &UseInst ||
-          !dominates(*MBB, SelfLoopDef->getIterator(), UseInst.getIterator())) {
+          !dominates(PosIndexes, *SelfLoopDef, UseInst)) {
         MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
         return true;
       }
@@ -984,17 +1094,15 @@ bool RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
 
 /// Allocates a register for a VirtReg use.
 /// \return true if MI's MachineOperands were re-arranged/invalidated.
-bool RegAllocFast::useVirtReg(MachineInstr &MI, unsigned OpNum,
+bool RegAllocFast::useVirtReg(MachineInstr &MI, MachineOperand &MO,
                               Register VirtReg) {
   assert(VirtReg.isVirtual() && "Not a virtual register");
   if (!shouldAllocateRegister(VirtReg))
     return false;
-  MachineOperand &MO = MI.getOperand(OpNum);
   LiveRegMap::iterator LRI;
   bool New;
   std::tie(LRI, New) = LiveVirtRegs.insert(LiveReg(VirtReg));
   if (New) {
-    MachineOperand &MO = MI.getOperand(OpNum);
     if (!MO.isKill()) {
       if (mayLiveOut(VirtReg)) {
         LRI->LiveOut = true;
@@ -1224,6 +1332,17 @@ void RegAllocFast::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   });
 }
 
+// Returns true if MO is tied and the operand it's tied to is not Undef (not
+// Undef is not the same thing as Def).
+static bool isTiedToNotUndef(const MachineOperand &MO) {
+  if (!MO.isTied())
+    return false;
+  const MachineInstr &MI = *MO.getParent();
+  unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
+  const MachineOperand &TiedMO = MI.getOperand(TiedIdx);
+  return !TiedMO.isUndef();
+}
+
 void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   // The basic algorithm here is:
   // 1. Mark registers of def operands as free
@@ -1241,12 +1360,6 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   RegMasks.clear();
   BundleVirtRegsMap.clear();
 
-  auto TiedOpIsUndef = [&](const MachineOperand &MO, unsigned Idx) {
-    assert(MO.isTied());
-    unsigned TiedIdx = MI.findTiedOperandIdx(Idx);
-    const MachineOperand &TiedMO = MI.getOperand(TiedIdx);
-    return TiedMO.isUndef();
-  };
   // Scan for special cases; Apply pre-assigned register defs to state.
   bool HasPhysRegUse = false;
   bool HasRegMask = false;
@@ -1254,8 +1367,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   bool HasDef = false;
   bool HasEarlyClobber = false;
   bool NeedToAssignLiveThroughs = false;
-  for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
-    MachineOperand &MO = MI.getOperand(I);
+  for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       Register Reg = MO.getReg();
       if (Reg.isVirtual()) {
@@ -1268,8 +1380,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
             HasEarlyClobber = true;
             NeedToAssignLiveThroughs = true;
           }
-          if ((MO.isTied() && !TiedOpIsUndef(MO, I)) ||
-              (MO.getSubReg() != 0 && !MO.isUndef()))
+          if (isTiedToNotUndef(MO) || (MO.getSubReg() != 0 && !MO.isUndef()))
             NeedToAssignLiveThroughs = true;
         }
       } else if (Reg.isPhysical()) {
@@ -1314,35 +1425,32 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
           for (uint16_t OpIdx : DefOperandIndexes) {
             MachineOperand &MO = MI.getOperand(OpIdx);
             LLVM_DEBUG(dbgs() << "Allocating " << MO << '\n');
-            unsigned Reg = MO.getReg();
-            if (MO.isEarlyClobber() ||
-                (MO.isTied() && !TiedOpIsUndef(MO, OpIdx)) ||
+            Register Reg = MO.getReg();
+            if (MO.isEarlyClobber() || isTiedToNotUndef(MO) ||
                 (MO.getSubReg() && !MO.isUndef())) {
               ReArrangedImplicitOps = defineLiveThroughVirtReg(MI, OpIdx, Reg);
             } else {
               ReArrangedImplicitOps = defineVirtReg(MI, OpIdx, Reg);
             }
-            if (ReArrangedImplicitOps) {
-              // Implicit operands of MI were re-arranged,
-              // re-compute DefOperandIndexes.
+            // Implicit operands of MI were re-arranged,
+            // re-compute DefOperandIndexes.
+            if (ReArrangedImplicitOps)
               break;
-            }
           }
         }
       } else {
         // Assign virtual register defs.
         while (ReArrangedImplicitOps) {
           ReArrangedImplicitOps = false;
-          for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
-            MachineOperand &MO = MI.getOperand(I);
+          for (MachineOperand &MO : MI.operands()) {
             if (!MO.isReg() || !MO.isDef())
               continue;
             Register Reg = MO.getReg();
             if (Reg.isVirtual()) {
-              ReArrangedImplicitOps = defineVirtReg(MI, I, Reg);
-              if (ReArrangedImplicitOps) {
+              ReArrangedImplicitOps =
+                  defineVirtReg(MI, MI.getOperandNo(&MO), Reg);
+              if (ReArrangedImplicitOps)
                 break;
-              }
             }
           }
         }
@@ -1352,8 +1460,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
     // Free registers occupied by defs.
     // Iterate operands in reverse order, so we see the implicit super register
     // defs first (we added them earlier in case of <def,read-undef>).
-    for (signed I = MI.getNumOperands() - 1; I >= 0; --I) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : reverse(MI.operands())) {
       if (!MO.isReg() || !MO.isDef())
         continue;
 
@@ -1370,7 +1477,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
              "tied def assigned to clobbered register");
 
       // Do not free tied operands and early clobbers.
-      if ((MO.isTied() && !TiedOpIsUndef(MO, I)) || MO.isEarlyClobber())
+      if (isTiedToNotUndef(MO) || MO.isEarlyClobber())
         continue;
       if (!Reg)
         continue;
@@ -1411,8 +1518,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
         continue;
       if (MRI->isReserved(Reg))
         continue;
-      bool displacedAny = usePhysReg(MI, Reg);
-      if (!displacedAny)
+      if (!usePhysReg(MI, Reg))
         MO.setIsKill(true);
     }
   }
@@ -1424,8 +1530,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   bool ReArrangedImplicitMOs = true;
   while (ReArrangedImplicitMOs) {
     ReArrangedImplicitMOs = false;
-    for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
@@ -1443,7 +1548,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
       assert(!MO.isInternalRead() && "Bundles not supported");
       assert(MO.readsReg() && "reading use");
-      ReArrangedImplicitMOs = useVirtReg(MI, I, Reg);
+      ReArrangedImplicitMOs = useVirtReg(MI, MO, Reg);
       if (ReArrangedImplicitMOs)
         break;
     }
@@ -1465,7 +1570,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Free early clobbers.
   if (HasEarlyClobber) {
-    for (MachineOperand &MO : llvm::reverse(MI.all_defs())) {
+    for (MachineOperand &MO : reverse(MI.all_defs())) {
       if (!MO.isEarlyClobber())
         continue;
       assert(!MO.getSubReg() && "should be already handled in def processing");
@@ -1570,6 +1675,7 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   this->MBB = &MBB;
   LLVM_DEBUG(dbgs() << "\nAllocating " << MBB);
 
+  PosIndexes.unsetInitialized();
   RegUnitStates.assign(TRI->getNumRegUnits(), regFree);
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 

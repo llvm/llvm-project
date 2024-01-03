@@ -122,6 +122,70 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 }
 
 //===----------------------------------------------------------------------===//
+// ConcatOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_ConcatOp : Tensor_Op<"concat",
+    [Pure,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "tensor concatenation operation";
+  let description = [{
+    The "concat" operation constructs a tensor out of a variadic list of input
+    tensors, concatenated along a static dimension number. All inputs and the
+    result type must share the same rank.
+
+    `dim` specifies the dimension along which to concatenate. The size of the
+    concatenated dimension in the result must be equal to the sum of the sizes
+    of the inputs along that dimension. All other dimensions in both the inputs
+    and result must be the same size.
+
+    Example:
+
+    ```mlir
+    %0 = tensor.concat dim(0) %0, %1, %2 :
+        (tensor<3x6xf32>, tensor<3x6xf32>, tensor<1x6xf32) -> tensor<7x6xf32>
+
+    // Dynamic + dynamic -> static
+    %0 = tensor.concat dim(1) %0, %1, %2 :
+        (tensor<3x?xf32>, tensor<3x2xf32>, tensor<3x?xf32) -> tensor<3x10xf32>
+    ```
+  }];
+  let arguments = (ins I64Attr:$dim,
+                       Variadic<AnyRankedTensor>:$inputs);
+  let results = (outs AnyRankedTensor:$result);
+  let assemblyFormat = [{
+    `dim` `(` $dim `)` $inputs attr-dict
+    `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    // Builder with an inferred result type.
+    OpBuilder<(ins "int64_t":$dim, "ValueRange":$inputs)>,
+  ];
+
+  let extraClassDeclaration = [{
+    // Helper to infer the concatenated result type for the given list of input
+    // types, being concatenated along `dim`. Because concatenation can specify
+    // more static information than can automatically be inferred,
+    // InferTypeOpInterface is not used.
+    static RankedTensorType inferResultType(int64_t dim, TypeRange inputTypes);
+
+    RankedTensorType getResultType() {
+      return ::llvm::cast<RankedTensorType>(getResult().getType());
+    }
+
+    int64_t getRank() {
+      return ::llvm::cast<RankedTensorType>(getResult().getType()).getRank();
+    }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DimOp
 //===----------------------------------------------------------------------===//
 
@@ -1664,6 +1728,7 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
 
 def Tensor_SplatOp : Tensor_Op<"splat", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
     Pure,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",
@@ -1672,38 +1737,56 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
   let summary = "tensor splat or broadcast operation";
   let description = [{
     Broadcast the operand to all elements of the result tensor. The operand is
-    required to be of integer/index/float type, and the result tensor must be
-    statically shaped.
+    required to be of integer/index/float type.
 
-    Example:
+    An additional argument of type `index` must be provided for each dynamic
+    dimension present in the result type.
+
+    Example for a statically shaped tensor:
 
     ```mlir
-    %s = arith.constant 10.1 : f32
+    %s = arith.constant 1.0 : f32
     %t = tensor.splat %s : tensor<8x16xf32>
     ```
 
-    TODO: This operation is easy to extend to broadcast to dynamically shaped
-          tensors:
+    Example for a tensor containing dynamic dimensions:
 
     ```mlir
-    // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
-    // to the sizes of the two dynamic dimensions.
-    %m = "foo"() : () -> (index)
-    %n = "bar"() : () -> (index)
-    %t = tensor.splat %s [%m, %n] : tensor<?x?xf32>
+    // Broadcasts %s to a 3D dynamically shaped tensor, with %m and %n binding
+    // to dimensions 0 and 2 of the resulting tensor, respectively.
+    %m = arith.constant 10 : index
+    %n = arith.constant 30 : index
+    %t = tensor.splat %s[%m, %n] : tensor<?x20x?xf32>
     ```
   }];
 
   let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
-                                 "integer/index/float type">:$input);
-  let results = (outs AnyStaticShapeTensor:$aggregate);
+                                 "integer/index/float type">:$input,
+                       Variadic<Index>:$dynamicSizes);
+  let results = (outs AnyRankedTensor:$aggregate);
 
   let builders = [
-    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
-    [{ build($_builder, $_state, aggregateType, element); }]>];
-  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
+    // Build with an explicit result type and a list of values corresponding
+    // to the dynamic sizes present in the result type.
+    OpBuilder<(ins "Value":$element,
+                   "Type":$aggregateType,
+                   CArg<"ValueRange", "{}">:$dynamicSizes)>,
+
+    // Build with a result tensor shape and a list of values corresponding to
+    // the elements in the result tensor shape set to ShapedType::kDynamic.
+    OpBuilder<(ins "Value":$element,
+                   "ArrayRef<int64_t>":$staticShape,
+                   CArg<"ValueRange", "{}">:$dynamicSizes)>,
+
+    // Build with mixed static/dynamic sizes, where an attribute represents
+    // a static dimension and a value represents a dynamic dimension.
+    OpBuilder<(ins "Value":$element, "ArrayRef<OpFoldResult>":$sizes)>
+  ];
+
+  let assemblyFormat = "$input (`[` $dynamicSizes^ `]`)? attr-dict `:` type($aggregate)";
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1758,13 +1841,10 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     and optionally transposes the tiled source tensor dimensions.
 
     `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`. The order of the dimensions matters: the
-    tiled dimensions (of size `inner_tiles`) are added to the end of the result
+    being tiled, where `0 < k <= n`. The order of the dimensions matters: 
+     - The tiled dimensions (of size `inner_tiles`) are added to the end of the result
     tensor in the order in which they appear in `inner_dims_pos`.
-
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`. The order of the dimensions matters:
-    `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
     `inner_tiles[i]`.
 
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes

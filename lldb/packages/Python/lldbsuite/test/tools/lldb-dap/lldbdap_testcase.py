@@ -291,6 +291,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         sourceMap=None,
         sourceInitFile=False,
+        expectFailure=False,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
@@ -322,6 +323,8 @@ class DAPTestCaseBase(TestBase):
             postRunCommands=postRunCommands,
             sourceMap=sourceMap,
         )
+        if expectFailure:
+            return response
         if not (response and response["success"]):
             self.assertTrue(
                 response["success"], "attach failed (%s)" % (response["message"])
@@ -354,7 +357,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
     ):
@@ -434,9 +437,11 @@ class DAPTestCaseBase(TestBase):
         lldbDAPEnv=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        launchCommands=None,
+        expectFailure=False,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
@@ -470,4 +475,6 @@ class DAPTestCaseBase(TestBase):
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
             customThreadFormat=customThreadFormat,
+            launchCommands=launchCommands,
+            expectFailure=expectFailure,
         )

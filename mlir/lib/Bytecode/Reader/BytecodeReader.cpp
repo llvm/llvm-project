@@ -2564,7 +2564,7 @@ BytecodeReader::finalize(function_ref<bool(Operation *)> shouldMaterialize) {
 }
 
 bool mlir::isBytecode(llvm::MemoryBufferRef buffer) {
-  return buffer.getBuffer().startswith("ML\xefR");
+  return buffer.getBuffer().starts_with("ML\xefR");
 }
 
 /// Read the bytecode from the provided memory buffer reference.

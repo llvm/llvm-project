@@ -5,6 +5,7 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32:32-p3:64:64:64-i1:8:8-i8:
 
 declare ptr @getptr()
 declare void @use(ptr)
+declare void @use.i1(i1)
 
 define i1 @eq_base(ptr %x, i64 %y) {
 ; CHECK-LABEL: @eq_base(
@@ -395,6 +396,75 @@ define i1 @test61_as1(ptr addrspace(1) %foo, i16 %i, i16 %j) {
   %cmp = icmp ult ptr addrspace(1) %gep1, %gep2
   ret i1 %cmp
 ; Don't transform non-inbounds GEPs.
+}
+
+define i1 @test60_extra_use(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_extra_use(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, ptr [[FOO]], i64 [[J:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    call void @use(ptr [[GEP2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %foo, i64 %i
+  %gep2 = getelementptr inbounds i16, ptr %foo, i64 %j
+  call void @use(ptr %gep1)
+  call void @use(ptr %gep2)
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @test60_extra_use_const_operands_inbounds(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_extra_use_const_operands_inbounds(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 1
+; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[J:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %foo, i64 1
+  %gep2 = getelementptr inbounds i16, ptr %foo, i64 %j
+  call void @use(ptr %gep1)
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @test60_extra_use_const_operands_no_inbounds(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_extra_use_const_operands_no_inbounds(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 1
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    [[GEP2_IDX_MASK:%.*]] = and i64 [[J:%.*]], 9223372036854775807
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP2_IDX_MASK]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %foo, i64 1
+  %gep2 = getelementptr i16, ptr %foo, i64 %j
+  call void @use(ptr %gep1)
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define void @test60_extra_use_fold(ptr %foo, i64 %start.idx, i64 %end.offset) {
+; CHECK-LABEL: @test60_extra_use_fold(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 [[START_IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 [[END_OFFSET:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    call void @use(ptr [[GEP2]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds i32, ptr %foo, i64 %start.idx
+  %gep2 = getelementptr inbounds i8, ptr %foo, i64 %end.offset
+  call void @use(ptr %gep1)
+  call void @use(ptr %gep2)
+  %cmp1 = icmp eq ptr %gep1, %gep2
+  call void @use.i1(i1 %cmp1)
+  %cmp2 = icmp ult ptr %gep1, %gep2
+  call void @use.i1(i1 %cmp2)
+  ret void
 }
 
 define i1 @test_scalable_same(ptr %x) {

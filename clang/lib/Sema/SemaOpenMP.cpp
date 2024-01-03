@@ -161,7 +161,7 @@ private:
     LoopControlVariablesMapTy LCVMap;
     DefaultDataSharingAttributes DefaultAttr = DSA_unspecified;
     SourceLocation DefaultAttrLoc;
-    DefaultmapInfo DefaultmapMap[OMPC_DEFAULTMAP_unknown];
+    DefaultmapInfo DefaultmapMap[OMPC_DEFAULTMAP_unknown + 1];
     OpenMPDirectiveKind Directive = OMPD_unknown;
     /// GenericLoopDirective with bind clause is mapped to other directives,
     /// like for, distribute and simd. Presently, set MappedDirective to
@@ -3689,7 +3689,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
   bool ErrorFound = false;
   bool TryCaptureCXXThisMembers = false;
   CapturedStmt *CS = nullptr;
-  const static unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_pointer + 1;
+  const static unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
   llvm::SmallVector<Expr *, 4> ImplicitFirstprivate;
   llvm::SmallVector<Expr *, 4> ImplicitPrivate;
   llvm::SmallVector<Expr *, 4> ImplicitMap[DefaultmapKindNum][OMPC_MAP_delete];
@@ -6276,7 +6276,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     SmallVector<Expr *, 4> ImplicitPrivates(
         DSAChecker.getImplicitPrivate().begin(),
         DSAChecker.getImplicitPrivate().end());
-    const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_pointer + 1;
+    const unsigned DefaultmapKindNum = OMPC_DEFAULTMAP_unknown + 1;
     SmallVector<Expr *, 4> ImplicitMaps[DefaultmapKindNum][OMPC_MAP_delete];
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         ImplicitMapModifiers[DefaultmapKindNum];
@@ -12683,7 +12683,7 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       break;
     }
     case OMPC_fail: {
-      if (AtomicKind != OMPC_compare) {
+      if (!EncounteredAtomicKinds.contains(OMPC_compare)) {
         Diag(C->getBeginLoc(), diag::err_omp_atomic_fail_no_compare)
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         return StmtError();
@@ -14657,6 +14657,19 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDirective(ArrayRef<OMPClause *> Clauses,
     CS->getCapturedDecl()->setNothrow();
   }
   setFunctionHasBranchProtectedScope();
+
+  const OMPClause *BareClause = nullptr;
+  bool HasThreadLimitAndNumTeamsClause = hasClauses(Clauses, OMPC_num_teams) &&
+                                         hasClauses(Clauses, OMPC_thread_limit);
+  bool HasBareClause = llvm::any_of(Clauses, [&](const OMPClause *C) {
+    BareClause = C;
+    return C->getClauseKind() == OMPC_ompx_bare;
+  });
+
+  if (HasBareClause && !HasThreadLimitAndNumTeamsClause) {
+    Diag(BareClause->getBeginLoc(), diag::err_ompx_bare_no_grid);
+    return StmtError();
+  }
 
   return OMPTargetTeamsDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                          AStmt);

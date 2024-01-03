@@ -285,7 +285,7 @@ std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
     // Rename if necessary.
     if (!GV.hasName())
       GV.setName("__orc_anon." + Twine(NextId++));
-    else if (GV.getName().startswith("\01L"))
+    else if (GV.getName().starts_with("\01L"))
       GV.setName("__" + GV.getName().substr(1) + "." + Twine(NextId++));
     else if (GV.hasLocalLinkage())
       GV.setName("__orc_lcl." + GV.getName() + "." + Twine(NextId++));

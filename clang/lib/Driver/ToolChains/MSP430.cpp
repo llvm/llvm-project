@@ -166,7 +166,7 @@ void MSP430ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
     return;
 
   const StringRef MCU = MCUArg->getValue();
-  if (MCU.startswith("msp430i")) {
+  if (MCU.starts_with("msp430i")) {
     // 'i' should be in lower case as it's defined in TI MSP430-GCC headers
     CC1Args.push_back(DriverArgs.MakeArgString(
         "-D__MSP430i" + MCU.drop_front(7).upper() + "__"));

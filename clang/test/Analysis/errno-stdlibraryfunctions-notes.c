@@ -3,7 +3,7 @@
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=apiModeling.Errno \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true
 
 #include "Inputs/errno_var.h"

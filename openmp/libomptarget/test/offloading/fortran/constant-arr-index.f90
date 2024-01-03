@@ -1,9 +1,8 @@
 ! Basic offloading test with a target region
-! that checks constant indexing on device 
+! that checks constant indexing on device
 ! correctly works (regression test for prior
 ! bug).
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
+! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
 ! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
@@ -19,8 +18,8 @@ program main
      sp(5) = 10
   !$omp end target
 
-   ! print *, sp(1)
-   ! print *, sp(5)
+   print *, sp(1)
+   print *, sp(5)
 end program
 
 ! CHECK: 20

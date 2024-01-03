@@ -296,7 +296,7 @@ bool BreakpointBase::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      output += ValueToString(value);
+      output += VariableDescription(value).display_value;
     } else {
       output += messagePart.text;
     }

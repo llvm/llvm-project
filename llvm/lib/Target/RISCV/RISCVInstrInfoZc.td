@@ -56,9 +56,8 @@ def rlist : Operand<OtherVT> {
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    if (!isUInt<4>(Imm)) return false;
     // 0~3 Reserved for EABI
-    return (Imm >= 4) && (Imm <= 15);
+    return isUInt<4>(Imm) && Imm >= 4;
   }];
  }
 
@@ -70,7 +69,7 @@ def spimm : Operand<OtherVT> {
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return isShiftedUInt<5, 4>(Imm);
+    return isShiftedUInt<2, 4>(Imm);
   }];
 }
 

@@ -93,6 +93,12 @@ static constexpr llvm::StringRef getInternalProcedureAttrName() {
   return "fir.internal_proc";
 }
 
+/// Attribute containing the original name of a function from before the
+/// ExternalNameConverision pass runs
+static constexpr llvm::StringRef getInternalFuncNameAttrName() {
+  return "fir.internal_name";
+}
+
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
 bool hasHostAssociationArgument(mlir::func::FuncOp func);
@@ -139,6 +145,22 @@ inline std::optional<std::int64_t> getIntIfConstant(mlir::Value value) {
       if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
         return intAttr.getInt();
   return {};
+}
+
+static constexpr llvm::StringRef getAdaptToByRefAttrName() {
+  return "adapt.valuebyref";
+}
+
+// Attribute for an alloca that is a trivial adaptor for converting a value to
+// pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
+// eliminate these.
+// Template is used to avoid compiler errors in places that don't include
+// FIRBuilder.h
+template <typename Builder>
+inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
+  return {mlir::StringAttr::get(builder.getContext(),
+                                fir::getAdaptToByRefAttrName()),
+          builder.getUnitAttr()};
 }
 
 } // namespace fir

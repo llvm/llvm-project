@@ -407,7 +407,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPInteropDirective(cast<OMPInteropDirective>(*S));
     break;
   case Stmt::OMPDispatchDirectiveClass:
-    llvm_unreachable("Dispatch directive not supported yet.");
+    CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
     break;
   case Stmt::OMPScopeDirectiveClass:
     llvm_unreachable("scope not supported with FE outlining");
@@ -1299,8 +1299,7 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     SLocPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(SLocPtr);
     assert(ReturnLocation.isValid() && "No valid return location");
-    Builder.CreateStore(Builder.CreateBitCast(SLocPtr, Int8PtrTy),
-                        ReturnLocation);
+    Builder.CreateStore(SLocPtr, ReturnLocation);
   }
 
   // Returning from an outlined SEH helper is UB, and we already warn on it.
@@ -2549,7 +2548,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).startswith("{@cc");
+      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
       ResultRegIsFlagReg.push_back(IsFlagReg);
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);

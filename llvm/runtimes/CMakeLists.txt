@@ -3,7 +3,7 @@
 # similar although simpler functionality. We should figure out how to merge
 # the two files.
 
-set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON")
+set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -391,8 +391,17 @@ function(runtime_register_target name)
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
   endif()
   foreach(runtime_name ${runtime_names})
+    if(NOT TARGET ${runtime_name})
+      add_custom_target(${runtime_name})
+    endif()
     add_dependencies(${runtime_name} ${runtime_name}-${name})
+    if(NOT TARGET install-${runtime_name})
+      add_custom_target(install-${runtime_name})
+    endif()
     add_dependencies(install-${runtime_name} install-${runtime_name}-${name})
+    if(NOT TARGET install-${runtime_name}-stripped)
+      add_custom_target(install-${runtime_name}-stripped)
+    endif()
     add_dependencies(install-${runtime_name}-stripped install-${runtime_name}-${name}-stripped)
   endforeach()
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
@@ -459,11 +468,6 @@ if(runtimes)
         add_custom_target(runtimes-test-depends)
         set(test_targets "")
       endif()
-      foreach(runtime_name ${RUNTIME_NAMES})
-        add_custom_target(${runtime_name})
-        add_custom_target(install-${runtime_name})
-        add_custom_target(install-${runtime_name}-stripped)
-      endforeach()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
           add_custom_target(${component})
@@ -522,6 +526,7 @@ if(runtimes)
         FileCheck
         count
         llvm-cov
+        llvm-lto
         llvm-nm
         llvm-objdump
         llvm-profdata
@@ -529,6 +534,7 @@ if(runtimes)
         llvm-xray
         not
         obj2yaml
+        opt
         sancov
         sanstats
         llvm_gtest_main

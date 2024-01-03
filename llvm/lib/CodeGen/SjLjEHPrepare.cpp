@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,13 +32,13 @@
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "sjljehprepare"
+#define DEBUG_TYPE "sjlj-eh-prepare"
 
 STATISTIC(NumInvokes, "Number of invokes replaced");
 STATISTIC(NumSpilled, "Number of registers live across unwind edges");
 
 namespace {
-class SjLjEHPrepare : public FunctionPass {
+class SjLjEHPrepareImpl {
   IntegerType *DataTy = nullptr;
   Type *doubleUnderDataTy = nullptr;
   Type *doubleUnderJBufTy = nullptr;
@@ -55,16 +56,9 @@ class SjLjEHPrepare : public FunctionPass {
   const TargetMachine *TM = nullptr;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-  explicit SjLjEHPrepare(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {}
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {}
-  StringRef getPassName() const override {
-    return "SJLJ Exception Handling preparation";
-  }
+  explicit SjLjEHPrepareImpl(const TargetMachine *TM = nullptr) : TM(TM) {}
+  bool doInitialization(Module &M);
+  bool runOnFunction(Function &F);
 
 private:
   bool setupEntryBlockAndCallSites(Function &F);
@@ -74,7 +68,31 @@ private:
   void lowerAcrossUnwindEdges(Function &F, ArrayRef<InvokeInst *> Invokes);
   void insertCallSiteStore(Instruction *I, int Number);
 };
+
+class SjLjEHPrepare : public FunctionPass {
+  SjLjEHPrepareImpl Impl;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  explicit SjLjEHPrepare(const TargetMachine *TM = nullptr)
+      : FunctionPass(ID), Impl(TM) {}
+  bool doInitialization(Module &M) override { return Impl.doInitialization(M); }
+  bool runOnFunction(Function &F) override { return Impl.runOnFunction(F); };
+
+  StringRef getPassName() const override {
+    return "SJLJ Exception Handling preparation";
+  }
+};
+
 } // end anonymous namespace
+
+PreservedAnalyses SjLjEHPreparePass::run(Function &F,
+                                         FunctionAnalysisManager &FAM) {
+  SjLjEHPrepareImpl Impl(TM);
+  Impl.doInitialization(*F.getParent());
+  bool Changed = Impl.runOnFunction(F);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
 
 char SjLjEHPrepare::ID = 0;
 INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions",
@@ -87,7 +105,7 @@ FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
 
 // doInitialization - Set up decalarations and types needed to process
 // exceptions.
-bool SjLjEHPrepare::doInitialization(Module &M) {
+bool SjLjEHPrepareImpl::doInitialization(Module &M) {
   // Build the function context structure.
   // builtin_setjmp uses a five word jbuf
   Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
@@ -104,12 +122,12 @@ bool SjLjEHPrepare::doInitialization(Module &M) {
                                       doubleUnderJBufTy  // __jbuf
   );
 
-  return true;
+  return false;
 }
 
 /// insertCallSiteStore - Insert a store of the call-site value to the
 /// function context
-void SjLjEHPrepare::insertCallSiteStore(Instruction *I, int Number) {
+void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
   IRBuilder<> Builder(I);
 
   // Get a reference to the call_site field.
@@ -140,8 +158,8 @@ static void MarkBlocksLiveIn(BasicBlock *BB,
 
 /// substituteLPadValues - Substitute the values returned by the landingpad
 /// instruction with those returned by the personality function.
-void SjLjEHPrepare::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
-                                         Value *SelVal) {
+void SjLjEHPrepareImpl::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
+                                             Value *SelVal) {
   SmallVector<Value *, 8> UseWorkList(LPI->users());
   while (!UseWorkList.empty()) {
     Value *Val = UseWorkList.pop_back_val();
@@ -175,8 +193,9 @@ void SjLjEHPrepare::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
 
 /// setupFunctionContext - Allocate the function context on the stack and fill
 /// it with all of the data that we know at this point.
-Value *SjLjEHPrepare::setupFunctionContext(Function &F,
-                                           ArrayRef<LandingPadInst *> LPads) {
+Value *
+SjLjEHPrepareImpl::setupFunctionContext(Function &F,
+                                        ArrayRef<LandingPadInst *> LPads) {
   BasicBlock *EntryBB = &F.front();
 
   // Create an alloca for the incoming jump buffer ptr and the new jump buffer
@@ -233,7 +252,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
 /// specially, we lower each arg to a copy instruction in the entry block. This
 /// ensures that the argument value itself cannot be live out of the entry
 /// block.
-void SjLjEHPrepare::lowerIncomingArguments(Function &F) {
+void SjLjEHPrepareImpl::lowerIncomingArguments(Function &F) {
   BasicBlock::iterator AfterAllocaInsPt = F.begin()->begin();
   while (isa<AllocaInst>(AfterAllocaInsPt) &&
          cast<AllocaInst>(AfterAllocaInsPt)->isStaticAlloca())
@@ -264,8 +283,8 @@ void SjLjEHPrepare::lowerIncomingArguments(Function &F) {
 
 /// lowerAcrossUnwindEdges - Find all variables which are alive across an unwind
 /// edge and spill them.
-void SjLjEHPrepare::lowerAcrossUnwindEdges(Function &F,
-                                           ArrayRef<InvokeInst *> Invokes) {
+void SjLjEHPrepareImpl::lowerAcrossUnwindEdges(Function &F,
+                                               ArrayRef<InvokeInst *> Invokes) {
   // Finally, scan the code looking for instructions with bad live ranges.
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : BB) {
@@ -358,7 +377,7 @@ void SjLjEHPrepare::lowerAcrossUnwindEdges(Function &F,
 /// setupEntryBlockAndCallSites - Setup the entry block by creating and filling
 /// the function context and marking the call sites with the appropriate
 /// values. These values are used by the DWARF EH emitter.
-bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
+bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
   SmallVector<ReturnInst *, 16> Returns;
   SmallVector<InvokeInst *, 16> Invokes;
   SmallSetVector<LandingPadInst *, 16> LPads;
@@ -479,7 +498,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   return true;
 }
 
-bool SjLjEHPrepare::runOnFunction(Function &F) {
+bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),
