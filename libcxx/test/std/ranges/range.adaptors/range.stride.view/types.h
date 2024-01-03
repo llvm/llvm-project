@@ -114,39 +114,6 @@ struct SizedInputIterator {
 static_assert(std::input_iterator<SizedInputIterator>);
 static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
 
-struct SizedForwardIterator {
-  using iterator_concept = std::forward_iterator_tag;
-  using value_type       = int;
-  using difference_type  = std::intptr_t;
-
-  int* __v_ = nullptr;
-
-  constexpr SizedForwardIterator() = default;
-  constexpr SizedForwardIterator(int* v) { __v_ = v; }
-  constexpr SizedForwardIterator(const SizedForwardIterator& sii)        = default;
-  constexpr SizedForwardIterator& operator=(const SizedForwardIterator&) = default;
-  constexpr SizedForwardIterator& operator=(SizedForwardIterator&&)      = default;
-
-  constexpr int operator*() const { return *__v_; }
-  constexpr SizedForwardIterator& operator++() {
-    __v_++;
-    return *this;
-  }
-  constexpr SizedForwardIterator operator++(int) {
-    auto nv = __v_;
-    nv++;
-    return SizedForwardIterator(nv);
-  }
-  friend constexpr bool operator==(const SizedForwardIterator& left, const SizedForwardIterator& right) {
-    return left.__v_ == right.__v_;
-  }
-  friend constexpr difference_type operator-(const SizedForwardIterator& left, const SizedForwardIterator& right) {
-    return left.__v_ - right.__v_;
-  }
-};
-static_assert(std::input_iterator<SizedForwardIterator>);
-static_assert(std::sized_sentinel_for<SizedForwardIterator, SizedForwardIterator>);
-
 template <bool Swappable = true, bool NoExcept = true>
 struct MaybeExceptIterSwapIterator : InputIterBase<MaybeExceptIterSwapIterator<Swappable, NoExcept>> {
   int* counter_{nullptr};
