@@ -71,7 +71,7 @@ public:
     return cpp::bit_cast<long double>(bits);
   }
 
-  LIBC_INLINE constexpr operator long double() {
+  LIBC_INLINE constexpr operator long double() const {
     return cpp::bit_cast<long double>(bits);
   }
 
