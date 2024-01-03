@@ -14245,7 +14245,7 @@ SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,
   assert(VT != MVT::i64 && "Expected illegal VSCALE node");
 
   SDLoc DL(Op);
-  APInt MulImm = cast<ConstantSDNode>(Op.getOperand(0))->getAPIntValue();
+  APInt MulImm = Op.getConstantOperandAPInt(0);
   return DAG.getZExtOrTrunc(DAG.getVScale(DL, MVT::i64, MulImm.sext(64)), DL,
                             VT);
 }
@@ -18341,7 +18341,7 @@ static bool isEssentiallyExtractHighSubvector(SDValue N) {
     return false;
   if (N.getOperand(0).getValueType().isScalableVector())
     return false;
-  return cast<ConstantSDNode>(N.getOperand(1))->getAPIntValue() ==
+  return N.getConstantOperandAPInt(1) ==
          N.getOperand(0).getValueType().getVectorNumElements() / 2;
 }
 
