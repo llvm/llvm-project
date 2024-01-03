@@ -6771,6 +6771,9 @@ def warn_pointer_sub_null_ptr : Warning<
 def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
+def warn_fast_floatingpoint_eq : Warning<
+  "explicit comparison with %0 in fast floating point mode">,
+  InGroup<TautologicalConstantCompare>;
 
 def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "

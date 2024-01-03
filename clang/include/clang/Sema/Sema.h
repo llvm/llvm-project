@@ -13998,6 +13998,8 @@ private:
                             SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
 
+  void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
+
   void CheckAbsoluteValueFunction(const CallExpr *Call,
                                   const FunctionDecl *FDecl);
 
@@ -14024,6 +14026,8 @@ private:
 public:
   void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
                             BinaryOperatorKind Opcode);
+  void CheckInfNaNFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
+                                  BinaryOperatorKind Opcode);
 
 private:
   void CheckImplicitConversions(Expr *E, SourceLocation CC = SourceLocation());

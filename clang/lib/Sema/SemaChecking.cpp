@@ -2169,6 +2169,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     ICEArguments &= ~(1 << ArgNo);
   }
 
+  FPOptions FPO;
   switch (BuiltinID) {
   case Builtin::BI__builtin___CFStringMakeConstantString:
     // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
@@ -2245,6 +2246,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
+    if (BuiltinID == Builtin::BI__builtin_isunordered) {
+      if (TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs())
+        Diag(TheCall->getBeginLoc(), diag::warn_fast_floatingpoint_eq)
+            << "NaN" << TheCall->getSourceRange();
+    }
     if (SemaBuiltinUnorderedCompare(TheCall))
       return ExprError();
     break;
@@ -2267,6 +2273,16 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
   case Builtin::BI__builtin_signbitl:
+    FPO = TheCall->getFPFeaturesInEffect(getLangOpts());
+    if (FPO.getNoHonorInfs() && (BuiltinID == Builtin::BI__builtin_isfinite ||
+                                 BuiltinID == Builtin::BI__builtin_isinf ||
+                                 BuiltinID == Builtin::BI__builtin_isinf_sign))
+      Diag(TheCall->getBeginLoc(), diag::warn_fast_floatingpoint_eq)
+          << "infinity" << TheCall->getSourceRange();
+    if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
+                                 BuiltinID == Builtin::BI__builtin_isunordered))
+      Diag(TheCall->getBeginLoc(), diag::warn_fast_floatingpoint_eq)
+          << "NaN" << TheCall->getSourceRange();
     if (SemaBuiltinFPClassification(TheCall, 1))
       return ExprError();
     break;
@@ -7621,6 +7637,7 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
 
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
+  CheckInfNaNFunction(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     DiagnoseCStringFormatDirectiveInCFAPI(*this, FDecl, Args, NumArgs);
@@ -12878,6 +12895,23 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
   return true;
 }
 
+void Sema::CheckInfNaNFunction(const CallExpr *Call,
+                               const FunctionDecl *FDecl) {
+  if (Call->getNumArgs() != 1 && Call->getNumArgs() != 2)
+    return;
+
+  FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
+  if ((IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered")) &&
+      FPO.getNoHonorNaNs())
+    Diag(Call->getBeginLoc(), diag::warn_fast_floatingpoint_eq)
+        << "NaN" << Call->getSourceRange();
+  else if ((IsStdFunction(FDecl, "isinf") ||
+            (IsStdFunction(FDecl, "isfinite"))) &&
+           FPO.getNoHonorInfs())
+    Diag(Call->getBeginLoc(), diag::warn_fast_floatingpoint_eq)
+        << "infinity" << Call->getSourceRange();
+}
+
 // Warn when using the wrong abs() function.
 void Sema::CheckAbsoluteValueFunction(const CallExpr *Call,
                                       const FunctionDecl *FDecl) {
@@ -13844,6 +13878,37 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
   // here prevent the user from using a PPC MMA type as trailing return type.
   if (Context.getTargetInfo().getTriple().isPPC64())
     CheckPPCMMAType(RetValExp->getType(), ReturnLoc);
+}
+
+/// Diagnose comparison to NAN or INFINITY in fast math modes.
+/// The comparison to NaN or INFINITY is always false in
+/// fast modes: float evaluation will not result in inf or nan.
+void Sema::CheckInfNaNFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
+                                      BinaryOperatorKind Opcode) {
+  Expr *LeftExprSansParen = LHS->IgnoreParenImpCasts();
+  Expr *RightExprSansParen = RHS->IgnoreParenImpCasts();
+
+  FPOptions FPO = LHS->getFPFeaturesInEffect(getLangOpts());
+  bool NoHonorNaNs = FPO.getNoHonorNaNs();
+  bool NoHonorInfs = FPO.getNoHonorInfs();
+  llvm::APFloat Value(0.0);
+  bool IsConstant;
+  IsConstant = !LHS->isValueDependent() &&
+               LeftExprSansParen->EvaluateAsFloat(Value, Context,
+                                                  Expr::SE_AllowSideEffects);
+  if (IsConstant &&
+      ((NoHonorNaNs && Value.isNaN()) || (NoHonorInfs && Value.isInfinity())))
+    Diag(Loc, diag::warn_fast_floatingpoint_eq)
+        << (Value.isNaN() ? "NaN" : "infinity") << LHS->getSourceRange()
+        << RHS->getSourceRange();
+  IsConstant = !RHS->isValueDependent() &&
+               RightExprSansParen->EvaluateAsFloat(Value, Context,
+                                                   Expr::SE_AllowSideEffects);
+  if (IsConstant &&
+      ((NoHonorNaNs && Value.isNaN()) || (NoHonorInfs && Value.isInfinity())))
+    Diag(Loc, diag::warn_fast_floatingpoint_eq)
+        << (Value.isNaN() ? "NaN" : "infinity") << LHS->getSourceRange()
+        << RHS->getSourceRange();
 }
 
 /// Check for comparisons of floating-point values using == and !=. Issue a
