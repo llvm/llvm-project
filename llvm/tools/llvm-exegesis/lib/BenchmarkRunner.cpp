@@ -359,7 +359,7 @@ private:
         auto CounterValueOrErr = Counter->readOrError();
         if (!CounterValueOrErr)
           return CounterValueOrErr.takeError();
-        CounterValues.swap(*CounterValueOrErr);
+        CounterValues = std::move(*CounterValueOrErr);
 
         return Error::success();
       }
