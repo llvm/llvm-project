@@ -16,7 +16,6 @@ __attribute__((swift_attr("@actor")))
 // CHECK-NEXT: SwiftAttrAttr {{.*}} "@sendable"
 
 #define SWIFT_SENDABLE __attribute__((swift_attr("@Sendable")))
-#define MAIN_ACTOR __attribute__((swift_attr("@MainActor")))
 
 @interface InTypeContext
 - (nullable id)test:(nullable SWIFT_SENDABLE id)obj SWIFT_SENDABLE;
@@ -24,7 +23,7 @@ __attribute__((swift_attr("@actor")))
 
 // CHECK-LABEL: InterfaceDecl {{.*}} InTypeContext
 // CHECK-NEXT: MethodDecl {{.*}} - test: 'id _Nullable':'id'
-// CHECK-NEXT: ParmVarDecl {{.*}} obj 'id _Nullable':'id'
+// CHECK-NEXT: ParmVarDecl {{.*}} obj 'SWIFT_SENDABLE id _Nullable':'id'
 // CHECK-NEXT: SwiftAttrAttr {{.*}} "@Sendable"
 
 @interface Generic<T: SWIFT_SENDABLE id>
@@ -38,3 +37,11 @@ typedef SWIFT_SENDABLE Generic<id> Alias;
 // CHECK-LABEL: TypedefDecl {{.*}} Alias 'Generic<id>'
 // CHECK-NEXT: ObjectType {{.*}} 'Generic<id>'
 // CHECK-NEXT: SwiftAttrAttr {{.*}} "@Sendable"
+
+SWIFT_SENDABLE
+typedef struct {
+  void *ptr;
+} SendableStruct;
+
+// CHECK-LABEL: TypedefDecl {{.*}} SendableStruct 'struct SendableStruct':'SendableStruct'
+// CHECK: SwiftAttrAttr {{.*}} "@Sendable"
