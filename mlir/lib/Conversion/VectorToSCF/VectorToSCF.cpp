@@ -921,7 +921,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
       } else {
         // It's safe to assume the mask buffer can be unpacked if the data
         // buffer was unpacked.
-        auto maskBufferType = dyn_cast<MemRefType>(maskBuffer.getType());
+        auto maskBufferType = cast<MemRefType>(maskBuffer.getType());
         MemRefType castedMaskType = *unpackOneDim(maskBufferType);
         castedMaskBuffer =
             locB.create<vector::TypeCastOp>(castedMaskType, maskBuffer);
