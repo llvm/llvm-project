@@ -163,6 +163,18 @@ DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
   return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
 }
 
+DebugLoc llvm::getDebugValueLoc(DPValue *DPV) {
+  // Original dbg.declare must have a location.
+  const DebugLoc &DeclareLoc = DPV->getDebugLoc();
+  MDNode *Scope = DeclareLoc.getScope();
+  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
+  // Because no machine insts can come from debug intrinsics, only the scope
+  // and inlinedAt is significant. Zero line numbers are used in case this
+  // DebugLoc leaks into any adjacent instructions. Produce an unknown location
+  // with the correct scope / inlinedAt fields.
+  return DILocation::get(DPV->getContext(), 0, 0, Scope, InlinedAt);
+}
+
 //===----------------------------------------------------------------------===//
 // DebugInfoFinder implementations.
 //===----------------------------------------------------------------------===//
@@ -1779,11 +1791,14 @@ AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
 
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
   auto Range = getAssignmentMarkers(Inst);
-  if (Range.empty())
+  SmallVector<DPValue *> DPVAssigns = getDPVAssignmentMarkers(Inst);
+  if (Range.empty() && DPVAssigns.empty())
     return;
   SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
   for (auto *DAI : ToDelete)
     DAI->eraseFromParent();
+  for (auto *DPV : DPVAssigns)
+    DPV->eraseFromParent();
 }
 
 void at::RAUW(DIAssignID *Old, DIAssignID *New) {
@@ -1813,9 +1828,34 @@ void at::deleteAll(Function *F) {
     DAI->eraseFromParent();
 }
 
-bool at::calculateFragmentIntersect(
+/// Get the FragmentInfo for the variable if it exists, otherwise return a
+/// FragmentInfo that covers the entire variable if the variable size is
+/// known, otherwise return a zero-sized fragment.
+static DIExpression::FragmentInfo
+getFragmentOrEntireVariable(const DPValue *DPV) {
+  DIExpression::FragmentInfo VariableSlice(0, 0);
+  // Get the fragment or variable size, or zero.
+  if (auto Sz = DPV->getFragmentSizeInBits())
+    VariableSlice.SizeInBits = *Sz;
+  if (auto Frag = DPV->getExpression()->getFragmentInfo())
+    VariableSlice.OffsetInBits = Frag->OffsetInBits;
+  return VariableSlice;
+}
+
+static DIExpression::FragmentInfo
+getFragmentOrEntireVariable(const DbgVariableIntrinsic *DVI) {
+  DIExpression::FragmentInfo VariableSlice(0, 0);
+  // Get the fragment or variable size, or zero.
+  if (auto Sz = DVI->getFragmentSizeInBits())
+    VariableSlice.SizeInBits = *Sz;
+  if (auto Frag = DVI->getExpression()->getFragmentInfo())
+    VariableSlice.OffsetInBits = Frag->OffsetInBits;
+  return VariableSlice;
+}
+template <typename T>
+bool calculateFragmentIntersectImpl(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
+    uint64_t SliceSizeInBits, const T *AssignRecord,
     std::optional<DIExpression::FragmentInfo> &Result) {
   // There are multiple offsets at play in this function, so let's break it
   // down. Starting with how variables may be stored in allocas:
@@ -1844,7 +1884,7 @@ bool at::calculateFragmentIntersect(
   // dbg.assign, that has been killed, if any.
   //
   //     calculateFragmentIntersect(..., SliceOffsetInBits=0,
-  //                 SliceSizeInBits=32, Dest=%dest, DAI=dbg.assign)
+  //                 SliceSizeInBits=32, Dest=%dest, Assign=dbg.assign)
   //
   // Drawing the store (s) in memory followed by the shortened version ($),
   // then the dbg.assign (d), with the fragment information on a seperate scale
@@ -1857,7 +1897,8 @@ bool at::calculateFragmentIntersect(
   //        |      |
   //       s[######] - Original stores 64 bits to Dest.
   //       $----[##] - DSE says the lower 32 bits are dead, to be removed.
-  //       d    [##] - DAI's address-modifying expression adds 4 bytes to dest.
+  //       d    [##] - Assign's address-modifying expression adds 4 bytes to
+  //       dest.
   // Variable   |  |
   // Fragment   128|
   //  Offsets      159
@@ -1872,10 +1913,10 @@ bool at::calculateFragmentIntersect(
   //
   // 3. That offset along with the store size (32) represents the bits of the
   //    variable that'd be affected by the store. Call it SliceOfVariable.
-  //    Intersect that with DAI's fragment info:
-  //      SliceOfVariable ∩ DAI_fragment = none
+  //    Intersect that with Assign's fragment info:
+  //      SliceOfVariable ∩ Assign_fragment = none
   //
-  // In this case: none of the dead bits of the store affect DAI.
+  // In this case: none of the dead bits of the store affect Assign.
   //
   // # Example 2
   // Similar example with the same goal. This time the upper 16 bits
@@ -1886,7 +1927,7 @@ bool at::calculateFragmentIntersect(
   //               !DIExpression(DW_OP_plus_uconst, 4))
   //
   //     calculateFragmentIntersect(..., SliceOffsetInBits=48,
-  //                 SliceSizeInBits=16, Dest=%dest, DAI=dbg.assign)
+  //                 SliceSizeInBits=16, Dest=%dest, Assign=dbg.assign)
   //
   // Memory
   // offset
@@ -1895,7 +1936,8 @@ bool at::calculateFragmentIntersect(
   //        |      |
   //       s[######] - Original stores 64 bits to Dest.
   //       $[####]-- - DSE says the upper 16 bits are dead, to be removed.
-  //       d    [##] - DAI's address-modifying expression adds 4 bytes to dest.
+  //       d    [##] - Assign's address-modifying expression adds 4 bytes to
+  //       dest.
   // Variable   |  |
   // Fragment   128|
   //  Offsets      159
@@ -1904,13 +1946,14 @@ bool at::calculateFragmentIntersect(
   // 1. SliceOffsetInBits:48 + VarFrag.OffsetInBits:128 = 176
   // 2. 176 - (expression_offset:32 + (d.address - dest):0) = 144
   // 3. SliceOfVariable offset = 144, size = 16:
-  //      SliceOfVariable ∩ DAI_fragment = (offset: 144, size: 16)
-  // SliceOfVariable tells us the bits of the variable described by DAI that are
-  // affected by the DSE.
-  if (DAI->isKillAddress())
+  //      SliceOfVariable ∩ Assign_fragment = (offset: 144, size: 16)
+  // SliceOfVariable tells us the bits of the variable described by Assign that
+  // are affected by the DSE.
+  if (AssignRecord->isKillAddress())
     return false;
 
-  DIExpression::FragmentInfo VarFrag = DAI->getFragmentOrEntireVariable();
+  DIExpression::FragmentInfo VarFrag =
+      getFragmentOrEntireVariable(AssignRecord);
   if (VarFrag.SizeInBits == 0)
     return false; // Variable size is unknown.
 
@@ -1918,12 +1961,14 @@ bool at::calculateFragmentIntersect(
   // address-modifying expression.
   int64_t PointerOffsetInBits;
   {
-    auto DestOffsetInBytes = DAI->getAddress()->getPointerOffsetFrom(Dest, DL);
+    auto DestOffsetInBytes =
+        AssignRecord->getAddress()->getPointerOffsetFrom(Dest, DL);
     if (!DestOffsetInBytes)
       return false; // Can't calculate difference in addresses.
 
     int64_t ExprOffsetInBytes;
-    if (!DAI->getAddressExpression()->extractIfOffset(ExprOffsetInBytes))
+    if (!AssignRecord->getAddressExpression()->extractIfOffset(
+            ExprOffsetInBytes))
       return false;
 
     int64_t PointerOffsetInBytes = *DestOffsetInBytes + ExprOffsetInBytes;
@@ -1937,7 +1982,8 @@ bool at::calculateFragmentIntersect(
   if (NewOffsetInBits < 0)
     return false; // Fragment offsets can only be positive.
   DIExpression::FragmentInfo SliceOfVariable(SliceSizeInBits, NewOffsetInBits);
-  // Intersect the variable slice with DAI's fragment to trim it down to size.
+  // Intersect the variable slice with AssignRecord's fragment to trim it down
+  // to size.
   DIExpression::FragmentInfo TrimmedSliceOfVariable =
       DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);
   if (TrimmedSliceOfVariable == VarFrag)
@@ -1945,6 +1991,20 @@ bool at::calculateFragmentIntersect(
   else
     Result = TrimmedSliceOfVariable;
   return true;
+}
+bool at::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
+    std::optional<DIExpression::FragmentInfo> &Result) {
+  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
+                                        SliceSizeInBits, DbgAssign, Result);
+}
+bool at::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DPValue *DPVAssign,
+    std::optional<DIExpression::FragmentInfo> &Result) {
+  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
+                                        SliceSizeInBits, DPVAssign, Result);
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
@@ -2194,7 +2254,9 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   for (auto &P : DbgDeclares) {
     const AllocaInst *Alloca = P.first;
     auto Markers = at::getAssignmentMarkers(Alloca);
+    SmallVector<DPValue *> DPMarkers = at::getDPVAssignmentMarkers(Alloca);
     (void)Markers;
+    (void)DPMarkers;
     for (DbgDeclareInst *DDI : P.second) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare has
@@ -2203,9 +2265,15 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
       // fragment. e.g. if the alloca is smaller than the variable, then
       // trackAssignments will create an alloca-sized fragment for the
       // dbg.assign.
-      assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
-        return DebugVariableAggregate(DAI) == DebugVariableAggregate(DDI);
-      }));
+      assert(llvm::any_of(Markers,
+                          [DDI](DbgAssignIntrinsic *DAI) {
+                            return DebugVariableAggregate(DAI) ==
+                                   DebugVariableAggregate(DDI);
+                          }) ||
+             llvm::any_of(DPMarkers, [DDI](DPValue *DPV) {
+               return DebugVariableAggregate(DPV) ==
+                      DebugVariableAggregate(DDI);
+             }));
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.
       DDI->eraseFromParent();

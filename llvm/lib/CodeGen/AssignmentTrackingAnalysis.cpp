@@ -20,6 +20,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -81,6 +82,19 @@ template <> struct llvm::DenseMapInfo<VariableID> {
   }
 };
 
+using VarLocInsertPt = PointerUnion<const Instruction *, const DPValue *>;
+
+namespace std {
+template <> struct hash<VarLocInsertPt> {
+  using argument_type = VarLocInsertPt;
+  using result_type = std::size_t;
+
+  result_type operator()(const argument_type &Arg) const {
+    return std::hash<void *>()(Arg.getOpaqueValue());
+  }
+};
+} // namespace std
+
 /// Helper class to build FunctionVarLocs, since that class isn't easy to
 /// modify. TODO: There's not a great deal of value in the split, it could be
 /// worth merging the two classes.
@@ -89,8 +103,7 @@ class FunctionVarLocsBuilder {
   UniqueVector<DebugVariable> Variables;
   // Use an unordered_map so we don't invalidate iterators after
   // insert/modifications.
-  std::unordered_map<const Instruction *, SmallVector<VarLocInfo>>
-      VarLocsBeforeInst;
+  std::unordered_map<VarLocInsertPt, SmallVector<VarLocInfo>> VarLocsBeforeInst;
 
   SmallVector<VarLocInfo> SingleLocVars;
 
@@ -109,7 +122,7 @@ public:
 
   /// Return ptr to wedge of defs or nullptr if no defs come just before /p
   /// Before.
-  const SmallVectorImpl<VarLocInfo> *getWedge(const Instruction *Before) const {
+  const SmallVectorImpl<VarLocInfo> *getWedge(VarLocInsertPt Before) const {
     auto R = VarLocsBeforeInst.find(Before);
     if (R == VarLocsBeforeInst.end())
       return nullptr;
@@ -117,7 +130,7 @@ public:
   }
 
   /// Replace the defs that come just before /p Before with /p Wedge.
-  void setWedge(const Instruction *Before, SmallVector<VarLocInfo> &&Wedge) {
+  void setWedge(VarLocInsertPt Before, SmallVector<VarLocInfo> &&Wedge) {
     VarLocsBeforeInst[Before] = std::move(Wedge);
   }
 
@@ -133,7 +146,7 @@ public:
   }
 
   /// Add a def to the wedge of defs just before /p Before.
-  void addVarLoc(Instruction *Before, DebugVariable Var, DIExpression *Expr,
+  void addVarLoc(VarLocInsertPt Before, DebugVariable Var, DIExpression *Expr,
                  DebugLoc DL, RawLocationWrapper R) {
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
@@ -201,15 +214,31 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
   SingleVarLocEnd = VarLocRecords.size();
 
   // Insert a contiguous block of VarLocInfos for each instruction, mapping it
-  // to the start and end position in the vector with VarLocsBeforeInst.
+  // to the start and end position in the vector with VarLocsBeforeInst. This
+  // block includes VarLocs for any DPValues attached to that instruction.
   for (auto &P : Builder.VarLocsBeforeInst) {
+    // Process VarLocs attached to a DPValue alongside their marker Instruction.
+    if (isa<const DPValue *>(P.first))
+      continue;
+    const Instruction *I = cast<const Instruction *>(P.first);
     unsigned BlockStart = VarLocRecords.size();
+    // Any VarLocInfos attached to a DPValue should now be remapped to their
+    // marker Instruction, in order of DPValue appearance and prior to any
+    // VarLocInfos attached directly to that instruction.
+    for (const DPValue &DPV : I->getDbgValueRange()) {
+      // Even though DPV defines a variable location, VarLocsBeforeInst can
+      // still be empty if that VarLoc was redundant.
+      if (!Builder.VarLocsBeforeInst.count(&DPV))
+        continue;
+      for (const VarLocInfo &VarLoc : Builder.VarLocsBeforeInst[&DPV])
+        VarLocRecords.emplace_back(VarLoc);
+    }
     for (const VarLocInfo &VarLoc : P.second)
       VarLocRecords.emplace_back(VarLoc);
     unsigned BlockEnd = VarLocRecords.size();
     // Record the start and end indices.
     if (BlockEnd != BlockStart)
-      VarLocsBeforeInst[P.first] = {BlockStart, BlockEnd};
+      VarLocsBeforeInst[I] = {BlockStart, BlockEnd};
   }
 
   // Copy the Variables vector from the builder's UniqueVector.
@@ -370,7 +399,7 @@ class MemLocFragmentFill {
     unsigned SizeInBits;
     DebugLoc DL;
   };
-  using InsertMap = MapVector<Instruction *, SmallVector<FragMemLoc>>;
+  using InsertMap = MapVector<VarLocInsertPt, SmallVector<FragMemLoc>>;
 
   /// BBInsertBeforeMap holds a description for the set of location defs to be
   /// inserted after the analysis is complete. It is updated during the dataflow
@@ -590,7 +619,7 @@ class MemLocFragmentFill {
     return /*Changed=*/false;
   }
 
-  void insertMemLoc(BasicBlock &BB, Instruction &Before, unsigned Var,
+  void insertMemLoc(BasicBlock &BB, VarLocInsertPt Before, unsigned Var,
                     unsigned StartBit, unsigned EndBit, unsigned Base,
                     DebugLoc DL) {
     assert(StartBit < EndBit && "Cannot create fragment of size <= 0");
@@ -603,7 +632,7 @@ class MemLocFragmentFill {
     assert(Base && "Expected a non-zero ID for Base address");
     Loc.Base = Base;
     Loc.DL = DL;
-    BBInsertBeforeMap[&BB][&Before].push_back(Loc);
+    BBInsertBeforeMap[&BB][Before].push_back(Loc);
     LLVM_DEBUG(dbgs() << "Add mem def for " << Aggregates[Var].first->getName()
                       << " bits [" << StartBit << ", " << EndBit << ")\n");
   }
@@ -612,7 +641,7 @@ class MemLocFragmentFill {
   /// in \p FragMap starts before \p StartBit or ends after \p EndBit (which
   /// indicates - assuming StartBit->EndBit has just been inserted - that the
   /// slice has been coalesced in the map).
-  void coalesceFragments(BasicBlock &BB, Instruction &Before, unsigned Var,
+  void coalesceFragments(BasicBlock &BB, VarLocInsertPt Before, unsigned Var,
                          unsigned StartBit, unsigned EndBit, unsigned Base,
                          DebugLoc DL, const FragsInMemMap &FragMap) {
     if (!CoalesceAdjacentFragments)
@@ -633,7 +662,7 @@ class MemLocFragmentFill {
                  Base, DL);
   }
 
-  void addDef(const VarLocInfo &VarLoc, Instruction &Before, BasicBlock &BB,
+  void addDef(const VarLocInfo &VarLoc, VarLocInsertPt Before, BasicBlock &BB,
               VarFragMap &LiveSet) {
     DebugVariable DbgVar = FnVarLocs->getVariable(VarLoc.VariableID);
     if (skipVariable(DbgVar.getVariable()))
@@ -802,7 +831,7 @@ class MemLocFragmentFill {
     for (auto &I : BB) {
       if (const auto *Locs = FnVarLocs->getWedge(&I)) {
         for (const VarLocInfo &Loc : *Locs) {
-          addDef(Loc, I, *I.getParent(), LiveSet);
+          addDef(Loc, &I, *I.getParent(), LiveSet);
         }
       }
     }
@@ -923,7 +952,7 @@ public:
     for (auto &Pair : BBInsertBeforeMap) {
       InsertMap &Map = Pair.second;
       for (auto &Pair : Map) {
-        Instruction *InsertBefore = Pair.first;
+        auto InsertBefore = Pair.first;
         assert(InsertBefore && "should never be null");
         auto FragMemLocs = Pair.second;
         auto &Ctx = Fn.getContext();
@@ -1056,11 +1085,12 @@ private:
   UntaggedStoreAssignmentMap UntaggedStoreVars;
 
   // Machinery to defer inserting dbg.values.
-  using InsertMap = MapVector<Instruction *, SmallVector<VarLocInfo>>;
-  InsertMap InsertBeforeMap;
+  using InstInsertMap = MapVector<VarLocInsertPt, SmallVector<VarLocInfo>>;
+  InstInsertMap InsertBeforeMap;
   /// Clear the location definitions currently cached for insertion after /p
   /// After.
   void resetInsertionPoint(Instruction &After);
+  void resetInsertionPoint(DPValue &After);
   void emitDbgValue(LocKind Kind, const DbgVariableIntrinsic *Source,
                     Instruction *After);
 
@@ -1418,6 +1448,24 @@ const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
 }
 #endif
 
+VarLocInsertPt getNextNode(const DPValue *DPV) {
+  auto NextIt = ++(DPV->getIterator());
+  if (NextIt == DPV->getMarker()->getDbgValueRange().end())
+    return DPV->getMarker()->MarkedInstr;
+  return &*NextIt;
+}
+VarLocInsertPt getNextNode(const Instruction *Inst) {
+  const Instruction *Next = Inst->getNextNode();
+  if (!Next->hasDbgValues())
+    return Next;
+  return &*Next->getDbgValueRange().begin();
+}
+VarLocInsertPt getNextNode(VarLocInsertPt InsertPt) {
+  if (isa<const Instruction *>(InsertPt))
+    return getNextNode(cast<const Instruction *>(InsertPt));
+  return getNextNode(cast<const DPValue *>(InsertPt));
+}
+
 void AssignmentTrackingLowering::emitDbgValue(
     AssignmentTrackingLowering::LocKind Kind,
     const DbgVariableIntrinsic *Source, Instruction *After) {
@@ -1430,7 +1478,7 @@ void AssignmentTrackingLowering::emitDbgValue(
           PoisonValue::get(Type::getInt1Ty(Source->getContext())));
 
     // Find a suitable insert point.
-    Instruction *InsertBefore = After->getNextNode();
+    auto InsertBefore = getNextNode(After);
     assert(InsertBefore && "Shouldn't be inserting after a terminator");
 
     VariableID Var = getVariableID(DebugVariable(Source));
@@ -1538,8 +1586,9 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
     Ops.push_back(dwarf::DW_OP_deref);
     DIE = DIExpression::prependOpcodes(DIE, Ops, /*StackValue=*/false,
                                        /*EntryValue=*/false);
-    // Find a suitable insert point.
-    Instruction *InsertBefore = I.getNextNode();
+    // Find a suitable insert point, before the next instruction or DPValue
+    // after I.
+    auto InsertBefore = getNextNode(&I);
     assert(InsertBefore && "Shouldn't be inserting after a terminator");
 
     // Get DILocation for this unrecorded assignment.
@@ -1710,8 +1759,8 @@ void AssignmentTrackingLowering::processDbgValue(DbgValueInst &DVI,
   emitDbgValue(LocKind::Val, &DVI, &DVI);
 }
 
-static bool hasZeroSizedFragment(DbgVariableIntrinsic &DVI) {
-  if (auto F = DVI.getExpression()->getFragmentInfo())
+template <typename T> static bool hasZeroSizedFragment(T &DbgValue) {
+  if (auto F = DbgValue.getExpression()->getFragmentInfo())
     return F->SizeInBits == 0;
   return false;
 }
