@@ -13998,6 +13998,8 @@ private:
                             SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
 
+  void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
+
   void CheckAbsoluteValueFunction(const CallExpr *Call,
                                   const FunctionDecl *FDecl);
 
