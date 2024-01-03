@@ -644,7 +644,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 
   // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
   // new entry to NewVariables.
-  DenseMap<Value *, unsigned> NewIndexMap;
+  SmallDenseMap<Value *, unsigned> NewIndexMap;
   auto GetOrAddIndex = [&Value2Index, &NewVariables,
                         &NewIndexMap](Value *V) -> unsigned {
     auto V2I = Value2Index.find(V);
@@ -668,7 +668,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       IsSigned, IsEq, IsNe);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
-  DenseMap<Value *, bool> KnownNonNegativeVariables;
+  SmallDenseMap<Value *, bool> KnownNonNegativeVariables;
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA) {
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
