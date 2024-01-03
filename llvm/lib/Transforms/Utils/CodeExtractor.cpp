@@ -1594,6 +1594,10 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         DPVsToDelete.push_back(&DPV);
         continue;
       }
+      if (DPV.isDbgAssign() && IsInvalidLocation(DPV.getAddress())) {
+        DPVsToDelete.push_back(&DPV);
+        continue;
+      }
       if (!DPV.getDebugLoc().getInlinedAt())
         DPV.setVariable(GetUpdatedDIVariable(DPV.getVariable()));
       DPV.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DPV.getDebugLoc(),
