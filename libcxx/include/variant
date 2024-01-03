@@ -1296,7 +1296,11 @@ public:
 #  if _LIBCPP_STD_VER >= 26
   // [variant.visit], visitation
 
-  template <int = 0, class _Self, class _Visitor>
+  struct __variant_visit_barrier_tag { // unnamable when using standard library modules
+    explicit __variant_visit_barrier_tag() = default;
+  };
+
+  template <__variant_visit_barrier_tag = __variant_visit_barrier_tag{}, class _Self, class _Visitor>
   constexpr decltype(auto) visit(this _Self&& __self, _Visitor&& __visitor) {
     using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
     return std::visit(std::forward<_Visitor>(__visitor), (_V)__self);
