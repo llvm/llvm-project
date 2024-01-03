@@ -58,6 +58,7 @@ public:
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
+  virtual void startFunction() {return;}
 };
 
 // This part is for ascii assembly output

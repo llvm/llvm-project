@@ -137,14 +137,30 @@ void RISCVELFStreamer::emitDataMappingSymbol() {
   LastEMS = EMS_Data;
 }
 
-void RISCVELFStreamer::emitInstructionsMappingSymbol() {
+void RISCVELFStreamer::emitInstructionsMappingSymbol(
+    const MCSubtargetInfo &STI) {
   if (LastEMS == EMS_Instructions)
     return;
-  emitMappingSymbol("$x");
+
+  std::string ISA = "";
+  // Compare the base MCSubtargetInfo with current MCSubtargetInfo,
+  // and emit ISA when they are different.
+  if (Subtarget->getFeatureBits() != STI.getFeatureBits()) {
+    auto ParseResult = RISCVFeatures::parseFeatureBits(
+        STI.hasFeature(RISCV::Feature64Bit), STI.getFeatureBits());
+    if (!ParseResult) {
+      report_fatal_error(ParseResult.takeError());
+    }
+    auto &ISAInfo = *ParseResult;
+    ISA = ISAInfo->toString();
+  }
+
+  emitMappingSymbol("$x" + ISA);
   LastEMS = EMS_Instructions;
 }
 
 void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
+
   auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
       Name + "." + Twine(MappingSymbolCounter++)));
   emitLabel(Symbol);
@@ -165,7 +181,7 @@ void RISCVELFStreamer::changeSection(MCSection *Section,
 
 void RISCVELFStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
-  emitInstructionsMappingSymbol();
+  emitInstructionsMappingSymbol(STI);
   MCELFStreamer::emitInstruction(Inst, STI);
 }
 
@@ -185,6 +201,8 @@ void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   emitDataMappingSymbol();
   MCELFStreamer::emitValueImpl(Value, Size, Loc);
 }
+
+void RISCVELFStreamer::startFunction() { LastEMS = EMS_None; }
 
 namespace llvm {
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,

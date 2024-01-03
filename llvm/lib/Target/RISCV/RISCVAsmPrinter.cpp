@@ -369,7 +369,7 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
   bool EmittedOptionArch = emitDirectiveOptionArch();
-
+  RTS.startFunction();
   SetupMachineFunction(MF);
   emitFunctionBody();
 

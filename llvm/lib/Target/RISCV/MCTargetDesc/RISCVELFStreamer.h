@@ -11,13 +11,14 @@
 
 #include "RISCVTargetStreamer.h"
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCContext.h"
 
 using namespace llvm;
 
 class RISCVELFStreamer : public MCELFStreamer {
   void reset() override;
   void emitDataMappingSymbol();
-  void emitInstructionsMappingSymbol();
+  void emitInstructionsMappingSymbol(const MCSubtargetInfo &STI);
   void emitMappingSymbol(StringRef Name);
 
   enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
@@ -25,18 +26,22 @@ class RISCVELFStreamer : public MCELFStreamer {
   int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
+  const MCSubtargetInfo *Subtarget;
 
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
                    std::unique_ptr<MCObjectWriter> MOW,
                    std::unique_ptr<MCCodeEmitter> MCE)
-      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)),
+        Subtarget(C.getSubtargetInfo()) {}
 
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitBytes(StringRef Data) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
+
+  void startFunction();
 };
 
 namespace llvm {
@@ -71,6 +76,7 @@ public:
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 
   void finish() override;
+  void startFunction() override {getStreamer().startFunction();}
 };
 
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,
