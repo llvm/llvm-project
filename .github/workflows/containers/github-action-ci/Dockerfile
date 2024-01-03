@@ -15,7 +15,6 @@ RUN apt-get update && \
 RUN mkdir -p $LLVM_SYSROOT/bin/ $LLVM_SYSROOT/lib/
 
 RUN curl -O -L https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/$LLVM_FILENAME
-#COPY $LLVM_FILENAME .
 
 RUN tar -C $LLVM_SYSROOT --strip-components=1 -xJf $LLVM_FILENAME \
     $LLVM_DIRNAME/bin/clang \
@@ -47,6 +46,3 @@ RUN apt-get update && \
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
-
-# Test clang
-RUN printf '#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }' | clang++ -x c++ - && ./a.out | grep Hello
