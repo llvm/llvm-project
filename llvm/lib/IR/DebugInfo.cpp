@@ -2115,6 +2115,10 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::OptimizeNone))
     return /*Changed*/ false;
 
+  // FIXME: https://github.com/llvm/llvm-project/issues/76545
+  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
+    return /*Changed*/ false;
+
   bool Changed = false;
   auto *DL = &F.getParent()->getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
