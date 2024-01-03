@@ -178,7 +178,7 @@ The in-memory representation of the metadata is `__llvm_profile_data`_.
 Some fields are used to reference data from other sections in the profile.
 The fields are documented as follows:
 
-.. _`__llvm_profile_data`: https://github.com/llvm/llvm-project/blob/7c3b67d2038cfb48a80299089f6a1308eee1df7f/compiler-rt/lib/profile/InstrProfiling.h#L25
+.. _`__llvm_profile_data`: https://github.com/llvm/llvm-project/blob/7c3b67d2038cfb48a80299089f6a1308eee1df7f/compiler-rt/include/profile/InstrProfData.inc#L65-L95
 
 ``NameRef``
   The MD5 of the function's PGO name. PGO name has the format
@@ -279,15 +279,18 @@ section) and makes use of the recorded relative distances, as illustrated below.
         + --> start(__llvm_prf_cnts) --> +---------------------+       ||    |
                                          |        ...          |       ||    |
                                          +---------------------+  -----||----+
-                                         |      Counter 1      |       ||
+                                         |    Counter for      |       ||
+                                         |       Data 1        |       ||
                                          +---------------------+       ||
                                          |        ...          |       ||
                                          +---------------------+  =====||
-                                         |      Counter 2      |
+                                         |    Counter for      |
+                                         |       Data 2        |
                                          +---------------------+
                                          |        ...          |
                                          +---------------------+
-                                         |      Counter N      |
+                                         |    Counter for      |
+                                         |       Data N        |
                                          +---------------------+
 
 
