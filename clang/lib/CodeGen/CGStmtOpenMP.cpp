@@ -6679,13 +6679,11 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
   }
 }
 
-static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
-                                     llvm::AtomicOrdering AO, const Expr *X,
-                                     const Expr *V, const Expr *R,
-                                     const Expr *E, const Expr *D,
-                                     const Expr *CE, bool IsXBinopExpr,
-                                     bool IsPostfixUpdate, bool IsFailOnly,
-                                     const Expr *Hint, SourceLocation Loc) {
+static void emitOMPAtomicCompareExpr(
+    CodeGenFunction &CGF, llvm::AtomicOrdering AO, llvm::AtomicOrdering FailAO,
+    const Expr *X, const Expr *V, const Expr *R, const Expr *E, const Expr *D,
+    const Expr *CE, bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly,
+    const Expr *Hint, SourceLocation Loc) {
   llvm::OpenMPIRBuilder &OMPBuilder =
       CGF.CGM.getOpenMPRuntime().getOMPBuilder();
 
@@ -6770,13 +6768,21 @@ static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
               R->getType().isVolatileQualified()};
   }
 
-  CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-      IsPostfixUpdate, IsFailOnly));
+  if (FailAO == llvm::AtomicOrdering::NotAtomic) {
+    // fail clause was not mentionend on the
+    // "#pragma omp atomic compare" construct.
+    CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
+        CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
+        IsPostfixUpdate, IsFailOnly));
+  } else
+    CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
+        CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
+        IsPostfixUpdate, IsFailOnly, FailAO));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
-                              llvm::AtomicOrdering AO, bool IsPostfixUpdate,
+                              llvm::AtomicOrdering AO,
+                              llvm::AtomicOrdering FailAO, bool IsPostfixUpdate,
                               const Expr *X, const Expr *V, const Expr *R,
                               const Expr *E, const Expr *UE, const Expr *D,
                               const Expr *CE, bool IsXLHSInRHSPart,
@@ -6798,8 +6804,8 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                              IsXLHSInRHSPart, Loc);
     break;
   case OMPC_compare: {
-    emitOMPAtomicCompareExpr(CGF, AO, X, V, R, E, D, CE, IsXLHSInRHSPart,
-                             IsPostfixUpdate, IsFailOnly, Hint, Loc);
+    emitOMPAtomicCompareExpr(CGF, AO, FailAO, X, V, R, E, D, CE,
+                             IsXLHSInRHSPart, IsPostfixUpdate, IsFailOnly, Hint, Loc);
     break;
   }
   case OMPC_fail: {
@@ -6813,6 +6819,8 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::Monotonic;
+  // Fail Memory Clause Ordering.
+  llvm::AtomicOrdering FailAO = llvm::AtomicOrdering::NotAtomic;
   bool MemOrderingSpecified = false;
   if (S.getSingleClause<OMPSeqCstClause>()) {
     AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -6869,12 +6877,27 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   if (const auto *HintClause = S.getSingleClause<OMPHintClause>())
     Hint = HintClause->getHint();
 
+  if (KindsEncountered.contains(OMPC_compare) &&
+      KindsEncountered.contains(OMPC_fail)) {
+    Kind = OMPC_compare;
+    const auto *FailClause = S.getSingleClause<OMPFailClause>();
+    if (FailClause) {
+      OpenMPClauseKind FailParameter = FailClause->getFailParameter();
+      if (FailParameter == llvm::omp::OMPC_relaxed)
+        FailAO = llvm::AtomicOrdering::Monotonic;
+      else if (FailParameter == llvm::omp::OMPC_acquire)
+        FailAO = llvm::AtomicOrdering::Acquire;
+      else if (FailParameter == llvm::omp::OMPC_seq_cst)
+        FailAO = llvm::AtomicOrdering::SequentiallyConsistent;
+    }
+  }
+
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(S.getAssociatedStmt());
-  emitOMPAtomicExpr(*this, Kind, AO, S.isPostfixUpdate(), S.getX(), S.getV(),
-                    S.getR(), S.getExpr(), S.getUpdateExpr(), S.getD(),
-                    S.getCondExpr(), S.isXLHSInRHSPart(), S.isFailOnly(),
-                    S.getBeginLoc(), Hint);
+  emitOMPAtomicExpr(*this, Kind, AO, FailAO, S.isPostfixUpdate(), S.getX(),
+                    S.getV(), S.getR(), S.getExpr(), S.getUpdateExpr(),
+                    S.getD(), S.getCondExpr(), S.isXLHSInRHSPart(),
+                    S.isFailOnly(), S.getBeginLoc(), Hint);
 }
 
 static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
