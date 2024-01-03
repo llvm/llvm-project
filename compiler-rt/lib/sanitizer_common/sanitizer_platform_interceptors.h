@@ -649,6 +649,7 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_PROCCTL SI_FREEBSD
 #define SANITIZER_INTERCEPT_ARGP_PARSE SI_GLIBC
 #define SANITIZER_INTERCEPT_CPUSET_GETAFFINITY SI_FREEBSD
+
 // FIXME: also available from musl 1.2.5
 #define SANITIZER_INTERCEPT_PREADV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
 #define SANITIZER_INTERCEPT_PWRITEV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
@@ -673,6 +674,7 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #  define SANITIZER_INTERCEPT_FREE_SIZED 0
 #  define SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED 0
 #endif
+#define SANITIZER_INTERCEPT_CPUSET_GETDOMAIN SI_FREEBSD
 
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have
