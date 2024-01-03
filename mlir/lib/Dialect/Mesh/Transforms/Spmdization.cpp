@@ -570,7 +570,7 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, ClusterOp mesh,
                 TypedValue<ShapedType> sourceShard) {
   assert(sourceShard.getType() ==
          shardShapedType(sourceUnshardedValue.getType(), mesh, sourceSharding));
-  ShapedType targetShardType =
+  [[maybe_unused]] ShapedType targetShardType =
       shardShapedType(sourceUnshardedValue.getType(), mesh, targetSharding);
   assert(sourceShard.getType().getRank() == targetShardType.getRank());
   assert(mesh.getRank() == 1 && "Only 1D meshes are currently supported.");
