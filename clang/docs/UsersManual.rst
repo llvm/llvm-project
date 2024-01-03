@@ -2905,6 +2905,14 @@ For example, a user program can have special logging during profile generate:
 The logging is automatically excluded during a normal build of the program,
 hence it does not impact performance during a normal execution.
 
+It is advised to use such fine tuning only in a program's cold regions. The weak
+symbols can introduce extra control flow (the ``if`` checks), while the macros
+(hence declarations they guard in ``profile/instr_prof_interface.h``)
+can change the control flow of the functions that use them between profile
+generation and profile use (which can lead to discarded counters in such
+functions). Using these APIs in the program's cold regions introduces less
+overhead and leads to more optimized code.
+
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
