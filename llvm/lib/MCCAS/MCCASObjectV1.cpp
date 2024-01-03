@@ -16,11 +16,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-#include "llvm/MCCAS/MCCASDebugV1.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MCCAS/MCCASDebugV1.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include <memory>
@@ -1893,7 +1894,13 @@ struct DIEDataWriter : public DataWriter {
 /// is described by some DIEAbbrevRef block.
 struct DistinctDataWriter : public DataWriter {
   Expected<DIEDistinctDataRef> getCASNode(MCCASBuilder &CASBuilder) {
-    return DIEDistinctDataRef::create(CASBuilder, toStringRef(Data));
+    SmallVector<uint8_t> CompressedBuff;
+    compression::zlib::compress(arrayRefFromStringRef(toStringRef(Data)),
+                                CompressedBuff);
+    // Reserve 8 bytes for ULEB to store the size of the uncompressed data.
+    CompressedBuff.append(8, 0);
+    encodeULEB128(Data.size(), CompressedBuff.end() - 8, 8 /*Pad to*/);
+    return DIEDistinctDataRef::create(CASBuilder, toStringRef(CompressedBuff));
   }
 };
 
@@ -3401,7 +3408,16 @@ Error mccasformats::v1::visitDebugInfo(
     return LoadedTopRef.takeError();
 
   StringRef DistinctData = LoadedTopRef->DistinctData.getData();
-  BinaryStreamReader DistinctReader(DistinctData, support::endianness::little);
+  ArrayRef<uint8_t> BuffRef = arrayRefFromStringRef(DistinctData);
+  auto UncompressedSize = decodeULEB128(BuffRef.data() + BuffRef.size() - 8);
+  BuffRef = BuffRef.drop_back(8);
+  SmallVector<uint8_t> OutBuff;
+  if (auto E =
+          compression::zlib::decompress(BuffRef, OutBuff, UncompressedSize))
+    return E;
+  auto UncompressedDistinctData = toStringRef(OutBuff);
+  BinaryStreamReader DistinctReader(UncompressedDistinctData,
+                                    support::endianness::little);
   ArrayRef<char> HeaderData;
 
   auto BeginOffset = DistinctReader.getOffset();
@@ -3423,8 +3439,9 @@ Error mccasformats::v1::visitDebugInfo(
   HeaderCallback(toStringRef(HeaderData));
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{TotAbbrevEntries, DistinctReader,   DistinctData,
-                     HeaderCallback,   StartTagCallback, AttrCallback,
-                     EndTagCallback,   NewBlockCallback};
+  DIEVisitor Visitor{TotAbbrevEntries,         DistinctReader,
+                     UncompressedDistinctData, HeaderCallback,
+                     StartTagCallback,         AttrCallback,
+                     EndTagCallback,           NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
 }
