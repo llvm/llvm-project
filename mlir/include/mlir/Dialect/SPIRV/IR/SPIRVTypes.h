@@ -29,7 +29,6 @@ namespace spirv {
 namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
-struct CooperativeMatrixNVTypeStorage;
 struct ImageTypeStorage;
 struct JointMatrixTypeStorage;
 struct MatrixTypeStorage;
@@ -414,32 +413,6 @@ public:
   uint32_t getColumns() const;
   /// Returns the use parameter of the cooperative matrix.
   CooperativeMatrixUseKHR getUse() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-};
-
-// SPIR-V NV cooperative matrix type
-class CooperativeMatrixNVType
-    : public Type::TypeBase<CooperativeMatrixNVType, CompositeType,
-                            detail::CooperativeMatrixNVTypeStorage> {
-public:
-  using Base::Base;
-
-  static constexpr StringLiteral name = "spirv.NV.coopmatrix";
-
-  static CooperativeMatrixNVType get(Type elementType, Scope scope,
-                                     unsigned rows, unsigned columns);
-  Type getElementType() const;
-
-  /// Returns the scope of the matrix.
-  Scope getScope() const;
-  /// Returns the number of rows of the matrix.
-  unsigned getRows() const;
-  /// Returns the number of columns of the matrix.
-  unsigned getColumns() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      std::optional<StorageClass> storage = std::nullopt);
