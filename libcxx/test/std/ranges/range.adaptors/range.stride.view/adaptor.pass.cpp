@@ -98,7 +98,7 @@ constexpr bool test() {
     auto strided_iter                                                   = strided.begin();
     auto strided_iter_next                                              = strided_iter;
 
-    strided_iter_next++;
+    (void)strided_iter_next++;
 
     assert(*strided_iter == arr[0]);
     assert(*strided_iter_next == arr[1]);
