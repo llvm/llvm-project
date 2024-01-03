@@ -4257,13 +4257,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << ShaderModel << T.getOSName() << T.str();
         }
-      }
-
-      if (T.isSPIRVLogical()) {
+      } else if (T.isSPIRVLogical()) {
         if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
         }
+      } else {
+        llvm_unreachable();
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
