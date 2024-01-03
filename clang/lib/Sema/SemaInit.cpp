@@ -7582,7 +7582,7 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
                     RD->hasAttr<CoroReturnTypeAttr>() &&
-                    !Callee->hasAttr<CoroNotLifetimeBoundAttr>();
+                    !Callee->hasAttr<CoroDisableLifetimeBoundAttr>();
   }
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());

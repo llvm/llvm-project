@@ -7674,7 +7674,7 @@ it should also be annotated with ``[[clang::coro_return_type]]``).
 All parameters of a function are considered to be lifetime bound if the function returns a
 coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
-with ``[[clang::coro_not_lifetimebound]]`` function attribute .
+with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
 See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
 
 
@@ -7722,14 +7722,14 @@ Both coroutines and coroutine wrappers are part of this analysis.
   }
 
 This analysis can be disabled for all calls to a particular function by annotating the function
-with function attribute ``[[clang::coro_not_lifetimebound]]``.
+with function attribute ``[[clang::coro_disable_lifetimebound]]``.
 For example, this could be useful for coroutine wrappers which accept reference parameters
 but do not pass them to the underlying coroutine or pass them by value.
 
 .. code-block:: c++
 
   Task<int> coro(int a) { co_return a + 1; }
-  [[clang::coro_wrapper, clang::coro_not_lifetimebound]] Task<int> coro_wrapper(const int& a) {
+  [[clang::coro_wrapper, clang::coro_disable_lifetimebound]] Task<int> coro_wrapper(const int& a) {
     return coro(a + 1);
   }
   void use() {

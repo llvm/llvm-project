@@ -117,16 +117,16 @@ CoNoCRT<int> bar(int a) {
 } // namespace not_a_crt
 
 // =============================================================================
-// Not lifetime bound coroutine wrappers: [[clang::coro_not_lifetimebound]].
+// Not lifetime bound coroutine wrappers: [[clang::coro_disable_lifetimebound]].
 // =============================================================================
-namespace not_lifetimebound {
+namespace disable_lifetimebound {
 Co<int> foo(int x) {  co_return x; }
 
-[[clang::coro_wrapper, clang::coro_not_lifetimebound]] 
+[[clang::coro_wrapper, clang::coro_disable_lifetimebound]] 
 Co<int> foo_wrapper(const int& x) { return foo(x); }
 
 [[clang::coro_wrapper]] Co<int> caller() {
   // The call to foo_wrapper is wrapper is safe.
   return foo_wrapper(1);
 }
-} // namespace not_lifetimebound
+} // namespace disable_lifetimebound

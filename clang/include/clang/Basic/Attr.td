@@ -1121,8 +1121,8 @@ def CoroLifetimeBound : InheritableAttr {
   let SimpleHandler = 1;
 }
 
-def CoroNotLifetimeBound : InheritableAttr {
-  let Spellings = [Clang<"coro_not_lifetimebound">];
+def CoroDisableLifetimeBound : InheritableAttr {
+  let Spellings = [Clang<"coro_disable_lifetimebound">];
   let Subjects = SubjectList<[Function]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroLifetimeBoundDoc];
