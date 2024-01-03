@@ -54,9 +54,9 @@ void printErrorAndExit(Twine ErrMsg) {
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "filedescs=<infd>,<outfd> [args...]\n"
+         << "[test-jitloadergdb] filedescs=<infd>,<outfd> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "listen=<host>:<port> [args...]\n";
+         << "[test-jitloadergdb] listen=<host>:<port> [args...]\n";
   exit(1);
 }
 
@@ -132,50 +132,47 @@ int main(int argc, char *argv[]) {
   int InFD = 0;
   int OutFD = 0;
 
-  std::vector<StringRef> TestOutputFlags;
-
   if (argc < 2)
     printErrorAndExit("insufficient arguments");
-  else {
-    StringRef ConnectArg = argv[FirstProgramArg++];
+
+  StringRef NextArg = argv[FirstProgramArg++];
 #ifndef NDEBUG
-    if (ConnectArg == "debug") {
-      DebugFlag = true;
-      ConnectArg = argv[FirstProgramArg++];
-    }
+  if (NextArg == "debug") {
+    DebugFlag = true;
+    NextArg = argv[FirstProgramArg++];
+  }
 #endif
 
-    while (ConnectArg.starts_with("test-")) {
-      TestOutputFlags.push_back(ConnectArg);
-      ConnectArg = argv[FirstProgramArg++];
-    }
-
-    StringRef SpecifierType, Specifier;
-    std::tie(SpecifierType, Specifier) = ConnectArg.split('=');
-    if (SpecifierType == "filedescs") {
-      StringRef FD1Str, FD2Str;
-      std::tie(FD1Str, FD2Str) = Specifier.split(',');
-      if (FD1Str.getAsInteger(10, InFD))
-        printErrorAndExit(FD1Str + " is not a valid file descriptor");
-      if (FD2Str.getAsInteger(10, OutFD))
-        printErrorAndExit(FD2Str + " is not a valid file descriptor");
-    } else if (SpecifierType == "listen") {
-      StringRef Host, PortStr;
-      std::tie(Host, PortStr) = Specifier.split(':');
-
-      int Port = 0;
-      if (PortStr.getAsInteger(10, Port))
-        printErrorAndExit("port number '" + PortStr +
-                          "' is not a valid integer");
-
-      InFD = OutFD = openListener(Host.str(), PortStr.str());
-    } else
-      printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
+  std::vector<StringRef> TestOutputFlags;
+  while (NextArg.starts_with("test-")) {
+    TestOutputFlags.push_back(NextArg);
+    NextArg = argv[FirstProgramArg++];
   }
 
   if (llvm::is_contained(TestOutputFlags, "test-jitloadergdb"))
     fprintf(stderr, "__jit_debug_descriptor.last_entry = 0x%016" PRIx64 "\n",
             pointerToJITTargetAddress(findLastDebugDescriptorEntryPtr()));
+
+  StringRef SpecifierType, Specifier;
+  std::tie(SpecifierType, Specifier) = NextArg.split('=');
+  if (SpecifierType == "filedescs") {
+    StringRef FD1Str, FD2Str;
+    std::tie(FD1Str, FD2Str) = Specifier.split(',');
+    if (FD1Str.getAsInteger(10, InFD))
+      printErrorAndExit(FD1Str + " is not a valid file descriptor");
+    if (FD2Str.getAsInteger(10, OutFD))
+      printErrorAndExit(FD2Str + " is not a valid file descriptor");
+  } else if (SpecifierType == "listen") {
+    StringRef Host, PortStr;
+    std::tie(Host, PortStr) = Specifier.split(':');
+
+    int Port = 0;
+    if (PortStr.getAsInteger(10, Port))
+      printErrorAndExit("port number '" + PortStr + "' is not a valid integer");
+
+    InFD = OutFD = openListener(Host.str(), PortStr.str());
+  } else
+    printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
 
   auto Server =
       ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
