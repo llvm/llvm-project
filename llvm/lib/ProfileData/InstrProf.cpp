@@ -429,9 +429,8 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
 }
 
 bool isGPUProfTarget(const Module &M) {
-  const auto &triple = M.getTargetTriple();
-  return triple.rfind("nvptx", 0) == 0 || triple.rfind("amdgcn", 0) == 0 ||
-         triple.rfind("r600", 0) == 0;
+  const auto &Triple = llvm::Triple(M.getTargetTriple());
+  return Triple.isAMDGPU() || Triple.isNVPTX();
 }
 
 GlobalVariable *createPGOFuncNameVar(Module &M,
