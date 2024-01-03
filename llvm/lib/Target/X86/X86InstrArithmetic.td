@@ -350,212 +350,212 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
   let isCommutable = CommutableRR,
       isConvertibleToThreeAddress = ConvertibleToThreeAddressRR in {
     let Predicates = [NoNDD] in {
-      def NAME#8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
-      def NAME#16rr : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag>, OpSize16;
-      def NAME#32rr : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag>, OpSize32;
-      def NAME#64rr : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag>;
+      def 8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
+      def 16rr : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag>, OpSize16;
+      def 32rr : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag>, OpSize32;
+      def 64rr : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag>;
     }
     let Predicates = [HasNDD, In64BitMode] in {
-      def NAME#8rr_ND  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag, 1>;
-      def NAME#16rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag, 1>, PD;
-      def NAME#32rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag, 1>;
-      def NAME#64rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag, 1>;
-      def NAME#8rr_NF_ND  : BinOpRR_R<BaseOpc, mnemonic, Xi8, 1>, EVEX_NF;
-      def NAME#16rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi16, 1>, EVEX_NF, PD;
-      def NAME#32rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi32, 1>, EVEX_NF;
-      def NAME#64rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi64, 1>, EVEX_NF;
+      def 8rr_ND  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag, 1>;
+      def 16rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag, 1>, PD;
+      def 32rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag, 1>;
+      def 64rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag, 1>;
+      def 8rr_NF_ND  : BinOpRR_R<BaseOpc, mnemonic, Xi8, 1>, EVEX_NF;
+      def 16rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi16, 1>, EVEX_NF, PD;
+      def 32rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi32, 1>, EVEX_NF;
+      def 64rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi64, 1>, EVEX_NF;
     }
     let Predicates = [In64BitMode] in {
-      def NAME#8rr_NF  : BinOpRR_R<BaseOpc, mnemonic, Xi8>, NF;
-      def NAME#16rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi16>, NF, PD;
-      def NAME#32rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi32>, NF;
-      def NAME#64rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi64>, NF;
-      def NAME#8rr_EVEX  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
-      def NAME#16rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
-      def NAME#32rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
-      def NAME#64rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+      def 8rr_NF  : BinOpRR_R<BaseOpc, mnemonic, Xi8>, NF;
+      def 16rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi16>, NF, PD;
+      def 32rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi32>, NF;
+      def 64rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi64>, NF;
+      def 8rr_EVEX  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+      def 16rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+      def 32rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+      def 64rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
     }
   }
 
-    def NAME#8rr_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>;
-    def NAME#16rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
-    def NAME#32rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
-    def NAME#64rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>;
+    def 8rr_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>;
+    def 16rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
+    def 32rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
+    def 64rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>;
     let Predicates = [In64BitMode] in {
-      def NAME#8rr_EVEX_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>, PL;
-      def NAME#16rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, PL, PD;
-      def NAME#32rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, PL;
-      def NAME#64rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>, PL;
-      def NAME#8rr_ND_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8, 1>;
-      def NAME#16rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16, 1>, PD;
-      def NAME#32rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32, 1>;
-      def NAME#64rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64, 1>;
-      def NAME#8rr_NF_REV  : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi8>, NF;
-      def NAME#16rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi16>, NF, PD;
-      def NAME#32rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi32>, NF;
-      def NAME#64rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi64>, NF;
-      def NAME#8rr_NF_ND_REV  : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi8, 1>, EVEX_NF;
-      def NAME#16rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi16, 1>, EVEX_NF, PD;
-      def NAME#32rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi32, 1>, EVEX_NF;
-      def NAME#64rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi64, 1>, EVEX_NF;
+      def 8rr_EVEX_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>, PL;
+      def 16rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, PL, PD;
+      def 32rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, PL;
+      def 64rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>, PL;
+      def 8rr_ND_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8, 1>;
+      def 16rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16, 1>, PD;
+      def 32rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32, 1>;
+      def 64rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64, 1>;
+      def 8rr_NF_REV  : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi8>, NF;
+      def 16rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi16>, NF, PD;
+      def 32rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi32>, NF;
+      def 64rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi64>, NF;
+      def 8rr_NF_ND_REV  : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi8, 1>, EVEX_NF;
+      def 16rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi16, 1>, EVEX_NF, PD;
+      def 32rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi32, 1>, EVEX_NF;
+      def 64rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi64, 1>, EVEX_NF;
     }
 
     let Predicates = [NoNDD] in {
-      def NAME#8rm   : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag>;
-      def NAME#16rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag>, OpSize16;
-      def NAME#32rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag>, OpSize32;
-      def NAME#64rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag>;
+      def 8rm   : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag>;
+      def 16rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag>, OpSize16;
+      def 32rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag>, OpSize32;
+      def 64rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag>;
     }
     let Predicates = [HasNDD, In64BitMode] in {
-      def NAME#8rm_ND  : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag, 1>;
-      def NAME#16rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag, 1>, PD;
-      def NAME#32rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag, 1>;
-      def NAME#64rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag, 1>;
-      def NAME#8rm_NF_ND  : BinOpRM_R<BaseOpc2, mnemonic, Xi8, 1>, EVEX_NF;
-      def NAME#16rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi16, 1>, EVEX_NF, PD;
-      def NAME#32rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi32, 1>, EVEX_NF;
-      def NAME#64rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi64, 1>, EVEX_NF;
+      def 8rm_ND  : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag, 1>;
+      def 16rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag, 1>, PD;
+      def 32rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag, 1>;
+      def 64rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag, 1>;
+      def 8rm_NF_ND  : BinOpRM_R<BaseOpc2, mnemonic, Xi8, 1>, EVEX_NF;
+      def 16rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi16, 1>, EVEX_NF, PD;
+      def 32rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi32, 1>, EVEX_NF;
+      def 64rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi64, 1>, EVEX_NF;
     }
     let Predicates = [In64BitMode] in {
-      def NAME#8rm_NF  : BinOpRM_R<BaseOpc2, mnemonic, Xi8>, NF;
-      def NAME#16rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi16>, NF, PD;
-      def NAME#32rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi32>, NF;
-      def NAME#64rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi64>, NF;
-      def NAME#8rm_EVEX  : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , null_frag>, PL;
-      def NAME#16rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, null_frag>, PL, PD;
-      def NAME#32rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, null_frag>, PL;
-      def NAME#64rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, null_frag>, PL;
+      def 8rm_NF  : BinOpRM_R<BaseOpc2, mnemonic, Xi8>, NF;
+      def 16rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi16>, NF, PD;
+      def 32rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi32>, NF;
+      def 64rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi64>, NF;
+      def 8rm_EVEX  : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , null_frag>, PL;
+      def 16rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, null_frag>, PL, PD;
+      def 32rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, null_frag>, PL;
+      def 64rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, null_frag>, PL;
     }
 
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
       let Predicates = [NoNDD] in {
         // NOTE: These are order specific, we want the ri8 forms to be listed
         // first so that they are slightly preferred to the ri forms.
-        def NAME#16ri8 : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
-        def NAME#32ri8 : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
-        def NAME#64ri8 : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>;
-        def NAME#8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
-        def NAME#16ri  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM>, OpSize16;
-        def NAME#32ri  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM>, OpSize32;
-        def NAME#64ri32: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM>;
+        def 16ri8 : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
+        def 32ri8 : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
+        def 64ri8 : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>;
+        def 8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
+        def 16ri  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM>, OpSize16;
+        def 32ri  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM>, OpSize32;
+        def 64ri32: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM>;
       }
       let Predicates = [HasNDD, In64BitMode] in {
-        def NAME#16ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
-        def NAME#32ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
-        def NAME#64ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
-        def NAME#8ri_ND   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM, 1>;
-        def NAME#16ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM, 1>, PD;
-        def NAME#32ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM, 1>;
-        def NAME#64ri32_ND: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM, 1>;
-        def NAME#16ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
-        def NAME#32ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
-        def NAME#64ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
-        def NAME#8ri_NF_ND  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM, 1>, EVEX_NF;
-        def NAME#16ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
-        def NAME#32ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
-        def NAME#64ri32_NF_ND : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
+        def 16ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
+        def 32ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
+        def 64ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
+        def 8ri_ND   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM, 1>;
+        def 16ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM, 1>, PD;
+        def 32ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM, 1>;
+        def 64ri32_ND: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM, 1>;
+        def 16ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
+        def 32ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
+        def 64ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
+        def 8ri_NF_ND  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM, 1>, EVEX_NF;
+        def 16ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
+        def 32ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
+        def 64ri32_NF_ND : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
       }
       let Predicates = [In64BitMode] in {
-        def NAME#16ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM>, NF, PD;
-        def NAME#32ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM>, NF;
-        def NAME#64ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM>, NF;
-        def NAME#8ri_NF  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM>, NF;
-        def NAME#16ri_NF : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM>, NF, PD;
-        def NAME#32ri_NF : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM>, NF;
-        def NAME#64ri32_NF : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM>, NF;
-        def NAME#16ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
-        def NAME#32ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
-        def NAME#64ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
-        def NAME#8ri_EVEX   : BinOpRI_RF<0x80, mnemonic, Xi8 , null_frag, RegMRM>, PL;
-        def NAME#16ri_EVEX  : BinOpRI_RF<0x81, mnemonic, Xi16, null_frag, RegMRM>, PL, PD;
-        def NAME#32ri_EVEX  : BinOpRI_RF<0x81, mnemonic, Xi32, null_frag, RegMRM>, PL;
-        def NAME#64ri32_EVEX: BinOpRI_RF<0x81, mnemonic, Xi64, null_frag, RegMRM>, PL;
+        def 16ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM>, NF, PD;
+        def 32ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM>, NF;
+        def 64ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM>, NF;
+        def 8ri_NF  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM>, NF;
+        def 16ri_NF : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM>, NF, PD;
+        def 32ri_NF : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM>, NF;
+        def 64ri32_NF : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM>, NF;
+        def 16ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
+        def 32ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
+        def 64ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
+        def 8ri_EVEX   : BinOpRI_RF<0x80, mnemonic, Xi8 , null_frag, RegMRM>, PL;
+        def 16ri_EVEX  : BinOpRI_RF<0x81, mnemonic, Xi16, null_frag, RegMRM>, PL, PD;
+        def 32ri_EVEX  : BinOpRI_RF<0x81, mnemonic, Xi32, null_frag, RegMRM>, PL;
+        def 64ri32_EVEX: BinOpRI_RF<0x81, mnemonic, Xi64, null_frag, RegMRM>, PL;
       }
     }
 
-    def NAME#8mr    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , opnode>;
-    def NAME#16mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-    def NAME#32mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-    def NAME#64mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, opnode>;
+    def 8mr    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , opnode>;
+    def 16mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+    def 32mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+    def 64mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, opnode>;
     let Predicates = [HasNDD, In64BitMode] in {
-    def NAME#8mr_ND    : BinOpMR_RF<BaseOpc, mnemonic, Xi8 , opnode>;
-    def NAME#16mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
-    def NAME#32mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi32, opnode>;
-    def NAME#64mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi64, opnode>;
-    def NAME#8mr_NF_ND    : BinOpMR_R<BaseOpc, mnemonic, Xi8>, EVEX_NF;
-    def NAME#16mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi16>, EVEX_NF, PD;
-    def NAME#32mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi32>, EVEX_NF;
-    def NAME#64mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi64>, EVEX_NF;
+    def 8mr_ND    : BinOpMR_RF<BaseOpc, mnemonic, Xi8 , opnode>;
+    def 16mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
+    def 32mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi32, opnode>;
+    def 64mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi64, opnode>;
+    def 8mr_NF_ND    : BinOpMR_R<BaseOpc, mnemonic, Xi8>, EVEX_NF;
+    def 16mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi16>, EVEX_NF, PD;
+    def 32mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi32>, EVEX_NF;
+    def 64mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi64>, EVEX_NF;
   }
   let Predicates = [In64BitMode] in {
-    def NAME#8mr_NF    : BinOpMR_M<BaseOpc, mnemonic, Xi8>, NF;
-    def NAME#16mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi16>, NF, PD;
-    def NAME#32mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi32>, NF;
-    def NAME#64mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi64>, NF;
-    def NAME#8mr_EVEX    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
-    def NAME#16mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
-    def NAME#32mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
-    def NAME#64mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+    def 8mr_NF    : BinOpMR_M<BaseOpc, mnemonic, Xi8>, NF;
+    def 16mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi16>, NF, PD;
+    def 32mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi32>, NF;
+    def 64mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi64>, NF;
+    def 8mr_EVEX    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+    def 16mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+    def 32mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+    def 64mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
   }
 
   // NOTE: These are order specific, we want the mi8 forms to be listed
   // first so that they are slightly preferred to the mi forms.
-  def NAME#16mi8  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, OpSize16;
-  def NAME#32mi8  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, OpSize32;
+  def 16mi8  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, OpSize16;
+  def 32mi8  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-    def NAME#64mi8  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>;
-  def NAME#8mi    : BinOpMI_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-  def NAME#16mi   : BinOpMI_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
-  def NAME#32mi   : BinOpMI_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
+    def 64mi8  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>;
+  def 8mi    : BinOpMI_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+  def 16mi   : BinOpMI_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
+  def 32mi   : BinOpMI_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-    def NAME#64mi32 : BinOpMI_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 64mi32 : BinOpMI_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
   let Predicates = [HasNDD, In64BitMode] in {
-    def NAME#16mi8_ND  : BinOpMI8_RF<mnemonic, Xi16, MemMRM>, PD;
-    def NAME#32mi8_ND  : BinOpMI8_RF<mnemonic, Xi32, MemMRM>;
-    def NAME#64mi8_ND  : BinOpMI8_RF<mnemonic, Xi64, MemMRM>;
-    def NAME#8mi_ND    : BinOpMI_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-    def NAME#16mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
-    def NAME#32mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
-    def NAME#64mi32_ND : BinOpMI_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
-    def NAME#16mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi16, MemMRM>, NF, PD;
-    def NAME#32mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi32, MemMRM>, NF;
-    def NAME#64mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi64, MemMRM>, NF;
-    def NAME#8mi_NF_ND    : BinOpMI_R<0x80, mnemonic, Xi8, MemMRM>, NF;
-    def NAME#16mi_NF_ND   : BinOpMI_R<0x81, mnemonic, Xi16, MemMRM>, NF, PD;
-    def NAME#32mi_NF_ND   : BinOpMI_R<0x81, mnemonic, Xi32, MemMRM>, NF;
-    def NAME#64mi32_NF_ND : BinOpMI_R<0x81, mnemonic, Xi64, MemMRM>, NF;
+    def 16mi8_ND  : BinOpMI8_RF<mnemonic, Xi16, MemMRM>, PD;
+    def 32mi8_ND  : BinOpMI8_RF<mnemonic, Xi32, MemMRM>;
+    def 64mi8_ND  : BinOpMI8_RF<mnemonic, Xi64, MemMRM>;
+    def 8mi_ND    : BinOpMI_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+    def 16mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
+    def 32mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
+    def 64mi32_ND : BinOpMI_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 16mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi32, MemMRM>, NF;
+    def 64mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi64, MemMRM>, NF;
+    def 8mi_NF_ND    : BinOpMI_R<0x80, mnemonic, Xi8, MemMRM>, NF;
+    def 16mi_NF_ND   : BinOpMI_R<0x81, mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi_NF_ND   : BinOpMI_R<0x81, mnemonic, Xi32, MemMRM>, NF;
+    def 64mi32_NF_ND : BinOpMI_R<0x81, mnemonic, Xi64, MemMRM>, NF;
   }
   let Predicates = [In64BitMode] in {
-    def NAME#16mi8_NF  : BinOpMI8_M<mnemonic, Xi16, MemMRM>, NF, PD;
-    def NAME#32mi8_NF  : BinOpMI8_M<mnemonic, Xi32, MemMRM>, NF;
-    def NAME#64mi8_NF  : BinOpMI8_M<mnemonic, Xi64, MemMRM>, NF;
-    def NAME#8mi_NF    : BinOpMI_M<0x80, mnemonic, Xi8, MemMRM>, NF;
-    def NAME#16mi_NF   : BinOpMI_M<0x81, mnemonic, Xi16, MemMRM>, NF, PD;
-    def NAME#32mi_NF   : BinOpMI_M<0x81, mnemonic, Xi32, MemMRM>, NF;
-    def NAME#64mi32_NF : BinOpMI_M<0x81, mnemonic, Xi64, MemMRM>, NF;
-    def NAME#16mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, PL, PD;
-    def NAME#32mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, PL;
-    def NAME#64mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>, PL;
-    def NAME#8mi_EVEX    : BinOpMI_MF<0x80, mnemonic, Xi8 , null_frag, MemMRM>, PL;
-    def NAME#16mi_EVEX   : BinOpMI_MF<0x81, mnemonic, Xi16, null_frag, MemMRM>, PL, PD;
-    def NAME#32mi_EVEX   : BinOpMI_MF<0x81, mnemonic, Xi32, null_frag, MemMRM>, PL;
-    def NAME#64mi32_EVEX : BinOpMI_MF<0x81, mnemonic, Xi64, null_frag, MemMRM>, PL;
+    def 16mi8_NF  : BinOpMI8_M<mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi8_NF  : BinOpMI8_M<mnemonic, Xi32, MemMRM>, NF;
+    def 64mi8_NF  : BinOpMI8_M<mnemonic, Xi64, MemMRM>, NF;
+    def 8mi_NF    : BinOpMI_M<0x80, mnemonic, Xi8, MemMRM>, NF;
+    def 16mi_NF   : BinOpMI_M<0x81, mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi_NF   : BinOpMI_M<0x81, mnemonic, Xi32, MemMRM>, NF;
+    def 64mi32_NF : BinOpMI_M<0x81, mnemonic, Xi64, MemMRM>, NF;
+    def 16mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, PL, PD;
+    def 32mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, PL;
+    def 64mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>, PL;
+    def 8mi_EVEX    : BinOpMI_MF<0x80, mnemonic, Xi8 , null_frag, MemMRM>, PL;
+    def 16mi_EVEX   : BinOpMI_MF<0x81, mnemonic, Xi16, null_frag, MemMRM>, PL, PD;
+    def 32mi_EVEX   : BinOpMI_MF<0x81, mnemonic, Xi32, null_frag, MemMRM>, PL;
+    def 64mi32_EVEX : BinOpMI_MF<0x81, mnemonic, Xi64, null_frag, MemMRM>, PL;
   }
 
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode] in {
-  def NAME#8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
-  def NAME#8mi8 : BinOpMI8_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
+  def 8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
+  def 8mi8 : BinOpMI8_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
   }
 
-  def NAME#8i8 : BinOpAI_AF<BaseOpc4, mnemonic, Xi8 , AL,
+  def 8i8 : BinOpAI_AF<BaseOpc4, mnemonic, Xi8 , AL,
                             "{$src, %al|al, $src}">;
-  def NAME#16i16 : BinOpAI_AF<BaseOpc4, mnemonic, Xi16, AX,
+  def 16i16 : BinOpAI_AF<BaseOpc4, mnemonic, Xi16, AX,
                               "{$src, %ax|ax, $src}">, OpSize16;
-  def NAME#32i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi32, EAX,
+  def 32i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi32, EAX,
                               "{$src, %eax|eax, $src}">, OpSize32;
-  def NAME#64i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi64, RAX,
+  def 64i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi64, RAX,
                               "{$src, %rax|rax, $src}">;
 }
 
@@ -571,162 +571,162 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                            bit ConvertibleToThreeAddress> {
   let isCommutable = CommutableRR in {
     let Predicates = [NoNDD] in {
-      def NAME#8rr  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
+      def 8rr  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
       let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-        def NAME#16rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-        def NAME#32rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-        def NAME#64rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
+        def 16rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+        def 32rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+        def 64rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
       }
     }
     let Predicates = [HasNDD, In64BitMode] in {
-      def NAME#8rr_ND  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode, 1>;
+      def 8rr_ND  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode, 1>;
       let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-        def NAME#16rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode, 1>, PD;
-        def NAME#32rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode, 1>;
-        def NAME#64rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode, 1>;
+        def 16rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode, 1>, PD;
+        def 32rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode, 1>;
+        def 64rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode, 1>;
       }
     }
   } // isCommutable
 
   let Predicates = [In64BitMode] in {
-    def NAME#8rr_EVEX  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
-    def NAME#16rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
-    def NAME#32rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
-    def NAME#64rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+    def 8rr_EVEX  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+    def 16rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+    def 32rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+    def 64rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
   }
 
-  def NAME#8rr_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>;
-  def NAME#16rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
-  def NAME#32rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
-  def NAME#64rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>;
+  def 8rr_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>;
+  def 16rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
+  def 32rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
+  def 64rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>;
   let Predicates = [In64BitMode] in {
-    def NAME#8rr_ND_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8, 1>;
-    def NAME#16rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16, 1>, PD;
-    def NAME#32rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32, 1>;
-    def NAME#64rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64, 1>;
-    def NAME#8rr_EVEX_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>, PL;
-    def NAME#16rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, PL, PD;
-    def NAME#32rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, PL;
-    def NAME#64rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>, PL;
+    def 8rr_ND_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8, 1>;
+    def 16rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16, 1>, PD;
+    def 32rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32, 1>;
+    def 64rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64, 1>;
+    def 8rr_EVEX_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>, PL;
+    def 16rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, PL, PD;
+    def 32rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, PL;
+    def 64rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>, PL;
   }
 
   let Predicates = [NoNDD] in {
-    def NAME#8rm   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>;
-    def NAME#16rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
-    def NAME#32rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
-    def NAME#64rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>;
+    def 8rm   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>;
+    def 16rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
+    def 32rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
+    def 64rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>;
   }
   let Predicates = [HasNDD, In64BitMode] in {
-    def NAME#8rm_ND   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode, 1>;
-    def NAME#16rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode, 1>, PD;
-    def NAME#32rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode, 1>;
-    def NAME#64rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode, 1>;
+    def 8rm_ND   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode, 1>;
+    def 16rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode, 1>, PD;
+    def 32rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode, 1>;
+    def 64rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode, 1>;
   }
   let Predicates = [In64BitMode] in {
-    def NAME#8rm_EVEX   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>, PL;
-    def NAME#16rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, PL, PD;
-    def NAME#32rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, PL;
-    def NAME#64rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>, PL;
+    def 8rm_EVEX   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>, PL;
+    def 16rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, PL, PD;
+    def 32rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, PL;
+    def 64rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>, PL;
   }
 
   let Predicates = [NoNDD] in {
-    def NAME#8ri   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>;
+    def 8ri   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>;
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
       // NOTE: These are order specific, we want the ri8 forms to be listed
       // first so that they are slightly preferred to the ri forms.
-      def NAME#16ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
-      def NAME#32ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
-      def NAME#64ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>;
+      def 16ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
+      def 32ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
+      def 64ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>;
 
-      def NAME#16ri  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
-      def NAME#32ri  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
-      def NAME#64ri32: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>;
+      def 16ri  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
+      def 32ri  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
+      def 64ri32: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>;
     }
   }
 
   let Predicates = [HasNDD, In64BitMode] in {
-    def NAME#8ri_ND   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM, 1>;
+    def 8ri_ND   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM, 1>;
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-      def NAME#16ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
-      def NAME#32ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
-      def NAME#64ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
-      def NAME#16ri_ND  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM, 1>, PD;
-      def NAME#32ri_ND  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM, 1>;
-      def NAME#64ri32_ND: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM, 1>;
+      def 16ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
+      def 32ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
+      def 64ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
+      def 16ri_ND  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM, 1>, PD;
+      def 32ri_ND  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM, 1>;
+      def 64ri32_ND: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM, 1>;
     }
   }
   let Predicates = [In64BitMode] in {
-    def NAME#8ri_EVEX   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>, PL;
-    def NAME#16ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
-    def NAME#32ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
-    def NAME#64ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
-    def NAME#16ri_EVEX  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, PL, PD;
-    def NAME#32ri_EVEX  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, PL;
-    def NAME#64ri32_EVEX: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>, PL;
+    def 8ri_EVEX   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>, PL;
+    def 16ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
+    def 32ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
+    def 64ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
+    def 16ri_EVEX  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, PL, PD;
+    def 32ri_EVEX  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, PL;
+    def 64ri32_EVEX: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>, PL;
   }
 
-  def NAME#8mr    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , opnode>;
-  def NAME#16mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, opnode>;
+  def 8mr    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , opnode>;
+  def 16mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+  def 32mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+  def 64mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, opnode>;
   let Predicates = [HasNDD, In64BitMode] in {
-    def NAME#8mr_ND    : BinOpMRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
-    def NAME#16mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
-    def NAME#32mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi32, opnode>;
-    def NAME#64mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
+    def 8mr_ND    : BinOpMRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
+    def 16mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
+    def 32mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi32, opnode>;
+    def 64mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
   }
   let Predicates = [In64BitMode] in {
-    def NAME#8mr_EVEX    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
-    def NAME#16mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
-    def NAME#32mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
-    def NAME#64mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+    def 8mr_EVEX    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+    def 16mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+    def 32mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+    def 64mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
   }
 
   // NOTE: These are order specific, we want the mi8 forms to be listed
   // first so that they are slightly preferred to the mi forms.
-  def NAME#8mi    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-  def NAME#16mi8  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, OpSize16;
-  def NAME#32mi8  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, OpSize32;
+  def 8mi    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+  def 16mi8  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, OpSize16;
+  def 32mi8  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-    def NAME#64mi8  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>;
-  def NAME#16mi   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
-  def NAME#32mi   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
+    def 64mi8  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>;
+  def 16mi   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
+  def 32mi   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-    def NAME#64mi32 : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 64mi32 : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
 
   let Predicates = [HasNDD, In64BitMode] in {
-    def NAME#8mi_ND    : BinOpMIF_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-    def NAME#16mi8_ND  : BinOpMI8F_RF<mnemonic, Xi16, MemMRM>, PD;
-    def NAME#32mi8_ND  : BinOpMI8F_RF<mnemonic, Xi32, MemMRM>;
-    def NAME#64mi8_ND  : BinOpMI8F_RF<mnemonic, Xi64, MemMRM>;
-    def NAME#16mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
-    def NAME#32mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
-    def NAME#64mi32_ND : BinOpMIF_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 8mi_ND    : BinOpMIF_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+    def 16mi8_ND  : BinOpMI8F_RF<mnemonic, Xi16, MemMRM>, PD;
+    def 32mi8_ND  : BinOpMI8F_RF<mnemonic, Xi32, MemMRM>;
+    def 64mi8_ND  : BinOpMI8F_RF<mnemonic, Xi64, MemMRM>;
+    def 16mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
+    def 32mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
+    def 64mi32_ND : BinOpMIF_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
   }
   let Predicates = [In64BitMode] in {
-    def NAME#8mi_EVEX    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>, PL;
-    def NAME#16mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, PL, PD;
-    def NAME#32mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, PL;
-    def NAME#64mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>, PL;
-    def NAME#16mi_EVEX   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, PL, PD;
-    def NAME#32mi_EVEX   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, PL;
-    def NAME#64mi32_EVEX : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>, PL;
+    def 8mi_EVEX    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>, PL;
+    def 16mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, PL, PD;
+    def 32mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, PL;
+    def 64mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>, PL;
+    def 16mi_EVEX   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, PL, PD;
+    def 32mi_EVEX   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, PL;
+    def 64mi32_EVEX : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>, PL;
   }
 
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode]  in {
-    def NAME#8ri8 : BinOpRI8F_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
-  def NAME#8mi8 : BinOpMI8F_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
+    def 8ri8 : BinOpRI8F_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
+  def 8mi8 : BinOpMI8F_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
   }
 
-  def NAME#8i8 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi8 , AL,
+  def 8i8 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi8 , AL,
                              "{$src, %al|al, $src}">;
-  def NAME#16i16 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi16, AX,
+  def 16i16 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi16, AX,
                                "{$src, %ax|ax, $src}">, OpSize16;
-  def NAME#32i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi32, EAX,
+  def 32i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi32, EAX,
                                "{$src, %eax|eax, $src}">, OpSize32;
-  def NAME#64i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi64, RAX,
+  def 64i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi64, RAX,
                                "{$src, %rax|rax, $src}">;
 }
 
@@ -739,71 +739,71 @@ multiclass ArithBinOp_F<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                         SDNode opnode, bit CommutableRR,
                         bit ConvertibleToThreeAddress> {
   let isCommutable = CommutableRR in {
-  def NAME#8rr  : BinOpRR_F<BaseOpc, mnemonic, Xi8 , opnode>;
+  def 8rr  : BinOpRR_F<BaseOpc, mnemonic, Xi8 , opnode>;
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-    def NAME#16rr : BinOpRR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-    def NAME#32rr : BinOpRR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-    def NAME#64rr : BinOpRR_F<BaseOpc, mnemonic, Xi64, opnode>;
+    def 16rr : BinOpRR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+    def 32rr : BinOpRR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+    def 64rr : BinOpRR_F<BaseOpc, mnemonic, Xi64, opnode>;
     } // isConvertibleToThreeAddress
   } // isCommutable
 
-  def NAME#8rr_REV  : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi8>;
-  def NAME#16rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
-  def NAME#32rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
-  def NAME#64rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi64>;
+  def 8rr_REV  : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi8>;
+  def 16rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
+  def 32rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
+  def 64rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi64>;
 
-  def NAME#8rm   : BinOpRM_F<BaseOpc2, mnemonic, Xi8 , opnode>;
-  def NAME#16rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi64, opnode>;
+  def 8rm   : BinOpRM_F<BaseOpc2, mnemonic, Xi8 , opnode>;
+  def 16rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
+  def 32rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
+  def 64rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi64, opnode>;
 
-  def NAME#8ri   : BinOpRI_F<0x80, mnemonic, Xi8 , opnode, RegMRM>;
+  def 8ri   : BinOpRI_F<0x80, mnemonic, Xi8 , opnode, RegMRM>;
 
   let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
   // NOTE: These are order specific, we want the ri8 forms to be listed
   // first so that they are slightly preferred to the ri forms.
-  def NAME#16ri8 : BinOpRI8_F<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
-  def NAME#32ri8 : BinOpRI8_F<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
-  def NAME#64ri8 : BinOpRI8_F<0x83, mnemonic, Xi64, RegMRM>;
+  def 16ri8 : BinOpRI8_F<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
+  def 32ri8 : BinOpRI8_F<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
+  def 64ri8 : BinOpRI8_F<0x83, mnemonic, Xi64, RegMRM>;
 
-  def NAME#16ri  : BinOpRI_F<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
-  def NAME#32ri  : BinOpRI_F<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
-  def NAME#64ri32: BinOpRI_F<0x81, mnemonic, Xi64, opnode, RegMRM>;
+  def 16ri  : BinOpRI_F<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
+  def 32ri  : BinOpRI_F<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
+  def 64ri32: BinOpRI_F<0x81, mnemonic, Xi64, opnode, RegMRM>;
   }
 
-  def NAME#8mr    : BinOpMR_F<BaseOpc, mnemonic, Xi8 , opnode>;
-  def NAME#16mr   : BinOpMR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32mr   : BinOpMR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64mr   : BinOpMR_F<BaseOpc, mnemonic, Xi64, opnode>;
+  def 8mr    : BinOpMR_F<BaseOpc, mnemonic, Xi8 , opnode>;
+  def 16mr   : BinOpMR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+  def 32mr   : BinOpMR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+  def 64mr   : BinOpMR_F<BaseOpc, mnemonic, Xi64, opnode>;
 
   // NOTE: These are order specific, we want the mi8 forms to be listed
   // first so that they are slightly preferred to the mi forms.
-  def NAME#16mi8  : BinOpMI8_F<mnemonic, Xi16, MemMRM>, OpSize16;
-  def NAME#32mi8  : BinOpMI8_F<mnemonic, Xi32, MemMRM>, OpSize32;
+  def 16mi8  : BinOpMI8_F<mnemonic, Xi16, MemMRM>, OpSize16;
+  def 32mi8  : BinOpMI8_F<mnemonic, Xi32, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi8  : BinOpMI8_F<mnemonic, Xi64, MemMRM>;
+  def 64mi8  : BinOpMI8_F<mnemonic, Xi64, MemMRM>;
 
-  def NAME#8mi    : BinOpMI_F<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-  def NAME#16mi   : BinOpMI_F<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
-  def NAME#32mi   : BinOpMI_F<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
+  def 8mi    : BinOpMI_F<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+  def 16mi   : BinOpMI_F<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
+  def 32mi   : BinOpMI_F<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi32 : BinOpMI_F<0x81, mnemonic, Xi64, opnode, MemMRM>;
+  def 64mi32 : BinOpMI_F<0x81, mnemonic, Xi64, opnode, MemMRM>;
 
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode] in {
-  def NAME#8ri8 : BinOpRI8_F<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
+  def 8ri8 : BinOpRI8_F<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
     let mayLoad = 1 in
-    def NAME#8mi8 : BinOpMI8_F<mnemonic, Xi8, MemMRM>;
+    def 8mi8 : BinOpMI8_F<mnemonic, Xi8, MemMRM>;
   }
 
-  def NAME#8i8 : BinOpAI_F<BaseOpc4, mnemonic, Xi8 , AL,
+  def 8i8 : BinOpAI_F<BaseOpc4, mnemonic, Xi8 , AL,
                            "{$src, %al|al, $src}">;
-  def NAME#16i16 : BinOpAI_F<BaseOpc4, mnemonic, Xi16, AX,
+  def 16i16 : BinOpAI_F<BaseOpc4, mnemonic, Xi16, AX,
                            "{$src, %ax|ax, $src}">, OpSize16;
-  def NAME#32i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi32, EAX,
+  def 32i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi32, EAX,
                            "{$src, %eax|eax, $src}">, OpSize32;
-  def NAME#64i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi64, RAX,
+  def 64i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi64, RAX,
                            "{$src, %rax|rax, $src}">;
 }
 
