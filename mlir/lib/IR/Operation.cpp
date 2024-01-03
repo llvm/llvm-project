@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
 
@@ -611,11 +612,19 @@ void Operation::setSuccessor(Block *block, unsigned index) {
 /// the results of the given op.
 static void checkFoldResultTypes(Operation *op,
                                  SmallVectorImpl<OpFoldResult> &results) {
-  if (!results.empty())
-    for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults()))
-      if (auto value = ofr.dyn_cast<Value>())
-        assert(value.getType() == opResult.getType() &&
-               "folder produced value of incorrect type");
+  if (results.empty())
+    return;
+
+  for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults())) {
+    if (auto value = dyn_cast<Value>(ofr)) {
+      if (value.getType() != opResult.getType()) {
+        llvm::errs() << "Folder produced a value of incorrect type for: "
+                     << *op << "\nOriginal type: '" << value.getType()
+                     << "'\nNew type: '" << opResult.getType() << "'\n";
+        assert(false && "incorrect fold result type");
+      }
+    }
+  }
 }
 #endif // NDEBUG
 
