@@ -1,5 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
+## mulx
+
 # CHECK: {evex}	mulx	r10d, edx, ecx
 # CHECK: encoding: [0x62,0x72,0x6f,0x08,0xf6,0xd1]
          {evex}	mulx	r10d, edx, ecx
@@ -16,21 +18,23 @@
 # CHECK: encoding: [0x62,0x72,0xb7,0x08,0xf6,0xbc,0x98,0x7b,0x00,0x00,0x00]
          {evex}	mulx	r15, r9, qword ptr [rax + 4*rbx + 123]
 
-# CHECK: {evex}	mulx	r26d, r22d, r18d
+# CHECK: mulx	r26d, r22d, r18d
 # CHECK: encoding: [0x62,0x6a,0x4f,0x00,0xf6,0xd2]
-         {evex}	mulx	r26d, r22d, r18d
+         mulx	r26d, r22d, r18d
 
-# CHECK: {evex}	mulx	r27, r23, r19
+# CHECK: mulx	r27, r23, r19
 # CHECK: encoding: [0x62,0x6a,0xc7,0x00,0xf6,0xdb]
-         {evex}	mulx	r27, r23, r19
+         mulx	r27, r23, r19
 
-# CHECK: {evex}	mulx	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: mulx	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
 # CHECK: encoding: [0x62,0x8a,0x6b,0x00,0xf6,0xb4,0xac,0x23,0x01,0x00,0x00]
-         {evex}	mulx	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+         mulx	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
 
-# CHECK: {evex}	mulx	r23, r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: mulx	r23, r19, qword ptr [r28 + 4*r29 + 291]
 # CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf6,0xbc,0xac,0x23,0x01,0x00,0x00]
-         {evex}	mulx	r23, r19, qword ptr [r28 + 4*r29 + 291]
+         mulx	r23, r19, qword ptr [r28 + 4*r29 + 291]
+
+## pdep
 
 # CHECK: {evex}	pdep	r10d, edx, ecx
 # CHECK: encoding: [0x62,0x72,0x6f,0x08,0xf5,0xd1]
@@ -64,6 +68,8 @@
 # CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00]
          pdep	r23, r19, qword ptr [r28 + 4*r29 + 291]
 
+## pext
+
 # CHECK: {evex}	pext	r10d, edx, ecx
 # CHECK: encoding: [0x62,0x72,0x6e,0x08,0xf5,0xd1]
          {evex}	pext	r10d, edx, ecx
@@ -95,6 +101,8 @@
 # CHECK: pext	r23, r19, qword ptr [r28 + 4*r29 + 291]
 # CHECK: encoding: [0x62,0x8a,0xe2,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00]
          pext	r23, r19, qword ptr [r28 + 4*r29 + 291]
+
+## rorx
 
 # CHECK: {evex}	rorx	edx, ecx, 123
 # CHECK: encoding: [0x62,0xf3,0x7f,0x08,0xf0,0xd1,0x7b]
@@ -128,6 +136,8 @@
 # CHECK: encoding: [0x62,0x8b,0xfb,0x08,0xf0,0x9c,0xac,0x23,0x01,0x00,0x00,0x7b]
          rorx	r19, qword ptr [r28 + 4*r29 + 291], 123
 
+## sarx
+
 # CHECK: {evex}	sarx	r10d, edx, ecx
 # CHECK: encoding: [0x62,0x72,0x76,0x08,0xf7,0xd2]
          {evex}	sarx	r10d, edx, ecx
@@ -160,6 +170,8 @@
 # CHECK: encoding: [0x62,0x8a,0xe2,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
          sarx	r23, qword ptr [r28 + 4*r29 + 291], r19
 
+## shlx
+
 # CHECK: {evex}	shlx	r10d, edx, ecx
 # CHECK: encoding: [0x62,0x72,0x75,0x08,0xf7,0xd2]
          {evex}	shlx	r10d, edx, ecx
@@ -191,6 +203,8 @@
 # CHECK: shlx	r23, qword ptr [r28 + 4*r29 + 291], r19
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
          shlx	r23, qword ptr [r28 + 4*r29 + 291], r19
+
+## shrx
 
 # CHECK: {evex}	shrx	r10d, edx, ecx
 # CHECK: encoding: [0x62,0x72,0x77,0x08,0xf7,0xd2]

@@ -3,6 +3,9 @@
 
 # ERROR-COUNT-56: error:
 # ERROR-NOT: error:
+
+## mulx
+
 # CHECK: {evex}	mulxl	%ecx, %edx, %r10d
 # CHECK: encoding: [0x62,0x72,0x6f,0x08,0xf6,0xd1]
          {evex}	mulxl	%ecx, %edx, %r10d
@@ -19,21 +22,23 @@
 # CHECK: encoding: [0x62,0x72,0xb7,0x08,0xf6,0xbc,0x98,0x7b,0x00,0x00,0x00]
          {evex}	mulxq	123(%rax,%rbx,4), %r9, %r15
 
-# CHECK: {evex}	mulxl	%r18d, %r22d, %r26d
+# CHECK: mulxl	%r18d, %r22d, %r26d
 # CHECK: encoding: [0x62,0x6a,0x4f,0x00,0xf6,0xd2]
-         {evex}	mulxl	%r18d, %r22d, %r26d
+         mulxl	%r18d, %r22d, %r26d
 
-# CHECK: {evex}	mulxq	%r19, %r23, %r27
+# CHECK: mulxq	%r19, %r23, %r27
 # CHECK: encoding: [0x62,0x6a,0xc7,0x00,0xf6,0xdb]
-         {evex}	mulxq	%r19, %r23, %r27
+         mulxq	%r19, %r23, %r27
 
-# CHECK: {evex}	mulxl	291(%r28,%r29,4), %r18d, %r22d
+# CHECK: mulxl	291(%r28,%r29,4), %r18d, %r22d
 # CHECK: encoding: [0x62,0x8a,0x6b,0x00,0xf6,0xb4,0xac,0x23,0x01,0x00,0x00]
-         {evex}	mulxl	291(%r28,%r29,4), %r18d, %r22d
+         mulxl	291(%r28,%r29,4), %r18d, %r22d
 
-# CHECK: {evex}	mulxq	291(%r28,%r29,4), %r19, %r23
+# CHECK: mulxq	291(%r28,%r29,4), %r19, %r23
 # CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf6,0xbc,0xac,0x23,0x01,0x00,0x00]
-         {evex}	mulxq	291(%r28,%r29,4), %r19, %r23
+         mulxq	291(%r28,%r29,4), %r19, %r23
+
+## pdep
 
 # CHECK: {evex}	pdepl	%ecx, %edx, %r10d
 # CHECK: encoding: [0x62,0x72,0x6f,0x08,0xf5,0xd1]
@@ -67,6 +72,8 @@
 # CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00]
          pdepq	291(%r28,%r29,4), %r19, %r23
 
+## pext
+
 # CHECK: {evex}	pextl	%ecx, %edx, %r10d
 # CHECK: encoding: [0x62,0x72,0x6e,0x08,0xf5,0xd1]
          {evex}	pextl	%ecx, %edx, %r10d
@@ -98,6 +105,8 @@
 # CHECK: pextq	291(%r28,%r29,4), %r19, %r23
 # CHECK: encoding: [0x62,0x8a,0xe2,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00]
          pextq	291(%r28,%r29,4), %r19, %r23
+
+## rorx
 
 # CHECK: {evex}	rorxl	$123, %ecx, %edx
 # CHECK: encoding: [0x62,0xf3,0x7f,0x08,0xf0,0xd1,0x7b]
@@ -131,6 +140,8 @@
 # CHECK: encoding: [0x62,0x8b,0xfb,0x08,0xf0,0x9c,0xac,0x23,0x01,0x00,0x00,0x7b]
          rorxq	$123, 291(%r28,%r29,4), %r19
 
+## sarx
+
 # CHECK: {evex}	sarxl	%ecx, %edx, %r10d
 # CHECK: encoding: [0x62,0x72,0x76,0x08,0xf7,0xd2]
          {evex}	sarxl	%ecx, %edx, %r10d
@@ -163,6 +174,8 @@
 # CHECK: encoding: [0x62,0x8a,0xe2,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
          sarxq	%r19, 291(%r28,%r29,4), %r23
 
+## shlx
+
 # CHECK: {evex}	shlxl	%ecx, %edx, %r10d
 # CHECK: encoding: [0x62,0x72,0x75,0x08,0xf7,0xd2]
          {evex}	shlxl	%ecx, %edx, %r10d
@@ -194,6 +207,8 @@
 # CHECK: shlxq	%r19, 291(%r28,%r29,4), %r23
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
          shlxq	%r19, 291(%r28,%r29,4), %r23
+
+## shrx
 
 # CHECK: {evex}	shrxl	%ecx, %edx, %r10d
 # CHECK: encoding: [0x62,0x72,0x77,0x08,0xf7,0xd2]

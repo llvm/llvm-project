@@ -1,7 +1,7 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
-## invvpid
+## ldtilecfg
 
 # ATT:   ldtilecfg	123(%rax,%rbx,4)
 # INTEL: ldtilecfg	[rax + 4*rbx + 123]
@@ -11,7 +11,7 @@
 # INTEL: ldtilecfg	[r28 + 4*r29 + 291]
 0x62,0x9a,0x78,0x08,0x49,0x84,0xac,0x23,0x01,0x00,0x00
 
-## invvpid
+## sttilecfg
 
 # ATT:   sttilecfg	123(%rax,%rbx,4)
 # INTEL: sttilecfg	[rax + 4*rbx + 123]
@@ -21,7 +21,7 @@
 # INTEL: sttilecfg	[r28 + 4*r29 + 291]
 0x62,0x9a,0x79,0x08,0x49,0x84,0xac,0x23,0x01,0x00,0x00
 
-## invvpid
+## tileloadd
 
 # ATT:   tileloadd	123(%rax,%rbx,4), %tmm6
 # INTEL: tileloadd	tmm6, [rax + 4*rbx + 123]
@@ -31,7 +31,7 @@
 # INTEL: tileloadd	tmm6, [r28 + 4*r29 + 291]
 0x62,0x9a,0x7b,0x08,0x4b,0xb4,0xac,0x23,0x01,0x00,0x00
 
-## invvpid
+## tileloaddt1
 
 # ATT:   tileloaddt1	123(%rax,%rbx,4), %tmm6
 # INTEL: tileloaddt1	tmm6, [rax + 4*rbx + 123]
@@ -41,7 +41,7 @@
 # INTEL: tileloaddt1	tmm6, [r28 + 4*r29 + 291]
 0x62,0x9a,0x79,0x08,0x4b,0xb4,0xac,0x23,0x01,0x00,0x00
 
-## invvpid
+## tilestored
 
 # ATT:   tilestored	%tmm6, 123(%rax,%rbx,4)
 # INTEL: tilestored	[rax + 4*rbx + 123], tmm6
