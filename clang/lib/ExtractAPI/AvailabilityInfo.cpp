@@ -1,11 +1,17 @@
 #include "clang/ExtractAPI/AvailabilityInfo.h"
 #include "clang/AST/Attr.h"
 #include "llvm/ADT/STLExtras.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang;
 using namespace extractapi;
 
 AvailabilitySet::AvailabilitySet(const Decl *Decl) {
+    
+  ASTContext &Context = Decl->getASTContext();
+  StringRef PlatformName = Context.getTargetInfo().getPlatformName();
+    
   // Collect availability attributes from all redeclrations.
   for (const auto *RD : Decl->redecls()) {
     if (const auto *A = RD->getAttr<UnavailableAttr>()) {
@@ -24,6 +30,8 @@ AvailabilitySet::AvailabilitySet(const Decl *Decl) {
 
     for (const auto *Attr : RD->specific_attrs<AvailabilityAttr>()) {
       StringRef Domain = Attr->getPlatform()->getName();
+      if (Domain != PlatformName)
+        continue;
       auto *Availability =
           llvm::find_if(Availabilities, [Domain](const AvailabilityInfo &Info) {
             return Domain.equals(Info.Domain);

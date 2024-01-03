@@ -300,22 +300,6 @@ void e(void) __attribute__((availability(tvos, unavailable)));
             "minor": 0,
             "patch": 0
           }
-        },
-        {
-          "domain": "ios",
-          "introduced": {
-            "major": 13,
-            "minor": 0,
-            "patch": 0
-          }
-        },
-        {
-          "domain": "tvos",
-          "introduced": {
-            "major": 15,
-            "minor": 0,
-            "patch": 0
-          }
         }
       ],
       "declarationFragments": [
@@ -394,10 +378,6 @@ void e(void) __attribute__((availability(tvos, unavailable)));
             "minor": 0,
             "patch": 0
           }
-        },
-        {
-          "domain": "tvos",
-          "isUnconditionallyUnavailable": true
         }
       ],
       "declarationFragments": [
