@@ -13,9 +13,8 @@
 #define OMPTARGET_DEVICERTL_PROFILING_H
 
 extern "C" {
-
-void __llvm_profile_register_function(void *ptr);
-void __llvm_profile_register_names_function(void *ptr, long int i);
+void __llvm_profile_register_function(void *Ptr);
+void __llvm_profile_register_names_function(void *Ptr, long int I);
 }
 
 #endif
