@@ -444,7 +444,7 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
 bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   // Win64 EH requires a frame pointer if funclets are present, as the locals
   // are accessed off the frame pointer in both the parent function and the
   // funclets.
@@ -455,7 +455,7 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
-      RegInfo->hasStackRealignment(MF))
+      RegInfo->hasStackRealignment(MF) || AFI->callsEhReturn())
     return true;
   // With large callframes around we may need to use FP to access the scavenging
   // emergency spillslot.
@@ -1095,6 +1095,8 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   if (AFI->getLocalStackSize() == 0)
     return false;
 
+  if (AFI->callsEhReturn())
+    return false;
   // For WinCFI, if optimizing for size, prefer to not combine the stack bump
   // (to force a stp with predecrement) to match the packed unwind format,
   // provided that there actually are any callee saved registers to merge the
@@ -1626,6 +1628,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   auto VerifyClobberOnExit = make_scope_exit([&]() {
     if (NonFrameStart == MBB.end())
       return;
+
+    // Ignore eh data register
+    if (AFI->callsEhReturn()) {
+      for (int I = 0; I < 4; ++I)
+        LiveRegs.removeReg(AFI->GetEhDataReg(I));
+    }
     // Check if any of the newly instructions clobber any of the live registers.
     for (MachineInstr &MI :
          make_range(MBB.instr_begin(), NonFrameStart->getIterator())) {
@@ -2054,6 +2062,26 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                        CFAOffset, MFI.hasVarSizedObjects());
   }
 
+  // Insert instructions that spill eh data registers.
+  if (AFI->callsEhReturn()) {
+    for (int I = 0; I < 4; ++I) {
+      if (!MBB.isLiveIn(AFI->GetEhDataReg(I)))
+        MBB.addLiveIn(AFI->GetEhDataReg(I));
+    }
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXi))
+        .addReg(AFI->GetEhDataReg(0), RegState::Define)
+        .addReg(AFI->GetEhDataReg(1), RegState::Define)
+        .addReg(AArch64::SP)
+        .addImm(0)
+        .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXi))
+        .addReg(AFI->GetEhDataReg(2), RegState::Define)
+        .addReg(AFI->GetEhDataReg(3), RegState::Define)
+        .addReg(AArch64::SP)
+        .addImm(2)
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
+
   // If we need a base pointer, set it up here. It's whatever the value of the
   // stack pointer is at this point. Any variable size objects will be allocated
   // after this, so we can still use the base pointer to reference locals.
@@ -2266,6 +2294,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     --EpilogStartI;
   }
 
+  if (AFI->callsEhReturn()) {
+    BuildMI(MBB, LastPopI, DL, TII->get(AArch64::STURXi))
+        .addReg(AFI->GetEhDataReg(0), RegState::Define)
+        .addReg(AArch64::FP)
+        .addImm((NumBytes - PrologueSaveSize) / 8);
+  }
+
   if (hasFP(MF) && AFI->hasSwiftAsyncContext()) {
     switch (MF.getTarget().Options.SwiftAsyncFramePointer) {
     case SwiftAsyncFramePointerMode::DeploymentBased:
@@ -2436,6 +2471,21 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         MCCFIInstruction::cfiDefCfa(nullptr, Reg, PrologueSaveSize));
     BuildMI(MBB, LastPopI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
+
+  if (AFI->callsEhReturn()) {
+    BuildMI(MBB, LastPopI, DL, TII->get(AArch64::LDPXi))
+        .addReg(AFI->GetEhDataReg(0), RegState::Define)
+        .addReg(AFI->GetEhDataReg(1), RegState::Define)
+        .addReg(AArch64::FP)
+        .addImm(-NumBytes / 8)
+        .setMIFlags(MachineInstr::FrameDestroy);
+    BuildMI(MBB, LastPopI, DL, TII->get(AArch64::LDPXi))
+        .addReg(AFI->GetEhDataReg(2), RegState::Define)
+        .addReg(AFI->GetEhDataReg(3), RegState::Define)
+        .addReg(AArch64::FP)
+        .addImm(-NumBytes / 8 + 2)
         .setMIFlags(MachineInstr::FrameDestroy);
   }
 
@@ -3312,6 +3362,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(AArch64::LR);
   }
 
+  // Create spill slots for eh data registers if function calls eh_return.
+  if (AFI->callsEhReturn())
+    AFI->createEhDataRegsFI(MF);
+
   LLVM_DEBUG(dbgs() << "*** determineCalleeSaves\nSaved CSRs:";
              for (unsigned Reg
                   : SavedRegs.set_bits()) dbgs()
@@ -3339,7 +3393,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Conservatively always assume BigStack when there are SVE spills.
   bool BigStack = SVEStackSize || (EstimatedStackSize + CSStackSize +
                                    CalleeStackUsed) > EstimatedStackSizeLimit;
-  if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
+  if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF) ||
+      AFI->callsEhReturn())
     AFI->setHasStackFrame(true);
 
   // Estimate if we might need to scavenge a register at some point in order

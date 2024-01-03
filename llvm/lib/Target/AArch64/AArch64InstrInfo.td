@@ -401,6 +401,9 @@ def SDT_AArch64binvec : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
 def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<0,3>]>;
+
+def SDT_AArch64EHRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
+
 def SDT_AArch64TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
 def SDT_AArch64PREFETCH : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>]>;
 
@@ -754,6 +757,9 @@ def AArch64fcmltz: SDNode<"AArch64ISD::FCMLTz", SDT_AArch64fcmpz>;
 
 def AArch64bici: SDNode<"AArch64ISD::BICi", SDT_AArch64vecimm>;
 def AArch64orri: SDNode<"AArch64ISD::ORRi", SDT_AArch64vecimm>;
+
+def AArch64ehret : SDNode<"AArch64ISD::EH_RETURN", SDT_AArch64EHRET,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def AArch64tcret: SDNode<"AArch64ISD::TC_RETURN", SDT_AArch64TCRET,
                   [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
@@ -4794,6 +4800,12 @@ let isPseudo = 1 in {
 
 // Pseudo instructions for Windows EH
 //===----------------------------------------------------------------------===//
+let isTerminator = 1, isReturn = 1, isBarrier = 1,
+   hasCtrlDep = 1, isCodeGenOnly = 1, isPseudo = 1, AsmString = "ret" in {
+def EH_RETURN   : Pseudo<(outs), (ins GPR64sp:$addr, GPR64:$dst),
+                         [(AArch64ehret GPR64sp:$addr, GPR64:$dst)]>, Sched<[]>;
+}
+
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1, isPseudo = 1 in {
    def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret)]>, Sched<[]>;

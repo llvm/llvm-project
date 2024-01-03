@@ -1943,7 +1943,8 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
 
 bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
-      MI.getOpcode() != AArch64::CATCHRET)
+      MI.getOpcode() != AArch64::CATCHRET &&
+      MI.getOpcode() != AArch64::EH_RETURN)
     return false;
 
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1971,6 +1972,19 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(AArch64::X0)
         .addMBB(TargetMBB)
         .addImm(0);
+    return true;
+  }
+
+  if (MI.getOpcode() == AArch64::EH_RETURN) {
+    Register OffsetReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, MI, DL, get(AArch64::ADDXrx64))
+        .addReg(AArch64::SP)
+        .addReg(AArch64::SP)
+        .addReg(OffsetReg)
+        .addImm(0)
+        .setMIFlags(MachineInstr::FrameDestroy);
+    BuildMI(MBB, MI, DL, get(AArch64::RET)).addReg(AArch64::LR);
+    MBB.erase(MI);
     return true;
   }
 

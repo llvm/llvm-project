@@ -120,6 +120,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// which the sret argument is passed.
   Register SRetReturnReg;
 
+  /// CallsEhReturn - Whether the function calls llvm.eh.return.
+  bool CallsEhReturn = false;
+
+  /// Frame objects for spilling eh data registers.
+  int EhDataRegFI[4];
+
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.
@@ -273,6 +279,14 @@ public:
     CalleeSavedStackSize = Size;
     HasCalleeSavedStackSize = true;
   }
+
+  bool callsEhReturn() const { return CallsEhReturn; }
+  void setCallsEhReturn() { CallsEhReturn = true; }
+
+  void createEhDataRegsFI(MachineFunction &MF);
+  int getEhDataRegFI(unsigned Reg) const { return EhDataRegFI[Reg]; }
+  bool isEhDataRegFI(int FI) const;
+  unsigned GetEhDataReg(unsigned I) const;
 
   // When CalleeSavedStackSize has not been set (for example when
   // some MachineIR pass is run in isolation), then recalculate

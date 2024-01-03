@@ -553,6 +553,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
   setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
 
+  setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
   // Variable arguments.
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction(ISD::VAARG, MVT::Other, Custom);
@@ -2502,6 +2503,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::RDSVL)
     MAKE_CASE(AArch64ISD::BIC)
     MAKE_CASE(AArch64ISD::BIT)
+    MAKE_CASE(AArch64ISD::EH_RETURN)
     MAKE_CASE(AArch64ISD::CBZ)
     MAKE_CASE(AArch64ISD::CBNZ)
     MAKE_CASE(AArch64ISD::TBZ)
@@ -6414,6 +6416,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFunnelShift(Op, DAG);
   case ISD::FLDEXP:
     return LowerFLDEXP(Op, DAG);
+  case ISD::EH_RETURN:
+    return LowerEH_RETURN(Op, DAG);
   }
 }
 
@@ -6593,6 +6597,27 @@ AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
                        MPI);
 
   return TPIDR2Obj;
+}
+
+SDValue AArch64TargetLowering::LowerEH_RETURN(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Offset = Op.getOperand(1);
+  SDValue Handler = Op.getOperand(2);
+  SDLoc dl(Op);
+
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  AFI->setCallsEhReturn();
+
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  Register OffsetReg = AArch64::X4;
+  Register AddrReg = AArch64::X0;
+  Chain = DAG.getCopyToReg(Chain, dl, OffsetReg, Offset);
+  Chain = DAG.getCopyToReg(Chain, dl, AddrReg, Handler);
+
+  return DAG.getNode(AArch64ISD::EH_RETURN, dl, MVT::Other, Chain,
+                     DAG.getRegister(OffsetReg, MVT::i64),
+                     DAG.getRegister(AddrReg, PtrVT));
 }
 
 SDValue AArch64TargetLowering::LowerFormalArguments(
