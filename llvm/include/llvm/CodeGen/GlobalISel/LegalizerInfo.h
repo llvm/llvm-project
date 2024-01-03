@@ -35,6 +35,7 @@ extern cl::opt<bool> DisableGISelLegalityCheck;
 class MachineFunction;
 class raw_ostream;
 class LegalizerHelper;
+class LostDebugLocObserver;
 class MachineInstr;
 class MachineRegisterInfo;
 class MCInstrInfo;
@@ -1288,8 +1289,8 @@ public:
                        const MachineRegisterInfo &MRI) const;
 
   /// Called for instructions with the Custom LegalizationAction.
-  virtual bool legalizeCustom(LegalizerHelper &Helper,
-                              MachineInstr &MI) const {
+  virtual bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                              LostDebugLocObserver &LocObserver) const {
     llvm_unreachable("must implement this if custom action is used");
   }
 

@@ -37,7 +37,8 @@ define amdgpu_ps void @divergent_i1_phi_uniform_branch(ptr addrspace(1) %out, i3
 ; GFX10-NEXT:    v_cmp_gt_u32_e64 s0, 1, v2
 ; GFX10-NEXT:    global_store_dword v[3:4], v5, off
 ; GFX10-NEXT:  .LBB0_3: ; %exit
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, 2, 1, s0
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s0
+; GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v2
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX10-NEXT:    s_endpgm
 A:
@@ -72,7 +73,8 @@ define amdgpu_ps void @divergent_i1_phi_uniform_branch_simple(ptr addrspace(1) %
 ; GFX10-NEXT:  .LBB1_2: ; %B
 ; GFX10-NEXT:    v_cmp_gt_u32_e64 s0, 1, v2
 ; GFX10-NEXT:  .LBB1_3: ; %exit
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, 2, 1, s0
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s0
+; GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v2
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX10-NEXT:    s_endpgm
 A:

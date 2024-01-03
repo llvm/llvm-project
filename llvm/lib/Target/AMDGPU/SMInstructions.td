@@ -1064,27 +1064,42 @@ def SIMM24bitPtr : ImmLeaf <iPTR,
   [{return isInt<24>(Imm);}]
 >;
 
-multiclass SMPrefetchPat<string type, int cache_type> {
+def i32imm_zero : TImmLeaf <i32, [{
+  return Imm == 0;
+}]>;
+
+def i32imm_one : TImmLeaf <i32, [{
+  return Imm == 1;
+}]>;
+
+multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
   def : GCNPat <
-    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, (i32 cache_type)),
+    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
   >;
 
   def : GCNPat <
-    (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, (i32 cache_type)),
+    (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0))
   >;
 
   def : GCNPat <
-    (prefetch SIMM24bitPtr:$offset, timm, timm, (i32 cache_type)),
+    (prefetch SIMM24bitPtr:$offset, timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type#"_PC_REL") (as_i32timm $offset), (i32 SGPR_NULL), (i8 0))
   > {
     let AddedComplexity = 10;
   }
+
+  def : GCNPat <
+    (smrd_prefetch (i32 SReg_32:$sbase), timm, timm, cache_type),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type)
+        (i64 (REG_SEQUENCE SReg_64, $sbase, sub0, (i32 (S_MOV_B32 (i32 0))), sub1)),
+        0, (i32 SGPR_NULL), (i8 0))
+  >;
 }
 
-defm : SMPrefetchPat<"INST", 0>;
-defm : SMPrefetchPat<"DATA", 1>;
+defm : SMPrefetchPat<"INST", i32imm_zero>;
+defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

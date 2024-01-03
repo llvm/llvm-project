@@ -8,40 +8,13 @@
 
 #include "ExecutionUtils.h"
 
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
 #include <vector>
-
-// Declarations follow the GDB JIT interface (version 1, 2009) and must match
-// those of the DYLD used for testing. See:
-//
-//   llvm/lib/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.cpp
-//   llvm/lib/ExecutionEngine/GDBRegistrationListener.cpp
-//
-typedef enum {
-  JIT_NOACTION = 0,
-  JIT_REGISTER_FN,
-  JIT_UNREGISTER_FN
-} jit_actions_t;
-
-struct jit_code_entry {
-  struct jit_code_entry *next_entry;
-  struct jit_code_entry *prev_entry;
-  const char *symfile_addr;
-  uint64_t symfile_size;
-};
-
-struct jit_descriptor {
-  uint32_t version;
-  // This should be jit_actions_t, but we want to be specific about the
-  // bit-width.
-  uint32_t action_flag;
-  struct jit_code_entry *relevant_entry;
-  struct jit_code_entry *first_entry;
-};
 
 namespace llvm {
 
@@ -61,6 +34,9 @@ static const char *actionFlagToStr(uint32_t ActionFlag) {
   return "<invalid action_flag>";
 }
 
+// Declarations follow the GDB JIT interface (version 1, 2009) and must match
+// those of the DYLD used for testing.
+//
 // Sample output:
 //
 //   Reading __jit_debug_descriptor at 0x0000000000404048
