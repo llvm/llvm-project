@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
@@ -132,6 +133,23 @@ public:
   }
 };
 
+/// A custom operation for the purpose of showcasing how discardable attributes
+/// are handled in absence of properties.
+class OpWithoutProperties : public Op<OpWithoutProperties> {
+public:
+  // Begin boilerplate.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpWithoutProperties)
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() {
+    static StringRef attributeNames[] = {StringRef("inherent_attr")};
+    return ArrayRef(attributeNames);
+  };
+  static StringRef getOperationName() {
+    return "test_op_properties.op_without_properties";
+  }
+  // End boilerplate.
+};
+
 // A trivial supporting dialect to register the above operation.
 class TestOpPropertiesDialect : public Dialect {
 public:
@@ -142,7 +160,7 @@ public:
   explicit TestOpPropertiesDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
                 TypeID::get<TestOpPropertiesDialect>()) {
-    addOperations<OpWithProperties>();
+    addOperations<OpWithProperties, OpWithoutProperties>();
   }
 };
 
@@ -357,6 +375,26 @@ TEST(OpPropertiesTest, getOrAddProperties) {
     EXPECT_TRUE(StringRef(os.str()).contains("array = array<i64: 3, 4, 5>"));
   }
   op->erase();
+}
+
+constexpr StringLiteral withoutPropertiesAttrsSrc = R"mlir(
+    "test_op_properties.op_without_properties"()
+      {inherent_attr = 42, other_attr = 56} : () -> ()
+)mlir";
+
+TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
+  MLIRContext context;
+  context.getOrLoadDialect<TestOpPropertiesDialect>();
+  ParserConfig config(&context);
+  OwningOpRef<Operation *> op =
+      parseSourceString(withoutPropertiesAttrsSrc, config);
+  ASSERT_EQ(llvm::range_size(op->getDiscardableAttrs()), 1u);
+  EXPECT_EQ(op->getDiscardableAttrs().begin()->getName().getValue(),
+            "other_attr");
+
+  EXPECT_EQ(op->getAttrs().size(), 2u);
+  EXPECT_TRUE(op->getInherentAttr("inherent_attr") != std::nullopt);
+  EXPECT_TRUE(op->getDiscardableAttr("other_attr") != Attribute());
 }
 
 } // namespace
