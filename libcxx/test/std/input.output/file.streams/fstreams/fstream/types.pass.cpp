@@ -35,9 +35,9 @@ int main(int, char**)
     static_assert((std::is_same<std::basic_fstream<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::basic_fstream<char>::off_type, std::char_traits<char>::off_type>::value), "");
 #if _LIBCPP_STD_VER >= 26
-    test_native_handle_type < std::basic_fstream<char>>();
+    test_native_handle_type< std::basic_fstream<char>>();
 #  ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test_native_handle_type < std::basic_fstream<wchar_t>>();
+    test_native_handle_type< std::basic_fstream<wchar_t>>();
 #  endif
 #endif
 
