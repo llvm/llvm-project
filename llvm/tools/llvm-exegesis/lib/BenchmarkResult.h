@@ -33,10 +33,7 @@ class Error;
 namespace exegesis {
 
 enum ValidationEvent {
-  L1DCacheLoadMiss,
   InstructionRetired,
-  DataTLBLoadMiss,
-  DataTLBStoreMiss
 };
 
 enum class BenchmarkPhaseSelectorE {

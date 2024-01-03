@@ -195,26 +195,14 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
 
 const char *validationEventToString(exegesis::ValidationEvent VE) {
   switch (VE) {
-  case exegesis::ValidationEvent::L1DCacheLoadMiss:
-    return "l1d-load-miss";
   case exegesis::ValidationEvent::InstructionRetired:
     return "instructions-retired";
-  case exegesis::ValidationEvent::DataTLBLoadMiss:
-    return "data-tlb-load-misses";
-  case exegesis::ValidationEvent::DataTLBStoreMiss:
-    return "data-tlb-store-misses";
   }
 }
 
 Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
-  if (Input == "l1d-load-miss")
-    return exegesis::ValidationEvent::L1DCacheLoadMiss;
-  else if (Input == "instructions-retired")
+  if (Input == "instructions-retired")
     return exegesis::ValidationEvent::InstructionRetired;
-  else if (Input == "data-tlb-load-misses")
-    return exegesis::ValidationEvent::DataTLBLoadMiss;
-  else if (Input == "data-tlb-store-misses")
-    return exegesis::ValidationEvent::DataTLBStoreMiss;
   else
     return make_error<StringError>("Invalid validation event string",
                                    errc::invalid_argument);

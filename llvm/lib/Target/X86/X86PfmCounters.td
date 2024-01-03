@@ -100,6 +100,9 @@ def SandyBridgePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SBPort4",  "uops_dispatched_port:port_4">,
     PfmIssueCounter<"SBPort5",  "uops_dispatched_port:port_5">
   ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
+  ];
 }
 def : PfmCountersBinding<"sandybridge", SandyBridgePfmCounters>;
 def : PfmCountersBinding<"ivybridge", SandyBridgePfmCounters>;
@@ -117,6 +120,9 @@ def HaswellPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"HWPort6", "uops_executed_port:port_6">,
     PfmIssueCounter<"HWPort7", "uops_executed_port:port_7">
   ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
+  ];
 }
 def : PfmCountersBinding<"haswell", HaswellPfmCounters>;
 
@@ -132,6 +138,9 @@ def BroadwellPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"BWPort5", "uops_executed_port:port_5">,
     PfmIssueCounter<"BWPort6", "uops_executed_port:port_6">,
     PfmIssueCounter<"BWPort7", "uops_executed_port:port_7">
+  ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
   ];
 }
 def : PfmCountersBinding<"broadwell", BroadwellPfmCounters>;
@@ -149,6 +158,9 @@ def SkylakeClientPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SKLPort6", "uops_dispatched_port:port_6">,
     PfmIssueCounter<"SKLPort7", "uops_dispatched_port:port_7">
   ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
+  ];
 }
 def : PfmCountersBinding<"skylake", SkylakeClientPfmCounters>;
 
@@ -164,6 +176,9 @@ def SkylakeServerPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SKXPort5", "uops_dispatched_port:port_5">,
     PfmIssueCounter<"SKXPort6", "uops_dispatched_port:port_6">,
     PfmIssueCounter<"SKXPort7", "uops_dispatched_port:port_7">
+  ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
   ];
 }
 def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
@@ -181,6 +196,9 @@ def IceLakePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ICXPort5",  "uops_dispatched_port:port_5">,
     PfmIssueCounter<"ICXPort6",  "uops_dispatched_port:port_6">,
     PfmIssueCounter<"ICXPort78", "uops_dispatched_port:port_7_8">
+  ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
   ];
 }
 def : PfmCountersBinding<"icelake-client", IceLakePfmCounters>;
@@ -265,6 +283,9 @@ def ZnVer1PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ZnAGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
     PfmIssueCounter<"ZnDivider", "div_op_count">
   ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">
+  ];
 }
 def : PfmCountersBinding<"znver1", ZnVer1PfmCounters>;
 
@@ -307,6 +328,9 @@ def ZnVer4PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn4Store", "ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn4Divider", "div_op_count">,
     PfmIssueCounter<"Zn4AGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">
+  ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">
   ];
 }
 def : PfmCountersBinding<"znver4", ZnVer4PfmCounters>;

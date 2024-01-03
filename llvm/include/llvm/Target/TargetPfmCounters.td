@@ -32,10 +32,7 @@ class ValidationEvent <int event_number> {
   int EventNumber = event_number;
 }
 
-def L1DCacheLoadMiss    : ValidationEvent<0>;
-def InstructionRetired  : ValidationEvent<1>;
-def DataTLBLoadMiss     : ValidationEvent<2>;
-def DataTLBStoreMiss    : ValidationEvent<3>;
+def InstructionRetired  : ValidationEvent<0>;
 
 // Validation counters can be tied to a specific event
 class PfmValidationCounter<ValidationEvent event_type, string counter>

@@ -274,15 +274,9 @@ static cl::list<ValidationEvent> ValidationCounters(
         "The name of a validation counter to run concurrently with the main "
         "counter to validate benchmarking assumptions"),
     cl::CommaSeparated, cl::cat(BenchmarkOptions),
-    cl::values(clEnumValN(ValidationEvent::L1DCacheLoadMiss, "l1d-load-misses",
-                          "Count L1D cache load misses"),
-               clEnumValN(ValidationEvent::InstructionRetired,
-                          "instructions-retired", "Count retired instructions"),
-               clEnumValN(ValidationEvent::DataTLBLoadMiss,
-                          "data-tlb-load-misses", "Count data TLB load misses"),
-               clEnumValN(ValidationEvent::DataTLBStoreMiss,
-                          "data-tlb-store-misses",
-                          "Count data TLB store misses")));
+    cl::values(clEnumValN(ValidationEvent::InstructionRetired,
+                          "instructions-retired",
+                          "Count retired instructions")));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
