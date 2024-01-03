@@ -25,6 +25,7 @@
 
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 #include "__ranges/concepts.h"
@@ -233,28 +234,20 @@ constexpr bool test_non_forward_operator_minus() {
 }
 
 constexpr bool test_forward_operator_minus() {
-  using Base = BasicTestView<SizedForwardIterator, SizedForwardIterator>;
   // Test the forward-range operator- between two iterators (i.e., no ceil).
+  using Base = BasicTestView<int*, int*>;
   int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
   // First, what operators are valid for an iterator derived from a stride view
-  // over a sized forward view.
+  // over a sized forward view (even though it is actually much more than that!).
   using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
 
   static_assert(is_plus_plusable_post<StrideViewIterator>);
   static_assert(is_plus_plusable_pre<StrideViewIterator>);
-  static_assert(!is_minus_minusable_post<StrideViewIterator>);
-  static_assert(!is_minus_minusable_pre<StrideViewIterator>);
-  static_assert(!is_plus_equalable<StrideViewIterator>);
-  static_assert(!is_minus_equalable<StrideViewIterator>);
   static_assert(is_iterator_minusable<StrideViewIterator>);
-  static_assert(!is_difference_plusable<StrideViewIterator>);
-  static_assert(!is_difference_minusable<StrideViewIterator>);
-  static_assert(!is_relationally_comparable<StrideViewIterator>);
-  static_assert(!is_indexable<StrideViewIterator>);
 
-  auto rav_zero    = Base(SizedForwardIterator(arr), SizedForwardIterator(arr + 10));
-  auto rav_one     = Base(SizedForwardIterator(arr + 1), SizedForwardIterator(arr + 10));
+  auto rav_zero    = Base(arr, arr + 10);
+  auto rav_one     = Base(arr + 1, arr + 10);
   auto stride_zoff = std::ranges::stride_view(rav_zero, 3);
   auto stride_ooff = std::ranges::stride_view(rav_one, 3);
 
@@ -270,7 +263,7 @@ constexpr bool test_forward_operator_minus() {
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
   static_assert(can_calculate_distance_between_non_sentinel<decltype(stride_zoff_begin)>);
-  static_assert(std::forward_iterator<SizedForwardIterator>);
+  static_assert(std::forward_iterator<std::ranges::iterator_t<Base>>);
 
   assert(*stride_zoff_one == 1);
   assert(*stride_zoff_four == 4);

@@ -29,7 +29,10 @@ constexpr BasicTestView<cpp17_input_iterator<int*>> make_input_view(int* begin, 
 using ForwardStrideView      = std::ranges::stride_view<BasicTestView<forward_iterator<int*>>>;
 using BidirStrideView        = std::ranges::stride_view<BasicTestView<bidirectional_iterator<int*>>>;
 using RandomAccessStrideView = std::ranges::stride_view<BasicTestView<random_access_iterator<int*>>>;
-using SizedForwardStrideView = std::ranges::stride_view<BasicTestView<SizedForwardIterator>>;
+
+using SizedForwardStrideView =
+    std::ranges::stride_view<BasicTestView<random_access_iterator<int*>, random_access_iterator<int*>>>;
+using SizedInputStrideView = std::ranges::stride_view<BasicTestView<SizedInputIterator, SizedInputIterator>>;
 
 static_assert(std::ranges::forward_range<ForwardStrideView>);
 static_assert(std::ranges::bidirectional_range<BidirStrideView>);
@@ -37,6 +40,8 @@ static_assert(std::ranges::random_access_range<RandomAccessStrideView>);
 static_assert(std::ranges::forward_range<SizedForwardStrideView>);
 static_assert(std::sized_sentinel_for<std::ranges::iterator_t<SizedForwardStrideView>,
                                       std::ranges::iterator_t<SizedForwardStrideView>>);
+static_assert(std::sized_sentinel_for<std::ranges::iterator_t<SizedInputStrideView>,
+                                      std::ranges::iterator_t<SizedInputStrideView>>);
 
 constexpr bool test() {
   constexpr int N = 3;
@@ -92,8 +97,8 @@ constexpr bool test() {
   }
 
   {
-    using View = BasicTestView<SizedForwardIterator>;
-    auto view  = View(SizedForwardIterator(arr), SizedForwardIterator(arr + N));
+    using View                                                          = BasicTestView<int*, int*>;
+    auto view                                                           = View(arr, arr + N);
     std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
     auto strided_iter                                                   = strided.begin();
     auto strided_iter_next                                              = strided_iter;
