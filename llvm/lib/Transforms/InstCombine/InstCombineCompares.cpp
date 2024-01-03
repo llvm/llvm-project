@@ -815,6 +815,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
     if (GEPsInBounds || CmpInst::isEquality(Cond)) {
       auto EmitGEPOffsetAndRewrite = [&](GEPOperator *GEP) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
         auto *Inst = dyn_cast<Instruction>(GEP);
         if (Inst)
           Builder.SetInsertPoint(Inst);
