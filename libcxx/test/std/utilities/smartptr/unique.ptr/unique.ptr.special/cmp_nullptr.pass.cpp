@@ -92,6 +92,40 @@ TEST_CONSTEXPR_CXX23 bool test() {
   assert((nullptr <=> p2) == std::strong_ordering::equivalent);
 #endif
 
+  const std::unique_ptr<int[]> p3(new int[1]);
+  assert(!(p3 == nullptr));
+  assert(!(nullptr == p3));
+  // A pointer to allocated storage and a nullptr can't be compared at compile-time
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(!(p3 < nullptr));
+    assert((nullptr < p3));
+    assert(!(p3 <= nullptr));
+    assert((nullptr <= p3));
+    assert((p3 > nullptr));
+    assert(!(nullptr > p3));
+    assert((p3 >= nullptr));
+    assert(!(nullptr >= p3));
+#if TEST_STD_VER > 17
+    assert((nullptr <=> p3) == std::strong_ordering::less);
+    assert((p3 <=> nullptr) == std::strong_ordering::greater);
+#endif
+  }
+
+  const std::unique_ptr<int[]> p4;
+  assert((p4 == nullptr));
+  assert((nullptr == p4));
+  assert(!(p4 < nullptr));
+  assert(!(nullptr < p4));
+  assert((p4 <= nullptr));
+  assert((nullptr <= p4));
+  assert(!(p4 > nullptr));
+  assert(!(nullptr > p4));
+  assert((p4 >= nullptr));
+  assert((nullptr >= p4));
+#if TEST_STD_VER > 17
+  assert((nullptr <=> p4) == std::strong_ordering::equivalent);
+#endif
+
   return true;
 }
 
