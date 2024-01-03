@@ -293,6 +293,8 @@ public:
   explicit DominatorTreePrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c DominatorTree.
