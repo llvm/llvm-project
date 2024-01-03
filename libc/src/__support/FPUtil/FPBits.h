@@ -306,16 +306,7 @@ public:
 
   using UP::get_biased_exponent;
   using UP::is_zero;
-
-  // The function return mantissa with the implicit bit set iff the current
-  // value is a valid normal number.
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
-    return ((get_biased_exponent() > 0 && !is_inf_or_nan())
-                ? (FRACTION_MASK + 1)
-                : 0) |
-           (FRACTION_MASK & bits);
-  }
-
+  // Constants.
   static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
@@ -323,6 +314,7 @@ public:
   static constexpr StorageType MAX_NORMAL =
       (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
+// Constructors.
   LIBC_INLINE constexpr FPBits() = default;
 
   template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
@@ -336,6 +328,16 @@ public:
     }
   }
 
+  // The function return mantissa with the implicit bit set iff the current
+  // value is a valid normal number.
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
+    return ((get_biased_exponent() > 0 && !is_inf_or_nan())
+                ? (FRACTION_MASK + 1)
+                : 0) |
+           (FRACTION_MASK & bits);
+  }
+
+ // Floating-point conversions.
   LIBC_INLINE constexpr void set_val(T value) {
     bits = cpp::bit_cast<StorageType>(value);
   }

@@ -37,6 +37,7 @@ private:
   using UP::QUIET_NAN_MASK;
 
 public:
+  // Constants.
   static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
   // The x86 80 bit float represents the leading digit of the mantissa
   // explicitly. This is the mask for that bit.
@@ -51,19 +52,7 @@ public:
   static constexpr StorageType MAX_NORMAL =
       (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
-    return bits & SIG_MASK;
-  }
-
-  LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return bits & EXPLICIT_BIT_MASK;
-  }
-
-  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    if (get_implicit_bit() != implicitVal)
-      bits ^= EXPLICIT_BIT_MASK;
-  }
-
+  // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
 
   template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
@@ -77,12 +66,26 @@ public:
     }
   }
 
+  // Floating-point conversions.
+  LIBC_INLINE constexpr long double get_val() const {
+    return cpp::bit_cast<long double>(bits);
+  }
+
   LIBC_INLINE constexpr operator long double() {
     return cpp::bit_cast<long double>(bits);
   }
 
-  LIBC_INLINE constexpr long double get_val() const {
-    return cpp::bit_cast<long double>(bits);
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
+    return bits & SIG_MASK;
+  }
+
+  LIBC_INLINE constexpr bool get_implicit_bit() const {
+    return bits & EXPLICIT_BIT_MASK;
+  }
+
+  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
+    if (get_implicit_bit() != implicitVal)
+      bits ^= EXPLICIT_BIT_MASK;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
