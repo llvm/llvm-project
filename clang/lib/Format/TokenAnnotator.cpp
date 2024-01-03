@@ -2209,7 +2209,8 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
+          (Line.InPragmaDirective &&
+           NextNonComment->isOneOf(tok::identifier, tok::string_literal))))) {
       return false;
     }
 
