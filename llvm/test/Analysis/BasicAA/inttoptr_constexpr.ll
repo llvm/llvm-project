@@ -1,6 +1,6 @@
 ; RUN: opt -passes=aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
-; CHECK: NoAlias: i8* %a, i8* %gep
+; CHECK: MayAlias: i8* %a, i8* %gep
 define void @inttoptr_alloca() {
   %a = alloca i8
   %a.int = ptrtoint ptr %a to i64
@@ -11,7 +11,7 @@ define void @inttoptr_alloca() {
   ret void
 }
 
-; CHECK: NoAlias: i8* %a, i8* %gep
+; CHECK: MayAlias: i8* %a, i8* %gep
 define void @inttoptr_alloca_unknown_relation(i64 %offset) {
   %a = alloca i8
   %a.int = ptrtoint ptr %a to i64
@@ -30,7 +30,7 @@ define void @inttoptr_alloca_noescape(i64 %offset) {
   ret void
 }
 
-; CHECK: NoAlias: i8* %a, i8* %gep
+; CHECK: MayAlias: i8* %a, i8* %gep
 define void @inttoptr_noalias(ptr noalias %a) {
   %a.int = ptrtoint ptr %a to i64
   %a.int.1 = add i64 %a.int, 1
