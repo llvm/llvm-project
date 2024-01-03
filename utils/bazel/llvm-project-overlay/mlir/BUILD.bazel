@@ -35,6 +35,7 @@ expand_template(
     substitutions = {
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
+        "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
     },
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
@@ -318,11 +319,13 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
+        "lib/IR/PDL/*.cpp",
         "lib/Bytecode/Reader/*.h",
         "lib/Bytecode/Writer/*.h",
         "lib/Bytecode/*.h",
     ]) + [
         "lib/Bytecode/BytecodeOpInterface.cpp",
+        "include/mlir/IR/PDLPatternMatch.h.inc",
     ],
     hdrs = glob([
         "include/mlir/IR/*.h",
@@ -345,6 +348,7 @@ cc_library(
         ":BuiltinTypesIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":CallOpInterfacesIncGen",
+        ":config",
         ":DataLayoutInterfacesIncGen",
         ":InferTypeOpInterfaceIncGen",
         ":OpAsmInterfaceIncGen",

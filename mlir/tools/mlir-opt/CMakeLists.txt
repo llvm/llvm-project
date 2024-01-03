@@ -38,15 +38,17 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestOneToNTypeConversionPass
     MLIRTestPass
-    MLIRTestPDLL
     MLIRTestReducer
-    MLIRTestRewrite
-    MLIRTestTransformDialect
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
+    )
+  set(test_libs ${test_libs}
+    MLIRTestPDLL
+    MLIRTestRewrite
+    MLIRTestTransformDialect
     )
 endif()
 
