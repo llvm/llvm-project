@@ -314,7 +314,7 @@ public:
   static constexpr StorageType MAX_NORMAL =
       (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
-// Constructors.
+  // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
 
   template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
@@ -337,11 +337,7 @@ public:
            (FRACTION_MASK & bits);
   }
 
- // Floating-point conversions.
-  LIBC_INLINE constexpr void set_val(T value) {
-    bits = cpp::bit_cast<StorageType>(value);
-  }
-
+  // Floating-point conversions.
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
   LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
