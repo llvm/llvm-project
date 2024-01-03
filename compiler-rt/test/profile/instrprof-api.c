@@ -4,15 +4,15 @@
 
 // Testing profile use. Generate some profile file first.
 // RUN: rm -rf rawprof.profraw
-// RUN: %clang_profgen -o %t %s
-// RUN: %run %t
+// RUN: %clang_profgen -o %t1 %s
+// RUN: %run %t1
 // RUN: llvm-profdata merge -o %t1.profdata rawprof.profraw
-// RUN: %clang_profuse=%t.profdata %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFUSE
+// RUN: %clang_profuse=%t1.profdata %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFUSE
 // RUN: rm -rf rawprof.profraw
-// RUN: %clang_pgogen -o %t %s
-// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: %clang_pgogen -o %t2 %s
+// RUN: %run %t2
 // RUN: llvm-profdata merge -o %t2.profdata rawprof.profraw
-// RUN: %clang_pgouse=%t.profdata %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFUSE
+// RUN: %clang_pgouse=%t2.profdata %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFUSE
 #include "profile/instr_prof_interface.h"
 
 __attribute__((noinline)) int bar() { return 4; }
