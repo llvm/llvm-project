@@ -822,7 +822,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         Value *Offset = EmitGEPOffset(GEP);
         // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
         // the offset arithmetic.
-        if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices()) {
+        if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
+            !GEP->getSourceElementType()->isIntegerTy(8)) {
           replaceInstUsesWith(*Inst,
                               Builder.CreateGEP(Builder.getInt8Ty(),
                                                 GEP->getPointerOperand(),
