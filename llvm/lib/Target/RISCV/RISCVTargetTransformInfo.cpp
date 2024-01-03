@@ -811,11 +811,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_roundtozero: {
     // Rounding with static rounding mode needs two more instructions to
     // swap/write FRM than vp_rint.
-    unsigned Cost = 7;
     auto LT = getTypeLegalizationCost(RetTy);
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
-      return Cost * LT.first * TLI->getLMULCost(LT.second);
+      return 5 * LT.first * TLI->getLMULCost(LT.second) + 2;
     break;
   }
   }
