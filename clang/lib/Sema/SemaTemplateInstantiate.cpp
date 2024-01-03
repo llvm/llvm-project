@@ -344,14 +344,18 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
 
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
-  if (Innermost) {
-    Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND),
-                                     Innermost->asArray(), Final);
-    CurDecl = Response::UseNextDecl(ND).NextDecl;
-  }
 
   if (!ND)
     CurDecl = Decl::castFromDeclContext(DC);
+
+  if (Innermost) {
+    Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND),
+                                     Innermost->asArray(), Final);
+    if (CurDecl->getDeclContext()->isFileContext())
+      if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl))
+        HandleDefaultTempArgIntoTempTempParam(TTP, Result);
+    CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
+  }
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;

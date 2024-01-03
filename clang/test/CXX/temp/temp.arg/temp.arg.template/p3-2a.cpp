@@ -59,3 +59,28 @@ struct Nothing {};
 
 // FIXME: Wait the standard to clarify the intent.
 template<> template<> Z<Nothing> S5<Z>::V<Nothing>;
+
+namespace GH57410 {
+
+template<typename T>
+concept True = true;
+
+template<typename T>
+concept False = false; // #False
+
+template<template<True T> typename Wrapper>
+using Test = Wrapper<int>;
+
+template<template<False T> typename Wrapper> // #TTP-Wrapper
+using Test = Wrapper<int>; // expected-error {{constraints not satisfied for template template parameter 'Wrapper' [with T = int]}}
+
+// expected-note@#TTP-Wrapper {{'int' does not satisfy 'False'}}
+// expected-note@#False {{evaluated to false}}
+
+template <template<False> typename T> // #TTP-foo
+void foo(T<int>); // expected-error {{constraints not satisfied for template template parameter 'T' [with $0 = int]}}
+
+// expected-note@#TTP-foo {{'int' does not satisfy 'False'}}
+// expected-note@#False {{evaluated to false}}
+
+}
