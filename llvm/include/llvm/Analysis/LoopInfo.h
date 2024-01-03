@@ -580,6 +580,7 @@ class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.

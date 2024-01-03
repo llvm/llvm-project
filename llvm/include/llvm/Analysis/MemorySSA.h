@@ -953,6 +953,8 @@ public:
       : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Printer pass for \c MemorySSA via the walker.
@@ -964,6 +966,8 @@ public:
   explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c MemorySSA.

@@ -2257,6 +2257,8 @@ public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 class ScalarEvolutionWrapperPass : public FunctionPass {
