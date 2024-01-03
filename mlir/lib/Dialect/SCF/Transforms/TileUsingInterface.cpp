@@ -804,6 +804,7 @@ mlir::scf::tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
                                 const scf::SCFTilingOptions &options) {
   Location loc = op->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPointAfter(op);
 
   // 1. Get the range of loops that are represented by the operation.
   SmallVector<Range> loopRanges = op.getIterationDomain(rewriter);
