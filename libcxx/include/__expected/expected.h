@@ -1187,7 +1187,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void value() const& {
-    static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
+    static_assert(is_copy_constructible_v<_Err>);
     if (!__has_val_) {
       std::__throw_bad_expected_access<_Err>(__union_.__unex_);
     }
