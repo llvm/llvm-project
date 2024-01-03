@@ -105,8 +105,8 @@ public:
   }
 
 private:
-  // When an std::any is rested or default constructed it has a null type.
-  // We represent it by storing a null QualType.
+  // When a std::any is reset or default constructed it has a null type.
+  // We represent it by storing an empty QualType.
   ProgramStateRef setNullTypeAny(const MemRegion *Mem, CheckerContext &C) const {
     auto State = C.getState();
     return State->set<AnyHeldTypeMap>(Mem, QualType{});
