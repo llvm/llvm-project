@@ -2504,7 +2504,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     Value *Y = Arg->getArgOperand(1);
     // Cast exponent to FP if integer.
     if (ArgID == Intrinsic::powi)
-        Y = B.CreateCast(Instruction::SIToFP, Y, Ty, "cast");
+      Y = B.CreateCast(Instruction::SIToFP, Y, Ty, "cast");
     Value *MulY = B.CreateFMul(Y, LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
