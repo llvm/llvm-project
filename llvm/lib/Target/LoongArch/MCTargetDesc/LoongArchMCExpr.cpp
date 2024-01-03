@@ -25,9 +25,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-mcexpr"
 
-const LoongArchMCExpr *
-LoongArchMCExpr::create(const MCExpr *Expr, VariantKind Kind, MCContext &Ctx) {
-  return new (Ctx) LoongArchMCExpr(Expr, Kind);
+const LoongArchMCExpr *LoongArchMCExpr::create(const MCExpr *Expr,
+                                               VariantKind Kind, MCContext &Ctx,
+                                               bool Hint) {
+  return new (Ctx) LoongArchMCExpr(Expr, Kind, Hint);
 }
 
 void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {

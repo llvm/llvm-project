@@ -1131,37 +1131,59 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   case 23:
     CPU = "znver1";
     *Type = X86::AMDFAM17H;
-    if ((Model >= 0x30 && Model <= 0x3f) || Model == 0x71) {
+    if ((Model >= 0x30 && Model <= 0x3f) || (Model == 0x47) ||
+        (Model >= 0x60 && Model <= 0x67) || (Model >= 0x68 && Model <= 0x6f) ||
+        (Model >= 0x70 && Model <= 0x7f) || (Model >= 0x84 && Model <= 0x87) ||
+        (Model >= 0x90 && Model <= 0x97) || (Model >= 0x98 && Model <= 0x9f) ||
+        (Model >= 0xa0 && Model <= 0xaf)) {
+      // Family 17h Models 30h-3Fh (Starship) Zen 2
+      // Family 17h Models 47h (Cardinal) Zen 2
+      // Family 17h Models 60h-67h (Renoir) Zen 2
+      // Family 17h Models 68h-6Fh (Lucienne) Zen 2
+      // Family 17h Models 70h-7Fh (Matisse) Zen 2
+      // Family 17h Models 84h-87h (ProjectX) Zen 2
+      // Family 17h Models 90h-97h (VanGogh) Zen 2
+      // Family 17h Models 98h-9Fh (Mero) Zen 2
+      // Family 17h Models A0h-AFh (Mendocino) Zen 2
       CPU = "znver2";
       *Subtype = X86::AMDFAM17H_ZNVER2;
-      break; // 30h-3fh, 71h: Zen2
+      break;
     }
-    if (Model <= 0x0f) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x20 && Model <= 0x2f)) {
+      // Family 17h Models 10h-1Fh (Raven1) Zen
+      // Family 17h Models 10h-1Fh (Picasso) Zen+
+      // Family 17h Models 20h-2Fh (Raven2 x86) Zen
       *Subtype = X86::AMDFAM17H_ZNVER1;
-      break; // 00h-0Fh: Zen1
+      break;
     }
     break;
   case 25:
     CPU = "znver3";
     *Type = X86::AMDFAM19H;
-    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x5f)) {
-      // Family 19h Models 00h-0Fh - Zen3
-      // Family 19h Models 20h-2Fh - Zen3
-      // Family 19h Models 30h-3Fh - Zen3
-      // Family 19h Models 40h-4Fh - Zen3+
-      // Family 19h Models 50h-5Fh - Zen3+
+    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x2f) ||
+        (Model >= 0x30 && Model <= 0x3f) || (Model >= 0x40 && Model <= 0x4f) ||
+        (Model >= 0x50 && Model <= 0x5f)) {
+      // Family 19h Models 00h-0Fh (Genesis, Chagall) Zen 3
+      // Family 19h Models 20h-2Fh (Vermeer) Zen 3
+      // Family 19h Models 30h-3Fh (Badami) Zen 3
+      // Family 19h Models 40h-4Fh (Rembrandt) Zen 3+
+      // Family 19h Models 50h-5Fh (Cezanne) Zen 3
       *Subtype = X86::AMDFAM19H_ZNVER3;
       break;
     }
-    if ((Model >= 0x10 && Model <= 0x1f) ||
-        (Model >= 0x60 && Model <= 0x74) ||
-        (Model >= 0x78 && Model <= 0x7b) ||
-        (Model >= 0xA0 && Model <= 0xAf)) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x60 && Model <= 0x6f) ||
+        (Model >= 0x70 && Model <= 0x77) || (Model >= 0x78 && Model <= 0x7f) ||
+        (Model >= 0xa0 && Model <= 0xaf)) {
+      // Family 19h Models 10h-1Fh (Stones; Storm Peak) Zen 4
+      // Family 19h Models 60h-6Fh (Raphael) Zen 4
+      // Family 19h Models 70h-77h (Phoenix, Hawkpoint1) Zen 4
+      // Family 19h Models 78h-7Fh (Phoenix 2, Hawkpoint2) Zen 4
+      // Family 19h Models A0h-AFh (Stones-Dense) Zen 4
       CPU = "znver4";
       *Subtype = X86::AMDFAM19H_ZNVER4;
       break; //  "znver4"
     }
-    break; // family 19h
+    break;
   default:
     break; // Unknown AMD CPU.
   }
@@ -1502,7 +1524,8 @@ StringRef sys::getHostCPUName() {
   // Use processor id to detect cpu name.
   uint32_t processor_id;
   __asm__("cpucfg %[prid], $zero\n\t" : [prid] "=r"(processor_id));
-  switch (processor_id & 0xff00) {
+  // Refer PRID_SERIES_MASK in linux kernel: arch/loongarch/include/asm/cpu.h.
+  switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
   // TODO: Others.

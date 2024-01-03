@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
@@ -74,13 +75,6 @@ namespace llvm {
   struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Function &, FunctionAnalysisManager &) {             \
-      return PreservedAnalyses::all();                                         \
-    }                                                                          \
-  };
-#define DUMMY_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                        \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
-    template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
-    PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
@@ -701,6 +695,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
     addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::WinEH:

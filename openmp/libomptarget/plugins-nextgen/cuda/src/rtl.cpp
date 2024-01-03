@@ -22,6 +22,7 @@
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
+#include "Utils/ELF.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -60,6 +61,14 @@ CUresult
 cuMemGetAllocationGranularity(size_t *granularity,
                               const CUmemAllocationProp *prop,
                               CUmemAllocationGranularity_flags option) {}
+#endif
+
+#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
+// Forward declarations of asynchronous memory management functions. This is
+// necessary for older versions of CUDA.
+CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = nullptr; }
+
+CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
 #endif
 
 /// Class implementing the CUDA device images properties.
@@ -487,6 +496,16 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
       MemAlloc = (void *)DevicePtr;
       break;
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+      CUstream Stream;
+      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+        break;
+      if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
+        break;
+      cuStreamSynchronize(Stream);
+      Res = cuStreamDestroy(Stream);
+      MemAlloc = (void *)DevicePtr;
+    }
     }
 
     if (auto Err =
@@ -517,6 +536,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_HOST:
       Res = cuMemFreeHost(TgtPtr);
       break;
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+      CUstream Stream;
+      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+        break;
+      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
+      cuStreamSynchronize(Stream);
+      if ((Res = cuStreamDestroy(Stream)))
+        break;
+    }
     }
 
     if (auto Err = Plugin::check(Res, "Error in cuMemFree[Host]: %s")) {
@@ -727,7 +755,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // If there is already pending work on the stream it could be waiting for
     // someone to check the RPC server.
-    if (auto RPCServer = getRPCServer()) {
+    if (auto *RPCServer = getRPCServer()) {
       CUresult Res = cuStreamQuery(Stream);
       while (Res == CUDA_ERROR_NOT_READY) {
         if (auto Err = RPCServer->runServer(*this))
@@ -1062,15 +1090,13 @@ private:
     // automatically so we must create it ourselves. The backend will emit
     // several globals that contain function pointers we can call. These are
     // prefixed with a known name due to Nvidia's lack of section support.
-    const ELF64LEObjectFile *ELFObj =
-        Handler.getOrCreateELFObjectFile(*this, Image);
-    if (!ELFObj)
-      return Plugin::error("Unable to create ELF object for image %p",
-                           Image.getStart());
+    auto ELFObjOrErr = Handler.getELFObjectFile(Image);
+    if (!ELFObjOrErr)
+      return ELFObjOrErr.takeError();
 
     // Search for all symbols that contain a constructor or destructor.
     SmallVector<std::pair<StringRef, uint16_t>> Funcs;
-    for (ELFSymbolRef Sym : ELFObj->symbols()) {
+    for (ELFSymbolRef Sym : ELFObjOrErr->symbols()) {
       auto NameOrErr = Sym.getName();
       if (!NameOrErr)
         return NameOrErr.takeError();
@@ -1087,7 +1113,7 @@ private:
     }
 
     // Sort the created array to be in priority order.
-    llvm::sort(Funcs, [=](auto x, auto y) { return x.second < y.second; });
+    llvm::sort(Funcs, [=](auto X, auto Y) { return X.second < Y.second; });
 
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
@@ -1284,7 +1310,16 @@ struct CUDAPluginTy final : public GenericPluginTy {
   }
 
   /// Check whether the image is compatible with the available CUDA devices.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool> isELFCompatible(StringRef Image) const override {
+    auto ElfOrErr =
+        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
+                                  /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+
+    // Get the numeric value for the image's `sm_` value.
+    auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
+
     for (int32_t DevId = 0; DevId < getNumDevices(); ++DevId) {
       CUdevice Device;
       CUresult Res = cuDeviceGet(&Device, DevId);
@@ -1302,16 +1337,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
       if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
         return std::move(Err);
 
-      StringRef ArchStr(Info->Arch);
-      StringRef PrefixStr("sm_");
-      if (!ArchStr.starts_with(PrefixStr))
-        return Plugin::error("Unrecognized image arch %s", ArchStr.data());
+      int32_t ImageMajor = SM / 10;
+      int32_t ImageMinor = SM % 10;
 
-      int32_t ImageMajor = ArchStr[PrefixStr.size() + 0] - '0';
-      int32_t ImageMinor = ArchStr[PrefixStr.size() + 1] - '0';
-
-      // A cubin generated for a certain compute capability is supported to run
-      // on any GPU with the same major revision and same or higher minor
+      // A cubin generated for a certain compute capability is supported to
+      // run on any GPU with the same major revision and same or higher minor
       // revision.
       if (Major != ImageMajor || Minor < ImageMinor)
         return false;

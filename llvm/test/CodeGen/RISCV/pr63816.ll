@@ -80,4 +80,3 @@ define void @test(ptr %0, ptr %1) nounwind {
   store <8 x double> %V2, ptr %1
   ret void
 }
-

@@ -1618,8 +1618,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     NewMI.addOperand(MO);
 
   SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
-  for (unsigned i = 0, e = NewMIImplDefs.size(); i != e; ++i) {
-    MCRegister Reg = NewMIImplDefs[i];
+  for (MCRegister Reg : NewMIImplDefs) {
     for (MCRegUnit Unit : TRI->regunits(Reg))
       if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
@@ -4236,8 +4235,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
                     InflateRegs.end());
   LLVM_DEBUG(dbgs() << "Trying to inflate " << InflateRegs.size()
                     << " regs.\n");
-  for (unsigned i = 0, e = InflateRegs.size(); i != e; ++i) {
-    Register Reg = InflateRegs[i];
+  for (Register Reg : InflateRegs) {
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     if (MRI->recomputeRegClass(Reg)) {

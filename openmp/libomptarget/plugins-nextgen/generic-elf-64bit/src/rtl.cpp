@@ -35,7 +35,7 @@
 
 // The ELF ID should be defined at compile-time by the build system.
 #ifndef TARGET_ELF_ID
-#define TARGET_ELF_ID 0
+#define TARGET_ELF_ID ELF::EM_NONE
 #endif
 
 namespace llvm {
@@ -215,6 +215,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -397,9 +398,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
-    return true;
-  }
+  Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
   Triple::ArchType getTripleArch() const override {
     return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;

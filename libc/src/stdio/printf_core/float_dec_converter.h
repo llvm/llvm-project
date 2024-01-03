@@ -10,13 +10,8 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_DEC_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/UInt.h"
-#include "src/__support/UInt128.h"
-#include "src/__support/common.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
@@ -103,14 +98,14 @@ class PaddingWriter {
   size_t min_width = 0;
 
 public:
-  PaddingWriter() {}
-  PaddingWriter(const FormatSection &to_conv, char init_sign_char)
+  LIBC_INLINE PaddingWriter() {}
+  LIBC_INLINE PaddingWriter(const FormatSection &to_conv, char init_sign_char)
       : left_justified((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) > 0),
         leading_zeroes((to_conv.flags & FormatFlags::LEADING_ZEROES) > 0),
         sign_char(init_sign_char),
         min_width(to_conv.min_width > 0 ? to_conv.min_width : 0) {}
 
-  int write_left_padding(Writer *writer, size_t total_digits) {
+  LIBC_INLINE int write_left_padding(Writer *writer, size_t total_digits) {
     // The pattern is (spaces) (sign) (zeroes), but only one of spaces and
     // zeroes can be written, and only if the padding amount is positive.
     int padding_amount =
@@ -133,7 +128,7 @@ public:
     return 0;
   }
 
-  int write_right_padding(Writer *writer, size_t total_digits) {
+  LIBC_INLINE int write_right_padding(Writer *writer, size_t total_digits) {
     // If and only if the conversion is left justified, there may be trailing
     // spaces.
     int padding_amount =
@@ -170,7 +165,7 @@ class FloatWriter {
   Writer *writer;                   // Writes to the final output.
   PaddingWriter padding_writer; // Handles prefixes/padding, uses total_digits.
 
-  int flush_buffer(bool round_up_max_blocks = false) {
+  LIBC_INLINE int flush_buffer(bool round_up_max_blocks = false) {
     const char MAX_BLOCK_DIGIT = (round_up_max_blocks ? '0' : '9');
 
     // Write the most recent buffered block, and mark has_written
@@ -245,21 +240,21 @@ class FloatWriter {
   // -exponent will never overflow because all long double types we support
   // have at most 15 bits of mantissa and the C standard defines an int as
   // being at least 16 bits.
-  static_assert(fputil::FloatProperties<long double>::EXP_LEN <
-                (sizeof(int) * 8));
+  static_assert(fputil::FPBits<long double>::EXP_LEN < (sizeof(int) * 8));
 
 public:
-  FloatWriter(Writer *init_writer, bool init_has_decimal_point,
-              const PaddingWriter &init_padding_writer)
+  LIBC_INLINE FloatWriter(Writer *init_writer, bool init_has_decimal_point,
+                          const PaddingWriter &init_padding_writer)
       : has_decimal_point(init_has_decimal_point), writer(init_writer),
         padding_writer(init_padding_writer) {}
 
-  void init(size_t init_total_digits, size_t init_digits_before_decimal) {
+  LIBC_INLINE void init(size_t init_total_digits,
+                        size_t init_digits_before_decimal) {
     total_digits = init_total_digits;
     digits_before_decimal = init_digits_before_decimal;
   }
 
-  void write_first_block(BlockInt block, bool exp_format = false) {
+  LIBC_INLINE void write_first_block(BlockInt block, bool exp_format = false) {
     const DecimalString buf(block);
     const cpp::string_view int_to_str = buf.view();
     size_t digits_buffered = int_to_str.size();
@@ -280,7 +275,7 @@ public:
     }
   }
 
-  int write_middle_block(BlockInt block) {
+  LIBC_INLINE int write_middle_block(BlockInt block) {
     if (block == MAX_BLOCK) { // Buffer max blocks in case of rounding
       ++max_block_count;
     } else { // If a non-max block has been found
@@ -301,9 +296,9 @@ public:
     return 0;
   }
 
-  int write_last_block(BlockInt block, size_t block_digits,
-                       RoundDirection round, int exponent = 0,
-                       char exp_char = '\0') {
+  LIBC_INLINE int write_last_block(BlockInt block, size_t block_digits,
+                                   RoundDirection round, int exponent = 0,
+                                   char exp_char = '\0') {
     bool has_exp = (exp_char != '\0');
 
     char end_buff[BLOCK_SIZE];
@@ -458,13 +453,13 @@ public:
     return WRITE_OK;
   }
 
-  int write_zeroes(uint32_t num_zeroes) {
+  LIBC_INLINE int write_zeroes(uint32_t num_zeroes) {
     RET_IF_RESULT_NEGATIVE(flush_buffer());
     RET_IF_RESULT_NEGATIVE(writer->write('0', num_zeroes));
     return 0;
   }
 
-  int right_pad() {
+  LIBC_INLINE int right_pad() {
     return padding_writer.write_right_padding(writer, total_digits);
   }
 };
@@ -478,7 +473,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
-  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
+  constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
 
@@ -591,7 +586,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
-  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
+  constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();
@@ -754,7 +749,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
-  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
+  constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();

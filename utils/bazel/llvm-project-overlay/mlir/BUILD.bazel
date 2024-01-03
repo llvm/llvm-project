@@ -35,6 +35,7 @@ expand_template(
     substitutions = {
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
+        "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
     },
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
@@ -318,11 +319,13 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
+        "lib/IR/PDL/*.cpp",
         "lib/Bytecode/Reader/*.h",
         "lib/Bytecode/Writer/*.h",
         "lib/Bytecode/*.h",
     ]) + [
         "lib/Bytecode/BytecodeOpInterface.cpp",
+        "include/mlir/IR/PDLPatternMatch.h.inc",
     ],
     hdrs = glob([
         "include/mlir/IR/*.h",
@@ -345,6 +348,7 @@ cc_library(
         ":BuiltinTypesIncGen",
         ":BytecodeOpInterfaceIncGen",
         ":CallOpInterfacesIncGen",
+        ":config",
         ":DataLayoutInterfacesIncGen",
         ":InferTypeOpInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
@@ -1625,6 +1629,22 @@ gentbl_cc_library(
     deps = [":EmitCTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "EmitCPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=EmitC",
+            ],
+            "include/mlir/Dialect/EmitC/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/EmitC/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
 cc_library(
     name = "TargetCpp",
     srcs = glob([
@@ -2688,6 +2708,7 @@ cc_library(
     deps = [
         ":AffineAnalysis",
         ":AffineDialect",
+        ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
         ":BufferizationDialect",
@@ -3180,6 +3201,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Mesh/IR/MeshOps.td",
     deps = [
         ":MeshTdFiles",
+        ":ShapeOpsTdFiles",
     ],
 )
 
@@ -3258,12 +3280,16 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":MeshDialect",
         ":MeshShardingInterface",
         ":MeshTransformsPassIncGen",
         ":Pass",
+        ":Support",
+        ":TensorDialect",
         ":TransformUtils",
         "//llvm:Support",
     ],
@@ -3639,6 +3665,25 @@ cc_library(
         ":EmitCOpsIncGen",
         ":IR",
         ":SideEffectInterfaces",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "EmitCTransforms",
+    srcs = glob([
+        "lib/Dialect/EmitC/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/EmitC/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+        ":EmitCPassIncGen",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -5280,6 +5325,38 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "GPUPipelines",
+    srcs = ["lib/Dialect/GPU/Pipelines/GPUToNVVMPipeline.cpp"],
+    hdrs = ["include/mlir/Dialect/GPU/Pipelines/Passes.h"],
+    includes = ["include"],
+    local_defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    deps = [
+        ":AffineToStandard",
+        ":ArithToLLVM",
+        ":FuncDialect",
+        ":FuncToLLVM",
+        ":GPUCommonTransforms",
+        ":GPUDialect",
+        ":GPUToNVVMTransforms",
+        ":GPUTransforms",
+        ":IndexToLLVM",
+        ":LLVMDialect",
+        ":LinalgTransforms",
+        ":MathToLLVM",
+        ":MemRefToLLVM",
+        ":MemRefTransforms",
+        ":NVGPUToNVVM",
+        ":NVVMToLLVM",
+        ":Pass",
+        ":ReconcileUnrealizedCasts",
+        ":SCFToControlFlow",
+        ":Transforms",
+        ":VectorToLLVM",
+        ":VectorToSCF",
+    ],
+)
+
+cc_library(
     name = "GPUTransforms",
     srcs = glob(
         [
@@ -5389,9 +5466,11 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":GPUPassIncGen",
+        ":IR",
         ":Pass",
         ":SPIRVDialect",
         ":Support",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )
@@ -8808,6 +8887,7 @@ cc_library(
         ":ConvertToLLVM",
         ":DLTIDialect",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":FuncDialect",
         ":FuncToLLVM",
         ":FuncToSPIRV",
@@ -8816,6 +8896,7 @@ cc_library(
         ":FuncTransformsPassIncGen",
         ":GPUDialect",
         ":GPUPassIncGen",
+        ":GPUPipelines",
         ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
         ":GPUToROCDLTransforms",
@@ -9290,6 +9371,7 @@ cc_binary(
         ":MlirJitRunner",
         ":Pass",
         ":ReconcileUnrealizedCasts",
+        ":SCFDialect",
         ":SPIRVDialect",
         ":SPIRVTransforms",
         ":ToLLVMIRTranslation",

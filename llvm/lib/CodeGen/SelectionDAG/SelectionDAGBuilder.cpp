@@ -3354,6 +3354,8 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   }
   if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I))
     Flags.setExact(ExactOp->isExact());
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    Flags.setDisjoint(DisjointOp->isDisjoint());
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
@@ -10627,8 +10629,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     else if (CLI.RetZExt)
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
-    for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
-      EVT VT = RetTys[I];
+    for (EVT VT : RetTys) {
       MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
                                                      CLI.CallConv, VT);
       unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),

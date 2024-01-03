@@ -3022,19 +3022,6 @@ public:
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
 
-  // Find a struct's flexible array member. It may be embedded inside multiple
-  // sub-structs, but must still be the last field.
-  const ValueDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                                const RecordDecl *RD);
-
-  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
-  /// \p nullptr if either the attribute or the field doesn't exist.
-  const ValueDecl *FindCountedByField(const Expr *Base);
-
-  /// Build an expression accessing the "counted_by" field.
-  const Expr *BuildCountedByFieldExpr(const Expr *Base,
-                                      const ValueDecl *CountedByVD);
-
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
   ComplexPairTy EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -4829,9 +4816,6 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
-
-  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
-                                           llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);

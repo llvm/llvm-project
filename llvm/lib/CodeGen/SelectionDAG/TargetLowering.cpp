@@ -1064,10 +1064,9 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
   SDValue ResultAVG =
-      DAG.getNode(AVGOpc, DL, NVT, DAG.getNode(ISD::TRUNCATE, DL, NVT, ExtOpA),
-                  DAG.getNode(ISD::TRUNCATE, DL, NVT, ExtOpB));
-  return DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL, VT,
-                     ResultAVG);
+      DAG.getNode(AVGOpc, DL, NVT, DAG.getExtOrTrunc(IsSigned, ExtOpA, DL, NVT),
+                  DAG.getExtOrTrunc(IsSigned, ExtOpB, DL, NVT));
+  return DAG.getExtOrTrunc(IsSigned, ResultAVG, DL, VT);
 }
 
 /// Look at Op. At this point, we know that only the OriginalDemandedBits of the
@@ -1468,14 +1467,24 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::OR: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-
+    SDNodeFlags Flags = Op.getNode()->getFlags();
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
-                             Depth + 1))
+                             Depth + 1)) {
+      if (Flags.hasDisjoint()) {
+        Flags.setDisjoint(false);
+        Op->setFlags(Flags);
+      }
       return true;
+    }
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     if (SimplifyDemandedBits(Op0, ~Known.One & DemandedBits, DemandedElts,
-                             Known2, TLO, Depth + 1))
+                             Known2, TLO, Depth + 1)) {
+      if (Flags.hasDisjoint()) {
+        Flags.setDisjoint(false);
+        Op->setFlags(Flags);
+      }
       return true;
+    }
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known zero on one side, return the other.

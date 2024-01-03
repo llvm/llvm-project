@@ -1358,11 +1358,9 @@ def err_acc_unexpected_directive
 def warn_pragma_acc_unimplemented
     : Warning<"OpenACC directives not yet implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
-def warn_pragma_acc_unimplemented_clause_parsing
-    : Warning<"OpenACC clause parsing not yet implemented">,
-      InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
+def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;

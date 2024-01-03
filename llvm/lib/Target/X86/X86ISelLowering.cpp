@@ -2267,6 +2267,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
@@ -2282,6 +2284,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
@@ -2674,34 +2678,33 @@ SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy(DAG.getDataLayout()));
 }
 
-bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model M,
-                                       bool hasSymbolicDisplacement) {
+bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model CM,
+                                       bool HasSymbolicDisplacement) {
   // Offset should fit into 32 bit immediate field.
   if (!isInt<32>(Offset))
     return false;
 
   // If we don't have a symbolic displacement - we don't have any extra
   // restrictions.
-  if (!hasSymbolicDisplacement)
+  if (!HasSymbolicDisplacement)
     return true;
 
-  // FIXME: Some tweaks might be needed for medium code model.
-  if (M != CodeModel::Small && M != CodeModel::Kernel)
-    return false;
-
-  // For small code model we assume that latest object is 16MB before end of 31
-  // bits boundary. We may also accept pretty large negative constants knowing
-  // that all objects are in the positive half of address space.
-  if (M == CodeModel::Small && Offset < 16*1024*1024)
+  // We can fold large offsets in the large code model because we always use
+  // 64-bit offsets.
+  if (CM == CodeModel::Large)
     return true;
 
   // For kernel code model we know that all object resist in the negative half
   // of 32bits address space. We may not accept negative offsets, since they may
   // be just off and we may accept pretty large positive ones.
-  if (M == CodeModel::Kernel && Offset >= 0)
-    return true;
+  if (CM == CodeModel::Kernel)
+    return Offset >= 0;
 
-  return false;
+  // For other non-large code models we assume that latest small object is 16MB
+  // before end of 31 bits boundary. We may also accept pretty large negative
+  // constants knowing that all objects are in the positive half of address
+  // space.
+  return Offset < 16 * 1024 * 1024;
 }
 
 /// Return true if the condition is an signed comparison operation.
@@ -3738,9 +3741,11 @@ static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
   // type. This ensures they get CSE'd. But if the integer type is not
   // available, use a floating-point +0.0 instead.
   SDValue Vec;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!Subtarget.hasSSE2() && VT.is128BitVector()) {
     Vec = DAG.getConstantFP(+0.0, dl, MVT::v4f32);
-  } else if (VT.isFloatingPoint()) {
+  } else if (VT.isFloatingPoint() &&
+             TLI.isTypeLegal(VT.getVectorElementType())) {
     Vec = DAG.getConstantFP(+0.0, dl, VT);
   } else if (VT.getVectorElementType() == MVT::i1) {
     assert((Subtarget.hasBWI() || VT.getVectorNumElements() <= 16) &&
@@ -4554,7 +4559,7 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
+static ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
@@ -4562,7 +4567,7 @@ static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
 }
 
 static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
-  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
+  ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
   return CNode->getConstVal();
@@ -7563,8 +7568,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   } else
     DstVec = DAG.getUNDEF(VT);
 
-  for (unsigned i = 0, e = NonConstIdx.size(); i != e; ++i) {
-    unsigned InsertIdx = NonConstIdx[i];
+  for (unsigned InsertIdx : NonConstIdx) {
     DstVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, DstVec,
                          Op.getOperand(InsertIdx),
                          DAG.getIntPtrConstant(InsertIdx, dl));
@@ -31754,7 +31758,7 @@ static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
 
 static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG) {
-  unsigned IsData = cast<ConstantSDNode>(Op.getOperand(4))->getZExtValue();
+  unsigned IsData = Op.getConstantOperandVal(4);
 
   // We don't support non-data prefetch without PREFETCHI.
   // Just preserve the chain.
@@ -40217,6 +40221,34 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     }
     return SDValue();
   }
+  case X86ISD::SHUF128: {
+    // If we're permuting the upper 256-bits subvectors of a concatenation, then
+    // see if we can peek through and access the subvector directly.
+    if (VT.is512BitVector()) {
+      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only the
+      // upper subvector is used.
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      uint64_t Mask = N->getConstantOperandVal(2);
+      SmallVector<SDValue> LHSOps, RHSOps;
+      SDValue NewLHS, NewRHS;
+      if ((Mask & 0x0A) == 0x0A &&
+          collectConcatOps(LHS.getNode(), LHSOps, DAG) && LHSOps.size() == 2) {
+        NewLHS = widenSubVector(LHSOps[1], false, Subtarget, DAG, DL, 512);
+        Mask &= ~0x0A;
+      }
+      if ((Mask & 0xA0) == 0xA0 &&
+          collectConcatOps(RHS.getNode(), RHSOps, DAG) && RHSOps.size() == 2) {
+        NewRHS = widenSubVector(RHSOps[1], false, Subtarget, DAG, DL, 512);
+        Mask &= ~0xA0;
+      }
+      if (NewLHS || NewRHS)
+        return DAG.getNode(X86ISD::SHUF128, DL, VT, NewLHS ? NewLHS : LHS,
+                           NewRHS ? NewRHS : RHS,
+                           DAG.getTargetConstant(Mask, DL, MVT::i8));
+    }
+    return SDValue();
+  }
   case X86ISD::VPERM2X128: {
     // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     SDValue LHS = N->getOperand(0);
@@ -40857,7 +40889,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
   SDValue BC = peekThroughOneUseBitcasts(Mask);
   EVT BCVT = BC.getValueType();
   auto *Load = dyn_cast<LoadSDNode>(BC);
-  if (!Load)
+  if (!Load || !Load->getBasePtr().hasOneUse())
     return false;
 
   const Constant *C = getTargetConstantFromNode(Load);
@@ -54568,6 +54600,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           Op0.getValueType() == cast<MemSDNode>(SrcVec)->getMemoryVT())
         return Op0.getOperand(0);
     }
+
+    // concat_vectors(permq(x),permq(x)) -> permq(concat_vectors(x,x))
+    if (Op0.getOpcode() == X86ISD::VPERMI && Subtarget.useAVX512Regs() &&
+        !X86::mayFoldLoad(Op0.getOperand(0), Subtarget))
+      return DAG.getNode(Op0.getOpcode(), DL, VT,
+                         DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                                     Op0.getOperand(0), Op0.getOperand(0)),
+                         Op0.getOperand(1));
   }
 
   // concat(extract_subvector(v0,c0), extract_subvector(v1,c1)) -> vperm2x128.
@@ -54973,6 +55013,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0),
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
+      }
+      break;
+    case X86ISD::BLENDI:
+      if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
+        uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
+        uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
+        uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
+        MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
+        MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+        SDValue Sel =
+            DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
+        return DAG.getSelect(DL, VT, Sel, ConcatSubOperand(VT, Ops, 1),
+                             ConcatSubOperand(VT, Ops, 0));
       }
       break;
     case ISD::VSELECT:

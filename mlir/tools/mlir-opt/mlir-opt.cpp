@@ -47,7 +47,7 @@ void registerTestAffineReifyValueBoundsPass();
 void registerTestBytecodeRoundtripPasses();
 void registerTestDecomposeAffineOpPass();
 void registerTestAffineLoopUnswitchingPass();
-void registerTestAllReduceLoweringPass();
+void registerTestGpuLoweringPasses();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestLoopPermutationPass();
@@ -85,7 +85,9 @@ void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDiagnosticsPass();
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 void registerTestDialectConversionPasses();
+#endif
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestEmulateNarrowTypePass();
@@ -119,6 +121,7 @@ void registerTestMathPolynomialApproximationPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMeshSimplificationsPass();
+void registerTestMeshReshardingSpmdizationPass();
 void registerTestNextAccessPass();
 void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
@@ -146,8 +149,8 @@ void registerTestNvgpuLowerings();
 
 namespace test {
 void registerTestDialect(DialectRegistry &);
-void registerTestTransformDialectExtension(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
+void registerTestTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
@@ -167,7 +170,7 @@ void registerTestPasses() {
   registerTestAffineReifyValueBoundsPass();
   registerTestDecomposeAffineOpPass();
   registerTestAffineLoopUnswitchingPass();
-  registerTestAllReduceLoweringPass();
+  registerTestGpuLoweringPasses();
   registerTestBytecodeRoundtripPasses();
   registerTestFunc();
   registerTestGpuMemoryPromotionPass();
@@ -202,9 +205,6 @@ void registerTestPasses() {
   mlir::test::registerTestControlFlowSink();
   mlir::test::registerTestDiagnosticsPass();
   mlir::test::registerTestDialectConversionPasses();
-#if MLIR_CUDA_CONVERSIONS_ENABLED
-  mlir::test::registerTestLowerToNVVM();
-#endif
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
@@ -240,6 +240,7 @@ void registerTestPasses() {
   mlir::test::registerTestMemRefDependenceCheck();
   mlir::test::registerTestMemRefStrideCalculation();
   mlir::test::registerTestMeshSimplificationsPass();
+  mlir::test::registerTestMeshReshardingSpmdizationPass();
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestOneToNTypeConversionPass();
   mlir::test::registerTestOpaqueLoc();
@@ -261,6 +262,9 @@ void registerTestPasses() {
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestNvgpuLowerings();
   mlir::test::registerTestWrittenToPass();
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+  mlir::test::registerTestDialectConversionPasses();
+#endif
 }
 #endif
 
