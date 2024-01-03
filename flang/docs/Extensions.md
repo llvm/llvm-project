@@ -318,6 +318,8 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
+* A comma in a fixed-width numeric input field terminates the
+  field rather than signaling an invalid character error.
 
 ### Extensions supported when enabled by options
 
