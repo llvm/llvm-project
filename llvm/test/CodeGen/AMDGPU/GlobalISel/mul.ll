@@ -481,13 +481,12 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX12-LABEL: v_mul_i64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX12-NEXT:    v_mul_lo_u32 v1, v2, v1
-; GFX12-NEXT:    v_mul_lo_u32 v3, v3, v0
-; GFX12-NEXT:    v_mul_hi_u32 v4, v2, v0
-; GFX12-NEXT:    v_mul_lo_u32 v0, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, v1, v3
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, v1, v4
+; GFX12-NEXT:    v_mul_hi_u32 v4, v0, v2
+; GFX12-NEXT:    v_mul_lo_u32 v3, v0, v3
+; GFX12-NEXT:    v_mul_lo_u32 v1, v1, v2
+; GFX12-NEXT:    v_mul_lo_u32 v0, v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add3_u32 v1, v4, v3, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = mul i64 %num, %den
   ret i64 %result

@@ -2096,58 +2096,42 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
 
 // Break s_mul_u64 into 32-bit vector operations.
 void AMDGPURegisterBankInfo::applyMappingSMULU64(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &B, const OperandsMapper &OpdMapper) const {
+  SmallVector<Register, 2> DefRegs(OpdMapper.getVRegs(0));
+  SmallVector<Register, 2> Src0Regs(OpdMapper.getVRegs(1));
+  SmallVector<Register, 2> Src1Regs(OpdMapper.getVRegs(2));
 
-  MachineInstr &MI = OpdMapper.getMI();
+  // All inputs are SGPRs, nothing special to do.
+  if (DefRegs.empty()) {
+    assert(Src0Regs.empty() && Src1Regs.empty());
+    applyDefaultMapping(OpdMapper);
+    return;
+  }
+
+  assert(DefRegs.size() == 2);
+  assert(Src0Regs.size() == Src1Regs.size() &&
+         (Src0Regs.empty() || Src0Regs.size() == 2));
+
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
+  MachineInstr &MI = OpdMapper.getMI();
   Register DstReg = MI.getOperand(0).getReg();
+  LLT HalfTy = LLT::scalar(32);
 
-  // Insert basic copies.
-  applyDefaultMapping(OpdMapper);
+  // Depending on where the source registers came from, the generic code may
+  // have decided to split the inputs already or not. If not, we still need to
+  // extract the values.
 
-  Register SrcReg0 = MI.getOperand(1).getReg();
-  Register SrcReg1 = MI.getOperand(2).getReg();
-  assert(MRI.getRegBankOrNull(SrcReg0) == &AMDGPU::VGPRRegBank &&
-         MRI.getRegBankOrNull(SrcReg1) == &AMDGPU::VGPRRegBank &&
-         "Source operands should be in vector registers.");
-  MachineBasicBlock *MBB = MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
+  if (Src0Regs.empty())
+    split64BitValueForMapping(B, Src0Regs, HalfTy, MI.getOperand(1).getReg());
+  else
+    setRegsToType(MRI, Src0Regs, HalfTy);
 
-  // Extract subregisters from the first operand
-  Register NewSrcReg0 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-  MRI.setRegClass(NewSrcReg0, &AMDGPU::VReg_64RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg0)
-      .addReg(SrcReg0, 0, MI.getOperand(1).getSubReg());
-  Register Op0L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Op0L, &AMDGPU::VGPR_32RegClass);
-  Register Op0H = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Op0H, &AMDGPU::VGPR_32RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op0L)
-      .addReg(NewSrcReg0, 0, AMDGPU::sub0);
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op0H)
-      .addReg(NewSrcReg0, 0, AMDGPU::sub1);
+  if (Src1Regs.empty())
+    split64BitValueForMapping(B, Src1Regs, HalfTy, MI.getOperand(2).getReg());
+  else
+    setRegsToType(MRI, Src1Regs, HalfTy);
 
-  // Extract subregisters from the second operand.
-  Register NewSrcReg1 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-  MRI.setRegClass(NewSrcReg1, &AMDGPU::VReg_64RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg1)
-      .addReg(SrcReg1, 0, MI.getOperand(2).getSubReg());
-  Register Op1L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Op1L, &AMDGPU::VGPR_32RegClass);
-  Register Op1H = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Op1H, &AMDGPU::VGPR_32RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op1L)
-      .addReg(NewSrcReg1, 0, AMDGPU::sub0);
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op1H)
-      .addReg(NewSrcReg1, 0, AMDGPU::sub1);
-
-  // Split s_mul_u64 in 32-bit multiplications.
-  Register NewDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-  MRI.setRegClass(NewDestReg, &AMDGPU::VReg_64RegClass);
-  Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(DestSub0, &AMDGPU::VGPR_32RegClass);
-  Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(DestSub1, &AMDGPU::VGPR_32RegClass);
+  setRegsToType(MRI, DefRegs, HalfTy);
 
   // The multiplication is done as follows:
   //
@@ -2165,47 +2149,17 @@ void AMDGPURegisterBankInfo::applyMappingSMULU64(
   //  The high 32-bit value is Op1H*Op0L + Op1L*Op0H + carry (from
   //  Op1L*Op0L).
 
-  Register Op1L_Op0H_Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Op1L_Op0H_Reg, &AMDGPU::VGPR_32RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Op1L_Op0H_Reg)
-      .addReg(Op1L)
-      .addReg(Op0H);
-
-  Register Op1H_Op0L_Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Op1H_Op0L_Reg, &AMDGPU::VGPR_32RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Op1H_Op0L_Reg)
-      .addReg(Op1H)
-      .addReg(Op0L);
-
-  Register CarryReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(CarryReg, &AMDGPU::VGPR_32RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_HI_U32_e64), CarryReg)
-      .addReg(Op1L)
-      .addReg(Op0L);
-
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), DestSub0)
-      .addReg(Op1L)
-      .addReg(Op0L);
-
-  Register AddReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(AddReg, &AMDGPU::VGPR_32RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), AddReg)
-      .addReg(Op1L_Op0H_Reg)
-      .addReg(Op1H_Op0L_Reg);
-
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), DestSub1)
-      .addReg(AddReg)
-      .addReg(CarryReg);
-
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), NewDestReg)
-      .addReg(DestSub0)
-      .addImm(AMDGPU::sub0)
-      .addReg(DestSub1)
-      .addImm(AMDGPU::sub1);
-
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-      .addReg(NewDestReg);
-
+  Register Hi = B.buildUMulH(HalfTy, Src0Regs[0], Src1Regs[0]).getReg(0);
+  MRI.setRegBank(Hi, AMDGPU::VGPRRegBank);
+  Register MulLoHi = B.buildMul(HalfTy, Src0Regs[0], Src1Regs[1]).getReg(0);
+  MRI.setRegBank(MulLoHi, AMDGPU::VGPRRegBank);
+  Register Add = B.buildAdd(HalfTy, Hi, MulLoHi).getReg(0);
+  MRI.setRegBank(Add, AMDGPU::VGPRRegBank);
+  Register MulHiLo = B.buildMul(HalfTy, Src0Regs[1], Src1Regs[0]).getReg(0);
+  MRI.setRegBank(MulHiLo, AMDGPU::VGPRRegBank);
+  B.buildAdd(DefRegs[1], Add, MulHiLo);
+  B.buildMul(DefRegs[0], Src0Regs[0], Src1Regs[0]);
+  MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
   MI.eraseFromParent();
 }
 
@@ -2508,16 +2462,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_UMAX: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    const LLT S64 = LLT::scalar(64);
-    const RegisterBank *DstBank =
-        OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
 
     // Special case for s_mul_u64. There is not a vector equivalent of
     // s_mul_u64. Hence, we have to break down s_mul_u64 into 32-bit vector
     // multiplications.
-    if (Opc == AMDGPU::G_MUL && DstTy == S64 &&
-        DstBank == &AMDGPU::VGPRRegBank) {
-      applyMappingSMULU64(OpdMapper);
+    if (Opc == AMDGPU::G_MUL && DstTy.getSizeInBits() == 64) {
+      applyMappingSMULU64(B, OpdMapper);
       return;
     }
 
@@ -2526,6 +2476,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     if (DstTy != LLT::scalar(16) && DstTy != LLT::fixed_vector(2, 16))
       break;
 
+    const RegisterBank *DstBank =
+        OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::VGPRRegBank)
       break;
 
@@ -3858,7 +3810,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   case AMDGPU::G_AND:
   case AMDGPU::G_OR:
-  case AMDGPU::G_XOR: {
+  case AMDGPU::G_XOR:
+  case AMDGPU::G_MUL: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     if (Size == 1) {
       const RegisterBank *DstBank
@@ -3926,7 +3879,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_PTRMASK:
   case AMDGPU::G_ADD:
   case AMDGPU::G_SUB:
-  case AMDGPU::G_MUL:
   case AMDGPU::G_SHL:
   case AMDGPU::G_LSHR:
   case AMDGPU::G_ASHR:
