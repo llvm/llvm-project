@@ -27,4 +27,6 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_native_handle_assertion<std::basic_ifstream<wchar_t>>();
 #endif
+
+  return 0;
 }

@@ -80,7 +80,7 @@ struct LibraryDefaultBuffer {
   void operator()(std::basic_ifstream<CharT>&) const {}
 };
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
 #  if defined(_WIN32)
 using NativeHandleT = void*; // HANDLE
 #  elif __has_include(<unistd.h>)

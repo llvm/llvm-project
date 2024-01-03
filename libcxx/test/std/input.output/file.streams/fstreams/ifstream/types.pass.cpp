@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
 #  include "../native_handle_test_helpers.h"
 #endif
 
@@ -36,7 +36,7 @@ int main(int, char**)
     static_assert((std::is_same<std::basic_ifstream<char>::int_type, std::char_traits<char>::int_type>::value), "");
     static_assert((std::is_same<std::basic_ifstream<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::basic_ifstream<char>::off_type, std::char_traits<char>::off_type>::value), "");
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
     test_native_handle_type< std::basic_ifstream<char>>();
 #  ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_native_handle_type< std::basic_ifstream<wchar_t>>();
