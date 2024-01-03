@@ -379,6 +379,18 @@ namespace dr1347 { // dr1347: 3.1
 #endif
 }
 
+namespace dr1351 { // dr1351: 1
+#if __cplusplus >= 201103L
+  struct Base {
+    virtual void method() noexcept = delete;
+  };
+
+  struct Derived : Base {
+    void method() override = delete;
+  };
+#endif
+}
+
 namespace dr1358 { // dr1358: 3.1
 #if __cplusplus >= 201103L
   struct Lit { constexpr operator int() const { return 0; } };
@@ -425,7 +437,7 @@ namespace dr1359 { // dr1359: 3.5
   union B { constexpr B() = default; int a; }; // #dr1359-B
   // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
   union C { constexpr C() = default; int a, b; }; // #dr1359-C
-  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}} 
+  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
   struct X { constexpr X() = default; union {}; };
   // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // #dr1359-Y
@@ -645,7 +657,7 @@ struct A {
 } // namespace dr1397
 
 namespace dr1399 { // dr1399: dup 1388
-  template<typename ...T> void f(T..., int, T...) {} // #dr1399-f 
+  template<typename ...T> void f(T..., int, T...) {} // #dr1399-f
   // cxx98-error@-1 {{variadic templates are a C++11 extension}}
   void g() {
     f(0);

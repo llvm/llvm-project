@@ -194,6 +194,9 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `CWG1351 <https://cplusplus.github.io/CWG/issues/1351.html>`_ which allows lax exception specifications on
+  overriding functions that are explicitly defined to be deleted.
+
 C Language Changes
 ------------------
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
