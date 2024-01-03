@@ -14,12 +14,9 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, nan, (const char *arg)) {
-  const char *fp_str = internal::nan_str_to_floatingpoint_str(arg);
-  auto result = internal::strtofloatingpoint<double>(fp_str);
-
+  auto result = internal::strtonan<double>(arg);
   if (result.has_error())
     libc_errno = result.error;
-
   return result.value;
 }
 

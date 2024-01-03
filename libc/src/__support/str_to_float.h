@@ -1055,6 +1055,38 @@ hexadecimal_string_to_float(const char *__restrict src,
   return output;
 }
 
+template <class T>
+LIBC_INLINE fputil::FPBits<T> nan_from_ncharseq(const char *__restrict ncharseq,
+                                                ptrdiff_t ncharseq_len,
+                                                int *error, bool sign = false) {
+  using FPBits = typename fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+
+  FPBits result = FPBits();
+  StorageType nan_mantissa = 0;
+
+  if (ncharseq != nullptr && isdigit(ncharseq[0])) {
+    // This is to prevent errors when StorageType is larger than 64
+    // bits, since strtointeger only supports up to 64 bits. This is
+    // actually more than is required by the specification, which says
+    // for the input type "NAN(n-char-sequence)" that "the meaning of
+    // the n-char sequence is implementation-defined."
+    auto strtoint_result = strtointeger<uint64_t>(ncharseq, 0);
+    if (strtoint_result.has_error() && error != nullptr)
+      *error = strtoint_result.error;
+
+    nan_mantissa = static_cast<StorageType>(strtoint_result.value);
+    if (strtoint_result.parsed_len != ncharseq_len)
+      nan_mantissa = 0;
+  }
+
+  result = FPBits(result.build_quiet_nan(nan_mantissa));
+  if (sign)
+    result.set_sign(true);
+
+  return result;
+}
+
 // Takes a pointer to a string and a pointer to a string pointer. This function
 // is used as the backend for all of the string to float functions.
 template <class T>
@@ -1134,7 +1166,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
         tolower(src[index + 2]) == nan_string[2]) {
       seen_digit = true;
       index += 3;
-      StorageType nan_mantissa = 0;
+      bool ncharseq_found = false;
       // this handles the case of `NaN(n-character-sequence)`, where the
       // n-character-sequence is made of 0 or more letters and numbers in any
       // order.
@@ -1147,32 +1179,17 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           ++index;
         if (src[index] == ')') {
           ++index;
-          if (isdigit(src[left_paren + 1])) {
-            // This is to prevent errors when StorageType is larger than 64
-            // bits, since strtointeger only supports up to 64 bits. This is
-            // actually more than is required by the specification, which says
-            // for the input type "NAN(n-char-sequence)" that "the meaning of
-            // the n-char sequence is implementation-defined."
-
-            auto strtoint_result =
-                strtointeger<uint64_t>(src + (left_paren + 1), 0);
-            if (strtoint_result.has_error()) {
-              error = strtoint_result.error;
-            }
-            nan_mantissa = static_cast<StorageType>(strtoint_result.value);
-            if (src[left_paren + 1 + strtoint_result.parsed_len] != ')')
-              nan_mantissa = 0;
-          }
+          result = nan_from_ncharseq<T>(src + (left_paren + 1),
+                                        index - left_paren - 2, &error,
+                                        result.get_sign());
+          ncharseq_found = true;
         } else {
           index = left_paren;
         }
       }
-      if (result.get_sign()) {
-        result = FPBits(result.build_quiet_nan(nan_mantissa));
-        result.set_sign(true);
-      } else {
-        result.set_sign(false);
-        result = FPBits(result.build_quiet_nan(nan_mantissa));
+
+      if (!ncharseq_found) {
+        result = nan_from_ncharseq<T>(nullptr, 0, &error, result.get_sign());
       }
     }
   } else if (tolower(src[index]) == 'i') { // INF
@@ -1206,32 +1223,23 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   return {T(result), index, error};
 }
 
-LIBC_INLINE const char *nan_str_to_floatingpoint_str(const char *arg) {
+template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
+  using FPBits = typename fputil::FPBits<T>;
+
+  FPBits result;
+  int error = 0;
+
   ptrdiff_t index = 0;
   while (isalnum(arg[index]) || arg[index] == '_')
     ++index;
 
   if (arg[index] == '\0') {
-    // 5 is the number of characters in string "NAN()".
-    ptrdiff_t size = 5 + index;
-    char *output_str = new char[size + 1];
-
-    output_str[0] = 'N';
-    output_str[1] = 'A';
-    output_str[2] = 'N';
-    output_str[3] = '(';
-
-    for (ptrdiff_t i = 0; i < index; ++i) {
-      output_str[4 + i] = arg[i];
-    }
-
-    output_str[size - 1] = ')';
-    output_str[size] = '\0';
-
-    return output_str;
+    result = nan_from_ncharseq<T>(arg, index, &error);
+    return {T(result), index, error};
   }
 
-  return "NAN";
+  result = nan_from_ncharseq<T>(nullptr, 0, &error);
+  return {T(result), 0, error};
 }
 
 } // namespace internal
