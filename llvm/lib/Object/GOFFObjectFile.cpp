@@ -436,9 +436,6 @@ Expected<StringRef> GOFFObjectFile::getSectionName(DataRefImpl Sec) const {
   if (Name) {
     StringRef Res = *Name;
     LLVM_DEBUG(dbgs() << "Got section: " << Res << '\n');
-    // TODO: Make clang look for C____clangast instead of this
-    if (Res.equals("C___clangast"))
-      Res = "__clangast";
     LLVM_DEBUG(dbgs() << "Final section name: " << Res << '\n');
     Name = Res;
   }
