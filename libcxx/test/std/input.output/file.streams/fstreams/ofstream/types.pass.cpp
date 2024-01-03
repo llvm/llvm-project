@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "../types.h"
 
 int main(int, char**)
 {
@@ -32,6 +33,9 @@ int main(int, char**)
     static_assert((std::is_same<std::basic_ofstream<char>::int_type, std::char_traits<char>::int_type>::value), "");
     static_assert((std::is_same<std::basic_ofstream<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::basic_ofstream<char>::off_type, std::char_traits<char>::off_type>::value), "");
+#  if _LIBCPP_STD_VER >= 26
+    static_assert((std::is_same<std::basic_fstream<char>::native_handle_type, NativeHandleT);
+#endif
 
   return 0;
 }

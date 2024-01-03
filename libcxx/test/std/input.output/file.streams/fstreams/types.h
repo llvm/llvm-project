@@ -80,4 +80,12 @@ struct LibraryDefaultBuffer {
   void operator()(std::basic_ifstream<CharT>&) const {}
 };
 
+#if defined(_WIN32)
+using NativeHandleT = void*; // HANDLE
+#elif __has_include(<unistd.h>)
+using NativeHandleT = int; // POSIX file descriptor
+#else
+#  error "Provide a native file handle!"
+#endif
+
 #endif // TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TYPES_H

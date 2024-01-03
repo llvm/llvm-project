@@ -9,73 +9,85 @@
 #ifndef TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H
 #define TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H
 
-#if _LIBCPP_STD_VER >= 26
+#include <cassert>
+#include <concepts>
+#include <cstdio>
+#include <fstream>
+#include <filesystem>
+#include <type_traits>
 
-#  include <cassert>
-#  include <concepts>
-#  include <cstdio>
-#  include <fstream>
-#  include <filesystem>
-#  include <type_traits>
-#  include <utility>
+#if defined(_WIN32)
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <io.h>
+#  include <windows.h>
+#else
+#  include <fcntl.h>
+#endif
 
-#  if defined(_LIBCPP_WIN32API)
-#    define WIN32_LEAN_AND_MEAN
-#    define NOMINMAX
-#    include <io.h>
-#    include <windows.h>
-#  else
-#    include <fcntl.h>
-#  endif
+#include "check_assertion.h"
+#include "platform_support.h"
+#include "types.h"
 
-#  include "platform_support.h"
-
-#  if defined(_LIBCPP_WIN32API)
-using HandleT = void*; // HANDLE
-
-bool is_handle_valid(void* handle) {
-  if (BY_HANDLE_FILE_INFORMATION fileInformation; !GetFileInformationByHandle(handle, &fileInformation))
-    return false;
-  return true;
-};
-#  elif __has_include(<unistd.h>) // POSIX
-using HandleT = int; // POSIX file descriptor
-
-bool is_handle_valid(HandleT fd) { return fcntl(fd, F_GETFL) != -1 || errno != EBADF; };
-#  else
-#    error "Provide a native file handle!"
-#  endif
+inline bool is_handle_valid(NativeHandleT handle) {
+#if defined(_WIN32)
+  BY_HANDLE_FILE_INFORMATION fileInformation;
+  return GetFileInformationByHandle(handle, &fileInformation));
+#elif __has_include(<unistd.h>) // POSIX
+  return fcntl(handle, F_GETFL) != -1 || errno != EBADF;
+#else
+#  error "Provide a native file handle!"
+#endif
+}
 
 template <typename CharT, typename StreamT>
 void test_native_handle() {
   static_assert(
       std::is_same_v<typename std::basic_filebuf<CharT>::native_handle_type, typename StreamT::native_handle_type>);
 
-  HandleT native_handle{};
-  HandleT const_native_handle{};
+  std::filesystem::path p = get_temp_file_name();
 
+  // non-const
   {
     StreamT f;
 
-    assert(!f.is_open());
-    std::filesystem::path p = get_temp_file_name();
-    f.open(p);
-    assert(f.is_open());
+    assert(f.open(p) != nullptr);
     assert(f.native_handle() == f.rdbuf()->native_handle());
-    std::same_as<HandleT> decltype(auto) handle = f.native_handle();
-    native_handle                               = handle;
-    assert(is_handle_valid(native_handle));
-    std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
-    const_native_handle                               = const_handle;
-    assert(is_handle_valid(const_native_handle));
+    std::same_as<NativeHandleT> decltype(auto) handle = f.native_handle();
+    assert(is_handle_valid(handle));
+    f.close();
+    assert(is_handle_valid(handle));
     static_assert(noexcept(f.native_handle()));
-    static_assert(noexcept(std::as_const(f).native_handle()));
   }
+  // const
+  {
+    StreamT cf;
 
-  assert(!is_handle_valid(native_handle));
-  assert(!is_handle_valid(const_native_handle));
+    assert(cf.open(p) != nullptr);
+    std::same_as<NativeHandleT> decltype(auto) const_handle = cf.native_handle();
+    assert(is_handle_valid(const_handle));
+    cf.close();
+    assert(!is_handle_valid(const_handle));
+    static_assert(noexcept(cf.native_handle()));
+  }
 }
 
-#endif // _LIBCPP_STD_VER >= 26
+template <typename StreamT>
+void test_native_handle_assertion() {
+  std::filesystem::path p = get_temp_file_name();
+
+  // non-const
+  {
+    StreamT f;
+
+    TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened");
+  }
+  // const
+  {
+    StreamT cf;
+
+    TEST_LIBCPP_ASSERT_FAILURE(cf.native_handle(), "File must be opened");
+  }
+}
 
 #endif // TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H

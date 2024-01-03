@@ -25,27 +25,25 @@
 
 template <typename CharT>
 void test() {
-  HandleT native_handle{};
-  HandleT const_native_handle{};
+  std::basic_filebuf<CharT> f;
+  std::filesystem::path p = get_temp_file_name();
 
   {
-    std::basic_filebuf<CharT> f;
-    assert(!f.is_open());
-    std::filesystem::path p = get_temp_file_name();
-    f.open(p, std::ios_base::in);
-    assert(f.is_open());
+    assert(f.open(p, std::ios_base::in) != nullptr);
     std::same_as<HandleT> decltype(auto) handle = f.native_handle();
-    native_handle                               = handle;
-    assert(is_handle_valid(native_handle));
-    std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
-    const_native_handle                               = const_handle;
-    assert(is_handle_valid(const_native_handle));
+    assert(is_handle_valid(handle));
+    f.close();
+    assert(!is_handle_valid(handle));
     static_assert(noexcept(f.native_handle()));
+  }
+  {
+    assert(f.open(p, std::ios_base::in) != nullptr);
+    std::same_as<HandleT> decltype(auto) const_handle = std::as_const(f).native_handle();
+    assert(is_handle_valid(const_handle));
+    f.close();
+    assert(!is_handle_valid(const_handle));
     static_assert(noexcept(std::as_const(f).native_handle()));
   }
-
-  assert(!is_handle_valid(native_handle));
-  assert(!is_handle_valid(const_native_handle));
 }
 
 int main(int, char**) {
