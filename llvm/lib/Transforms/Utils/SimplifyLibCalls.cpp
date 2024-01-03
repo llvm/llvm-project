@@ -2505,7 +2505,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     // Cast exponent to FP if integer.
     if (ArgID == Intrinsic::powi) {
       if (ConstantInt *C = dyn_cast<ConstantInt>(Y))
-        Y = ConstantFoldCastOperand(Instruction::SIToFP, C, Log->getType(), DL);
+        Y = ConstantFoldCastOperand(Instruction::SIToFP, C, Ty, DL);
       else
         Y = B.CreateCast(Instruction::SIToFP, Y, Ty, "cast");
     }
