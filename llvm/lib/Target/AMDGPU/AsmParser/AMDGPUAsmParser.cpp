@@ -1057,6 +1057,7 @@ public:
   }
 
   static void printImmTy(raw_ostream& OS, ImmTy Type) {
+    // clang-format off
     switch (Type) {
     case ImmTyNone: OS << "None"; break;
     case ImmTyGDS: OS << "GDS"; break;
@@ -1120,12 +1121,8 @@ public:
     case ImmTyEndpgm: OS << "Endpgm"; break;
     case ImmTyWaitVDST: OS << "WaitVDST"; break;
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
-    case ImmTyWaitVAVDst:
-      OS << "WaitVAVDst";
-      break;
-    case ImmTyWaitVMVSrc:
-      OS << "WaitVMVSrc";
-      break;
+    case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
+    case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
     case ImmTyGlobalSReg32:
       OS << "GlobalSReg32";
       break;
@@ -1133,6 +1130,7 @@ public:
       OS << "GlobalSReg64";
       break;
     }
+    // clang-format on
   }
 
   void print(raw_ostream &OS) const override {

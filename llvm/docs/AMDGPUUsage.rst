@@ -5033,8 +5033,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX10-GFX12
-     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table
+  .. table:: compute_pgm_rsrc3 for GFX10-GFX11
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -15582,7 +15582,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
