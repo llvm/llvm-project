@@ -40221,6 +40221,34 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     }
     return SDValue();
   }
+  case X86ISD::SHUF128: {
+    // If we're permuting the upper 256-bits subvectors of a concatenation, then
+    // see if we can peek through and access the subvector directly.
+    if (VT.is512BitVector()) {
+      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only the
+      // upper subvector is used.
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      uint64_t Mask = N->getConstantOperandVal(2);
+      SmallVector<SDValue> LHSOps, RHSOps;
+      SDValue NewLHS, NewRHS;
+      if ((Mask & 0x0A) == 0x0A &&
+          collectConcatOps(LHS.getNode(), LHSOps, DAG) && LHSOps.size() == 2) {
+        NewLHS = widenSubVector(LHSOps[1], false, Subtarget, DAG, DL, 512);
+        Mask &= ~0x0A;
+      }
+      if ((Mask & 0xA0) == 0xA0 &&
+          collectConcatOps(RHS.getNode(), RHSOps, DAG) && RHSOps.size() == 2) {
+        NewRHS = widenSubVector(RHSOps[1], false, Subtarget, DAG, DL, 512);
+        Mask &= ~0xA0;
+      }
+      if (NewLHS || NewRHS)
+        return DAG.getNode(X86ISD::SHUF128, DL, VT, NewLHS ? NewLHS : LHS,
+                           NewRHS ? NewRHS : RHS,
+                           DAG.getTargetConstant(Mask, DL, MVT::i8));
+    }
+    return SDValue();
+  }
   case X86ISD::VPERM2X128: {
     // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     SDValue LHS = N->getOperand(0);
