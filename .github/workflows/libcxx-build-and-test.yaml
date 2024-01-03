@@ -48,124 +48,14 @@ env:
 
 
 jobs:
-  stage1:
-    if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [
-          'generic-cxx03',
-          'generic-cxx26',
-          'generic-modules'
-        ]
-        cc: [  'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        clang_tidy: [ 'ON' ]
-        include:
-          - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
-    steps:
-      - uses: actions/checkout@v4
-      - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
-          path: |
-            **/test-results.xml
-            **/*.abilist
-            **/CMakeError.log
-            **/CMakeOutput.log
-            **/crash_diagnostics/*
-  stage2:
-    if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
-    needs: [ stage1 ]
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        config: [
-          'generic-cxx11',
-          'generic-cxx14',
-          'generic-cxx17',
-          'generic-cxx20',
-          'generic-cxx23'
-        ]
-        cc: [ 'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        clang_tidy: [ 'ON' ]
-        include:
-          - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
-          - config: 'generic-cxx23'
-            cc: 'clang-16'
-            cxx: 'clang++-16'
-            clang_tidy: 'OFF'
-          - config: 'generic-cxx23'
-            cc: 'clang-17'
-            cxx: 'clang++-17'
-            clang_tidy: 'OFF'
-    steps:
-      - uses: actions/checkout@v4
-      - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
-        if: always()  # Upload artifacts even if the build or test suite fails
-        with:
-          name: ${{ matrix.config }}-results
-          path: |
-            **/test-results.xml
-            **/*.abilist
-            **/CMakeError.log
-            **/CMakeOutput.log
-            **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    needs: [ stage1, stage2 ]
     continue-on-error: false
     strategy:
       fail-fast: false
       max-parallel: 8
       matrix:
         config: [
-          'generic-abi-unstable',
-          'generic-hardening-mode-debug',
-          'generic-hardening-mode-extensive',
-          'generic-hardening-mode-fast',
-          'generic-hardening-mode-fast-with-abi-breaks',
-          'generic-merged',
-          'generic-modules-lsv',
-          'generic-no-exceptions',
-          'generic-no-experimental',
-          'generic-no-filesystem',
-          'generic-no-localization',
-          'generic-no-random_device',
-          'generic-no-threads',
-          'generic-no-tzdb',
-          'generic-no-unicode',
-          'generic-no-wide-characters',
-          'generic-no-rtti',
-          'generic-static',
-          'generic-with_llvm_unwinder',
-          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
-          # or don't provide much value since the benchmark run results are too noise on the bots.
-          'benchmarks',
           'bootstrapping-build'
         ]
         machine: [ 'libcxx-runners-8-set' ]
