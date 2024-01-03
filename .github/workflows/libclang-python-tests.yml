@@ -28,7 +28,6 @@ concurrency:
 
 jobs:
   check-clang-python:
-    if: github.repository_owner == 'llvm'
     # Build libclang and then run the libclang Python binding's unit tests.
     name: Build and run Python unit tests
     uses: ./.github/workflows/llvm-project-tests.yml
