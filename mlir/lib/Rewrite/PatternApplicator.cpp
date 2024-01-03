@@ -152,6 +152,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
     // Find the next pattern with the highest benefit.
     const Pattern *bestPattern = nullptr;
     unsigned *bestPatternIt = &opIt;
+    const PDLByteCode::MatchResult *pdlMatch = nullptr;
 
     /// Operation specific patterns.
     if (opIt < opE)
@@ -163,8 +164,6 @@ LogicalResult PatternApplicator::matchAndRewrite(
       bestPatternIt = &anyIt;
       bestPattern = anyOpPatterns[anyIt];
     }
-
-    const PDLByteCode::MatchResult *pdlMatch = nullptr;
     /// PDL patterns.
     if (pdlIt < pdlE && (!bestPattern || bestPattern->getBenefit() <
                                              pdlMatches[pdlIt].benefit)) {
@@ -172,7 +171,6 @@ LogicalResult PatternApplicator::matchAndRewrite(
       pdlMatch = &pdlMatches[pdlIt];
       bestPattern = pdlMatch->pattern;
     }
-
     if (!bestPattern)
       break;
 

@@ -61,10 +61,3 @@ add_mlir_library(MLIRIR
   LINK_LIBS PUBLIC
   MLIRSupport
   )
-
-if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
-  add_subdirectory(PDL)
-  target_link_libraries(MLIRIR PUBLIC
-    MLIRIRPDLPatternMatch)
-endif()
-
