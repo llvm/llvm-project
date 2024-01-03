@@ -2164,9 +2164,9 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
-  if (C.getArgs().hasArg(options::OPT_print_library_module_manifest_path)) {
-    llvm::outs() << "module: ="
-                 << GetModuleManifestPath(C, C.getDefaultToolChain()) << '\n';
+  if (C.getArgs().hasArg(options::OPT_print_std_module_manifest_path)) {
+    llvm::outs() << GetStdModuleManifestPath(C, C.getDefaultToolChain())
+                 << '\n';
     return false;
   }
 
@@ -6141,8 +6141,10 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   return std::string(Name);
 }
 
-std::string Driver::GetModuleManifestPath(const Compilation &C,
-                                          const ToolChain &TC) const {
+std::string Driver::GetStdModuleManifestPath(const Compilation &C,
+                                             const ToolChain &TC) const {
+
+  std::string error = "<NOT PRESENT>";
 
   switch (TC.GetCXXStdlibType(C.getArgs())) {
   case ToolChain::CST_Libcxx: {
@@ -6164,15 +6166,15 @@ std::string Driver::GetModuleManifestPath(const Compilation &C,
     if (TC.getVFS().exists(path))
       return path;
 
-    return "";
+    return error;
   }
 
   case ToolChain::CST_Libstdcxx:
     // libstdc++ does not provide Standard library modules yet.
-    return "";
+    return error;
   }
 
-  return "";
+  return error;
 }
 
 std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
