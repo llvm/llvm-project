@@ -1135,11 +1135,11 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
 }
 
 static bool isNF(InternalInstruction *insn) {
-  // NF bit is the MSB of aaa.
-  if (nfFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
-      insn->opcodeType == MAP4)
+  if (!nfFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+    return false;
+  if (insn->opcodeType == MAP4)
     return true;
-  // Promoted BMI instrs below has nf version but not in map4.
+  // Below NF instructions are not in map4.
   if (insn->opcodeType == THREEBYTE_38 &&
       ppFromEVEX3of4(insn->vectorExtensionPrefix[2]) == VEX_PREFIX_NONE) {
     switch (insn->opcode) {
@@ -1148,6 +1148,8 @@ static bool isNF(InternalInstruction *insn) {
     case 0xf5: // BZHI
     case 0xf7: // BEXTR
       return true;
+    default:
+      break;
     }
   }
   return false;
@@ -1188,7 +1190,7 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXKZ;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXB;
-      if (isNF(insn))
+      if (isNF(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
       else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXK;

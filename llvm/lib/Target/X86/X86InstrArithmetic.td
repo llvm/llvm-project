@@ -1312,7 +1312,7 @@ def : Pat<(X86testpat (loadi64 addr:$src1), i64relocImmSExt32_su:$src2),
 //===----------------------------------------------------------------------===//
 // ANDN Instruction
 //
-multiclass AndN<X86TypeInfo t, string suffix> {
+multiclass AndN<X86TypeInfo t, string suffix = ""> {
   defvar andn_rr_p =
     [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
      t.RegClass:$src2))];
@@ -1332,8 +1332,8 @@ multiclass AndN<X86TypeInfo t, string suffix> {
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let AddedComplexity = -6 in {
-defm ANDN32 : AndN<Xi32, "">, VEX, Requires<[HasBMI, NoEGPR]>;
-defm ANDN64 : AndN<Xi64, "">, VEX, REX_W, Requires<[HasBMI, NoEGPR]>;
+defm ANDN32 : AndN<Xi32>, VEX, Requires<[HasBMI, NoEGPR]>;
+defm ANDN64 : AndN<Xi64>, VEX, REX_W, Requires<[HasBMI, NoEGPR]>;
 defm ANDN32 : AndN<Xi32, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>;
 defm ANDN64 : AndN<Xi64, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>;
 let Pattern = [(null_frag)] in {
