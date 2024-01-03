@@ -153,7 +153,7 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
       OS << "    { " << ValidationCounter->getValueAsDef("EventType")->getName()
          << ", " << Target << "PfmCounterNames["
          << getPfmCounterId(ValidationCounter->getValueAsString("Counter"))
-         << "]}\n";
+         << "]},\n";
     }
     OS << "  } // Validation counters.\n";
   }
