@@ -1459,20 +1459,6 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-static bool isNonZeroAVL(const MachineOperand &MO,
-                         const MachineRegisterInfo &MRI) {
-  if (MO.isReg()) {
-    if (MO.getReg() == RISCV::X0)
-      return true;
-    if (MachineInstr *MI = MRI.getVRegDef(MO.getReg());
-        MI && isNonZeroLoadImmediate(*MI))
-      return true;
-    return false;
-  }
-  assert(MO.isImm());
-  return 0 != MO.getImm();
-}
-
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
 static bool canMutatePriorConfig(const MachineInstr &PrevMI,
@@ -1491,15 +1477,51 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLZeroness) {
       if (isVLPreservingConfig(PrevMI))
         return false;
-      if (!isNonZeroAVL(MI.getOperand(1), MRI) ||
-          !isNonZeroAVL(PrevMI.getOperand(1), MRI))
+      if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
+                                                       MRI))
         return false;
     }
 
-    // TODO: Track whether the register is defined between
-    // PrevMI and MI.
     if (MI.getOperand(1).isReg() &&
         RISCV::X0 != MI.getOperand(1).getReg())
+      return false;
+
+    // Taken from MachineDominatorTree::dominates
+    auto Dominates = [](const MachineInstr &A, const MachineInstr &B) {
+      assert(A.getParent() == B.getParent());
+      // Loop through the basic block until we find A or B.
+      MachineBasicBlock::const_iterator I = A.getParent()->begin();
+      for (; I != A && I != B; ++I)
+        /*empty*/;
+      return I == A;
+    };
+
+    // Given A and B are in the same block and A comes before (dominates) B,
+    // return whether or not Reg is defined between A and B.
+    auto IsDefinedBetween = [&MRI, &Dominates](const Register Reg,
+                                               const MachineInstr &A,
+                                               const MachineInstr &B) {
+      assert(Dominates(A, B));
+      for (const auto &Def : MRI.def_instructions(Reg)) {
+        if (Def.getParent() != A.getParent())
+          continue;
+        // If B defines Reg, assume it early clobbers for now.
+        if (&Def == &B)
+          return true;
+        if (Dominates(Def, A) && !Dominates(Def, B))
+          return true;
+      }
+
+      // Reg isn't defined between PrevMI and MI.
+      return false;
+    };
+
+    auto &AVL = MI.getOperand(1);
+    auto &PrevAVL = PrevMI.getOperand(1);
+    bool AreSameAVL = AVL.isReg() && PrevAVL.isReg() &&
+                      AVL.getReg() == PrevAVL.getReg() &&
+                      !IsDefinedBetween(AVL.getReg(), PrevMI, MI);
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0 && !AreSameAVL)
       return false;
   }
 
