@@ -4499,8 +4499,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     default: break;
     case ARM::LDRrs:
     case ARM::LDRBrs: {
-      unsigned ShOpVal =
-        cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
+      unsigned ShOpVal = DefNode->getConstantOperandVal(2);
       unsigned ShImm = ARM_AM::getAM2Offset(ShOpVal);
       if (ShImm == 0 ||
           (ShImm == 2 && ARM_AM::getAM2ShiftOpc(ShOpVal) == ARM_AM::lsl))
@@ -4512,8 +4511,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::t2LDRHs:
     case ARM::t2LDRSHs: {
       // Thumb2 mode: lsl only.
-      unsigned ShAmt =
-        cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
+      unsigned ShAmt = DefNode->getConstantOperandVal(2);
       if (ShAmt == 0 || ShAmt == 2)
         Latency = *Latency - 1;
       break;
@@ -4526,8 +4524,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     default: break;
     case ARM::LDRrs:
     case ARM::LDRBrs: {
-      unsigned ShOpVal =
-        cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
+      unsigned ShOpVal = DefNode->getConstantOperandVal(2);
       unsigned ShImm = ARM_AM::getAM2Offset(ShOpVal);
       if (ShImm == 0 ||
           ((ShImm == 1 || ShImm == 2 || ShImm == 3) &&
@@ -6435,20 +6432,20 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator It, bool CFI,
                                      bool Auth) const {
   int Align = std::max(Subtarget.getStackAlignment().value(), uint64_t(8));
+  unsigned MIFlags = CFI ? MachineInstr::FrameSetup : 0;
   assert(Align >= 8 && Align <= 256);
   if (Auth) {
     assert(Subtarget.isThumb2());
     // Compute PAC in R12. Outlining ensures R12 is dead across the outlined
     // sequence.
-    BuildMI(MBB, It, DebugLoc(), get(ARM::t2PAC))
-        .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, It, DebugLoc(), get(ARM::t2PAC)).setMIFlags(MIFlags);
     BuildMI(MBB, It, DebugLoc(), get(ARM::t2STRD_PRE), ARM::SP)
         .addReg(ARM::R12, RegState::Kill)
         .addReg(ARM::LR, RegState::Kill)
         .addReg(ARM::SP)
         .addImm(-Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(MIFlags);
   } else {
     unsigned Opc = Subtarget.isThumb() ? ARM::t2STR_PRE : ARM::STR_PRE_IMM;
     BuildMI(MBB, It, DebugLoc(), get(Opc), ARM::SP)
@@ -6456,7 +6453,7 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
         .addReg(ARM::SP)
         .addImm(-Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(MIFlags);
   }
 
   if (!CFI)
@@ -6511,6 +6508,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator It,
                                           bool CFI, bool Auth) const {
   int Align = Subtarget.getStackAlignment().value();
+  unsigned MIFlags = CFI ? MachineInstr::FrameDestroy : 0;
   if (Auth) {
     assert(Subtarget.isThumb2());
     // Restore return address PAC and LR.
@@ -6521,7 +6519,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
         .addReg(ARM::SP)
         .addImm(Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameDestroy);
+        .setMIFlags(MIFlags);
     // LR authentication is after the CFI instructions, below.
   } else {
     unsigned Opc = Subtarget.isThumb() ? ARM::t2LDR_POST : ARM::LDR_POST_IMM;
@@ -6532,7 +6530,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
       MIB.addReg(0);
     MIB.addImm(Subtarget.getStackAlignment().value())
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameDestroy);
+        .setMIFlags(MIFlags);
   }
 
   if (CFI) {

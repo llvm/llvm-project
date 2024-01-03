@@ -130,9 +130,10 @@ View the diff from {self.name} here.
 
         if diff is None:
             if should_update_gh:
-                comment_text = f"""
-    :white_check_mark: With the latest revision this PR passed the {self.friendly_name}.
-    """
+                comment_text = (
+                    ":white_check_mark: With the latest revision "
+                    f"this PR passed the {self.friendly_name}."
+                )
                 self.update_pr(comment_text, args, create_new=False)
             return True
         elif len(diff) > 0:
@@ -141,15 +142,17 @@ View the diff from {self.name} here.
                 self.update_pr(comment_text, args, create_new=True)
             else:
                 print(
-                    f"Warning: {self.friendly_name}, {self.name} detected some issues with your code formatting..."
+                    f"Warning: {self.friendly_name}, {self.name} detected "
+                    "some issues with your code formatting..."
                 )
             return False
         else:
             # The formatter failed but didn't output a diff (e.g. some sort of
             # infrastructure failure).
-            comment_text = f"""
-:warning: The {self.friendly_name} failed without printing a diff. Check the logs for stderr output. :warning:
-"""
+            comment_text = (
+                f":warning: The {self.friendly_name} failed without printing "
+                "a diff. Check the logs for stderr output. :warning:"
+            )
             self.update_pr(comment_text, args, create_new=False)
             return False
 

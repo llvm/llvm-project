@@ -166,7 +166,8 @@ bool Module::isForBuilding(const LangOptions &LangOpts) const {
   // for either.
   if (!LangOpts.isCompilingModule() && getTopLevelModule()->IsFramework &&
       CurrentModule == LangOpts.ModuleName &&
-      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+      !CurrentModule.ends_with("_Private") &&
+      TopLevelName.ends_with("_Private"))
     TopLevelName = TopLevelName.drop_back(8);
 
   return TopLevelName == CurrentModule;

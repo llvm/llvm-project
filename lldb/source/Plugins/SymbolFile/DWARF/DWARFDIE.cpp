@@ -418,6 +418,54 @@ std::vector<lldb_private::CompilerContext> DWARFDIE::GetDeclContext() const {
   return context;
 }
 
+std::vector<lldb_private::CompilerContext>
+DWARFDIE::GetTypeLookupContext() const {
+  std::vector<lldb_private::CompilerContext> context;
+  // If there is no name, then there is no need to look anything up for this
+  // DIE.
+  const char *name = GetName();
+  if (!name || !name[0])
+    return context;
+  const dw_tag_t tag = Tag();
+  if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
+    return context;
+  DWARFDIE parent = GetParent();
+  if (parent)
+    context = parent.GetTypeLookupContext();
+  auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
+    context.push_back({kind, ConstString(name)});
+  };
+  switch (tag) {
+  case DW_TAG_namespace:
+    push_ctx(CompilerContextKind::Namespace, name);
+    break;
+  case DW_TAG_structure_type:
+    push_ctx(CompilerContextKind::Struct, name);
+    break;
+  case DW_TAG_union_type:
+    push_ctx(CompilerContextKind::Union, name);
+    break;
+  case DW_TAG_class_type:
+    push_ctx(CompilerContextKind::Class, name);
+    break;
+  case DW_TAG_enumeration_type:
+    push_ctx(CompilerContextKind::Enum, name);
+    break;
+  case DW_TAG_variable:
+    push_ctx(CompilerContextKind::Variable, GetPubname());
+    break;
+  case DW_TAG_typedef:
+    push_ctx(CompilerContextKind::Typedef, name);
+    break;
+  case DW_TAG_base_type:
+    push_ctx(CompilerContextKind::Builtin, name);
+    break;
+  default:
+    break;
+  }
+  return context;
+}
+
 DWARFDIE
 DWARFDIE::GetParentDeclContextDIE() const {
   if (IsValid())

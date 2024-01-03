@@ -20,6 +20,9 @@ def ArmStreamingMode : I32EnumAttr<"ArmStreamingMode", "Armv9 Streaming SVE mode
       // StreamingLocally: PSTATE.SM is kept internal and the callee manages it
       // on entry/exit.
       I32EnumAttrCase<"StreamingLocally", 2, "arm_locally_streaming">,
+      // StreamingCompatible: the function may be entered in either
+      // non-streaming mode (PSTATE.SM=0) or in streaming mode (PSTATE.SM=1)
+      I32EnumAttrCase<"StreamingCompatible", 3, "arm_streaming_compatible">,
     ]>{
   let cppNamespace = "mlir::arm_sme";
   let genSpecializedAttr = 0;
@@ -61,7 +64,11 @@ def EnableArmStreaming
                 clEnumValN(mlir::arm_sme::ArmStreamingMode::StreamingLocally,
                            "streaming-locally",
                            "Streaming mode is internal to the function, callee "
-                           "manages PSTATE.SM on entry/exit.")
+                           "manages PSTATE.SM on entry/exit."),
+                clEnumValN(mlir::arm_sme::ArmStreamingMode::StreamingCompatible,
+                           "streaming-compatible",
+                           "Function supports both streaming and non-streaming "
+                           "modes.")
           )}]>,
     Option<"zaMode", "za-mode", "mlir::arm_sme::ArmZaMode",
            /*default=*/"mlir::arm_sme::ArmZaMode::Disabled",
