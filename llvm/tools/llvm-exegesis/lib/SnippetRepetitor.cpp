@@ -26,8 +26,8 @@ public:
                       unsigned LoopBodySize,
                       bool CleanupMemory) const override {
     return [this, Instructions, MinInstructions,
-            CleanupMemory](FunctionFiller &Filler) {
-      auto Entry = Filler.getEntry();
+            CleanupMemory](FunctionFiller &Filler, bool AddReturn,
+                           BasicBlockFiller &Entry) -> BasicBlockFiller {
       if (!Instructions.empty()) {
         // Add the whole snippet at least once.
         Entry.addInstructions(Instructions);
@@ -35,7 +35,9 @@ public:
           Entry.addInstruction(Instructions[I % Instructions.size()]);
         }
       }
-      Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
+      if (AddReturn)
+        Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
+      return std::move(Entry);
     };
   }
 
@@ -57,9 +59,9 @@ public:
                       unsigned LoopBodySize,
                       bool CleanupMemory) const override {
     return [this, Instructions, MinInstructions, LoopBodySize,
-            CleanupMemory](FunctionFiller &Filler) {
+            CleanupMemory](FunctionFiller &Filler, bool AddReturn,
+                           BasicBlockFiller &Entry) -> BasicBlockFiller {
       const auto &ET = State.getExegesisTarget();
-      auto Entry = Filler.getEntry();
 
       // We can not use loop snippet repetitor for terminator instructions.
       for (const MCInst &Inst : Instructions) {
@@ -68,7 +70,7 @@ public:
         if (!MCID.isTerminator())
           continue;
         Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
-        return;
+        return Entry;
       }
 
       auto Loop = Filler.addBasicBlock();
@@ -93,7 +95,7 @@ public:
       Entry.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       Loop.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       // If the snippet setup completed, then we can track liveness.
-      if (Loop.MF.getProperties().hasProperty(
+      if (Loop.MF->getProperties().hasProperty(
               MachineFunctionProperties::Property::TracksLiveness)) {
         // The live ins are: the loop counter, the registers that were setup by
         // the entry block, and entry block live ins.
@@ -112,7 +114,11 @@ public:
 
       // Set up the exit basic block.
       Loop.MBB->addSuccessor(Exit.MBB, BranchProbability::getZero());
-      Exit.addReturn(State.getExegesisTarget(), CleanupMemory);
+
+      if (AddReturn)
+        Exit.addReturn(State.getExegesisTarget(), CleanupMemory);
+
+      return Exit;
     };
   }
 

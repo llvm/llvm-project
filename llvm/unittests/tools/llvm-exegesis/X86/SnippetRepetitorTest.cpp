@@ -44,7 +44,8 @@ protected:
     FunctionFiller Sink(*MF, {X86::EAX});
     const auto Fill =
         Repetitor->Repeat(Instructions, kMinInstructions, kLoopBodySize, false);
-    Fill(Sink);
+    BasicBlockFiller Entry = Sink.getEntry();
+    Fill(Sink, true, Entry);
   }
 
   static constexpr const unsigned kMinInstructions = 3;

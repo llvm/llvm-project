@@ -268,6 +268,12 @@ static cl::opt<unsigned> BenchmarkRepeatCount(
              "before aggregating the results"),
     cl::cat(BenchmarkOptions), cl::init(30));
 
+static cl::opt<unsigned> WarmupMinInstructions(
+    "warmup-min-instructions",
+    cl::desc("The number of iterations of the snippet to run before starting "
+             "the performance counters and actually benchmarking the snippet"),
+    cl::cat(BenchmarkOptions), cl::init(0));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -405,8 +411,9 @@ static void runBenchmarkConfigurations(
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
-      auto RC = ExitOnErr(Runner.getRunnableConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor));
+      auto RC = ExitOnErr(
+          Runner.getRunnableConfiguration(Conf, NumRepetitions, LoopBodySize,
+                                          *Repetitor, WarmupMinInstructions));
       std::optional<StringRef> DumpFile;
       if (DumpObjectToDisk.getNumOccurrences())
         DumpFile = DumpObjectToDisk;
@@ -479,6 +486,12 @@ void benchmarkMain() {
     if (exegesis::pfm::pfmInitialize())
       ExitWithError("cannot initialize libpfm");
 #endif
+  }
+
+  if (WarmupMinInstructions > 0 &&
+      ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess) {
+    ExitWithError("Warmup iterations are currently only supported in the "
+                  "subprocess execution mode.");
   }
 
   InitializeAllAsmPrinters();

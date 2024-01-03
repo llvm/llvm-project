@@ -47,38 +47,14 @@ static constexpr const char ModuleID[] = "ExegesisInfoTest";
 static constexpr const char FunctionID[] = "foo";
 static const Align kFunctionAlignment(4096);
 
-// Fills the given basic block with register setup code, and returns true if
-// all registers could be setup correctly.
-static bool generateSnippetSetupCode(const ExegesisTarget &ET,
-                                     const MCSubtargetInfo *const MSI,
-                                     BasicBlockFiller &BBF,
-                                     const BenchmarkKey &Key,
-                                     bool GenerateMemoryInstructions) {
+static bool generateRegisterSetupCode(
+    const ExegesisTarget &ET, const MCSubtargetInfo *const MSI,
+    BasicBlockFiller &BBF, ArrayRef<RegisterValue> InitialRegisterValues,
+    bool GenerateMemoryInstructions, Register StackPointerRegister) {
   bool IsSnippetSetupComplete = true;
-  if (GenerateMemoryInstructions) {
-    BBF.addInstructions(ET.generateMemoryInitialSetup());
-    for (const MemoryMapping &MM : Key.MemoryMappings) {
-#ifdef __linux__
-      // The frontend that generates that parses the memory mapping information
-      // from the user should validate that the requested address is a multiple
-      // of the page size. Assert that this is true here.
-      assert(MM.Address % getpagesize() == 0 &&
-             "Memory mappings need to be aligned to page boundaries.");
-#endif
-      BBF.addInstructions(ET.generateMmap(
-          MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
-          ET.getAuxiliaryMemoryStartAddress() +
-              sizeof(int) * (Key.MemoryValues.at(MM.MemoryValueName).Index +
-                             SubprocessMemory::AuxiliaryMemoryOffset)));
-    }
-    BBF.addInstructions(ET.setStackRegisterToAuxMem());
-  }
-  Register StackPointerRegister = BBF.MF.getSubtarget()
-                                      .getTargetLowering()
-                                      ->getStackPointerRegisterToSaveRestore();
-  for (const RegisterValue &RV : Key.RegisterInitialValues) {
+  for (const RegisterValue &RV : InitialRegisterValues) {
     if (GenerateMemoryInstructions) {
-      // If we're generating memory instructions, don't load in the value for
+      // If we are generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
       // the setup.
       if (RV.Register == StackPointerRegister)
@@ -90,23 +66,61 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       IsSnippetSetupComplete = false;
     BBF.addInstructions(SetRegisterCode);
   }
-  if (GenerateMemoryInstructions) {
-#ifdef HAVE_LIBPFM
-    BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
-#endif // HAVE_LIBPFM
-    for (const RegisterValue &RV : Key.RegisterInitialValues) {
-      // Load in the stack register now as we're done using it elsewhere
-      // and need to set the value in preparation for executing the
-      // snippet.
-      if (RV.Register != StackPointerRegister)
-        continue;
-      const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
-      if (SetRegisterCode.empty())
-        IsSnippetSetupComplete = false;
-      BBF.addInstructions(SetRegisterCode);
-      break;
-    }
+  return IsSnippetSetupComplete;
+}
+
+static void generateMemoryMappings(const ExegesisTarget &ET,
+                                   BasicBlockFiller &BBF,
+                                   const BenchmarkKey &Key) {
+  BBF.addInstructions(ET.generateMemoryInitialSetup());
+  for (const MemoryMapping &MM : Key.MemoryMappings) {
+#ifdef __linux__
+    // The frontend that generates that parses the memory mapping information
+    // from the user should validate that the requested address is a multiple
+    // of the page size. Assert that this is true here.
+    assert(MM.Address % getpagesize() == 0 &&
+           "Memory mappings need to be aligned to page boundaries.");
+#endif
+    BBF.addInstructions(ET.generateMmap(
+        MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
+        ET.getAuxiliaryMemoryStartAddress() +
+            sizeof(int) * (Key.MemoryValues.at(MM.MemoryValueName).Index +
+                           SubprocessMemory::AuxiliaryMemoryOffset)));
   }
+  BBF.addInstructions(ET.setStackRegisterToAuxMem());
+}
+
+static bool
+setStackPointerRegister(const ExegesisTarget &ET,
+                        const MCSubtargetInfo *const MSI, BasicBlockFiller &BBF,
+                        ArrayRef<RegisterValue> InitialRegisterValues,
+                        Register StackPointerRegister) {
+  bool IsSnippetSetupComplete = true;
+  for (const RegisterValue &RV : InitialRegisterValues) {
+    // Load in the stack register now as we're done using it elsewhere
+    // and need to set the value in preparation for executing the
+    // snippet.
+    if (RV.Register != StackPointerRegister)
+      continue;
+    const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
+    if (SetRegisterCode.empty())
+      IsSnippetSetupComplete = false;
+    BBF.addInstructions(SetRegisterCode);
+    break;
+  }
+  return IsSnippetSetupComplete;
+}
+
+static bool generatePerfCounterReset(
+    const ExegesisTarget &ET, const MCSubtargetInfo *const MSI,
+    BasicBlockFiller &BBF, ArrayRef<RegisterValue> InitialRegisterValues,
+    Register StackPointerRegister) {
+  bool IsSnippetSetupComplete = true;
+#ifdef HAVE_LIBPFM
+  BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
+#endif // HAVE_LIBPFM
+  IsSnippetSetupComplete = setStackPointerRegister(
+      ET, MSI, BBF, InitialRegisterValues, StackPointerRegister);
   return IsSnippetSetupComplete;
 }
 
@@ -147,7 +161,7 @@ MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionName,
   return MMI->getOrCreateMachineFunction(*F);
 }
 
-BasicBlockFiller::BasicBlockFiller(MachineFunction &MF, MachineBasicBlock *MBB,
+BasicBlockFiller::BasicBlockFiller(MachineFunction *MF, MachineBasicBlock *MBB,
                                    const MCInstrInfo *MCII)
     : MF(MF), MBB(MBB), MCII(MCII) {}
 
@@ -193,17 +207,17 @@ void BasicBlockFiller::addReturn(const ExegesisTarget &ET,
 #endif // __linux__
   }
   // Insert the return code.
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   if (TII->getReturnOpcode() < TII->getNumOpcodes()) {
     BuildMI(MBB, DL, TII->get(TII->getReturnOpcode()));
   } else {
-    MachineIRBuilder MIB(MF);
+    MachineIRBuilder MIB(*MF);
     MIB.setMBB(*MBB);
 
     FunctionLoweringInfo FuncInfo;
     FuncInfo.CanLowerReturn = true;
-    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {}, FuncInfo,
-                                                     0);
+    MF->getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {},
+                                                      FuncInfo, 0);
   }
 }
 
@@ -215,7 +229,7 @@ FunctionFiller::FunctionFiller(MachineFunction &MF,
 BasicBlockFiller FunctionFiller::addBasicBlock() {
   MachineBasicBlock *MBB = MF.CreateMachineBasicBlock();
   MF.push_back(MBB);
-  return BasicBlockFiller(MF, MBB, MCII);
+  return BasicBlockFiller(&MF, MBB, MCII);
 }
 
 ArrayRef<unsigned> FunctionFiller::getRegistersSetUp() const {
@@ -241,11 +255,28 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
 
+static void setMBBLiveIns(const ExegesisTarget &ET, MachineBasicBlock *MBB,
+                          bool GenerateMemoryInstructions,
+                          ArrayRef<unsigned> LiveIns) {
+  for (const unsigned Reg : LiveIns)
+    MBB->addLiveIn(Reg);
+
+  if (GenerateMemoryInstructions) {
+    for (const unsigned Reg : ET.getArgumentRegisters())
+      MBB->addLiveIn(Reg);
+    // Add a live in for registers that need saving so that the machine
+    // verifier doesn't fail if the register is never defined.
+    for (const unsigned Reg : ET.getRegistersNeedSaving())
+      MBB->addLiveIn(Reg);
+  }
+}
+
 Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
                        ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
-                       bool GenerateMemoryInstructions) {
+                       bool GenerateMemoryInstructions,
+                       std::optional<FillFunction> WarmupFill) {
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
@@ -280,20 +311,42 @@ Error assembleToStream(const ExegesisTarget &ET,
   FunctionFiller Sink(MF, std::move(RegistersSetUp));
   auto Entry = Sink.getEntry();
 
-  for (const unsigned Reg : LiveIns)
-    Entry.MBB->addLiveIn(Reg);
+  setMBBLiveIns(ET, Entry.MBB, GenerateMemoryInstructions, LiveIns);
 
-  if (GenerateMemoryInstructions) {
-    for (const unsigned Reg : ET.getArgumentRegisters())
-      Entry.MBB->addLiveIn(Reg);
-    // Add a live in for registers that need saving so that the machine verifier
-    // doesn't fail if the register is never defined.
-    for (const unsigned Reg : ET.getRegistersNeedSaving())
-      Entry.MBB->addLiveIn(Reg);
+  bool IsSnippetSetupComplete = true;
+  const MCSubtargetInfo *const MSI = TM->getMCSubtargetInfo();
+
+  Register StackPointerRegister = MF.getSubtarget()
+                                      .getTargetLowering()
+                                      ->getStackPointerRegisterToSaveRestore();
+
+  if (GenerateMemoryInstructions)
+    generateMemoryMappings(ET, Entry, Key);
+
+  BasicBlockFiller BenchmarkStartBlock = Entry;
+
+  if (WarmupFill) {
+    IsSnippetSetupComplete &= generateRegisterSetupCode(
+        ET, MSI, Entry, Key.RegisterInitialValues, GenerateMemoryInstructions,
+        StackPointerRegister);
+
+    IsSnippetSetupComplete &= setStackPointerRegister(
+        ET, MSI, Entry, Key.RegisterInitialValues, StackPointerRegister);
+
+    BenchmarkStartBlock = (*WarmupFill)(Sink, false, Entry);
+
+    setMBBLiveIns(ET, BenchmarkStartBlock.MBB, GenerateMemoryInstructions,
+                  LiveIns);
   }
 
-  const bool IsSnippetSetupComplete = generateSnippetSetupCode(
-      ET, TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
+  IsSnippetSetupComplete &= generateRegisterSetupCode(
+      ET, MSI, BenchmarkStartBlock, Key.RegisterInitialValues,
+      GenerateMemoryInstructions, StackPointerRegister);
+
+  if (GenerateMemoryInstructions)
+    IsSnippetSetupComplete &= generatePerfCounterReset(
+        ET, MSI, BenchmarkStartBlock, Key.RegisterInitialValues,
+        StackPointerRegister);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.
@@ -301,7 +354,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   if (!IsSnippetSetupComplete)
     Properties.reset(MachineFunctionProperties::Property::TracksLiveness);
 
-  Fill(Sink);
+  Fill(Sink, true, BenchmarkStartBlock);
 
   // prologue/epilogue pass needs the reserved registers to be frozen, this
   // is usually done by the SelectionDAGISel pass.

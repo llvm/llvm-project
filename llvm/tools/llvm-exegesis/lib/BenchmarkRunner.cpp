@@ -478,15 +478,22 @@ private:
 Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
     const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
     unsigned MinInstructions, unsigned LoopBodySize,
-    bool GenerateMemoryInstructions) const {
+    bool GenerateMemoryInstructions, unsigned MinWarmupInstructions) const {
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
   SmallString<0> Buffer;
   raw_svector_ostream OS(Buffer);
+
+  std::optional<FillFunction> OptionalWarmupFill = {};
+  if (MinWarmupInstructions > 0)
+    OptionalWarmupFill =
+        Repetitor.Repeat(Instructions, MinWarmupInstructions, LoopBodySize,
+                         GenerateMemoryInstructions);
+
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
           Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
                            GenerateMemoryInstructions),
-          OS, BC.Key, GenerateMemoryInstructions)) {
+          OS, BC.Key, GenerateMemoryInstructions, OptionalWarmupFill)) {
     return std::move(E);
   }
   return Buffer;
@@ -495,7 +502,7 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
 Expected<BenchmarkRunner::RunnableConfiguration>
 BenchmarkRunner::getRunnableConfiguration(
     const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
-    const SnippetRepetitor &Repetitor) const {
+    const SnippetRepetitor &Repetitor, unsigned WarmupMinInstructions) const {
   RunnableConfiguration RC;
 
   Benchmark &BenchmarkResult = RC.BenchmarkResult;
@@ -519,9 +526,12 @@ BenchmarkRunner::getRunnableConfiguration(
   if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareSnippet) {
     const int MinInstructionsForSnippet = 4 * Instructions.size();
     const int LoopBodySizeForSnippet = 2 * Instructions.size();
+    // Do not include warmup iterations in the assembled snippet to display
+    // as reasonable warmup instruction minimums can easily blow up the size
+    // of the string.
     auto Snippet =
         assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
-                        LoopBodySizeForSnippet, GenerateMemoryInstructions);
+                        LoopBodySizeForSnippet, GenerateMemoryInstructions, 0);
     if (Error E = Snippet.takeError())
       return std::move(E);
 
@@ -534,9 +544,9 @@ BenchmarkRunner::getRunnableConfiguration(
   // measurements.
   if (BenchmarkPhaseSelector >
       BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
-    auto Snippet =
-        assembleSnippet(BC, Repetitor, BenchmarkResult.NumRepetitions,
-                        LoopBodySize, GenerateMemoryInstructions);
+    auto Snippet = assembleSnippet(
+        BC, Repetitor, BenchmarkResult.NumRepetitions, LoopBodySize,
+        GenerateMemoryInstructions, WarmupMinInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
