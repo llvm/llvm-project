@@ -136,6 +136,11 @@ private:
   LIBC_INLINE static constexpr StorageType bit_at(int position) {
     return StorageType(1) << position;
   }
+  LIBC_INLINE static constexpr StorageType merge(StorageType a, StorageType b,
+                                                 StorageType mask) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
+    return a ^ ((a ^ b) & mask);
+  }
 
 protected:
   // The number of bits after the decimal dot when the number is in normal form.
@@ -178,9 +183,7 @@ public:
   }
 
   LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
-    mantVal &= FRACTION_MASK;
-    bits &= ~FRACTION_MASK;
-    bits |= mantVal;
+    bits = merge(bits, mantVal, FRACTION_MASK);
   }
 
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
@@ -188,10 +191,7 @@ public:
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    // clear exponent bits
-    bits &= ~EXP_MASK;
-    // set exponent bits
-    bits |= (biased << EXP_MASK_SHIFT) & EXP_MASK;
+    bits = merge(bits, biased << EXP_MASK_SHIFT, EXP_MASK);
   }
 
   LIBC_INLINE constexpr int get_exponent() const {
@@ -327,6 +327,10 @@ public:
       static_assert(cpp::always_false<XType>);
     }
   }
+  // Floating-point conversions.
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
+
+  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
@@ -336,11 +340,6 @@ public:
                 : 0) |
            (FRACTION_MASK & bits);
   }
-
-  // Floating-point conversions.
-  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
-
-  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
   LIBC_INLINE constexpr bool is_inf() const {
     return (bits & EXP_SIG_MASK) == EXP_MASK;
@@ -362,14 +361,20 @@ public:
     return FPBits(bits & EXP_SIG_MASK);
   }
 
+  // Methods below this are used by tests.
+
   LIBC_INLINE static constexpr T zero(bool sign = false) {
-    return FPBits(sign ? SIGN_MASK : StorageType(0)).get_val();
+    StorageType rep = sign ? SIGN_MASK : StorageType(0);
+    return FPBits(rep).get_val();
   }
 
   LIBC_INLINE static constexpr T neg_zero() { return zero(true); }
 
   LIBC_INLINE static constexpr T inf(bool sign = false) {
-    return FPBits((sign ? SIGN_MASK : StorageType(0)) | EXP_MASK).get_val();
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
+                      | EXP_MASK                          // exponent
+                      | 0;                                // mantissa
+    return FPBits(rep).get_val();
   }
 
   LIBC_INLINE static constexpr T neg_inf() { return inf(true); }
@@ -391,13 +396,22 @@ public:
   }
 
   LIBC_INLINE static constexpr T build_nan(StorageType v) {
-    FPBits<T> bits(inf());
-    bits.set_mantissa(v);
-    return T(bits);
+    StorageType rep = 0                      // sign
+                      | EXP_MASK             // exponent
+                      | (v & FRACTION_MASK); // mantissa
+    return FPBits(rep).get_val();
   }
 
   LIBC_INLINE static constexpr T build_quiet_nan(StorageType v) {
     return build_nan(QUIET_NAN_MASK | v);
+  }
+
+  LIBC_INLINE static constexpr FPBits<T>
+  create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0))           // sign
+                      | ((biased_exp << EXP_MASK_SHIFT) & EXP_MASK) // exponent
+                      | (mantissa & FRACTION_MASK);                 // mantissa
+    return FPBits(rep);
   }
 
   // The function convert integer number and unbiased exponent to proper float
@@ -425,15 +439,6 @@ public:
     } else {
       result.set_mantissa(number >> -ep);
     }
-    return result;
-  }
-
-  LIBC_INLINE static constexpr FPBits<T>
-  create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
-    FPBits<T> result;
-    result.set_sign(sign);
-    result.set_biased_exponent(biased_exp);
-    result.set_mantissa(mantissa);
     return result;
   }
 };

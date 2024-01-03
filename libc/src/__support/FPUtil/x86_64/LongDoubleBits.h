@@ -109,33 +109,25 @@ public:
 
   // Methods below this are used by tests.
 
-  LIBC_INLINE static constexpr long double zero() { return 0.0l; }
+  LIBC_INLINE static constexpr long double zero(bool sign = false) {
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
+                      | 0                                 // exponent
+                      | 0                                 // explicit bit
+                      | 0;                                // mantissa
+    return FPBits(rep).get_val();
+  }
 
-  LIBC_INLINE static constexpr long double neg_zero() { return -0.0l; }
+  LIBC_INLINE static constexpr long double neg_zero() { return zero(true); }
 
   LIBC_INLINE static constexpr long double inf(bool sign = false) {
-    FPBits<long double> bits(0.0l);
-    bits.set_biased_exponent(MAX_BIASED_EXPONENT);
-    bits.set_implicit_bit(1);
-    if (sign) {
-      bits.set_sign(true);
-    }
-    return bits.get_val();
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
+                      | EXP_MASK                          // exponent
+                      | EXPLICIT_BIT_MASK                 // explicit bit
+                      | 0;                                // mantissa
+    return FPBits(rep).get_val();
   }
 
   LIBC_INLINE static constexpr long double neg_inf() { return inf(true); }
-
-  LIBC_INLINE static constexpr long double build_nan(StorageType v) {
-    FPBits<long double> bits(0.0l);
-    bits.set_biased_exponent(MAX_BIASED_EXPONENT);
-    bits.set_implicit_bit(1);
-    bits.set_mantissa(v);
-    return bits;
-  }
-
-  LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
-    return build_nan(QUIET_NAN_MASK | v);
-  }
 
   LIBC_INLINE static constexpr long double min_normal() {
     return FPBits(MIN_NORMAL).get_val();
@@ -153,13 +145,16 @@ public:
     return FPBits(MAX_SUBNORMAL).get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<long double>
-  create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
-    FPBits<long double> result;
-    result.set_sign(sign);
-    result.set_biased_exponent(biased_exp);
-    result.set_mantissa(mantissa);
-    return result;
+  LIBC_INLINE static constexpr long double build_nan(StorageType v) {
+    StorageType rep = 0                      // sign
+                      | EXP_MASK             // exponent
+                      | EXPLICIT_BIT_MASK    // explicit bit
+                      | (v & FRACTION_MASK); // mantissa
+    return FPBits(rep).get_val();
+  }
+
+  LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
+    return build_nan(QUIET_NAN_MASK | v);
   }
 };
 
