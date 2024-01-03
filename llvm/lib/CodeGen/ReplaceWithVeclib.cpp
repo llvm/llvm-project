@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Replaces instructions to LLVM vector intrinsics (i.e., the frem instruction
-// or calls to LLVM intrinsics with vector operands) with matching calls to
-// functions from a vector library (e.g., libmvec, SVML) according to
-// TargetLibraryInfo.
+// Replaces LLVM IR instructions with vector operands (i.e., the frem
+// instruction or calls to LLVM intrinsics) with matching calls to functions
+// from a vector library (e.g libmvec, SVML) using TargetLibraryInfo interface
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,7 +69,7 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
   return TLIFunc;
 }
 
-/// Replace the Instruction \p I with a call to the corresponding function from
+/// Replace the instruction \p I with a call to the corresponding function from
 /// the vector library ( \p TLIVecFunc ).
 static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
                                    Function *TLIVecFunc) {
@@ -84,7 +83,7 @@ static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
                 Constant::getAllOnesValue(MaskTy));
   }
 
-  // Preserve the operand bundles for CallInsts.
+  // If it is a call instruction, preserve the operand bundles.
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
     CI->getOperandBundlesAsDefs(OpBundles);
@@ -98,38 +97,35 @@ static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
 
 /// Returns true when successfully replaced \p I with a suitable function taking
 /// vector arguments, based on available mappings in the \p TLI. Currently only
-/// works when \p I is a call to vectorized intrinsic or the frem Instruction.
+/// works when \p I is a call to vectorized intrinsic or the frem instruction.
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                                     Instruction &I) {
   std::string ScalarName;
-  ElementCount VF = ElementCount::getFixed(0);
+  ElementCount EC = ElementCount::getFixed(0);
   CallInst *CI = dyn_cast<CallInst>(&I);
   SmallVector<Type *, 8> ScalarArgTypes;
+  // Compute the argument types of the corresponding scalar call, the scalar
+  // function name, and EC. For CI, it additionally checks if in the vector
+  // call, all vector operands have the same EC.
   if (CI) {
     Intrinsic::ID IID = Intrinsic::not_intrinsic;
     IID = CI->getCalledFunction()->getIntrinsicID();
-    // Compute arguments types of the corresponding scalar call. Additionally
-    // checks if in the vector call, all vector operands have the same EC.
-    for (auto Arg : enumerate(CI ? CI->args() : I.operands())) {
+    for (auto Arg : enumerate(CI->args())) {
       auto *ArgTy = Arg.value()->getType();
-      if (CI && isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
+      if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
         ScalarArgTypes.push_back(ArgTy);
-      } else {
-        auto *VectorArgTy = dyn_cast<VectorType>(ArgTy);
-        // We are expecting only VectorTypes, as:
-        // - with a CallInst, scalar operands are handled earlier
-        // - with the frem Instruction, both operands must be vectors.
-        if (!VectorArgTy)
-          return false;
-        ScalarArgTypes.push_back(ArgTy->getScalarType());
+      } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
+        ScalarArgTypes.push_back(VectorArgTy->getElementType());
         // Disallow vector arguments with different VFs. When processing the
         // first vector argument, store it's VF, and for the rest ensure that
         // they match it.
-        if (VF.isZero())
-          VF = VectorArgTy->getElementCount();
-        else if (VF != VectorArgTy->getElementCount())
+        if (EC.isZero())
+          EC = VectorArgTy->getElementCount();
+        else if (EC != VectorArgTy->getElementCount())
           return false;
-      }
+      } else
+        // Exit when it is supposed to be a vector argument but it isn't.
+        return false;
     }
     // Try to reconstruct the name for the scalar version of the instruction,
     // using scalar argument types.
@@ -137,6 +133,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                      ? Intrinsic::getName(IID, ScalarArgTypes, I.getModule())
                      : Intrinsic::getName(IID).str();
   } else {
+    assert(I.getType()->isVectorTy() && "Instruction must use vectors");
     LibFunc Func;
     auto *ScalarTy = I.getType()->getScalarType();
     if (!TLI.getLibFunc(I.getOpcode(), ScalarTy, Func))
@@ -144,19 +141,19 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
     ScalarName = TLI.getName(Func);
     ScalarArgTypes = {ScalarTy, ScalarTy};
     if (auto *VTy = dyn_cast<VectorType>(I.getType()))
-      VF = VTy->getElementCount();
+      EC = VTy->getElementCount();
   }
 
   // Try to find the mapping for the scalar version of this intrinsic and the
   // exact vector width of the call operands in the TargetLibraryInfo. First,
   // check with a non-masked variant, and if that fails try with a masked one.
   const VecDesc *VD =
-      TLI.getVectorMappingInfo(ScalarName, VF, /*Masked*/ false);
-  if (!VD && !(VD = TLI.getVectorMappingInfo(ScalarName, VF, /*Masked*/ true)))
+      TLI.getVectorMappingInfo(ScalarName, EC, /*Masked*/ false);
+  if (!VD && !(VD = TLI.getVectorMappingInfo(ScalarName, EC, /*Masked*/ true)))
     return false;
 
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Found TLI mapping from: `" << ScalarName
-                    << "` and vector width " << VF << " to: `"
+                    << "` and vector width " << EC << " to: `"
                     << VD->getVectorFnName() << "`.\n");
 
   // Replace the call to the intrinsic with a call to the vector library
@@ -183,16 +180,16 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   return true;
 }
 
-/// Supported Instructions \p I are either frem or CallInsts to Intrinsics.
+/// Supported instructions \p I are either frem or CallInsts to intrinsics.
 static bool isSupportedInstruction(Instruction *I) {
   if (auto *CI = dyn_cast<CallInst>(I)) {
-    if (!CI->getCalledFunction() ||
-        CI->getCalledFunction()->getIntrinsicID() == Intrinsic::not_intrinsic)
-      return false;
-  } else if (I->getOpcode() != Instruction::FRem)
-    return false;
+    if (CI->getCalledFunction() &&
+        CI->getCalledFunction()->getIntrinsicID() != Intrinsic::not_intrinsic)
+      return true;
+  } else if (I->getOpcode() == Instruction::FRem && I->getType()->isVectorTy())
+    return true;
 
-  return true;
+  return false;
 }
 
 static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
