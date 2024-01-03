@@ -1,17 +1,15 @@
 #include "clang/ExtractAPI/AvailabilityInfo.h"
-#include "clang/AST/Attr.h"
-#include "llvm/ADT/STLExtras.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace extractapi;
 
 AvailabilitySet::AvailabilitySet(const Decl *Decl) {
-    
   ASTContext &Context = Decl->getASTContext();
   StringRef PlatformName = Context.getTargetInfo().getPlatformName();
-    
   // Collect availability attributes from all redeclrations.
   for (const auto *RD : Decl->redecls()) {
     if (const auto *A = RD->getAttr<UnavailableAttr>()) {
