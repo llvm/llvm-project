@@ -1206,15 +1206,15 @@ defm MULX64 : MulX<Xi64, WriteMULX64>, REX_W;
 // We don't have patterns for these as there is no advantage over ADC for
 // most code.
 let Form = MRMSrcReg in {
-  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32>, T8, PD;
+  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64>, T8, PD;
+  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32>, T8, XS;
+  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64>, T8, XS;
   let Predicates =[In64BitMode] in {
-    def ADCX32rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi32, null_frag>, EVEX, T_MAP4, PD;
-    def ADCX64rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi64, null_frag>, EVEX, T_MAP4, PD;
-    def ADOX32rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi32, null_frag>, EVEX, T_MAP4, XS;
-    def ADOX64rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi64, null_frag>, EVEX, T_MAP4, XS;
+    def ADCX32rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi32>, EVEX, T_MAP4, PD;
+    def ADCX64rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi64>, EVEX, T_MAP4, PD;
+    def ADOX32rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi32>, EVEX, T_MAP4, XS;
+    def ADOX64rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi64>, EVEX, T_MAP4, XS;
     def ADCX32rr_ND : BinOpRRF_RF<0x66, "adcx", Xi32, null_frag, 1>, PD;
     def ADCX64rr_ND : BinOpRRF_RF<0x66, "adcx", Xi64, null_frag, 1>, PD;
     def ADOX32rr_ND : BinOpRRF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;
@@ -1222,15 +1222,15 @@ let Form = MRMSrcReg in {
   }
 }
 let Form = MRMSrcMem in {
-  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32>, T8, PD;
+  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64>, T8, PD;
+  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32>, T8, XS;
+  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64>, T8, XS;
   let Predicates =[In64BitMode] in {
-    def ADCX32rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi32, null_frag>, EVEX, T_MAP4, PD;
-    def ADCX64rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi64, null_frag>, EVEX, T_MAP4, PD;
-    def ADOX32rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi32, null_frag>, EVEX, T_MAP4, XS;
-    def ADOX64rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi64, null_frag>, EVEX, T_MAP4, XS;
+    def ADCX32rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi32>, EVEX, T_MAP4, PD;
+    def ADCX64rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi64>, EVEX, T_MAP4, PD;
+    def ADOX32rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi32>, EVEX, T_MAP4, XS;
+    def ADOX64rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi64>, EVEX, T_MAP4, XS;
     def ADCX32rm_ND : BinOpRMF_RF<0x66, "adcx", Xi32, null_frag, 1>, PD;
     def ADCX64rm_ND : BinOpRMF_RF<0x66, "adcx", Xi64, null_frag, 1>, PD;
     def ADOX32rm_ND : BinOpRMF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;

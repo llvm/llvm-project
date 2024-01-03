@@ -1650,7 +1650,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     if (HasVEX_4V) // Skip 1st src (which is encoded in VEX_VVVV)
       ++SrcRegNum;
 
-    if (IsND)
+    if (IsND) // Skip new data destination
       ++CurOp;
 
     emitRegModRMByte(MI.getOperand(SrcRegNum),
