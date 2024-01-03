@@ -56,7 +56,9 @@ class BreakpointSerialization(TestBase):
 
         exe_path = self.getBuildArtifact("a.out")
         exe_module = self.orig_target.module[exe_path]
-        self.assertTrue(exe_module.IsValid(), "Failed to find the executable module in target")
+        self.assertTrue(
+            exe_module.IsValid(), "Failed to find the executable module in target"
+        )
         sym_ctx_list = exe_module.FindFunctions("main")
         self.assertTrue(sym_ctx_list.GetSize() == 1, "Unable to find function 'main'")
         sym_ctx = sym_ctx_list.GetContextAtIndex(0)
