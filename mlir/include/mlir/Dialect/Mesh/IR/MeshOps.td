@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_MESH_IR_MESHOPS_TD
 
 include "mlir/Dialect/Mesh/IR/MeshBase.td"
+include "mlir/Dialect/Shape/IR/ShapeBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
@@ -93,6 +94,28 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     }
   }];
   let hasVerifier = 1;
+}
+
+def Mesh_ClusterShapeOp : Mesh_Op<"cluster_shape", [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Get the shape of the cluster.";
+  let arguments = (ins
+    FlatSymbolRefAttr:$mesh,
+    DefaultValuedAttr<Mesh_MeshAxesAttr, "{}">:$axes
+  );
+
+  let results = (outs
+    Variadic<Index>:$result
+  );
+
+  let assemblyFormat = [{
+    $mesh (`axes` `=` $axes^)?
+    attr-dict `:` type($result)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>,
+    OpBuilder<(ins "StringRef":$mesh, "ArrayRef<int16_t>":$axes)>
+  ];
 }
 
 def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
@@ -186,6 +209,29 @@ def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
   }];
 }
 
+def Mesh_ProcessIndexOp : Mesh_Op<"process_index", [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Get the index of current device along specified mesh axis.";
+  let description = [{
+    It is used in the SPMD format of IR.
+    The `axes` mush be non-negative and less than the total number of mesh axes.
+  }];
+  let arguments = (ins
+    FlatSymbolRefAttr:$mesh,
+    DefaultValuedAttr<Mesh_MeshAxesAttr, "{}">:$axes
+  );
+  let results = (outs
+    Variadic<Index>:$result
+  );
+  let assemblyFormat = [{
+    `on` $mesh (`axes` `=` $axes^)?
+    attr-dict `:` type($result)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>,
+    OpBuilder<(ins "StringRef":$mesh, "ArrayRef<int16_t>":$axes)>
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // collective communication ops
 //===----------------------------------------------------------------------===//
@@ -197,7 +243,7 @@ class Mesh_CollectiveCommunicationOpBase<
       [DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
   dag commonArgs = (ins
     FlatSymbolRefAttr:$mesh,
-    DefaultValuedAttr<DenseI16ArrayAttr, "{}">:$mesh_axes
+    DefaultValuedAttr<Mesh_MeshAxesAttr, "{}">:$mesh_axes
   );
 }
 

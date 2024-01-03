@@ -976,9 +976,11 @@ LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   // lets us pick up facts from expressions like "and i32 (call i32
   // @foo()), 32"
   std::optional<ConstantRange> LHSRes = getRangeFor(I->getOperand(0), I, BB);
+  if (!LHSRes)
+    return std::nullopt;
+
   std::optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
-  if (!LHSRes || !RHSRes)
-    // More work to do before applying this transfer rule.
+  if (!RHSRes)
     return std::nullopt;
 
   const ConstantRange &LHSRange = *LHSRes;
@@ -1281,9 +1283,11 @@ LazyValueInfoImpl::getValueFromCondition(Value *Val, Value *Cond,
 
   std::optional<ValueLatticeElement> LV =
       getValueFromCondition(Val, L, IsTrueDest, UseBlockValue, Depth);
+  if (!LV)
+    return std::nullopt;
   std::optional<ValueLatticeElement> RV =
       getValueFromCondition(Val, R, IsTrueDest, UseBlockValue, Depth);
-  if (!LV || !RV)
+  if (!RV)
     return std::nullopt;
 
   // if (L && R) -> intersect L and R

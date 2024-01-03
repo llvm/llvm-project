@@ -2013,3 +2013,6 @@ ds_sub_clamp_rtn_u32 v5, v1, v2
 
 ds_sub_clamp_u32 v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_ordered_add_b64 v0, v[2:3], s[0:1] offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
