@@ -1544,28 +1544,25 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     return AliasResult::NoAlias;
 
   if (CtxI && EnableSeparateStorageAnalysis) {
-    for (auto &AssumeVH : AC.assumptions()) {
-      if (!AssumeVH)
+    for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
+      if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
 
-      AssumeInst *Assume = cast<AssumeInst>(AssumeVH);
+      AssumeInst *Assume = cast<AssumeInst>(Elem);
+      OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
+      if (OBU.getTagName() == "separate_storage") {
+        assert(OBU.Inputs.size() == 2);
+        const Value *Hint1 = OBU.Inputs[0].get();
+        const Value *Hint2 = OBU.Inputs[1].get();
+        // This is often a no-op; instcombine rewrites this for us. No-op
+        // getUnderlyingObject calls are fast, though.
+        const Value *HintO1 = getUnderlyingObject(Hint1);
+        const Value *HintO2 = getUnderlyingObject(Hint2);
 
-      for (unsigned Idx = 0; Idx < Assume->getNumOperandBundles(); Idx++) {
-        OperandBundleUse OBU = Assume->getOperandBundleAt(Idx);
-        if (OBU.getTagName() == "separate_storage") {
-          assert(OBU.Inputs.size() == 2);
-          const Value *Hint1 = OBU.Inputs[0].get();
-          const Value *Hint2 = OBU.Inputs[1].get();
-          // This is often a no-op; instcombine rewrites this for us. No-op
-          // getUnderlyingObject calls are fast, though.
-          const Value *HintO1 = getUnderlyingObject(Hint1);
-          const Value *HintO2 = getUnderlyingObject(Hint2);
-
-          if (((O1 == HintO1 && O2 == HintO2) ||
-               (O1 == HintO2 && O2 == HintO1)) &&
-              isValidAssumeForContext(Assume, CtxI, DT))
-            return AliasResult::NoAlias;
-        }
+        if (((O1 == HintO1 && O2 == HintO2) ||
+             (O1 == HintO2 && O2 == HintO1)) &&
+            isValidAssumeForContext(Assume, CtxI, DT))
+          return AliasResult::NoAlias;
       }
     }
   }
