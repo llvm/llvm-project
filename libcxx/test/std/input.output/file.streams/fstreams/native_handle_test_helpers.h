@@ -79,8 +79,6 @@ inline void test_native_handle() {
 
 template <typename StreamT>
 inline void test_native_handle_assertion() {
-  std::filesystem::path p = get_temp_file_name();
-
   StreamT f;
 
   // non-const
