@@ -1544,7 +1544,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     return AliasResult::NoAlias;
 
   if (CtxI && EnableSeparateStorageAnalysis) {
-    for (auto &AssumeVH : AC.assumptions()) {
+    for (auto &AssumeVH : AC.assumptionsFor(O1)) {
       if (!AssumeVH)
         continue;
 
