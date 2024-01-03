@@ -19,15 +19,15 @@ int main(int, char**) {
     int range[]   = {1, 2, 3};
     auto striv    = std::ranges::views::stride(range, 3);
     auto striv_it = striv.begin();
-    striv_it++;
-    TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
+    ++striv_it;
+    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(striv_it), "Cannot dereference an iterator at the end.");
   }
   {
     int range[]   = {1, 2, 3};
     auto striv    = std::ranges::views::stride(range, 4);
     auto striv_it = striv.begin();
-    striv_it++;
-    TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
+    ++striv_it;
+    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(striv_it), "Cannot dereference an iterator at the end.");
   }
   return 0;
 }
