@@ -265,7 +265,13 @@ enum : unsigned {
   WASM_TYPE_V128 = 0x7B,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXTERNREF = 0x6F,
+  WASM_TYPE_NULLABLE = 0x63,
   WASM_TYPE_FUNC = 0x60,
+  WASM_TYPE_ARRAY = 0x5E, // Composite types, not used for codegen
+  WASM_TYPE_STRUCT = 0x5F,
+  WASM_TYPE_SUB = 0x50,
+  WASM_TYPE_SUB_FINAL = 0x4F,
+  WASM_TYPE_REC = 0x4E,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
 
@@ -431,11 +437,13 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
+  OTHERREF,
 };
 
 struct WasmSignature {
   SmallVector<ValType, 1> Returns;
   SmallVector<ValType, 4> Params;
+  enum {Function, Other} Kind = Function;
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State = Plain;
 

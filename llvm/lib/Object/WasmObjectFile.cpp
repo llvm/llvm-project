@@ -21,6 +21,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -29,6 +30,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <sys/types.h>
 
 #define DEBUG_TYPE "wasm-object"
 
@@ -1104,26 +1106,107 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
+  auto parseFieldDef = [&]() {
+    int32_t TypeCode = readVarint32((Ctx));
+    uint32_t Mutability = readVaruint32(Ctx);
+  };
+  auto parseRecType = [&]() {
+    uint8_t Form = readUint8(Ctx);
+    if (Form == wasm::WASM_TYPE_REC) {
+      uint32_t Size = readVaruint32(Ctx);
+      assert(Size > 0); // TODO real errors here and below
+      Form = readVaruint32(Ctx);
+    }
+    if (Form == wasm::WASM_TYPE_SUB || Form == wasm::WASM_TYPE_SUB_FINAL) {
+      uint32_t Supers = readVaruint32(Ctx);
+      if (Supers > 0) {
+        assert(Supers == 1);
+        uint32_t SuperIndex = readVaruint32(Ctx);
+      }
+      Form = readVaruint32(Ctx);
+    }
+    if (Form == wasm::WASM_TYPE_STRUCT) {
+      uint32_t NumFields = readVaruint32(Ctx);
+      for (size_t i = 0; i < NumFields; i++) {
+        parseFieldDef();
+      }
+    } else if (Form == wasm::WASM_TYPE_ARRAY) {
+      parseFieldDef();
+    }
+
+  };
+  auto parseParamType = [&](uint32_t code) -> wasm::ValType {
+    switch(code) {
+      case wasm::WASM_TYPE_I32:
+      case wasm::WASM_TYPE_I64:
+      case wasm::WASM_TYPE_F32:
+      case wasm::WASM_TYPE_F64:
+      case wasm::WASM_TYPE_V128:
+      case wasm::WASM_TYPE_FUNCREF:
+      case wasm::WASM_TYPE_EXTERNREF:
+        return wasm::ValType(code);
+    }
+  };
   uint32_t Count = readVaruint32(Ctx);
   Signatures.reserve(Count);
   while (Count--) {
     wasm::WasmSignature Sig;
     uint8_t Form = readUint8(Ctx);
+    llvm::errs() << llvm::format("Top Count %d form %x", Count, Form) << '\n';
+    if (Form == wasm::WASM_TYPE_REC) {
+      uint32_t Size = readVaruint32(Ctx);
+      assert(Size > 0); // TODO real errors here and below
+      Form = readVaruint32(Ctx);
+      wasm::WasmSignature s; s.Kind = s.Other;
+      Signatures.push_back(s);
+      Count--;
+      llvm::errs() << llvm::format(" Rec size %d form %x", Size, Form) << '\n';
+    }
     if (Form != wasm::WASM_TYPE_FUNC) {
+      wasm::WasmSignature s; s.Kind = s.Other;
+      if (Form == wasm::WASM_TYPE_SUB || Form == wasm::WASM_TYPE_SUB_FINAL) {
+        uint32_t Supers = readVaruint32(Ctx);
+        if (Supers > 0) {
+          assert(Supers == 1);
+          uint32_t SuperIndex = readVaruint32(Ctx);
+        }
+        Form = readVaruint32(Ctx);
+        llvm::errs() << llvm::format(" Sub Supers %d form %x", Supers, Form) << '\n';
+      }
+      if (Form == wasm::WASM_TYPE_STRUCT) {
+        uint32_t NumFields = readVaruint32(Ctx);
+        for (size_t i = 0; i < NumFields; i++) {
+          parseFieldDef();
+        }
+        llvm::errs() << llvm::format(" Struct size %d", NumFields) << '\n';
+      } else if (Form == wasm::WASM_TYPE_ARRAY) {
+        parseFieldDef();
+        llvm::errs() << llvm::format("arr form %x", Form) << '\n';
+      } else {
+        llvm::errs() << llvm::format(" bad form %x", Form) << '\n';
+        return make_error<GenericBinaryError>("bad form", object_error::parse_failed);
+      }
+      Signatures.push_back(s);
+      continue;
       return make_error<GenericBinaryError>("invalid signature type",
                                             object_error::parse_failed);
     }
+
     uint32_t ParamCount = readVaruint32(Ctx);
     Sig.Params.reserve(ParamCount);
+    llvm::errs() << llvm::format("param ct %d ", ParamCount);
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
+      if (ParamType == )
       Sig.Params.push_back(wasm::ValType(ParamType));
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
+    llvm::errs() << llvm::format("return ct %d\n", ReturnCount);
     while (ReturnCount--) {
       uint32_t ReturnType = readUint8(Ctx);
       Sig.Returns.push_back(wasm::ValType(ReturnType));
     }
+    
     Signatures.push_back(std::move(Sig));
   }
   if (Ctx.Ptr != Ctx.End)
