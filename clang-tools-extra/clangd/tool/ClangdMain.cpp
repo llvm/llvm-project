@@ -478,7 +478,6 @@ enum class ErrorResultCode : int {
   CheckFailed = 3
 };
 
-
 int clangdMain(int argc, char *argv[]) {
   // Clang could run on the main thread. e.g., when the flag '-check' or '-sync'
   // is enabled.
