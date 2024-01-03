@@ -639,6 +639,20 @@ void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
   printU4ImmDecOperand(MI, OpNo, O);
 }
 
+void AMDGPUInstPrinter::printWaitVAVDst(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  O << " wait_va_vdst:";
+  printU4ImmDecOperand(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  O << " wait_vm_vsrc:";
+  printU4ImmDecOperand(MI, OpNo, O);
+}
+
 void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
