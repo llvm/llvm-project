@@ -494,6 +494,8 @@ public:
   /// Return all of the discardable attributes on this operation as a
   /// DictionaryAttr.
   DictionaryAttr getDiscardableAttrDictionary() {
+    if (getPropertiesStorage())
+      return attrs;
     return DictionaryAttr::get(getContext(),
                                llvm::to_vector(getDiscardableAttrs()));
   }
