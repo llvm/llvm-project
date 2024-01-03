@@ -5151,6 +5151,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
+  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
+      // FIXME: Breaking after newlines seems useful in general. Turn this into
+      // an option and Recognize more cases like endl etc, and break independent
+      // of what comes after operator lessless.
+      Right.Next->is(tok::string_literal) &&
+      Left.TokenText.ends_with("\\n\"")) {
+    return true;
+  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

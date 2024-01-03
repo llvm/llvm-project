@@ -10,6 +10,7 @@
 
 #include "FormatTestUtils.h"
 #include "TestLexer.h"
+#include "clang/Basic/TokenKinds.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -2497,6 +2498,15 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+}
+
+TEST_F(TokenAnnotatorTest, StreamOperator) {
+  auto Tokens = annotate("\"foo\\n\" << aux << \"foo\\n\" << \"foo\";");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_FALSE(Tokens[1]->MustBreakBefore);
+  EXPECT_FALSE(Tokens[3]->MustBreakBefore);
+  // Only break between string literals if the former ends with \n.
+  EXPECT_TRUE(Tokens[5]->MustBreakBefore);
 }
 
 } // namespace
