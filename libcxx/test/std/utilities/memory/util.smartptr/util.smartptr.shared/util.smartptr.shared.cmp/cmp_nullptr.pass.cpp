@@ -87,6 +87,7 @@ int main(int, char**)
   assert((nullptr <=> p2) == std::strong_ordering::equivalent);
 #endif
 
+#if TEST_STD_VER > 14
   const std::shared_ptr<int[]> p3(new int[1]);
   assert(!(p3 == nullptr));
   assert(!(nullptr == p3));
@@ -98,10 +99,10 @@ int main(int, char**)
   assert(!(nullptr > p3));
   assert((p3 >= nullptr));
   assert(!(nullptr >= p3));
-#if TEST_STD_VER > 17
+#  if TEST_STD_VER > 17
   assert((nullptr <=> p3) == std::strong_ordering::less);
   assert((p3 <=> nullptr) == std::strong_ordering::greater);
-#endif
+#  endif
 
   const std::shared_ptr<int[]> p4;
   assert((p4 == nullptr));
@@ -114,8 +115,9 @@ int main(int, char**)
   assert(!(nullptr > p4));
   assert((p4 >= nullptr));
   assert((nullptr >= p4));
-#if TEST_STD_VER > 17
+#  if TEST_STD_VER > 17
   assert((nullptr <=> p4) == std::strong_ordering::equivalent);
+#  endif
 #endif
 
   return 0;
