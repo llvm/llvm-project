@@ -32,17 +32,17 @@
 
 #if TEST_STD_VER >= 26
 
-#include "check_assertion.h"
+#  include "check_assertion.h"
 
 inline bool is_handle_valid(NativeHandleT handle) {
-#if defined(_WIN32)
+#  if defined(_WIN32)
   BY_HANDLE_FILE_INFORMATION fileInformation;
   return GetFileInformationByHandle(handle, &fileInformation));
-#elif __has_include(<unistd.h>) // POSIX
+#  elif __has_include(<unistd.h>) // POSIX
   return fcntl(handle, F_GETFL) != -1 || errno != EBADF;
-#else
-#  error "Provide a native file handle!"
-#endif
+#  else
+#    error "Provide a native file handle!"
+#  endif
 }
 
 template <typename CharT, typename StreamT>
