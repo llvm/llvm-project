@@ -67,9 +67,10 @@ void errno_mkstemp(char *template) {
 void errno_mkdtemp(char *template) {
   char *Dir = mkdtemp(template);
   if (Dir == NULL) {
-    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {}                    // no warning
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
   } else {
-    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+    clang_analyzer_eval(Dir == template); // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }

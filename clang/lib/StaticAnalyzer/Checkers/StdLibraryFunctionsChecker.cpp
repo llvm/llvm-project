@@ -2514,7 +2514,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "mkdtemp", Signature(ArgTypes{CharPtrTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
