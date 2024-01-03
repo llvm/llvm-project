@@ -19,6 +19,9 @@
 #include "linux/io.h"
 #elif defined(__Fuchsia__)
 #include "fuchsia/io.h"
+#elif defined(__ELF__)
+// TODO: Ideally we would have LIBC_TARGET_OS_IS_BAREMETAL.
+#include "baremetal/io.h"
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H
