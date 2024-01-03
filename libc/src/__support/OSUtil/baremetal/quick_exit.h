@@ -14,9 +14,7 @@ namespace LIBC_NAMESPACE {
 // This is intended to be provided by the vendor.
 extern "C" void __llvm_libc_quick_exit(int status);
 
-void quick_exit(int status) {
-  __llvm_libc_quick_exit(status);
-}
+void quick_exit(int status) { __llvm_libc_quick_exit(status); }
 
 } // namespace LIBC_NAMESPACE
 
