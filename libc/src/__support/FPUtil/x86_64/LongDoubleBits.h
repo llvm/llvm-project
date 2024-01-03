@@ -37,20 +37,21 @@ private:
   using UP::QUIET_NAN_MASK;
 
 public:
-  static constexpr int MAX_BIASED_EXPONENT = 0x7FFF;
+  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
+  // The x86 80 bit float represents the leading digit of the mantissa
+  // explicitly. This is the mask for that bit.
+  static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
+                                                   << FRACTION_LEN;
+  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0, "mask disjoint");
+  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK, "mask cover");
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
-  // Subnormal numbers include the implicit bit in x86 long double formats.
-  static constexpr StorageType MAX_SUBNORMAL =
-      (StorageType(1) << FRACTION_LEN) - 1;
-  static constexpr StorageType MIN_NORMAL = (StorageType(3) << FRACTION_LEN);
+  static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
+  static constexpr StorageType MIN_NORMAL =
+      (StorageType(1) << SIG_LEN) | EXPLICIT_BIT_MASK;
   static constexpr StorageType MAX_NORMAL =
-      (StorageType(MAX_BIASED_EXPONENT - 1) << (FRACTION_LEN + 1)) |
-      (StorageType(1) << FRACTION_LEN) | MAX_SUBNORMAL;
+      (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
-    // The x86 80 bit float represents the leading digit of the mantissa
-    // explicitly. This is the mask for that bit.
-    constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1) << FRACTION_LEN;
     return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
   }
 

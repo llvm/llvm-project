@@ -288,6 +288,8 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
 private:
   using UP::EXP_SIG_MASK;
   using UP::QUIET_NAN_MASK;
+  using UP::SIG_LEN;
+  using UP::SIG_MASK;
 
 public:
   using StorageType = typename UP::StorageType;
@@ -319,7 +321,7 @@ public:
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
   static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
   static constexpr StorageType MAX_NORMAL =
-      ((StorageType(MAX_BIASED_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
+      (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
   LIBC_INLINE constexpr FPBits() = default;
 
