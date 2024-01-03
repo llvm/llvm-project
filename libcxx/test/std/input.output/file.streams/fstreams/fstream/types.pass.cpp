@@ -23,8 +23,10 @@
 #include <type_traits>
 
 #include "test_macros.h"
-#include "../native_handle_test_helpers.h"
-#include "../types.h"
+
+#if _LIBCPP_STD_VER >= 26
+#  include "../native_handle_test_helpers.h"
+#endif
 
 int main(int, char**)
 {
