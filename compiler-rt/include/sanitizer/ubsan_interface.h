@@ -23,10 +23,10 @@ extern "C" {
 /// <c>verbosity=1:halt_on_error=0</c>).
 ///
 /// \returns Default options string.
-const char* __ubsan_default_options(void);
+const char *SANITIZER_CDECL __ubsan_default_options(void);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // SANITIZER_UBSAN_INTERFACE_H
+#endif // SANITIZER_UBSAN_INTERFACE_H

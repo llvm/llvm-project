@@ -211,7 +211,7 @@ INTERCEPTOR_WINAPI(size_t, HeapSize, HANDLE hHeap, DWORD dwFlags,
   // interception takes place, so if it is not owned by the RTL heap we can
   // pass it to the ASAN heap for inspection.
   if (flags()->windows_hook_rtl_allocators) {
-    if (!asan_inited || OWNED_BY_RTL(hHeap, lpMem))
+    if (!AsanInited() || OWNED_BY_RTL(hHeap, lpMem))
       return REAL(HeapSize)(hHeap, dwFlags, lpMem);
   } else {
     CHECK(dwFlags == 0 && "unsupported heap flags");
@@ -226,7 +226,7 @@ INTERCEPTOR_WINAPI(LPVOID, HeapAlloc, HANDLE hHeap, DWORD dwFlags,
   // If the ASAN runtime is not initialized, or we encounter an unsupported
   // flag, fall back to the original allocator.
   if (flags()->windows_hook_rtl_allocators) {
-    if (UNLIKELY(!asan_inited ||
+    if (UNLIKELY(!AsanInited() ||
                  (dwFlags & HEAP_ALLOCATE_UNSUPPORTED_FLAGS) != 0)) {
       return REAL(HeapAlloc)(hHeap, dwFlags, dwBytes);
     }
@@ -297,7 +297,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
 
     // If this heap block which was allocated before the ASAN
     // runtime came up, use the real HeapFree function.
-    if (UNLIKELY(!asan_inited)) {
+    if (UNLIKELY(!AsanInited())) {
       return reallocFunc(hHeap, dwFlags, lpMem, dwBytes);
     }
     bool only_asan_supported_flags =
@@ -420,7 +420,7 @@ size_t RtlSizeHeap(void* HeapHandle, DWORD Flags, void* BaseAddress);
 INTERCEPTOR_WINAPI(size_t, RtlSizeHeap, HANDLE HeapHandle, DWORD Flags,
                    void* BaseAddress) {
   if (!flags()->windows_hook_rtl_allocators ||
-      UNLIKELY(!asan_inited || OWNED_BY_RTL(HeapHandle, BaseAddress))) {
+      UNLIKELY(!AsanInited() || OWNED_BY_RTL(HeapHandle, BaseAddress))) {
     return REAL(RtlSizeHeap)(HeapHandle, Flags, BaseAddress);
   }
   GET_CURRENT_PC_BP_SP;
@@ -448,7 +448,7 @@ INTERCEPTOR_WINAPI(void*, RtlAllocateHeap, HANDLE HeapHandle, DWORD Flags,
   // If the ASAN runtime is not initialized, or we encounter an unsupported
   // flag, fall back to the original allocator.
   if (!flags()->windows_hook_rtl_allocators ||
-      UNLIKELY(!asan_inited ||
+      UNLIKELY(!AsanInited() ||
                (Flags & HEAP_ALLOCATE_UNSUPPORTED_FLAGS) != 0)) {
     return REAL(RtlAllocateHeap)(HeapHandle, Flags, Size);
   }

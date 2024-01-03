@@ -162,6 +162,20 @@ enum ArchExtKind : unsigned {
   AEK_FPMR =          58, // FEAT_FPMR
   AEK_FP8 =           59, // FEAT_FP8
   AEK_FAMINMAX =      60, // FEAT_FAMINMAX
+  AEK_FP8FMA =        61, // FEAT_FP8FMA
+  AEK_SSVE_FP8FMA =   62, // FEAT_SSVE_FP8FMA
+  AEK_FP8DOT2 =       63, // FEAT_FP8DOT2
+  AEK_SSVE_FP8DOT2 =  64, // FEAT_SSVE_FP8DOT2
+  AEK_FP8DOT4 =       65, // FEAT_FP8DOT4
+  AEK_SSVE_FP8DOT4 =  66, // FEAT_SSVE_FP8DOT4
+  AEK_LUT =           67, // FEAT_LUT
+  AEK_SME_LUTv2 =     68, // FEAT_SME_LUTv2
+  AEK_SMEF8F16 =      69, // FEAT_SME_F8F16
+  AEK_SMEF8F32 =      70, // FEAT_SME_F8F32
+  AEK_SMEFA64 =       71, // FEAT_SME_FA64
+  AEK_CPA =           72, // FEAT_CPA
+  AEK_PAUTHLR =       73, // FEAT_PAuth_LR
+  AEK_TLBIW =         74, // FEAT_TLBIW
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -273,6 +287,20 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"fpmr", AArch64::AEK_FPMR, "+fpmr", "-fpmr", FEAT_INIT, "", 0},
     {"fp8", AArch64::AEK_FP8, "+fp8", "-fp8", FEAT_INIT, "+fpmr", 0},
     {"faminmax", AArch64::AEK_FAMINMAX, "+faminmax", "-faminmax", FEAT_INIT, "", 0},
+    {"fp8fma", AArch64::AEK_FP8FMA, "+fp8fma", "-fp8fma", FEAT_INIT, "+fpmr", 0},
+    {"ssve-fp8fma", AArch64::AEK_SSVE_FP8FMA, "+ssve-fp8fma", "-ssve-fp8fma", FEAT_INIT, "+sme2", 0},
+    {"fp8dot2", AArch64::AEK_FP8DOT2, "+fp8dot2", "-fp8dot2", FEAT_INIT, "", 0},
+    {"ssve-fp8dot2", AArch64::AEK_SSVE_FP8DOT2, "+ssve-fp8dot2", "-ssve-fp8dot2", FEAT_INIT, "+sme2", 0},
+    {"fp8dot4", AArch64::AEK_FP8DOT4, "+fp8dot4", "-fp8dot4", FEAT_INIT, "", 0},
+    {"ssve-fp8dot4", AArch64::AEK_SSVE_FP8DOT4, "+ssve-fp8dot4", "-ssve-fp8dot4", FEAT_INIT, "+sme2", 0},
+    {"lut", AArch64::AEK_LUT, "+lut", "-lut", FEAT_INIT, "", 0},
+    {"sme-lutv2", AArch64::AEK_SME_LUTv2, "+sme-lutv2", "-sme-lutv2", FEAT_INIT, "", 0},
+    {"sme-f8f16", AArch64::AEK_SMEF8F16, "+sme-f8f16", "-sme-f8f16", FEAT_INIT, "+sme2,+fp8", 0},
+    {"sme-f8f32", AArch64::AEK_SMEF8F32, "+sme-f8f32", "-sme-f8f32", FEAT_INIT, "+sme2,+fp8", 0},
+    {"sme-fa64",  AArch64::AEK_SMEFA64,  "+sme-fa64", "-sme-fa64",  FEAT_INIT, "", 0},
+    {"cpa", AArch64::AEK_CPA, "+cpa", "-cpa", FEAT_INIT, "", 0},
+    {"pauth-lr", AArch64::AEK_PAUTHLR, "+pauth-lr", "-pauth-lr", FEAT_INIT, "", 0},
+    {"tlbiw", AArch64::AEK_TLBIW, "+tlbiw", "-tlbiw", FEAT_INIT, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };
@@ -356,6 +384,8 @@ inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a
                                         AArch64::ExtensionBitset({AArch64::AEK_MOPS, AArch64::AEK_HBC}))};
 inline constexpr ArchInfo ARMV9_4A  = { VersionTuple{9, 4}, AProfile, "armv9.4-a", "+v9.4a", (ARMV9_3A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SPECRES2, AArch64::AEK_CSSC, AArch64::AEK_RASv2}))};
+inline constexpr ArchInfo ARMV9_5A  = { VersionTuple{9, 5}, AProfile, "armv9.5-a", "+v9.5a", (ARMV9_4A.DefaultExts |
+                                        AArch64::ExtensionBitset({AArch64::AEK_CPA}))};
 // For v8-R, we do not enable crypto and align with GCC that enables a more minimal set of optional architecture extensions.
 inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", (ARMV8_5A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SSBS,
@@ -363,10 +393,10 @@ inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r",
 // clang-format on
 
 // The set of all architectures
-static constexpr std::array<const ArchInfo *, 16> ArchInfos = {
+static constexpr std::array<const ArchInfo *, 17> ArchInfos = {
     &ARMV8A,   &ARMV8_1A, &ARMV8_2A, &ARMV8_3A, &ARMV8_4A, &ARMV8_5A,
-    &ARMV8_6A, &ARMV8_7A, &ARMV8_8A, &ARMV8_9A, &ARMV9A, &ARMV9_1A,
-    &ARMV9_2A, &ARMV9_3A, &ARMV9_4A, &ARMV8R,
+    &ARMV8_6A, &ARMV8_7A, &ARMV8_8A, &ARMV8_9A, &ARMV9A,   &ARMV9_1A,
+    &ARMV9_2A, &ARMV9_3A, &ARMV9_4A, &ARMV9_5A, &ARMV8R,
 };
 
 // Details of a specific CPU.
@@ -405,6 +435,11 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_PAUTH, AArch64::AEK_MTE, AArch64::AEK_SSBS,
           AArch64::AEK_SVE, AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM,
           AArch64::AEK_FP16FML}))},
+    {"cortex-a520", ARMV9_2A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_MTE,
+          AArch64::AEK_FP16FML, AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES}))},
     {"cortex-a57", ARMV8A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_CRC}))},
@@ -462,6 +497,12 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_I8MM, AArch64::AEK_PREDRES, AArch64::AEK_PERFMON,
           AArch64::AEK_PROFILE, AArch64::AEK_SVE, AArch64::AEK_SVE2BITPERM,
           AArch64::AEK_BF16, AArch64::AEK_FLAGM}))},
+    {"cortex-a720", ARMV9_2A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_MTE,
+          AArch64::AEK_FP16FML, AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES,
+          AArch64::AEK_PROFILE}))},
     {"cortex-r82", ARMV8R,
      (AArch64::ExtensionBitset({AArch64::AEK_LSE}))},
     {"cortex-x1", ARMV8_2A,
@@ -487,6 +528,12 @@ inline constexpr CpuInfo CpuInfos[] = {
           AArch64::AEK_SVE2BITPERM, AArch64::AEK_SB, AArch64::AEK_PAUTH,
           AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_PREDRES,
           AArch64::AEK_FLAGM, AArch64::AEK_SSBS}))},
+    {"cortex-x4", ARMV9_2A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_MTE,
+          AArch64::AEK_FP16FML, AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES,
+          AArch64::AEK_PROFILE}))},
     {"neoverse-e1", ARMV8_2A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_DOTPROD,
@@ -496,10 +543,9 @@ inline constexpr CpuInfo CpuInfos[] = {
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_DOTPROD,
           AArch64::AEK_FP16, AArch64::AEK_PROFILE, AArch64::AEK_RCPC,
           AArch64::AEK_SSBS}))},
-    {"neoverse-n2", ARMV8_5A,
+    {"neoverse-n2", ARMV9A,
      (AArch64::ExtensionBitset(
-         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_SM4, AArch64::AEK_BF16, AArch64::AEK_DOTPROD,
+         {AArch64::AEK_BF16, AArch64::AEK_DOTPROD,
           AArch64::AEK_FP16, AArch64::AEK_I8MM, AArch64::AEK_MTE,
           AArch64::AEK_SB, AArch64::AEK_SSBS, AArch64::AEK_SVE,
           AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM}))},
@@ -548,30 +594,37 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"apple-a13", ARMV8_4A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
     {"apple-a14", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
-    {"apple-a15", ARMV8_5A,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a15", ARMV8_6A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
-          AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
-    {"apple-a16", ARMV8_5A,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a16", ARMV8_6A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
-          AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a17", ARMV8_6A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+
     {"apple-m1", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
-    {"apple-m2", ARMV8_5A,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-m2", ARMV8_6A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
-          AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-m3", ARMV8_6A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+
     {"apple-s4", ARMV8_3A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16}))},

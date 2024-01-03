@@ -28,4 +28,4 @@ define i1 @foo(ptr %p) {
 ; X86_32-NEXT:   call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0Aendbr32\0Ajmp ${1:c}@plt\0A.balign 16, 0xcc\0A", "s,s"(ptr @f.cfi, ptr @g.cfi)
 ; X86_64-NEXT:   call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0Aendbr64\0Ajmp ${1:c}@plt\0A.balign 16, 0xcc\0A", "s,s"(ptr @f.cfi, ptr @g.cfi)
 
-; X86_64: attributes #[[#ATTR]] = { naked nocf_check nounwind }
+; X86_64: attributes #[[#ATTR]] = { naked nocf_check noinline }

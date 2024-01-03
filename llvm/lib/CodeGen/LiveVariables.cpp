@@ -406,11 +406,11 @@ bool LiveVariables::HandlePhysRegKill(Register Reg, MachineInstr *MI) {
   return true;
 }
 
-void LiveVariables::HandleRegMask(const MachineOperand &MO) {
+void LiveVariables::HandleRegMask(const MachineOperand &MO, unsigned NumRegs) {
   // Call HandlePhysRegKill() for all live registers clobbered by Mask.
   // Clobbered registers are always dead, sp there is no need to use
   // HandlePhysRegDef().
-  for (unsigned Reg = 1, NumRegs = TRI->getNumRegs(); Reg != NumRegs; ++Reg) {
+  for (unsigned Reg = 1; Reg != NumRegs; ++Reg) {
     // Skip dead regs.
     if (!PhysRegDef[Reg] && !PhysRegUse[Reg])
       continue;
@@ -421,7 +421,8 @@ void LiveVariables::HandleRegMask(const MachineOperand &MO) {
     // This avoids needless implicit operands.
     unsigned Super = Reg;
     for (MCPhysReg SR : TRI->superregs(Reg))
-      if ((PhysRegDef[SR] || PhysRegUse[SR]) && MO.clobbersPhysReg(SR))
+      if (SR < NumRegs && (PhysRegDef[SR] || PhysRegUse[SR]) &&
+          MO.clobbersPhysReg(SR))
         Super = SR;
     HandlePhysRegKill(Super, nullptr);
   }
@@ -478,7 +479,8 @@ void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
 }
 
 void LiveVariables::runOnInstr(MachineInstr &MI,
-                               SmallVectorImpl<unsigned> &Defs) {
+                               SmallVectorImpl<unsigned> &Defs,
+                               unsigned NumRegs) {
   assert(!MI.isDebugOrPseudoInstr());
   // Process all of the operands of the instruction...
   unsigned NumOperandsToProcess = MI.getNumOperands();
@@ -527,7 +529,7 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
 
   // Process all masked registers. (Call clobbers).
   for (unsigned Mask : RegMasks)
-    HandleRegMask(MI.getOperand(Mask));
+    HandleRegMask(MI.getOperand(Mask), NumRegs);
 
   // Process all defs.
   for (unsigned MOReg : DefRegs) {
@@ -539,7 +541,7 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
   UpdatePhysRegDefs(MI, Defs);
 }
 
-void LiveVariables::runOnBlock(MachineBasicBlock *MBB, const unsigned NumRegs) {
+void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
   // Mark live-in registers as live-in.
   SmallVector<unsigned, 4> Defs;
   for (const auto &LI : MBB->liveins()) {
@@ -556,7 +558,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, const unsigned NumRegs) {
       continue;
     DistanceMap.insert(std::make_pair(&MI, Dist++));
 
-    runOnInstr(MI, Defs);
+    runOnInstr(MI, Defs, NumRegs);
   }
 
   // Handle any virtual assignments from PHI nodes which might be at the
@@ -597,7 +599,7 @@ bool LiveVariables::runOnMachineFunction(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
 
-  const unsigned NumRegs = TRI->getNumRegs();
+  const unsigned NumRegs = TRI->getNumSupportedRegs(mf);
   PhysRegDef.assign(NumRegs, nullptr);
   PhysRegUse.assign(NumRegs, nullptr);
   PHIVarInfo.resize(MF->getNumBlockIDs());

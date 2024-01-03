@@ -910,7 +910,7 @@ extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
     return;
   }
 
-  if (!Tok.startswith(RegisterPrefix))
+  if (!Tok.starts_with(RegisterPrefix))
     return;
 
   StringRef RegName = Tok.substr(RegisterPrefix.size());
@@ -985,7 +985,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
   bool IsIsolatedToken = true;
   for (size_t i = 0, e = String.size(); i != e; ++i) {
     char Char = String[i];
-    if (Variant.BreakCharacters.find(Char) != std::string::npos) {
+    if (Variant.BreakCharacters.contains(Char)) {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), false);
         Prev = i;
@@ -994,7 +994,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       InTok = true;
       continue;
     }
-    if (Variant.TokenizingCharacters.find(Char) != std::string::npos) {
+    if (Variant.TokenizingCharacters.contains(Char)) {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
         InTok = false;
@@ -1005,7 +1005,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       IsIsolatedToken = true;
       continue;
     }
-    if (Variant.SeparatorCharacters.find(Char) != std::string::npos) {
+    if (Variant.SeparatorCharacters.contains(Char)) {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
         InTok = false;
@@ -1520,7 +1520,7 @@ void AsmMatcherInfo::buildInfo() {
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instructions we consider.
-      if (!StringRef(CGI->TheDef->getName()).startswith(MatchPrefix))
+      if (!StringRef(CGI->TheDef->getName()).starts_with(MatchPrefix))
         continue;
 
       // Ignore "codegen only" instructions.
@@ -1555,7 +1555,7 @@ void AsmMatcherInfo::buildInfo() {
       // filter the set of instruction aliases we consider, based on the target
       // instruction.
       if (!StringRef(Alias->ResultInst->TheDef->getName())
-            .startswith( MatchPrefix))
+               .starts_with(MatchPrefix))
         continue;
 
       StringRef V = Alias->TheDef->getValueAsString("AsmVariantName");
@@ -3317,7 +3317,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    unsigned MCK);\n\n";
   }
 
-  OS << "#endif // GET_ASSEMBLER_HEADER_INFO\n\n";
+  OS << "#endif // GET_ASSEMBLER_HEADER\n\n";
 
   // Emit the operand match diagnostic enum names.
   OS << "\n#ifdef GET_OPERAND_DIAGNOSTIC_TYPES\n";

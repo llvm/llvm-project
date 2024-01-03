@@ -34,7 +34,7 @@ OPTIONS
 
 .. option:: --build-variant-suffix <suffix=buildvariant>
 
- Specify the build variant suffix used to build the executabe file.
+ Specify the build variant suffix used to build the executable file.
  There can be multiple variants for the binary of a product, each built
  slightly differently. The most common build variants are 'debug' and
  'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will

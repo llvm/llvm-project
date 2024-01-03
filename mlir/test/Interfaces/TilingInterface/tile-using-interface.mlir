@@ -100,37 +100,37 @@ func.func @multi_result(%arg0 : tensor<128x200x300xf32>) -> (tensor<128x300x200x
     } -> (tensor<128x300x200xf32>, tensor<300x128x200xf32>)
   return %0#0, %0#1 : tensor<128x300x200xf32>, tensor<300x128x200xf32>
 }
-//  CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0) -> (10, -d0 + 128)>
-//      CHECK-LABEL: func.func @multi_result(
-// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<128x200x300xf32>)
-//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
-//  CHECK-DAG:   %[[C10:.+]] = arith.constant 10 : index
-//  CHECK-DAG:   %[[C20:.+]] = arith.constant 20 : index
-//  CHECK-DAG:   %[[C128:.+]] = arith.constant 128 : index
-//  CHECK-DAG:   %[[C300:.+]] = arith.constant 300 : index
-//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty()
-//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty()
-//      CHECK:   %[[OUTER:[a-zA-Z0-9]+]]:2 = scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[C128]] step %[[C10]]
-// CHECK-SAME:       iter_args(%[[ARG1:[a-zA-Z0-9]+]] = %[[INIT0]], %[[ARG2:[a-zA-Z0-9]+]] = %[[INIT1]])
-//      CHECK:     %[[TS_Y:.+]] = affine.min #[[$MAP0]](%[[IV0]])
-//      CHECK:     %[[INNER:[a-zA-Z0-9]+]]:2 = scf.for %[[IV1:[a-zA-Z0-9]+]] = %[[C0]] to %[[C300]] step %[[C20]]
-// CHECK-SAME:         iter_args(%[[ARG3:[a-zA-Z0-9]+]] = %[[ARG1]], %[[ARG4:[a-zA-Z0-9]+]] = %[[ARG2]])
-//  CHECK-DAG:       %[[ARG_TILE:.+]] = tensor.extract_slice %[[ARG0]]
-// CHECK-SAME:           [%[[IV0]], 0, %[[IV1]]] [%[[TS_Y]], 200, 20] [1, 1, 1]
-//  CHECK-DAG:       %[[INIT0_TILE:.+]] = tensor.extract_slice %[[ARG3]]
-// CHECK-SAME:           [%[[IV0]], %[[IV1]], 0] [%[[TS_Y]], 20, 200] [1, 1, 1]
-//  CHECK-DAG:       %[[INIT1_TILE:.+]] = tensor.extract_slice %[[ARG4]]
-// CHECK-SAME:           [%[[IV1]], %[[IV0]], 0] [20, %[[TS_Y]], 200] [1, 1, 1]
-//      CHECK:       %[[RESULT_TILE:.+]]:2 = linalg.generic
-// CHECK-SAME:           ins(%[[ARG_TILE]] :
-// CHECK-SAME:           outs(%[[INIT0_TILE]], %[[INIT1_TILE]] :
-//      CHECK:       %[[UPDATE0:.+]] = tensor.insert_slice %[[RESULT_TILE]]#0 into %[[ARG3]]
-// CHECK-SAME:           [%[[IV0]], %[[IV1]], 0] [%[[TS_Y]], 20, 200] [1, 1, 1]
-//      CHECK:       %[[UPDATE1:.+]] = tensor.insert_slice %[[RESULT_TILE]]#1 into %[[ARG4]]
-// CHECK-SAME:           [%[[IV1]], %[[IV0]], 0] [20, %[[TS_Y]], 200] [1, 1, 1]
-//      CHECK:       scf.yield %[[UPDATE0]], %[[UPDATE1]]
-//      CHECK:     scf.yield %[[INNER]]#0, %[[INNER]]#1
-//      CHECK:   return %[[OUTER]]#0, %[[OUTER]]#1
+//   CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0) -> (10, -d0 + 128)>
+// CHECK-LABEL: func.func @multi_result(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<128x200x300xf32>)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C10:.+]] = arith.constant 10 : index
+//   CHECK-DAG:   %[[C20:.+]] = arith.constant 20 : index
+//   CHECK-DAG:   %[[C128:.+]] = arith.constant 128 : index
+//   CHECK-DAG:   %[[C300:.+]] = arith.constant 300 : index
+//   CHECK-DAG:   %[[INIT0:.+]] = tensor.empty()
+//   CHECK-DAG:   %[[INIT1:.+]] = tensor.empty()
+//       CHECK:   %[[OUTER:[a-zA-Z0-9]+]]:2 = scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[C128]] step %[[C10]]
+//  CHECK-SAME:       iter_args(%[[ARG1:[a-zA-Z0-9]+]] = %[[INIT0]], %[[ARG2:[a-zA-Z0-9]+]] = %[[INIT1]])
+//       CHECK:     %[[TS_Y:.+]] = affine.min #[[$MAP0]](%[[IV0]])
+//       CHECK:     %[[INNER:[a-zA-Z0-9]+]]:2 = scf.for %[[IV1:[a-zA-Z0-9]+]] = %[[C0]] to %[[C300]] step %[[C20]]
+//  CHECK-SAME:         iter_args(%[[ARG3:[a-zA-Z0-9]+]] = %[[ARG1]], %[[ARG4:[a-zA-Z0-9]+]] = %[[ARG2]])
+//   CHECK-DAG:       %[[ARG_TILE:.+]] = tensor.extract_slice %[[ARG0]]
+//  CHECK-SAME:           [%[[IV0]], 0, %[[IV1]]] [%[[TS_Y]], 200, 20] [1, 1, 1]
+//   CHECK-DAG:       %[[INIT0_TILE:.+]] = tensor.extract_slice %[[ARG3]]
+//  CHECK-SAME:           [%[[IV0]], %[[IV1]], 0] [%[[TS_Y]], 20, 200] [1, 1, 1]
+//   CHECK-DAG:       %[[INIT1_TILE:.+]] = tensor.extract_slice %[[ARG4]]
+//  CHECK-SAME:           [%[[IV1]], %[[IV0]], 0] [20, %[[TS_Y]], 200] [1, 1, 1]
+//       CHECK:       %[[RESULT_TILE:.+]]:2 = linalg.generic
+//  CHECK-SAME:           ins(%[[ARG_TILE]] :
+//  CHECK-SAME:           outs(%[[INIT0_TILE]], %[[INIT1_TILE]] :
+//       CHECK:       %[[UPDATE0:.+]] = tensor.insert_slice %[[RESULT_TILE]]#0 into %[[ARG3]]
+//  CHECK-SAME:           [%[[IV0]], %[[IV1]], 0] [%[[TS_Y]], 20, 200] [1, 1, 1]
+//       CHECK:       %[[UPDATE1:.+]] = tensor.insert_slice %[[RESULT_TILE]]#1 into %[[ARG4]]
+//  CHECK-SAME:           [%[[IV1]], %[[IV0]], 0] [20, %[[TS_Y]], 200] [1, 1, 1]
+//       CHECK:       scf.yield %[[UPDATE0]], %[[UPDATE1]]
+//       CHECK:     scf.yield %[[INNER]]#0, %[[INNER]]#1
+//       CHECK:   return %[[OUTER]]#0, %[[OUTER]]#1
 
 // -----
 
@@ -193,14 +193,9 @@ func.func @conv2D(%arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>,
 
 // -----
 
-// CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
-
-// CHECK-LABEL: @indexed_semantics
 func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   // Check that we correctly amend "linalg.index" results.
 
-  // CHECK: scf.for %[[I0:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
-  // CHECK: scf.for %[[I1:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
   %0 = linalg.generic {
     indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                      affine_map<(d0, d1) -> (d0, d1)>],
@@ -209,13 +204,8 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
     ins(%arg0: tensor<?x?xf32>)
     outs(%arg1: tensor<?x?xf32>) {
   ^bb0(%arg2: f32, %arg3: f32):
-    // CHECK: %[[INDEX0:.+]] = linalg.index 0
-    // CHECK: %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX0]], %[[I0]])
     %1 = linalg.index 0 : index
-    // CHECK: %[[INDEX1:.+]] = linalg.index 1
-    // CHECK: %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
     %2 = linalg.index 1 : index
-    // CHECK: arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
     %3 = arith.addi %1, %2 : index
     %4 = arith.index_cast %3 : index to i64
     %5 = arith.uitofp %4 : i64 to f32
@@ -224,6 +214,15 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
   } -> (tensor<?x?xf32>)
   return %0 : tensor<?x?xf32>
 }
+//       CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-LABEL: @indexed_semantics
+//       CHECK:   scf.for %[[I0:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+//       CHECK:     scf.for %[[I1:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+//       CHECK:       %[[INDEX0:.+]] = linalg.index 0
+//       CHECK:       %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX0]], %[[I0]])
+//       CHECK:       %[[INDEX1:.+]] = linalg.index 1
+//       CHECK:       %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
+//       CHECK:       arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
 
 // -----
 
@@ -276,14 +275,53 @@ func.func @interchange_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 
 // -----
 
+func.func @linalg_copy_matmul(%a: memref<?x?xf32>, %b: memref<?x?xf32>) {
+  linalg.copy {__internal_transform__ = "simple_copy_memref"}
+      ins(%a : memref<?x?xf32>) outs(%b : memref<?x?xf32>)
+  return
+}
 // CHECK-LABEL: func @linalg_copy_matmul(
 //       CHECK:   scf.for
 //       CHECK:     scf.for
 //       CHECK:       memref.subview
 //       CHECK:       memref.subview
 //       CHECK:       linalg.copy
-func.func @linalg_copy_matmul(%a: memref<?x?xf32>, %b: memref<?x?xf32>) {
-  linalg.copy {__internal_transform__ = "simple_copy_memref"}
-      ins(%a : memref<?x?xf32>) outs(%b : memref<?x?xf32>)
+
+// -----
+
+func.func @check_scalar_operation(%arg0 : tensor<f32>) -> tensor<f32> {
+  %init = tensor.empty() : tensor<f32>
+  %0 = linalg.generic {
+      indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
+      iterator_types = []}
+      {__internal_transform__ = "scalar_op"}
+      ins(%arg0 : tensor<f32>) outs(%init : tensor<f32>){
+    ^bb0(%b0 : f32, %b1 : f32):
+      %1 = arith.mulf %b0, %b0 : f32
+      linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+// CHECK-LABEL: func @check_scalar_operation
+//   CHECK-NOT:   scf.for
+//       CHECK:   linalg.generic
+//  CHECK-SAME:       __internal_transform__ = "scalar_op"
+
+// -----
+
+func.func @check_scalar_memref_operation(%arg0 : memref<f32>, %arg1 : memref<f32>){
+  linalg.generic {
+      indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
+      iterator_types = []}
+      {__internal_transform__ = "scalar_op"}
+      ins(%arg0 : memref<f32>) outs(%arg1 : memref<f32>){
+    ^bb0(%b0 : f32, %b1 : f32):
+      %1 = arith.mulf %b0, %b0 : f32
+      linalg.yield %1 : f32
+  }
   return
 }
+// CHECK-LABEL: func @check_scalar_memref_operation
+//   CHECK-NOT:   scf.for
+//       CHECK:   linalg.generic
+//  CHECK-SAME:       __internal_transform__ = "scalar_op"

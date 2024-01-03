@@ -1837,7 +1837,7 @@ compiler-rt/lib/sanitizer_common/sanitizer_stack_store.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_stack_store.h
 compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_fuchsia.h
 compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_win.cpp
-compiler-rt/lib/sanitizer_common/sanitizer_symbolizer_fuchsia.h
+compiler-rt/lib/sanitizer_common/sanitizer_symbolizer_markup_constants.h
 compiler-rt/lib/sanitizer_common/sanitizer_thread_safety.h
 compiler-rt/lib/sanitizer_common/sanitizer_tls_get_addr.h
 compiler-rt/lib/sanitizer_common/sanitizer_type_traits.cpp

@@ -341,7 +341,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
   int SpReg = 0;
 
   rs.enterBasicBlockEnd(MBB);
-  rs.backward(II);
+  rs.backward(std::next(II));
   //
   // We need to know which registers can be used, in the case where there
   // are not enough free registers. We exclude all registers that

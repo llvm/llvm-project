@@ -295,8 +295,12 @@ def : Pat<(fneg (fma FPR32:$fj, FPR32:$fk, FPR32:$fa)),
 def : Pat<(fma_nsz (fneg FPR32:$fj), FPR32:$fk, (fneg FPR32:$fa)),
           (FNMADD_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
 
-// fnmsub.s: -fj * fk + fa
-def : Pat<(fma (fneg FPR32:$fj), FPR32:$fk, FPR32:$fa),
+// fnmsub.s: -(fj * fk - fa)
+def : Pat<(fneg (fma FPR32:$fj, FPR32:$fk, (fneg FPR32:$fa))),
+          (FNMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
+
+// fnmsub.s: -fj * fk + fa (the nsz flag on the FMA)
+def : Pat<(fma_nsz (fneg FPR32:$fj), FPR32:$fk, FPR32:$fa),
           (FNMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
 } // Predicates = [HasBasicF]
 

@@ -4,119 +4,92 @@
 
 # Tests for LLVM libc CPP functions.
 
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
-cc_test(
+libc_test(
     name = "atomic_test",
     srcs = ["atomic_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_atomic",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_atomic"],
 )
 
-cc_test(
+libc_test(
     name = "bitset_test",
     srcs = ["bitset_test.cpp"],
+    deps = ["//libc:__support_cpp_bitset"],
+)
+
+libc_test(
+    name = "bit_test",
+    srcs = ["bit_test.cpp"],
     deps = [
-        "//libc:__support_cpp_bitset",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc:__support_cpp_bit",
+        "//libc:__support_uint",
     ],
 )
 
-cc_test(
+libc_test(
     name = "cstddef_test",
     srcs = ["cstddef_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_cstddef",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_cstddef"],
 )
 
-cc_test(
+libc_test(
     name = "integer_sequence_test",
     srcs = ["integer_sequence_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_utility",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_utility"],
 )
 
-cc_test(
+libc_test(
     name = "limits_test",
     srcs = ["limits_test.cpp"],
     deps = [
         "//libc:__support_cpp_limits",
         "//libc:__support_uint",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
 
-cc_test(
+libc_test(
     name = "optional_test",
     srcs = ["optional_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_optional",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_optional"],
 )
 
-cc_test(
+libc_test(
     name = "span_test",
     srcs = ["span_test.cpp"],
     deps = [
         "//libc:__support_cpp_array",
         "//libc:__support_cpp_span",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
 
-cc_test(
+libc_test(
     name = "stringstream_test",
     srcs = ["stringstream_test.cpp"],
     deps = [
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_stringstream",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
 
-cc_test(
+libc_test(
     name = "string_test",
     srcs = ["string_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_string",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_string"],
 )
 
-cc_test(
+libc_test(
     name = "stringview_test",
     srcs = ["stringview_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_string_view"],
 )
 
-cc_test(
+libc_test(
     name = "type_traits_test",
     srcs = ["type_traits_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_type_traits",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
+    deps = ["//libc:__support_cpp_type_traits"],
 )

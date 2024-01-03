@@ -4,10 +4,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+xtheadba -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+xtheadba < %s \
-# RUN:     | llvm-objdump --mattr=+xtheadba -d -r - \
+# RUN:     | llvm-objdump --mattr=+xtheadba --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+xtheadba < %s \
-# RUN:     | llvm-objdump --mattr=+xtheadba -d -r - \
+# RUN:     | llvm-objdump --mattr=+xtheadba --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: th.addsl t0, t1, t2, 0

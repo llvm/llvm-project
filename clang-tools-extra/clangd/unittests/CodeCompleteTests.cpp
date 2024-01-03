@@ -59,7 +59,7 @@ MATCHER_P(named, Name, "") { return arg.Name == Name; }
 MATCHER_P(mainFileRefs, Refs, "") { return arg.MainFileRefs == Refs; }
 MATCHER_P(scopeRefs, Refs, "") { return arg.ScopeRefsInFile == Refs; }
 MATCHER_P(nameStartsWith, Prefix, "") {
-  return llvm::StringRef(arg.Name).startswith(Prefix);
+  return llvm::StringRef(arg.Name).starts_with(Prefix);
 }
 MATCHER_P(filterText, F, "") { return arg.FilterText == F; }
 MATCHER_P(scope, S, "") { return arg.Scope == S; }
@@ -3890,6 +3890,29 @@ TEST(CompletionTest, FunctionArgsExist) {
   EXPECT_THAT(completions(Context + "MAC^(2)", {}, Opts).Completions,
               Contains(AllOf(labeled("MACRO(x)"), snippetSuffix(""),
                              kind(CompletionItemKind::Function))));
+}
+
+TEST(CompletionTest, FunctionArgsExist_Issue1785) {
+  // This is a scenario where the implementation of our check for
+  // "is there a function argument list right after the cursor"
+  // gave a bogus result.
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  // The whitespace in this testcase is important!
+  std::string Code = R"cpp(
+void waldo(int);
+
+int main()
+{
+  wal^
+
+
+  // (    )
+}
+  )cpp";
+  EXPECT_THAT(
+      completions(Code, {}, Opts).Completions,
+      Contains(AllOf(labeled("waldo(int)"), snippetSuffix("(${1:int})"))));
 }
 
 TEST(CompletionTest, NoCrashDueToMacroOrdering) {

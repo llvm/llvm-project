@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test calling functions whose result interface is evaluated on the call site
 ! and where the calls are located in an internal procedure while the

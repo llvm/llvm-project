@@ -82,6 +82,9 @@ public:
     return *this;
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
+  bool shouldElideResourceDataFromBytecode() const {
+    return elideResourceDataFromBytecodeFlag;
+  }
 
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
@@ -184,6 +187,9 @@ protected:
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
+
+  /// Elide resources when generating bytecode.
+  bool elideResourceDataFromBytecodeFlag = false;
 
   /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
   bool enableDebuggerActionHookFlag = false;

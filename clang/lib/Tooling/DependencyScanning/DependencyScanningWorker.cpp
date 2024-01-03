@@ -137,8 +137,9 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
-      bool DisableFree, std::optional<StringRef> ModuleName = std::nullopt)
+      ScanningOutputFormat Format, ScanningOptimizations OptimizeArgs,
+      bool EagerLoadModules, bool DisableFree,
+      std::optional<StringRef> ModuleName = std::nullopt)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         Controller(Controller), DepFS(std::move(DepFS)), Format(Format),
         OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
@@ -252,6 +253,10 @@ public:
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
     ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
+        true;
 
     // Avoid some checks and module map parsing when loading PCM files.
     ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
@@ -295,7 +300,7 @@ private:
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ScanningOutputFormat Format;
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   bool EagerLoadModules;
   bool DisableFree;
   std::optional<StringRef> ModuleName;
@@ -310,7 +315,7 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
+    : Format(Service.getFormat()), OptimizeArgs(Service.getOptimizeArgs()),
       EagerLoadModules(Service.shouldEagerLoadModules()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.

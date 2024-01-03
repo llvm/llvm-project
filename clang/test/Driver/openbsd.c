@@ -10,6 +10,12 @@
 // CHECK-PG: "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-nopie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
 
+// Check for variants of crt* when creating shared libs
+// RUN: %clang --target=i686-pc-openbsd -pthread -shared -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-SHARED %s
+// CHECK-SHARED: "-cc1" "-triple" "i686-pc-openbsd"
+// CHECK-SHARED: ld{{.*}}" "--eh-frame-hdr" "-shared" "-o" "a.out" "{{.*}}crtbeginS.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread" "-lcompiler_rt" "{{.*}}crtendS.o"
+
 // Check CPU type for i386
 // RUN: %clang --target=i386-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-i386-CPU %s
@@ -125,3 +131,8 @@
 // RUN: %clang --target=riscv64-unknown-openbsd -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-RISCV64-FLAGS %s
 // CHECK-RISCV64-FLAGS: "-X"
+
+// Check passing LTO flags to the linker
+// RUN: %clang --target=amd64-unknown-openbsd -flto -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
+// CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"

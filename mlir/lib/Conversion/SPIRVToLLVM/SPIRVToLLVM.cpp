@@ -201,16 +201,14 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
 
 /// Converts SPIR-V struct with a regular (according to `VulkanLayoutUtils`)
 /// offset to LLVM struct. Otherwise, the conversion is not supported.
-static std::optional<Type>
-convertStructTypeWithOffset(spirv::StructType type,
-                            LLVMTypeConverter &converter) {
+static Type convertStructTypeWithOffset(spirv::StructType type,
+                                        LLVMTypeConverter &converter) {
   if (type != VulkanLayoutUtils::decorateType(type))
-    return std::nullopt;
+    return nullptr;
 
-  auto elementsVector = llvm::to_vector<8>(
-      llvm::map_range(type.getElementTypes(), [&](Type elementType) {
-        return converter.convertType(elementType);
-      }));
+  SmallVector<Type> elementsVector;
+  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
+    return nullptr;
   return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
                                           /*isPacked=*/false);
 }
@@ -218,10 +216,9 @@ convertStructTypeWithOffset(spirv::StructType type,
 /// Converts SPIR-V struct with no offset to packed LLVM struct.
 static Type convertStructTypePacked(spirv::StructType type,
                                     LLVMTypeConverter &converter) {
-  auto elementsVector = llvm::to_vector<8>(
-      llvm::map_range(type.getElementTypes(), [&](Type elementType) {
-        return converter.convertType(elementType);
-      }));
+  SmallVector<Type> elementsVector;
+  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
+    return nullptr;
   return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
                                           /*isPacked=*/true);
 }
@@ -317,9 +314,8 @@ static unsigned mapToAddressSpace(spirv::ClientAPI clientAPI,
 static Type convertPointerType(spirv::PointerType type,
                                LLVMTypeConverter &converter,
                                spirv::ClientAPI clientAPI) {
-  auto pointeeType = converter.convertType(type.getPointeeType());
   unsigned addressSpace = mapToAddressSpace(clientAPI, type.getStorageClass());
-  return converter.getPointerType(pointeeType, addressSpace);
+  return LLVM::LLVMPointerType::get(type.getContext(), addressSpace);
 }
 
 /// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over
@@ -335,12 +331,12 @@ static std::optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
 
 /// Converts SPIR-V struct to LLVM struct. There is no support of structs with
 /// member decorations. Also, only natural offset is supported.
-static std::optional<Type> convertStructType(spirv::StructType type,
-                                             LLVMTypeConverter &converter) {
+static Type convertStructType(spirv::StructType type,
+                              LLVMTypeConverter &converter) {
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
   type.getMemberDecorations(memberDecorations);
   if (!memberDecorations.empty())
-    return std::nullopt;
+    return nullptr;
   if (type.hasOffset())
     return convertStructTypeWithOffset(type, converter);
   return convertStructTypePacked(type, converter);
@@ -1379,8 +1375,8 @@ public:
     if (!dstType)
       return failure();
 
-    if (typeConverter.useOpaquePointers() &&
-        isa<LLVM::LLVMPointerType>(dstType)) {
+    // LLVM's opaque pointers do not require bitcasts.
+    if (isa<LLVM::LLVMPointerType>(dstType)) {
       rewriter.replaceOp(bitcastOp, adaptor.getOperand());
       return success();
     }

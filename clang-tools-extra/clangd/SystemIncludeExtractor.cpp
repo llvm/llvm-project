@@ -89,13 +89,14 @@ struct DriverArgs {
   std::string ISysroot;
   std::string Target;
   std::string Stdlib;
+  llvm::SmallVector<std::string> Specs;
 
   bool operator==(const DriverArgs &RHS) const {
     return std::tie(Driver, StandardIncludes, StandardCXXIncludes, Lang,
-                    Sysroot, ISysroot, Target, Stdlib) ==
+                    Sysroot, ISysroot, Target, Stdlib, Specs) ==
            std::tie(RHS.Driver, RHS.StandardIncludes, RHS.StandardCXXIncludes,
-                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target,
-                    RHS.Stdlib);
+                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target, RHS.Stdlib,
+                    RHS.Specs);
   }
 
   DriverArgs(const tooling::CompileCommand &Cmd, llvm::StringRef File) {
@@ -145,6 +146,17 @@ struct DriverArgs {
           Stdlib = Cmd.CommandLine[I + 1];
       } else if (Arg.consume_front("-stdlib=")) {
         Stdlib = Arg.str();
+      } else if (Arg.starts_with("-specs=")) {
+        // clang requires a single token like `-specs=file` or `--specs=file`,
+        // but gcc will accept two tokens like `--specs file`. Since the
+        // compilation database is presumably correct, we just forward the flags
+        // as-is.
+        Specs.push_back(Arg.str());
+      } else if (Arg.starts_with("--specs=")) {
+        Specs.push_back(Arg.str());
+      } else if (Arg == "--specs" && I + 1 < E) {
+        Specs.push_back(Arg.str());
+        Specs.push_back(Cmd.CommandLine[I + 1]);
       }
     }
 
@@ -186,6 +198,11 @@ struct DriverArgs {
       Args.append({"-target", Target});
     if (!Stdlib.empty())
       Args.append({"--stdlib", Stdlib});
+
+    for (llvm::StringRef Spec : Specs) {
+      Args.push_back(Spec);
+    }
+
     return Args;
   }
 
@@ -210,7 +227,7 @@ template <> struct DenseMapInfo<DriverArgs> {
     return Driver;
   }
   static unsigned getHashValue(const DriverArgs &Val) {
-    return llvm::hash_value(std::tuple{
+    unsigned FixedFieldsHash = llvm::hash_value(std::tuple{
         Val.Driver,
         Val.StandardIncludes,
         Val.StandardCXXIncludes,
@@ -220,6 +237,11 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Target,
         Val.Stdlib,
     });
+
+    unsigned SpecsHash =
+        llvm::hash_combine_range(Val.Specs.begin(), Val.Specs.end());
+
+    return llvm::hash_combine(FixedFieldsHash, SpecsHash);
   }
   static bool isEqual(const DriverArgs &LHS, const DriverArgs &RHS) {
     return LHS == RHS;
@@ -260,7 +282,7 @@ std::optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
       if (!SeenIncludes && Line.trim() == SIS) {
         SeenIncludes = true;
         State = IncludesExtracting;
-      } else if (!SeenTarget && Line.trim().startswith(TS)) {
+      } else if (!SeenTarget && Line.trim().starts_with(TS)) {
         SeenTarget = true;
         llvm::StringRef TargetLine = Line.trim();
         TargetLine.consume_front(TS);
@@ -426,7 +448,7 @@ tooling::CompileCommand &setTarget(tooling::CompileCommand &Cmd,
   if (!Target.empty()) {
     // We do not want to override existing target with extracted one.
     for (llvm::StringRef Arg : Cmd.CommandLine) {
-      if (Arg == "-target" || Arg.startswith("--target="))
+      if (Arg == "-target" || Arg.starts_with("--target="))
         return Cmd;
     }
     // Just append when `--` isn't present.

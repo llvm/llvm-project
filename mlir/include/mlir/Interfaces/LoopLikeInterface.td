@@ -33,6 +33,13 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     If one of the respective interface methods is implemented, so must the other
     two. The interface verifier ensures that the number of types of the region
     iter_args, init values and yielded values match.
+
+    Optionally, "loop results" can be exposed through this interface. These are
+    the values that are returned from the loop op when there are no more
+    iterations. The number and types of the loop results must match with the
+    region iter_args. Note: Loop results are optional because some loops
+    (e.g., `scf.while`) may produce results that do match 1-to-1 with the
+    region iter_args.
   }];
   let cppNamespace = "::mlir";
 
@@ -167,6 +174,26 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Return the range of results that are return from this loop and
+        correspond to the "init" operands.
+
+        Note: This interface method is optional. If loop results are not
+        exposed via this interface, "std::nullopt" should be returned.
+        Otherwise, the number and types of results must match with the
+        region iter_args, inits and yielded values that are exposed via this
+        interface. If loop results are exposed but this loop op has no
+        loop-carried variables, an empty result range (and not "std::nullopt")
+        should be returned.
+      }],
+      /*retTy=*/"::std::optional<::mlir::ResultRange>",
+      /*methodName=*/"getLoopResults",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::std::nullopt;
+      }]
+    >,
+    InterfaceMethod<[{
         Append the specified additional "init" operands: replace this loop with
         a new loop that has the additional init operands. The loop body of
         this loop is moved over to the new loop.
@@ -242,6 +269,8 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     }
 
     /// Return the region iter_arg that corresponds to the given init operand.
+    /// Return an "empty" block argument if the given operand is not an init
+    /// operand of this loop op.
     BlockArgument getTiedLoopRegionIterArg(OpOperand *opOperand) {
       auto initsMutable = $_op.getInitsMutable();
       auto it = llvm::find(initsMutable, *opOperand);
@@ -250,7 +279,22 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       return $_op.getRegionIterArgs()[std::distance(initsMutable.begin(), it)];
     }
 
+    /// Return the region iter_arg that corresponds to the given loop result.
+    /// Return an "empty" block argument if the given OpResult is not a loop
+    /// result or if this op does not expose any loop results.
+    BlockArgument getTiedLoopRegionIterArg(OpResult opResult) {
+      auto loopResults = $_op.getLoopResults();
+      if (!loopResults)
+        return {};
+      auto it = llvm::find(*loopResults, opResult);
+      if (it == loopResults->end())
+        return {};
+      return $_op.getRegionIterArgs()[std::distance(loopResults->begin(), it)];
+    }
+
     /// Return the init operand that corresponds to the given region iter_arg.
+    /// Return "nullptr" if the given block argument is not a region iter_arg
+    /// of this loop op.
     OpOperand *getTiedLoopInit(BlockArgument bbArg) {
       auto iterArgs = $_op.getRegionIterArgs();
       auto it = llvm::find(iterArgs, bbArg);
@@ -259,7 +303,22 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       return &$_op.getInitsMutable()[std::distance(iterArgs.begin(), it)];
     }
 
+    /// Return the init operand that corresponds to the given loop result.
+    /// Return "nullptr" if the given OpResult is not a loop result or if this
+    /// op does not expose any loop results.
+    OpOperand *getTiedLoopInit(OpResult opResult) {
+      auto loopResults = $_op.getLoopResults();
+      if (!loopResults)
+        return nullptr;
+      auto it = llvm::find(*loopResults, opResult);
+      if (it == loopResults->end())
+        return nullptr;
+      return &$_op.getInitsMutable()[std::distance(loopResults->begin(), it)];
+    }
+
     /// Return the yielded value that corresponds to the given region iter_arg.
+    /// Return "nullptr" if the given block argument is not a region iter_arg
+    /// of this loop op.
     OpOperand *getTiedLoopYieldedValue(BlockArgument bbArg) {
       auto iterArgs = $_op.getRegionIterArgs();
       auto it = llvm::find(iterArgs, bbArg);
@@ -267,6 +326,34 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         return {};
       return
           &$_op.getYieldedValuesMutable()[std::distance(iterArgs.begin(), it)];
+    }
+
+    /// Return the loop result that corresponds to the given init operand.
+    /// Return an "empty" OpResult if the given operand is not an init operand
+    /// of this loop op or if this op does not expose any loop results.
+    OpResult getTiedLoopResult(OpOperand *opOperand) {
+      auto loopResults = $_op.getLoopResults();
+      if (!loopResults)
+        return {};
+      auto initsMutable = $_op.getInitsMutable();
+      auto it = llvm::find(initsMutable, *opOperand);
+      if (it == initsMutable.end())
+        return {};
+      return (*loopResults)[std::distance(initsMutable.begin(), it)];
+    }
+
+    /// Return the loop result that corresponds to the given region iter_arg.
+    /// Return an "empty" OpResult if the given block argument is not a region
+    /// iter_arg of this loop op or if this op does not expose any loop results.
+    OpResult getTiedLoopResult(BlockArgument bbArg) {
+      auto loopResults = $_op.getLoopResults();
+      if (!loopResults)
+        return {};
+      auto iterArgs = $_op.getRegionIterArgs();
+      auto it = llvm::find(iterArgs, bbArg);
+      if (it == iterArgs.end())
+        return {};
+      return (*loopResults)[std::distance(iterArgs.begin(), it)];
     }
   }];
 

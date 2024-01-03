@@ -233,6 +233,59 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x ptr> %P) nounwind {
   ret <2 x i1> %C
 }
 
+define <2 x i1> @test13_fixed_fixed(i64 %X, ptr %P, <2 x i64> %y) nounwind {
+; CHECK-LABEL: @test13_fixed_fixed(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 3, i64 0>
+; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw <2 x i64> [[Y:%.*]], <i64 4, i64 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %A = getelementptr inbounds <2 x i64>, ptr %P, <2 x i64> zeroinitializer, i64 %X
+  %B = getelementptr inbounds <2 x i64>, ptr %P, <2 x i64> %y
+  %C = icmp eq <2 x ptr> %A, %B
+  ret <2 x i1> %C
+}
+
+define <2 x i1> @test13_fixed_scalable(i64 %X, ptr %P, <2 x i64> %y) nounwind {
+; CHECK-LABEL: @test13_fixed_scalable(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 3, i64 0>
+; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <2 x i64> [[DOTSPLAT2]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %A = getelementptr inbounds <vscale x 2 x i64>, ptr %P, <2 x i64> zeroinitializer, i64 %X
+  %B = getelementptr inbounds <vscale x 2 x i64>, ptr %P, <2 x i64> %y
+  %C = icmp eq <2 x ptr> %A, %B
+  ret <2 x i1> %C
+}
+
+define <vscale x 2 x i1> @test13_scalable_scalable(i64 %X, ptr %P, <vscale x 2 x i64> %y) nounwind {
+; CHECK-LABEL: @test13_scalable_scalable(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[A_IDX:%.*]] = shl nsw <vscale x 2 x i64> [[DOTSPLAT]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 3, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <vscale x 2 x i64> [[DOTSPLAT2]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <vscale x 2 x i64> [[A_IDX]], [[B_IDX]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[C]]
+;
+  %A = getelementptr inbounds <vscale x 2 x i64>, ptr %P, <vscale x 2 x i64> zeroinitializer, i64 %X
+  %B = getelementptr inbounds <vscale x 2 x i64>, ptr %P, <vscale x 2 x i64> %y
+  %C = icmp eq <vscale x 2 x ptr> %A, %B
+  ret <vscale x 2 x i1> %C
+}
+
 ; This is a test of icmp + shl nuw in disguise - 4611... is 0x3fff...
 define <2 x i1> @test13_vector3(i64 %X, <2 x ptr> %P) nounwind {
 ; CHECK-LABEL: @test13_vector3(
@@ -1398,6 +1451,168 @@ define ptr @const_gep_chain(ptr %p, i64 %a) {
   %p3 = getelementptr inbounds i8, ptr %p2, i64 2
   %p4 = getelementptr inbounds i8, ptr %p3, i64 3
   ret ptr %p4
+}
+
+define ptr @gep_sdiv(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define <2 x ptr> @gep_sdiv_vec(<2 x ptr> %p, <2 x i64> %off) {
+; CHECK-LABEL: @gep_sdiv_vec(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, <2 x ptr> [[P:%.*]], <2 x i64> [[OFF:%.*]]
+; CHECK-NEXT:    ret <2 x ptr> [[PTR]]
+;
+  %index = sdiv exact <2 x i64> %off, <i64 7, i64 7>
+  %ptr = getelementptr %struct.C, <2 x ptr> %p, <2 x i64> %index
+  ret <2 x ptr> %ptr
+}
+
+define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_inbounds(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr inbounds %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define ptr @gep_ashr(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_ashr(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = ashr exact i64 %off, 2
+  %ptr = getelementptr i32, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+; Negative tests
+
+define ptr @gep_i8(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_i8(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %ptr = getelementptr i8, ptr %p, i64 %off
+  ret ptr %ptr
+}
+
+define ptr @gep_sdiv_mismatched_size(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_mismatched_size(
+; CHECK-NEXT:    [[INDEX:%.*]] = sdiv exact i64 [[OFF:%.*]], 20
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 20
+  %ptr = getelementptr %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define ptr @gep_sdiv_without_exact(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_without_exact(
+; CHECK-NEXT:    [[INDEX:%.*]] = sdiv i64 [[OFF:%.*]], 7
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv i64 %off, 7
+  %ptr = getelementptr %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define ptr @gep_ashr_without_exact(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_ashr_without_exact(
+; CHECK-NEXT:    [[INDEX:%.*]] = ashr i64 [[OFF:%.*]], 2
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = ashr i64 %off, 2
+  %ptr = getelementptr i32, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
+define i1 @test_only_used_by_icmp(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test_only_used_by_icmp(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %cmp = icmp eq ptr %gep, %c
+  ret i1 %cmp
+}
+
+define i64 @test_only_used_by_ptrtoint(ptr %a, ptr %b) {
+; CHECK-LABEL: @test_only_used_by_ptrtoint(
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[VAL]]
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %val = ptrtoint ptr %gep to i64
+  ret i64 %val
+}
+
+define i64 @test_used_by_both(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test_used_by_both(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    ret i64 [[VAL]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %cmp = icmp eq ptr %gep, %c
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %val = ptrtoint ptr %gep to i64
+  ret i64 %val
+if.else:
+  ret i64 0
+}
+
+; Negative tests
+
+define i64 @test_used_by_both_invalid(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test_used_by_both_invalid(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[PB:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[PA:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PB]], [[PA]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[SUB]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret i64 [[VAL]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %pa = ptrtoint ptr %a to i64
+  %pb = ptrtoint ptr %b to i64
+  %sub = sub i64 %pb, %pa
+  %gep = getelementptr i8, ptr %a, i64 %sub
+  %cmp = icmp eq ptr %gep, %c
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %val = load i64, ptr %gep, align 8
+  ret i64 %val
+if.else:
+  ret i64 0
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}

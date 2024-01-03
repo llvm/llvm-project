@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: shell
 
 // RUN: EXPECTED_RESOURCE_DIR=`%clang -print-resource-dir` && \

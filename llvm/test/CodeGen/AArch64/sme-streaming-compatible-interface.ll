@@ -436,3 +436,56 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
   tail call void @normal_callee();
   ret void;
 }
+
+define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2) "aarch64_pstate_sm_compatible" {
+; CHECK-LABEL: call_to_non_streaming_pass_args:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #112
+; CHECK-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    stp d2, d3, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    tbz w19, #0, .LBB10_2
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB10_2: // %entry
+; CHECK-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    mov x0, x9
+; CHECK-NEXT:    ldp d2, d3, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    bl bar
+; CHECK-NEXT:    tbz w19, #0, .LBB10_4
+; CHECK-NEXT:  // %bb.3: // %entry
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:  .LBB10_4: // %entry
+; CHECK-NEXT:    ldp x30, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ret
+entry:
+  call void @bar(ptr noundef nonnull %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2)
+  ret void
+}
+
+declare void @bar(ptr noundef, i64 noundef, i64 noundef, i32 noundef, i32 noundef, float noundef, float noundef, double noundef, double noundef)

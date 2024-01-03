@@ -104,6 +104,8 @@
 # define CACHE_LINE 128
 #elif KMP_ARCH_AARCH64_A64FX
 # define CACHE_LINE 256
+#elif KMP_ARCH_S390X
+# define CACHE_LINE 256
 #else
 # define CACHE_LINE 64
 #endif

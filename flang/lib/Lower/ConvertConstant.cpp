@@ -366,6 +366,8 @@ static mlir::Value genStructureComponentInit(
     TODO(loc, "allocatable component in structure constructor");
 
   if (Fortran::semantics::IsPointer(sym)) {
+    if (Fortran::semantics::IsProcedure(sym))
+      TODO(loc, "procedure pointer component initial value");
     mlir::Value initialTarget =
         Fortran::lower::genInitialDataTarget(converter, loc, componentTy, expr);
     res = builder.create<fir::InsertValueOp>(
@@ -476,10 +478,6 @@ static mlir::Value genInlinedStructureCtorLitImpl(
 
   const Fortran::semantics::DerivedTypeSpec *curentType = nullptr;
   for (const auto &[sym, expr] : ctor.values()) {
-    // This TODO is not needed here anymore, but should be removed in a separate
-    // patch.
-    if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
-      TODO(loc, "parent component in structure constructor");
     const Fortran::semantics::DerivedTypeSpec *componentParentType =
         sym->owner().derivedTypeSpec();
     assert(componentParentType && "failed to retrieve component parent type");

@@ -191,7 +191,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     : ExternalSource(nullptr), CurFPFeatures(pp.getLangOpts()),
       LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
       Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
-      CollectStats(false), CodeCompleter(CodeCompleter), CurContext(nullptr),
+      APINotes(SourceMgr, LangOpts), CollectStats(false),
+      CodeCompleter(CodeCompleter), CurContext(nullptr),
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
@@ -329,8 +330,9 @@ void Sema::Initialize() {
   if (getLangOpts().MSVCCompat) {
     if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
-      PushOnScopeChains(Context.buildImplicitRecord("type_info", TTK_Class),
-                        TUScope);
+      PushOnScopeChains(
+          Context.buildImplicitRecord("type_info", TagTypeKind::Class),
+          TUScope);
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
@@ -868,6 +870,7 @@ static void checkUndefinedButUsed(Sema &S) {
   // Collect all the still-undefined entities with internal linkage.
   SmallVector<std::pair<NamedDecl *, SourceLocation>, 16> Undefined;
   S.getUndefinedButUsed(Undefined);
+  S.UndefinedButUsed.clear();
   if (Undefined.empty()) return;
 
   for (const auto &Undef : Undefined) {
@@ -921,8 +924,6 @@ static void checkUndefinedButUsed(Sema &S) {
     if (UseLoc.isValid())
       S.Diag(UseLoc, diag::note_used_here);
   }
-
-  S.UndefinedButUsed.clear();
 }
 
 void Sema::LoadExternalWeakUndeclaredIdentifiers() {
@@ -1285,8 +1286,6 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (auto *FD = dyn_cast<FunctionDecl>(D)) {
         bool DefInPMF = false;
         if (auto *FDD = FD->getDefinition()) {
-          assert(FDD->getOwningModule() &&
-                 FDD->getOwningModule()->isModulePurview());
           DefInPMF = FDD->getOwningModule()->isPrivateModule();
           if (!DefInPMF)
             continue;
@@ -1333,8 +1332,8 @@ void Sema::ActOnEndOfTranslationUnit() {
       // Set the length of the array to 1 (C99 6.9.2p5).
       Diag(VD->getLocation(), diag::warn_tentative_incomplete_array);
       llvm::APInt One(Context.getTypeSize(Context.getSizeType()), true);
-      QualType T = Context.getConstantArrayType(ArrayT->getElementType(), One,
-                                                nullptr, ArrayType::Normal, 0);
+      QualType T = Context.getConstantArrayType(
+          ArrayT->getElementType(), One, nullptr, ArraySizeModifier::Normal, 0);
       VD->setType(T);
     } else if (RequireCompleteType(VD->getLocation(), VD->getType(),
                                    diag::err_tentative_def_incomplete_type))
@@ -2077,15 +2076,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
-    if (TI.hasRISCVVTypes() && Ty->isRVVType())
+    if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType())
       checkRVVTypeSupport(Ty, Loc, D);
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures(
-          "sve", CallerFeatureMap))
+      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
+          !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
         Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
     }
   };

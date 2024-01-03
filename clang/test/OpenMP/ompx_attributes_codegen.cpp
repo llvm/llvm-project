@@ -9,9 +9,9 @@
 
 // Check that the target attributes are set on the generated kernel
 void func() {
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l16() #0
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l18()
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l20() #4
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l16(ptr {{[^,]+}}) #0
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l18(ptr {{[^,]+}})
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l20(ptr {{[^,]+}}) #4
 
   #pragma omp target ompx_attribute([[clang::amdgpu_flat_work_group_size(10, 20)]])
   {}

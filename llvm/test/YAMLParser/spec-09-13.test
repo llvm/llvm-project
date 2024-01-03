@@ -1,4 +1,13 @@
-# RUN: yaml-bench -canonical %s
+# RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
+# CHECK:      !!map {
+# CHECK-NEXT:   ? !!str "simple key"
+# CHECK-NEXT:   : !!map {
+# CHECK-NEXT:     ? !!str "also simple"
+# CHECK-NEXT:     : !!str "value",
+# CHECK-NEXT:     ? !!str "not a simple key"
+# CHECK-NEXT:     : !!str "any value",
+# CHECK-NEXT:   },
+# CHECK-NEXT: }
 
 simple key : {
   also simple : value,

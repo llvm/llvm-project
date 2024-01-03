@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"

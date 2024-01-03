@@ -1,5 +1,5 @@
-! RUN: bbc %s -o - | tco | FileCheck %s
-! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | tco | FileCheck %s
+! RUN: %flang -emit-llvm -flang-deprecated-no-hlfir -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 ! Test from Fortran source through to LLVM IR.
 ! UNSUPPORTED: system-windows
 

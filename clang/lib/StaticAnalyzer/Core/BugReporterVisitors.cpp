@@ -632,7 +632,7 @@ static bool potentiallyWritesIntoIvar(const Decl *Parent,
 
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Base))
       if (const auto *ID = dyn_cast<ImplicitParamDecl>(DRE->getDecl()))
-        if (ID->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+        if (ID->getParameterKind() == ImplicitParamKind::ObjCSelf)
           return true;
 
     return false;
@@ -1394,8 +1394,7 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
       VR->printPretty(OS);
     }
   } else if (const auto *ImplParam = dyn_cast<ImplicitParamDecl>(D)) {
-    if (ImplParam->getParameterKind() ==
-        ImplicitParamDecl::ImplicitParamKind::ObjCSelf) {
+    if (ImplParam->getParameterKind() == ImplicitParamKind::ObjCSelf) {
       OS << " via implicit parameter 'self'";
     }
   }
@@ -3373,7 +3372,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   FullSourceLoc Loc = BR.getLocation().asLocation();
   while (Loc.isMacroID()) {
     Loc = Loc.getSpellingLoc();
-    if (SM.getFilename(Loc).endswith("sys/queue.h")) {
+    if (SM.getFilename(Loc).ends_with("sys/queue.h")) {
       BR.markInvalid(getTag(), nullptr);
       return;
     }

@@ -254,7 +254,7 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
       continue;
 
     Arg->render(Args, NewLinkerArgs);
-    if (Arg->getOption().matches(OPT_o))
+    if (Arg->getOption().matches(OPT_o) || Arg->getOption().matches(OPT_out))
       llvm::transform(Files, std::back_inserter(NewLinkerArgs),
                       [&](StringRef Arg) { return Args.MakeArgString(Arg); });
   }
@@ -396,11 +396,31 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
-    for (const opt::Arg *Arg : Args.filtered(OPT_library, OPT_library_path))
-      Arg->render(Args, LinkerArgs);
-    for (const opt::Arg *Arg : Args.filtered(OPT_rpath))
-      LinkerArgs.push_back(
-          Args.MakeArgString("-Wl,-rpath," + StringRef(Arg->getValue())));
+    for (const opt::Arg *Arg :
+         Args.filtered(OPT_INPUT, OPT_library, OPT_library_path, OPT_rpath,
+                       OPT_whole_archive, OPT_no_whole_archive)) {
+      // Sometimes needed libraries are passed by name, such as when using
+      // sanitizers. We need to check the file magic for any libraries.
+      if (Arg->getOption().matches(OPT_INPUT)) {
+        if (!sys::fs::exists(Arg->getValue()) ||
+            sys::fs::is_directory(Arg->getValue()))
+          continue;
+
+        file_magic Magic;
+        if (auto EC = identify_magic(Arg->getValue(), Magic))
+          return createStringError(inconvertibleErrorCode(),
+                                   "Failed to open %s", Arg->getValue());
+        if (Magic != file_magic::archive &&
+            Magic != file_magic::elf_shared_object)
+          continue;
+      }
+      if (Arg->getOption().matches(OPT_whole_archive))
+        LinkerArgs.push_back(Args.MakeArgString("-Wl,--whole-archive"));
+      else if (Arg->getOption().matches(OPT_no_whole_archive))
+        LinkerArgs.push_back(Args.MakeArgString("-Wl,--no-whole-archive"));
+      else
+        Arg->render(Args, LinkerArgs);
+    }
     llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
@@ -428,7 +448,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
         std::back_inserter(CmdArgs));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
-    CmdArgs.push_back(Args.MakeArgString("-Wl," + Arg));
+    CmdArgs.push_back(Args.MakeArgString(Arg));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_builtin_bitcode_EQ)) {
     if (llvm::Triple(Arg.split('=').first) == Triple)
@@ -1150,7 +1170,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
 std::optional<std::string> findFile(StringRef Dir, StringRef Root,
                                     const Twine &Name) {
   SmallString<128> Path;
-  if (Dir.startswith("="))
+  if (Dir.starts_with("="))
     sys::path::append(Path, Root, Dir.substr(1), Name);
   else
     sys::path::append(Path, Dir, Name);
@@ -1187,7 +1207,7 @@ searchLibraryBaseName(StringRef Name, StringRef Root,
 /// `-lfoo` or `-l:libfoo.a`.
 std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
                                          ArrayRef<StringRef> SearchPaths) {
-  if (Input.startswith(":"))
+  if (Input.starts_with(":") || Input.ends_with(".lib"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   return searchLibraryBaseName(Input, Root, SearchPaths);
 }
@@ -1338,7 +1358,7 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
 
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
-  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
+  for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
     LibraryPaths.push_back(Arg->getValue());
 
   BumpPtrAllocator Alloc;
@@ -1347,7 +1367,7 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
   // Try to extract device code from the linker input files.
   SmallVector<OffloadFile> InputFiles;
   DenseMap<OffloadFile::TargetID, DenseMap<StringRef, Symbol>> Syms;
-  bool WholeArchive = false;
+  bool WholeArchive = Args.hasArg(OPT_wholearchive_flag) ? true : false;
   for (const opt::Arg *Arg : Args.filtered(
            OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
     if (Arg->getOption().matches(OPT_whole_archive) ||
@@ -1473,8 +1493,16 @@ int main(int Argc, char **Argv) {
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
   SaveTemps = Args.hasArg(OPT_save_temps);
-  ExecutableName = Args.getLastArgValue(OPT_o, "a.out");
   CudaBinaryPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
+
+  llvm::Triple Triple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+  if (Args.hasArg(OPT_o))
+    ExecutableName = Args.getLastArgValue(OPT_o, "a.out");
+  else if (Args.hasArg(OPT_out))
+    ExecutableName = Args.getLastArgValue(OPT_out, "a.exe");
+  else
+    ExecutableName = Triple.isOSWindows() ? "a.exe" : "a.out";
 
   parallel::strategy = hardware_concurrency(1);
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {

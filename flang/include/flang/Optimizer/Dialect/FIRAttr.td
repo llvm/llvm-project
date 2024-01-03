@@ -58,6 +58,16 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
           "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
+def fir_BoxFieldAttr : I32EnumAttr<
+    "BoxFieldAttr", "",
+    [
+      I32EnumAttrCase<"base_addr", 0>,
+      I32EnumAttrCase<"derived_type", 1>
+    ]> {
+  let cppNamespace = "fir";
+}
+
+
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
 

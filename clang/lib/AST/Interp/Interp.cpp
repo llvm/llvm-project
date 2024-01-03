@@ -131,19 +131,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
   const Function *CurFunc = S.Current->getFunction();
   assert(CurFunc);
 
-  // Certain builtin functions are declared as func-name(...), so the
-  // parameters are checked in Sema and only available through the CallExpr.
-  // The interp::Function we create for them has 0 parameters, so we need to
-  // remove them from the stack by checking the CallExpr.
-  // FIXME: This is potentially just a special case and could be handled more
-  // generally with the code just below?
-  if (CurFunc->needsRuntimeArgPop(S.getCtx())) {
-    const auto *CE = cast<CallExpr>(S.Current->getExpr(OpPC));
-    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
-      popArg(S, CE->getArg(I));
-    }
+  if (CurFunc->isUnevaluatedBuiltin())
     return;
-  }
 
   if (S.Current->Caller && CurFunc->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
@@ -361,11 +350,6 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   }
 
   if (!F->isConstexpr()) {
-    // Don't emit anything if we're checking for a potential constant
-    // expression. That will happen later when actually executing.
-    if (S.checkingPotentialConstantExpression())
-      return false;
-
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
@@ -382,13 +366,21 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
       // FIXME: If DiagDecl is an implicitly-declared special member function
       // or an inheriting constructor, we should be much more explicit about why
       // it's not constexpr.
-      if (CD && CD->isInheritingConstructor())
+      if (CD && CD->isInheritingConstructor()) {
         S.FFDiag(Loc, diag::note_constexpr_invalid_inhctor, 1)
           << CD->getInheritedConstructor().getConstructor()->getParent();
-      else
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+      } else {
+        // Don't emit anything if the function isn't defined and we're checking
+        // for a constant expression. It might be defined at the point we're
+        // actually calling it.
+        if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
+          return false;
+
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+      }
     } else {
       S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
     }

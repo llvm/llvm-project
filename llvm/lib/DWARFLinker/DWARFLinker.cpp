@@ -177,6 +177,20 @@ static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
   sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
 }
 
+/// Make a best effort to guess the
+/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
+static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
+  SmallString<128> Result;
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+  StringRef Base = sys::path::parent_path(SysRoot);
+  if (sys::path::filename(Base) != "SDKs")
+    return Result;
+  Base = sys::path::parent_path(Base);
+  Result = Base;
+  Result += "/Toolchains";
+  return Result;
+}
+
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 static void analyzeImportedModule(
@@ -190,13 +204,18 @@ static void analyzeImportedModule(
     return;
 
   StringRef Path = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_include_path));
-  if (!Path.endswith(".swiftinterface"))
+  if (!Path.ends_with(".swiftinterface"))
     return;
   // Don't track interfaces that are part of the SDK.
   StringRef SysRoot = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_sysroot));
   if (SysRoot.empty())
     SysRoot = CU.getSysRoot();
-  if (!SysRoot.empty() && Path.startswith(SysRoot))
+  if (!SysRoot.empty() && Path.starts_with(SysRoot))
+    return;
+  // Don't track interfaces that are part of the toolchain.
+  // For example: Swift, _Concurrency, ...
+  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
+  if (!Toolchain.empty() && Path.starts_with(Toolchain))
     return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));

@@ -1066,5 +1066,5 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
 
   // Bufferization requires SubsetInsertionOpInterface models. Make sure that
   // they are registered.
-  tensor::registerSubsetInsertionOpInterfaceExternalModels(registry);
+  tensor::registerSubsetOpInterfaceExternalModels(registry);
 }

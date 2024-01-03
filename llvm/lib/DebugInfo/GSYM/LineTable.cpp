@@ -270,11 +270,6 @@ Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, ui
     if (Addr < Row.Addr)
       return false; // Stop parsing, result contains the line table row!
     Result = Row;
-    if (Addr == Row.Addr) {
-      // Stop parsing, this is the row we are looking for since the address
-      // matches.
-      return false;
-    }
     return true; // Keep parsing till we find the right row.
   });
   if (Err)

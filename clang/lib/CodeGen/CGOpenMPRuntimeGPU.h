@@ -130,7 +130,6 @@ protected:
 
 public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
-  void clear() override;
 
   bool isGPU() const override { return true; };
 
@@ -386,7 +385,6 @@ private:
   /// Maps the function to the list of the globalized variables with their
   /// addresses.
   llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
-  llvm::GlobalVariable *KernelTeamsReductionPtr = nullptr;
   /// List of the records with the list of fields for the reductions across the
   /// teams. Used to build the intermediate buffer for the fast teams
   /// reductions.

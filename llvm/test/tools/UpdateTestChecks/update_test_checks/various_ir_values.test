@@ -16,3 +16,9 @@
 ## Also try the --check-globals flag
 # RUN: %update_test_checks %t.ll --check-globals
 # RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.globals.expected
+# RUN: cp -f %S/Inputs/various_ir_values.ll %t.ll && %update_test_checks %t.ll --function-signature --check-globals all
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.globals.expected
+# RUN: cp -f %S/Inputs/various_ir_values.ll %t.ll && %update_test_checks %t.ll --check-globals none
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.noglobals.expected
+# RUN: cp -f %S/Inputs/various_ir_values.ll %t.ll && %update_test_checks %t.ll --check-globals smart
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.transitiveglobals.expected

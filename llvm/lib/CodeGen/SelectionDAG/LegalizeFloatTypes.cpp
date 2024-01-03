@@ -49,8 +49,7 @@ static RTLIB::Libcall GetFPLibCall(EVT VT,
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG));
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
@@ -898,8 +897,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ(SDNode *N) {
 //===----------------------------------------------------------------------===//
 
 bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG));
   SDValue Res = SDValue();
 
   switch (N->getOpcode()) {
@@ -1265,7 +1263,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
 /// have invalid operands or may have other results that need promotion, we just
 /// know that (at least) one result needs expansion.
 void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Expand float result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand float result: "; N->dump(&DAG));
   SDValue Lo, Hi;
   Lo = Hi = SDValue();
 
@@ -1870,7 +1868,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
 /// types of the node are known to be legal, but other operands of the node may
 /// need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Expand float operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand float operand: "; N->dump(&DAG));
   SDValue Res = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -2184,8 +2182,7 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 }
 
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
-  LLVM_DEBUG(dbgs() << "Promote float operand " << OpNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote float operand " << OpNo << ": "; N->dump(&DAG));
   SDValue R = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
@@ -2217,6 +2214,9 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
     case ISD::FP_EXTEND:  R = PromoteFloatOp_FP_EXTEND(N, OpNo); break;
+    case ISD::STRICT_FP_EXTEND:
+      R = PromoteFloatOp_STRICT_FP_EXTEND(N, OpNo);
+      break;
     case ISD::SELECT_CC:  R = PromoteFloatOp_SELECT_CC(N, OpNo); break;
     case ISD::SETCC:      R = PromoteFloatOp_SETCC(N, OpNo); break;
     case ISD::STORE:      R = PromoteFloatOp_STORE(N, OpNo); break;
@@ -2279,6 +2279,26 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo) {
   return DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, Op);
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N,
+                                                          unsigned OpNo) {
+  assert(OpNo == 1);
+
+  SDValue Op = GetPromotedFloat(N->getOperand(1));
+  EVT VT = N->getValueType(0);
+
+  // Desired VT is same as promoted type.  Use promoted float directly.
+  if (VT == Op->getValueType(0)) {
+    ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return Op;
+  }
+
+  // Else, extend the promoted float value to the desired VT.
+  SDValue Res = DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(N), N->getVTList(),
+                            N->getOperand(0), Op);
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
 // Promote the float operands used for comparison.  The true- and false-
 // operands have the same type as the result and are promoted, if needed, by
 // PromoteFloatRes_SELECT_CC
@@ -2327,8 +2347,7 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_STORE(SDNode *N, unsigned OpNo) {
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
-  LLVM_DEBUG(dbgs() << "Promote float result " << ResNo << ": "; N->dump(&DAG);
-             dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote float result " << ResNo << ": "; N->dump(&DAG));
   SDValue R = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -2711,7 +2730,7 @@ SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
 
 void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   LLVM_DEBUG(dbgs() << "Soft promote half result " << ResNo << ": ";
-             N->dump(&DAG); dbgs() << "\n");
+             N->dump(&DAG));
   SDValue R = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -2777,6 +2796,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FPOWI:
   case ISD::FLDEXP:      R = SoftPromoteHalfRes_ExpOp(N); break;
+
+  case ISD::FFREXP:      R = SoftPromoteHalfRes_FFREXP(N); break;
 
   case ISD::LOAD:        R = SoftPromoteHalfRes_LOAD(N); break;
   case ISD::SELECT:      R = SoftPromoteHalfRes_SELECT(N); break;
@@ -2906,6 +2927,24 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ExpOp(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FFREXP(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Promote to the larger FP type.
+  Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
+
+  SDValue Res = DAG.getNode(N->getOpcode(), dl,
+                            DAG.getVTList(NVT, N->getValueType(1)), Op);
+
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+
+  // Convert back to FP16 as an integer.
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   EVT RVT = N->getValueType(0);
   EVT SVT = N->getOperand(0).getValueType();
@@ -3020,7 +3059,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N) {
 
 bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Soft promote half operand " << OpNo << ": ";
-             N->dump(&DAG); dbgs() << "\n");
+             N->dump(&DAG));
   SDValue Res = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {

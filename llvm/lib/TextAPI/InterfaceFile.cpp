@@ -361,6 +361,8 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
     return false;
   if (IsAppExtensionSafe != O.IsAppExtensionSafe)
     return false;
+  if (IsOSLibNotForSharedCache != O.IsOSLibNotForSharedCache)
+    return false;
   if (HasSimSupport != O.HasSimSupport)
     return false;
   if (ParentUmbrellas != O.ParentUmbrellas)

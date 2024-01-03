@@ -62,6 +62,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -80,6 +81,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
 #include <algorithm>
 #include <cassert>
@@ -358,7 +360,7 @@ bool IRTranslator::translateCompare(const User &U,
 bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   const ReturnInst &RI = cast<ReturnInst>(U);
   const Value *Ret = RI.getReturnValue();
-  if (Ret && DL->getTypeStoreSize(Ret->getType()) == 0)
+  if (Ret && DL->getTypeStoreSize(Ret->getType()).isZero())
     Ret = nullptr;
 
   ArrayRef<Register> VRegs;
@@ -721,7 +723,7 @@ bool IRTranslator::translateSwitch(const User &U, MachineIRBuilder &MIB) {
     return true;
   }
 
-  SL->findJumpTables(Clusters, &SI, DefaultMBB, nullptr, nullptr);
+  SL->findJumpTables(Clusters, &SI, std::nullopt, DefaultMBB, nullptr, nullptr);
   SL->findBitTestClusters(Clusters, &SI);
 
   LLVM_DEBUG({
@@ -767,7 +769,7 @@ void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
   MIB.setMBB(*MBB);
   MIB.setDebugLoc(CurBuilder->getDebugLoc());
 
-  Type *PtrIRTy = Type::getInt8PtrTy(MF->getFunction().getContext());
+  Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
   const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
 
   auto Table = MIB.buildJumpTable(PtrTy, JT.JTI);
@@ -790,7 +792,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
 
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
-  Type *PtrIRTy = SValue.getType()->getPointerTo();
+  auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
   const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
   Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
 
@@ -1015,7 +1017,7 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   Register MinValReg = MIB.buildConstant(SwitchOpTy, B.First).getReg(0);
   auto RangeSub = MIB.buildSub(SwitchOpTy, SwitchOpReg, MinValReg);
 
-  Type *PtrIRTy = Type::getInt8PtrTy(MF->getFunction().getContext());
+  Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
   const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
 
   LLT MaskTy = SwitchOpTy;
@@ -1484,6 +1486,9 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
+  if (U.getType()->getScalarType()->isBFloatTy() ||
+      U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
+    return false;
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
   MIRBuilder.buildInstr(Opcode, {Res}, {Op});
@@ -1545,8 +1550,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       // If this is a scalar constant or a splat vector of constants,
       // handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
-        Offset += ElementSize * CI->getSExtValue();
-        continue;
+        if (std::optional<int64_t> Val = CI->getValue().trySExtValue()) {
+          Offset += ElementSize * *Val;
+          continue;
+        }
       }
 
       if (Offset != 0) {
@@ -2063,12 +2070,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     auto &TLI = *MF->getSubtarget().getTargetLowering();
     Value *Ptr = CI.getArgOperand(0);
     unsigned ListSize = TLI.getVaListSizeInBits(*DL) / 8;
+    Align Alignment = getKnownAlignment(Ptr, *DL);
 
-    // FIXME: Get alignment
     MIRBuilder.buildInstr(TargetOpcode::G_VASTART, {}, {getOrCreateVReg(*Ptr)})
         .addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Ptr),
                                                 MachineMemOperand::MOStore,
-                                                ListSize, Align(1)));
+                                                ListSize, Alignment));
     return true;
   }
   case Intrinsic::dbg_value: {
@@ -2390,6 +2397,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
     return CLI->lowerCall(MIRBuilder, Info);
   }
+  case Intrinsic::amdgcn_cs_chain:
+    return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
 
@@ -2426,6 +2435,21 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::reset_fpmode: {
     MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
+    return true;
+  }
+  case Intrinsic::prefetch: {
+    Value *Addr = CI.getOperand(0);
+    unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
+    unsigned Locality = cast<ConstantInt>(CI.getOperand(2))->getZExtValue();
+    unsigned CacheType = cast<ConstantInt>(CI.getOperand(3))->getZExtValue();
+
+    auto Flags = RW ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    auto &MMO = *MF->getMachineMemOperand(MachinePointerInfo(Addr), Flags,
+                                          LLT(), Align());
+
+    MIRBuilder.buildPrefetch(getOrCreateVReg(*Addr), RW, Locality, CacheType,
+                             MMO);
+
     return true;
   }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
@@ -3341,7 +3365,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   CurBuilder->setInsertPt(*ParentBB, ParentBB->end());
   // First create the loads to the guard/stack slot for the comparison.
   const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
-  Type *PtrIRTy = Type::getInt8PtrTy(MF->getFunction().getContext());
+  Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
   const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
   LLT PtrMemTy = getLLTForMVT(TLI.getPointerMemTy(*DL));
 
@@ -3351,7 +3375,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   Register Guard;
   Register StackSlotPtr = CurBuilder->buildFrameIndex(PtrTy, FI).getReg(0);
   const Module &M = *ParentBB->getParent()->getFunction().getParent();
-  Align Align = DL->getPrefTypeAlign(Type::getInt8PtrTy(M.getContext()));
+  Align Align = DL->getPrefTypeAlign(PointerType::getUnqual(M.getContext()));
 
   // Generate code to load the content of the guard slot.
   Register GuardVal =

@@ -110,6 +110,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.
+  LLVM_PREFERRED_TYPE(tok::TokenKind)
   unsigned TokenID : 9;
 
   // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
@@ -118,58 +119,75 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   unsigned ObjCOrBuiltinID : ObjCOrBuiltinIDBits;
 
   // True if there is a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMacro : 1;
 
   // True if there was a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HadMacro : 1;
 
   // True if the identifier is a language extension.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExtension : 1;
 
   // True if the identifier is a keyword in a newer or proposed Standard.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFutureCompatKeyword : 1;
 
   // True if the identifier is poisoned.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPoisoned : 1;
 
   // True if the identifier is a C++ operator keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCPPOperatorKeyword : 1;
 
   // Internal bit set by the member function RecomputeNeedsHandleIdentifier.
   // See comment about RecomputeNeedsHandleIdentifier for more info.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NeedsHandleIdentifier : 1;
 
   // True if the identifier was loaded (at least partially) from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFromAST : 1;
 
   // True if the identifier has changed from the definition
   // loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ChangedAfterLoad : 1;
 
   // True if the identifier's frontend information has changed from the
   // definition loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FEChangedAfterLoad : 1;
 
   // True if revertTokenIDToIdentifier was called.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RevertedTokenID : 1;
 
   // True if there may be additional information about
   // this identifier stored externally.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned OutOfDate : 1;
 
   // True if this is the 'import' contextual keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsModulesImport : 1;
 
   // True if this is a mangled OpenMP variant name.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMangledOpenMPVariantName : 1;
 
   // True if this is a deprecated macro.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDeprecatedMacro : 1;
 
   // True if this macro is unsafe in headers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRestrictExpansion : 1;
 
   // True if this macro is final.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
   // 22 bits left in a 64-bit word.
@@ -493,7 +511,7 @@ public:
   ///   function(<#int x#>);
   /// \endcode
   bool isEditorPlaceholder() const {
-    return getName().startswith("<#") && getName().endswith("#>");
+    return getName().starts_with("<#") && getName().ends_with("#>");
   }
 
   /// Determine whether \p this is a name reserved for the implementation (C99

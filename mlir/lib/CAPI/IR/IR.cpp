@@ -678,6 +678,14 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
   unwrap(op)->print(stream, *unwrap(flags));
 }
 
+void mlirOperationPrintWithState(MlirOperation op, MlirAsmState state,
+                                 MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  if (state.ptr)
+    unwrap(op)->print(stream, *unwrap(state));
+  unwrap(op)->print(stream);
+}
+
 void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
                                 void *userData) {
   detail::CallbackOstream stream(callback, userData);
@@ -976,6 +984,10 @@ bool mlirOpOperandIsNull(MlirOpOperand opOperand) { return !opOperand.ptr; }
 
 MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand) {
   return wrap(unwrap(opOperand)->getOwner());
+}
+
+MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand) {
+  return wrap(unwrap(opOperand)->get());
 }
 
 unsigned mlirOpOperandGetOperandNumber(MlirOpOperand opOperand) {

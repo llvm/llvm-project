@@ -113,11 +113,11 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::malformed:
     OS << "malformed instrumentation profile data";
     break;
-  case instrprof_error::missing_debug_info_for_correlation:
-    OS << "debug info for correlation is required";
+  case instrprof_error::missing_correlation_info:
+    OS << "debug info/binary for correlation is required";
     break;
-  case instrprof_error::unexpected_debug_info_for_correlation:
-    OS << "debug info for correlation is not necessary";
+  case instrprof_error::unexpected_correlation_info:
+    OS << "debug info/binary for correlation is not necessary";
     break;
   case instrprof_error::unable_to_correlate_profile:
     OS << "unable to correlate profile";
@@ -135,6 +135,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
     break;
   case instrprof_error::count_mismatch:
     OS << "function basic block count change detected (counter mismatch)";
+    break;
+  case instrprof_error::bitmap_mismatch:
+    OS << "function bitmap size change detected (bitmap size mismatch)";
     break;
   case instrprof_error::counter_overflow:
     OS << "counter overflow";
@@ -157,6 +160,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
     break;
   case instrprof_error::raw_profile_version_mismatch:
     OS << "raw profile version mismatch";
+    break;
+  case instrprof_error::counter_value_too_large:
+    OS << "excessively large counter value suggests corrupted profile data";
     break;
   }
 
@@ -240,11 +246,27 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
-std::string getPGOFuncName(StringRef RawFuncName,
-                           GlobalValue::LinkageTypes Linkage,
+std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
                            uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
-  return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
+  // Value names may be prefixed with a binary '1' to indicate
+  // that the backend should not modify the symbols due to any platform
+  // naming convention. Do not include that '1' in the PGO profile name.
+  if (Name[0] == '\1')
+    Name = Name.substr(1);
+
+  std::string NewName = std::string(Name);
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    // For local symbols, prepend the main file name to distinguish them.
+    // Do not include the full path in the file name since there's no guarantee
+    // that it will stay the same, e.g., if the files are checked out from
+    // version control in different locations.
+    if (FileName.empty())
+      NewName = NewName.insert(0, "<unknown>:");
+    else
+      NewName = NewName.insert(0, FileName.str() + ":");
+  }
+  return NewName;
 }
 
 // Strip NumPrefix level of directory name from PathNameStr. If the number of
@@ -294,12 +316,10 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
   SmallString<64> Name;
-  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
-    Name.append(FileName.empty() ? "<unknown>" : FileName);
-    Name.append(";");
-  }
+  // FIXME: Mangler's handling is kept outside of `getGlobalIdentifier` for now.
+  // For more details please check issue #74565.
   Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
-  return Name.str().str();
+  return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
@@ -346,6 +366,9 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
+// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// for front-end (Clang, etc) instrumentation.
+// The implementation is kept for profile matching from older profiles.
 // This is similar to `getIRPGOFuncName` except that this function calls
 // 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
@@ -378,8 +401,9 @@ getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
     return PGOFuncName;
-  // Drop the file name including ':'. See also getPGOFuncName.
-  if (PGOFuncName.startswith(FileName))
+  // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
+  // well.
+  if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;
 }
@@ -450,6 +474,59 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
   Sorted = false;
   finalizeSymtab();
   return Error::success();
+}
+
+/// \c NameStrings is a string composed of one of more possibly encoded
+/// sub-strings. The substrings are separated by 0 or more zero bytes. This
+/// method decodes the string and calls `NameCallback` for each substring.
+static Error
+readAndDecodeStrings(StringRef NameStrings,
+                     std::function<Error(StringRef)> NameCallback) {
+  const uint8_t *P = NameStrings.bytes_begin();
+  const uint8_t *EndP = NameStrings.bytes_end();
+  while (P < EndP) {
+    uint32_t N;
+    uint64_t UncompressedSize = decodeULEB128(P, &N);
+    P += N;
+    uint64_t CompressedSize = decodeULEB128(P, &N);
+    P += N;
+    bool isCompressed = (CompressedSize != 0);
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
+    StringRef NameStrings;
+    if (isCompressed) {
+      if (!llvm::compression::zlib::isAvailable())
+        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
+
+      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
+                                                  UncompressedNameStrings,
+                                                  UncompressedSize)) {
+        consumeError(std::move(E));
+        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
+      }
+      P += CompressedSize;
+      NameStrings = toStringRef(UncompressedNameStrings);
+    } else {
+      NameStrings =
+          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
+      P += UncompressedSize;
+    }
+    // Now parse the name strings.
+    SmallVector<StringRef, 0> Names;
+    NameStrings.split(Names, getInstrProfNameSeparator());
+    for (StringRef &Name : Names)
+      if (Error E = NameCallback(Name))
+        return E;
+
+    while (P < EndP && *P == 0)
+      P++;
+  }
+  return Error::success();
+}
+
+Error InstrProfSymtab::create(StringRef NameStrings) {
+  return readAndDecodeStrings(
+      NameStrings,
+      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
@@ -558,48 +635,6 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   }
   return collectGlobalObjectNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
-}
-
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
-  const uint8_t *P = NameStrings.bytes_begin();
-  const uint8_t *EndP = NameStrings.bytes_end();
-  while (P < EndP) {
-    uint32_t N;
-    uint64_t UncompressedSize = decodeULEB128(P, &N);
-    P += N;
-    uint64_t CompressedSize = decodeULEB128(P, &N);
-    P += N;
-    bool isCompressed = (CompressedSize != 0);
-    SmallVector<uint8_t, 128> UncompressedNameStrings;
-    StringRef NameStrings;
-    if (isCompressed) {
-      if (!llvm::compression::zlib::isAvailable())
-        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
-
-      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
-                                                  UncompressedNameStrings,
-                                                  UncompressedSize)) {
-        consumeError(std::move(E));
-        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
-      }
-      P += CompressedSize;
-      NameStrings = toStringRef(UncompressedNameStrings);
-    } else {
-      NameStrings =
-          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
-      P += UncompressedSize;
-    }
-    // Now parse the name strings.
-    SmallVector<StringRef, 0> Names;
-    NameStrings.split(Names, getInstrProfNameSeparator());
-    for (StringRef &Name : Names)
-      if (Error E = Symtab.addFuncName(Name))
-        return E;
-
-    while (P < EndP && *P == 0)
-      P++;
-  }
-  return Error::success();
 }
 
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
@@ -813,6 +848,18 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
+  }
+
+  // If the number of bitmap bytes doesn't match we either have bad data
+  // or a hash collision.
+  if (BitmapBytes.size() != Other.BitmapBytes.size()) {
+    Warn(instrprof_error::bitmap_mismatch);
+    return;
+  }
+
+  // Bitmap bytes are merged by simply ORing them together.
+  for (size_t I = 0, E = Other.BitmapBytes.size(); I < E; ++I) {
+    BitmapBytes[I] = Other.BitmapBytes[I] | BitmapBytes[I];
   }
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
@@ -1487,9 +1534,11 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 11ull:
+    [[fallthrough]];
   case 10ull:
     H.TemporalProfTracesOffset =
         read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
@@ -1513,10 +1562,12 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 11ull:
+    [[fallthrough]];
   case 10ull:
     return offsetOf(&Header::TemporalProfTracesOffset) +
            sizeof(Header::TemporalProfTracesOffset);

@@ -185,7 +185,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
@@ -206,7 +205,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <tuple>
 #include <vector>
 
 #include <cstdio>
@@ -854,7 +852,7 @@ public:
     appendToCompilerUsed(M, {static_cast<GlobalValue *>(
                                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
                                     cast<Constant>(ModuleScopeReplacement.SGV),
-                                    Type::getInt8PtrTy(Ctx)))});
+                                    PointerType::getUnqual(Ctx)))});
 
     // module.lds will be allocated at zero in any kernel that allocates it
     recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);

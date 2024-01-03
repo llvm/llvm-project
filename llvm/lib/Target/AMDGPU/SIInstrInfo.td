@@ -32,6 +32,7 @@ def SIEncodingFamily {
   int GFX90A = 8;
   int GFX940 = 9;
   int GFX11 = 10;
+  int GFX12 = 11;
 }
 
 //===----------------------------------------------------------------------===//
@@ -199,10 +200,7 @@ defm SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
-    [SDTCisVT<0, i32>,   // dst
-     SDTCisVT<1, i32>,   // src
-     SDTCisVT<2, i32>,   // cmp
-     SDTCisVT<3, v4i32>, // rsrc
+    [SDTCisVT<3, v4i32>, // rsrc
      SDTCisVT<4, i32>,   // vindex(VGPR)
      SDTCisVT<5, i32>,   // voffset(VGPR)
      SDTCisVT<6, i32>,   // soffset(SGPR)
@@ -889,11 +887,19 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
 //===----------------------------------------------------------------------===//
 
 def extract_cpol : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & AMDGPU::CPol::ALL, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::ALL
+                               : AMDGPU::CPol::ALL_pregfx12),
+      SDLoc(N), MVT::i8);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 1, SDLoc(N), MVT::i8);
+  const bool Swizzle =
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::SWZ
+                               : AMDGPU::CPol::SWZ_pregfx12);
+  return CurDAG->getTargetConstant(Swizzle, SDLoc(N), MVT::i8);
 }]>;
 
 def set_glc : SDNodeXForm<timm, [{
@@ -920,6 +926,13 @@ def InterpSlot : CustomOperand<i32>;
 def InterpAttr : CustomOperand<i32>;
 
 def InterpAttrChan : ImmOperand<i32>;
+
+def SplitBarrier : ImmOperand<i32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
+  let DecoderMethod = "decodeSplitBarrier";
+  let PrintMethod = "printOperand";
+}
 
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
@@ -1038,9 +1051,8 @@ class NamedBitOperand<string Id, string Name = NAME>
 
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
-    CustomOperandProps<1, Op.ParserMatchClass.Name> {
-  let PredicateMethod = Op.ParserMatchClass.PredicateMethod;
-  let ParserMethod = Op.ParserMatchClass.ParserMethod;
+    CustomOperandProps<1> {
+  let ParserMatchClass = Op.ParserMatchClass;
   let PrintMethod = Op.PrintMethod;
 }
 
@@ -1081,6 +1093,10 @@ def highmod : NamedBitOperand<"high", "High">;
 def CPol : CustomOperand<i32, 1>;
 def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
+def CPol_GLC : ValuePredicatedOperand<CPol, "Op.getImm() & CPol::GLC">;
+def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
+def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
+def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
 
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;
@@ -2757,7 +2773,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
-                   [!cast<string>(SIEncodingFamily.GFX11)]];
+                   [!cast<string>(SIEncodingFamily.GFX11)],
+                   [!cast<string>(SIEncodingFamily.GFX12)]];
 }
 
 // Get equivalent SOPK instruction.
@@ -2896,14 +2913,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY"];
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-  let Key = ["OpX", "OpY"];
+  let Key = ["OpX", "OpY", "SubTgt"];
 }
 
 include "SIInstructions.td"

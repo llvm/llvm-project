@@ -97,6 +97,16 @@ The presence of ``address`` can cause the condition unsatisfied. LLD will warn.
 GNU ld from Binutils 2.35 onwards will reduce sh_addralign so that
 sh_addr=0 (modulo sh_addralign).
 
+When an output section has no input section, GNU ld will eliminate it if it
+only contains symbol assignments (e.g. ``.foo { symbol = 42; }``). LLD will
+retain such sections unless all the symbol assignments are unreferenced
+``PROVIDED``.
+
+When an output section has no input section but advances the location counter,
+GNU ld sets the ``SHF_WRITE`` flag. LLD sets the SHF_WRITE flag only if the
+preceding output section with non-empty input sections also has the SHF_WRITE
+flag.
+
 Output section type
 -------------------
 

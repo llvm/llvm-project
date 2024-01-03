@@ -10,8 +10,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
+#include <cstddef>
 #include <cstdlib>
+
+#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
+#include <limits.h> // LOGIN_NAME_MAX used in getlog test
+#endif
 
 using namespace Fortran::runtime;
 
@@ -57,6 +63,13 @@ protected:
     assert(res.length() <= len && "No room to pad");
     res.append(len - res.length(), ' ');
     return res;
+  }
+
+  void CheckCharEqStr(const char *value, const std::string &expected) const {
+    ASSERT_NE(value, nullptr);
+    EXPECT_EQ(std::strncmp(value, expected.c_str(), expected.size()), 0)
+        << "expected: " << expected << "\n"
+        << "value: " << value;
   }
 
   void CheckDescriptorEqStr(
@@ -171,7 +184,7 @@ protected:
     std::string spaces(value->ElementBytes(), ' ');
     CheckDescriptorEqStr(value.get(), spaces);
 
-    CheckDescriptorEqInt(length.get(), 0);
+    CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
 
     if (errStr) {
       std::string paddedErrStr(GetPaddedStr(errStr, err->ElementBytes()));
@@ -193,7 +206,7 @@ protected:
     std::string spaces(value->ElementBytes(), ' ');
     CheckDescriptorEqStr(value.get(), spaces);
 
-    CheckDescriptorEqInt(length.get(), 0);
+    CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
 
     if (errStr) {
       std::string paddedErrStr(GetPaddedStr(errStr, err->ElementBytes()));
@@ -294,7 +307,7 @@ TEST_F(SeveralArguments, ArgValueTooShort) {
       RTNAME(GetCommandArgument)(1, tooShort.get(), length.get(), errMsg.get()),
       -1);
 
-  CheckDescriptorEqInt(length.get(), 16);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 16);
   std::string expectedErrMsg{
       GetPaddedStr("Value too short", errMsg->ElementBytes())};
   CheckDescriptorEqStr(errMsg.get(), expectedErrMsg);
@@ -320,7 +333,7 @@ TEST_F(SeveralArguments, CommandErrMsgTooShort) {
 
   std::string spaces(value->ElementBytes(), ' ');
   CheckDescriptorEqStr(value.get(), spaces);
-  CheckDescriptorEqInt(length.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
   CheckDescriptorEqStr(errMsg.get(), "Mis");
 }
 
@@ -351,7 +364,7 @@ TEST_F(OnlyValidArguments, CommandValueTooShort) {
 
   CheckDescriptorEqStr(
       tooShort.get(), "aProgram -f has/a/few/slashes has\\a\\few\\backslashe");
-  CheckDescriptorEqInt(length.get(), 51);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 51);
 
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor()};
   ASSERT_NE(errMsg, nullptr);
@@ -377,7 +390,7 @@ TEST_F(OnlyValidArguments, GetCommandCanTakeNull) {
           value->ElementBytes()));
 
   EXPECT_EQ(0, RTNAME(GetCommand)(nullptr, length.get(), nullptr));
-  CheckDescriptorEqInt(length.get(), 51);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 51);
 }
 
 TEST_F(OnlyValidArguments, GetCommandShortLength) {
@@ -388,10 +401,20 @@ TEST_F(OnlyValidArguments, GetCommandShortLength) {
   CheckDescriptorEqInt<short>(length.get(), 51);
 }
 
+TEST_F(ZeroArguments, GetPID) {
+  // pid should always greater than 0, in both linux and windows
+  EXPECT_GT(RTNAME(GetPID)(), 0);
+}
+
 class EnvironmentVariables : public CommandFixture {
 protected:
   EnvironmentVariables() : CommandFixture(0, nullptr) {
     SetEnv("NAME", "VALUE");
+#ifdef _WIN32
+    SetEnv("USERNAME", "loginName");
+#else
+    SetEnv("LOGNAME", "loginName");
+#endif
     SetEnv("EMPTY", "");
   }
 
@@ -489,3 +512,68 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
       1);
   CheckDescriptorEqStr(errMsg.get(), "Mis");
 }
+
+// username first char must not be null
+TEST_F(EnvironmentVariables, GetlogGetName) {
+  const int charLen{3};
+  char input[charLen]{"\0\0"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::byte *>(input), charLen);
+
+  EXPECT_NE(input[0], '\0');
+}
+
+#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
+TEST_F(EnvironmentVariables, GetlogPadSpace) {
+  // guarantee 1 char longer than max, last char should be pad space
+  const int charLen{LOGIN_NAME_MAX + 2};
+  char input[charLen];
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::byte *>(input), charLen);
+
+  EXPECT_EQ(input[charLen - 1], ' ');
+}
+#endif
+
+#ifdef _WIN32 // Test ability to get name from environment variable
+TEST_F(EnvironmentVariables, GetlogEnvGetName) {
+  if (EnableFineGrainedTests()) {
+    ASSERT_NE(std::getenv("USERNAME"), nullptr)
+        << "Environment variable USERNAME does not exist";
+
+    char input[]{"XXXXXXXXX"};
+    FORTRAN_PROCEDURE_NAME(getlog)
+    (reinterpret_cast<std::byte *>(input), sizeof(input));
+
+    CheckCharEqStr(input, "loginName");
+  }
+}
+
+TEST_F(EnvironmentVariables, GetlogEnvBufferShort) {
+  if (EnableFineGrainedTests()) {
+    ASSERT_NE(std::getenv("USERNAME"), nullptr)
+        << "Environment variable USERNAME does not exist";
+
+    char input[]{"XXXXXX"};
+    FORTRAN_PROCEDURE_NAME(getlog)
+    (reinterpret_cast<std::byte *>(input), sizeof(input));
+
+    CheckCharEqStr(input, "loginN");
+  }
+}
+
+TEST_F(EnvironmentVariables, GetlogEnvPadSpace) {
+  if (EnableFineGrainedTests()) {
+    ASSERT_NE(std::getenv("USERNAME"), nullptr)
+        << "Environment variable USERNAME does not exist";
+
+    char input[]{"XXXXXXXXXX"};
+    FORTRAN_PROCEDURE_NAME(getlog)
+    (reinterpret_cast<std::byte *>(input), sizeof(input));
+
+    CheckCharEqStr(input, "loginName ");
+  }
+}
+#endif

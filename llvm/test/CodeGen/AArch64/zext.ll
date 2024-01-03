@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for zext_v16i10_v16i16
+
 define i16 @zext_i8_to_i16(i8 %a) {
 ; CHECK-LABEL: zext_i8_to_i16:
 ; CHECK:       // %bb.0: // %entry
@@ -333,18 +335,14 @@ define <3 x i32> @zext_v3i16_v3i32(<3 x i16> %a) {
 ; CHECK-GI-LABEL: zext_v3i16_v3i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    uxth w8, w8
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    uxth w9, w9
-; CHECK-GI-NEXT:    uxth w8, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w9
-; CHECK-GI-NEXT:    mov v0.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    umov w8, v0.h[2]
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    mov v1.s[3], w8
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i16> %a to <3 x i32>
@@ -366,15 +364,10 @@ define <3 x i64> @zext_v3i16_v3i64(<3 x i16> %a) {
 ; CHECK-GI-LABEL: zext_v3i16_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    ubfx x8, x8, #0, #16
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    fmov w10, s2
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ubfx x9, x9, #0, #16
-; CHECK-GI-NEXT:    ubfx x10, x10, #0, #16
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    ret
@@ -396,12 +389,10 @@ define <3 x i64> @zext_v3i32_v3i64(<3 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v3i32_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[0]
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
+; CHECK-GI-NEXT:    mov w10, v0.s[2]
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    fmov w10, s2
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    ret
@@ -1196,7 +1187,7 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v16i10_v16i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s7, w0
+; CHECK-GI-NEXT:    fmov s16, w0
 ; CHECK-GI-NEXT:    fmov s17, w2
 ; CHECK-GI-NEXT:    ldr s0, [sp]
 ; CHECK-GI-NEXT:    fmov s18, w4
@@ -1207,33 +1198,33 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-GI-NEXT:    ldr s4, [sp, #32]
 ; CHECK-GI-NEXT:    ldr s5, [sp, #40]
 ; CHECK-GI-NEXT:    ldr s6, [sp, #48]
-; CHECK-GI-NEXT:    ldr s16, [sp, #56]
-; CHECK-GI-NEXT:    mov v7.s[1], w1
+; CHECK-GI-NEXT:    ldr s7, [sp, #56]
+; CHECK-GI-NEXT:    mov v16.s[1], w1
 ; CHECK-GI-NEXT:    mov v17.s[1], w3
 ; CHECK-GI-NEXT:    mov v18.s[1], w5
 ; CHECK-GI-NEXT:    mov v19.s[1], w7
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    mov v2.s[1], v3.s[0]
 ; CHECK-GI-NEXT:    mov v4.s[1], v5.s[0]
-; CHECK-GI-NEXT:    mov v6.s[1], v16.s[0]
+; CHECK-GI-NEXT:    mov v6.s[1], v7.s[0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI54_0
-; CHECK-GI-NEXT:    ldr q16, [x8, :lo12:.LCPI54_0]
-; CHECK-GI-NEXT:    ushll v1.2d, v7.2s, #0
+; CHECK-GI-NEXT:    ushll v1.2d, v16.2s, #0
 ; CHECK-GI-NEXT:    ushll v3.2d, v17.2s, #0
 ; CHECK-GI-NEXT:    ushll v5.2d, v18.2s, #0
 ; CHECK-GI-NEXT:    ushll v7.2d, v19.2s, #0
-; CHECK-GI-NEXT:    ushll v17.2d, v0.2s, #0
+; CHECK-GI-NEXT:    ushll v16.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll v18.2d, v2.2s, #0
 ; CHECK-GI-NEXT:    ushll v19.2d, v4.2s, #0
 ; CHECK-GI-NEXT:    ushll v20.2d, v6.2s, #0
-; CHECK-GI-NEXT:    and v0.16b, v1.16b, v16.16b
-; CHECK-GI-NEXT:    and v1.16b, v3.16b, v16.16b
-; CHECK-GI-NEXT:    and v2.16b, v5.16b, v16.16b
-; CHECK-GI-NEXT:    and v3.16b, v7.16b, v16.16b
-; CHECK-GI-NEXT:    and v4.16b, v17.16b, v16.16b
-; CHECK-GI-NEXT:    and v5.16b, v18.16b, v16.16b
-; CHECK-GI-NEXT:    and v6.16b, v19.16b, v16.16b
-; CHECK-GI-NEXT:    and v7.16b, v20.16b, v16.16b
+; CHECK-GI-NEXT:    ldr q17, [x8, :lo12:.LCPI54_0]
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v17.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v17.16b
+; CHECK-GI-NEXT:    and v2.16b, v5.16b, v17.16b
+; CHECK-GI-NEXT:    and v3.16b, v7.16b, v17.16b
+; CHECK-GI-NEXT:    and v4.16b, v16.16b, v17.16b
+; CHECK-GI-NEXT:    and v5.16b, v18.16b, v17.16b
+; CHECK-GI-NEXT:    and v6.16b, v19.16b, v17.16b
+; CHECK-GI-NEXT:    and v7.16b, v20.16b, v17.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <16 x i10> %a to <16 x i64>

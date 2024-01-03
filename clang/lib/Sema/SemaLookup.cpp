@@ -1593,7 +1593,6 @@ bool Sema::isUsableModule(const Module *M) {
   //   The global module fragment can be used to provide declarations that are
   //   attached to the global module and usable within the module unit.
   if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment ||
-      M == TheExportedImplicitGlobalModuleFragment ||
       // If M is the module we're parsing, it should be usable. This covers the
       // private module fragment. The private module fragment is usable only if
       // it is within the current module unit. And it must be the current
@@ -3911,7 +3910,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
             // with an import).
-            assert(FM && FM->isModulePurview() && !FM->isPrivateModule() &&
+            assert(FM && FM->isNamedModule() && !FM->isPrivateModule() &&
                    "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
@@ -5713,6 +5712,11 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
                                  MissingImportKind MIK, bool Recover) {
   assert(!Modules.empty());
 
+  // See https://github.com/llvm/llvm-project/issues/73893. It is generally
+  // confusing than helpful to show the namespace is not visible.
+  if (isa<NamespaceDecl>(Decl))
+    return;
+
   auto NotePrevious = [&] {
     // FIXME: Suppress the note backtrace even under
     // -fdiagnostics-show-note-include-stack. We don't care how this
@@ -5724,7 +5728,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
   llvm::SmallVector<Module*, 8> UniqueModules;
   llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
   for (auto *M : Modules) {
-    if (M->isGlobalModule() || M->isPrivateModule())
+    if (M->isExplicitGlobalModule() || M->isPrivateModule())
       continue;
     if (UniqueModuleSet.insert(M).second)
       UniqueModules.push_back(M);
@@ -5756,6 +5760,28 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   Modules = UniqueModules;
 
+  auto GetModuleNameForDiagnostic = [this](const Module *M) -> std::string {
+    if (M->isModuleMapModule())
+      return M->getFullModuleName();
+
+    Module *CurrentModule = getCurrentModule();
+
+    if (M->isImplicitGlobalModule())
+      M = M->getTopLevelModule();
+
+    bool IsInTheSameModule =
+        CurrentModule && CurrentModule->getPrimaryModuleInterfaceName() ==
+                             M->getPrimaryModuleInterfaceName();
+
+    // If the current module unit is in the same module with M, it is OK to show
+    // the partition name. Otherwise, it'll be sufficient to show the primary
+    // module name.
+    if (IsInTheSameModule)
+      return M->getTopLevelModuleName().str();
+    else
+      return M->getPrimaryModuleInterfaceName().str();
+  };
+
   if (Modules.size() > 1) {
     std::string ModuleList;
     unsigned N = 0;
@@ -5765,7 +5791,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
         ModuleList += "[...]";
         break;
       }
-      ModuleList += M->getFullModuleName();
+      ModuleList += GetModuleNameForDiagnostic(M);
     }
 
     Diag(UseLoc, diag::err_module_unimported_use_multiple)
@@ -5773,7 +5799,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
   } else {
     // FIXME: Add a FixItHint that imports the corresponding module.
     Diag(UseLoc, diag::err_module_unimported_use)
-      << (int)MIK << Decl << Modules[0]->getFullModuleName();
+        << (int)MIK << Decl << GetModuleNameForDiagnostic(Modules[0]);
   }
 
   NotePrevious();

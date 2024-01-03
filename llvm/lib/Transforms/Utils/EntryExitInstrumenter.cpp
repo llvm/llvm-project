@@ -54,7 +54,7 @@ static void insertCall(Function &CurFn, StringRef Func,
   }
 
   if (Func == "__cyg_profile_func_enter" || Func == "__cyg_profile_func_exit") {
-    Type *ArgTypes[] = {Type::getInt8PtrTy(C), Type::getInt8PtrTy(C)};
+    Type *ArgTypes[] = {PointerType::getUnqual(C), PointerType::getUnqual(C)};
 
     FunctionCallee Fn = M.getOrInsertFunction(
         Func, FunctionType::get(Type::getVoidTy(C), ArgTypes, false));
@@ -65,9 +65,7 @@ static void insertCall(Function &CurFn, StringRef Func,
         InsertionPt);
     RetAddr->setDebugLoc(DL);
 
-    Value *Args[] = {ConstantExpr::getBitCast(&CurFn, Type::getInt8PtrTy(C)),
-                     RetAddr};
-
+    Value *Args[] = {&CurFn, RetAddr};
     CallInst *Call =
         CallInst::Create(Fn, ArrayRef<Value *>(Args), "", InsertionPt);
     Call->setDebugLoc(DL);

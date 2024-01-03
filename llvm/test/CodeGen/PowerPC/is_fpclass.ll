@@ -117,12 +117,9 @@ define i1 @isinf_float(float %x) nounwind {
 define i1 @isinf_ppc_fp128(ppc_fp128 %x) nounwind {
 ; CHECK-LABEL: isinf_ppc_fp128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
-; CHECK-NEXT:    xsabsdp 0, 1
-; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    lfs 1, .LCPI9_0@toc@l(3)
+; CHECK-NEXT:    xststdcdp 0, 1, 48
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    fcmpu 0, 0, 1
+; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
   %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 516)  ; 0x204 = "inf"

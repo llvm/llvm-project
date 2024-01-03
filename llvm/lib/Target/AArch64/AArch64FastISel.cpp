@@ -335,8 +335,6 @@ static unsigned getImplicitScaleFactor(MVT VT) {
 }
 
 CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
-  if (CC == CallingConv::WebKit_JS)
-    return CC_AArch64_WebKit_JS;
   if (CC == CallingConv::GHC)
     return CC_AArch64_GHC;
   if (CC == CallingConv::CFGuard_Check)
@@ -3864,9 +3862,7 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
     // Analyze operands of the call, assigning locations to each operand.
     SmallVector<CCValAssign, 16> ValLocs;
     CCState CCInfo(CC, F.isVarArg(), *FuncInfo.MF, ValLocs, I->getContext());
-    CCAssignFn *RetCC = CC == CallingConv::WebKit_JS ? RetCC_AArch64_WebKit_JS
-                                                     : RetCC_AArch64_AAPCS;
-    CCInfo.AnalyzeReturn(Outs, RetCC);
+    CCInfo.AnalyzeReturn(Outs, RetCC_AArch64_AAPCS);
 
     // Only handle a single return value for now.
     if (ValLocs.size() != 1)

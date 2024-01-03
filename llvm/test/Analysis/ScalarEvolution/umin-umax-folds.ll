@@ -20,7 +20,7 @@ define void @umin_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -56,7 +56,7 @@ define void @ule_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -92,7 +92,7 @@ define void @uge_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (sext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (sext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -128,7 +128,7 @@ define void @ult_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -164,7 +164,7 @@ define void @ugt_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (sext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (sext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -200,7 +200,7 @@ define void @sle_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -236,7 +236,7 @@ define void @sge_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -272,7 +272,7 @@ define void @slt_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (sext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (sext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64
@@ -308,7 +308,7 @@ define void @sgt_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i32 %len to i64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %len.zext = zext i32 %len to i64

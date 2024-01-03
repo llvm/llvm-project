@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
 // <experimental/simd>
 //

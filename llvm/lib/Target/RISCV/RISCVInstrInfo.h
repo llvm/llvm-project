@@ -43,6 +43,7 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
+unsigned getBrCond(CondCode CC);
 
 } // end of namespace RISCVCC
 
@@ -121,6 +122,8 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
+  bool optimizeCondBranch(MachineInstr &MI) const override;
+
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
@@ -148,6 +151,18 @@ public:
 
   MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
                                  const ExtAddrMode &AM) const override;
+
+  bool getMemOperandsWithOffsetWidth(
+      const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
+      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      const TargetRegisterInfo *TRI) const override;
+
+  bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
+                           ArrayRef<const MachineOperand *> BaseOps2,
+                           int64_t Offset2, bool OffsetIsScalable2,
+                           unsigned ClusterSize,
+                           unsigned NumBytes) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
@@ -194,6 +209,9 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
 
+  std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                           Register Reg) const override;
+
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
@@ -218,9 +236,6 @@ public:
 
   MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
-  void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
-                             MachineInstr &NewMI1,
-                             MachineInstr &NewMI2) const override;
   bool
   getMachineCombinerPatterns(MachineInstr &Root,
                              SmallVectorImpl<MachineCombinerPattern> &Patterns,
@@ -282,6 +297,9 @@ bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 // returns null.
 std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
                                                        unsigned Log2SEW);
+
+// Returns the MC opcode of RVV pseudo instruction.
+unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;

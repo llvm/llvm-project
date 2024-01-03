@@ -35,7 +35,7 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_def_cfa_offset 32
   .cfi_offset w30, -24
   .cfi_offset w29, -32
-  .cfi_offset vg, -16
+  .cfi_offset 46, -16
 	bl	__arm_sme_state
 	tbz	x0, #0, 2f
 1:

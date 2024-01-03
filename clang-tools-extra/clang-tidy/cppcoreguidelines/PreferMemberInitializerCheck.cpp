@@ -118,45 +118,50 @@ static void updateAssignmentLevel(
   }
 }
 
-static std::pair<const FieldDecl *, const Expr *>
+struct AssignmentPair {
+  const FieldDecl *Field;
+  const Expr *Init;
+};
+
+static std::optional<AssignmentPair>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
                        const CXXConstructorDecl *Ctor) {
   if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
     if (BO->getOpcode() != BO_Assign)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *ME = dyn_cast<MemberExpr>(BO->getLHS()->IgnoreParenImpCasts());
     if (!ME)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!Field)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     if (!isa<CXXThisExpr>(ME->getBase()))
-      return std::make_pair(nullptr, nullptr);
+      return {};
     const Expr *Init = BO->getRHS()->IgnoreParenImpCasts();
-    return std::make_pair(Field, Init);
+    return AssignmentPair{Field, Init};
   }
   if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (COCE->getOperator() != OO_Equal)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *ME =
         dyn_cast<MemberExpr>(COCE->getArg(0)->IgnoreParenImpCasts());
     if (!ME)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!Field)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     if (!isa<CXXThisExpr>(ME->getBase()))
-      return std::make_pair(nullptr, nullptr);
+      return {};
     const Expr *Init = COCE->getArg(1)->IgnoreParenImpCasts();
-    return std::make_pair(Field, Init);
+    return AssignmentPair{Field, Init};
   }
-  return std::make_pair(nullptr, nullptr);
+  return {};
 }
 
 PreferMemberInitializerCheck::PreferMemberInitializerCheck(
@@ -216,11 +221,12 @@ void PreferMemberInitializerCheck::check(
         return;
     }
 
-    const FieldDecl *Field = nullptr;
-    const Expr *InitValue = nullptr;
-    std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
-    if (!Field)
+    std::optional<AssignmentPair> AssignmentToMember =
+        isAssignmentToMemberOf(Class, S, Ctor);
+    if (!AssignmentToMember)
       continue;
+    const FieldDecl *Field = AssignmentToMember->Field;
+    const Expr *InitValue = AssignmentToMember->Init;
     updateAssignmentLevel(Field, InitValue, Ctor, AssignedFields);
     if (!canAdvanceAssignment(AssignedFields[Field]))
       continue;

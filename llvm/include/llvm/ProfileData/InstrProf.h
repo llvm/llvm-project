@@ -26,7 +26,6 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -95,6 +94,9 @@ inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 
 /// Return the name prefix of profile counter variables.
 inline StringRef getInstrProfCountersVarPrefix() { return "__profc_"; }
+
+/// Return the name prefix of profile bitmap variables.
+inline StringRef getInstrProfBitmapVarPrefix() { return "__profbm_"; }
 
 /// Return the name prefix of value profile variables.
 inline StringRef getInstrProfValuesVarPrefix() { return "__profvp_"; }
@@ -169,6 +171,8 @@ inline StringRef getInstrProfCounterBiasVarName() {
 /// Return the marker used to separate PGO names during serialization.
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 
+/// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+/// for front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
 /// used the key for profile lookup. Variable \c InLTO indicates if this
 /// is called in LTO optimization passes.
@@ -194,20 +198,22 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
 std::pair<StringRef, StringRef> getParsedIRPGOFuncName(StringRef IRPGOFuncName);
 
 /// Return the name of the global variable used to store a function
-/// name in PGO instrumentation. \c FuncName is the name of the function
-/// returned by the \c getPGOFuncName call.
+/// name in PGO instrumentation. \c FuncName is the IRPGO function name
+/// (returned by \c getIRPGOFuncName) for LLVM IR instrumentation and PGO
+/// function name (returned by \c getPGOFuncName) for front-end instrumentation.
 std::string getPGOFuncNameVarName(StringRef FuncName,
                                   GlobalValue::LinkageTypes Linkage);
 
 /// Create and return the global variable for function name used in PGO
-/// instrumentation. \c FuncName is the name of the function returned
-/// by \c getPGOFuncName call.
+/// instrumentation. \c FuncName is the IRPGO function name (returned by
+/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// (returned by \c getPGOFuncName) for front-end instrumentation.
 GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName);
 
 /// Create and return the global variable for function name used in PGO
-/// instrumentation.  /// \c FuncName is the name of the function
-/// returned by \c getPGOFuncName call, \c M is the owning module,
-/// and \c Linkage is the linkage of the instrumented function.
+/// instrumentation. \c FuncName is the IRPGO function name (returned by
+/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// (returned by \c getPGOFuncName) for front-end instrumentation.
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName);
@@ -239,11 +245,6 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
 /// variables.
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
-
-/// \c NameStrings is a string composed of one of more sub-strings encoded in
-/// the format described above. The substrings are separated by 0 or more zero
-/// bytes. This method decodes the string and populates the \c Symtab.
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
 
 /// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
 /// set in IR PGO compilation.
@@ -331,20 +332,22 @@ enum class instrprof_error {
   too_large,
   truncated,
   malformed,
-  missing_debug_info_for_correlation,
-  unexpected_debug_info_for_correlation,
+  missing_correlation_info,
+  unexpected_correlation_info,
   unable_to_correlate_profile,
   unknown_function,
   invalid_prof,
   hash_mismatch,
   count_mismatch,
+  bitmap_mismatch,
   counter_overflow,
   value_site_count_mismatch,
   compress_failed,
   uncompress_failed,
   empty_raw_profile,
   zlib_unavailable,
-  raw_profile_version_mismatch
+  raw_profile_version_mismatch,
+  counter_value_too_large,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -418,11 +421,11 @@ uint64_t ComputeHash(StringRef K);
 
 } // end namespace IndexedInstrProf
 
-/// A symbol table used for function PGO name look-up with keys
+/// A symbol table used for function [IR]PGO name look-up with keys
 /// (such as pointers, md5hash values) to the function. A function's
-/// PGO name or name's md5hash are used in retrieving the profile
-/// data of the function. See \c getPGOFuncName() method for details
-/// on how PGO name is formed.
+/// [IR]PGO name or name's md5hash are used in retrieving the profile
+/// data of the function. See \c getIRPGOFuncName() and \c getPGOFuncName
+/// methods for details how [IR]PGO name is formed.
 class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
@@ -465,14 +468,14 @@ public:
   /// until before it is used. See also \c create(StringRef) method.
   Error create(object::SectionRef &Section);
 
-  /// This interface is used by reader of CoverageMapping test
-  /// format.
-  inline Error create(StringRef D, uint64_t BaseAddr);
-
   /// \c NameStrings is a string composed of one of more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
   /// This method is a wrapper to \c readPGOFuncNameStrings method.
-  inline Error create(StringRef NameStrings);
+  Error create(StringRef NameStrings);
+
+  /// This interface is used by reader of CoverageMapping test
+  /// format.
+  inline Error create(StringRef D, uint64_t BaseAddr);
 
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
@@ -541,10 +544,6 @@ Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
   Data = D;
   Address = BaseAddr;
   return Error::success();
-}
-
-Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readPGOFuncNameStrings(NameStrings, *this);
 }
 
 template <typename NameIterRange>
@@ -693,18 +692,23 @@ struct InstrProfValueSiteRecord {
 /// Profiling information for a single function.
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
+  std::vector<uint8_t> BitmapBytes;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
+  InstrProfRecord(std::vector<uint64_t> Counts,
+                  std::vector<uint8_t> BitmapBytes)
+      : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
-      : Counts(RHS.Counts),
+      : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
+    BitmapBytes = RHS.BitmapBytes;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -883,6 +887,11 @@ struct NamedInstrProfRecord : InstrProfRecord {
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts)
       : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts,
+                       std::vector<uint8_t> BitmapBytes)
+      : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
+        Hash(Hash) {}
 
   static bool hasCSFlagInHash(uint64_t FuncHash) {
     return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
@@ -1014,7 +1023,9 @@ enum ProfVersion {
   Version9 = 9,
   // An additional (optional) temporal profile traces section is added.
   Version10 = 10,
-  // The current version is 10.
+  // An additional field is used for bitmap bytes.
+  Version11 = 11,
+  // The current version is 11.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1152,6 +1163,7 @@ namespace RawInstrProf {
 // Version 6: Added binary id.
 // Version 7: Reorder binary id and include version in signature.
 // Version 8: Use relative counter pointer.
+// Version 9: Added relative bitmap bytes pointer and count used by MC/DC.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();

@@ -1,36 +1,10 @@
 include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
-# Clear out any pre-existing compile_commands file before processing. This
-# allows for generating a clean compile_commands on each configure.
-file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
-
 function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
-
-  # Get the current set of include paths for this td file.
-  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
-  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
-  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
-  # Filter out any empty include items.
-  list(REMOVE_ITEM tblgen_includes "")
-
-  # Build the absolute path for the current input file.
-  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-  else()
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
-  endif()
-
-  # Append the includes used for this file to the tablegen_compile_commands
-  # file.
-  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
-      "--- !FileInfo:\n"
-      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
-      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
-  )
 endfunction()
 
 # Clear out any pre-existing compile_commands file before processing. This
@@ -160,6 +134,31 @@ function(add_mlir_pdll_library target inputFile ofn)
   )
 
   add_public_tablegen_target(${target})
+endfunction()
+
+# Declare a function to generate ODS with mlir-linalg-ods-yaml-gen
+function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
+  set(YAML_AST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${yaml_ast_file})
+  set(GEN_ODS_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.yamlgen.td)
+  set(GEN_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.yamlgen.cpp.inc)
+  set_source_files_properties(
+    ${GEN_ODS_FILE}
+    PROPERTIES GENERATED TRUE)
+  set_source_files_properties(
+    ${GEN_CPP_FILE}
+    PROPERTIES GENERATED TRUE)
+  add_custom_command(
+    OUTPUT ${GEN_ODS_FILE} ${GEN_CPP_FILE}
+    COMMAND ${MLIR_LINALG_ODS_YAML_GEN_TABLEGEN_EXE} ${YAML_AST_SOURCE} -o-ods-decl=${GEN_ODS_FILE} -o-impl=${GEN_CPP_FILE}
+    MAIN_DEPENDENCY
+    ${YAML_AST_SOURCE}
+    DEPENDS
+    ${MLIR_LINALG_ODS_YAML_GEN_TABLEGEN_EXE}
+    ${MLIR_LINALG_ODS_YAML_GEN_TABLEGEN_TARGET}
+    ${LLVM_TARGET_DEPENDS})
+    
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${GEN_ODS_FILE} ${GEN_CPP_FILE}
+      PARENT_SCOPE)
 endfunction()
 
 # Declare a dialect in the include directory

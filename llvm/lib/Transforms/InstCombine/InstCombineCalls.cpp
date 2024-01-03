@@ -89,12 +89,6 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
 
-namespace llvm {
-/// enable preservation of attributes in assume like:
-/// call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
-extern cl::opt<bool> EnableKnowledgeRetention;
-} // namespace llvm
-
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
 static Type *getPromotedType(Type *Ty) {
@@ -363,9 +357,9 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 
   // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
   APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts, UndefElts))
+  APInt PoisonElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 0, V);
 
   return nullptr;
@@ -445,12 +439,12 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
 
   // Use masked off lanes to simplify operands via SimplifyDemandedVectorElts
   APInt DemandedElts = possiblyDemandedEltsInMask(ConstMask);
-  APInt UndefElts(DemandedElts.getBitWidth(), 0);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts, UndefElts))
+  APInt PoisonElts(DemandedElts.getBitWidth(), 0);
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 0, V);
-  if (Value *V =
-          SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts, UndefElts))
+  if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts,
+                                            PoisonElts))
     return replaceOperand(II, 1, V);
 
   return nullptr;
@@ -520,6 +514,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
   }
 
+  Constant *C;
+
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
@@ -555,6 +551,38 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
       return IC.replaceOperand(II, 0, X);
+
+    // cttz(shl(%const, %val), 1) --> add(cttz(%const, 1), %val)
+    if (match(Op0, m_Shl(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCttz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, C, Op1);
+      return BinaryOperator::CreateAdd(ConstCttz, X);
+    }
+
+    // cttz(lshr exact (%const, %val), 1) --> sub(cttz(%const, 1), %val)
+    if (match(Op0, m_Exact(m_LShr(m_ImmConstant(C), m_Value(X)))) &&
+        match(Op1, m_One())) {
+      Value *ConstCttz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, C, Op1);
+      return BinaryOperator::CreateSub(ConstCttz, X);
+    }
+  } else {
+    // ctlz(lshr(%const, %val), 1) --> add(ctlz(%const, 1), %val)
+    if (match(Op0, m_LShr(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCtlz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
+      return BinaryOperator::CreateAdd(ConstCtlz, X);
+    }
+
+    // ctlz(shl nuw (%const, %val), 1) --> sub(ctlz(%const, 1), %val)
+    if (match(Op0, m_NUWShl(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCtlz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
+      return BinaryOperator::CreateSub(ConstCtlz, X);
+    }
   }
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
@@ -1498,9 +1526,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // support.
   if (auto *IIFVTy = dyn_cast<FixedVectorType>(II->getType())) {
     auto VWidth = IIFVTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
+    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, PoisonElts)) {
       if (V != II)
         return replaceInstUsesWith(*II, V);
       return II;
@@ -1508,6 +1536,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   if (II->isCommutative()) {
+    if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
+      return I;
+
+    if (Instruction *I = foldCommutativeIntrinsicOverPhis(*II))
+      return I;
+
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
   }
@@ -1704,12 +1738,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
       Value *A;
       if (match(X, m_OneUse(m_Not(m_Value(A)))) &&
-          !isFreeToInvert(A, A->hasOneUse()) &&
-          isFreeToInvert(Y, Y->hasOneUse())) {
-        Value *NotY = Builder.CreateNot(Y);
-        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
-        return BinaryOperator::CreateNot(InvMaxMin);
+          !isFreeToInvert(A, A->hasOneUse())) {
+        if (Value *NotY = getFreelyInverted(Y, Y->hasOneUse(), &Builder)) {
+          Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+          Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
+          return BinaryOperator::CreateNot(InvMaxMin);
+        }
       }
       return nullptr;
     };
@@ -1761,6 +1795,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
+
+    // Try to fold minmax with constant RHS based on range information
+    const APInt *RHSC;
+    if (match(I1, m_APIntAllowUndef(RHSC))) {
+      ICmpInst::Predicate Pred =
+          ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
+      bool IsSigned = MinMaxIntrinsic::isSigned(IID);
+      ConstantRange LHS_CR = computeConstantRangeIncludingKnownBits(
+          I0, IsSigned, SQ.getWithInstruction(II));
+      if (!LHS_CR.isFullSet()) {
+        if (LHS_CR.icmp(Pred, *RHSC))
+          return replaceInstUsesWith(*II, I0);
+        if (LHS_CR.icmp(ICmpInst::getSwappedPredicate(Pred), *RHSC))
+          return replaceInstUsesWith(*II,
+                                     ConstantInt::get(II->getType(), *RHSC));
+      }
+    }
 
     break;
   }
@@ -1962,17 +2013,49 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::ptrmask: {
+    unsigned BitWidth = DL.getPointerTypeSizeInBits(II->getType());
+    KnownBits Known(BitWidth);
+    if (SimplifyDemandedInstructionBits(*II, Known))
+      return II;
+
     Value *InnerPtr, *InnerMask;
+    bool Changed = false;
+    // Combine:
+    // (ptrmask (ptrmask p, A), B)
+    //    -> (ptrmask p, (and A, B))
     if (match(II->getArgOperand(0),
               m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(InnerPtr),
                                                        m_Value(InnerMask))))) {
       assert(II->getArgOperand(1)->getType() == InnerMask->getType() &&
              "Mask types must match");
+      // TODO: If InnerMask == Op1, we could copy attributes from inner
+      // callsite -> outer callsite.
       Value *NewMask = Builder.CreateAnd(II->getArgOperand(1), InnerMask);
-      return replaceInstUsesWith(
-          *II, Builder.CreateIntrinsic(InnerPtr->getType(), Intrinsic::ptrmask,
-                                       {InnerPtr, NewMask}));
+      replaceOperand(CI, 0, InnerPtr);
+      replaceOperand(CI, 1, NewMask);
+      Changed = true;
     }
+
+    // See if we can deduce non-null.
+    if (!CI.hasRetAttr(Attribute::NonNull) &&
+        (Known.isNonZero() ||
+         isKnownNonZero(II, DL, /*Depth*/ 0, &AC, II, &DT))) {
+      CI.addRetAttr(Attribute::NonNull);
+      Changed = true;
+    }
+
+    unsigned NewAlignmentLog =
+        std::min(Value::MaxAlignmentExponent,
+                 std::min(BitWidth - 1, Known.countMinTrailingZeros()));
+    // Known bits will capture if we had alignment information associated with
+    // the pointer argument.
+    if (NewAlignmentLog > Log2(CI.getRetAlign().valueOrOne())) {
+      CI.addRetAttr(Attribute::getWithAlignment(
+          CI.getContext(), Align(uint64_t(1) << NewAlignmentLog)));
+      Changed = true;
+    }
+    if (Changed)
+      return &CI;
     break;
   }
   case Intrinsic::uadd_with_overflow:
@@ -2539,10 +2622,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     VectorType *NewVT = cast<VectorType>(II->getType());
     if (Constant *CV0 = dyn_cast<Constant>(Arg0)) {
       if (Constant *CV1 = dyn_cast<Constant>(Arg1)) {
-        CV0 = ConstantExpr::getIntegerCast(CV0, NewVT, /*isSigned=*/!Zext);
-        CV1 = ConstantExpr::getIntegerCast(CV1, NewVT, /*isSigned=*/!Zext);
-
-        return replaceInstUsesWith(CI, ConstantExpr::getMul(CV0, CV1));
+        Value *V0 = Builder.CreateIntCast(CV0, NewVT, /*isSigned=*/!Zext);
+        Value *V1 = Builder.CreateIntCast(CV1, NewVT, /*isSigned=*/!Zext);
+        return replaceInstUsesWith(CI, Builder.CreateMul(V0, V1));
       }
 
       // Couldn't simplify - canonicalize constant to the RHS.
@@ -3768,6 +3850,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   if (Callee->hasFnAttribute("thunk"))
     return false;
 
+  // If this is a call to a naked function, the assembly might be
+  // using an argument, or otherwise rely on the frame layout,
+  // the function prototype will mismatch.
+  if (Callee->hasFnAttribute(Attribute::Naked))
+    return false;
+
   // If this is a musttail call, the callee's prototype must match the caller's
   // prototype with the exception of pointee types. The code below doesn't
   // implement that, so we can't do this transform.
@@ -3992,9 +4080,9 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
       NC->setDebugLoc(Caller->getDebugLoc());
 
-      Instruction *InsertPt = NewCall->getInsertionPointAfterDef();
-      assert(InsertPt && "No place to insert cast");
-      InsertNewInstBefore(NC, InsertPt->getIterator());
+      auto OptInsertPt = NewCall->getInsertionPointAfterDef();
+      assert(OptInsertPt && "No place to insert cast");
+      InsertNewInstBefore(NC, *OptInsertPt);
       Worklist.pushUsersToWorkList(*Caller);
     } else {
       NV = PoisonValue::get(Caller->getType());
@@ -4157,4 +4245,40 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // code sort out any function type mismatches.
   Call.setCalledFunction(FTy, NestF);
   return &Call;
+}
+
+// op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
+  assert(II.isCommutative());
+
+  Value *A, *B, *C;
+  if (match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
+      match(II.getOperand(1),
+            m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
+    replaceOperand(II, 0, B);
+    replaceOperand(II, 1, C);
+    return &II;
+  }
+
+  return nullptr;
+}
+
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
+  assert(II.isCommutative() && "Instruction should be commutative");
+
+  PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
+  PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
+    replaceOperand(II, 0, P->first);
+    replaceOperand(II, 1, P->second);
+    return &II;
+  }
+
+  return nullptr;
 }

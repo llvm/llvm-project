@@ -55,7 +55,7 @@ for.body:
   store i16 %0, ptr %arrayidx2, align 2
   %arrayidx4 = getelementptr inbounds i16, ptr %y, i64 %indvars.iv
   %2 = load i16, ptr %arrayidx4, align 2
-  %3 = or i64 %1, 1
+  %3 = or disjoint i64 %1, 1
   %arrayidx7 = getelementptr inbounds i16, ptr %points, i64 %3
   store i16 %2, ptr %arrayidx7, align 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -117,7 +117,7 @@ for.body:
   store i16 %0, ptr %arrayidx2, align 2
   %arrayidx4 = getelementptr inbounds i16, ptr %y, i64 %indvars.iv
   %2 = load i16, ptr %arrayidx4, align 2
-  %3 = or i64 %1, 1
+  %3 = or disjoint i64 %1, 1
   %arrayidx7 = getelementptr inbounds i16, ptr %points, i64 %3
   store i16 %2, ptr %arrayidx7, align 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1

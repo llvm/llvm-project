@@ -3,8 +3,8 @@
 // REQUIRES: c99-complex
 
 //
-// Bug 42493
-// XFAIL: sparc-target-arch
+// This test should be XFAILed on 32-bit sparc (sparc-target-arch, Issue
+// #41838), but that is currently hidden, which caused an XPASS (Issue #72398).
 //
 #include <stdio.h>
 
@@ -14,6 +14,7 @@
 #include <math.h>
 
 // Returns: the quotient of (a + ib) / (c + id)
+#if defined(CRT_HAS_TF_MODE)
 
 COMPILER_RT_ABI Qcomplex __divtc3(tf_float __a, tf_float __b, tf_float __c,
                                   tf_float __d);
@@ -363,3 +364,12 @@ int main() {
   fprintf(stderr, "No errors found.\n");
   return 0;
 }
+
+#else
+
+int main() {
+  printf("skipped\n");
+  return 0;
+}
+
+#endif // CRT_HAS_TF_MODE

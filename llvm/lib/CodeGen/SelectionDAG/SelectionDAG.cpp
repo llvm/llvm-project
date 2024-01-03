@@ -963,7 +963,7 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, const SDNode *N) {
 /// doNotCSE - Return true if CSE should not be performed for this node.
 static bool doNotCSE(SDNode *N) {
   if (N->getValueType(0) == MVT::Glue)
-    return true; // Never CSE anything that produces a flag.
+    return true; // Never CSE anything that produces a glue result.
 
   switch (N->getOpcode()) {
   default: break;
@@ -975,7 +975,7 @@ static bool doNotCSE(SDNode *N) {
   // Check that remaining values produced are not flags.
   for (unsigned i = 1, e = N->getNumValues(); i != e; ++i)
     if (N->getValueType(i) == MVT::Glue)
-      return true; // Never CSE anything that produces a flag.
+      return true; // Never CSE anything that produces a glue result.
 
   return false;
 }
@@ -1209,7 +1209,7 @@ bool SelectionDAG::RemoveNodeFromCSEMaps(SDNode *N) {
   }
 #ifndef NDEBUG
   // Verify that the node was actually in one of the CSE maps, unless it has a
-  // flag result (which cannot be CSE'd) or is one of the special cases that are
+  // glue result (which cannot be CSE'd) or is one of the special cases that are
   // not subject to CSE.
   if (!Erased && N->getValueType(N->getNumValues()-1) != MVT::Glue &&
       !N->isMachineOpcode() && !doNotCSE(N)) {
@@ -2879,6 +2879,12 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     }
     break;
   }
+  }
+
+  // Fallback - this is a splat if all demanded elts are the same constant.
+  if (computeKnownBits(V, DemandedElts, Depth).isConstant()) {
+    UndefElts = ~DemandedElts;
+    return true;
   }
 
   return false;
@@ -5027,7 +5033,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BITREVERSE:
   case ISD::PARITY:
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
@@ -5036,6 +5041,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
     return false;
+
+  // Matches hasPoisonGeneratingFlags().
+  case ISD::ZERO_EXTEND:
+    return ConsiderFlags && Op->getFlags().hasNonNeg();
 
   case ISD::ADD:
   case ISD::SUB:
@@ -5461,7 +5470,7 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
         Ops[i].getOperand(0).getValueType() != VT ||
         (IdentitySrc && Ops[i].getOperand(0) != IdentitySrc) ||
         !isa<ConstantSDNode>(Ops[i].getOperand(1)) ||
-        cast<ConstantSDNode>(Ops[i].getOperand(1))->getAPIntValue() != i) {
+        Ops[i].getConstantOperandAPInt(1) != i) {
       IsIdentity = false;
       break;
     }
@@ -5715,12 +5724,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // Skip unnecessary zext_inreg pattern:
     // (zext (trunc x)) -> x iff the upper bits are known zero.
-    // TODO: Generalize to just the MaskedValueIsZero check?
+    // TODO: Remove (zext (trunc (and x, c))) exception which some targets
+    // use to recognise zext_inreg patterns.
     if (OpOpcode == ISD::TRUNCATE) {
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        if (OpOp.getOpcode() == ISD::AssertZext ||
-            OpOp.getOpcode() == ISD::SRL) {
+        if (OpOp.getOpcode() != ISD::AND) {
           APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
                                                N1.getScalarValueSizeInBits());
           if (MaskedValueIsZero(OpOp, HiBits)) {
@@ -5886,7 +5895,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDNode *N;
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1};
-  if (VT != MVT::Glue) { // Don't CSE flag producing nodes
+  if (VT != MVT::Glue) { // Don't CSE glue producing nodes
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
@@ -6849,8 +6858,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // expanding copies of large vectors from registers. This only works for
     // fixed length vectors, since we need to know the exact number of
     // elements.
-    if (N2C && N1.getOperand(0).getValueType().isFixedLengthVector() &&
-        N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0) {
+    if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
+        N1.getOperand(0).getValueType().isFixedLengthVector()) {
       unsigned Factor =
         N1.getOperand(0).getValueType().getVectorNumElements();
       return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
@@ -6967,7 +6976,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
     // the concat have the same type as the extract.
-    if (N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0 &&
+    if (N1.getOpcode() == ISD::CONCAT_VECTORS &&
         VT == N1.getOperand(0).getValueType()) {
       unsigned Factor = VT.getVectorMinNumElements();
       return N1.getOperand(N2C->getZExtValue() / Factor);
@@ -7217,7 +7226,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
 
-  // Memoize node if it doesn't produce a flag.
+  // Memoize node if it doesn't produce a glue result.
   SDNode *N;
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1, N2, N3};
@@ -7399,7 +7408,7 @@ static bool isMemSrcFromConstant(SDValue Src, ConstantDataArraySlice &Slice) {
            Src.getOperand(0).getOpcode() == ISD::GlobalAddress &&
            Src.getOperand(1).getOpcode() == ISD::Constant) {
     G = cast<GlobalAddressSDNode>(Src.getOperand(0));
-    SrcDelta = cast<ConstantSDNode>(Src.getOperand(1))->getZExtValue();
+    SrcDelta = Src.getConstantOperandVal(1);
   }
   if (!G)
     return false;
@@ -7558,7 +7567,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       if (Value.getNode()) {
         Store = DAG.getStore(
             Chain, dl, Value,
-            DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+            DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
             DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
         OutChains.push_back(Store);
       }
@@ -7583,14 +7592,14 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getMemBasePlusOffset(Src, TypeSize::Fixed(SrcOff), dl),
+          DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
           commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+          DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
           DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
@@ -7727,7 +7736,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     Value = DAG.getLoad(
         VT, dl, Chain,
-        DAG.getMemBasePlusOffset(Src, TypeSize::Fixed(SrcOff), dl),
+        DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
         SrcPtrInfo.getWithOffset(SrcOff), *SrcAlign, SrcMMOFlags, NewAAInfo);
     LoadValues.push_back(Value);
     LoadChains.push_back(Value.getValue(1));
@@ -7742,7 +7751,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     Store = DAG.getStore(
         Chain, dl, LoadValues[i],
-        DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
         DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VTSize;
@@ -7874,7 +7883,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     assert(Value.getValueType() == VT && "Value with wrong type.");
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
-        DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
         DstPtrInfo.getWithOffset(DstOff), Alignment,
         isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
         NewAAInfo);
@@ -8356,7 +8365,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
            (int)Opcode >= ISD::FIRST_TARGET_MEMORY_OPCODE)) &&
          "Opcode is not a memory-accessing opcode!");
 
-  // Memoize the node unless it returns a flag.
+  // Memoize the node unless it returns a glue result.
   MemIntrinsicSDNode *N;
   if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
@@ -9999,7 +10008,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 #endif
   }
 
-  // Memoize the node unless it returns a flag.
+  // Memoize the node unless it returns a glue result.
   SDNode *N;
   if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
@@ -10849,6 +10858,10 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         uint64_t Offset;
         if (RHSConstant)
           Offset = N.getConstantOperandVal(1);
+        // We are not allowed to turn indirect debug values variadic, so
+        // don't salvage those.
+        if (!RHSConstant && DV->isIndirect())
+          continue;
 
         // Rewrite an ADD constant node into a DIExpression. Since we are
         // performing arithmetic to compute the variable's *value* in the

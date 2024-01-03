@@ -187,6 +187,8 @@ module attributes {
 {
   func.func @zero_size() {
     %0 = memref.alloc() : memref<0xf32, #spirv.storage_class<Workgroup>>
+    %1 = memref.alloc() : memref<0xi1, #spirv.storage_class<Workgroup>>
+    %2 = memref.alloc() : memref<0xi4, #spirv.storage_class<Workgroup>>
     return
   }
 }

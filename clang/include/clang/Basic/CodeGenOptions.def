@@ -28,12 +28,8 @@ CODEGENOPT(Name, Bits, Default)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
-ENUM_CODEGENOPT(CompressDebugSections, llvm::DebugCompressionType, 2,
-                llvm::DebugCompressionType::None)
 CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
-CODEGENOPT(Dwarf64           , 1, 0) ///< -gdwarf64.
-CODEGENOPT(Dwarf32           , 1, 1) ///< -gdwarf32.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
 CODEGENOPT(AssumeUniqueVTables , 1, 1) ///< Assume a class has only one vtable.
@@ -73,10 +69,6 @@ CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(EmitCallSiteInfo, 1, 0) ///< Emit call site info only in the case of
                                    ///< '-g' + 'O>0' level.
-CODEGENOPT(EnableDIPreservationVerify, 1, 0) ///< Enable di preservation verify
-                                             ///< each (it means check
-                                             ///< the original debug info
-                                             ///< metadata preservation).
 CODEGENOPT(IndirectTlsSegRefs, 1, 0) ///< Set when -mno-tls-direct-seg-refs
                                      ///< is specified.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
@@ -113,15 +105,9 @@ CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.
-CODEGENOPT(ForceDwarfFrameSection , 1, 0) ///< Set when -fforce-dwarf-frame is
-                                          ///< enabled.
 
 ///< Set when -femit-compact-unwind-non-canonical is enabled.
 CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0)
-
-///< Set when -femit-dwarf-unwind is passed.
-ENUM_CODEGENOPT(EmitDwarfUnwind, llvm::EmitDwarfUnwindType, 2,
-                llvm::EmitDwarfUnwindType::Default)
 
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0)
@@ -178,8 +164,6 @@ CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
 CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
-CODEGENOPT(NoDwarfDirectoryAsm , 1, 0) ///< Set when -fno-dwarf-directory-asm is
-                                       ///< enabled.
 CODEGENOPT(NoExecStack       , 1, 0) ///< Set when -Wa,--noexecstack is enabled.
 CODEGENOPT(FatalWarnings     , 1, 0) ///< Set when -Wa,--fatal-warnings is
                                      ///< enabled.
@@ -187,8 +171,6 @@ CODEGENOPT(NoWarn            , 1, 0) ///< Set when -Wa,--no-warn is enabled.
 CODEGENOPT(NoTypeCheck       , 1, 0) ///< Set when -Wa,--no-type-check is enabled.
 CODEGENOPT(MisExpect         , 1, 0) ///< Set when -Wmisexpect is enabled
 CODEGENOPT(EnableSegmentedStacks , 1, 0) ///< Set when -fsplit-stack is enabled.
-CODEGENOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
-                                     ///< inline line tables.
 CODEGENOPT(StackClashProtector, 1, 0) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
@@ -197,6 +179,7 @@ CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1) ///< -fno-hip-fp32-correctly-rounde
 CODEGENOPT(HIPSaveKernelArgName, 1, 0) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
+CODEGENOPT(PPCUseFullRegisterNames, 1, 0) ///< Print full register names in assembly
 
 /// When false, this attempts to generate code as if the result of an
 /// overflowing conversion matches the overflowing behavior of a target's native
@@ -340,37 +323,6 @@ VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
                                                ///< probe size, even if 0.
 VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX) ///< Set via -fwarn-stack-size.
 CODEGENOPT(NoStackArgProbe, 1, 0) ///< Set when -mno-stack-arg-probe is used
-CODEGENOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
-
-/// Control the Assignment Tracking debug info feature.
-ENUM_CODEGENOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2, AssignmentTrackingOpts::Disabled)
-
-CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
-                                  ///< in debug info.
-
-CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
-                                   ///< external references to a PCH or module.
-
-CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
-                                       ///< contain explicit imports for
-                                       ///< anonymous namespaces
-
-/// Set debug info source file hashing algorithm.
-ENUM_CODEGENOPT(DebugSrcHash, DebugSrcHashKind, 2, DSH_MD5)
-
-CODEGENOPT(SplitDwarfInlining, 1, 1) ///< Whether to include inlining info in the
-                                     ///< skeleton CU to allow for symbolication
-                                     ///< of inline stack frames without .dwo files.
-CODEGENOPT(DebugFwdTemplateParams, 1, 0) ///< Whether to emit complete
-                                         ///< template parameter descriptions in
-                                         ///< forward declarations (versus just
-                                         ///< including them in the name).
-ENUM_CODEGENOPT(DebugSimpleTemplateNames, llvm::codegenoptions::DebugTemplateNamesKind, 2, llvm::codegenoptions::DebugTemplateNamesKind::Full) ///< Whether to emit template parameters
-                                           ///< in the textual names of template
-					   ///< specializations.
-					   ///< Implies DebugFwdTemplateNames to
-					   ///< allow decorated names to be
-					   ///< reconstructed when needed.
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
 CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
@@ -394,30 +346,6 @@ VALUE_CODEGENOPT(SmallDataLimit, 32, 0)
 /// The lower bound for a buffer to be considered for stack protection.
 VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 
-/// The kind of generated debug info.
-ENUM_CODEGENOPT(DebugInfo, llvm::codegenoptions::DebugInfoKind, 4, llvm::codegenoptions::NoDebugInfo)
-
-/// Whether to generate macro debug info.
-CODEGENOPT(MacroDebugInfo, 1, 0)
-
-/// Tune the debug info for this debugger.
-ENUM_CODEGENOPT(DebuggerTuning, llvm::DebuggerKind, 3,
-                llvm::DebuggerKind::Default)
-
-/// Dwarf version. Version zero indicates to LLVM that no DWARF should be
-/// emitted.
-VALUE_CODEGENOPT(DwarfVersion, 3, 0)
-
-/// Whether we should emit CodeView debug information. It's possible to emit
-/// CodeView and DWARF into the same object.
-CODEGENOPT(EmitCodeView, 1, 0)
-
-/// Whether to emit the .debug$H section containing hashes of CodeView types.
-CODEGENOPT(CodeViewGHash, 1, 0)
-
-/// Whether to emit the compiler path and command line into the CodeView debug information.
-CODEGENOPT(CodeViewCommandLine, 1, 0)
-
 /// The kind of inlining to perform.
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 
@@ -425,7 +353,7 @@ ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
 
 // Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, VectorLibrary, 3, NoLibrary)
+ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
@@ -450,25 +378,13 @@ CODEGENOPT(DirectAccessExternalData, 1, 0)
 /// paths that reach the end of a function without executing a required return.
 CODEGENOPT(StrictReturn, 1, 1)
 
-/// Whether emit extra debug info for sample pgo profile collection.
-CODEGENOPT(DebugInfoForProfiling, 1, 0)
-
 /// Whether emit pseudo probes for sample pgo profile collection.
 CODEGENOPT(PseudoProbeForProfiling, 1, 0)
 
 /// Whether 3-component vector type is preserved.
 CODEGENOPT(PreserveVec3Type, 1, 0)
 
-/// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
-CODEGENOPT(DebugNameTable, 2, 0)
-
-/// Whether to use DWARF base address specifiers in .debug_ranges.
-CODEGENOPT(DebugRangesBaseAddress, 1, 0)
-
 CODEGENOPT(NoPLT, 1, 0)
-
-/// Whether to embed source in DWARF debug line section.
-CODEGENOPT(EmbedSource, 1, 0)
 
 /// Whether to emit all vtables
 CODEGENOPT(ForceEmitVTables, 1, 0)
@@ -513,6 +429,9 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
+
+/// FIXME: Make DebugOptions its own top-level .def file.
+#include "DebugOptions.def"
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

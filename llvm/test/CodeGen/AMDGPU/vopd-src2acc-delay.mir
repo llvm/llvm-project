@@ -12,9 +12,9 @@ body: |
     ; CHECK-NEXT: $vgpr2 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr3 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr4 = IMPLICIT_DEF
-    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_FMAC_F32_e32_X_FMAC_F32_e32 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_FMAC_F32_e32_X_FMAC_F32_e32_gfx11 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU 1
-    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_FMAC_F32_e32_X_FMAC_F32_e32 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_FMAC_F32_e32_X_FMAC_F32_e32_gfx11 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
     $vgpr2 = IMPLICIT_DEF
@@ -36,9 +36,9 @@ body: |
     ; CHECK-NEXT: $vgpr2 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr3 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr4 = IMPLICIT_DEF
-    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_DOT2C_F32_F16_e32_X_DOT2C_F32_F16_e32 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_DOT2C_F32_F16_e32_X_DOT2C_F32_F16_e32_gfx11 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU 1
-    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_DOT2C_F32_F16_e32_X_DOT2C_F32_F16_e32 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0, $vgpr1 = V_DUAL_DOT2C_F32_F16_e32_X_DOT2C_F32_F16_e32_gfx11 $vgpr2, $vgpr3, $vgpr0, $vgpr3, $vgpr4, $vgpr1, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
     $vgpr2 = IMPLICIT_DEF

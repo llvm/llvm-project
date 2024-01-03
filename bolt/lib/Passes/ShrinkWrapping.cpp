@@ -903,7 +903,7 @@ bool ShrinkWrapping::isBestSavePosCold(unsigned CSR, MCInst *&BestPosSave,
   return true;
 }
 
-/// Auxiliar function used to create basic blocks for critical edges and update
+/// Auxiliary function used to create basic blocks for critical edges and update
 /// the dominance frontier with these new locations
 void ShrinkWrapping::splitFrontierCritEdges(
     BinaryFunction *Func, SmallVector<ProgramPoint, 4> &Frontier,
@@ -1416,12 +1416,12 @@ bool ShrinkWrapping::foldIdenticalSplitEdges() {
   bool Changed = false;
   for (auto Iter = BF.begin(); Iter != BF.end(); ++Iter) {
     BinaryBasicBlock &BB = *Iter;
-    if (!BB.getName().startswith(".LSplitEdge"))
+    if (!BB.getName().starts_with(".LSplitEdge"))
       continue;
     for (BinaryBasicBlock &RBB : llvm::reverse(BF)) {
       if (&RBB == &BB)
         break;
-      if (!RBB.getName().startswith(".LSplitEdge") || !RBB.isValid() ||
+      if (!RBB.getName().starts_with(".LSplitEdge") || !RBB.isValid() ||
           !isIdenticalSplitEdgeBB(BC, *Iter, RBB))
         continue;
       assert(RBB.pred_size() == 1 && "Invalid split edge BB");

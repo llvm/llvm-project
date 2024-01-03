@@ -52,6 +52,7 @@ add_flang_library(flangFrontend
   Support
   Target
   TargetParser
+  FrontendDriver
   FrontendOpenACC
   FrontendOpenMP
 

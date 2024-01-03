@@ -100,12 +100,13 @@ module attributes { transform.with_named_sequence } {
   }
 
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.consumed}) {
-    transform.foreach_match in %arg0
+    transform.foreach_match restrict_root in %arg0
         @match_structured_suppress -> @do_nothing
         : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 
+  // expected-remark @below {{other}}
   func.func @payload() attributes { transform.target_tag = "start_here" } {
     // expected-remark @below {{other}}
     %D = arith.constant dense<1.0> : tensor<2x4xf32>

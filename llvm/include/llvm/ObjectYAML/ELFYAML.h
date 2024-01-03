@@ -170,6 +170,19 @@ struct BBAddrMapEntry {
   std::optional<std::vector<BBEntry>> BBEntries;
 };
 
+struct PGOAnalysisMapEntry {
+  struct PGOBBEntry {
+    struct SuccessorEntry {
+      uint32_t ID;
+      llvm::yaml::Hex32 BrProb;
+    };
+    std::optional<uint64_t> BBFreq;
+    std::optional<std::vector<SuccessorEntry>> Successors;
+  };
+  std::optional<uint64_t> FuncEntryCount;
+  std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
+};
+
 struct StackSizeEntry {
   llvm::yaml::Hex64 Address;
   llvm::yaml::Hex64 Size;
@@ -317,6 +330,7 @@ struct SectionHeaderTable : Chunk {
 
 struct BBAddrMapSection : Section {
   std::optional<std::vector<BBAddrMapEntry>> Entries;
+  std::optional<std::vector<PGOAnalysisMapEntry>> PGOAnalyses;
 
   BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
 
@@ -737,6 +751,10 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
@@ -903,6 +921,21 @@ template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
 
 template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
   static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry> {
+  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry> {
+  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &Rel);
+};
+
+template <>
+struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry> {
+  static void
+  mapping(IO &IO,
+          ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {

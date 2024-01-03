@@ -45,6 +45,7 @@
 #include "LibCxxVariant.h"
 #include "LibStdcpp.h"
 #include "MSVCUndecoratedNameParser.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -465,7 +466,7 @@ protected:
   }
 
   void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
-    if (!llvm::StringRef(currentParserPos(), this->numLeft()).startswith(From))
+    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
       return;
 
     // We found a match. Append unmodified input up to this point.
@@ -1415,7 +1416,8 @@ CPlusPlusLanguage::GetHardcodedSummaries() {
                   lldb_private::formatters::CXXFunctionPointerSummaryProvider,
                   "Function pointer summary provider"));
           if (CompilerType CT = valobj.GetCompilerType();
-              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType()) {
+              CT.IsFunctionPointerType() || CT.IsMemberFunctionPointerType() ||
+              valobj.GetValueType() == lldb::eValueTypeVTableEntry) {
             return formatter_sp;
           }
           return nullptr;

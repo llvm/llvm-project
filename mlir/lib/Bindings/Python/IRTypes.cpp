@@ -462,19 +462,62 @@ public:
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c) {
-    c.def_static(
-        "get",
-        [](std::vector<int64_t> shape, PyType &elementType,
-           DefaultingPyLocation loc) {
-          PyMlirContext::ErrorCapture errors(loc->getContext());
-          MlirType t = mlirVectorTypeGetChecked(loc, shape.size(), shape.data(),
-                                                elementType);
-          if (mlirTypeIsNull(t))
-            throw MLIRError("Invalid type", errors.take());
-          return PyVectorType(elementType.getContext(), t);
-        },
-        py::arg("shape"), py::arg("elementType"), py::arg("loc") = py::none(),
-        "Create a vector type");
+    c.def_static("get", &PyVectorType::get, py::arg("shape"),
+                 py::arg("element_type"), py::kw_only(),
+                 py::arg("scalable") = py::none(),
+                 py::arg("scalable_dims") = py::none(),
+                 py::arg("loc") = py::none(), "Create a vector type")
+        .def_property_readonly(
+            "scalable",
+            [](MlirType self) { return mlirVectorTypeIsScalable(self); })
+        .def_property_readonly("scalable_dims", [](MlirType self) {
+          std::vector<bool> scalableDims;
+          size_t rank = static_cast<size_t>(mlirShapedTypeGetRank(self));
+          scalableDims.reserve(rank);
+          for (size_t i = 0; i < rank; ++i)
+            scalableDims.push_back(mlirVectorTypeIsDimScalable(self, i));
+          return scalableDims;
+        });
+  }
+
+private:
+  static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
+                          std::optional<py::list> scalable,
+                          std::optional<std::vector<int64_t>> scalableDims,
+                          DefaultingPyLocation loc) {
+    if (scalable && scalableDims) {
+      throw py::value_error("'scalable' and 'scalable_dims' kwargs "
+                            "are mutually exclusive.");
+    }
+
+    PyMlirContext::ErrorCapture errors(loc->getContext());
+    MlirType type;
+    if (scalable) {
+      if (scalable->size() != shape.size())
+        throw py::value_error("Expected len(scalable) == len(shape).");
+
+      SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
+          *scalable, [](const py::handle &h) { return h.cast<bool>(); }));
+      type = mlirVectorTypeGetScalableChecked(loc, shape.size(), shape.data(),
+                                              scalableDimFlags.data(),
+                                              elementType);
+    } else if (scalableDims) {
+      SmallVector<bool> scalableDimFlags(shape.size(), false);
+      for (int64_t dim : *scalableDims) {
+        if (static_cast<size_t>(dim) >= scalableDimFlags.size() || dim < 0)
+          throw py::value_error("Scalable dimension index out of bounds.");
+        scalableDimFlags[dim] = true;
+      }
+      type = mlirVectorTypeGetScalableChecked(loc, shape.size(), shape.data(),
+                                              scalableDimFlags.data(),
+                                              elementType);
+    } else {
+      type = mlirVectorTypeGetChecked(loc, shape.size(), shape.data(),
+                                      elementType);
+    }
+    if (mlirTypeIsNull(type))
+      throw MLIRError("Invalid type", errors.take());
+    return PyVectorType(elementType.getContext(), type);
   }
 };
 
@@ -646,13 +689,9 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_tuple",
-        [](py::list elementList, DefaultingPyMlirContext context) {
-          intptr_t num = py::len(elementList);
-          // Mapping py::list to SmallVector.
-          SmallVector<MlirType, 4> elements;
-          for (auto element : elementList)
-            elements.push_back(element.cast<PyType>());
-          MlirType t = mlirTupleTypeGet(context->get(), num, elements.data());
+        [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
+          MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
+                                        elements.data());
           return PyTupleType(context->getRef(), t);
         },
         py::arg("elements"), py::arg("context") = py::none(),
@@ -684,13 +723,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::vector<PyType> inputs, std::vector<PyType> results,
+        [](std::vector<MlirType> inputs, std::vector<MlirType> results,
            DefaultingPyMlirContext context) {
-          SmallVector<MlirType, 4> inputsRaw(inputs.begin(), inputs.end());
-          SmallVector<MlirType, 4> resultsRaw(results.begin(), results.end());
-          MlirType t = mlirFunctionTypeGet(context->get(), inputsRaw.size(),
-                                           inputsRaw.data(), resultsRaw.size(),
-                                           resultsRaw.data());
+          MlirType t =
+              mlirFunctionTypeGet(context->get(), inputs.size(), inputs.data(),
+                                  results.size(), results.data());
           return PyFunctionType(context->getRef(), t);
         },
         py::arg("inputs"), py::arg("results"), py::arg("context") = py::none(),
@@ -699,7 +736,6 @@ public:
         "inputs",
         [](PyFunctionType &self) {
           MlirType t = self;
-          auto contextRef = self.getContext();
           py::list types;
           for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
                ++i) {
@@ -711,7 +747,6 @@ public:
     c.def_property_readonly(
         "results",
         [](PyFunctionType &self) {
-          auto contextRef = self.getContext();
           py::list types;
           for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
                ++i) {

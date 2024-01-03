@@ -42,19 +42,12 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum {
-  AMDHSA_COV3 = 3,
-  AMDHSA_COV4 = 4,
-  AMDHSA_COV5 = 5
-};
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
 /// \returns HSA OS ABI Version identification.
 std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 3,
-/// false otherwise.
-bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 4,
 /// false otherwise.
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
@@ -512,6 +505,10 @@ struct CanBeVOPD {
   bool Y;
 };
 
+/// \returns SIEncodingFamily used for VOPD encoding on a \p ST.
+LLVM_READONLY
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
+
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
 
@@ -531,7 +528,7 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -754,15 +751,20 @@ public:
   // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
   // for the specified component and MC operand. The callback must return 0
   // if the operand is not a register or not a VGPR.
-  bool hasInvalidOperand(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-    return getInvalidCompOperandIndex(GetRegIdx).has_value();
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
+  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         bool SkipSrc = false) const {
+    return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      bool SkipSrc = false) const;
 
 private:
   RegIndices
@@ -1142,7 +1144,7 @@ bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
 bool hasGDS(const MCSubtargetInfo &STI);
-unsigned getNSAMaxSize(const MCSubtargetInfo &STI);
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler = false);
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
@@ -1150,20 +1152,26 @@ bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 bool isGFX9_GFX10(const MCSubtargetInfo &STI);
+bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI);
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI);
 bool isGFX8Plus(const MCSubtargetInfo &STI);
 bool isGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
+bool isGFX10_GFX11(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
+bool isGFX12(const MCSubtargetInfo &STI);
+bool isGFX12Plus(const MCSubtargetInfo &STI);
+bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
+bool isGFX10_3_GFX11(const MCSubtargetInfo &STI);
 bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
@@ -1230,6 +1238,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16: // mandatory literal is always size 4
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return 4;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -1288,6 +1297,9 @@ LLVM_READNONE
 bool isInlinableIntLiteralV216(int32_t Literal);
 
 LLVM_READNONE
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType);
+
+LLVM_READNONE
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
@@ -1322,7 +1334,7 @@ std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
 std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                      int64_t ByteOffset);
 
-/// For FLAT segment the offset must be positive;
+/// For pre-GFX12 FLAT instructions the offset must be positive;
 /// MSB is ignored and forced to zero.
 ///
 /// \return The number of bits available for the signed offset field in flat
