@@ -42,7 +42,7 @@ inline bool is_handle_valid(NativeHandleT handle) {
 }
 
 template <typename CharT, typename StreamT>
-void test_native_handle() {
+inline void test_native_handle() {
   static_assert(
       std::is_same_v<typename std::basic_filebuf<CharT>::native_handle_type, typename StreamT::native_handle_type>);
 
@@ -74,7 +74,7 @@ void test_native_handle() {
 }
 
 template <typename StreamT>
-void test_native_handle_assertion() {
+inline void test_native_handle_assertion() {
   std::filesystem::path p = get_temp_file_name();
 
   StreamT f;
@@ -83,6 +83,13 @@ void test_native_handle_assertion() {
   { TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened"); }
   // const
   { TEST_LIBCPP_ASSERT_FAILURE(std::as_const(f).native_handle(), "File must be opened"); }
+}
+
+template <typename StreamT>
+inline void test_native_handle_type() {
+  static_assert(std::is_trivially_copyable_v<typename StreamT::native_handle_type>);
+  static_assert(std::semiregular<typename StreamT::native_handle_type>);
+  static_assert(std::is_same_v<typename StreamT::native_handle_type, NativeHandleT>);
 }
 
 #endif // TEST_STD_INPUT_OUTPUT_FILE_STREAMS_FSTREAMS_TEST_HELPERS_H

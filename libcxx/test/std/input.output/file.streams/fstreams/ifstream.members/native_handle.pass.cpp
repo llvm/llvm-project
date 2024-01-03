@@ -15,7 +15,7 @@
 // native_handle_type native_handle() const noexcept;
 
 #include "test_macros.h"
-#include "../test_helpers.h"
+#include "../native_handle_test_helpers.h"
 
 int main(int, char**) {
   test_native_handle<char, std::basic_ifstream<char>>();

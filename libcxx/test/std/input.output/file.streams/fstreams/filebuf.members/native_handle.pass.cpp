@@ -21,7 +21,7 @@
 
 #include "platform_support.h"
 #include "test_macros.h"
-#include "../test_helpers.h"
+#include "../native_handle_test_helpers.h"
 
 template <typename CharT>
 void test() {

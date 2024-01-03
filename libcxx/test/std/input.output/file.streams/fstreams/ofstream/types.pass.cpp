@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "../native_handle_test_helpers.h"
 #include "../types.h"
 
 int main(int, char**)
@@ -34,7 +35,10 @@ int main(int, char**)
     static_assert((std::is_same<std::basic_ofstream<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::basic_ofstream<char>::off_type, std::char_traits<char>::off_type>::value), "");
 #if _LIBCPP_STD_VER >= 26
-    static_assert(std::is_same_v<std::basic_fstream<char>::native_handle_type, NativeHandleT>);
+    test_native_handle_type < std::basic_ofstream<char>>();
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test_native_handle_type < std::basic_ofstream<wchar_t>>();
+#  endif
 #endif
 
     return 0;
