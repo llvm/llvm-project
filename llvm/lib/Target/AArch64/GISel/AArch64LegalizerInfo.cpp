@@ -623,6 +623,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s32, s64})
       .legalFor(PackedVectorAllTypeList)
       .maxScalar(0, s64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
       .lower();
 
   // FP conversions
@@ -985,6 +989,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s16, 8)
       .lower();
 
+  // For fmul reductions we need to split up into individual operations. We
+  // clamp to 128 bit vectors then to 64bit vectors to produce a cascade of
+  // smaller types, followed by scalarizing what remains.
+  getActionDefinitionsBuilder(G_VECREDUCE_FMUL)
+      .minScalarOrElt(0, MinFPScalar)
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s32, 2)
+      .clampMaxNumElements(1, s16, 4)
+      .scalarize(1)
+      .lower();
+
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
       .legalFor({{s8, v16s8},
                  {s8, v8s8},
@@ -1133,8 +1150,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   verify(*ST.getInstrInfo());
 }
 
-bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                          MachineInstr &MI) const {
+bool AArch64LegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;

@@ -1179,8 +1179,8 @@ def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
-def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
-def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
+def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDst">;
+def wait_va_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSrc">;
 
 def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;

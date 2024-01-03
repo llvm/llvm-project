@@ -2186,7 +2186,7 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 // the mask of valid CC values if so.
 static bool isIntrinsicWithCCAndChain(SDValue Op, unsigned &Opcode,
                                       unsigned &CCValid) {
-  unsigned Id = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  unsigned Id = Op.getConstantOperandVal(1);
   switch (Id) {
   case Intrinsic::s390_tbegin:
     Opcode = SystemZISD::TBEGIN;
@@ -2212,7 +2212,7 @@ static bool isIntrinsicWithCCAndChain(SDValue Op, unsigned &Opcode,
 // CC value as its final argument.  Provide the associated SystemZISD
 // opcode and the mask of valid CC values if so.
 static bool isIntrinsicWithCC(SDValue Op, unsigned &Opcode, unsigned &CCValid) {
-  unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Id = Op.getConstantOperandVal(0);
   switch (Id) {
   case Intrinsic::s390_vpkshs:
   case Intrinsic::s390_vpksfs:
@@ -2600,10 +2600,9 @@ static bool shouldSwapCmpOperands(const Comparison &C) {
     return true;
   if (C.ICmpType != SystemZICMP::SignedOnly && Opcode0 == ISD::ZERO_EXTEND)
     return true;
-  if (C.ICmpType != SystemZICMP::SignedOnly &&
-      Opcode0 == ISD::AND &&
+  if (C.ICmpType != SystemZICMP::SignedOnly && Opcode0 == ISD::AND &&
       C.Op0.getOperand(1).getOpcode() == ISD::Constant &&
-      cast<ConstantSDNode>(C.Op0.getOperand(1))->getZExtValue() == 0xffffffff)
+      C.Op0.getConstantOperandVal(1) == 0xffffffff)
     return true;
 
   return false;
@@ -3429,11 +3428,9 @@ SDValue SystemZTargetLowering::lowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 static bool isAbsolute(SDValue CmpOp, SDValue Pos, SDValue Neg) {
   return (Neg.getOpcode() == ISD::SUB &&
           Neg.getOperand(0).getOpcode() == ISD::Constant &&
-          cast<ConstantSDNode>(Neg.getOperand(0))->getZExtValue() == 0 &&
-          Neg.getOperand(1) == Pos &&
-          (Pos == CmpOp ||
-           (Pos.getOpcode() == ISD::SIGN_EXTEND &&
-            Pos.getOperand(0) == CmpOp)));
+          Neg.getConstantOperandVal(0) == 0 && Neg.getOperand(1) == Pos &&
+          (Pos == CmpOp || (Pos.getOpcode() == ISD::SIGN_EXTEND &&
+                            Pos.getOperand(0) == CmpOp)));
 }
 
 // Return the absolute or negative absolute of Op; IsNegative decides which.
@@ -3740,7 +3737,7 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
   MFI.setFrameAddressIsTaken(true);
 
   SDLoc DL(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   // By definition, the frame address is the address of the back chain.  (In
@@ -3776,7 +3773,7 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   SDLoc DL(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   if (Depth > 0) {
@@ -4226,7 +4223,7 @@ SDValue SystemZTargetLowering::lowerOR(SDValue Op, SelectionDAG &DAG) const {
   if (HighOp.getOpcode() == ISD::AND &&
       HighOp.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue HighOp0 = HighOp.getOperand(0);
-    uint64_t Mask = cast<ConstantSDNode>(HighOp.getOperand(1))->getZExtValue();
+    uint64_t Mask = HighOp.getConstantOperandVal(1);
     if (DAG.MaskedValueIsZero(HighOp0, APInt(64, ~(Mask | 0xffffffff))))
       HighOp = HighOp0;
   }
@@ -4485,10 +4482,10 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
 SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  AtomicOrdering FenceOrdering = static_cast<AtomicOrdering>(
-    cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
-  SyncScope::ID FenceSSID = static_cast<SyncScope::ID>(
-    cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+  AtomicOrdering FenceOrdering =
+      static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
 
   // The only fence that needs an instruction is a sequentially-consistent
   // cross-thread fence.
@@ -4773,13 +4770,13 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
 
 SDValue SystemZTargetLowering::lowerPREFETCH(SDValue Op,
                                              SelectionDAG &DAG) const {
-  bool IsData = cast<ConstantSDNode>(Op.getOperand(4))->getZExtValue();
+  bool IsData = Op.getConstantOperandVal(4);
   if (!IsData)
     // Just preserve the chain.
     return Op.getOperand(0);
 
   SDLoc DL(Op);
-  bool IsWrite = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+  bool IsWrite = Op.getConstantOperandVal(2);
   unsigned Code = IsWrite ? SystemZ::PFD_WRITE : SystemZ::PFD_READ;
   auto *Node = cast<MemIntrinsicSDNode>(Op.getNode());
   SDValue Ops[] = {Op.getOperand(0), DAG.getTargetConstant(Code, DL, MVT::i32),
@@ -4825,7 +4822,7 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                        SDValue(Node, 0), getCCResult(DAG, SDValue(Node, 1)));
   }
 
-  unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Id = Op.getConstantOperandVal(0);
   switch (Id) {
   case Intrinsic::thread_pointer:
     return lowerThreadPointer(SDLoc(Op), DAG);
@@ -5628,7 +5625,7 @@ static SDValue tryBuildVectorShuffle(SelectionDAG &DAG,
       Op = Op.getOperand(0);
     if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
         Op.getOperand(1).getOpcode() == ISD::Constant) {
-      unsigned Elem = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+      unsigned Elem = Op.getConstantOperandVal(1);
       if (!GS.add(Op.getOperand(0), Elem))
         return SDValue();
       FoundOne = true;
@@ -6727,8 +6724,7 @@ SDValue SystemZTargetLowering::combineLOAD(
       int Index = 1;
       if (User->getOpcode() == ISD::SRL &&
           User->getOperand(1).getOpcode() == ISD::Constant &&
-          cast<ConstantSDNode>(User->getOperand(1))->getZExtValue() == 64 &&
-          User->hasOneUse()) {
+          User->getConstantOperandVal(1) == 64 && User->hasOneUse()) {
         User = *User->use_begin();
         Index = 0;
       }
@@ -6857,7 +6853,7 @@ static bool isMovedFromParts(SDValue Val, SDValue &LoPart, SDValue &HiPart) {
     std::swap(Op0, Op1);
   if (Op1.getOpcode() != ISD::SHL || !Op1.getNode()->hasOneUse() ||
       Op1.getOperand(1).getOpcode() != ISD::Constant ||
-      cast<ConstantSDNode>(Op1.getOperand(1))->getZExtValue() != 64)
+      Op1.getConstantOperandVal(1) != 64)
     return false;
   Op1 = Op1.getOperand(0);
 
@@ -7149,20 +7145,18 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
   unsigned OpNo = N->isStrictFPOpcode() ? 1 : 0;
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op0 = N->getOperand(OpNo);
-  if (N->getValueType(0) == MVT::f32 &&
-      Op0.hasOneUse() &&
+  if (N->getValueType(0) == MVT::f32 && Op0.hasOneUse() &&
       Op0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       Op0.getOperand(0).getValueType() == MVT::v2f64 &&
       Op0.getOperand(1).getOpcode() == ISD::Constant &&
-      cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue() == 0) {
+      Op0.getConstantOperandVal(1) == 0) {
     SDValue Vec = Op0.getOperand(0);
     for (auto *U : Vec->uses()) {
-      if (U != Op0.getNode() &&
-          U->hasOneUse() &&
+      if (U != Op0.getNode() && U->hasOneUse() &&
           U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
-          cast<ConstantSDNode>(U->getOperand(1))->getZExtValue() == 1) {
+          U->getConstantOperandVal(1) == 1) {
         SDValue OtherRound = SDValue(*U->use_begin(), 0);
         if (OtherRound.getOpcode() == N->getOpcode() &&
             OtherRound.getOperand(OpNo) == SDValue(U, 0) &&
@@ -7215,20 +7209,18 @@ SDValue SystemZTargetLowering::combineFP_EXTEND(
   unsigned OpNo = N->isStrictFPOpcode() ? 1 : 0;
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op0 = N->getOperand(OpNo);
-  if (N->getValueType(0) == MVT::f64 &&
-      Op0.hasOneUse() &&
+  if (N->getValueType(0) == MVT::f64 && Op0.hasOneUse() &&
       Op0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       Op0.getOperand(0).getValueType() == MVT::v4f32 &&
       Op0.getOperand(1).getOpcode() == ISD::Constant &&
-      cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue() == 0) {
+      Op0.getConstantOperandVal(1) == 0) {
     SDValue Vec = Op0.getOperand(0);
     for (auto *U : Vec->uses()) {
-      if (U != Op0.getNode() &&
-          U->hasOneUse() &&
+      if (U != Op0.getNode() && U->hasOneUse() &&
           U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
           U->getOperand(0) == Vec &&
           U->getOperand(1).getOpcode() == ISD::Constant &&
-          cast<ConstantSDNode>(U->getOperand(1))->getZExtValue() == 2) {
+          U->getConstantOperandVal(1) == 2) {
         SDValue OtherExtend = SDValue(*U->use_begin(), 0);
         if (OtherExtend.getOpcode() == N->getOpcode() &&
             OtherExtend.getOperand(OpNo) == SDValue(U, 0) &&
@@ -7605,7 +7597,7 @@ SDValue SystemZTargetLowering::combineINTRINSIC(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
-  unsigned Id = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned Id = N->getConstantOperandVal(1);
   switch (Id) {
   // VECTOR LOAD (RIGHTMOST) WITH LENGTH with a length operand of 15
   // or larger is simply a vector load.
@@ -7679,7 +7671,7 @@ static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
   APInt SrcDemE;
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::INTRINSIC_WO_CHAIN) {
-    unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned Id = Op.getConstantOperandVal(0);
     switch (Id) {
     case Intrinsic::s390_vpksh:   // PACKS
     case Intrinsic::s390_vpksf:
@@ -7723,7 +7715,7 @@ static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
       SrcDemE = APInt(NumElts, 0);
       if (!DemandedElts[OpNo - 1])
         break;
-      unsigned Mask = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+      unsigned Mask = Op.getConstantOperandVal(3);
       unsigned MaskBit = ((OpNo - 1) ? 1 : 4);
       // Demand input element 0 or 1, given by the mask bit value.
       SrcDemE.setBit((Mask & MaskBit)? 1 : 0);
@@ -7732,7 +7724,7 @@ static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
     case Intrinsic::s390_vsldb: {
       // VECTOR SHIFT LEFT DOUBLE BY BYTE
       assert(VT == MVT::v16i8 && "Unexpected type.");
-      unsigned FirstIdx = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+      unsigned FirstIdx = Op.getConstantOperandVal(3);
       assert (FirstIdx > 0 && FirstIdx < 16 && "Unused operand.");
       unsigned NumSrc0Els = 16 - FirstIdx;
       SrcDemE = APInt(NumElts, 0);
@@ -7808,7 +7800,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::INTRINSIC_WO_CHAIN) {
     bool IsLogical = false;
-    unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned Id = Op.getConstantOperandVal(0);
     switch (Id) {
     case Intrinsic::s390_vpksh:   // PACKS
     case Intrinsic::s390_vpksf:
@@ -7908,7 +7900,7 @@ SystemZTargetLowering::ComputeNumSignBitsForTargetNode(
     return 1;
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::INTRINSIC_WO_CHAIN) {
-    unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned Id = Op.getConstantOperandVal(0);
     switch (Id) {
     case Intrinsic::s390_vpksh:   // PACKS
     case Intrinsic::s390_vpksf:
