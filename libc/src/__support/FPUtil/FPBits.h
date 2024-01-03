@@ -224,19 +224,19 @@ public:
 
 namespace internal {
 
-// This is a temporary class to unify common methods and properties between
-// FPBits and FPBits<long double>.
+// Manipulates the representation of a floating point number defined by its
+// FPType. This layer is architecture agnostic and does not handle C++ floating
+// point types directly ('float', 'double' and 'long double'). Use the FPBits
+// below if needed.
+//
+// TODO: Specialize this class for FPType::X86_Binary80 and remove ad-hoc logic
+// from FPRepBase.
 template <FPType fp_type> struct FPRep : public FPRepBase<fp_type> {
   using UP = FPRepBase<fp_type>;
   using typename UP::StorageType;
-  using UP::EXP_BIAS;
-  using UP::EXP_LEN;
   using UP::FRACTION_LEN;
   using UP::FRACTION_MASK;
   using UP::MANTISSA_PRECISION;
-  using UP::SIGN_MASK;
-  using UP::STORAGE_LEN;
-  using UP::TOTAL_LEN;
 };
 
 } // namespace internal
