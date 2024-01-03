@@ -364,7 +364,9 @@ public:
   // Methods below this are used by tests.
 
   LIBC_INLINE static constexpr T zero(bool sign = false) {
-    StorageType rep = sign ? SIGN_MASK : StorageType(0);
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
+                      | 0                                 // exponent
+                      | 0;                                // mantissa
     return FPBits(rep).get_val();
   }
 
