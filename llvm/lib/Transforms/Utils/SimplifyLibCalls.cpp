@@ -2503,12 +2503,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
             : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, NoAttrs);
     Value *Y = Arg->getArgOperand(1);
     // Cast exponent to FP if integer.
-    if (ArgID == Intrinsic::powi) {
-      if (ConstantInt *C = dyn_cast<ConstantInt>(Y))
-        Y = ConstantFoldCastOperand(Instruction::SIToFP, C, Ty, DL);
-      else
+    if (ArgID == Intrinsic::powi)
         Y = B.CreateCast(Instruction::SIToFP, Y, Ty, "cast");
-    }
     Value *MulY = B.CreateFMul(Y, LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
