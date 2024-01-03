@@ -465,13 +465,15 @@ template <typename T> struct [[clang::coro_return_type]] Gen {
 Gen<int> foo_coro(int b) { co_return b; }
   )cpp";
   Annotations Main(R"cpp(
-    #include "header.hpp"
+// error-ok
+#include "header.hpp"
+Gen<int> $[[bar_coro]](int b) { return foo_coro(b); }
   )cpp");
   TestTU TU = TestTU::withCode(Main.code());
   TU.AdditionalFiles["coroutine.h"] = std::string(CoroutineH);
   TU.AdditionalFiles["header.hpp"] = std::string(Header);
   TU.ExtraArgs.push_back("--std=c++20");
-  EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+  EXPECT_THAT(TU.build().getDiagnostics(), ElementsAre(hasRange(Main.range())));
 }
 
 TEST(DiagnosticTest, MakeShared) {
