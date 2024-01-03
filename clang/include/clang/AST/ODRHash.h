@@ -101,6 +101,9 @@ public:
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
 
+  // Add intergers to ID.
+  void AddInteger(unsigned Value);
+
   static bool isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent);
 
 private:

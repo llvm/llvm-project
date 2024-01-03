@@ -525,8 +525,11 @@ private:
     return Function.getInt();
   }
 
+  void loadExternalRedecls();
+
 public:
   friend TrailingObjects;
+  friend class ASTReader;
 
   static FunctionTemplateSpecializationInfo *
   Create(ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
@@ -789,12 +792,14 @@ protected:
     return SpecIterator<EntryType>(isEnd ? Specs.end() : Specs.begin());
   }
 
-  void loadLazySpecializationsImpl() const;
+  void loadExternalSpecializations() const;
 
   template <class EntryType, typename ...ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType*
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
                          void *&InsertPos, ProfileArguments &&...ProfileArgs);
+
+  void loadLazySpecializationsWithArgs(ArrayRef<TemplateArgument> TemplateArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
@@ -814,9 +819,13 @@ protected:
     /// If non-null, points to an array of specializations (including
     /// partial specializations) known only by their external declaration IDs.
     ///
+    /// These specializations needs to be loaded at once in
+    /// loadExternalSpecializations to complete the redecl chain or be preparing
+    /// for template resolution.
+    ///
     /// The first value in the array is the number of specializations/partial
     /// specializations that follow.
-    uint32_t *LazySpecializations = nullptr;
+    uint32_t *ExternalSpecializations = nullptr;
 
     /// The set of "injected" template arguments used within this
     /// template.
@@ -850,6 +859,8 @@ public:
   friend class ASTDeclWriter;
   friend class ASTReader;
   template <class decl_type> friend class RedeclarableTemplate;
+  friend class ClassTemplateSpecializationDecl;
+  friend class VarTemplateSpecializationDecl;
 
   /// Retrieves the canonical declaration of this template.
   RedeclarableTemplateDecl *getCanonicalDecl() override {
@@ -977,6 +988,7 @@ SpecEntryTraits<FunctionTemplateSpecializationInfo> {
 class FunctionTemplateDecl : public RedeclarableTemplateDecl {
 protected:
   friend class FunctionDecl;
+  friend class FunctionTemplateSpecializationInfo;
 
   /// Data that is common to all of the declarations of a given
   /// function template.
@@ -1012,12 +1024,12 @@ protected:
   void addSpecialization(FunctionTemplateSpecializationInfo* Info,
                          void *InsertPos);
 
+  /// Load any lazily-loaded specializations from the external source.
+  void LoadLazySpecializations() const;
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
-
-  /// Load any lazily-loaded specializations from the external source.
-  void LoadLazySpecializations() const;
 
   /// Get the underlying function declaration of the template.
   FunctionDecl *getTemplatedDecl() const {
@@ -1839,6 +1851,8 @@ class ClassTemplateSpecializationDecl
   LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
+  void loadExternalRedecls();
+
 protected:
   ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
                                   DeclContext *DC, SourceLocation StartLoc,
@@ -1852,6 +1866,7 @@ protected:
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class ASTReader;
 
   static ClassTemplateSpecializationDecl *
   Create(ASTContext &Context, TagKind TK, DeclContext *DC,
@@ -2285,9 +2300,7 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class TemplateDeclInstantiator;
-
-  /// Load any lazily-loaded specializations from the external source.
-  void LoadLazySpecializations() const;
+  friend class ClassTemplateSpecializationDecl;
 
   /// Get the underlying class declarations of the template.
   CXXRecordDecl *getTemplatedDecl() const {
@@ -2651,6 +2664,8 @@ class VarTemplateSpecializationDecl : public VarDecl,
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsCompleteDefinition : 1;
 
+  void loadExternalRedecls();
+
 protected:
   VarTemplateSpecializationDecl(Kind DK, ASTContext &Context, DeclContext *DC,
                                 SourceLocation StartLoc, SourceLocation IdLoc,
@@ -2664,6 +2679,7 @@ protected:
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class ASTReader;
   friend class VarDecl;
 
   static VarTemplateSpecializationDecl *
@@ -3057,8 +3073,7 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  /// Load any lazily-loaded specializations from the external source.
-  void LoadLazySpecializations() const;
+  friend class VarTemplatePartialSpecializationDecl;
 
   /// Get the underlying variable declarations of the template.
   VarDecl *getTemplatedDecl() const {
