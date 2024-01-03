@@ -343,33 +343,6 @@ def TestMixedSuccessAndSilenceableOp
   }];
 }
 
-def TestPrintNumberOfAssociatedPayloadIROps
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_ops",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformHandleTypeInterface:$handle);
-  let assemblyFormat = "$handle attr-dict `:` type($handle)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintNumberOfAssociatedPayloadIRValues
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_values",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformValueHandleTypeInterface:$value_handle);
-  let assemblyFormat = "$value_handle attr-dict `:` type($value_handle)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintNumberOfAssociatedPayloadIRParams
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_params",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformParamTypeInterface:$param);
-  let assemblyFormat = "$param attr-dict `:` type($param)";
-  let cppNamespace = "::mlir::test";
-}
-
 def TestCopyPayloadOp
   : Op<Transform_Dialect, "test_copy_payload",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
