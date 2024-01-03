@@ -230,10 +230,17 @@ TEST_F(NoArgv, FdateGetDate) {
 
   // Tue May 26 21:51:03 2015\n\0
   // index at 3, 7, 10, 19 should be space
-  EXPECT_EQ(input[3], ' ');
-  EXPECT_EQ(input[7], ' ');
-  EXPECT_EQ(input[10], ' ');
-  EXPECT_EQ(input[19], ' ');
+  // when date is less than two digit, index 8 would be space
+  // Tue May  6 21:51:03 2015\n\0
+  for (std::size_t i{0}; i < charLen; i++) {
+    if (i == 8)
+      continue;
+    if (i == 3 || i == 7 || i == 10 || i == 19) {
+      EXPECT_EQ(input[i], ' ');
+      continue;
+    }
+    EXPECT_NE(input[i], ' ');
+  }
 }
 
 TEST_F(NoArgv, FdateGetDateTooShort) {

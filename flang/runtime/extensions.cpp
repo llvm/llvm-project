@@ -18,20 +18,20 @@
 #include <ctime>
 
 #ifdef _WIN32
-inline void ctime_alloc(char *buffer, size_t bufsize, const time_t cur_time,
+inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   int error{ctime_s(buffer, bufsize, &cur_time)};
   RUNTIME_CHECK(terminator, error == 0);
 }
 #elif _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || \
     _POSIX_SOURCE
-inline void ctime_alloc(char *buffer, size_t bufsize, const time_t cur_time,
+inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   const char *res{ctime_r(&cur_time, buffer)};
   RUNTIME_CHECK(terminator, res != nullptr);
 }
 #else
-inline void ctime_alloc(char *buffer, size_t bufsize, const time_t cur_time,
+inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   buffer[0] = '\0';
   terminator.Crash("fdate is not supported.");
