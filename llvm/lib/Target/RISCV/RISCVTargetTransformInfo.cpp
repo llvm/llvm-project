@@ -497,13 +497,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // vslidedown+vslideup.
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
-    ArrayRef<unsigned> Opcodes;
+    unsigned Opcodes[2] = {RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VX};
     if (Index >= 0 && Index < 32)
-      Opcodes = {RISCV::VSLIDEDOWN_VI, RISCV::VSLIDEUP_VX};
+      Opcodes[0] = RISCV::VSLIDEDOWN_VI;
     else if (Index < 0 && Index > -32)
-      Opcodes = {RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VI};
-    else
-      Opcodes = {RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VX};
+      Opcodes[1] = RISCV::VSLIDEUP_VI;
     return LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
   }
   case TTI::SK_Reverse: {
