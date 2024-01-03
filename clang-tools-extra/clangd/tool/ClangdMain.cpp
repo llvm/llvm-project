@@ -69,16 +69,16 @@
 namespace {
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
-static constexpr uint MallocTrimVis = (1 << 8);
+static constexpr unsigned MallocTrimVis = (1 << 8);
 #else
-static constexpr uint MallocTrimVis = 0;
+static constexpr unsigned MallocTrimVis = 0;
 #endif
 
 #if CLANGD_ENABLE_REMOTE
 // FIXME(kirillbobyrev): Should this be the location of compile_commands.json?
-static constexpr uint RemoteVis = (1 << 9);
+static constexpr unsigned RemoteVis = (1 << 9);
 #else
-static constexpr uint RemoteVis = 0;
+static constexpr unsigned RemoteVis = 0;
 #endif
 
 using namespace llvm;
