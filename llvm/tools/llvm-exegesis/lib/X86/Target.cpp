@@ -45,6 +45,9 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#ifdef HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#endif // HAVE_LIBPFM
 #endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER
@@ -1252,7 +1255,7 @@ std::vector<MCInst>
 ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
   if (SaveRegisters)
-    saveSyscallRegisters(ConfigurePerfCounterCode, 2);
+    saveSyscallRegisters(ConfigurePerfCounterCode, 3);
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
   ConfigurePerfCounterCode.push_back(MCInstBuilder(X86::MOV32rm)
@@ -1264,9 +1267,13 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
                                          .addReg(0));
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RSI, 64, APInt(64, Request)));
+#ifdef HAVE_LIBPFM
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(X86::RDX, 64, APInt(64, PERF_IOC_FLAG_GROUP)));
+#endif // HAVE_LIBPFM
   generateSyscall(SYS_ioctl, ConfigurePerfCounterCode);
   if (SaveRegisters)
-    restoreSyscallRegisters(ConfigurePerfCounterCode, 2);
+    restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
   return ConfigurePerfCounterCode;
 }
 

@@ -154,12 +154,12 @@ Counter::~Counter() {
 
 void Counter::start() {
   if (!IsDummyEvent)
-    ioctl(FileDescriptor, PERF_EVENT_IOC_RESET, 0);
+    ioctl(FileDescriptor, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
 }
 
 void Counter::stop() {
   if (!IsDummyEvent)
-    ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0);
+    ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
 }
 
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
