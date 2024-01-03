@@ -137,7 +137,7 @@ LIBC_INLINE float exp2f(float x) {
   // exp_hi = shift hi to the exponent field of double precision.
   int64_t exp_hi =
       static_cast<int64_t>(static_cast<uint64_t>(k >> ExpBase::MID_BITS)
-                           << fputil::FloatProperties<double>::FRACTION_LEN);
+                           << fputil::FPBits<double>::FRACTION_LEN);
   // mh = 2^hi * 2^mid
   // mh_bits = bit field of mh
   int64_t mh_bits = ExpBase::EXP_2_MID[k & ExpBase::MID_MASK] + exp_hi;

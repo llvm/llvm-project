@@ -597,6 +597,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasExact())
     OS << " exact";
 
+  if (getFlags().hasDisjoint())
+    OS << " disjoint";
+
   if (getFlags().hasNonNeg())
     OS << " nneg";
 

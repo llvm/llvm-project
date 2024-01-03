@@ -856,6 +856,9 @@ Bug Fixes to AST Handling
 - Fixed a bug where RecursiveASTVisitor fails to visit the
   initializer of a bitfield.
   `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
+- Fixed a bug where Template Instantiation failed to handle Lambda Expressions
+  with certain types of Attributes.
+  (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1127,9 +1130,10 @@ Improvements
 ^^^^^^^^^^^^
 
 - Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
-  functions like ``send``, ``recv``, ``readlink``, ``fflush`` and
+  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp`` and
   ``errno`` behavior.
   (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
+  `#76671 <https://github.com/llvm/llvm-project/pull/76671>`_,
   `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
   `#76557 <https://github.com/llvm/llvm-project/pull/76557>`_,
   `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_)
