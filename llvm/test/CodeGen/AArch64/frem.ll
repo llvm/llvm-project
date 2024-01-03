@@ -5,36 +5,18 @@
 ; RUN: llc -mtriple=aarch64-none-eabi -mattr=+fullfp16 -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define double @frem_f64(double %a, double %b) {
-; CHECK-SD-LABEL: frem_f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b fmod
-;
-; CHECK-GI-LABEL: frem_f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl fmod
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: frem_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b fmod
 entry:
   %c = frem double %a, %b
   ret double %c
 }
 
 define float @frem_f32(float %a, float %b) {
-; CHECK-SD-LABEL: frem_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b fmodf
-;
-; CHECK-GI-LABEL: frem_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl fmodf
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: frem_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b fmodf
 entry:
   %c = frem float %a, %b
   ret float %c
