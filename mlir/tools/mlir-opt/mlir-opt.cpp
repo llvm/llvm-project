@@ -85,9 +85,7 @@ void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDiagnosticsPass();
-#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 void registerTestDialectConversionPasses();
-#endif
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestEmulateNarrowTypePass();
@@ -149,8 +147,8 @@ void registerTestNvgpuLowerings();
 
 namespace test {
 void registerTestDialect(DialectRegistry &);
-void registerTestDynDialect(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
+void registerTestDynDialect(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
@@ -262,9 +260,6 @@ void registerTestPasses() {
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestNvgpuLowerings();
   mlir::test::registerTestWrittenToPass();
-#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  mlir::test::registerTestDialectConversionPasses();
-#endif
 }
 #endif
 
