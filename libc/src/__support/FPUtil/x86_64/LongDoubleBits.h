@@ -52,16 +52,16 @@ public:
       (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
-    return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
-  }
-
-  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    bits &= ~(StorageType(1) << FRACTION_LEN);
-    bits |= (StorageType(implicitVal) << FRACTION_LEN);
+    return bits & SIG_MASK;
   }
 
   LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return bool((bits & (StorageType(1) << FRACTION_LEN)) >> FRACTION_LEN);
+    return bits & EXPLICIT_BIT_MASK;
+  }
+
+  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
+    if (get_implicit_bit() != implicitVal)
+      bits ^= EXPLICIT_BIT_MASK;
   }
 
   LIBC_INLINE constexpr FPBits() = default;
