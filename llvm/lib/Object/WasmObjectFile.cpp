@@ -1667,18 +1667,10 @@ Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {
 Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   auto &Sym = getWasmSymbol(Symb);
   if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
-      isDefinedFunctionIndex(Sym.Info.ElementIndex)) {
-    // For object files, use the section offset. The linker relies on this.
-    // For linked files, use the file offset. This behavior matches the way
-    // browsers print stack traces and is useful for binary size analysis.
-    // (see https://webassembly.github.io/spec/web-api/index.html#conventions)
-    uint32_t Adjustment = isRelocatableObject() || isSharedObject()
-                              ? 0
-                              : Sections[CodeSection].Offset;
-    return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset +
-           Adjustment;
-  }
-  return getSymbolValue(Symb);
+      isDefinedFunctionIndex(Sym.Info.ElementIndex))
+    return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset;
+  else
+    return getSymbolValue(Symb);
 }
 
 uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {
