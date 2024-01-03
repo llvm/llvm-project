@@ -30,16 +30,15 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   io.mutableModes().inNamelist = true;
-  char comma{static_cast<char>(GetComma(io))};
   ConnectionState &connection{io.GetConnectionState()};
-  // Internal functions to advance records and convert case
-  const auto EmitWithAdvance{[&](char ch) -> bool {
-    return (!connection.NeedAdvance(1) || io.AdvanceRecord()) &&
-        EmitAscii(io, &ch, 1);
-  }};
-  const auto EmitUpperCase{[&](const char *str) -> bool {
-    if (connection.NeedAdvance(std::strlen(str)) &&
-        !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) {
+  // Internal function to advance records and convert case
+  const auto EmitUpperCase{[&](const char *prefix, std::size_t prefixLen,
+                               const char *str, char suffix) -> bool {
+    if ((connection.NeedAdvance(prefixLen) &&
+            !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) ||
+        !EmitAscii(io, prefix, prefixLen) ||
+        (connection.NeedAdvance(std::strlen(str) + (suffix != ' ')) &&
+            !(io.AdvanceRecord() && EmitAscii(io, " ", 1)))) {
       return false;
     }
     for (; *str; ++str) {
@@ -49,23 +48,25 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
         return false;
       }
     }
-    return true;
+    return suffix == ' ' || EmitAscii(io, &suffix, 1);
   }};
   // &GROUP
-  if (!(EmitWithAdvance('&') && EmitUpperCase(group.groupName))) {
+  if (!EmitUpperCase(" &", 2, group.groupName, ' ')) {
     return false;
   }
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  char comma{static_cast<char>(GetComma(io))};
+  char prefix{' '};
   for (std::size_t j{0}; j < group.items; ++j) {
     // [,]ITEM=...
     const NamelistGroup::Item &item{group.item[j]};
     if (listOutput) {
       listOutput->set_lastWasUndelimitedCharacter(false);
     }
-    if (!EmitWithAdvance(j == 0 ? ' ' : comma) || !EmitUpperCase(item.name) ||
-        !EmitWithAdvance('=')) {
+    if (!EmitUpperCase(&prefix, 1, item.name, '=')) {
       return false;
     }
+    prefix = comma;
     if (const auto *addendum{item.descriptor.Addendum()};
         addendum && addendum->derivedType()) {
       const NonTbpDefinedIoTable *table{group.nonTbpDefinedIo};
@@ -77,7 +78,7 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
   }
   // terminal /
-  return EmitWithAdvance('/');
+  return EmitUpperCase("/", 1, "", ' ');
 }
 
 static constexpr bool IsLegalIdStart(char32_t ch) {
