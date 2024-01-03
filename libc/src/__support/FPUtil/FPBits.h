@@ -87,9 +87,9 @@ template <> struct FPLayout<FPType::X86_Binary80> {
 
 } // namespace internal
 
-// FPBaseMasksAndShifts derives useful constants from the FPLayout.
+// FPRepBase derives useful constants from the FPLayout.
 template <FPType fp_type>
-struct FPBaseMasksAndShifts : public internal::FPLayout<fp_type> {
+struct FPRepBase : public internal::FPLayout<fp_type> {
 private:
   using UP = internal::FPLayout<fp_type>;
 
@@ -149,7 +149,7 @@ private:
     return StorageType(1) << position;
   }
 
-public:
+protected:
   // The number of bits after the decimal dot when the number is in normal form.
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision ? SIG_LEN - 1
@@ -159,7 +159,6 @@ public:
   LIBC_INLINE_VAR static constexpr StorageType FRACTION_MASK =
       mask_trailing_ones<StorageType, FRACTION_LEN>();
 
-protected:
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QUIET_NAN_MASK & bits(x) != 0
   LIBC_INLINE_VAR static constexpr StorageType QUIET_NAN_MASK =
@@ -173,41 +172,11 @@ protected:
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
           : bit_at(SIG_LEN - 2);                      // 0b0100...
-};
 
-namespace internal {
-
-// This is a temporary class to unify common methods and properties between
-// FPBits and FPBits<long double>.
-template <FPType fp_type> struct FPRep : private FPBaseMasksAndShifts<fp_type> {
-  using UP = FPBaseMasksAndShifts<fp_type>;
-  using typename UP::StorageType;
-  using UP::TOTAL_LEN;
-
-protected:
-  using UP::EXP_SIG_MASK;
-  using UP::QUIET_NAN_MASK;
+  // The floating point number representation as an unsigned integer.
+  StorageType bits = 0;
 
 public:
-  using UP::EXP_BIAS;
-  using UP::EXP_LEN;
-  using UP::EXP_MASK;
-  using UP::EXP_MASK_SHIFT;
-  using UP::FP_MASK;
-  using UP::FRACTION_LEN;
-  using UP::FRACTION_MASK;
-  using UP::MANTISSA_PRECISION;
-  using UP::SIGN_MASK;
-  using UP::STORAGE_LEN;
-
-  // Reinterpreting bits as an integer value and interpreting the bits of an
-  // integer value as a floating point value is used in tests. So, a convenient
-  // type is provided for such reinterpretations.
-  StorageType bits;
-
-  LIBC_INLINE constexpr FPRep() : bits(0) {}
-  LIBC_INLINE explicit constexpr FPRep(StorageType bits) : bits(bits) {}
-
   LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
     mantVal &= FRACTION_MASK;
     bits &= ~FRACTION_MASK;
@@ -266,6 +235,23 @@ public:
   }
 };
 
+namespace internal {
+
+// This is a temporary class to unify common methods and properties between
+// FPBits and FPBits<long double>.
+template <FPType fp_type> struct FPRep : public FPRepBase<fp_type> {
+  using UP = FPRepBase<fp_type>;
+  using typename UP::StorageType;
+  using UP::EXP_BIAS;
+  using UP::EXP_LEN;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::MANTISSA_PRECISION;
+  using UP::SIGN_MASK;
+  using UP::STORAGE_LEN;
+  using UP::TOTAL_LEN;
+};
+
 } // namespace internal
 
 // Returns the FPType corresponding to C++ type T on the host.
@@ -311,14 +297,14 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
   using UP = internal::FPRep<get_fp_type<T>()>;
-  using StorageType = typename UP::StorageType;
-  using UP::bits;
 
 private:
   using UP::EXP_SIG_MASK;
   using UP::QUIET_NAN_MASK;
 
 public:
+  using StorageType = typename UP::StorageType;
+  using UP::bits;
   using UP::EXP_BIAS;
   using UP::EXP_LEN;
   using UP::EXP_MASK;
@@ -327,6 +313,7 @@ public:
   using UP::FRACTION_MASK;
   using UP::SIGN_MASK;
   using UP::TOTAL_LEN;
+  using UP::UP;
 
   using UP::get_biased_exponent;
   using UP::is_zero;
@@ -347,17 +334,18 @@ public:
   static constexpr StorageType MAX_NORMAL =
       ((StorageType(MAX_BIASED_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
 
-  // We don't want accidental type promotions/conversions, so we require exact
-  // type match.
-  template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x)
-      : UP(cpp::bit_cast<StorageType>(x)) {}
+  LIBC_INLINE constexpr FPBits() = default;
 
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
-
-  LIBC_INLINE constexpr FPBits() : UP() {}
+  template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
+    using Unqual = typename cpp::remove_cv_t<XType>;
+    if constexpr (cpp::is_same_v<Unqual, T>) {
+      bits = cpp::bit_cast<StorageType>(x);
+    } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
+      bits = x;
+    } else {
+      static_assert(cpp::always_false<XType>);
+    }
+  }
 
   LIBC_INLINE constexpr void set_val(T value) {
     bits = cpp::bit_cast<StorageType>(value);

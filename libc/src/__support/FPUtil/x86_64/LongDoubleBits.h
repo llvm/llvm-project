@@ -30,23 +30,13 @@ template <>
 struct FPBits<long double> : public internal::FPRep<FPType::X86_Binary80> {
   using UP = internal::FPRep<FPType::X86_Binary80>;
   using StorageType = typename UP::StorageType;
-  using UP::bits;
 
 private:
+  using UP::bits;
   using UP::EXP_SIG_MASK;
   using UP::QUIET_NAN_MASK;
 
 public:
-  using UP::EXP_BIAS;
-  using UP::EXP_LEN;
-  using UP::EXP_MASK;
-  using UP::EXP_MASK_SHIFT;
-  using UP::FP_MASK;
-  using UP::FRACTION_LEN;
-  using UP::FRACTION_MASK;
-  using UP::SIGN_MASK;
-  using UP::TOTAL_LEN;
-
   static constexpr int MAX_BIASED_EXPONENT = 0x7FFF;
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
@@ -73,20 +63,18 @@ public:
     return bool((bits & (StorageType(1) << FRACTION_LEN)) >> FRACTION_LEN);
   }
 
-  LIBC_INLINE constexpr FPBits() : UP() {}
+  LIBC_INLINE constexpr FPBits() = default;
 
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x)
-      : UP(cpp::bit_cast<StorageType>(x)) {
-    // bits starts uninitialized, and setting it to a long double only
-    // overwrites the first 80 bits. This clears those upper bits.
-    bits = bits & ((StorageType(1) << 80) - 1);
+  template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
+    using Unqual = typename cpp::remove_cv_t<XType>;
+    if constexpr (cpp::is_same_v<Unqual, long double>) {
+      bits = cpp::bit_cast<StorageType>(x);
+    } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
+      bits = x;
+    } else {
+      static_assert(cpp::always_false<XType>);
+    }
   }
-
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
 
   LIBC_INLINE constexpr operator long double() {
     return cpp::bit_cast<long double>(bits);
