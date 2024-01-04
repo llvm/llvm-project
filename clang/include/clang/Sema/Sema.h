@@ -10263,11 +10263,13 @@ public:
     ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
   };
 
-  // Unlike the above, this evaluates constraints, which should only happen at
-  // 'constraint checking' time.
+  // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
+  // Unlike the above, this does not evaluates constraints.
+  ExprResult SubstConstraintExprWithoutSatisfaction(
+      Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
   /// Substitute the given template arguments into a list of
   /// expressions, expanding pack expansions if required.
