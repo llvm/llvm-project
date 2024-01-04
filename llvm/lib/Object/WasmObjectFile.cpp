@@ -1206,7 +1206,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     llvm::errs() << llvm::format("param ct %d ", ParamCount);
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
-      Sig.Returns.push_back(parseValType(Ctx, ParamType));
+      Sig.Params.push_back(parseValType(Ctx, ParamType));
       continue;
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
