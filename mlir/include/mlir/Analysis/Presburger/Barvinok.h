@@ -21,6 +21,7 @@
 
 namespace mlir {
 namespace presburger {
+namespace detail {
 
 // A polyhedron in H-representation is a set of inequalities
 // in d variables with integer coefficients.
@@ -65,6 +66,7 @@ ConeV getDual(ConeH);
 // The returned cone is pointed at the origin.
 ConeH getDual(ConeV);
 
+} // namespace detail
 } // namespace presburger
 } // namespace mlir
 
