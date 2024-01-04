@@ -646,7 +646,10 @@ template <> class FloatToString<long double> {
   static constexpr size_t EXTRA_INT_WIDTH =
       internal::div_ceil(sizeof(long double) * 8, 64) * 64;
 
-  cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> float_as_int = 0;
+  // float_as_fixed represents the floating point number as a fixed point number
+  // with the point EXTRA_INT_WIDTH bits from the left of the number. This can
+  // store any number with a negative exponent.
+  cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> float_as_fixed = 0;
   int int_block_index = 0;
 
   static constexpr size_t BLOCK_BUFFER_LEN =
@@ -673,11 +676,10 @@ template <> class FloatToString<long double> {
     }
   }
 
+  // init_convert initializes float_as_int, cur_block, and block_buffer based on
+  // the mantissa and exponent of the initial number. Calling it will always
+  // return the class to the starting state.
   LIBC_INLINE constexpr void init_convert() {
-    // This initializes float_as_int, cur_block, and block_buffer.
-
-    float_as_int = mantissa;
-
     // No calculation necessary for the 0 case.
     if (mantissa == 0 && exponent == 0) {
       return;
@@ -685,8 +687,14 @@ template <> class FloatToString<long double> {
 
     if (exponent > 0) {
       // if the exponent is positive, then the number is fully above the decimal
-      // point. Shift left by exponent to get the integer representation of this
-      // number.
+      // point. In this case we represent the float as an integer, then divide
+      // by 10^BLOCK_SIZE and take the remainder as our next block. This
+      // generates the digits from right to left, but the digits will be written
+      // from left to right, so it caches the results so they can be read in
+      // reverse order.
+
+      cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> float_as_int = mantissa;
+
       float_as_int.shift_left(exponent);
       int_block_index = 0;
 
@@ -699,17 +707,18 @@ template <> class FloatToString<long double> {
 
     } else {
       // if the exponent is not positive, then the number is at least partially
-      // below the decimal point. Shift left to make the int a fixed point
-      // representation with the decimal point after the top EXTRA_INT_WIDTH
-      // bits.
+      // below the decimal point. In this case we represent the float as a fixed
+      // point number with the decimal point after the top EXTRA_INT_WIDTH bits.
+      float_as_fixed = mantissa;
+
       const int SHIFT_AMOUNT = FLOAT_AS_INT_WIDTH + exponent;
       static_assert(EXTRA_INT_WIDTH >= sizeof(long double) * 8);
-      float_as_int.shift_left(SHIFT_AMOUNT);
+      float_as_fixed.shift_left(SHIFT_AMOUNT);
 
       // If there are still digits above the decimal point, handle those.
-      if (float_as_int.clz() < EXTRA_INT_WIDTH) {
+      if (float_as_fixed.clz() < EXTRA_INT_WIDTH) {
         cpp::UInt<EXTRA_INT_WIDTH> above_decimal_point =
-            float_as_int >> FLOAT_AS_INT_WIDTH;
+            float_as_fixed >> FLOAT_AS_INT_WIDTH;
 
         size_t positive_int_block_index = 0;
         while (above_decimal_point > 0) {
@@ -720,7 +729,7 @@ template <> class FloatToString<long double> {
         block_buffer_valid = positive_int_block_index;
 
         // Zero all digits above the decimal point.
-        zero_leading_digits(float_as_int);
+        zero_leading_digits(float_as_fixed);
         int_block_index = 0;
       }
     }
@@ -820,14 +829,14 @@ public:
     // If we are currently before the requested block. Step until we reach the
     // requested block. This is likely to only be one step.
     while (block_index < int_block_index) {
-      zero_leading_digits(float_as_int);
-      float_as_int.mul(1000000000);
+      zero_leading_digits(float_as_fixed);
+      float_as_fixed.mul(1000000000);
       --int_block_index;
     }
 
     // We're currently on the requested block, return the current block.
     BlockInt cur_block =
-        static_cast<BlockInt>(float_as_int >> FLOAT_AS_INT_WIDTH);
+        static_cast<BlockInt>(float_as_fixed >> FLOAT_AS_INT_WIDTH);
     return cur_block;
   }
 
