@@ -92,3 +92,51 @@ for.end.loopexit:
 for.end:
   ret void
 }
+
+; CHECK-LABEL: s172
+; CHECK-NOT: vector.body
+
+@b = global [32000 x float] zeroinitializer, align 64
+@a = global [32000 x float] zeroinitializer, align 64
+
+; for (int i = xa - 1; i < 32000; i += xb)
+;   a[i] += b[i];
+;
+define float @s172(i32 signext %xa, i32 signext %xb) mustprogress {
+entry:
+  %cmp214 = icmp slt i32 %xa, 32001
+  br i1 %cmp214, label %for.body.us.preheader, label %for.cond.cleanup
+
+for.body.us.preheader:                            ; preds = %entry
+  %sub = add i32 %xa, -1
+  %0 = sext i32 %sub to i64
+  %1 = sext i32 %xb to i64
+  br label %for.body.us
+
+for.body.us:                                      ; preds = %for.body.us.preheader, %for.cond1.for.cond.cleanup3_crit_edge.us
+  %nl.016.us = phi i32 [ %inc.us, %for.cond1.for.cond.cleanup3_crit_edge.us ], [ 0, %for.body.us.preheader ]
+  br label %for.body4.us
+
+for.body4.us:                                     ; preds = %for.body.us, %for.body4.us
+  %indvars.iv = phi i64 [ %0, %for.body.us ], [ %indvars.iv.next, %for.body4.us ]
+  %arrayidx.us = getelementptr inbounds [32000 x float], ptr @b, i64 0, i64 %indvars.iv
+  %2 = load float, ptr %arrayidx.us, align 4
+  %arrayidx6.us = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 %indvars.iv
+  %3 = load float, ptr %arrayidx6.us, align 4
+  %add.us = fadd fast float %3, %2
+  store float %add.us, ptr %arrayidx6.us, align 4
+  %indvars.iv.next = add i64 %indvars.iv, %1
+  %cmp2.us = icmp slt i64 %indvars.iv.next, 32000
+  br i1 %cmp2.us, label %for.body4.us, label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us:         ; preds = %for.body4.us
+  %inc.us = add nuw nsw i32 %nl.016.us, 1
+  %exitcond.not = icmp eq i32 %inc.us, 100000
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body.us
+
+for.cond.cleanup.loopexit:                        ; preds = %for.cond1.for.cond.cleanup3_crit_edge.us
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  ret float undef
+}
