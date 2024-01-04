@@ -434,14 +434,14 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
   if (MRI.getType(Src0) != LLT::scalar(64))
     return false;
 
-  if (KB->getKnownBits(Src0).countMinLeadingZeros() >= 32 &&
-      KB->getKnownBits(Src1).countMinLeadingZeros() >= 32) {
+  if (KB->getKnownBits(Src1).countMinLeadingZeros() >= 32 &&
+      KB->getKnownBits(Src0).countMinLeadingZeros() >= 32) {
     NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32;
     return true;
   }
 
-  if (KB->computeNumSignBits(Src0) >= 33 &&
-      KB->computeNumSignBits(Src1) >= 33) {
+  if (KB->computeNumSignBits(Src1) >= 33 &&
+      KB->computeNumSignBits(Src0) >= 33) {
     NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32;
     return true;
   }
