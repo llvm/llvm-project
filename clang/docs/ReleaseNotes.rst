@@ -518,7 +518,6 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
-- Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 
 
 Improvements to Clang's time-trace
@@ -1163,8 +1162,9 @@ Improvements
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
 - Improved the ``alpha.unix.Stream`` checker by modeling more functions like,
-  ``fflush``, ``fputs``, ``fgetc``, ``fputc``, ``fopen``, ``fopen``, ``fgets``.
-  (`#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
+  ``fflush``, ``fputs``, ``fgetc``, ``fputc``, ``fopen``, ``fdopen``, ``fgets``, ``tmpfile``.
+  (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
+  `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
   `#72627 <https://github.com/llvm/llvm-project/pull/72627>`_,
   `#71518 <https://github.com/llvm/llvm-project/pull/71518>`_,
