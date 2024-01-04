@@ -398,7 +398,8 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     EmitClangASTNodes(Records, OS, CommentNodeClassName, "");
     break;
   case GenClangDeclNodes:
-    EmitClangASTNodes(Records, OS, DeclNodeClassName, "Decl");
+    EmitClangASTNodes(Records, OS, DeclNodeClassName, "Decl",
+                      DeclContextNodeClassName);
     EmitClangDeclContext(Records, OS);
     break;
   case GenClangStmtNodes:

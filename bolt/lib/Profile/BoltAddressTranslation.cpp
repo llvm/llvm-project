@@ -486,7 +486,8 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
     FuncHashes[BF.getAddress()].first = BF.computeHash();
     BF.computeBlockHashes();
     for (const BinaryBasicBlock &BB : BF)
-      FuncHashes[BF.getAddress()].second.emplace(BB.getInputOffset(), BB.getHash());
+      FuncHashes[BF.getAddress()].second.emplace(BB.getInputOffset(),
+                                                 BB.getHash());
   }
 }
 } // namespace bolt
