@@ -1,0 +1,31 @@
+#!/bin/sh
+
+ACTION_TYPE=$1
+if test -z "$ACTION_TYPE"; then
+  exit 0
+fi
+
+if test "$ACTION_TYPE" = "pre-commit"; then
+  MERGE=$(git rev-parse --quiet --verify MERGE_HEAD)
+  if test -z "$MERGE"; then
+    exit 0
+  fi
+  FETCH=$(git rev-parse --quiet --verify FETCH_HEAD)
+  if test "$MERGE" != "$FETCH"; then
+    exit 0
+  fi
+fi
+
+LLVM_CONFIG_H_CMAKE_PATH="llvm/include/llvm/Config/llvm-config.h.cmake"
+
+FETCH_HASH=$(git log --oneline --format='%h' --max-count=1 FETCH_HEAD)
+COMMIT_REVISION=$(git rev-list --count $(git merge-base HEAD ${FETCH_HASH}))
+
+sed --in-place 's/^#define LLVM_MAIN_REVISION .*$/#define LLVM_MAIN_REVISION '${COMMIT_REVISION}'/' ${LLVM_CONFIG_H_CMAKE_PATH}
+git add ${LLVM_CONFIG_H_CMAKE_PATH}
+if test "$ACTION_TYPE" = "post-merge"; then
+  GIT_DIR=$(git rev-parse --git-dir)
+  rm --force ${GIT_DIR}/MERGE_HEAD
+
+  git commit --amend --no-edit
+fi

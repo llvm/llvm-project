@@ -1,0 +1,22 @@
+#!/bin/bash
+
+pushd() {
+  command pushd "$@" > /dev/null
+}
+
+popd() {
+  command popd "$@" > /dev/null
+}
+
+GIT_DIR=$(git rev-parse --git-dir)
+pushd ${GIT_DIR}/hooks
+
+rm --force post-merge
+rm --force pre-commit
+rm --force llvm-main-revision
+
+ln --symbolic ../../amd/git-hooks/post-merge post-merge
+ln --symbolic ../../amd/git-hooks/pre-commit pre-commit
+ln --symbolic ../../amd/git-hooks/llvm-main-revision llvm-main-revision
+
+popd
