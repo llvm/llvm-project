@@ -6,34 +6,34 @@ target triple = "x86_64-pc-windows-msvc19.12.0"
 
 $"?test@Test@@Plugin@@Host@@@Z" = comdat any
 
-declare dso_local i32 @__CxxFrameHandler3(...)
+declare i32 @__CxxFrameHandler3(...)
 
 ; Function Attrs: nounwind memory(none)
-declare dso_local void @llvm.seh.scope.begin() #1
+declare void @llvm.seh.scope.begin() #1
 
 ; Function Attrs: nobuiltin allocsize(0)
-declare dso_local noundef nonnull ptr @"??2@Test@Z"(i64 noundef) #1
+declare ptr @"??2@Test@Z"(i64) #1
 
 ; Function Attrs: nounwind memory(none)
-declare dso_local void @llvm.seh.scope.end() #0
+declare void @llvm.seh.scope.end() #0
 
 ; Function Attrs: nobuiltin nounwind
-declare dso_local void @"??3@YAXPEAX@Z"(ptr noundef) #2
+declare void @"??3@YAXPEAX@Z"(ptr) #2
 
 ; Function Attrs: mustprogress uwtable
-define weak_odr dso_local noundef ptr @"?test@Test@@Plugin@@Host@@@Z"(ptr noundef nonnull align 8 dereferenceable(48) %this, ptr noundef %host) unnamed_addr #3 comdat align 2 personality ptr @__CxxFrameHandler3 {
+define ptr @"?test@Test@@Plugin@@Host@@@Z"(ptr %this, ptr %host) #3 comdat align 2 personality ptr @__CxxFrameHandler3 {
 entry:
   %host.addr = alloca ptr, align 8
   %this.addr = alloca ptr, align 8
   store ptr %host, ptr %host.addr, align 8
   store ptr %this, ptr %this.addr, align 8
   %this1 = load ptr, ptr %this.addr, align 8
-  %call = call noalias noundef nonnull ptr @"??2@Test@Z"(i64 noundef 152) #5
+  %call = call noalias ptr @"??2@Test@Z"(i64 152) #5
   invoke void @llvm.seh.scope.begin()
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  %call3 = invoke noundef ptr @"??Test@?A0x2749C4FD@@QEAA@Test@Test@@@Z"(ptr noundef nonnull align 8 dereferenceable(152) %call, ptr noundef %this1)
+  %call3 = invoke ptr @"??Test@?A0x2749C4FD@@QEAA@Test@Test@@@Z"(ptr %call, ptr %this1)
           to label %invoke.cont2 unwind label %ehcleanup
 
 invoke.cont2:                                     ; preds = %invoke.cont
@@ -45,12 +45,12 @@ invoke.cont4:                                     ; preds = %invoke.cont2
 
 ehcleanup:                                        ; preds = %invoke.cont2, %invoke.cont, %entry
   %0 = cleanuppad within none []
-  call void @"??3@YAXPEAX@Z"(ptr noundef %call) #6 [ "funclet"(token %0) ]
+  call void @"??3@YAXPEAX@Z"(ptr %call) #6 [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 
 ; Function Attrs: uwtable
-declare hidden noundef ptr @"??Test@?A0x2749C4FD@@QEAA@Test@Test@@@Z"(ptr noundef nonnull returned align 8 dereferenceable(152), ptr noundef) unnamed_addr #4 align 2
+declare hidden ptr @"??Test@?A0x2749C4FD@@QEAA@Test@Test@@@Z"(ptr, ptr) #4 align 2
 
 attributes #0 = { nounwind memory(none) }
 attributes #1 = { nobuiltin allocsize(0) "target-cpu"="x86-64" "target-features"="+cmov,+crc32,+cx8,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "tune-cpu"="generic" }
@@ -60,10 +60,7 @@ attributes #4 = { uwtable "target-cpu"="x86-64" "target-features"="+cmov,+crc32,
 attributes #5 = { builtin allocsize(0) }
 attributes #6 = { builtin nounwind }
 
-!llvm.module.flags = !{!1, !2, !3, !4, !5}
+!llvm.module.flags = !{!1, !2}
 
-!1 = !{i32 1, !"wchar_size", i32 2}
-!2 = !{i32 2, !"eh-asynch", i32 1}
-!3 = !{i32 8, !"PIC Level", i32 2}
-!4 = !{i32 7, !"uwtable", i32 2}
-!5 = !{i32 1, !"MaxTLSAlign", i32 65536}
+!1 = !{i32 2, !"eh-asynch", i32 1}
+!2 = !{i32 7, !"uwtable", i32 2}
