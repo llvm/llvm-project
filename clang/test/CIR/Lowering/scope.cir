@@ -48,4 +48,31 @@ module {
   // MLIR-NEXT:   llvm.return
   // MLIR-NEXT: }
 
-}
+
+  cir.func @scope_with_return() -> !u32i {
+    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"] {alignment = 4 : i64}
+    cir.scope {
+      %2 = cir.const(#cir.int<0> : !u32i) : !u32i
+      cir.store %2, %0 : !u32i, cir.ptr <!u32i>
+      %3 = cir.load %0 : cir.ptr <!u32i>, !u32i
+      cir.return %3 : !u32i
+    }
+    %1 = cir.load %0 : cir.ptr <!u32i>, !u32i
+    cir.return %1 : !u32i
+  }
+
+  //      MLIR: llvm.func @scope_with_return()
+  // MLIR-NEXT:  [[v0:%.*]] = llvm.mlir.constant(1 : index) : i64
+  // MLIR-NEXT:  [[v1:%.*]] = llvm.alloca [[v0]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+  // MLIR-NEXT:  llvm.br ^bb1
+  // MLIR-NEXT: ^bb1:  // pred: ^bb0
+  // MLIR-NEXT:  [[v2:%.*]] = llvm.mlir.constant(0 : i32) : i32
+  // MLIR-NEXT:  llvm.store [[v2]], [[v1]] : i32, !llvm.ptr
+  // MLIR-NEXT:  [[v3:%.*]] = llvm.load [[v1]] : !llvm.ptr -> i32
+  // MLIR-NEXT:  llvm.return [[v3]] : i32
+  // MLIR-NEXT: ^bb2:  // no predecessors
+  // MLIR-NEXT:  [[v4:%.*]] = llvm.load [[v1]] : !llvm.ptr -> i32
+  // MLIR-NEXT:  llvm.return [[v4]] : i32
+  // MLIR-NEXT: }
+
+  }
