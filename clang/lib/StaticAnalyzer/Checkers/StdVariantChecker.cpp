@@ -269,7 +269,7 @@ private:
     if (RetrievedCanonicalType == StoredCanonicalType)
       return true;
 
-    ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
+    ExplodedNode *ErrNode = C.generateErrorNode();
     if (!ErrNode)
       return false;
     llvm::SmallString<128> Str;

@@ -152,7 +152,7 @@ private:
     // Report when we try to use std::any_cast on a std::any that held a null
     // type.
     if (TypeStored->isNull()) {
-      ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
+      ExplodedNode *ErrNode = C.generateErrorNode();
       if (!ErrNode)
         return false;
       llvm::SmallString<128> Str;
