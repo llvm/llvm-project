@@ -3483,7 +3483,8 @@ void Parser::ParseDeclarationSpecifiers(
 
     case tok::coloncolon: // ::foo::bar
       // C++ scope specifier.  Annotate and loop, or bail out on error.
-      if (TryAnnotateCXXScopeToken(EnteringContext)) {
+      if (getLangOpts().CPlusPlus &&
+          TryAnnotateCXXScopeToken(EnteringContext)) {
         if (!DS.hasTypeSpecifier())
           DS.SetTypeSpecError();
         goto DoneWithDeclSpec;
