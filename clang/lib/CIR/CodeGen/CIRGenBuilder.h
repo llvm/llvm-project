@@ -149,9 +149,17 @@ public:
     return mlir::cir::ConstPtrAttr::get(getContext(), t, v);
   }
 
-  mlir::cir::ConstArrayAttr getString(llvm::StringRef str, mlir::Type eltTy,
-                                      unsigned size = 0) {
+  mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
+                            unsigned size = 0) {
     unsigned finalSize = size ? size : str.size();
+
+    // If the string is full of null bytes, emit a #cir.zero rather than
+    // a #cir.const_array.
+    if (str.count('\0') == str.size()) {
+      auto arrayTy = mlir::cir::ArrayType::get(getContext(), eltTy, finalSize);
+      return getZeroAttr(arrayTy);
+    }
+
     auto arrayTy = mlir::cir::ArrayType::get(getContext(), eltTy, finalSize);
     return getConstArray(mlir::StringAttr::get(str, arrayTy), arrayTy);
   }
