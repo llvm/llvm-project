@@ -1134,7 +1134,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
   }
 
   // Don't reuse CacheIt since it may be invalid at this point.
-  CacheMap[V] = SizeOffsetWeakTrackingVH(Result.Size, Result.Offset);
+  CacheMap[V] = SizeOffsetWeakTrackingVH(Result);
   return Result;
 }
 

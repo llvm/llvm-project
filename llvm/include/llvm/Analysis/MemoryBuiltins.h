@@ -305,6 +305,7 @@ template <> struct SizeOffsetType<WeakTrackingVH> {
 
   SizeOffsetType() = default;
   SizeOffsetType(Value *Size, Value *Offset) : Size(Size), Offset(Offset) {}
+  SizeOffsetType(SizeOffsetValue &SOT) : Size(SOT.Size), Offset(SOT.Offset) {}
 
   bool knownSize() const { return Size.pointsToAliveValue(); }
   bool knownOffset() const { return Offset.pointsToAliveValue(); }
