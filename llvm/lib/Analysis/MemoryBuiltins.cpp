@@ -580,7 +580,7 @@ Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
 static APInt getSizeWithOverflow(const SizeOffsetAPInt &Data) {
   APInt Size = Data.Size;
   APInt Offset = Data.Offset;
-  if (Offset.isNegative() || Size.ult(Size))
+  if (Offset.isNegative() || Size.ult(Offset))
     return APInt(Size.getBitWidth(), 0);
   return Size - Offset;
 }
