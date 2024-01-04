@@ -168,6 +168,9 @@ double ThreadCPUUsage() {
   // RTEMS doesn't support CLOCK_THREAD_CPUTIME_ID. See
   // https://github.com/RTEMS/rtems/blob/master/cpukit/posix/src/clockgettime.c
   return ProcessCPUUsage();
+#elif defined(BENCHMARK_OS_ZOS)
+  // z/OS doesn't support CLOCK_THREAD_CPUTIME_ID.
+  return ProcessCPUUsage();
 #elif defined(BENCHMARK_OS_SOLARIS)
   struct rusage ru;
   if (getrusage(RUSAGE_LWP, &ru) == 0) return MakeTime(ru);
