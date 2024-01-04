@@ -2149,16 +2149,15 @@ void AMDGPURegisterBankInfo::applyMappingSMULU64(
   //  The high 32-bit value is Op1H*Op0L + Op1L*Op0H + carry (from
   //  Op1L*Op0L).
 
+  ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::VGPRRegBank);
+
   Register Hi = B.buildUMulH(HalfTy, Src0Regs[0], Src1Regs[0]).getReg(0);
-  MRI.setRegBank(Hi, AMDGPU::VGPRRegBank);
   Register MulLoHi = B.buildMul(HalfTy, Src0Regs[0], Src1Regs[1]).getReg(0);
-  MRI.setRegBank(MulLoHi, AMDGPU::VGPRRegBank);
   Register Add = B.buildAdd(HalfTy, Hi, MulLoHi).getReg(0);
-  MRI.setRegBank(Add, AMDGPU::VGPRRegBank);
   Register MulHiLo = B.buildMul(HalfTy, Src0Regs[1], Src1Regs[0]).getReg(0);
-  MRI.setRegBank(MulHiLo, AMDGPU::VGPRRegBank);
   B.buildAdd(DefRegs[1], Add, MulHiLo);
   B.buildMul(DefRegs[0], Src0Regs[0], Src1Regs[0]);
+
   MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
   MI.eraseFromParent();
 }
