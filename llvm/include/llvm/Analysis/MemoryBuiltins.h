@@ -196,14 +196,18 @@ template <typename T> struct SizeOffsetType {
 
   SizeOffsetType() = default;
   SizeOffsetType(T Size, T Offset) : Size(Size), Offset(Offset) {}
+  virtual ~SizeOffsetType() = default;
 
-  bool knownSize() const { return false; }
-  bool knownOffset() const { return false; }
+  virtual bool knownSize() const = 0;
+  virtual bool knownOffset() const = 0;
+
   bool anyKnown() const { return knownSize() || knownOffset(); }
   bool bothKnown() const { return knownSize() && knownOffset(); }
 
   bool operator==(const SizeOffsetType<T> &RHS) const {
-    return (T)Size == (T)RHS.Size && (T)Offset == (T)RHS.Offset;
+    // Cast here to get the 'Value*' from the 'WeakTrackingVH' object.
+    return static_cast<T>(Size) == static_cast<T>(RHS.Size) &&
+           static_cast<T>(Offset) == static_cast<T>(RHS.Offset);
   }
   bool operator!=(const SizeOffsetType<T> &RHS) const {
     return !(*this == RHS);
@@ -216,8 +220,8 @@ struct SizeOffsetAPInt : public SizeOffsetType<APInt> {
   SizeOffsetAPInt() = default;
   SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
 
-  bool knownSize() const { return Size.getBitWidth() > 1; }
-  bool knownOffset() const { return Offset.getBitWidth() > 1; }
+  bool knownSize() const override { return Size.getBitWidth() > 1; }
+  bool knownOffset() const override { return Offset.getBitWidth() > 1; }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*
@@ -234,7 +238,7 @@ class ObjectSizeOffsetVisitor
 
   APInt align(APInt Size, MaybeAlign Align);
 
-  static SizeOffsetAPInt unknown;
+  static SizeOffsetAPInt unknown() { return SizeOffsetAPInt(); }
 
 public:
   ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
@@ -274,25 +278,25 @@ private:
 /// \p Values.
 struct SizeOffsetWeakTrackingVH;
 struct SizeOffsetValue : public SizeOffsetType<Value *> {
-  SizeOffsetValue() = default;
+  SizeOffsetValue() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
   SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
 
-  bool knownSize() const { return Size != nullptr; }
-  bool knownOffset() const { return Offset != nullptr; }
+  bool knownSize() const override { return Size != nullptr; }
+  bool knownOffset() const override { return Offset != nullptr; }
 };
 
 /// SizeOffsetWeakTrackingVH - Used by \p ObjectSizeOffsetEvaluator in a
 /// \p DenseMap.
 struct SizeOffsetWeakTrackingVH : public SizeOffsetType<WeakTrackingVH> {
-  SizeOffsetWeakTrackingVH() = default;
+  SizeOffsetWeakTrackingVH() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetWeakTrackingVH(Value *Size, Value *Offset)
       : SizeOffsetType(Size, Offset) {}
   SizeOffsetWeakTrackingVH(const SizeOffsetValue &SOV)
       : SizeOffsetType(SOV.Size, SOV.Offset) {}
 
-  bool knownSize() const { return Size.pointsToAliveValue(); }
-  bool knownOffset() const { return Offset.pointsToAliveValue(); }
+  bool knownSize() const override { return Size.pointsToAliveValue(); }
+  bool knownOffset() const override { return Offset.pointsToAliveValue(); }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*.
@@ -321,7 +325,7 @@ public:
   ObjectSizeOffsetEvaluator(const DataLayout &DL, const TargetLibraryInfo *TLI,
                             LLVMContext &Context, ObjectSizeOpts EvalOpts = {});
 
-  static SizeOffsetValue unknown;
+  static SizeOffsetValue unknown() { return SizeOffsetValue(); }
 
   SizeOffsetValue compute(Value *V);
 

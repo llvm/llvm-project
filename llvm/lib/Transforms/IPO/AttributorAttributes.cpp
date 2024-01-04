@@ -6726,7 +6726,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         ObjectSizeOpts Opts;
         ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
         SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
-        assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown &&
+        assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
                cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
         Size = SizeOffsetPair.Size;
       }
