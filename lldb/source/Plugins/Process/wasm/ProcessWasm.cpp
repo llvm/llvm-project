@@ -29,7 +29,7 @@ LLDB_PLUGIN_DEFINE(ProcessWasm)
 ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
     : ProcessGDBRemote(target_sp, listener_sp) {
   /* always use linux signals for wasm process */
-  m_unix_signals_sp = UnixSignals::Create(ArchSpec{"wasm32-Ant-wasi-wasm"});
+  m_unix_signals_sp = UnixSignals::Create(ArchSpec{"wasm32-unknown-unknown-wasm"});
 }
 
 void ProcessWasm::Initialize() {
@@ -97,10 +97,9 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
 
   switch (wasm_addr.GetType()) {
   case WasmAddressType::Memory:
-    assert(false); // Sholud never get here?
     return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
   case WasmAddressType::Object:
-    // TODO
+    // TODO ?
     return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
   case WasmAddressType::Invalid:
   default:
