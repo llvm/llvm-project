@@ -275,7 +275,6 @@ double set_exceptional(double x) {
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
   bool x_sign = xbits.get_sign();
@@ -468,7 +467,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   if (LIBC_LIKELY(upper == lower)) {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -482,7 +481,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
 
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }
