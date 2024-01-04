@@ -2605,22 +2605,18 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
 }
 
 bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
-  return isTriviallyCopyableTypeImpl(*this, Context, false);
+  return isTriviallyCopyableTypeImpl(*this,Context,false);
 }
 
-bool QualType::isTriviallyCopyConstructibleType(
-    const ASTContext &Context) const {
-  return isTriviallyCopyableTypeImpl(*this, Context, true);
+bool QualType::isTriviallyCopyConstructibleType(const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this,Context,true);
 }
 
-bool QualType::isTriviallyCopyableTypeImpl(const QualType &type,
-                                           const ASTContext &Context,
-                                           bool copy_constructible) {
+bool QualType::isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible){
   if (type->isArrayType())
-    return Context.getBaseElementType(type).isTriviallyCopyableTypeImpl(
-        type, Context, copy_constructible);
+    return Context.getBaseElementType(type).isTriviallyCopyableTypeImpl(type,Context,copy_constructible);
 
-  if (type.hasNonTrivialObjCLifetime())
+  if (hasNonTrivialObjCLifetime())
     return false;
 
   // C++11 [basic.types]p9 - See Core 2094
@@ -2628,7 +2624,7 @@ bool QualType::isTriviallyCopyableTypeImpl(const QualType &type,
   //   cv-qualified versions of these types are collectively
   //   called trivially copy constructible types.
 
-  QualType CanonicalType = type.getCanonicalType();
+  QualType CanonicalType = getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2646,14 +2642,13 @@ bool QualType::isTriviallyCopyableTypeImpl(const QualType &type,
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (copy_constructible)
-        return ClassDecl->isTriviallyCopyConstructible();
-      else
-        return ClassDecl->isTriviallyCopyable();
+      if (!ClassDecl->isTriviallyCopyConstructible())
+        return false;
     }
 
     return true;
   }
+
   // No other types can match.
   return false;
 }
