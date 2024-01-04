@@ -88,7 +88,11 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   // within the module unit.
   //
   // So the declations in the global module shouldn't be visible by default.
-  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
+  if (getLangOpts().DiscardGMFDecls)
+    TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModuleDiscardable);
+  else
+    TU->setModuleOwnershipKind(
+        Decl::ModuleOwnershipKind::ReachableWhenImported);
   TU->setLocalOwningModule(GlobalModule);
 
   // FIXME: Consider creating an explicit representation of this declaration.

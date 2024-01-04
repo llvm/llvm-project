@@ -233,9 +233,12 @@ public:
 
     /// This declaration has an owning module, but is only visible to
     /// lookups that occur within that module.
-    /// The discarded declarations in global module fragment belongs
-    /// to this group too.
-    ModulePrivate
+    ModulePrivate,
+
+    /// This declaration is part of a Global Module Fragment, it is permitted
+    /// to discard it and therefore it is not reachable or visible to importers
+    /// of the named module of which the GMF is part.
+    ModuleDiscardable
   };
 
 protected:
@@ -658,9 +661,10 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
-  /// FIXME: Implement discarding declarations actually in global module
-  /// fragment. See [module.global.frag]p3,4 for details.
-  bool isDiscardedInGlobalModuleFragment() const { return false; }
+  /// See [module.global.frag]p3,4 for details.
+  bool isDiscardedInGlobalModuleFragment() const {
+    return getModuleOwnershipKind() == ModuleOwnershipKind::ModuleDiscardable;
+  }
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.

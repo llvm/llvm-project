@@ -67,13 +67,14 @@ void test() {
 module;
 class A{};
 export module C;
-void test() {
+export void C() {
   A a;
 }
 
 //--- UseGlobal.cpp
 import C;
 void test() {
-  A a; // expected-error {{'A' must be declared before it is used}}
-       // expected-note@Global.cppm:2 {{declaration here is not visible}}
+  A a; // expected-error {{missing '#include'; 'A' must be declared before it is used}}
+       // expected-note@* {{declaration here is not visible}}
+  C();
 }

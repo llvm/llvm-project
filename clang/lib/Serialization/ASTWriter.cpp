@@ -2994,7 +2994,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     // Emit the initializers, if any.
     RecordData Inits;
     for (Decl *D : Context->getModuleInitializers(Mod))
-      Inits.push_back(GetDeclRef(D));
+      if (!IsDeclModuleDiscardable(D))
+        Inits.push_back(GetDeclRef(D));
     if (!Inits.empty())
       Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
@@ -3171,6 +3172,13 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   uint64_t Offset = Stream.GetCurrentBitNo();
   SmallVector<uint32_t, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
+    if (IsDeclModuleDiscardable(D)) {
+      if (DC->isFileContext())
+        continue;
+      else
+        MarkDeclReachable(D);
+    }
+
     KindDeclPairs.push_back(D->getKind());
     KindDeclPairs.push_back(GetDeclRef(D));
   }
@@ -3819,9 +3827,12 @@ public:
   template<typename Coll>
   data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
-    for (NamedDecl *D : Decls) {
-      DeclIDs.push_back(
-          Writer.GetDeclRef(getDeclForLocalLookup(Writer.getLangOpts(), D)));
+    for (NamedDecl *ND : Decls) {
+      auto *D = getDeclForLocalLookup(Writer.getLangOpts(), ND);
+      if (Writer.IsDeclModuleDiscardable(D))
+        continue;
+
+      DeclIDs.push_back(Writer.GetDeclRef(D));
     }
     return std::make_pair(Start, DeclIDs.size());
   }
@@ -3975,6 +3986,15 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
     if (isLookupResultExternal(Result, DC) &&
         isLookupResultEntirelyExternal(Result, DC))
       continue;
+
+    if (!DC->isFileContext() && !DoneWritingDeclsAndTypes) {
+      for (auto *D : Result.getLookupResult())
+        if (IsDeclModuleDiscardable(D))
+          MarkDeclReachable(D);
+    } else if (llvm::all_of(Result.getLookupResult(), [this](NamedDecl *D) {
+            return IsDeclModuleDiscardable(D);
+          }))
+        continue;
 
     // We also skip empty results. If any of the results could be external and
     // the currently available results are empty, then all of the results are
@@ -4165,7 +4185,7 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
       }
 
       for (NamedDecl *ND : Result)
-        if (!ND->isFromASTFile())
+        if (!ND->isFromASTFile() && !IsDeclModuleDiscardable(ND))
           GetDeclRef(ND);
     }
 
@@ -4903,7 +4923,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
   for (const auto *D : TU->noload_decls()) {
-    if (!D->isFromASTFile()) {
+    if (!D->isFromASTFile() && !IsDeclModuleDiscardable(D)) {
       NewGlobalKindDeclPairs.push_back(D->getKind());
       NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
     }
@@ -4955,9 +4975,9 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // Make sure visible decls, added to DeclContexts previously loaded from
   // an AST file, are registered for serialization. Likewise for template
   // specializations added to imported templates.
-  for (const auto *I : DeclsToEmitEvenIfUnreferenced) {
-    GetDeclRef(I);
-  }
+  for (const auto *I : DeclsToEmitEvenIfUnreferenced)
+    if (!IsDeclModuleDiscardable(I))
+      GetDeclRef(I);
 
   // Make sure all decls associated with an identifier are registered for
   // serialization, if we're storing decls with identifiers.
@@ -5280,6 +5300,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_ADDED_TEMPLATE_SPECIALIZATION:
       case UPD_CXX_ADDED_ANONYMOUS_NAMESPACE:
         assert(Update.getDecl() && "no decl to add?");
+        MarkDeclReachable(Update.getDecl());
         Record.push_back(GetDeclRef(Update.getDecl()));
         break;
 
@@ -5419,6 +5440,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       Record.AddVarDeclInit(VD);
     }
 
+    MarkDeclReachable(D);
     OffsetsRecord.push_back(GetDeclRef(D));
     OffsetsRecord.push_back(Record.Emit(DECL_UPDATES));
   }
@@ -5679,7 +5701,125 @@ TypeID ASTWriter::getTypeID(QualType T) const {
   });
 }
 
+bool ASTWriter::IsSpecialDeclNotDiscardable(Decl *D) {
+  assert(D->isDiscardedInGlobalModuleFragment());
+
+  /// Currently, the only special decl is the deduction guide.
+  if (auto *ND = dyn_cast<NamedDecl>(D)) {
+    DeclarationName Name = ND->getDeclName();
+    if (TemplateDecl *TD = Name.getCXXDeductionGuideTemplate()) {
+      if (!IsDeclModuleDiscardable(TD)) {
+        MarkDeclReachable(D);
+        return true;
+      }
+
+      ReachableMarkerCallbacks[TD].push_back(D);
+    }
+  }
+
+  // FIXME:
+  //
+  // There is a wide used pattern in libstdc++:
+  //
+  // namespace std
+  // {
+  //   inline namespace __cxx11 __attribute__((__abi_tag__ ("cxx11"))) { }
+  // }
+  // namespace __gnu_cxx
+  // {
+  //   inline namespace __cxx11 __attribute__((__abi_tag__ ("cxx11"))) { }
+  // }
+  // ...
+  // namespace std {
+  //   some declarations for STL.
+  //   ...
+  //   namespace __cxx11 {
+  //     some declarations for STL.
+  //   }
+  // }
+  //
+  // Then in a real project, we observed false-positive ODR violations
+  // since some module units discard `__gnu_cxx::__cxx11` namespace while
+  // other module units don't discard `__gnu_cxx::__cxx11` namespace.
+  //
+  // This may imply that the ODR checking process is context sensitive.
+  // That said, the same type in different module units can be considered to be
+  // different if some module units discard the unused `__gnu_cxx::__cxx11` namespace
+  // while other module units don't. This is incorrect.
+  //
+  // This is a workaround to make things happen but we indeed to fix the ODR checking
+  // process indeed.
+  if (auto *ND = dyn_cast<NamedDecl>(D);
+      ND && ND->getAttr<AbiTagAttr>()) {
+    MarkDeclReachable(D);
+    return true;
+  }
+
+  return false;
+}
+
+bool ASTWriter::IsDeclModuleDiscardable(const Decl *ConstD) {
+  Decl *D = const_cast<Decl *>(ConstD);
+
+  if (!D->isDiscardedInGlobalModuleFragment())
+    return false;
+
+  // The Translation Unit should never be module discardable.
+  if (!D->getDeclContext()) {
+    assert(isa<TranslationUnitDecl>(D));
+    return false;
+  }
+
+  if (IsSpecialDeclNotDiscardable(D))
+    return false;
+
+  const DeclContext *DC = D->getNonTransparentDeclContext();
+  while (DC && DC->getParent() &&
+         !DC->getParent()->getNonTransparentContext()->isFileContext())
+    DC = DC->getParent()->getNonTransparentContext();
+
+  assert(DC && "Why is the decl not covered by file context?");
+  if (!DC->isFileContext() && !cast<Decl>(DC)->isDiscardedInGlobalModuleFragment()) {
+    MarkDeclReachable(D);
+    return false;
+  }
+
+  return true;
+}
+
+void ASTWriter::MarkDeclReachable(const Decl *ConstD) {
+  Decl *D = const_cast<Decl *>(ConstD);
+
+  if (!D || !D->isDiscardedInGlobalModuleFragment())
+    return;
+
+  D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
+  if (D->getNonTransparentDeclContext()->isFileContext()) {
+    // Update the decl contexts so that we can still find the decl with name
+    // lookup.
+    UpdatedDeclContexts.insert(D->getNonTransparentDeclContext());
+  }
+
+  auto Iter = ReachableMarkerCallbacks.find(D);
+  if (Iter != ReachableMarkerCallbacks.end()) {
+    for (Decl *ToBeMarked : Iter->second) {
+      MarkDeclReachable(ToBeMarked);
+      GetDeclRef(ToBeMarked);
+    }
+    ReachableMarkerCallbacks.erase(D);
+  }
+
+  DeclContext *DC = D->getNonTransparentDeclContext();
+  while (DC && DC->getParent() &&
+         !DC->getParent()->getNonTransparentContext()->isFileContext())
+    DC = DC->getParent()->getNonTransparentContext();
+
+  if (DC && !DC->isFileContext())
+    MarkDeclReachable(cast<Decl>(DC));
+}
+
 void ASTWriter::AddDeclRef(const Decl *D, RecordDataImpl &Record) {
+  MarkDeclReachable(D);
   Record.push_back(GetDeclRef(D));
 }
 
@@ -5694,6 +5834,8 @@ DeclID ASTWriter::GetDeclRef(const Decl *D) {
   // fixed.
   if (D->isFromASTFile())
     return D->getGlobalID();
+
+  assert(!D->isDiscardedInGlobalModuleFragment() && "We shouldn't write discarded decl.\n");
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
   DeclID &ID = DeclIDs[D];

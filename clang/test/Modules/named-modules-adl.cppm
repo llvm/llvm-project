@@ -25,6 +25,8 @@ void a(T x) {
 	n::s() + x;
 }
 
+export using n::operator+;
+
 //--- b.cppm
 // expected-no-diagnostics
 export module b;

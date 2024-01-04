@@ -30,7 +30,6 @@ module;
 
 void test_early() {
   in_header = 1; // expected-error {{use of undeclared identifier 'in_header'}}
-  // expected-note@* {{not visible}}
 
   global_module_fragment = 1; // expected-error {{use of undeclared identifier 'global_module_fragment'}}
 
@@ -53,10 +52,9 @@ import A;
 #endif
 
 void test_late() {
-  in_header = 1; // expected-error {{missing '#include "foo.h"'; 'in_header' must be declared before it is used}}
-  // expected-note@* {{not visible}}
+  in_header = 1; // expected-error {{use of undeclared identifier 'in_header'}}
 
-  global_module_fragment = 1; // expected-error {{missing '#include'; 'global_module_fragment' must be declared before it is used}}
+  global_module_fragment = 1; // expected-error {{use of undeclared identifier 'global_module_fragment'}}
 
   exported = 1;
 

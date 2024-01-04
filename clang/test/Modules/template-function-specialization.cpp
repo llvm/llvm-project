@@ -48,10 +48,8 @@ import foo;
 void use() {
   foo<short>();
   foo<int>();
-  foo2<short>(); // expected-error {{missing '#include'; 'foo2' must be declared before it is used}}
-                 // expected-note@* {{declaration here is not visible}}
-  foo2<int>();   // expected-error {{missing '#include'; 'foo2' must be declared before it is used}}
-                 // expected-note@* {{declaration here is not visible}}
+  foo2<short>(); // expected-error {{use of undeclared identifier 'foo2'}}
+  foo2<int>();   // expected-error {{use of undeclared identifier 'foo2'}}
   foo3<short>();
   foo3<int>();
 

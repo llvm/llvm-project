@@ -2970,6 +2970,13 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
   PosFlag<SetTrue, [], [ClangOption], "Look up implicit modules in the prebuilt module path">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
+defm discarding_gmf_decls : BoolFOption<"discarding-gmf-decls",
+  LangOpts<"DiscardGMFDecls">, DefaultTrue,
+  PosFlag<SetTrue>,
+  NegFlag<SetFalse, [], [ClangOption],
+          "Disable to discard unreachable decls in global module fragment">,
+  BothFlags<[], [ClangOption, CC1Option]>>;
+
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;

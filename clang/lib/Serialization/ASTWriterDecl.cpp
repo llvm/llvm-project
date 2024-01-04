@@ -1987,6 +1987,8 @@ void ASTDeclWriter::VisitRedeclarable(Redeclarable<T> *D) {
     //
     // FIXME: This is not correct; when we reach an imported declaration we
     // won't emit its previous declaration.
+    Writer.MarkDeclReachable(D->getPreviousDecl());
+    Writer.MarkDeclReachable(MostRecent);
     (void)Writer.GetDeclRef(D->getPreviousDecl());
     (void)Writer.GetDeclRef(MostRecent);
   } else {

@@ -31,19 +31,6 @@
 // RUN: -fmodule-file=M=M.pcm -S -emit-llvm  -o - \
 // RUN: | FileCheck %s --check-prefix=CHECK-IMPL
 
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 N.cpp -S -emit-llvm \
-// RUN:   -o - | FileCheck %s --check-prefix=CHECK-N
-
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 O.cpp -S -emit-llvm \
-// RUN:   -o - | FileCheck %s --check-prefix=CHECK-O
-
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-part.cpp -S -emit-llvm \
-// RUN:   -o - | FileCheck %s --check-prefix=CHECK-P
-
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M.cpp \
-// RUN:   -fmodule-file=N.pcm -fmodule-file=O=O.pcm -fmodule-file=M:Part=M-part.pcm \
-// RUN:   -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-M
-
 //--- N-h.h
 
 struct Oink {
@@ -59,6 +46,8 @@ module;
 
 export module N;
 
+export using ::Hog;
+
 export struct Quack {
   Quack(){};
 };
@@ -66,9 +55,9 @@ export struct Quack {
 export Quack Duck;
 
 // CHECK-N: define internal void @__cxx_global_var_init
-// CHECK-N: call {{.*}} @_ZN4OinkC1Ev
-// CHECK-N: define internal void @__cxx_global_var_init
 // CHECK-N: call {{.*}} @_ZNW1N5QuackC1Ev
+// CHECK-N: define internal void @__cxx_global_var_init
+// CHECK-N: call {{.*}} @_ZN4OinkC1Ev
 // CHECK-N: define void @_ZGIW1N
 // CHECK-N: store i8 1, ptr @_ZGIW1N__in_chrg
 // CHECK-N: call void @__cxx_global_var_init
@@ -89,16 +78,19 @@ module;
 
 export module O;
 
+export using ::Cat;
+
 export struct Bark {
   Bark(){};
 };
 
 export Bark Dog;
 
-// CHECK-O: define internal void @__cxx_global_var_init
-// CHECK-O: call {{.*}} @_ZN4MeowC2Ev
+
 // CHECK-O: define internal void @__cxx_global_var_init
 // CHECK-O: call {{.*}} @_ZNW1O4BarkC1Ev
+// CHECK-O: define internal void @__cxx_global_var_init
+// CHECK-O: call {{.*}} @_ZN4MeowC2Ev
 // CHECK-O: define void @_ZGIW1O
 // CHECK-O: store i8 1, ptr @_ZGIW1O__in_chrg
 // CHECK-O: call void @__cxx_global_var_init
@@ -119,6 +111,8 @@ module;
 
 module M:Part;
 
+using ::Frog;
+
 struct Squawk {
   Squawk(){};
 };
@@ -126,9 +120,9 @@ struct Squawk {
 Squawk parrot;
 
 // CHECK-P: define internal void @__cxx_global_var_init
-// CHECK-P: call {{.*}} @_ZN5CroakC1Ev
-// CHECK-P: define internal void @__cxx_global_var_init
 // CHECK-P: call {{.*}} @_ZNW1M6SquawkC1Ev
+// CHECK-P: define internal void @__cxx_global_var_init
+// CHECK-P: call {{.*}} @_ZN5CroakC1Ev
 // CHECK-P: define void @_ZGIW1MWP4Part
 // CHECK-P: store i8 1, ptr @_ZGIW1MWP4Part__in_chrg
 // CHECK-P: call void @__cxx_global_var_init
@@ -152,6 +146,8 @@ import N;
 export import O;
 import :Part;
 
+using ::Cow;
+
 export struct Baa {
   int x;
   Baa(){};
@@ -161,10 +157,11 @@ export struct Baa {
 
 export Baa Sheep(10);
 
-// CHECK-M: define internal void @__cxx_global_var_init
-// CHECK-M: call {{.*}} @_ZN3MooC1Ev
+
 // CHECK-M: define internal void @__cxx_global_var_init
 // CHECK-M: call {{.*}} @_ZNW1M3BaaC1Ei
+// CHECK-M: define internal void @__cxx_global_var_init
+// CHECK-M: call {{.*}} @_ZN3MooC1Ev
 // CHECK-M: declare void @_ZGIW1O()
 // CHECK-M: declare void @_ZGIW1N()
 // CHECK-M: declare void @_ZGIW1MWP4Part()

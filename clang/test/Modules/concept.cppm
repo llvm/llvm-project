@@ -63,12 +63,14 @@ struct __fn {
 module;
 #include "foo.h"
 export module A;
+export using ::__fn;
 
 //--- B.cppm
 module;
 #include "foo.h"
 export module B;
 import A;
+export using ::__fn;
 
 #ifdef DIFFERENT
 // expected-error@foo.h:41 {{'__fn::operator()' from module 'A.<global>' is not present in definition of '__fn' provided earlier}}

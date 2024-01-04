@@ -39,7 +39,7 @@ public:
 
 //--- Use.cpp
 import X;
-foo<int> f; // expected-error {{'foo' must be declared before it is used}}
+foo<int> f; // expected-error {{missing '#include "foo.h"'; 'foo' must be declared before it is used}}
             // expected-note@* {{declaration here is not visible}}
 int bar() {
   X<int> x;
