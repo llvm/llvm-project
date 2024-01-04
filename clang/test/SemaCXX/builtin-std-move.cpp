@@ -123,38 +123,19 @@ A &forward_rval_as_lval() {
 }
 
 struct B {};
-B &&(*pMove)(B&) = std::move; // #1 expected-note {{instantiation of}}
-B &&(*pMoveIfNoexcept)(B&) = &std::move_if_noexcept; // #2 expected-note {{instantiation of}}
-B &&(*pForward)(B&) = &std::forward<B>; // #3 expected-note {{instantiation of}}
-B &&(*pForwardLike)(B&) = &std::forward_like<int&&, B&>; // #4 expected-note {{instantiation of}}
-const B &(*pAsConst)(B&) = &std::as_const; // #5 expected-note {{instantiation of}}
-B *(*pAddressof)(B&) = &std::addressof; // #6 expected-note {{instantiation of}}
-B *(*pUnderUnderAddressof)(B&) = &std::__addressof; // #7 expected-note {{instantiation of}}
+B &&(*pMove)(B&) = std::move;                            // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B &&(*pMoveIfNoexcept)(B&) = &std::move_if_noexcept;     // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B &&(*pForward)(B&) = &std::forward<B>;                  // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B &&(*pForwardLike)(B&) = &std::forward_like<int&&, B&>; // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+const B &(*pAsConst)(B&) = &std::as_const;               // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B *(*pAddressof)(B&) = &std::addressof;                  // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+B *(*pUnderUnderAddressof)(B&) = &std::__addressof;      // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
 int (*pUnrelatedMove)(B, B) = std::move;
 
 struct C {};
-C &&(&rMove)(C&) = std::move; // #8 expected-note {{instantiation of}}
-C &&(&rForward)(C&) = std::forward<C>; // #9 expected-note {{instantiation of}}
+C &&(&rMove)(C&) = std::move;          // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+C &&(&rForward)(C&) = std::forward<C>; // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
 int (&rUnrelatedMove)(B, B) = std::move;
-
-// cxx17-warning@#1 {{non-addressable}}
-// cxx17-warning@#2 {{non-addressable}}
-// cxx17-warning@#3 {{non-addressable}}
-// cxx17-warning@#4 {{non-addressable}}
-// cxx17-warning@#5 {{non-addressable}}
-// cxx17-warning@#6 {{non-addressable}}
-// cxx17-warning@#7 {{non-addressable}}
-// cxx17-warning@#8 {{non-addressable}}
-// cxx17-warning@#9 {{non-addressable}}
-// cxx20-error@#1 {{non-addressable}}
-// cxx20-error@#2 {{non-addressable}}
-// cxx20-error@#3 {{non-addressable}}
-// cxx20-error@#4 {{non-addressable}}
-// cxx20-error@#5 {{non-addressable}}
-// cxx20-error@#6 {{non-addressable}}
-// cxx20-error@#7 {{non-addressable}}
-// cxx20-error@#8 {{non-addressable}}
-// cxx20-error@#9 {{non-addressable}}
 
 void attribute_const() {
   int n;
@@ -173,29 +154,14 @@ struct D {
   void* operator new(__SIZE_TYPE__, const D&(*)(D&));
 };
 
-// cxx17-warning@#10 {{non-addressable}}
-// cxx17-warning@#11 {{non-addressable}}
-// cxx17-warning@#12 {{non-addressable}}
-// cxx17-warning@#13 {{non-addressable}}
-// cxx17-warning@#14 {{non-addressable}}
-// cxx17-warning@#15 {{non-addressable}}
-// cxx17-warning@#16 {{non-addressable}}
-// cxx20-error@#10 {{non-addressable}}
-// cxx20-error@#11 {{non-addressable}}
-// cxx20-error@#12 {{non-addressable}}
-// cxx20-error@#13 {{non-addressable}}
-// cxx20-error@#14 {{non-addressable}}
-// cxx20-error@#15 {{non-addressable}}
-// cxx20-error@#16 {{non-addressable}}
-
 void placement_new() {
-  new (std::move<D>) D; // #10 expected-note {{instantiation of}}
-  new (std::move_if_noexcept<D>) D; // #11 expected-note {{instantiation of}}
-  new (std::forward<D>) D; // #12 expected-note {{instantiation of}}
-  new (std::forward_like<D>) D; // #13 expected-note {{instantiation of}}
-  new (std::addressof<D>) D; // #14 expected-note {{instantiation of}}
-  new (std::__addressof<D>) D; // #15 expected-note {{instantiation of}}
-  new (std::as_const<D>) D; // #16 expected-note {{instantiation of}}
+  new (std::move<D>) D;             // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::move_if_noexcept<D>) D; // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::forward<D>) D;          // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::forward_like<D>) D;     // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::addressof<D>) D;        // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::__addressof<D>) D;      // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
+  new (std::as_const<D>) D;         // cxx17-warning {{non-addressable}} cxx20-error {{non-addressable}} expected-note {{instantiation of}}
 }
 
 namespace std {
