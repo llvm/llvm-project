@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
@@ -35,7 +34,7 @@ class MachODebugObjectSynthesizerBase
     : public GDBJITDebugInfoRegistrationPlugin::DebugSectionSynthesizer {
 public:
   static bool isDebugSection(Section &Sec) {
-    return Sec.getName().startswith("__DWARF,");
+    return Sec.getName().starts_with("__DWARF,");
   }
 
   MachODebugObjectSynthesizerBase(LinkGraph &G, ExecutorAddr RegisterActionAddr)
@@ -158,15 +157,15 @@ public:
 
     std::optional<StringRef> FileName;
     if (!DebugLineSectionData.empty()) {
-      assert((G.getEndianness() == support::endianness::big ||
-              G.getEndianness() == support::endianness::little) &&
+      assert((G.getEndianness() == llvm::endianness::big ||
+              G.getEndianness() == llvm::endianness::little) &&
              "G.getEndianness() must be either big or little");
-      auto DWARFCtx = DWARFContext::create(DebugSectionMap, G.getPointerSize(),
-                                           G.getEndianness() ==
-                                               support::endianness::little);
+      auto DWARFCtx =
+          DWARFContext::create(DebugSectionMap, G.getPointerSize(),
+                               G.getEndianness() == llvm::endianness::little);
       DWARFDataExtractor DebugLineData(
-          DebugLineSectionData,
-          G.getEndianness() == support::endianness::little, G.getPointerSize());
+          DebugLineSectionData, G.getEndianness() == llvm::endianness::little,
+          G.getPointerSize());
       uint64_t Offset = 0;
       DWARFDebugLine::LineTable LineTable;
 
@@ -374,7 +373,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
   case Triple::aarch64:
     // Supported, continue.
     assert(LG.getPointerSize() == 8 && "Graph has incorrect pointer size");
-    assert(LG.getEndianness() == support::little &&
+    assert(LG.getEndianness() == llvm::endianness::little &&
            "Graph has incorrect endianness");
     break;
   default:
@@ -384,7 +383,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
              << "MachO graph " << LG.getName()
              << "(triple = " << LG.getTargetTriple().str()
              << ", pointer size = " << LG.getPointerSize() << ", endianness = "
-             << (LG.getEndianness() == support::big ? "big" : "little")
+             << (LG.getEndianness() == llvm::endianness::big ? "big" : "little")
              << ")\n";
     });
     return;

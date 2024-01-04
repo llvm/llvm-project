@@ -36,9 +36,8 @@ struct ReplayInlinerSettings;
 ///
 /// - Development mode, for training new models.
 /// In this mode, we trade off runtime performance for flexibility. This mode
-/// requires the full C Tensorflow API library, and evaluates models
-/// dynamically. This mode also permits generating training logs, for offline
-/// training.
+/// requires the TFLite library, and evaluates models dynamically. This mode
+/// also permits generating training logs, for offline training.
 ///
 /// - Dynamically load an advisor via a plugin (PluginInlineAdvisorAnalysis)
 enum class InliningAdvisorMode : int { Default, Release, Development };
@@ -342,7 +341,7 @@ public:
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
 };
 
-/// Printer pass for the FunctionPropertiesAnalysis results.
+/// Printer pass for the InlineAdvisorAnalysis results.
 class InlineAdvisorAnalysisPrinterPass
     : public PassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
   raw_ostream &OS;
@@ -354,6 +353,7 @@ public:
 
   PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  static bool isRequired() { return true; }
 };
 
 std::unique_ptr<InlineAdvisor>

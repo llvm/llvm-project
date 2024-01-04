@@ -4,6 +4,7 @@ void test_basic_types(void) {
   auto undefined;     // expected-error {{declaration of variable 'undefined' with deduced type 'auto' requires an initializer}}
   auto auto_int = 4;
   auto auto_long = 4UL;
+  auto int auto_int_ts = 12;
   signed auto a = 1L; // expected-error {{'auto' cannot be signed or unsigned}}
 
   _Static_assert(_Generic(auto_int, int : 1));

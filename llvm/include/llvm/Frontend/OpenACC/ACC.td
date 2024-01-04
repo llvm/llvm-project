@@ -159,7 +159,7 @@ def ACCC_Host : Clause<"host"> {
 
 // 2.5.6
 def ACCC_If : Clause <"if"> {
-  let flangClass = "ScalarLogicalExpr";
+  let flangClass = "ScalarExpr";
 }
 
 // 2.14.4
@@ -335,6 +335,7 @@ def ACC_Kernels : Directive<"kernels"> {
 def ACC_Parallel : Directive<"parallel"> {
   let allowedClauses = [
     VersionedClause<ACCC_Attach>,
+    VersionedClause<ACCC_Async>,
     VersionedClause<ACCC_Copy>,
     VersionedClause<ACCC_Copyin>,
     VersionedClause<ACCC_Copyout>,
@@ -342,20 +343,19 @@ def ACC_Parallel : Directive<"parallel"> {
     VersionedClause<ACCC_DevicePtr>,
     VersionedClause<ACCC_DeviceType>,
     VersionedClause<ACCC_NoCreate>,
+    VersionedClause<ACCC_NumGangs>,
+    VersionedClause<ACCC_NumWorkers>,
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
     VersionedClause<ACCC_FirstPrivate>,
     VersionedClause<ACCC_Reduction>,
-    VersionedClause<ACCC_Wait>
+    VersionedClause<ACCC_Wait>,
+    VersionedClause<ACCC_VectorLength>
   ];
   let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
     VersionedClause<ACCC_Default>,
     VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_NumGangs>,
-    VersionedClause<ACCC_NumWorkers>,
-    VersionedClause<ACCC_Self>,
-    VersionedClause<ACCC_VectorLength>
+    VersionedClause<ACCC_Self>
   ];
 }
 

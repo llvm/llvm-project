@@ -13,9 +13,13 @@ import shutil
 import subprocess
 import sys
 
-_isClang = lambda cfg: "__clang__" in compilerMacros(cfg) and "__apple_build_version__" not in compilerMacros(cfg)
+_isAnyClang = lambda cfg: "__clang__" in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
-_isGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg) and "__clang__" not in compilerMacros(cfg)
+_isAnyGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg)
+_isClang = lambda cfg: _isAnyClang(cfg) and not _isAppleClang(cfg)
+_isGCC = lambda cfg: _isAnyGCC(cfg) and not _isAnyClang(cfg)
+_isAnyClangOrGCC = lambda cfg: _isAnyClang(cfg) or _isAnyGCC(cfg)
+_isClExe = lambda cfg: not _isAnyClangOrGCC(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
@@ -43,7 +47,84 @@ def _getSuitableClangTidy(cfg):
         return None
 
 
+def _getAndroidDeviceApi(cfg):
+    return int(
+        programOutput(
+            cfg,
+            r"""
+                #include <android/api-level.h>
+                #include <stdio.h>
+                int main() {
+                    printf("%d\n", android_get_device_api_level());
+                    return 0;
+                }
+            """,
+        )
+    )
+
+# Lit features are evaluated in order. Some checks may require the compiler detection to have
+# run first in order to work properly.
 DEFAULT_FEATURES = [
+    # gcc-style-warnings detects compilers that understand -Wno-meow flags, unlike MSVC's compiler driver cl.exe.
+    Feature(name="gcc-style-warnings", when=_isAnyClangOrGCC),
+    Feature(name="cl-style-warnings", when=_isClExe),
+    Feature(name="apple-clang", when=_isAppleClang),
+    Feature(
+        name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
+        when=_isAppleClang,
+    ),
+    Feature(
+        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
+        when=_isAppleClang,
+    ),
+    Feature(
+        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
+        when=_isAppleClang,
+    ),
+    Feature(name="clang", when=_isClang),
+    Feature(
+        name=lambda cfg: "clang-{__clang_major__}".format(**compilerMacros(cfg)),
+        when=_isClang,
+    ),
+    Feature(
+        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
+        when=_isClang,
+    ),
+    Feature(
+        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
+        when=_isClang,
+    ),
+    # Note: Due to a GCC bug (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104760), we must disable deprecation warnings
+    #       on GCC or spurious diagnostics are issued.
+    #
+    # TODO:
+    # - Enable -Wplacement-new with GCC.
+    # - Enable -Wclass-memaccess with GCC.
+    Feature(
+        name="gcc",
+        when=_isGCC,
+        actions=[
+            AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
+            AddCompileFlag("-Wno-placement-new"),
+            AddCompileFlag("-Wno-class-memaccess"),
+            AddFeature("GCC-ALWAYS_INLINE-FIXME"),
+        ],
+    ),
+    Feature(
+        name=lambda cfg: "gcc-{__GNUC__}".format(**compilerMacros(cfg)), when=_isGCC
+    ),
+    Feature(
+        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}".format(**compilerMacros(cfg)),
+        when=_isGCC,
+    ),
+    Feature(
+        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}".format(**compilerMacros(cfg)),
+        when=_isGCC,
+    ),
+    Feature(name="msvc", when=_isMSVC),
+    Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
+    Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
+
     Feature(
         name="thread-safety",
         when=lambda cfg: hasCompileFlag(cfg, "-Werror=thread-safety"),
@@ -95,6 +176,13 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
+        name="add-latomic-workaround",  # https://github.com/llvm/llvm-project/issues/73361
+        when=lambda cfg: sourceBuilds(
+            cfg, "int main(int, char**) { return 0; }", ["-latomic"]
+        ),
+        actions=[AddLinkFlag("-latomic")],
+    ),
+    Feature(
         name="non-lockfree-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
@@ -103,6 +191,29 @@ DEFAULT_FEATURES = [
             struct Large { int storage[100]; };
             std::atomic<Large> x;
             int main(int, char**) { (void)x.load(); return 0; }
+          """,
+        ),
+    ),
+    Feature(
+        name="has-64-bit-atomics",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            #include <atomic>
+            std::atomic_uint64_t x;
+            int main(int, char**) { (void)x.load(); return 0; }
+          """,
+        ),
+    ),
+    # Tests that require 64-bit architecture
+    Feature(
+        name="32-bit-pointer",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) {
+              static_assert(sizeof(void *) == 4);
+            }
           """,
         ),
     ),
@@ -118,24 +229,6 @@ DEFAULT_FEATURES = [
             std::atomic<Large> x;
             int main(int, char**) { return x.is_lock_free(); }
           """,
-        ),
-    ),
-    # Some tests rely on creating shared libraries which link in the C++ Standard Library. In some
-    # cases, this doesn't work (e.g. if the library was built as a static archive and wasn't compiled
-    # as position independent). This feature informs the test suite of whether it's possible to create
-    # a shared library in a shell test by using the '-shared' compiler flag.
-    #
-    # Note: To implement this check properly, we need to make sure that we use something inside the
-    # compiled library, not only in the headers. It should be safe to assume that all implementations
-    # define `operator new` in the compiled library.
-    Feature(
-        name="cant-build-shared-library",
-        when=lambda cfg: not sourceBuilds(
-            cfg,
-            """
-            void f() { new int(3); }
-          """,
-            ["-shared"],
         ),
     ),
     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
@@ -199,7 +292,8 @@ DEFAULT_FEATURES = [
             #include <unistd.h>
             #include <sys/wait.h>
             int main(int, char**) {
-              return 0;
+              int fd[2];
+              return pipe(fd);
             }
           """,
         ),
@@ -223,62 +317,6 @@ DEFAULT_FEATURES = [
             AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
         ],
     ),
-    Feature(name="apple-clang", when=_isAppleClang),
-    Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
-        when=_isAppleClang,
-    ),
-    Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
-        when=_isAppleClang,
-    ),
-    Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
-        when=_isAppleClang,
-    ),
-    Feature(name="clang", when=_isClang),
-    Feature(
-        name=lambda cfg: "clang-{__clang_major__}".format(**compilerMacros(cfg)),
-        when=_isClang,
-    ),
-    Feature(
-        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
-        when=_isClang,
-    ),
-    Feature(
-        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
-        when=_isClang,
-    ),
-    # Note: Due to a GCC bug (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104760), we must disable deprecation warnings
-    #       on GCC or spurious diagnostics are issued.
-    #
-    # TODO:
-    # - Enable -Wplacement-new with GCC.
-    # - Enable -Wclass-memaccess with GCC.
-    Feature(
-        name="gcc",
-        when=_isGCC,
-        actions=[
-            AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
-            AddCompileFlag("-Wno-placement-new"),
-            AddCompileFlag("-Wno-class-memaccess"),
-            AddFeature("GCC-ALWAYS_INLINE-FIXME"),
-        ],
-    ),
-    Feature(
-        name=lambda cfg: "gcc-{__GNUC__}".format(**compilerMacros(cfg)), when=_isGCC
-    ),
-    Feature(
-        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}".format(**compilerMacros(cfg)),
-        when=_isGCC,
-    ),
-    Feature(
-        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}".format(**compilerMacros(cfg)),
-        when=_isGCC,
-    ),
-    Feature(name="msvc", when=_isMSVC),
-    Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
-    Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
@@ -298,6 +336,7 @@ macros = {
     "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
@@ -387,11 +426,33 @@ DEFAULT_FEATURES += [
         actions=[AddCompileFlag("-DTEST_WINDOWS_DLL")],
     ),
     Feature(name="linux", when=lambda cfg: "__linux__" in compilerMacros(cfg)),
+    Feature(name="android", when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)),
+    Feature(
+        name=lambda cfg: "android-device-api={}".format(_getAndroidDeviceApi(cfg)),
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg),
+    ),
+    Feature(
+        name="LIBCXX-ANDROID-FIXME",
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg),
+    ),
     Feature(name="netbsd", when=lambda cfg: "__NetBSD__" in compilerMacros(cfg)),
     Feature(name="freebsd", when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg)),
     Feature(
         name="LIBCXX-FREEBSD-FIXME",
         when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
+    ),
+    Feature(
+        name="LIBCXX-PICOLIBC-FIXME",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            #include <string.h>
+            #ifndef __PICOLIBC__
+            #error not picolibc
+            #endif
+            int main(int, char**) { return 0; }
+          """,
+        ),
     ),
 ]
 
@@ -472,7 +533,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-fp_to_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -480,7 +541,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-char8_t_support-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -488,31 +549,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-verbose_abort-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::bad_variant_access in the built library
-    Feature(
-        name="availability-bad_variant_access-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::bad_optional_access in the built library
-    Feature(
-        name="availability-bad_optional_access-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::bad_any_cast in the built library
-    Feature(
-        name="availability-bad_any_cast-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -520,7 +557,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -528,7 +565,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-filesystem-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12|13|14)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -536,24 +573,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-synchronization_library-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12|13|14|15)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require support for std::shared_mutex and std::shared_timed_mutex in the built library
-    Feature(
-        name="availability-shared_mutex-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require support for aligned allocation in the built library. This is about `operator new(..., std::align_val_t, ...)` specifically,
-    # not other forms of aligned allocation.
-    Feature(
-        name="availability-aligned_allocation-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14|15)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -562,20 +582,17 @@ DEFAULT_FEATURES += [
         name="availability-tzdb-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             # TODO(ldionne) Please provide the correct value.
-            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
+            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
             cfg.available_features,
         ),
     ),
-    # Tests that require 64-bit architecture
+    # Tests that require support for <print> and std::print in <ostream> in the built library.
     Feature(
-        name="32-bit-pointer",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            int main(int, char**) {
-              static_assert(sizeof(void *) == 4);
-            }
-          """,
+        name="availability-print-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # TODO(ldionne) Please provide the correct value.
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            cfg.available_features,
         ),
     ),
 ]

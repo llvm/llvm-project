@@ -543,7 +543,7 @@ static bool appendArrayType(SmallStringEnc &Enc, QualType QT,
                             const ArrayType *AT,
                             const CodeGen::CodeGenModule &CGM,
                             TypeStringCache &TSC, StringRef NoSizeEnc) {
-  if (AT->getSizeModifier() != ArrayType::Normal)
+  if (AT->getSizeModifier() != ArraySizeModifier::Normal)
     return false;
   Enc += "a(";
   if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(AT))

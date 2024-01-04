@@ -21,4 +21,4 @@ end
 ! NO-UNDERSCORING-NOT: ext_sub_
 ! NO-UNDERSCORING: {{ext_sub[^_]*$}}
 ! NO-UNDERSCORING-NOT: comblk_
-! NO-UNDERSCORING: comblk,
+! NO-UNDERSCORING: {{comblk[^_]*$}}

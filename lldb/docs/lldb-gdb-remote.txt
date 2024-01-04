@@ -581,11 +581,15 @@ read packet: <binary data>/E<error code>;AAAAAAAAA
 //  will get picked up automatically, and allows registers to change
 //  depending on the actual CPU type that is used.
 //
-//  NB: As of summer 2015, lldb can get register information from the
-//  "qXfer:features:read:target.xml" FSF gdb standard register packet
-//  where the stub provides register definitions in an XML file.
+//  NB: qRegisterInfo is deprecated in favor of the standard gdb remote
+//  serial protocol register description method, 
+//  "qXfer:features:read:target.xml".
 //  If qXfer:features:read:target.xml is supported, qRegisterInfo does
-//  not need to be implemented.
+//  not need to be implemented.  The target.xml format is used by most
+//  gdb RSP stubs whereas qRegisterInfo was an lldb-only design.
+//  qRegisterInfo requires one packet per register and can have undesirable
+//  performance costs at the start of a debug session, whereas target.xml
+//  may be able to describe all registers in a single packet.
 //----------------------------------------------------------------------
 
 With LLDB, for register information, remote GDB servers can add

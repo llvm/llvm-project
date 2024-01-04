@@ -1,5 +1,7 @@
 # The LLVM Compiler Infrastructure
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
+
 Welcome to the LLVM project!
 
 This repository contains the source code for LLVM, a toolkit for the
@@ -32,8 +34,9 @@ the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
 ## Getting in touch
 
 Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362), or #llvm IRC channel on
-[OFTC](https://oftc.net/).
+chat](https://discord.gg/xS7Z362),
+[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
+[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
 
 The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
 participants to all modes of communication within the project.

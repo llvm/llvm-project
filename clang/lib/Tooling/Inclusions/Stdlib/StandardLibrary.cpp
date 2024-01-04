@@ -55,20 +55,28 @@ static const SymbolHeaderMapping *getMappingPerLang(Lang L) {
 }
 
 static int countSymbols(Lang Language) {
-  llvm::DenseSet<llvm::StringRef> Set;
-#define SYMBOL(Name, NS, Header) Set.insert(#NS #Name);
+  ArrayRef<const char*> Symbols;
+#define SYMBOL(Name, NS, Header) #NS #Name,
   switch (Language) {
-  case Lang::C:
+  case Lang::C: {
+    static constexpr const char *CSymbols[] = {
 #include "CSymbolMap.inc"
+    };
+    Symbols = CSymbols;
     break;
-  case Lang::CXX:
+  }
+  case Lang::CXX: {
+    static constexpr const char *CXXSymbols[] = {
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
 #include "StdTsSymbolMap.inc"
+    };
+    Symbols = CXXSymbols;
     break;
   }
+  }
 #undef SYMBOL
-  return Set.size();
+  return llvm::DenseSet<StringRef>(Symbols.begin(), Symbols.end()).size();
 }
 
 static int initialize(Lang Language) {
@@ -127,16 +135,34 @@ static int initialize(Lang Language) {
     NSSymbolMap &NSSymbols = AddNS(QName.take_front(NSLen));
     NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
   };
-#define SYMBOL(Name, NS, Header) Add(#NS #Name, strlen(#NS), #Header);
+
+  struct Symbol {
+    const char *QName;
+    unsigned NSLen;
+    const char *HeaderName;
+  };
+#define SYMBOL(Name, NS, Header)                                               \
+  {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
+   #Header},
   switch (Language) {
-  case Lang::C:
+  case Lang::C: {
+    static constexpr Symbol CSymbols[] = {
 #include "CSymbolMap.inc"
+    };
+    for (const Symbol &S : CSymbols)
+      Add(S.QName, S.NSLen, S.HeaderName);
     break;
-  case Lang::CXX:
+  }
+  case Lang::CXX: {
+    static constexpr Symbol CXXSymbols[] = {
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
 #include "StdTsSymbolMap.inc"
+    };
+    for (const Symbol &S : CXXSymbols)
+      Add(S.QName, S.NSLen, S.HeaderName);
     break;
+  }
   }
 #undef SYMBOL
 

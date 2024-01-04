@@ -1,4 +1,4 @@
-//===-- RISCVAsmBackend.cpp - RISCV Assembler Backend ---------------------===//
+//===-- RISCVAsmBackend.cpp - RISC-V Assembler Backend --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,6 +30,12 @@ using namespace llvm;
 
 static cl::opt<bool> RelaxBranches("riscv-asm-relax-branches", cl::init(true),
                                    cl::Hidden);
+// Temporary workaround for old linkers that do not support ULEB128 relocations,
+// which are abused by DWARF v5 DW_LLE_offset_pair/DW_RLE_offset_pair
+// implemented in Clang/LLVM.
+static cl::opt<bool> ULEB128Reloc(
+    "riscv-uleb128-reloc", cl::init(true), cl::Hidden,
+    cl::desc("Emit R_RISCV_SET_ULEB128/E_RISCV_SUB_ULEB128 if appropriate"));
 
 std::optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
@@ -102,7 +108,8 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 // necessary for correctness as offsets may change during relaxation.
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
-                                            const MCValue &Target) {
+                                            const MCValue &Target,
+                                            const MCSubtargetInfo *STI) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
   switch (Fixup.getTargetKind()) {
@@ -112,6 +119,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_Data_leb128:
     if (Target.isAbsolute())
       return false;
     break;
@@ -121,7 +129,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     return true;
   }
 
-  return STI.hasFeature(RISCV::FeatureRelax) || ForceRelocs;
+  return STI->hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -238,7 +246,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
     Offset = OS.tell();
     Fixup = RISCV::getRelocPairForSize(2);
-    support::endian::write<uint16_t>(OS, 0, support::little);
+    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
   }
 
   const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
@@ -303,15 +311,15 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
     AddFixups(0, {ELF::R_RISCV_SET6, ELF::R_RISCV_SUB6});
   } else if (isUInt<8>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc1);
-    support::endian::write<uint8_t>(OS, 0, support::little);
+    support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
     AddFixups(1, {ELF::R_RISCV_SET8, ELF::R_RISCV_SUB8});
   } else if (isUInt<16>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc2);
-    support::endian::write<uint16_t>(OS, 0, support::little);
+    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
     AddFixups(1, {ELF::R_RISCV_SET16, ELF::R_RISCV_SUB16});
   } else if (isUInt<32>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc4);
-    support::endian::write<uint32_t>(OS, 0, support::little);
+    support::endian::write<uint32_t>(OS, 0, llvm::endianness::little);
     AddFixups(1, {ELF::R_RISCV_SET32, ELF::R_RISCV_SUB32});
   } else {
     llvm_unreachable("unsupported CFA encoding");
@@ -319,6 +327,18 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
 
   WasRelaxed = OldSize != Data.size();
   return true;
+}
+
+bool RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                                  int64_t &Value) const {
+  if (LF.isSigned())
+    return false;
+  const MCExpr &Expr = LF.getValue();
+  if (ULEB128Reloc) {
+    LF.getFixups().push_back(
+        MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  }
+  return Expr.evaluateKnownAbsolute(Value, Layout);
 }
 
 // Given a compressed control flow instruction this function returns
@@ -395,6 +415,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_Data_leb128:
     return Value;
   case RISCV::fixup_riscv_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_i:
@@ -494,8 +515,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
 bool RISCVAsmBackend::evaluateTargetFixup(
     const MCAssembler &Asm, const MCAsmLayout &Layout, const MCFixup &Fixup,
-    const MCFragment *DF, const MCValue &Target, uint64_t &Value,
-    bool &WasForced) {
+    const MCFragment *DF, const MCValue &Target, const MCSubtargetInfo *STI,
+    uint64_t &Value, bool &WasForced) {
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -545,7 +566,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   Value = Layout.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Layout.getFragmentOffset(AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget)) {
+  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
     WasForced = true;
     return false;
   }
@@ -576,6 +597,10 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
   case llvm::FK_Data_8:
     TA = ELF::R_RISCV_ADD64;
     TB = ELF::R_RISCV_SUB64;
+    break;
+  case llvm::FK_Data_leb128:
+    TA = ELF::R_RISCV_SET_ULEB128;
+    TB = ELF::R_RISCV_SUB_ULEB128;
     break;
   default:
     llvm_unreachable("unsupported fixup size");

@@ -130,7 +130,7 @@ define i8 @call_pointer(i8 zeroext %x, i8 zeroext %y, ptr %a, ptr %b) {
 define i16 @pointer_to_pointer(ptr %arg, i16 zeroext %limit) {
 ; CHECK-LABEL: @pointer_to_pointer(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADDR:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[ADDR:%.*]] = load ptr, ptr [[ARG:%.*]], align 4
 ; CHECK-NEXT:    [[VAL:%.*]] = load i16, ptr [[ADDR]], align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[VAL]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP0]], 7

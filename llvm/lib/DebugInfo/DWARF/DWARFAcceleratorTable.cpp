@@ -621,7 +621,10 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU.
+  // implicitly refer to the single CU, but only if we don't have a
+  // DW_IDX_type_unit.
+  if (lookup(dwarf::DW_IDX_type_unit).has_value())
+    return std::nullopt;
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
@@ -632,6 +635,19 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   if (!Index || *Index >= NameIdx->getCUCount())
     return std::nullopt;
   return NameIdx->getCUOffset(*Index);
+}
+
+std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
+  std::optional<uint64_t> Index = getLocalTUIndex();
+  if (!Index || *Index >= NameIdx->getLocalTUCount())
+    return std::nullopt;
+  return NameIdx->getLocalTUOffset(*Index);
+}
+
+std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
+  if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
+    return Off->getAsUnsignedConstant();
+  return std::nullopt;
 }
 
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
@@ -1014,7 +1030,7 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   //
   // We look for > at the end but if it does not contain any < then we
   // have something like operator>>. We check for the operator<=> case.
-  if (!Name.endswith(">") || Name.count("<") == 0 || Name.endswith("<=>"))
+  if (!Name.ends_with(">") || Name.count("<") == 0 || Name.ends_with("<=>"))
     return {};
 
   // How many < until we have the start of the template parameters.

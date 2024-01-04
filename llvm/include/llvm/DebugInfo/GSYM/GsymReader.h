@@ -47,7 +47,7 @@ class GsymReader {
 
   std::unique_ptr<MemoryBuffer> MemBuffer;
   StringRef GsymBytes;
-  llvm::support::endianness Endian;
+  llvm::endianness Endian;
   const Header *Hdr = nullptr;
   ArrayRef<uint8_t> AddrOffsets;
   ArrayRef<uint32_t> AddrInfoOffsets;
@@ -105,6 +105,15 @@ public:
   /// or an error object that indicates reason for failing to lookup the
   /// address.
   llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
+
+  /// Get the full function info given an address index.
+  ///
+  /// \param AddrIdx A address index for an address in the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing get the function
+  /// info object.
+  llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
 
   /// Lookup an address in the a GSYM.
   ///
@@ -266,6 +275,19 @@ protected:
       return std::nullopt;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
+
+    // GSYM files have sorted function infos with the most information (line
+    // table and/or inline info) first in the array of function infos, so
+    // always backup as much as possible as long as the address offset is the
+    // same as the previous entry.
+    while (Iter != Begin) {
+      auto Prev = Iter - 1;
+      if (*Prev == *Iter)
+        Iter = Prev;
+      else
+        break;
+    }
+
     return std::distance(Begin, Iter);
   }
 
@@ -303,6 +325,38 @@ protected:
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+
+  /// Given an address, find the correct function info data and function
+  /// address.
+  ///
+  /// Binary search the address table and find the matching address info
+  /// and make sure that the function info contains the address. GSYM allows
+  /// functions to overlap, and the most debug info is contained in the first
+  /// entries due to the sorting when GSYM files are created. We can have
+  /// multiple function info that start at the same address only if their
+  /// address range doesn't match. So find the first entry that matches \a Addr
+  /// and iterate forward until we find one that contains the address.
+  ///
+  /// \param[in] Addr A virtual address that matches the original object file
+  /// to lookup.
+  ///
+  /// \param[out] FuncStartAddr A virtual address that is the base address of
+  /// the function that is used for decoding the FunctionInfo.
+  ///
+  /// \returns An valid data extractor on success, or an error if we fail to
+  /// find the address in a function info or corrrectly decode the data
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
+
+  /// Get the function data and address given an address index.
+  ///
+  /// \param AddrIdx A address index from the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing to lookup the
+  /// address.
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
 };
 
 } // namespace gsym

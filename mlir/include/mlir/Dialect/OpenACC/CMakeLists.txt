@@ -24,3 +24,5 @@ mlir_tablegen(OpenACCTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(OpenACCTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIROpenACCTypeInterfacesIncGen)
 add_dependencies(mlir-headers MLIROpenACCTypeInterfacesIncGen)
+
+add_mlir_interface(OpenACCOpsInterfaces)

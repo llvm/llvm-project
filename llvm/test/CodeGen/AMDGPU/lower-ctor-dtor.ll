@@ -12,20 +12,19 @@
 @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
 @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
 
-
-
-
-
 ; VISIBILITY: FUNC   WEAK PROTECTED {{.*}} amdgcn.device.init
 ; VISIBILITY: OBJECT WEAK DEFAULT {{.*}} amdgcn.device.init.kd
 ; VISIBILITY: FUNC   WEAK PROTECTED {{.*}} amdgcn.device.fini
 ; VISIBILITY: OBJECT   WEAK DEFAULT {{.*}} amdgcn.device.fini.kd
+
 ; SECTION: .init_array.1     INIT_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
 ; SECTION: .fini_array.1     FINI_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
+
 ; DISABLED-NOT: FUNC   GLOBAL PROTECTED {{.*}} amdgcn.device.init
 ; DISABLED-NOT: OBJECT GLOBAL DEFAULT {{.*}} amdgcn.device.init.kd
 ; DISABLED-NOT: FUNC   GLOBAL PROTECTED {{.*}} amdgcn.device.fini
 ; DISABLED-NOT: OBJECT   GLOBAL DEFAULT {{.*}} amdgcn.device.fini.kd
+
 ; METADATA:  amdhsa.kernels:
 ; METADATA:    .kind:           init
 ; METADATA:    .max_flat_workgroup_size: 1
@@ -51,7 +50,7 @@ define internal void @bar() {
 ; CHECK: @[[__INIT_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @[[__FINI_ARRAY_START:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @[[__FINI_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
+; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
 ;.
 ; CHECK-LABEL: define internal void @foo() {
 ; CHECK-NEXT:    ret void
@@ -79,13 +78,17 @@ define internal void @bar() {
 ; CHECK-LABEL: define weak_odr amdgpu_kernel void @amdgcn.device.fini(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 icmp ne (ptr addrspace(1) @__fini_array_start, ptr addrspace(1) @__fini_array_end), label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i64 sub (i64 ptrtoint (ptr addrspace(1) @__fini_array_end to i64), i64 ptrtoint (ptr addrspace(1) @__fini_array_start to i64)), 3
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [0 x ptr], ptr addrspace(1) @__fini_array_start, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr addrspace(1) [[TMP2]], @__fini_array_start
+; CHECK-NEXT:    br i1 [[TMP3]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ @__fini_array_start, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[TMP2]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    call void [[CALLBACK]]()
-; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 1
-; CHECK-NEXT:    [[END:%.*]] = icmp eq ptr addrspace(1) [[NEXT]], @__fini_array_end
+; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 -1
+; CHECK-NEXT:    [[END:%.*]] = icmp ult ptr addrspace(1) [[NEXT]], @__fini_array_start
 ; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void

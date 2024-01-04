@@ -304,7 +304,7 @@ define void @test_infer_nsw(ptr %p) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD:%.*]], [[BB2:%.*]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[FREEZE]], [[PHI]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[FREEZE]], [[PHI]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp sgt i32 [[SUB]], 1
 ; CHECK-NEXT:    br i1 [[ICMP]], label [[BB2]], label [[BB3:%.*]]
 ; CHECK:       bb2:

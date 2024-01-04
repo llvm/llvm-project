@@ -980,8 +980,6 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
     }
   }
 
-  Type reduceTy = RankedTensorType::get(reduceShape, resultTy.getElementType());
-
   // First fill the output buffer with the init value.
   auto emptyTensor =
       rewriter
@@ -1000,22 +998,9 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
                                                   ValueRange{emptyTensor})
                           .result();
 
-  SmallVector<AffineExpr, 2> srcExprs;
-  SmallVector<AffineExpr, 2> dstExprs;
-  SmallVector<utils::IteratorType, 4> iteratorTypes;
-  for (unsigned int i = 0, rank = inputTy.getRank(); i != rank; ++i) {
-    srcExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
-
-    iteratorTypes.push_back(axis == i ? utils::IteratorType::reduction
-                                      : utils::IteratorType::parallel);
-    if (axis != i)
-      dstExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
-  }
-
   bool didEncounterError = false;
-  auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs});
-  auto linalgOp = rewriter.create<linalg::GenericOp>(
-      loc, reduceTy, input, filledTensor, maps, iteratorTypes,
+  auto linalgOp = rewriter.create<linalg::ReduceOp>(
+      loc, input, filledTensor, axis,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
         auto result = createLinalgBodyCalculationForReduceOp(
             op, blockArgs, elementTy, rewriter);
@@ -1064,56 +1049,6 @@ public:
   LogicalResult matchAndRewrite(SrcOp op,
                                 PatternRewriter &rewriter) const final {
     return elementwiseMatchAndRewriteHelper(op, rewriter);
-  }
-};
-
-class TransposeConverter : public OpRewritePattern<tosa::TransposeOp> {
-public:
-  using OpRewritePattern<tosa::TransposeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::TransposeOp op,
-                                PatternRewriter &rewriter) const final {
-    DenseIntElementsAttr perms;
-    if (!matchPattern(op.getPerms(), m_Constant(&perms))) {
-      return rewriter.notifyMatchFailure(op, "unmatched permutation tensor");
-    }
-
-    auto loc = op.getLoc();
-    auto input = op->getOperand(0);
-    auto resultTy = cast<ShapedType>(op.getType());
-
-    SmallVector<Value> dynDims;
-    dynDims.resize(cast<ShapedType>(op->getResult(0).getType()).getRank());
-
-    SmallVector<AffineExpr, 2> inputExprs;
-    inputExprs.resize(resultTy.getRank());
-    auto operandTy = cast<ShapedType>(input.getType());
-    for (const auto &permutation : llvm::enumerate(perms.getValues<APInt>())) {
-      auto index = permutation.index();
-      auto value = permutation.value().getZExtValue();
-      if (!operandTy.hasRank() || operandTy.isDynamicDim(index)) {
-        dynDims[value] = rewriter.create<tensor::DimOp>(loc, input, index);
-      }
-      inputExprs[value] = rewriter.getAffineDimExpr(index);
-    }
-
-    SmallVector<Value> filteredDims = condenseValues(dynDims);
-
-    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultTy.getElementType(), filteredDims);
-
-    SmallVector<AffineMap, 2> affineMaps = {
-        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
-                       rewriter.getContext()),
-        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
-
-    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-        op, resultTy, op.getInput1(), ValueRange{emptyTensor}, affineMaps,
-        getNParallelLoopsAttrs(resultTy.getRank()),
-        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-          nestedBuilder.create<linalg::YieldOp>(loc, *args.begin());
-        });
-    return success();
   }
 };
 
@@ -1518,6 +1453,9 @@ public:
     auto resultTy = cast<ShapedType>(op.getType());
     auto resultETy = resultTy.getElementType();
 
+    bool floatingPointMode = resultETy.isF16() || resultETy.isF32();
+    auto floatTy = resultETy.isF16() ? b.getF16Type() : b.getF32Type();
+
     auto imageH = inputTy.getShape()[1];
     auto imageW = inputTy.getShape()[2];
 
@@ -1551,15 +1489,12 @@ public:
 
       Value zeroI32 =
           b.create<arith::ConstantOp>(b.getZeroAttr(b.getI32Type()));
-      Value zeroFp32 =
-          b.create<arith::ConstantOp>(b.getZeroAttr(b.getF32Type()));
+      Value zeroFp = b.create<arith::ConstantOp>(b.getZeroAttr(floatTy));
       Value hMax = b.create<arith::ConstantOp>(b.getI32IntegerAttr(imageH - 1));
       Value wMax = b.create<arith::ConstantOp>(b.getI32IntegerAttr(imageW - 1));
 
       Value inY = b.create<arith::IndexCastOp>(b.getI32Type(), y);
       Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
-
-      bool floatingPointMode = resultETy.isF32();
 
       ArrayRef<int64_t> offset = op.getOffset();
       ArrayRef<int64_t> border = op.getBorder();
@@ -1583,16 +1518,16 @@ public:
                                     int size, ImplicitLocOpBuilder &b) {
         if (size == 1) {
           index = zeroI32;
-          delta = zeroFp32;
+          delta = zeroFp;
           return;
         }
         // x = x * scale_d + offset;
         // ix = floor(x / scale_n)
         // dx = x / scale_n - ix
-        Value val = b.create<arith::UIToFPOp>(b.getF32Type(), in);
-        scaleN = b.create<arith::UIToFPOp>(b.getF32Type(), scaleN);
-        scaleD = b.create<arith::UIToFPOp>(b.getF32Type(), scaleD);
-        offset = b.create<arith::SIToFPOp>(b.getF32Type(), offset);
+        Value val = b.create<arith::UIToFPOp>(floatTy, in);
+        scaleN = b.create<arith::UIToFPOp>(floatTy, scaleN);
+        scaleD = b.create<arith::UIToFPOp>(floatTy, scaleD);
+        offset = b.create<arith::SIToFPOp>(floatTy, offset);
         val = b.create<arith::MulFOp>(val, scaleD);
         val = b.create<arith::AddFOp>(val, offset);
         val = b.create<arith::DivFOp>(val, scaleN);
@@ -1641,7 +1576,7 @@ public:
 
           Value pred;
           if (floatingPointMode) {
-            auto h = b.create<arith::ConstantOp>(b.getF32FloatAttr(0.5f));
+            auto h = b.create<arith::ConstantOp>(b.getFloatAttr(floatTy, 0.5f));
             pred = b.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, dval, h);
           } else {
             Value dvalDouble = b.create<arith::ShLIOp>(dval, one);
@@ -1697,7 +1632,8 @@ public:
             input, ValueRange{batch, y1, x1, channel});
 
         if (floatingPointMode) {
-          auto oneVal = b.create<arith::ConstantOp>(b.getF32FloatAttr(1.0f));
+          auto oneVal =
+              b.create<arith::ConstantOp>(b.getFloatAttr(floatTy, 1.0f));
           auto interpolate = [&](Value val0, Value val1, Value delta,
                                  int inputSize,
                                  ImplicitLocOpBuilder &b) -> Value {
@@ -2469,7 +2405,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReverseConverter,
       RFFT2dConverter,
       TableConverter,
-      TileConverter,
-      TransposeConverter>(patterns->getContext());
+      TileConverter>(patterns->getContext());
   // clang-format on
 }

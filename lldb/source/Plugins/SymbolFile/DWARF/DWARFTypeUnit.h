@@ -14,13 +14,15 @@
 
 namespace llvm {
 class DWARFAbbreviationDeclarationSet;
-}
+} // namespace llvm
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFTypeUnit : public DWARFUnit {
 public:
   void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) override {}
 
-  void Dump(lldb_private::Stream *s) const override;
+  void Dump(Stream *s) const override;
 
   uint64_t GetTypeHash() { return m_header.GetTypeHash(); }
 
@@ -37,5 +39,7 @@ private:
 
   friend class DWARFUnit;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFTYPEUNIT_H

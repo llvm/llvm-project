@@ -678,7 +678,7 @@ static void extractStridesFromTerm(AffineExpr e,
                                    AffineExpr multiplicativeFactor,
                                    MutableArrayRef<AffineExpr> strides,
                                    AffineExpr &offset) {
-  if (auto dim = e.dyn_cast<AffineDimExpr>())
+  if (auto dim = dyn_cast<AffineDimExpr>(e))
     strides[dim.getPosition()] =
         strides[dim.getPosition()] + multiplicativeFactor;
   else
@@ -693,7 +693,7 @@ static LogicalResult extractStrides(AffineExpr e,
                                     AffineExpr multiplicativeFactor,
                                     MutableArrayRef<AffineExpr> strides,
                                     AffineExpr &offset) {
-  auto bin = e.dyn_cast<AffineBinaryOpExpr>();
+  auto bin = dyn_cast<AffineBinaryOpExpr>(e);
   if (!bin) {
     extractStridesFromTerm(e, multiplicativeFactor, strides, offset);
     return success();
@@ -705,7 +705,7 @@ static LogicalResult extractStrides(AffineExpr e,
     return failure();
 
   if (bin.getKind() == AffineExprKind::Mul) {
-    auto dim = bin.getLHS().dyn_cast<AffineDimExpr>();
+    auto dim = dyn_cast<AffineDimExpr>(bin.getLHS());
     if (dim) {
       strides[dim.getPosition()] =
           strides[dim.getPosition()] + bin.getRHS() * multiplicativeFactor;
@@ -820,12 +820,12 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   SmallVector<AffineExpr, 4> strideExprs;
   if (failed(::getStridesAndOffset(t, strideExprs, offsetExpr)))
     return failure();
-  if (auto cst = offsetExpr.dyn_cast<AffineConstantExpr>())
+  if (auto cst = dyn_cast<AffineConstantExpr>(offsetExpr))
     offset = cst.getValue();
   else
     offset = ShapedType::kDynamic;
   for (auto e : strideExprs) {
-    if (auto c = e.dyn_cast<AffineConstantExpr>())
+    if (auto c = dyn_cast<AffineConstantExpr>(e))
       strides.push_back(c.getValue());
     else
       strides.push_back(ShapedType::kDynamic);
@@ -888,7 +888,7 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
 
   // Corner-case for 0-D affine maps.
   if (m.getNumDims() == 0 && m.getNumSymbols() == 0) {
-    if (auto cst = m.getResult(0).dyn_cast<AffineConstantExpr>())
+    if (auto cst = dyn_cast<AffineConstantExpr>(m.getResult(0)))
       if (cst.getValue() == 0)
         return MemRefType::Builder(t).setLayout({});
     return t;

@@ -690,7 +690,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-X87-NEXT:    pushl %ebx
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $44, %esp
+; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -766,7 +766,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-X87-NEXT:    andl $15, %edx
 ; X86-X87-NEXT:    movb %dl, 12(%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
-; X86-X87-NEXT:    addl $44, %esp
+; X86-X87-NEXT:    addl $60, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    popl %edi
 ; X86-X87-NEXT:    popl %ebx
@@ -779,7 +779,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    pushl %ebx
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    subl $28, %esp
+; X86-SSE-NEXT:    subl $44, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -819,7 +819,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    andl $15, %eax
 ; X86-SSE-NEXT:    movb %al, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
-; X86-SSE-NEXT:    addl $28, %esp
+; X86-SSE-NEXT:    addl $44, %esp
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    popl %edi
 ; X86-SSE-NEXT:    popl %ebx
@@ -859,7 +859,7 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X86-X87-NEXT:    pushl %ebx
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $44, %esp
+; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -931,7 +931,7 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-X87-NEXT:    movl %eax, (%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
-; X86-X87-NEXT:    addl $44, %esp
+; X86-X87-NEXT:    addl $60, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    popl %edi
 ; X86-X87-NEXT:    popl %ebx
@@ -954,7 +954,7 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    pushl %ebx
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    subl $28, %esp
+; X86-SSE-NEXT:    subl $44, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -990,7 +990,7 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %eax, (%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
-; X86-SSE-NEXT:    addl $28, %esp
+; X86-SSE-NEXT:    addl $44, %esp
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    popl %edi
 ; X86-SSE-NEXT:    popl %ebx
@@ -2882,7 +2882,7 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X86-X87-NEXT:    pushl %ebx
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $44, %esp
+; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
 ; X86-X87-NEXT:    calll __gnu_h2f_ieee
@@ -2960,7 +2960,7 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X86-X87-NEXT:    andl $15, %edx
 ; X86-X87-NEXT:    movb %dl, 12(%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
-; X86-X87-NEXT:    addl $44, %esp
+; X86-X87-NEXT:    addl $60, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    popl %edi
 ; X86-X87-NEXT:    popl %ebx
@@ -3061,7 +3061,7 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; X86-X87-NEXT:    pushl %ebx
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $44, %esp
+; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
 ; X86-X87-NEXT:    calll __gnu_h2f_ieee
@@ -3135,7 +3135,7 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-X87-NEXT:    movl %eax, (%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
-; X86-X87-NEXT:    addl $44, %esp
+; X86-X87-NEXT:    addl $60, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    popl %edi
 ; X86-X87-NEXT:    popl %ebx

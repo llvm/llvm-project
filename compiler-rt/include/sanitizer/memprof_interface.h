@@ -24,25 +24,26 @@ extern "C" {
 ///
 /// \param addr Start of memory region.
 /// \param size Size of memory region.
-void __memprof_record_access_range(void const volatile *addr, size_t size);
+void SANITIZER_CDECL __memprof_record_access_range(void const volatile *addr,
+                                                   size_t size);
 
 /// Records access to a memory address <c><i>addr</i></c>.
 ///
 /// This memory must be previously allocated by your program.
 ///
 /// \param addr Accessed memory address
-void __memprof_record_access(void const volatile *addr);
+void SANITIZER_CDECL __memprof_record_access(void const volatile *addr);
 
 /// User-provided callback on MemProf errors.
 ///
 /// You can provide a function that would be called immediately when MemProf
 /// detects an error. This is useful in cases when MemProf detects an error but
 /// your program crashes before the MemProf report is printed.
-void __memprof_on_error(void);
+void SANITIZER_CDECL __memprof_on_error(void);
 
 /// Prints accumulated statistics to <c>stderr</c> (useful for calling from the
 /// debugger).
-void __memprof_print_accumulated_stats(void);
+void SANITIZER_CDECL __memprof_print_accumulated_stats(void);
 
 /// User-provided default option settings.
 ///
@@ -51,12 +52,18 @@ void __memprof_print_accumulated_stats(void);
 /// <c>verbosity=1:print_stats=1</c>).
 ///
 /// \returns Default options string.
-const char *__memprof_default_options(void);
+const char *SANITIZER_CDECL __memprof_default_options(void);
 
 /// Prints the memory profile to the current profile file.
 ///
 /// \returns 0 on success.
-int __memprof_profile_dump(void);
+int SANITIZER_CDECL __memprof_profile_dump(void);
+
+/// Closes the existing file descriptor, if it is valid and not stdout or
+/// stderr, and resets the internal state such that the profile filename is
+/// reopened on the next profile dump attempt. This can be used to enable
+/// multiple rounds of profiling on the same binary.
+void SANITIZER_CDECL __memprof_profile_reset(void);
 
 #ifdef __cplusplus
 } // extern "C"

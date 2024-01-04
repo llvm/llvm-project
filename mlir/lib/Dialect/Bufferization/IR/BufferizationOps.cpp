@@ -314,7 +314,11 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
       if (matchPattern(value, m_ConstantInt(&intVal))) {
-        newShape[i] = intVal.getSExtValue();
+        int64_t dim = intVal.getSExtValue();
+        if (dim >= 0)
+          newShape[i] = intVal.getSExtValue();
+        else
+          newDynamicSizes.push_back(value);
       } else {
         newDynamicSizes.push_back(value);
       }
@@ -503,8 +507,10 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<memref::CastOp>(cloneOp, cloneOp.getType(),
-                                                source);
+    if (source.getType() != cloneOp.getType())
+      source = rewriter.create<memref::CastOp>(cloneOp.getLoc(),
+                                               cloneOp.getType(), source);
+    rewriter.replaceOp(cloneOp, source);
     rewriter.eraseOp(redundantDealloc);
     return success();
   }
@@ -537,22 +543,30 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getSourceMutable();
+  return opOperand == getSourceMutable();
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()) {
+  if (opOperand == getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return true;
   }
   return false;
 }
 
+bool MaterializeInDestinationOp::mustBufferizeInPlace(
+    OpOperand &opOperand, const AnalysisState &state) {
+  // The source is only read and not written, so it always bufferizes in-place
+  // by default. The destination is written and is forced to bufferize in-place
+  // (if it is a tensor).
+  return true;
+}
+
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()) {
+  if (opOperand == getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
   }
@@ -573,7 +587,11 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
     assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
     buffer = getDest();
   }
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), buffer);
+  auto srcBuffer = getBuffer(rewriter, getSource(), options);
+  if (failed(srcBuffer))
+    return failure();
+  if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))
+    return failure();
   replaceOpWithBufferizedValues(rewriter, getOperation(),
                                 tensorDest ? ValueRange(buffer) : ValueRange());
   return success();
@@ -605,11 +623,19 @@ Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
     return getDest();
   }
 
+  // The "restrict" attribute is transferred from this op to the newly created
+  // to_tensor op. If this op does not the "restrict" attribute, the subset
+  // extraction cannot be built because there is no guarantee that there is no
+  // pre-existing "restrict" to_tensor op with the same/an aliasing destination.
+  if (!getRestrict())
+    return {};
+
   // Build a bufferization.to_tensor op.
   assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
   assert(getRestrict() &&
          "expected that ops with memrefs dest have 'restrict'");
-  return builder.create<ToTensorOp>(loc, getDest(), getRestrict(),
+  setRestrict(false);
+  return builder.create<ToTensorOp>(loc, getDest(), /*restrict=*/true,
                                     getWritable());
 }
 
@@ -627,6 +653,18 @@ OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
 }
 
+bool MaterializeInDestinationOp::operatesOnEquivalentSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
+bool MaterializeInDestinationOp::operatesOnDisjointSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
 LogicalResult MaterializeInDestinationOp::verify() {
   if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
     return emitOpError("'dest' must be a tensor or a memref");
@@ -639,9 +677,8 @@ LogicalResult MaterializeInDestinationOp::verify() {
   if (isa<BaseMemRefType>(getDest().getType()) &&
       getOperation()->getNumResults() != 0)
     return emitOpError("memref 'dest' implies zero results");
-  if (getRestrict() != isa<BaseMemRefType>(getDest().getType()))
-    return emitOpError("'restrict' must be specified if and only if the "
-                       "destination is of memref type");
+  if (getRestrict() && !isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("'restrict' is valid only for memref destinations");
   if (getWritable() != isa<BaseMemRefType>(getDest().getType()))
     return emitOpError("'writable' must be specified if and only if the "
                        "destination is of memref type");
@@ -651,8 +688,9 @@ LogicalResult MaterializeInDestinationOp::verify() {
 void MaterializeInDestinationOp::build(OpBuilder &builder,
                                        OperationState &state, Value source,
                                        Value dest) {
-  assert(isa<TensorType>(dest.getType()) && "expected tensor type");
-  build(builder, state, /*result=*/dest.getType(), source, dest);
+  auto destTensorType = dyn_cast<TensorType>(dest.getType());
+  build(builder, state, /*result=*/destTensorType ? destTensorType : Type(),
+        source, dest);
 }
 
 bool MaterializeInDestinationOp::isWritable(Value value,

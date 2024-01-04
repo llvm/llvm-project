@@ -12,7 +12,7 @@
 
 ; ELF: Relocations [
 ; ELF-NEXT: Section (3) .rel.text {
-; ELF-NEXT: 0x{{[0-9]+}} R_AMDGPU_ABS32 doff_0_0_b{{$}}
+; ELF-NEXT: 0x{{[0-9]+}} R_AMDGPU_ABS32_LO doff_0_0_b{{$}}
 
 define amdgpu_ps void @ps_main(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local_unnamed_addr #0 {
   %rc = call i32 @llvm.amdgcn.reloc.constant(metadata !1)

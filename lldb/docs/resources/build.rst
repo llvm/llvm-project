@@ -403,13 +403,21 @@ dependencies are required:
 * Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
+* SWIG (for generating Python bindings)
 
-To install the prerequisites for building the documentation (on Debian/Ubuntu)
+To install the system prerequisites for building the documentation (on Debian/Ubuntu)
 do:
 
 ::
 
-  $ sudo apt-get install doxygen graphviz python3-sphinx
+  $ sudo apt-get install doxygen graphviz swig
+
+To install Sphinx and its dependencies, use the ``requirements.txt`` available within LLVM
+to ensure you get a working configuration:
+
+::
+
+  $ pip3 install -r /path/to/llvm-project/llvm/docs/requirements.txt
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 

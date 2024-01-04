@@ -31,6 +31,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -40,12 +41,12 @@ int main(int, char**) {
     std::atomic_bool start = false;
     std::atomic_bool done  = false;
 
-    std::jthread jt{[&] {
+    std::jthread jt = support::make_test_jthread([&] {
       start.wait(false);
       f();
       done = true;
       done.notify_all();
-    }};
+    });
 
     f = [&] {
       try {

@@ -126,8 +126,9 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   OpBuilder builder(&ctx);
 
   // Create a module op and set it as the insertion point.
-  ModuleOp module = builder.create<ModuleOp>(UnknownLoc::get(&ctx));
-  builder = builder.atBlockBegin(module.getBody());
+  OwningOpRef<ModuleOp> module =
+      builder.create<ModuleOp>(UnknownLoc::get(&ctx));
+  builder = builder.atBlockBegin(module->getBody());
   // Create the dialect and insert it.
   irdl::DialectOp dialect = createIRDLDialect(builder);
   // Set insertion point to start of DialectOp.
@@ -143,7 +144,7 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   }
 
   // Print the module.
-  module.print(os);
+  module->print(os);
 
   return false;
 }

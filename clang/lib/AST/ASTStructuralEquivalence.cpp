@@ -1173,7 +1173,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::Elaborated: {
     const auto *Elab1 = cast<ElaboratedType>(T1);
     const auto *Elab2 = cast<ElaboratedType>(T2);
-    // CHECKME: what if a keyword is ETK_None or ETK_typename ?
+    // CHECKME: what if a keyword is ElaboratedTypeKeyword::None or
+    // ElaboratedTypeKeyword::Typename
+    // ?
     if (Elab1->getKeyword() != Elab2->getKeyword())
       return false;
     if (!IsStructurallyEquivalent(Context, Elab1->getQualifier(),
@@ -1973,6 +1975,18 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // Check the templated declaration.
   return IsStructurallyEquivalent(Context, D1->getTemplatedDecl()->getType(),
                                   D2->getTemplatedDecl()->getType());
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     TypeAliasTemplateDecl *D1,
+                                     TypeAliasTemplateDecl *D2) {
+  // Check template parameters.
+  if (!IsTemplateDeclCommonStructurallyEquivalent(Context, D1, D2))
+    return false;
+
+  // Check the templated declaration.
+  return IsStructurallyEquivalent(Context, D1->getTemplatedDecl(),
+                                  D2->getTemplatedDecl());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,

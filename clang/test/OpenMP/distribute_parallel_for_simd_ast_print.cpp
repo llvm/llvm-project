@@ -165,9 +165,9 @@ int main(int argc, char **argv) {
   for (i = 0; i < 100; i++)
     for (int j = 0; j < 200; j++)
       a += h + x[j];
-  // OMP45: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8)
-  // OMP50: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8) if(simd: argc) nontemporal(argc,c,d) order(concurrent)
-  // OMP51: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8) if(simd: argc) nontemporal(argc,c,d) order(unconstrained: concurrent)
+  // OMP45: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: step(2)) safelen(8) simdlen(8)
+  // OMP50: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: step(2)) safelen(8) simdlen(8) if(simd: argc) nontemporal(argc,c,d) order(concurrent)
+  // OMP51: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: step(2)) safelen(8) simdlen(8) if(simd: argc) nontemporal(argc,c,d) order(unconstrained: concurrent)
   // CHECK-NEXT: for (i = 0; i < 100; i++)
   // CHECK-NEXT: for (int j = 0; j < 200; j++)
   // CHECK-NEXT: a += h + x[j];

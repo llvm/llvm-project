@@ -9,10 +9,16 @@ declare ptr @llvm.call.preallocated.arg(token, i32)
 
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
 @ConstAS3Ptr = addrspace(3) global i32 0, align 4
+@ConstPtr = constant i32 0, align 4
+@ConstWeakPtr = weak constant i32 0, align 4
+@ConstWeakODRPtr = weak_odr constant i32 0, align 4
 
 ;.
 ; CHECK: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ; CHECK: @[[CONSTAS3PTR:[a-zA-Z0-9_$"\\.-]+]] = addrspace(3) global i32 0, align 4
+; CHECK: @[[CONSTPTR:[a-zA-Z0-9_$"\\.-]+]] = constant i32 0, align 4
+; CHECK: @[[CONSTWEAKPTR:[a-zA-Z0-9_$"\\.-]+]] = weak constant i32 0, align 4
+; CHECK: @[[CONSTWEAKODRPTR:[a-zA-Z0-9_$"\\.-]+]] = weak_odr constant i32 0, align 4
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external global [[STRUCT_X:%.*]]
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal constant { [2 x ptr] } { [2 x ptr] [ptr @f1, ptr @f2] }
 ; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = external global i32
@@ -1630,6 +1636,53 @@ dead4:
   ret i8 4
 dead5:
   ret i8 5
+}
+
+define i32 @readConst() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@readConst
+; TUNIT-SAME: () #[[ATTR2]] {
+; TUNIT-NEXT:    ret i32 0
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@readConst
+; CGSCC-SAME: () #[[ATTR1]] {
+; CGSCC-NEXT:    ret i32 0
+;
+  %l = load i32, ptr @ConstPtr
+  ret i32 %l
+}
+
+define i32 @readWeakConst() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@readWeakConst
+; TUNIT-SAME: () #[[ATTR2]] {
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @ConstWeakPtr, align 4
+; TUNIT-NEXT:    ret i32 [[L]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@readWeakConst
+; CGSCC-SAME: () #[[ATTR1]] {
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr @ConstWeakPtr, align 4
+; CGSCC-NEXT:    ret i32 [[L]]
+;
+  %l = load i32, ptr @ConstWeakPtr
+  ret i32 %l
+}
+
+define i32 @readWeakOdrConst() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@readWeakOdrConst
+; TUNIT-SAME: () #[[ATTR2]] {
+; TUNIT-NEXT:    ret i32 0
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@readWeakOdrConst
+; CGSCC-SAME: () #[[ATTR1]] {
+; CGSCC-NEXT:    ret i32 0
+;
+  %l = load i32, ptr @ConstWeakODRPtr
+  ret i32 %l
 }
 
 ;.

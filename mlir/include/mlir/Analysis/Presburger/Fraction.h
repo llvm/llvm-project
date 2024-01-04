@@ -38,7 +38,7 @@ struct Fraction {
     }
   }
   /// Overloads for passing literals.
-  Fraction(const MPInt &num, int64_t den = 1) : Fraction(num, MPInt(den)) {}
+  Fraction(const MPInt &num, int64_t den) : Fraction(num, MPInt(den)) {}
   Fraction(int64_t num, const MPInt &den = MPInt(1))
       : Fraction(MPInt(num), den) {}
   Fraction(int64_t num, int64_t den) : Fraction(MPInt(num), MPInt(den)) {}
@@ -101,6 +101,11 @@ inline bool operator>=(const Fraction &x, const Fraction &y) {
   return compare(x, y) >= 0;
 }
 
+inline Fraction abs(const Fraction &f) {
+  assert(f.den > 0 && "denominator of fraction must be positive!");
+  return Fraction(abs(f.num), f.den);
+}
+
 inline Fraction reduce(const Fraction &f) {
   if (f == Fraction(0))
     return Fraction(0, 1);
@@ -122,6 +127,12 @@ inline Fraction operator+(const Fraction &x, const Fraction &y) {
 
 inline Fraction operator-(const Fraction &x, const Fraction &y) {
   return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
+}
+
+// Find the integer nearest to a given fraction.
+inline MPInt round(const Fraction &f) {
+  MPInt rem = f.num % f.den;
+  return (f.num / f.den) + (rem > f.den / 2);
 }
 
 inline Fraction &operator+=(Fraction &x, const Fraction &y) {

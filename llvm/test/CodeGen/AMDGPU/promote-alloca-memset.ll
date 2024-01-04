@@ -7,7 +7,7 @@ define amdgpu_kernel void @memset_all_zero(i64 %val) {
 ; CHECK-LABEL: @memset_all_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <6 x i64> zeroinitializer, i64 [[VAL:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i64> [[TMP0]], i64 [[VAL]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -24,7 +24,7 @@ define amdgpu_kernel void @memset_all_5(i64 %val) {
 ; CHECK-LABEL: @memset_all_5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> <i64 361700864190383365, i64 361700864190383365, i64 361700864190383365, i64 361700864190383365>, i64 [[VAL:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[VAL]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -42,7 +42,7 @@ define amdgpu_kernel void @memset_volatile_nopromote(i64 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[STACK]], i8 0, i64 32, i1 true)
-; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 4
+; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -57,7 +57,7 @@ define amdgpu_kernel void @memset_badsize_nopromote(i64 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[STACK]], i8 0, i64 31, i1 true)
-; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 4
+; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -73,7 +73,7 @@ define amdgpu_kernel void @memset_offset_ptr_nopromote(i64 %val) {
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i64], ptr addrspace(5) [[STACK]], i64 0, i64 1
 ; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[GEP]], i8 0, i64 24, i1 true)
-; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 4
+; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

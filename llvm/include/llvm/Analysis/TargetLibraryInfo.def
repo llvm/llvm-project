@@ -1570,7 +1570,7 @@ TLI_DEFINE_SIG_INTERNAL(Int, Int)
 /// long int labs(long int j);
 TLI_DEFINE_ENUM_INTERNAL(labs)
 TLI_DEFINE_STRING_INTERNAL("labs")
-TLI_DEFINE_SIG_INTERNAL(Long, Long)
+TLI_DEFINE_SIG_INTERNAL(Long, Same)
 
 /// int lchown(const char *path, uid_t owner, gid_t group);
 TLI_DEFINE_ENUM_INTERNAL(lchown)

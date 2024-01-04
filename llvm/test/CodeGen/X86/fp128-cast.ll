@@ -34,7 +34,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X32-LABEL: TestFPExtF32_F128:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $24, %esp
+; X32-NEXT:    subl $40, %esp
 ; X32-NEXT:    flds vf32
 ; X32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -49,7 +49,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X32-NEXT:    movl %edx, vf128+8
 ; X32-NEXT:    movl %ecx, vf128+4
 ; X32-NEXT:    movl %eax, vf128
-; X32-NEXT:    addl $24, %esp
+; X32-NEXT:    addl $40, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -424,7 +424,7 @@ define dso_local void @TestFPToSIF128_I128() nounwind {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __fixtfti
 ; X32-NEXT:    addl $28, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -475,7 +475,7 @@ define dso_local void @TestFPToUIF128_U128() nounwind {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __fixunstfti
 ; X32-NEXT:    addl $28, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -638,7 +638,7 @@ define dso_local void @TestSIToFPI16_F128() nounwind {
 ; X32-NEXT:    pushl %ecx
 ; X32-NEXT:    calll __floatsitf
 ; X32-NEXT:    addl $12, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -686,7 +686,7 @@ define dso_local void @TestSIToFPU16_F128() nounwind {
 ; X32-NEXT:    pushl %ecx
 ; X32-NEXT:    calll __floatunsitf
 ; X32-NEXT:    addl $12, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -732,7 +732,7 @@ define dso_local void @TestSIToFPI32_F128() nounwind {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __floatsitf
 ; X32-NEXT:    addl $12, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -778,7 +778,7 @@ define dso_local void @TestUIToFPU32_F128() #2 {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __floatunsitf
 ; X32-NEXT:    addl $12, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -825,7 +825,7 @@ define dso_local void @TestSIToFPI64_F128() nounwind {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __floatditf
 ; X32-NEXT:    addl $12, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -872,7 +872,7 @@ define dso_local void @TestUIToFPU64_F128() #2 {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __floatunditf
 ; X32-NEXT:    addl $12, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -922,7 +922,7 @@ define dso_local void @TestSIToFPI128_F128() nounwind {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __floattitf
 ; X32-NEXT:    addl $28, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -973,7 +973,7 @@ define dso_local void @TestUIToFPU128_F128() #2 {
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll __floatuntitf
 ; X32-NEXT:    addl $28, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -1303,7 +1303,7 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl (%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:  .LBB26_4: # %cleanup
 ; X32-NEXT:    movl %edx, (%esi)

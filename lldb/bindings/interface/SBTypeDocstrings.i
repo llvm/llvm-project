@@ -140,19 +140,6 @@ SBType supports the eq/ne operator. For example,::
 ) lldb::SBType::IsReferenceType;
 
 %feature("docstring",
-    "Returns true if this type is a function type.
-
-    Language-specific behaviour:
-
-    * C: Returns true for types that represent functions. Note that function
-      pointers are not function types (but their `GetPointeeType()` are function
-      types).
-    * C++: Same as in C.
-    * Objective-C: Returns false for all types.
-    "
-) lldb::SBType::IsPolymorphicClass;
-
-%feature("docstring",
     "Returns true if this type is a polymorphic type.
 
     Language-specific behaviour:
@@ -719,6 +706,14 @@ SBType supports the eq/ne operator. For example,::
     of each `TypeFlags` value.
     "
 ) lldb::SBType::GetTypeFlags;
+
+%feature("docstring",
+    "Searches for a directly nested type that has the provided name.
+
+    Returns the type if it was found.
+    Returns invalid type if nothing was found.
+    "
+) lldb::SBType::FindDirectNestedType;
 
 %feature("docstring",
 "Represents a list of :py:class:`SBType` s.

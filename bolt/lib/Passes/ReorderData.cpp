@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // TODO:
-// - make sure writeable data isn't put on same cache line unless temporally
+// - make sure writable data isn't put on same cache line unless temporally
 // local
 // - estimate temporal locality by looking at CFG?
 
@@ -328,7 +328,7 @@ ReorderData::sortedByCount(BinaryContext &BC,
 
 // TODO
 // add option for cache-line alignment (or just use cache-line when section
-// is writeable)?
+// is writable)?
 void ReorderData::setSectionOrder(BinaryContext &BC,
                                   BinarySection &OutputSection,
                                   DataOrder::iterator Begin,
@@ -408,14 +408,14 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
   // suffix in another.
   auto isPrivate = [&](const BinaryData *BD) {
     auto Prefix = std::string("PG") + BC.AsmInfo->getPrivateGlobalPrefix();
-    return BD->getName().startswith(Prefix.str());
+    return BD->getName().starts_with(Prefix.str());
   };
   auto Range = BC.getBinaryDataForSection(Section);
   bool FoundUnmoveable = false;
   for (auto Itr = Range.begin(); Itr != Range.end(); ++Itr) {
     BinaryData *Next =
         std::next(Itr) != Range.end() ? std::next(Itr)->second : nullptr;
-    if (Itr->second->getName().startswith("PG.")) {
+    if (Itr->second->getName().starts_with("PG.")) {
       BinaryData *Prev =
           Itr != Range.begin() ? std::prev(Itr)->second : nullptr;
       bool PrevIsPrivate = Prev && isPrivate(Prev);

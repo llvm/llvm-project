@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/ELF.h"
+#include <optional>
 
 namespace lld::elf {
 
@@ -73,7 +74,7 @@ public:
   StringRef getLineStrSection() const override { return lineStrSection; }
 
   bool isLittleEndian() const override {
-    return ELFT::TargetEndianness == llvm::support::little;
+    return ELFT::TargetEndianness == llvm::endianness::little;
   }
 
   std::optional<llvm::RelocAddrEntry> find(const llvm::DWARFSection &sec,

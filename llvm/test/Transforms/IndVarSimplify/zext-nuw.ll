@@ -16,7 +16,7 @@ define void @_Z3fn1v() {
 ; CHECK-NEXT:    br label [[DOTPREHEADER4_LR_PH:%.*]]
 ; CHECK:       .preheader4.lr.ph:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X4]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i8 [[J_SROA_0_0_COPYLOAD]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP3]], [[TMP4]]

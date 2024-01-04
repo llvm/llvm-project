@@ -1,4 +1,4 @@
-//===- File.h - Reading/writing sparse tensors from/to files ----*- C++ -*-===//
+//===- File.h - Reading sparse tensors from files ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements reading and writing sparse tensor files in one of the
+// This file implements reading sparse tensor from files in one of the
 // following external formats:
 //
 // (1) Matrix Market Exchange (MME): *.mtx
@@ -197,14 +197,15 @@ public:
   template <typename P, typename I, typename V>
   SparseTensorStorage<P, I, V> *
   readSparseTensor(uint64_t lvlRank, const uint64_t *lvlSizes,
-                   const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                   const LevelType *lvlTypes, const uint64_t *dim2lvl,
                    const uint64_t *lvl2dim) {
     const uint64_t dimRank = getRank();
     MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim);
-    auto *coo = readCOO<V>(map, lvlSizes);
+    auto *lvlCOO = readCOO<V>(map, lvlSizes);
     auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
-        dimRank, getDimSizes(), lvlRank, lvlTypes, lvl2dim, *coo);
-    delete coo;
+        dimRank, getDimSizes(), lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,
+        *lvlCOO);
+    delete lvlCOO;
     return tensor;
   }
 
@@ -355,33 +356,6 @@ bool SparseTensorReader::readToBuffersLoop(const MapRef &map, C *lvlCoordinates,
   for (uint64_t n = 1; n < nse; ++n)
     readNextElement();
   return isSorted;
-}
-
-/// Writes the sparse tensor to `filename` in extended FROSTT format.
-template <typename V>
-inline void writeExtFROSTT(const SparseTensorCOO<V> &coo,
-                           const char *filename) {
-  assert(filename && "Got nullptr for filename");
-  const auto &dimSizes = coo.getDimSizes();
-  const auto &elements = coo.getElements();
-  const uint64_t dimRank = coo.getRank();
-  const uint64_t nse = elements.size();
-  std::fstream file;
-  file.open(filename, std::ios_base::out | std::ios_base::trunc);
-  assert(file.is_open());
-  file << "; extended FROSTT format\n" << dimRank << " " << nse << std::endl;
-  for (uint64_t d = 0; d < dimRank - 1; ++d)
-    file << dimSizes[d] << " ";
-  file << dimSizes[dimRank - 1] << std::endl;
-  for (uint64_t i = 0; i < nse; ++i) {
-    const auto &coords = elements[i].coords;
-    for (uint64_t d = 0; d < dimRank; ++d)
-      file << (coords[d] + 1) << " ";
-    file << elements[i].value << std::endl;
-  }
-  file.flush();
-  file.close();
-  assert(file.good());
 }
 
 } // namespace sparse_tensor

@@ -171,7 +171,7 @@ template<class E1, class E2> class E {};
 using test1 = D<E, int>;
 // CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:1, col:23> col:7 test1 'D<subst_default_argument::E, int>':'subst_default_argument::E<int, subst_default_argument::A<int>>'
 // CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'A<int>' sugar A
-// CHECK-NEXT: |-TemplateArgument type 'int':'int'
+// CHECK-NEXT: |-TemplateArgument type 'int'
 // CHECK-NEXT: | `-SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 1 D2
 // CHECK-NEXT: |   |-TypeAliasTemplate 0x{{[^ ]*}} 'D'
 // CHECK-NEXT: |   `-BuiltinType 0x{{[^ ]*}} 'int'

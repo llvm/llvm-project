@@ -23,8 +23,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
-    ; GCN-NEXT: $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_]], 0
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
+    ; GCN-NEXT: $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; GCN-NEXT: S_SETPC_B64 $sgpr30_sgpr31
     S_NOP 0
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
@@ -56,106 +56,106 @@ body:             |
     ; GCN: liveins: $sgpr10, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $vgpr0, $sgpr30_sgpr31, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr64, 0, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr65, 1, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr66, 2, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr67, 3, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr68, 4, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr69, 5, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr70, 6, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr71, 7, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr72, 8, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr73, 9, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr74, 10, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr75, 11, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr76, 12, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr77, 13, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr78, 14, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr79, 15, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr80, 16, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr81, 17, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr82, 18, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr83, 19, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr84, 20, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr85, 21, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr86, 22, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr87, 23, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr88, 24, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr89, 25, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr90, 26, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr91, 27, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr92, 28, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr93, 29, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr94, 30, $vgpr0
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr95, 31, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr64, 0, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr65, 1, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr66, 2, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr67, 3, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr68, 4, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr69, 5, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr70, 6, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr71, 7, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr72, 8, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr73, 9, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr74, 10, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr75, 11, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr76, 12, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr77, 13, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr78, 14, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr79, 15, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr80, 16, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr81, 17, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr82, 18, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr83, 19, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr84, 20, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr85, 21, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr86, 22, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr87, 23, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr88, 24, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr89, 25, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr90, 26, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr91, 27, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr92, 28, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr93, 29, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr94, 30, $vgpr0
+    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr95, 31, $vgpr0
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr64, 1, [[V_WRITELANE_B32_1]], implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr65, 2, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr66, 3, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr67, 4, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr68, 5, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr69, 6, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr70, 7, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr71, 8, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr72, 9, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr73, 10, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr74, 11, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr75, 12, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr76, 13, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr77, 14, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr78, 15, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr79, 16, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr80, 17, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr81, 18, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr82, 19, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr83, 20, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr84, 21, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr85, 22, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr86, 23, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr87, 24, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr88, 25, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr89, 26, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr90, 27, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr91, 28, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr92, 29, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr93, 30, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 $sgpr94, 31, [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr95, 32, [[V_WRITELANE_B32_1]], implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr64, 1, [[DEF]], implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr65, 2, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr66, 3, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr67, 4, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr68, 5, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr69, 6, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr70, 7, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr71, 8, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr72, 9, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr73, 10, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr74, 11, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr75, 12, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr76, 13, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr77, 14, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr78, 15, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr79, 16, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr80, 17, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr81, 18, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr82, 19, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr83, 20, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr84, 21, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr85, 22, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr86, 23, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr87, 24, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr88, 25, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr89, 26, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr90, 27, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr91, 28, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr92, 29, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr93, 30, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr94, 31, [[DEF]]
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr95, 32, [[DEF]], implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: $sgpr64 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 1, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
-    ; GCN-NEXT: $sgpr65 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 2
-    ; GCN-NEXT: $sgpr66 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 3
-    ; GCN-NEXT: $sgpr67 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 4
-    ; GCN-NEXT: $sgpr68 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 5
-    ; GCN-NEXT: $sgpr69 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 6
-    ; GCN-NEXT: $sgpr70 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 7
-    ; GCN-NEXT: $sgpr71 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 8
-    ; GCN-NEXT: $sgpr72 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 9
-    ; GCN-NEXT: $sgpr73 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 10
-    ; GCN-NEXT: $sgpr74 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 11
-    ; GCN-NEXT: $sgpr75 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 12
-    ; GCN-NEXT: $sgpr76 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 13
-    ; GCN-NEXT: $sgpr77 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 14
-    ; GCN-NEXT: $sgpr78 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 15
-    ; GCN-NEXT: $sgpr79 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 16
-    ; GCN-NEXT: $sgpr80 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 17
-    ; GCN-NEXT: $sgpr81 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 18
-    ; GCN-NEXT: $sgpr82 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 19
-    ; GCN-NEXT: $sgpr83 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 20
-    ; GCN-NEXT: $sgpr84 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 21
-    ; GCN-NEXT: $sgpr85 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 22
-    ; GCN-NEXT: $sgpr86 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 23
-    ; GCN-NEXT: $sgpr87 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 24
-    ; GCN-NEXT: $sgpr88 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 25
-    ; GCN-NEXT: $sgpr89 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 26
-    ; GCN-NEXT: $sgpr90 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 27
-    ; GCN-NEXT: $sgpr91 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 28
-    ; GCN-NEXT: $sgpr92 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 29
-    ; GCN-NEXT: $sgpr93 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 30
-    ; GCN-NEXT: $sgpr94 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 31
-    ; GCN-NEXT: $sgpr95 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 32
-    ; GCN-NEXT: $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 0
+    ; GCN-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 2
+    ; GCN-NEXT: $sgpr66 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 3
+    ; GCN-NEXT: $sgpr67 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
+    ; GCN-NEXT: $sgpr68 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 5
+    ; GCN-NEXT: $sgpr69 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 6
+    ; GCN-NEXT: $sgpr70 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 7
+    ; GCN-NEXT: $sgpr71 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 8
+    ; GCN-NEXT: $sgpr72 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 9
+    ; GCN-NEXT: $sgpr73 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 10
+    ; GCN-NEXT: $sgpr74 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 11
+    ; GCN-NEXT: $sgpr75 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 12
+    ; GCN-NEXT: $sgpr76 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 13
+    ; GCN-NEXT: $sgpr77 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 14
+    ; GCN-NEXT: $sgpr78 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 15
+    ; GCN-NEXT: $sgpr79 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 16
+    ; GCN-NEXT: $sgpr80 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 17
+    ; GCN-NEXT: $sgpr81 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 18
+    ; GCN-NEXT: $sgpr82 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 19
+    ; GCN-NEXT: $sgpr83 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 20
+    ; GCN-NEXT: $sgpr84 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 21
+    ; GCN-NEXT: $sgpr85 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 22
+    ; GCN-NEXT: $sgpr86 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 23
+    ; GCN-NEXT: $sgpr87 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 24
+    ; GCN-NEXT: $sgpr88 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 25
+    ; GCN-NEXT: $sgpr89 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 26
+    ; GCN-NEXT: $sgpr90 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 27
+    ; GCN-NEXT: $sgpr91 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 28
+    ; GCN-NEXT: $sgpr92 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 29
+    ; GCN-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 30
+    ; GCN-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 31
+    ; GCN-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 32
+    ; GCN-NEXT: $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
     ; GCN-NEXT: S_SETPC_B64 $sgpr30_sgpr31
     S_NOP 0
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
@@ -197,7 +197,7 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 10
-  ; GCN-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
@@ -205,13 +205,13 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 20
-  ; GCN-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_1]]
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; GCN-NEXT:   S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr10
   bb.0:
     liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
@@ -264,7 +264,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = V_READLANE_B32 [[DEF]], 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 15, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -272,7 +272,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr10 = V_READLANE_B32 [[DEF]], 0
+  ; GCN-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 20, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -281,7 +281,7 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 10
-  ; GCN-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
   ; GCN-NEXT:   S_CMP_EQ_U32 $sgpr11, 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN-NEXT:   S_BRANCH %bb.1

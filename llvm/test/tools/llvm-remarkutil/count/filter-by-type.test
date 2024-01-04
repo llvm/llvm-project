@@ -1,0 +1,16 @@
+RUN: llvm-remarkutil count --parser=yaml --remark-type=missed %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=MISSED
+RUN: llvm-remarkutil count --parser=yaml --remark-type=passed %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=PASSED
+RUN: llvm-remarkutil count --parser=yaml --remark-type=analysis %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=ANALYSIS
+RUN: llvm-remarkutil count --parser=yaml --remark-type=unknown %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=UNKNOWN
+
+; MISSED-LABEL: Source,Count
+; MISSED: path/to/anno.c,1
+
+; PASSED-LABEL: Source,Count
+; PASSED: path/to/anno.c,1
+
+; ANALYSIS-LABEL: Source,Count
+; ANALYSIS: path/to/anno2.c,2
+
+; UNKNOWN: Source,Count
+; UNKNOWN-EMPTY:

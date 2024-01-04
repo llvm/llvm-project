@@ -26,7 +26,7 @@
 @llvm.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(3) @tolower to ptr), ptr addrspacecast (ptr addrspace(1) @ignored to ptr)], section "llvm.metadata"
 
 ; @ignored still in list, @tolower removed, llvm.amdgcn.module.lds appended
-; CHECK: @llvm.compiler.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(1) @ignored to ptr), ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending addrspace(1) global [2 x ptr] [ptr addrspacecast (ptr addrspace(1) @ignored to ptr), ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
 
 @llvm.compiler.used = appending global [2 x ptr] [ptr addrspacecast (ptr addrspace(3) @tolower to ptr), ptr addrspacecast (ptr addrspace(1) @ignored to ptr)], section "llvm.metadata"
 

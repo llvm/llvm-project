@@ -1,4 +1,5 @@
 ; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -codegenprepare -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; The following target lines are needed for the test to exercise what it should.
 ; Without these lines, CodeGenPrepare does not try to sink the bitcasts.

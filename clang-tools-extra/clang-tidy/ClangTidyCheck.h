@@ -184,8 +184,8 @@ public:
     /// integral type ``T``.
     ///
     /// Reads the option with the check-local name \p LocalName from the
-    /// ``CheckOptions``. If the corresponding key is not present, return
-    /// ``std::nullopt``.
+    /// ``CheckOptions``. If the corresponding key is not present,
+    ///  return ``std::nullopt``.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
     /// diagnostic and return ``std::nullopt``.
@@ -199,6 +199,31 @@ public:
         diagnoseBadIntegerOption(NamePrefix + LocalName, *Value);
       }
       return std::nullopt;
+    }
+
+    /// Read a named option from the ``Context`` and parse it as an
+    /// integral type ``T``.
+    ///
+    /// Reads the option with the check-local name \p LocalName from the
+    /// ``CheckOptions``. If the corresponding key is `none`, `null`,
+    /// `-1` or empty, return ``std::nullopt``. If the corresponding
+    /// key is not present, return \p Default.
+    ///
+    /// If the corresponding key can't be parsed as a ``T``, emit a
+    /// diagnostic and return \p Default.
+    template <typename T>
+    std::enable_if_t<std::is_integral_v<T>, std::optional<T>>
+    get(StringRef LocalName, std::optional<T> Default) const {
+      if (std::optional<StringRef> Value = get(LocalName)) {
+        if (Value == "" || Value == "none" || Value == "null" ||
+            (std::is_unsigned_v<T> && Value == "-1"))
+          return std::nullopt;
+        T Result{};
+        if (!StringRef(*Value).getAsInteger(10, Result))
+          return Result;
+        diagnoseBadIntegerOption(NamePrefix + LocalName, *Value);
+      }
+      return Default;
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -251,6 +276,39 @@ public:
     /// Reads the option with the check-local name \p LocalName from local or
     /// global ``CheckOptions``. Gets local option first. If local is not
     /// present, falls back to get global option. If global option is not
+    /// present either, return \p Default. If the value value was found
+    /// and equals ``none``, ``null``, ``-1`` or empty, return ``std::nullopt``.
+    ///
+    /// If the corresponding key can't be parsed as a ``T``, emit a
+    /// diagnostic and return \p Default.
+    template <typename T>
+    std::enable_if_t<std::is_integral_v<T>, std::optional<T>>
+    getLocalOrGlobal(StringRef LocalName, std::optional<T> Default) const {
+      std::optional<StringRef> ValueOr = get(LocalName);
+      bool IsGlobal = false;
+      if (!ValueOr) {
+        IsGlobal = true;
+        ValueOr = getLocalOrGlobal(LocalName);
+        if (!ValueOr)
+          return Default;
+      }
+      T Result{};
+      if (ValueOr == "" || ValueOr == "none" || ValueOr == "null" ||
+          (std::is_unsigned_v<T> && ValueOr == "-1"))
+        return std::nullopt;
+      if (!StringRef(*ValueOr).getAsInteger(10, Result))
+        return Result;
+      diagnoseBadIntegerOption(
+          IsGlobal ? Twine(LocalName) : NamePrefix + LocalName, *ValueOr);
+      return Default;
+    }
+
+    /// Read a named option from the ``Context`` and parse it as an
+    /// integral type ``T``.
+    ///
+    /// Reads the option with the check-local name \p LocalName from local or
+    /// global ``CheckOptions``. Gets local option first. If local is not
+    /// present, falls back to get global option. If global option is not
     /// present either, return \p Default.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
@@ -286,8 +344,8 @@ public:
     /// enum type ``T``.
     ///
     /// Reads the option with the check-local name \p LocalName from the
-    /// ``CheckOptions``. If the corresponding key is not present, return
-    /// \p Default.
+    /// ``CheckOptions``. If the corresponding key is not present,
+    /// return \p Default.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
     /// diagnostic and return \p Default.
@@ -354,6 +412,19 @@ public:
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           T Value) const {
       storeInt(Options, LocalName, Value);
+    }
+
+    /// Stores an option with the check-local name \p LocalName with
+    /// integer value \p Value to \p Options. If the value is empty
+    /// stores ``
+    template <typename T>
+    std::enable_if_t<std::is_integral_v<T>>
+    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+          std::optional<T> Value) const {
+      if (Value)
+        storeInt(Options, LocalName, *Value);
+      else
+        store(Options, LocalName, "none");
     }
 
     /// Stores an option with the check-local name \p LocalName as the string

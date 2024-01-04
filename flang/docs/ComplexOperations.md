@@ -35,7 +35,7 @@ end function pow_self
 ```
 
 **FIR**
-```c
+```
 func.func @_QPpow_self(%arg0: !fir.ref<!fir.complex<4>>) -> !fir.complex<4> {
     %0 = fir.alloca !fir.complex<4>
     %1 = fir.load %arg0 : !fir.ref<!fir.complex<4>>

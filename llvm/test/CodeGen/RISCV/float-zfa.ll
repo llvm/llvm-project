@@ -95,15 +95,25 @@ define float @loadfpimm11() {
   ret float -1.0
 }
 
-; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
+; Ensure fli isn't directly used for negated versions of numbers in the fli
 ; table.
 define float @loadfpimm12() {
 ; CHECK-LABEL: loadfpimm12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 786432
-; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    fneg.s fa0, fa5
 ; CHECK-NEXT:    ret
   ret float -2.0
+}
+
+; Ensure fli isn't directly used for negative min normal value.
+define float @loadfpimm13() {
+; CHECK-LABEL: loadfpimm13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, min
+; CHECK-NEXT:    fneg.s fa0, fa5
+; CHECK-NEXT:    ret
+  ret float 0xb810000000000000
 }
 
 declare float @llvm.minimum.f32(float, float)

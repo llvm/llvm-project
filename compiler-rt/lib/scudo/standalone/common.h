@@ -112,6 +112,21 @@ template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   *RandState = State;
 }
 
+inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
+                              uptr *Fractional) {
+  constexpr uptr Digits = 100;
+  if (Denominator == 0) {
+    *Integral = 100;
+    *Fractional = 0;
+    return;
+  }
+
+  *Integral = Numerator * Digits / Denominator;
+  *Fractional =
+      (((Numerator * Digits) % Denominator) * Digits + Denominator / 2) /
+      Denominator;
+}
+
 // Platform specific functions.
 
 extern uptr PageSizeCached;
@@ -174,10 +189,6 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       MapPlatformData *Data = nullptr);
-
-// Internal map & unmap fatal error. This must not call map(). SizeIfOOM shall
-// hold the requested size on an out-of-memory error, 0 otherwise.
-void NORETURN dieOnMapUnmapError(uptr SizeIfOOM = 0);
 
 // Logging related functions.
 

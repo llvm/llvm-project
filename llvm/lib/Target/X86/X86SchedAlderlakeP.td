@@ -1328,7 +1328,7 @@ def ADLPWriteResGroup117 : SchedWriteRes<[ADLPPort02_03_11]> {
   let Latency = 8;
 }
 def : InstRW<[ADLPWriteResGroup117], (instregex "^MMX_MOV(D|Q)64rm$",
-                                                "^VBROADCAST(F|I)128$",
+                                                "^VBROADCAST(F|I)128rm$",
                                                 "^VBROADCASTS(D|S)Yrm$",
                                                 "^VMOV(D|SH|SL)DUPYrm$",
                                                 "^VPBROADCAST(D|Q)Yrm$")>;

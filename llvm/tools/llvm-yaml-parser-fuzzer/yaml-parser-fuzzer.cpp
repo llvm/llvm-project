@@ -25,7 +25,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   isValidYaml(Input.data(), Input.size());
 
   // Ensure we don't crash on byte strings with no null characters.
-  llvm::erase_value(Input, 0);
+  llvm::erase(Input, 0);
   Input.shrink_to_fit();
   bool IsValidWithout0s = isValidYaml(Input.data(), Input.size());
 

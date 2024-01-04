@@ -32,6 +32,7 @@ def SIEncodingFamily {
   int GFX90A = 8;
   int GFX940 = 9;
   int GFX11 = 10;
+  int GFX12 = 11;
 }
 
 //===----------------------------------------------------------------------===//
@@ -158,36 +159,18 @@ def SIbuffer_store_format_d16 : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT_D16",
                             SDTBufferStore,
                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
-class SDBufferAtomic<string opcode> : SDNode <opcode,
-  SDTypeProfile<1, 8,
-       [SDTCisVT<2, v4i32>, // rsrc
-       SDTCisVT<3, i32>,   // vindex(VGPR)
-       SDTCisVT<4, i32>,   // voffset(VGPR)
-       SDTCisVT<5, i32>,   // soffset(SGPR)
-       SDTCisVT<6, i32>,   // offset(imm)
-       SDTCisVT<7, i32>,   // cachepolicy(imm)
-       SDTCisVT<8, i1>]>,  // idxen(imm)
-  [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
->;
-
-def SIbuffer_atomic_swap : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SWAP">;
-def SIbuffer_atomic_add : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_ADD">;
-def SIbuffer_atomic_sub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SUB">;
-def SIbuffer_atomic_smin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMIN">;
-def SIbuffer_atomic_umin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMIN">;
-def SIbuffer_atomic_smax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMAX">;
-def SIbuffer_atomic_umax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMAX">;
-def SIbuffer_atomic_and : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_AND">;
-def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
-def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
-def SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
-def SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
-def SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
-def SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
-def SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
-def SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
-
-multiclass SDBufferAtomicNoRet {
+multiclass SDBufferAtomic<string opcode> {
+  def "" : SDNode <opcode,
+    SDTypeProfile<1, 8,
+         [SDTCisVT<2, v4i32>, // rsrc
+         SDTCisVT<3, i32>,   // vindex(VGPR)
+         SDTCisVT<4, i32>,   // voffset(VGPR)
+         SDTCisVT<5, i32>,   // soffset(SGPR)
+         SDTCisVT<6, i32>,   // offset(imm)
+         SDTCisVT<7, i32>,   // cachepolicy(imm)
+         SDTCisVT<8, i1>]>,  // idxen(imm)
+    [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
+  >;
   def "_noret" : PatFrag<
     (ops node:$vdata_in, node:$rsrc, node:$vindex, node:$voffset, node:$soffset,
       node:$offset, node:$cachepolicy, node:$idxen),
@@ -198,28 +181,26 @@ multiclass SDBufferAtomicNoRet {
   }
 }
 
-defm SIbuffer_atomic_swap : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_add : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_sub : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_smin : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_umin : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_smax : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_umax : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_and : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_or : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_xor : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_inc : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_swap : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SWAP">;
+defm SIbuffer_atomic_add : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_ADD">;
+defm SIbuffer_atomic_sub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SUB">;
+defm SIbuffer_atomic_smin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMIN">;
+defm SIbuffer_atomic_umin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMIN">;
+defm SIbuffer_atomic_smax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMAX">;
+defm SIbuffer_atomic_umax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMAX">;
+defm SIbuffer_atomic_and : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_AND">;
+defm SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
+defm SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
+defm SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
+defm SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
+defm SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
+defm SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
+defm SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
+defm SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
-    [SDTCisVT<0, i32>,   // dst
-     SDTCisVT<1, i32>,   // src
-     SDTCisVT<2, i32>,   // cmp
-     SDTCisVT<3, v4i32>, // rsrc
+    [SDTCisVT<3, v4i32>, // rsrc
      SDTCisVT<4, i32>,   // vindex(VGPR)
      SDTCisVT<5, i32>,   // voffset(VGPR)
      SDTCisVT<6, i32>,   // soffset(SGPR)
@@ -879,23 +860,6 @@ def ShiftAmt32Imm : ImmLeaf <i32, [{
   return Imm < 32;
 }]>;
 
-def getNegV2I16Imm : SDNodeXForm<build_vector, [{
-  return SDValue(packNegConstantV2I16(N, *CurDAG), 0);
-}]>;
-
-def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
-  assert(N->getNumOperands() == 2);
-  assert(N->getOperand(0).getValueType().getSizeInBits() == 16);
-  SDValue Src0 = N->getOperand(0);
-  SDValue Src1 = N->getOperand(1);
-  if (Src0 == Src1)
-    return isNegInlineImmediate(Src0.getNode());
-
-  return (isNullConstantOrUndef(Src0) && isNegInlineImmediate(Src1.getNode())) ||
-         (isNullConstantOrUndef(Src1) && isNegInlineImmediate(Src0.getNode()));
-}], getNegV2I16Imm>;
-
-
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
@@ -906,11 +870,19 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
 //===----------------------------------------------------------------------===//
 
 def extract_cpol : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & AMDGPU::CPol::ALL, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::ALL
+                               : AMDGPU::CPol::ALL_pregfx12),
+      SDLoc(N), MVT::i8);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 1, SDLoc(N), MVT::i8);
+  const bool Swizzle =
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::SWZ
+                               : AMDGPU::CPol::SWZ_pregfx12);
+  return CurDAG->getTargetConstant(Swizzle, SDLoc(N), MVT::i8);
 }]>;
 
 def set_glc : SDNodeXForm<timm, [{
@@ -937,6 +909,13 @@ def InterpSlot : CustomOperand<i32>;
 def InterpAttr : CustomOperand<i32>;
 
 def InterpAttrChan : ImmOperand<i32>;
+
+def SplitBarrier : ImmOperand<i32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
+  let DecoderMethod = "decodeSplitBarrier";
+  let PrintMethod = "printOperand";
+}
 
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
@@ -1044,6 +1023,7 @@ class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
 
 class NamedBitOperand<string Id, string Name = NAME>
     : CustomOperand<i1, 1, Name> {
+  let PredicateMethod = "isImmTy<AMDGPUOperand::"#ImmTy#">";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
@@ -1054,8 +1034,8 @@ class NamedBitOperand<string Id, string Name = NAME>
 
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
-    CustomOperandProps<1, Op.ParserMatchClass.Name> {
-  let ParserMethod = Op.ParserMatchClass.ParserMethod;
+    CustomOperandProps<1> {
+  let ParserMatchClass = Op.ParserMatchClass;
   let PrintMethod = Op.PrintMethod;
 }
 
@@ -1096,6 +1076,10 @@ def highmod : NamedBitOperand<"high", "High">;
 def CPol : CustomOperand<i32, 1>;
 def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
+def CPol_GLC : ValuePredicatedOperand<CPol, "Op.getImm() & CPol::GLC">;
+def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
+def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
+def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
 
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;
@@ -1143,6 +1127,8 @@ def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
+def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDst">;
+def wait_va_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSrc">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
@@ -2772,7 +2758,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
-                   [!cast<string>(SIEncodingFamily.GFX11)]];
+                   [!cast<string>(SIEncodingFamily.GFX11)],
+                   [!cast<string>(SIEncodingFamily.GFX12)]];
 }
 
 // Get equivalent SOPK instruction.
@@ -2911,14 +2898,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY"];
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-  let Key = ["OpX", "OpY"];
+  let Key = ["OpX", "OpY", "SubTgt"];
 }
 
 include "SIInstructions.td"

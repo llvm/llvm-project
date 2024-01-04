@@ -25,6 +25,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 
@@ -612,12 +613,14 @@ void mlirOperationSetInherentAttributeByName(MlirOperation op,
 }
 
 intptr_t mlirOperationGetNumDiscardableAttributes(MlirOperation op) {
-  return static_cast<intptr_t>(unwrap(op)->getDiscardableAttrs().size());
+  return static_cast<intptr_t>(
+      llvm::range_size(unwrap(op)->getDiscardableAttrs()));
 }
 
 MlirNamedAttribute mlirOperationGetDiscardableAttribute(MlirOperation op,
                                                         intptr_t pos) {
-  NamedAttribute attr = unwrap(op)->getDiscardableAttrs()[pos];
+  NamedAttribute attr =
+      *std::next(unwrap(op)->getDiscardableAttrs().begin(), pos);
   return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 
@@ -677,6 +680,14 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
   unwrap(op)->print(stream, *unwrap(flags));
 }
 
+void mlirOperationPrintWithState(MlirOperation op, MlirAsmState state,
+                                 MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  if (state.ptr)
+    unwrap(op)->print(stream, *unwrap(state));
+  unwrap(op)->print(stream);
+}
+
 void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
                                 void *userData) {
   detail::CallbackOstream stream(callback, userData);
@@ -703,6 +714,20 @@ void mlirOperationMoveAfter(MlirOperation op, MlirOperation other) {
 
 void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
+}
+
+void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
+                       void *userData, MlirWalkOrder walkOrder) {
+  switch (walkOrder) {
+
+  case MlirWalkPreOrder:
+    unwrap(op)->walk<mlir::WalkOrder::PreOrder>(
+        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+    break;
+  case MlirWalkPostOrder:
+    unwrap(op)->walk<mlir::WalkOrder::PostOrder>(
+        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -961,6 +986,10 @@ bool mlirOpOperandIsNull(MlirOpOperand opOperand) { return !opOperand.ptr; }
 
 MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand) {
   return wrap(unwrap(opOperand)->getOwner());
+}
+
+MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand) {
+  return wrap(unwrap(opOperand)->get());
 }
 
 unsigned mlirOpOperandGetOperandNumber(MlirOpOperand opOperand) {

@@ -472,6 +472,36 @@ bool f(S& s) {
 
 } // namespace ignore_1bit_bitfields
 
+int implicitConversionReturnInt()
+{
+    return true;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion bool -> 'int'
+    // CHECK-FIXES: return 1
+}
+
+int implicitConversionReturnIntWithParens()
+{
+    return (true);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion bool -> 'int'
+    // CHECK-FIXES: return 1
+}
+
+
+bool implicitConversionReturnBool()
+{
+    return 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> bool
+    // CHECK-FIXES: return true
+}
+
+bool implicitConversionReturnBoolWithParens()
+{
+    return (1);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> bool
+    // CHECK-FIXES: return true
+}
+
+
 namespace PR47000 {
   int to_int(bool x) { return int{x}; }
 

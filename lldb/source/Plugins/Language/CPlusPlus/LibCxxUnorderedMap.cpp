@@ -84,7 +84,7 @@ static bool isStdTemplate(ConstString type_name, llvm::StringRef type) {
   // The type name may be prefixed with `std::__<inline-namespace>::`.
   if (name.consume_front("std::"))
     consumeInlineNamespace(name);
-  return name.consume_front(type) && name.startswith("<");
+  return name.consume_front(type) && name.starts_with("<");
 }
 
 static bool isUnorderedMap(ConstString type_name) {
@@ -162,10 +162,27 @@ lldb::ValueObjectSP lldb_private::formatters::
       if (!node_sp || error.Fail())
           return nullptr;
 
-      value_sp = node_sp->GetChildMemberWithName("__value_");
       hash_sp = node_sp->GetChildMemberWithName("__hash_");
-      if (!value_sp || !hash_sp)
+      if (!hash_sp)
         return nullptr;
+
+      value_sp = node_sp->GetChildMemberWithName("__value_");
+      if (!value_sp) {
+        // clang-format off
+        // Since D101206 (ba79fb2e1f), libc++ wraps the `__value_` in an
+        // anonymous union.
+        // Child 0: __hash_node_base base class
+        // Child 1: __hash_
+        // Child 2: anonymous union
+        // clang-format on
+        auto anon_union_sp = node_sp->GetChildAtIndex(2);
+        if (!anon_union_sp)
+          return nullptr;
+
+        value_sp = anon_union_sp->GetChildMemberWithName("__value_");
+        if (!value_sp)
+          return nullptr;
+      }
     }
     m_elements_cache.push_back(
         {value_sp.get(), hash_sp->GetValueAsUnsigned(0)});

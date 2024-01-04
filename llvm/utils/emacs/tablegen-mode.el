@@ -19,7 +19,7 @@
 (defvar tablegen-font-lock-keywords
   (let ((kw (regexp-opt '("class" "defm" "def" "field" "include" "in"
                          "let" "multiclass" "foreach" "if" "then" "else"
-                         "defvar" "defset")
+                         "defvar" "defset" "dump" "assert")
                         'words))
         (type-kw (regexp-opt '("bit" "bits" "code" "dag" "int" "list" "string")
                              'words))

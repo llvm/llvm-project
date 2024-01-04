@@ -3,12 +3,12 @@ ops. Those can be translated to C/C++ via the Cpp emitter.
 
 The following convention is followed:
 
-*   If template arguments are passed to an `emitc.call` operation, C++ is
+*   If template arguments are passed to an `emitc.call_opaque` operation, C++ is
     generated.
 *   If tensors are used, C++ is generated.
-*   If multiple return values are used within in a functions or an `emitc.call`
-    operation, C++11 is required.
-*   If floating-point type template arguments are passed to an `emitc.call`
+*   If multiple return values are used within in a functions or an
+    `emitc.call_opaque` operation, C++11 is required.
+*   If floating-point type template arguments are passed to an `emitc.call_opaque`
     operation, C++20 is required.
 *   Else the generated code is compatible with C99.
 
@@ -31,8 +31,5 @@ translating the following operations:
     *   `func.constant`
     *   `func.func`
     *   `func.return`
-*   'scf' Dialect
-    *   `scf.for`
-    *   `scf.yield`
 *   'arith' Dialect
     *   `arith.constant`

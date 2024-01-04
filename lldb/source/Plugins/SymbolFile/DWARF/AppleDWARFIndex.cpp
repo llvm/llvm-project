@@ -18,6 +18,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
     Module &module, DWARFDataExtractor apple_names,
@@ -50,13 +51,20 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   extract_and_check(apple_namespaces_table_up);
   extract_and_check(apple_types_table_up);
   extract_and_check(apple_objc_table_up);
+  assert(apple_names.GetByteSize() == 0 || apple_names.GetSharedDataBuffer());
+  assert(apple_namespaces.GetByteSize() == 0 ||
+         apple_namespaces.GetSharedDataBuffer());
+  assert(apple_types.GetByteSize() == 0 || apple_types.GetSharedDataBuffer());
+  assert(apple_objc.GetByteSize() == 0 || apple_objc.GetSharedDataBuffer());
 
   if (apple_names_table_up || apple_namespaces_table_up ||
       apple_types_table_up || apple_objc_table_up)
     return std::make_unique<AppleDWARFIndex>(
         module, std::move(apple_names_table_up),
         std::move(apple_namespaces_table_up), std::move(apple_types_table_up),
-        std::move(apple_objc_table_up));
+        std::move(apple_objc_table_up), apple_names.GetSharedDataBuffer(),
+        apple_namespaces.GetSharedDataBuffer(),
+        apple_types.GetSharedDataBuffer(), apple_objc.GetSharedDataBuffer());
 
   return nullptr;
 }

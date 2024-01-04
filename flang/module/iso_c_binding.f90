@@ -10,7 +10,7 @@
 
 module iso_c_binding
 
-  use __Fortran_builtins, only: &
+  use __fortran_builtins, only: &
     c_associated => __builtin_c_associated, &
     c_funloc => __builtin_c_funloc, &
     c_funptr => __builtin_c_funptr, &

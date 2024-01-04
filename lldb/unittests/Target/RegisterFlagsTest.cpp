@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -16,7 +17,7 @@ using namespace lldb;
 TEST(RegisterFlagsTest, Field) {
   // We assume that start <= end is always true, so that is not tested here.
 
-  RegisterFlags::Field f1("abc", 0, 0);
+  RegisterFlags::Field f1("abc", 0);
   ASSERT_EQ(f1.GetName(), "abc");
   // start == end means a 1 bit field.
   ASSERT_EQ(f1.GetSizeInBits(), (unsigned)1);
@@ -51,11 +52,15 @@ static RegisterFlags::Field make_field(unsigned start, unsigned end) {
   return RegisterFlags::Field("", start, end);
 }
 
+static RegisterFlags::Field make_field(unsigned bit) {
+  return RegisterFlags::Field("", bit);
+}
+
 TEST(RegisterFlagsTest, FieldOverlaps) {
   // Single bit fields
-  ASSERT_FALSE(make_field(0, 0).Overlaps(make_field(1, 1)));
-  ASSERT_TRUE(make_field(1, 1).Overlaps(make_field(1, 1)));
-  ASSERT_FALSE(make_field(1, 1).Overlaps(make_field(3, 3)));
+  ASSERT_FALSE(make_field(0, 0).Overlaps(make_field(1)));
+  ASSERT_TRUE(make_field(1, 1).Overlaps(make_field(1)));
+  ASSERT_FALSE(make_field(1, 1).Overlaps(make_field(3)));
 
   ASSERT_TRUE(make_field(0, 1).Overlaps(make_field(1, 2)));
   ASSERT_TRUE(make_field(1, 2).Overlaps(make_field(0, 1)));
@@ -71,13 +76,13 @@ TEST(RegisterFlagsTest, PaddingDistance) {
   // (start bit is higher) field first and that they do not overlap.
 
   // [field 1][field 2]
-  ASSERT_EQ(make_field(1, 1).PaddingDistance(make_field(0, 0)), 0ULL);
+  ASSERT_EQ(make_field(1, 1).PaddingDistance(make_field(0)), 0ULL);
   // [field 1][..][field 2]
-  ASSERT_EQ(make_field(2, 2).PaddingDistance(make_field(0, 0)), 1ULL);
+  ASSERT_EQ(make_field(2, 2).PaddingDistance(make_field(0)), 1ULL);
   // [field 1][field 1][field 2]
-  ASSERT_EQ(make_field(1, 2).PaddingDistance(make_field(0, 0)), 0ULL);
+  ASSERT_EQ(make_field(1, 2).PaddingDistance(make_field(0)), 0ULL);
   // [field 1][30 bits free][field 2]
-  ASSERT_EQ(make_field(31, 31).PaddingDistance(make_field(0, 0)), 30ULL);
+  ASSERT_EQ(make_field(31, 31).PaddingDistance(make_field(0)), 30ULL);
 }
 
 static void test_padding(const std::vector<RegisterFlags::Field> &fields,
@@ -99,18 +104,18 @@ TEST(RegisterFlagsTest, RegisterFlagsPadding) {
 
   // Needs padding in between the fields, single bit.
   test_padding({make_field(17, 31), make_field(0, 15)},
-               {make_field(17, 31), make_field(16, 16), make_field(0, 15)});
+               {make_field(17, 31), make_field(16), make_field(0, 15)});
   // Multiple bits of padding.
   test_padding({make_field(17, 31), make_field(0, 14)},
                {make_field(17, 31), make_field(15, 16), make_field(0, 14)});
 
   // Padding before first field, single bit.
-  test_padding({make_field(0, 30)}, {make_field(31, 31), make_field(0, 30)});
+  test_padding({make_field(0, 30)}, {make_field(31), make_field(0, 30)});
   // Multiple bits.
   test_padding({make_field(0, 15)}, {make_field(16, 31), make_field(0, 15)});
 
   // Padding after last field, single bit.
-  test_padding({make_field(1, 31)}, {make_field(1, 31), make_field(0, 0)});
+  test_padding({make_field(1, 31)}, {make_field(1, 31), make_field(0)});
   // Multiple bits.
   test_padding({make_field(2, 31)}, {make_field(2, 31), make_field(0, 1)});
 
@@ -132,9 +137,8 @@ TEST(RegisterFieldsTest, ReverseFieldOrder) {
   ASSERT_EQ(0x56781234ULL, (unsigned long long)rf2.ReverseFieldOrder(0x12345678));
 
   // Many small fields.
-  RegisterFlags rf3("", 4,
-                    {make_field(31, 31), make_field(30, 30), make_field(29, 29),
-                     make_field(28, 28)});
+  RegisterFlags rf3(
+      "", 4, {make_field(31), make_field(30), make_field(29), make_field(28)});
   ASSERT_EQ(0x00000005ULL, rf3.ReverseFieldOrder(0xA0000000));
 }
 
@@ -167,7 +171,7 @@ TEST(RegisterFlagsTest, AsTable) {
             pos_wider.AsTable(100));
 
   // Single bit fields don't need to show start and end, just one of them.
-  RegisterFlags single_bit("", 4, {make_field(31, 31)});
+  RegisterFlags single_bit("", 4, {make_field(31)});
   ASSERT_EQ("| 31 | 30-0 |\n"
             "|----|------|\n"
             "|    |      |",
@@ -177,7 +181,7 @@ TEST(RegisterFlagsTest, AsTable) {
   RegisterFlags many_fields("", 4,
                             {RegisterFlags::Field("cat", 28, 31),
                              RegisterFlags::Field("pigeon", 20, 23),
-                             RegisterFlags::Field("wolf", 12, 12),
+                             RegisterFlags::Field("wolf", 12),
                              RegisterFlags::Field("x", 0, 4)});
   ASSERT_EQ("| 31-28 | 27-24 | 23-20  | 19-13 |  12  | 11-5 | 4-0 |\n"
             "|-------|-------|--------|-------|------|------|-----|\n"
@@ -254,4 +258,53 @@ TEST(RegisterFlagsTest, AsTable) {
             "|------------------|\n"
             "| really long name |",
             max_many_columns.AsTable(23));
+}
+
+TEST(RegisterFieldsTest, ToXML) {
+  StreamString strm;
+
+  // RegisterFlags requires that some fields be given, so no testing of empty
+  // input.
+
+  // Unnamed fields are padding that are ignored. This applies to fields passed
+  // in, and those generated to fill the other bits (31-1 here).
+  RegisterFlags("Foo", 4, {RegisterFlags::Field("", 0, 0)}).ToXML(strm);
+  ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
+                              "</flags>\n");
+
+  strm.Clear();
+  RegisterFlags("Foo", 4, {RegisterFlags::Field("abc", 0, 0)}).ToXML(strm);
+  ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
+                              "  <field name=\"abc\" start=\"0\" end=\"0\"/>\n"
+                              "</flags>\n");
+
+  strm.Clear();
+  // Should use the current indentation level as a starting point.
+  strm.IndentMore();
+  RegisterFlags(
+      "Bar", 5,
+      {RegisterFlags::Field("f1", 25, 32), RegisterFlags::Field("f2", 10, 24)})
+      .ToXML(strm);
+  ASSERT_EQ(strm.GetString(),
+            "  <flags id=\"Bar\" size=\"5\">\n"
+            "    <field name=\"f1\" start=\"25\" end=\"32\"/>\n"
+            "    <field name=\"f2\" start=\"10\" end=\"24\"/>\n"
+            "  </flags>\n");
+
+  strm.Clear();
+  strm.IndentLess();
+  // Should replace any XML unsafe characters in field names.
+  RegisterFlags("Safe", 8,
+                {RegisterFlags::Field("A<", 4), RegisterFlags::Field("B>", 3),
+                 RegisterFlags::Field("C'", 2), RegisterFlags::Field("D\"", 1),
+                 RegisterFlags::Field("E&", 0)})
+      .ToXML(strm);
+  ASSERT_EQ(strm.GetString(),
+            "<flags id=\"Safe\" size=\"8\">\n"
+            "  <field name=\"A&lt;\" start=\"4\" end=\"4\"/>\n"
+            "  <field name=\"B&gt;\" start=\"3\" end=\"3\"/>\n"
+            "  <field name=\"C&apos;\" start=\"2\" end=\"2\"/>\n"
+            "  <field name=\"D&quot;\" start=\"1\" end=\"1\"/>\n"
+            "  <field name=\"E&amp;\" start=\"0\" end=\"0\"/>\n"
+            "</flags>\n");
 }

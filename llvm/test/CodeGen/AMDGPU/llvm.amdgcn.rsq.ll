@@ -47,9 +47,7 @@ define amdgpu_kernel void @rsq_f64_constant_4.0(ptr addrspace(1) %out) #1 {
 }
 
 ; FUNC-LABEL: {{^}}rsq_f64_constant_100.0
-; SI-DAG: s_mov_b32 s{{[0-9]+}}, 0x40590000
-; SI-DAG: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; SI: v_rsq_f64_e32 {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+; SI: v_rsq_f64_e32 {{v\[[0-9]+:[0-9]+\]}}, 0x40590000
 define amdgpu_kernel void @rsq_f64_constant_100.0(ptr addrspace(1) %out) #1 {
   %rsq = call double @llvm.amdgcn.rsq.f64(double 100.0) #0
   store double %rsq, ptr addrspace(1) %out, align 4

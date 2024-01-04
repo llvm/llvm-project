@@ -86,24 +86,12 @@
 #include <exception>
 #include <execution>
 #include <expected>
-#include <experimental/deque>
-#include <experimental/forward_list>
 #include <experimental/iterator>
-#include <experimental/list>
-#include <experimental/map>
-#include <experimental/memory_resource>
+#include <experimental/memory>
 #include <experimental/propagate_const>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#  include <experimental/regex>
-#endif
-#include <experimental/set>
 #include <experimental/simd>
-#include <experimental/string>
 #include <experimental/type_traits>
-#include <experimental/unordered_map>
-#include <experimental/unordered_set>
 #include <experimental/utility>
-#include <experimental/vector>
 #include <fenv.h>
 #include <filesystem>
 #include <float.h>
@@ -135,7 +123,6 @@
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <latch>
 #endif
-#include <limits.h>
 #include <limits>
 #include <list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -170,7 +157,6 @@
 #  include <semaphore>
 #endif
 #include <set>
-#include <setjmp.h>
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <shared_mutex>
 #endif
@@ -200,6 +186,9 @@
 #include <string_view>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <strstream>
+#endif
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <syncstream>
 #endif
 #include <system_error>
 #include <tgmath.h>

@@ -15,6 +15,7 @@
 #define MLIR_CONVERSION_LLVMCOMMON_TYPECONVERTER_H
 
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -124,17 +125,6 @@ public:
   /// Gets the LLVM representation of the index type. The returned type is an
   /// integer type with the size configured for this type converter.
   Type getIndexType() const;
-
-  /// Returns true if using opaque pointers was enabled in the lowering options.
-  bool useOpaquePointers() const { return getOptions().useOpaquePointers; }
-
-  /// Creates an LLVM pointer type with the given element type and address
-  /// space.
-  /// This function is meant to be used in code supporting both typed and opaque
-  /// pointers, as it will create an opaque pointer with the given address space
-  /// if opaque pointers are enabled in the lowering options.
-  LLVM::LLVMPointerType getPointerType(Type elementType,
-                                       unsigned addressSpace = 0) const;
 
   /// Gets the bitwidth of the index type when converted to LLVM.
   unsigned getIndexTypeBitwidth() const { return options.getIndexBitwidth(); }

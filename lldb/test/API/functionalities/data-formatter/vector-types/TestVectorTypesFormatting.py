@@ -86,3 +86,10 @@ class VectorTypesFormattingTestCase(TestBase):
         v.SetFormat(lldb.eFormatVectorOfFloat32)
         oldValueAgain = v.GetChildAtIndex(0).GetValue()
         self.assertEqual(oldValue, oldValueAgain, "same format but different values")
+
+        # Test formatter for vector types whose size is not a power-of-2
+        f3 = self.frame().FindVariable("f3")
+        self.assertEqual(f3.GetNumChildren(), 3)
+        self.assertEqual(f3.GetChildAtIndex(0).GetData().float[0], 1.25)
+        self.assertEqual(f3.GetChildAtIndex(1).GetData().float[0], 2.50)
+        self.assertEqual(f3.GetChildAtIndex(2).GetData().float[0], 2.50)

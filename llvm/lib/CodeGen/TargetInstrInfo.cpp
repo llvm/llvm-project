@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -430,10 +431,18 @@ bool TargetInstrInfo::produceSameValue(const MachineInstr &MI0,
   return MI0.isIdenticalTo(MI1, MachineInstr::IgnoreVRegDefs);
 }
 
-MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) const {
-  assert(!Orig.isNotDuplicable() && "Instruction cannot be duplicated");
+MachineInstr &
+TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator InsertBefore,
+                           const MachineInstr &Orig) const {
   MachineFunction &MF = *MBB.getParent();
+  // CFI instructions are marked as non-duplicable, because Darwin compact
+  // unwind info emission can't handle multiple prologue setups.
+  assert((!Orig.isNotDuplicable() ||
+          (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+           Orig.isCFIInstruction())) &&
+         "Instruction cannot be duplicated");
+
   return MF.cloneMachineInstrBundle(MBB, InsertBefore, Orig);
 }
 
@@ -556,6 +565,72 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   return NewMI;
 }
 
+static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
+                                    const TargetInstrInfo &TII) {
+  // If the machine operand is tied, untie it first.
+  if (MI->getOperand(OpNo).isTied()) {
+    unsigned TiedTo = MI->findTiedOperandIdx(OpNo);
+    MI->untieRegOperand(OpNo);
+    // Intentional recursion!
+    foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
+  }
+
+  SmallVector<MachineOperand, 5> NewOps;
+  TII.getFrameIndexOperands(NewOps, FI);
+  assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
+  MI->removeOperand(OpNo);
+  MI->insert(MI->operands_begin() + OpNo, NewOps);
+
+  // Change the previous operand to a MemKind InlineAsm::Flag. The second param
+  // is the per-target number of operands that represent the memory operand
+  // excluding this one (MD). This includes MO.
+  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
+  F.setMemConstraint(InlineAsm::ConstraintCode::m);
+  MachineOperand &MD = MI->getOperand(OpNo - 1);
+  MD.setImm(F);
+}
+
+// Returns nullptr if not possible to fold.
+static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
+                                             ArrayRef<unsigned> Ops, int FI,
+                                             const TargetInstrInfo &TII) {
+  assert(MI.isInlineAsm() && "wrong opcode");
+  if (Ops.size() > 1)
+    return nullptr;
+  unsigned Op = Ops[0];
+  assert(Op && "should never be first operand");
+  assert(MI.getOperand(Op).isReg() && "shouldn't be folding non-reg operands");
+
+  if (!MI.mayFoldInlineAsmRegOp(Op))
+    return nullptr;
+
+  MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
+
+  foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
+
+  // Update mayload/maystore metadata, and memoperands.
+  const VirtRegInfo &RI =
+      AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
+  MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  if (RI.Reads) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
+    Flags |= MachineMemOperand::MOLoad;
+  }
+  if (RI.Writes) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
+    Flags |= MachineMemOperand::MOStore;
+  }
+  MachineFunction *MF = NewMI.getMF();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
+      MFI.getObjectAlign(FI));
+  NewMI.addMemOperand(*MF, MMO);
+
+  return &NewMI;
+}
+
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops, int FI,
                                                  LiveIntervals *LIS,
@@ -603,6 +678,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     NewMI = foldPatchpoint(MF, MI, Ops, FI, *this);
     if (NewMI)
       MBB->insert(MI, NewMI);
+  } else if (MI.isInlineAsm()) {
+    return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
@@ -674,6 +751,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     NewMI = foldPatchpoint(MF, MI, Ops, FrameIndex, *this);
     if (NewMI)
       NewMI = &*MBB.insert(MI, NewMI);
+  } else if (MI.isInlineAsm() && isLoadFromStackSlot(LoadMI, FrameIndex)) {
+    return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
@@ -1051,8 +1130,7 @@ void TargetInstrInfo::reassociateOps(
   MachineInstrBuilder MIB1 =
       BuildMI(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR)
           .addReg(RegX, getKillRegState(KillX))
-          .addReg(RegY, getKillRegState(KillY))
-          .setMIFlags(Prev.getFlags());
+          .addReg(RegY, getKillRegState(KillY));
 
   if (SwapRootOperands) {
     std::swap(RegA, NewVR);
@@ -1062,8 +1140,21 @@ void TargetInstrInfo::reassociateOps(
   MachineInstrBuilder MIB2 =
       BuildMI(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC)
           .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(KillNewVR))
-          .setMIFlags(Root.getFlags());
+          .addReg(NewVR, getKillRegState(KillNewVR));
+
+  // Propagate FP flags from the original instructions.
+  // But clear poison-generating flags because those may not be valid now.
+  // TODO: There should be a helper function for copying only fast-math-flags.
+  uint32_t IntersectedFlags = Root.getFlags() & Prev.getFlags();
+  MIB1->setFlags(IntersectedFlags);
+  MIB1->clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MIB1->clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MIB1->clearFlag(MachineInstr::MIFlag::IsExact);
+
+  MIB2->setFlags(IntersectedFlags);
+  MIB2->clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MIB2->clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MIB2->clearFlag(MachineInstr::MIFlag::IsExact);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 
@@ -1287,15 +1378,15 @@ bool TargetInstrInfo::getMemOperandWithOffset(
 //  SelectionDAG latency interface.
 //===----------------------------------------------------------------------===//
 
-int
+std::optional<unsigned>
 TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
                                    SDNode *DefNode, unsigned DefIdx,
                                    SDNode *UseNode, unsigned UseIdx) const {
   if (!ItinData || ItinData->isEmpty())
-    return -1;
+    return std::nullopt;
 
   if (!DefNode->isMachineOpcode())
-    return -1;
+    return std::nullopt;
 
   unsigned DefClass = get(DefNode->getMachineOpcode()).getSchedClass();
   if (!UseNode->isMachineOpcode())
@@ -1304,8 +1395,8 @@ TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
 }
 
-int TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
-                                     SDNode *N) const {
+unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
+                                          SDNode *N) const {
   if (!ItinData || ItinData->isEmpty())
     return 1;
 
@@ -1369,8 +1460,9 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     return false;
 
   unsigned DefClass = DefMI.getDesc().getSchedClass();
-  int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
-  return (DefCycle != -1 && DefCycle <= 1);
+  std::optional<unsigned> DefCycle =
+      ItinData->getOperandCycle(DefClass, DefIdx);
+  return DefCycle && DefCycle <= 1U;
 }
 
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
@@ -1488,11 +1580,9 @@ unsigned TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the
 /// itinerary. This may be overriden by the target.
-int TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                       const MachineInstr &DefMI,
-                                       unsigned DefIdx,
-                                       const MachineInstr &UseMI,
-                                       unsigned UseIdx) const {
+std::optional<unsigned> TargetInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   unsigned UseClass = UseMI.getDesc().getSchedClass();
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
@@ -1629,6 +1719,10 @@ std::string TargetInstrInfo::createMIROperandComment(
   unsigned TiedTo;
   if (F.isUseOperandTiedToDef(TiedTo))
     OS << " tiedto:$" << TiedTo;
+
+  if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isRegUseKind()) &&
+      F.getRegMayBeFolded())
+    OS << " foldable";
 
   return OS.str();
 }

@@ -115,6 +115,7 @@ cxx_sources = [
   "atomic.cpp",
   "barrier.cpp",
   "bind.cpp",
+  "call_once.cpp",
   "charconv.cpp",
   "chrono.cpp",
   "condition_variable.cpp",
@@ -144,6 +145,7 @@ cxx_sources = [
   "iostream.cpp",
   "legacy_pointer_safety.cpp",
   "locale.cpp",
+  "ostream.cpp",
   "memory.cpp",
   "memory_resource.cpp",
   "mutex.cpp",
@@ -306,7 +308,7 @@ if (libcxx_enable_experimental) {
   static_library("cxx_experimental") {
     output_dir = runtimes_dir
     output_name = "c++experimental"
-    sources = [ "experimental/memory_resource.cpp" ]
+    sources = [ "experimental/keep.cpp" ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
         "tz.cpp",

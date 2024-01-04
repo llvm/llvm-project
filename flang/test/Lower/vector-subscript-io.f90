@@ -1,5 +1,5 @@
 ! Test lowering of IO input items with vector subscripts
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 ! UNSUPPORTED: system-windows
 
 ! CHECK-LABEL: func @_QPsimple(
@@ -9,7 +9,7 @@ subroutine simple(x, y)
   integer :: x(10)
   read(*,*) x(y)
 ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK-DAG: %[[VAL_1:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_3:.*]] = arith.constant 4 : i32
 ! CHECK-DAG: %[[VAL_4:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_5:.*]] = arith.constant 0 : index
@@ -51,7 +51,7 @@ subroutine only_once(x)
   real :: x(:, :)
   ! Test subscripts are only evaluated once.
   read(*,*) x(get_substcript(), get_vector())
-! CHECK-DAG: %[[VAL_26:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_26:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_28:.*]] = arith.constant 0 : i64
 ! CHECK-DAG: %[[VAL_29:.*]] = arith.constant 0 : index
 ! CHECK-DAG: %[[VAL_30:.*]] = arith.constant 1 : index
@@ -102,7 +102,7 @@ subroutine with_assumed_shapes(x, y)
   integer :: y(:)
   integer :: x(:)
   read(*,*) x(y)
-! CHECK-DAG: %[[VAL_60:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_60:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_62:.*]] = arith.constant 4 : i32
 ! CHECK-DAG: %[[VAL_63:.*]] = arith.constant 0 : index
 ! CHECK-DAG: %[[VAL_64:.*]] = arith.constant 1 : index
@@ -138,7 +138,7 @@ subroutine lower_bounds(x, y)
   read(*,*) x(3, y)
 ! CHECK-DAG: %[[VAL_84:.*]] = arith.constant 4 : index
 ! CHECK-DAG: %[[VAL_85:.*]] = arith.constant 6 : index
-! CHECK-DAG: %[[VAL_86:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_86:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_88:.*]] = arith.constant 3 : i64
 ! CHECK-DAG: %[[VAL_89:.*]] = arith.constant 2 : index
 ! CHECK-DAG: %[[VAL_90:.*]] = arith.constant 4 : i32
@@ -177,7 +177,7 @@ subroutine two_vectors(x, y1, y2)
   real :: x(4, 4)
   read(*,*) x(y1, y2)
 ! CHECK-DAG: %[[VAL_114:.*]] = arith.constant 4 : index
-! CHECK-DAG: %[[VAL_115:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_115:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_117:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_118:.*]] = arith.constant 0 : index
 ! CHECK-DAG: %[[VAL_119:.*]] = arith.constant 1 : index
@@ -220,7 +220,7 @@ subroutine triplets_and_vector(x, y)
   integer :: y(3)
   complex :: x(4, 4)
   read(*,*) x(1:4:2, y)
-! CHECK-DAG: %[[VAL_147:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_147:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_149:.*]] = arith.constant 4 : index
 ! CHECK-DAG: %[[VAL_150:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_151:.*]] = arith.constant 2 : index
@@ -264,7 +264,7 @@ subroutine simple_char(x, y)
   character(*) :: x(3:8)
   read(*,*) x(y)
 ! CHECK-DAG: %[[VAL_178:.*]] = arith.constant 6 : index
-! CHECK-DAG: %[[VAL_179:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_179:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_181:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_182:.*]] = arith.constant 0 : index
 ! CHECK-DAG: %[[VAL_183:.*]] = arith.constant 1 : index
@@ -301,7 +301,7 @@ subroutine substring(x, y, i, j)
   integer :: y(3), i, j
   character(*) :: x(:)
   read(*,*) x(y)(i:j)
-! CHECK-DAG: %[[VAL_206:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_206:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_208:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_209:.*]] = arith.constant 0 : index
 ! CHECK-DAG: %[[VAL_210:.*]] = arith.constant 1 : index
@@ -347,7 +347,7 @@ subroutine complex_part(z, y)
   integer :: y(:)
   complex :: z(:)
   read(*,*) z(y)%IM
-! CHECK-DAG: %[[VAL_244:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_244:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_246:.*]] = arith.constant 1 : i32
 ! CHECK-DAG: %[[VAL_247:.*]] = arith.constant 0 : index
 ! CHECK-DAG: %[[VAL_248:.*]] = arith.constant 1 : index
@@ -392,7 +392,7 @@ subroutine simple_derived(x, y)
   type(t) :: x(3:8)
   read(*,*) x(y)
 ! CHECK-DAG: %[[VAL_267:.*]] = arith.constant 6 : index
-! CHECK-DAG: %[[VAL_268:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_268:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_270:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_271:.*]] = arith.constant 4 : index
 ! CHECK-DAG: %[[VAL_272:.*]] = arith.constant 0 : index
@@ -430,7 +430,7 @@ subroutine with_path(b, i)
   integer :: i(:)
   read (*, *) b(5, i, 8:9:1)%a(4,5)%i
 ! CHECK-DAG: %[[VAL_294:.*]] = arith.constant 4 : index
-! CHECK-DAG: %[[VAL_295:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_295:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_297:.*]] = arith.constant 8 : index
 ! CHECK-DAG: %[[VAL_298:.*]] = arith.constant 9 : index
 ! CHECK-DAG: %[[VAL_299:.*]] = arith.constant 4 : i64
@@ -481,7 +481,7 @@ subroutine simple_iostat(x, y, j, stat)
   integer :: j, y(:), stat
   real :: x(:)
   read(*, *, iostat=stat) x(y), j
-! CHECK-DAG: %[[VAL_334:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_334:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_336:.*]] = arith.constant false
 ! CHECK-DAG: %[[VAL_337:.*]] = arith.constant true
 ! CHECK-DAG: %[[VAL_338:.*]] = arith.constant 1 : index
@@ -527,7 +527,7 @@ subroutine iostat_in_io_loop(k, j, stat)
   integer  :: stat
   read(*, *, iostat=stat) (k(i, j), i=1,3,1)
 ! CHECK-DAG: %[[VAL_365:.*]] = arith.constant 5 : index
-! CHECK-DAG: %[[VAL_366:.*]] = arith.constant -1 : i32
+! CHECK-DAG: %[[VAL_366:.*]] = arith.constant 5 : i32
 ! CHECK-DAG: %[[VAL_368:.*]] = arith.constant 3 : index
 ! CHECK-DAG: %[[VAL_369:.*]] = arith.constant true
 ! CHECK-DAG: %[[VAL_370:.*]] = arith.constant false

@@ -17,9 +17,9 @@
 
 #include "Inputs/cuda.h"
 
-// LINKED4: @llvm.amdgcn.abi.version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 400
+// LINKED4: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 400
 // LINKED4-LABEL: bar
-// LINKED4-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @llvm.amdgcn.abi.version to ptr), align {{.*}}
+// LINKED4-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @__oclc_ABI_version to ptr), align {{.*}}
 // LINKED4-NOT: icmp sge i32 %{{.*}}, 500
 // LINKED4: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // LINKED4: [[GEP_5_X:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 12
@@ -28,7 +28,7 @@
 // LINKED4: select i1 false, ptr addrspace(4) [[GEP_5_X]], ptr addrspace(4) [[GEP_4_X]]
 // LINKED4: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 
-// LINKED4-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @llvm.amdgcn.abi.version to ptr), align {{.*}}
+// LINKED4-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @__oclc_ABI_version to ptr), align {{.*}}
 // LINKED4-NOT: icmp sge i32 %{{.*}}, 500
 // LINKED4: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // LINKED4: [[GEP_5_Y:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 14
@@ -37,7 +37,7 @@
 // LINKED4: select i1 false, ptr addrspace(4) [[GEP_5_Y]], ptr addrspace(4) [[GEP_4_Y]]
 // LINKED4: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 
-// LINKED4-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @llvm.amdgcn.abi.version to ptr), align {{.*}}
+// LINKED4-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @__oclc_ABI_version to ptr), align {{.*}}
 // LINKED4-NOT: icmp sge i32 %{{.*}}, 500
 // LINKED4: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // LINKED4: [[GEP_5_Z:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 16
@@ -47,9 +47,9 @@
 // LINKED4: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 // LINKED4: "amdgpu_code_object_version", i32 400
 
-// LINKED5: llvm.amdgcn.abi.version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
+// LINKED5: __oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
 // LINKED5-LABEL: bar
-// LINKED5-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @llvm.amdgcn.abi.version to ptr), align {{.*}}
+// LINKED5-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @__oclc_ABI_version to ptr), align {{.*}}
 // LINKED5-NOT: icmp sge i32 %{{.*}}, 500
 // LINKED5: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // LINKED5: [[GEP_5_X:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 12
@@ -58,7 +58,7 @@
 // LINKED5: select i1 true, ptr addrspace(4) [[GEP_5_X]], ptr addrspace(4) [[GEP_4_X]]
 // LINKED5: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 
-// LINKED5-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @llvm.amdgcn.abi.version to ptr), align {{.*}}
+// LINKED5-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @__oclc_ABI_version to ptr), align {{.*}}
 // LINKED5-NOT: icmp sge i32 %{{.*}}, 500
 // LINKED5: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // LINKED5: [[GEP_5_Y:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 14
@@ -67,7 +67,7 @@
 // LINKED5: select i1 true, ptr addrspace(4) [[GEP_5_Y]], ptr addrspace(4) [[GEP_4_Y]]
 // LINKED5: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 
-// LINKED5-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @llvm.amdgcn.abi.version to ptr), align {{.*}}
+// LINKED5-NOT: load i32, ptr addrspacecast (ptr addrspace(4) @__oclc_ABI_version to ptr), align {{.*}}
 // LINKED5-NOT: icmp sge i32 %{{.*}}, 500
 // LINKED5: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // LINKED5: [[GEP_5_Z:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 16

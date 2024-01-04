@@ -342,6 +342,10 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset, int64_t MaxOffset) {
+    return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
+  }
+
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
     auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {
@@ -380,6 +384,11 @@ public:
 
   bool isNumRegsMajorCostOfLSR() {
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
+  }
+
+  bool shouldFoldTerminatingConditionAfterLSR() const {
+    return TargetTransformInfoImplBase::
+        shouldFoldTerminatingConditionAfterLSR();
   }
 
   bool isProfitableLSRChainElement(Instruction *I) {
@@ -534,6 +543,25 @@ public:
     if (TLI->isOperationLegalOrCustomOrPromote(ISD::FADD, VT))
       return TargetTransformInfo::TCC_Basic;
     return TargetTransformInfo::TCC_Expensive;
+  }
+
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const {
+    switch (Inst.getOpcode()) {
+    default:
+      break;
+    case Instruction::SDiv:
+    case Instruction::SRem:
+    case Instruction::UDiv:
+    case Instruction::URem: {
+      if (!isa<ConstantInt>(Inst.getOperand(1)))
+        return false;
+      EVT VT = getTLI()->getValueType(DL, Inst.getType());
+      return !getTLI()->isIntDivCheap(VT, Fn.getAttributes());
+    }
+    };
+
+    return false;
   }
 
   unsigned getInliningThresholdMultiplier() const { return 1; }
@@ -1691,7 +1719,69 @@ public:
     }
     }
 
-    // Assume that we need to scalarize this intrinsic.
+    // VP Intrinsics should have the same cost as their non-vp counterpart.
+    // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
+    // counterpart when the vector length argument is smaller than the maximum
+    // vector length.
+    // TODO: Support other kinds of VPIntrinsics
+    if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
+      std::optional<unsigned> FOp =
+          VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+      if (FOp) {
+        if (ICA.getID() == Intrinsic::vp_load) {
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgs().size() > 1)
+            if (auto *PtrTy =
+                    dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
+              AS = PtrTy->getAddressSpace();
+          return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
+                                          AS, CostKind);
+        }
+        if (ICA.getID() == Intrinsic::vp_store) {
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgs().size() >= 2)
+            if (auto *PtrTy =
+                    dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
+              AS = PtrTy->getAddressSpace();
+          return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
+                                          AS, CostKind);
+        }
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+          return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
+                                                 CostKind);
+        }
+      }
+
+      std::optional<Intrinsic::ID> FID =
+          VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+      if (FID) {
+        // Non-vp version will have same Args/Tys except mask and vector length.
+        assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
+               "Expected VPIntrinsic to have Mask and Vector Length args and "
+               "types");
+        ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
+
+        // VPReduction intrinsics have a start value argument that their non-vp
+        // counterparts do not have, except for the fadd and fmul non-vp
+        // counterpart.
+        if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
+            *FID != Intrinsic::vector_reduce_fadd &&
+            *FID != Intrinsic::vector_reduce_fmul)
+          NewTys = NewTys.drop_front();
+
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
+                                       ICA.getFlags());
+        return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
+      }
+    }
+
+    // Assume that we need to scalarize this intrinsic.)
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
     InstructionCost ScalarizationCost = InstructionCost::getInvalid();
@@ -1846,6 +1936,12 @@ public:
       break;
     case Intrinsic::rint:
       ISD = ISD::FRINT;
+      break;
+    case Intrinsic::lrint:
+      ISD = ISD::LRINT;
+      break;
+    case Intrinsic::llrint:
+      ISD = ISD::LLRINT;
       break;
     case Intrinsic::round:
       ISD = ISD::FROUND;

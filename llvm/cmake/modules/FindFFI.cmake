@@ -38,15 +38,27 @@ find_library(FFI_LIBRARIES ffi PATHS ${FFI_LIBRARY_DIR})
 
 if(FFI_LIBRARIES)
   include(CMakePushCheckState)
-  include(CheckCSourceCompiles)
   cmake_push_check_state()
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${FFI_LIBRARIES})
-  check_c_source_compiles("
+  set(HAVE_FFI_CALL_SRC [=[
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
     struct ffi_cif;
     typedef struct ffi_cif ffi_cif;
     void ffi_call(ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue);
-    int main(void) { ffi_call(0, 0, 0, 0); }"
-    HAVE_FFI_CALL)
+    #ifdef __cplusplus
+    }
+    #endif
+    int main(void) { ffi_call(0, 0, 0, 0); }
+    ]=])
+  if(DEFINED CMAKE_C_COMPILER)
+    include(CheckCSourceCompiles)
+    check_c_source_compiles("${HAVE_FFI_CALL_SRC}" HAVE_FFI_CALL)
+  else()
+    include(CheckCXXSourceCompiles)
+    check_cxx_source_compiles("${HAVE_FFI_CALL_SRC}" HAVE_FFI_CALL)
+  endif()
   cmake_pop_check_state()
 endif()
 

@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "mutex.h"
+#include "report_linux.h"
 #include "trusty.h"
 
 #include <errno.h>           // for errno
@@ -51,7 +52,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   if (IS_ERR(P)) {
     errno = lk_err_to_errno(PTR_ERR(P));
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(Size);
+      reportMapError(Size);
     return nullptr;
   }
 
@@ -61,7 +62,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
 void unmap(UNUSED void *Addr, UNUSED uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (_trusty_munmap(Addr, Size) != 0)
-    dieOnMapUnmapError();
+    reportUnmapError(reinterpret_cast<uptr>(Addr), Size);
 }
 
 void setMemoryPermission(UNUSED uptr Addr, UNUSED uptr Size, UNUSED uptr Flags,

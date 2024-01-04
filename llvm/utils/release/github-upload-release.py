@@ -30,7 +30,7 @@
 
 import argparse
 import github
-
+from textwrap import dedent
 
 def create_release(repo, release, tag=None, name=None, message=None):
     if not tag:
@@ -40,7 +40,18 @@ def create_release(repo, release, tag=None, name=None, message=None):
         name = "LLVM {}".format(release)
 
     if not message:
-        message = "LLVM {} Release".format(release)
+        message = dedent(
+            """\
+            LLVM {} Release
+
+            # A note on binaries
+
+            Volunteers make binaries for the LLVM project, which will be uploaded
+            when they have had time to test and build these binaries. They might
+            not be available directly or not at all for each release. We suggest
+            you use the binaries from your distribution or build your own if you
+            rely on a specific platform or configuration."""
+        ).format(release)
 
     prerelease = True if "rc" in release else False
 

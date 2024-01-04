@@ -11,5 +11,5 @@ define amdgpu_kernel void @kern() {
   ret void
 }
 
-!0 = !{i64 0, i64 1}
+!0 = !{i32 0, i32 1}
 

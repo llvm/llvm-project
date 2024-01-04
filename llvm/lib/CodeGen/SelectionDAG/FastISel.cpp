@@ -560,15 +560,13 @@ bool FastISel::selectGetElementPtr(const User *I) {
         }
       }
     } else {
-      Type *Ty = GTI.getIndexedType();
-
       // If this is a constant subscript, handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
         if (CI->isZero())
           continue;
         // N = N + Offset
         uint64_t IdxN = CI->getValue().sextOrTrunc(64).getSExtValue();
-        TotalOffs += DL.getTypeAllocSize(Ty) * IdxN;
+        TotalOffs += GTI.getSequentialElementStride(DL) * IdxN;
         if (TotalOffs >= MaxOffs) {
           N = fastEmit_ri_(VT, ISD::ADD, N, TotalOffs, VT);
           if (!N) // Unhandled operand. Halt "fast" selection and bail.
@@ -585,7 +583,7 @@ bool FastISel::selectGetElementPtr(const User *I) {
       }
 
       // N = N + Idx * ElementSize;
-      uint64_t ElementSize = DL.getTypeAllocSize(Ty);
+      uint64_t ElementSize = GTI.getSequentialElementStride(DL);
       Register IdxN = getRegForGEPIndex(Idx);
       if (!IdxN) // Unhandled operand. Halt "fast" selection and bail.
         return false;
@@ -1000,8 +998,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   if (!CanLowerReturn)
     return false;
 
-  for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
-    EVT VT = RetTys[I];
+  for (EVT VT : RetTys) {
     MVT RegisterVT = TLI.getRegisterType(CLI.RetTy->getContext(), VT);
     unsigned NumRegs = TLI.getNumRegisters(CLI.RetTy->getContext(), VT);
     for (unsigned i = 0; i != NumRegs; ++i) {

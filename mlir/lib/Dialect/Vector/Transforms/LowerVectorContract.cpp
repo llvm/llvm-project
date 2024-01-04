@@ -139,7 +139,7 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   Value mul;
 
   if (isInt) {
-    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF ||
+    if (kind == CombiningKind::MINNUMF || kind == CombiningKind::MAXNUMF ||
         kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
       // Only valid for floating point types.
       return std::nullopt;
@@ -167,7 +167,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   if (!acc)
     return std::optional<Value>(mul);
 
-  return makeArithReduction(rewriter, loc, kind, mul, acc, mask);
+  return makeArithReduction(rewriter, loc, kind, mul, acc,
+                            /*fastmath=*/nullptr, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -418,7 +419,7 @@ struct UnrolledOuterProductGenerator
       return v;
     Type promotedType = dstElementType;
     if (vecType)
-      promotedType = VectorType::get(vecType.getShape(), promotedType);
+      promotedType = vecType.clone(promotedType);
     if (isa<FloatType>(dstElementType))
       return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
     return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
@@ -432,6 +433,9 @@ struct UnrolledOuterProductGenerator
       return failure();
 
     int reductionSize = lhsType.getDimSize(reductionDim);
+    assert(reductionSize > 0 &&
+           "Reduction dim must be a known static size to allow unrolling");
+
     // Incremental support for masking.
     if (mask && !maybeMask.has_value())
       return failure();
@@ -997,7 +1001,7 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       });
     if (lhsType.getScalableDims()[lhsIndex])
       return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-        diag << "Unrolloing scalable dimension (lhsIndex=" << lhsIndex
+        diag << "Unrolling scalable dimension (lhsIndex=" << lhsIndex
              << ") is not supported yet";
       });
     dimSize = lhsType.getDimSize(lhsIndex);
@@ -1005,7 +1009,7 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
     iterIndex = iMap[1].getDimPosition(rhsIndex);
     if (rhsType.getScalableDims()[rhsIndex])
       return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-        diag << "Unrolloing scalable dimension (lhsIndex=" << lhsIndex
+        diag << "Unrolling scalable dimension (rhsIndex=" << rhsIndex
              << ") is not supported yet";
       });
     dimSize = rhsType.getDimSize(rhsIndex);

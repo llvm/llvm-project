@@ -594,12 +594,6 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSpecialType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual) {
-  // Some OpenCL and SPIRV builtins like image2d_t are passed in as
-  // pointers, but should be treated as custom types like OpTypeImage.
-  if (auto PType = dyn_cast<PointerType>(Ty)) {
-    assert(!PType->isOpaque());
-    Ty = PType->getNonOpaquePointerElementType();
-  }
   assert(isSpecialOpaqueType(Ty) && "Not a special opaque builtin type");
   return SPIRV::lowerBuiltinType(Ty, AccQual, MIRBuilder, this);
 }
@@ -651,7 +645,7 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
-  if (ForwardPointerTypes.find(Ty) != ForwardPointerTypes.end())
+  if (ForwardPointerTypes.contains(Ty))
     return ForwardPointerTypes[Ty];
   return restOfCreateSPIRVType(Ty, MIRBuilder, AccQual, EmitIR);
 }
@@ -713,24 +707,19 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     // At the moment, all opaque pointers correspond to i8 element type.
     // TODO: change the implementation once opaque pointers are supported
     // in the SPIR-V specification.
-    if (PType->isOpaque())
-      SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
-    else
-      SpvElementType =
-          findSPIRVType(PType->getNonOpaquePointerElementType(), MIRBuilder,
-                        SPIRV::AccessQualifier::ReadWrite, EmitIR);
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
     auto SC = addressSpaceToStorageClass(PType->getAddressSpace());
     // Null pointer means we have a loop in type definitions, make and
     // return corresponding OpTypeForwardPointer.
     if (SpvElementType == nullptr) {
-      if (ForwardPointerTypes.find(Ty) == ForwardPointerTypes.end())
+      if (!ForwardPointerTypes.contains(Ty))
         ForwardPointerTypes[PType] = getOpTypeForwardPointer(SC, MIRBuilder);
       return ForwardPointerTypes[PType];
     }
     Register Reg(0);
     // If we have forward pointer associated with this type, use its register
     // operand to create OpTypePointer.
-    if (ForwardPointerTypes.find(PType) != ForwardPointerTypes.end())
+    if (ForwardPointerTypes.contains(PType))
       Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
 
     return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
@@ -755,13 +744,10 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
       !isSpecialOpaqueType(Ty)) {
     if (!Ty->isPointerTy())
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
-    else if (Ty->isOpaquePointerTy())
+    else
       DT.add(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
              Ty->getPointerAddressSpace(), &MIRBuilder.getMF(),
              getSPIRVTypeID(SpirvType));
-    else
-      DT.add(Ty->getNonOpaquePointerElementType(), Ty->getPointerAddressSpace(),
-             &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
   }
 
   return SpirvType;
@@ -956,40 +942,80 @@ SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
 }
 
 // TODO: maybe use tablegen to implement this.
-SPIRVType *
-SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(StringRef TypeStr,
-                                                MachineIRBuilder &MIRBuilder) {
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
+    StringRef TypeStr, MachineIRBuilder &MIRBuilder,
+    SPIRV::StorageClass::StorageClass SC,
+    SPIRV::AccessQualifier::AccessQualifier AQ) {
   unsigned VecElts = 0;
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
+  // Parse strings representing either a SPIR-V or OpenCL builtin type.
+  if (hasBuiltinTypePrefix(TypeStr))
+    return getOrCreateSPIRVType(
+        SPIRV::parseBuiltinTypeNameToTargetExtType(TypeStr.str(), MIRBuilder),
+        MIRBuilder, AQ);
+
   // Parse type name in either "typeN" or "type vector[N]" format, where
   // N is the number of elements of the vector.
-  Type *Type;
-  if (TypeStr.startswith("void")) {
-    Type = Type::getVoidTy(Ctx);
+  Type *Ty;
+
+  TypeStr.consume_front("atomic_");
+
+  if (TypeStr.starts_with("void")) {
+    Ty = Type::getVoidTy(Ctx);
     TypeStr = TypeStr.substr(strlen("void"));
-  } else if (TypeStr.startswith("int") || TypeStr.startswith("uint")) {
-    Type = Type::getInt32Ty(Ctx);
-    TypeStr = TypeStr.startswith("int") ? TypeStr.substr(strlen("int"))
-                                        : TypeStr.substr(strlen("uint"));
-  } else if (TypeStr.startswith("float")) {
-    Type = Type::getFloatTy(Ctx);
-    TypeStr = TypeStr.substr(strlen("float"));
-  } else if (TypeStr.startswith("half")) {
-    Type = Type::getHalfTy(Ctx);
+  } else if (TypeStr.starts_with("bool")) {
+    Ty = Type::getIntNTy(Ctx, 1);
+    TypeStr = TypeStr.substr(strlen("bool"));
+  } else if (TypeStr.starts_with("char") || TypeStr.starts_with("uchar")) {
+    Ty = Type::getInt8Ty(Ctx);
+    TypeStr = TypeStr.starts_with("char") ? TypeStr.substr(strlen("char"))
+                                          : TypeStr.substr(strlen("uchar"));
+  } else if (TypeStr.starts_with("short") || TypeStr.starts_with("ushort")) {
+    Ty = Type::getInt16Ty(Ctx);
+    TypeStr = TypeStr.starts_with("short") ? TypeStr.substr(strlen("short"))
+                                           : TypeStr.substr(strlen("ushort"));
+  } else if (TypeStr.starts_with("int") || TypeStr.starts_with("uint")) {
+    Ty = Type::getInt32Ty(Ctx);
+    TypeStr = TypeStr.starts_with("int") ? TypeStr.substr(strlen("int"))
+                                         : TypeStr.substr(strlen("uint"));
+  } else if (TypeStr.starts_with("long") || TypeStr.starts_with("ulong")) {
+    Ty = Type::getInt64Ty(Ctx);
+    TypeStr = TypeStr.starts_with("long") ? TypeStr.substr(strlen("long"))
+                                          : TypeStr.substr(strlen("ulong"));
+  } else if (TypeStr.starts_with("half")) {
+    Ty = Type::getHalfTy(Ctx);
     TypeStr = TypeStr.substr(strlen("half"));
-  } else if (TypeStr.startswith("opencl.sampler_t")) {
-    Type = StructType::create(Ctx, "opencl.sampler_t");
+  } else if (TypeStr.starts_with("float")) {
+    Ty = Type::getFloatTy(Ctx);
+    TypeStr = TypeStr.substr(strlen("float"));
+  } else if (TypeStr.starts_with("double")) {
+    Ty = Type::getDoubleTy(Ctx);
+    TypeStr = TypeStr.substr(strlen("double"));
   } else
     llvm_unreachable("Unable to recognize SPIRV type name.");
-  if (TypeStr.startswith(" vector[")) {
-    TypeStr = TypeStr.substr(strlen(" vector["));
+
+  auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ);
+
+  // Handle "type*" or  "type* vector[N]".
+  if (TypeStr.starts_with("*")) {
+    SpirvTy = getOrCreateSPIRVPointerType(SpirvTy, MIRBuilder, SC);
+    TypeStr = TypeStr.substr(strlen("*"));
+  }
+
+  // Handle "typeN*" or  "type vector[N]*".
+  bool IsPtrToVec = TypeStr.consume_back("*");
+
+  if (TypeStr.consume_front(" vector[")) {
     TypeStr = TypeStr.substr(0, TypeStr.find(']'));
   }
   TypeStr.getAsInteger(10, VecElts);
-  auto SpirvTy = getOrCreateSPIRVType(Type, MIRBuilder);
   if (VecElts > 0)
     SpirvTy = getOrCreateSPIRVVectorType(SpirvTy, VecElts, MIRBuilder);
+
+  if (IsPtrToVec)
+    SpirvTy = getOrCreateSPIRVPointerType(SpirvTy, MIRBuilder, SC);
+
   return SpirvTy;
 }
 

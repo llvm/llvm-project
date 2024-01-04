@@ -81,7 +81,7 @@ static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
       // of another symbol emitted near the weak symbol.
       // Just use the definition from the first object file that defined
       // this weak symbol.
-      if (ctx.config.mingw)
+      if (ctx.config.allowDuplicateWeak)
         return;
       ctx.symtab.reportDuplicate(source, f);
     }
@@ -236,8 +236,8 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   // CodeView needs linker support. We need to interpret debug info,
   // and then write it to a separate .pdb file.
 
-  // Ignore DWARF debug info unless /debug is given.
-  if (!ctx.config.debug && name.starts_with(".debug_"))
+  // Ignore DWARF debug info unless requested to be included.
+  if (!ctx.config.includeDwarfChunks && name.starts_with(".debug_"))
     return nullptr;
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
@@ -709,7 +709,7 @@ void ObjFile::initializeFlags() {
 
   DebugSubsectionArray subsections;
 
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, data.size()));
 
@@ -775,7 +775,7 @@ void ObjFile::initializeDependencies() {
   // Get the first type record. It will indicate if this object uses a type
   // server (/Zi) or a PCH file (/Yu).
   CVTypeArray types;
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   cantFail(reader.readArray(types, reader.getLength()));
   CVTypeArray::Iterator firstType = types.begin();
   if (firstType == types.end())
@@ -1040,6 +1040,21 @@ void BitcodeFile::parse() {
       fakeSC = &ctx.ltoDataSectionChunk.chunk;
     if (objSym.isUndefined()) {
       sym = ctx.symtab.addUndefined(symName, this, false);
+      if (objSym.isWeak())
+        sym->deferUndefined = true;
+      // If one LTO object file references (i.e. has an undefined reference to)
+      // a symbol with an __imp_ prefix, the LTO compilation itself sees it
+      // as unprefixed but with a dllimport attribute instead, and doesn't
+      // understand the relation to a concrete IR symbol with the __imp_ prefix.
+      //
+      // For such cases, mark the symbol as used in a regular object (i.e. the
+      // symbol must be retained) so that the linker can associate the
+      // references in the end. If the symbol is defined in an import library
+      // or in a regular object file, this has no effect, but if it is defined
+      // in another LTO object file, this makes sure it is kept, to fulfill
+      // the reference when linking the output of the LTO compilation.
+      if (symName.starts_with("__imp_"))
+        sym->isUsedInRegularObj = true;
     } else if (objSym.isCommon()) {
       sym = ctx.symtab.addCommon(this, symName, objSym.getCommonSize());
     } else if (objSym.isWeak() && objSym.isIndirect()) {
@@ -1082,6 +1097,7 @@ MachineTypes BitcodeFile::getMachineType() {
   case Triple::x86:
     return I386;
   case Triple::arm:
+  case Triple::thumb:
     return ARMNT;
   case Triple::aarch64:
     return ARM64;

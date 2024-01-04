@@ -122,7 +122,7 @@ endif()
 add_library(           cxx-benchmarks-flags-libcxx INTERFACE)
 target_link_libraries( cxx-benchmarks-flags-libcxx INTERFACE cxx-benchmarks-flags)
 target_compile_options(cxx-benchmarks-flags-libcxx INTERFACE ${SANITIZER_FLAGS} -Wno-user-defined-literals -Wno-suggest-override)
-target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nodefaultlibs "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
+target_link_options(   cxx-benchmarks-flags-libcxx INTERFACE -nostdlib++ "-L${BENCHMARK_LIBCXX_INSTALL}/lib" "-L${BENCHMARK_LIBCXX_INSTALL}/lib64" ${SANITIZER_FLAGS})
 
 set(libcxx_benchmark_targets)
 
@@ -176,6 +176,7 @@ set(BENCHMARK_TESTS
     algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
+    algorithms/for_each.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
@@ -184,6 +185,7 @@ set(BENCHMARK_TESTS
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
+    algorithms/ranges_contains.bench.cpp
     algorithms/ranges_ends_with.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
@@ -213,6 +215,7 @@ set(BENCHMARK_TESTS
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
+    stop_token.bench.cpp
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp

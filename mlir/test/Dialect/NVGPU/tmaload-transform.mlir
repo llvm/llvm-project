@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:     -test-transform-dialect-interpreter \
+// RUN:     -transform-interpreter \
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN: | FileCheck %s
 
@@ -18,12 +18,12 @@ func.func @main() {
   //      CHECK: %[[M1:.*]] = memref.cast %{{.*}} : memref<64x8xf32> to memref<*xf32>
   //      CHECK: %[[c64:.*]] = arith.constant 64 : index
   //      CHECK: %[[c8:.*]] = arith.constant 8 : index
-  //      CHECK: %[[D1:.*]] = nvgpu.tma.create.descriptor %[[M1]] box[%[[c64]], %[[c8]]] 
+  //      CHECK: %[[D1:.*]] = nvgpu.tma.create.descriptor %[[M1]] box[%[[c64]], %[[c8]]]
   // CHECK-SAME:   : memref<*xf32> -> <tensor = memref<64x8xf32, #gpu.address_space<workgroup>>, swizzle = none, l2promo = none, oob = zero, interleave = none>
   //      CHECK: %[[cast_2:.*]] = memref.cast %memref_0 : memref<8x128xf32> to memref<*xf32>
   //      CHECK: %[[c8_2:.*]] = arith.constant 8 : index
   //      CHECK: %[[c128_2:.*]] = arith.constant 128 : index
-  //      CHECK: %[[D2:.*]] = nvgpu.tma.create.descriptor %cast_2 box[%[[c8_2]], %[[c128_2]]] 
+  //      CHECK: %[[D2:.*]] = nvgpu.tma.create.descriptor %cast_2 box[%[[c8_2]], %[[c128_2]]]
   // CHECK-SAME:   : memref<*xf32> -> <tensor = memref<8x128xf32, #gpu.address_space<workgroup>>, swizzle = none, l2promo = none, oob = zero, interleave = none>
   // CHECK: gpu.launch
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
@@ -32,7 +32,7 @@ func.func @main() {
     //      CHECK: %[[G2:.*]] = memref.get_global @bufferRhsGlobal : memref<8x128xf32, #gpu.address_space<workgroup>>
     %out = memref.get_global @bufferLhsGlobal : memref<64x8xf32, #gpu.address_space<workgroup>>
     %out_1 = memref.get_global @bufferRhsGlobal : memref<8x128xf32, #gpu.address_space<workgroup>>
-    
+
     //      CHECK: %[[B:.*]] = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>
     //      CHECK: nvgpu.mbarrier.init %[[B]][%{{.*}}], %{{.*}} : <memorySpace = #gpu.address_space<workgroup>
     //      CHECK: gpu.barrier
@@ -44,15 +44,15 @@ func.func @main() {
     //      CHECK: scf.if %[[CMP]] {
     //
     //      CHECK:   %[[c0_7:.*]] = arith.constant 0 : index
-    //      CHECK:   nvgpu.tma.async.load %[[D1]][%[[c0_7]], %[[c0_7]]], %[[B]][%{{.*}}] to %[[G1]] 
-    // CHECK-SAME:     : <tensor = memref<64x8xf32, #gpu.address_space<workgroup>>, 
+    //      CHECK:   nvgpu.tma.async.load %[[D1]][%[[c0_7]], %[[c0_7]]], %[[B]][%{{.*}}] to %[[G1]]
+    // CHECK-SAME:     : <tensor = memref<64x8xf32, #gpu.address_space<workgroup>>,
     // CHECK-SAME:        swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>
     // CHECK-SAME:     -> memref<64x8xf32, #gpu.address_space<workgroup>>
     //
     //      CHECK:   %[[c0_8:.*]] = arith.constant 0 : index
-    //      CHECK:   nvgpu.tma.async.load %[[D2]][%[[c0_8]], %[[c0_8]]], %[[B]][%{{.*}}] to %[[G2]] 
+    //      CHECK:   nvgpu.tma.async.load %[[D2]][%[[c0_8]], %[[c0_8]]], %[[B]][%{{.*}}] to %[[G2]]
     // CHECK-SAME:     : <tensor = memref<8x128xf32, #gpu.address_space<workgroup>>,
-    // CHECK-SAME:         swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup> 
+    // CHECK-SAME:         swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>
     // CHECK-SAME:    -> memref<8x128xf32, #gpu.address_space<workgroup>>
     //
     //      CHECK:   %[[c6144:.*]] = arith.constant 6144 : index
@@ -66,19 +66,21 @@ func.func @main() {
     //      CHECK: %[[c10000000:.*]] = arith.constant 10000000 : index
     //      CHECK: nvgpu.mbarrier.try_wait.parity %[[B]][%{{.*}}], %[[c0_6]], %[[c10000000]] : <memorySpace = #gpu.address_space<workgroup>
 
-    /// Both copies are matched and end up in the same async group.    
+    /// Both copies are matched and end up in the same async group.
     linalg.copy ins(%memref: memref<64x8xf32>) outs(%out: memref<64x8xf32, #gpu.address_space<workgroup>>)
     linalg.copy ins(%memref_1: memref<8x128xf32>) outs(%out_1: memref<8x128xf32, #gpu.address_space<workgroup>>)
 
     gpu.terminator
   }
-  
+
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %copy = transform.structured.match ops{["linalg.copy"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.nvgpu.rewrite_copy_as_tma %copy  : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %copy = transform.structured.match ops{["linalg.copy"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.nvgpu.rewrite_copy_as_tma %copy  : (!transform.any_op) -> ()
+    transform.yield
+  }
 }

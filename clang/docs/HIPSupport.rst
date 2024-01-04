@@ -176,3 +176,93 @@ Predefined Macros
    * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
+Compilation Modes
+=================
+
+Each HIP source file contains intertwined device and host code. Depending on the chosen compilation mode by the compiler options ``-fno-gpu-rdc`` and ``-fgpu-rdc``, these portions of code are compiled differently.
+
+Device Code Compilation
+-----------------------
+
+**``-fno-gpu-rdc`` Mode (default)**:
+
+- Compiles to a self-contained, fully linked offloading device binary for each offloading device architecture.
+- Device code within a Translation Unit (TU) cannot call functions located in another TU.
+
+**``-fgpu-rdc`` Mode**:
+
+- Compiles to a bitcode for each GPU architecture.
+- For each offloading device architecture, the bitcode from different TUs are linked together to create a single offloading device binary.
+- Device code in one TU can call functions located in another TU.
+
+Host Code Compilation
+---------------------
+
+**Both Modes**:
+
+- Compiles to a relocatable object for each TU.
+- These relocatable objects are then linked together.
+- Host code within a TU can call host functions and launch kernels from another TU.
+
+Function Pointers Support
+=========================
+
+Function pointers' support varies with the usage mode in Clang with HIP. The following table provides an overview of the support status across different use-cases and modes.
+
+.. list-table:: Function Pointers Support Overview
+   :widths: 25 25 25
+   :header-rows: 1
+
+   * - Use Case
+     - ``-fno-gpu-rdc`` Mode (default)
+     - ``-fgpu-rdc`` Mode
+   * - Defined and used in the same TU
+     - Supported
+     - Supported
+   * - Defined in one TU and used in another TU
+     - Not Supported
+     - Supported
+
+In the ``-fno-gpu-rdc`` mode, the compiler calculates the resource usage of kernels based only on functions present within the same TU. This mode does not support the use of function pointers defined in a different TU due to the possibility of incorrect resource usage calculations, leading to undefined behavior.
+
+On the other hand, the ``-fgpu-rdc`` mode allows the definition and use of function pointers across different TUs, as resource usage calculations can accommodate functions from disparate TUs.
+
+Virtual Function Support
+========================
+
+In Clang with HIP, support for calling virtual functions of an object in device or host code is contingent on where the object is constructed.
+
+- **Constructed in Device Code**: Virtual functions of an object can be called in device code on a specific offloading device if the object is constructed in device code on an offloading device with the same architecture.
+- **Constructed in Host Code**: Virtual functions of an object can be called in host code if the object is constructed in host code.
+
+In other scenarios, calling virtual functions is not allowed.
+
+Explanation
+-----------
+
+An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architecures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
+
+Example Usage
+-------------
+
+.. code-block:: c++
+
+   class Base {
+   public:
+      __device__ virtual void virtualFunction() {
+         // Base virtual function implementation
+      }
+   };
+
+   class Derived : public Base {
+   public:
+      __device__ void virtualFunction() override {
+         // Derived virtual function implementation
+      }
+   };
+
+   __global__ void kernel() {
+      Derived obj;
+      Base* basePtr = &obj;
+      basePtr->virtualFunction(); // Allowed since obj is constructed in device code
+   }

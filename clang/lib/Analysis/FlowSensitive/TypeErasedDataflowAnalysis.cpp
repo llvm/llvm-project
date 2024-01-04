@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <memory>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -33,8 +32,8 @@
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -53,19 +52,14 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
-static bool isLoopHead(const CFGBlock &B) {
-  if (const auto *T = B.getTerminatorStmt())
-    switch (T->getStmtClass()) {
-      case Stmt::WhileStmtClass:
-      case Stmt::DoStmtClass:
-      case Stmt::ForStmtClass:
-      case Stmt::CXXForRangeStmtClass:
-        return true;
-      default:
-        return false;
-    }
-
-  return false;
+// A "backedge" node is a block introduced in the CFG exclusively to indicate a
+// loop backedge. They are exactly identified by the presence of a non-null
+// pointer to the entry block of the loop condition. Note that this is not
+// necessarily the block with the loop statement as terminator, because
+// short-circuit operators will result in multiple blocks encoding the loop
+// condition, only one of which will contain the loop statement as terminator.
+static bool isBackedgeNode(const CFGBlock &B) {
+  return B.getLoopTarget() != nullptr;
 }
 
 namespace {
@@ -136,7 +130,7 @@ private:
     if (Env.getValue(Cond) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
-    auto *Val = cast_or_null<BoolValue>(Env.getValue(Cond));
+    auto *Val = Env.get<BoolValue>(Cond);
     // Value merging depends on flow conditions from different environments
     // being mutually exclusive -- that is, they cannot both be true in their
     // entirety (even if they may share some clauses). So, we need *some* value
@@ -154,7 +148,7 @@ private:
       ConditionValue = false;
     }
 
-    Env.addToFlowCondition(Val->formula());
+    Env.assume(Val->formula());
     return {&Cond, ConditionValue};
   }
 
@@ -263,7 +257,12 @@ public:
       // initialize the state of each basic block differently.
       return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
     if (All.size() == 1)
-      return Owned.empty() ? All.front()->fork() : std::move(Owned.front());
+      // Join the environment with itself so that we discard the entries from
+      // `ExprToLoc` and `ExprToVal`.
+      // FIXME: We could consider writing special-case code for this that only
+      // does the discarding, but it's not clear if this is worth it.
+      return {All[0]->Lattice,
+              Environment::join(All[0]->Env, All[0]->Env, AC.Analysis)};
 
     auto Result = join(*All[0], *All[1]);
     for (unsigned I = 2; I < All.size(); ++I)
@@ -313,7 +312,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
-      llvm::erase_value(Preds, StmtBlock->getSecond());
+      llvm::erase(Preds, StmtBlock->getSecond());
     }
   }
 
@@ -502,19 +501,28 @@ runTypeErasedDataflowAnalysis(
         PostVisitCFG) {
   PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
 
-  PostOrderCFGView POV(&CFCtx.getCFG());
-  ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
+  std::optional<Environment> MaybeStartingEnv;
+  if (InitEnv.callStackSize() == 1) {
+    MaybeStartingEnv = InitEnv.fork();
+    MaybeStartingEnv->initialize();
+  }
+  const Environment &StartingEnv =
+      MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
+
+  const clang::CFG &CFG = CFCtx.getCFG();
+  PostOrderCFGView POV(&CFG);
+  ForwardDataflowWorklist Worklist(CFG, &POV);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size());
+      CFG.size());
 
   // The entry basic block doesn't contain statements so it can be skipped.
-  const CFGBlock &Entry = CFCtx.getCFG().getEntry();
+  const CFGBlock &Entry = CFG.getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
-                                     InitEnv.fork()};
+                                     StartingEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
 
-  AnalysisContext AC(CFCtx, Analysis, InitEnv, BlockStates);
+  AnalysisContext AC(CFCtx, Analysis, StartingEnv, BlockStates);
 
   // Bugs in lattices and transfer functions can prevent the analysis from
   // converging. To limit the damage (infinite loops) that these bugs can cause,
@@ -553,7 +561,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isLoopHead(*Block)) {
+      if (isBackedgeNode(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect \
-// RUN:     -test-transform-dialect-interpreter -canonicalize \
+// RUN:     -transform-interpreter -canonicalize \
 // RUN:     -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 - 1)>
@@ -35,10 +35,12 @@ func.func @make_alloca_loop_independent(%lb: index, %ub: index, %step: index) {
   }
   return
 }
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.memref.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.memref.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -67,8 +69,10 @@ func.func @make_alloca_loop_independent_static(%step: index) {
   }
   return
 }
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.memref.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.memref.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

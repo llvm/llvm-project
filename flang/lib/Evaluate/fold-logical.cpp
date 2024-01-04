@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-matmul.h"
 #include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
+#include "flang/Runtime/magic-numbers.h"
 
 namespace Fortran::evaluate {
 
@@ -194,6 +196,24 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         }
       }
     }
+  } else if (name == "is_iostat_end") {
+    if (args[0] && args[0]->UnwrapExpr() &&
+        IsActuallyConstant(*args[0]->UnwrapExpr())) {
+      using Int64 = Type<TypeCategory::Integer, 8>;
+      return FoldElementalIntrinsic<T, Int64>(context, std::move(funcRef),
+          ScalarFunc<T, Int64>([](const Scalar<Int64> &x) {
+            return Scalar<T>{x.ToInt64() == FORTRAN_RUNTIME_IOSTAT_END};
+          }));
+    }
+  } else if (name == "is_iostat_eor") {
+    if (args[0] && args[0]->UnwrapExpr() &&
+        IsActuallyConstant(*args[0]->UnwrapExpr())) {
+      using Int64 = Type<TypeCategory::Integer, 8>;
+      return FoldElementalIntrinsic<T, Int64>(context, std::move(funcRef),
+          ScalarFunc<T, Int64>([](const Scalar<Int64> &x) {
+            return Scalar<T>{x.ToInt64() == FORTRAN_RUNTIME_IOSTAT_EOR};
+          }));
+    }
   } else if (name == "lge" || name == "lgt" || name == "lle" || name == "llt") {
     // Rewrite LGE/LGT/LLE/LLT into ASCII character relations
     auto *cx0{UnwrapExpr<Expr<SomeCharacter>>(args[0])};
@@ -212,6 +232,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     if (auto *expr{UnwrapExpr<Expr<SomeLogical>>(args[0])}) {
       return Fold(context, ConvertToType<T>(std::move(*expr)));
     }
+  } else if (name == "matmul") {
+    return FoldMatmul(context, std::move(funcRef));
   } else if (name == "out_of_range") {
     if (Expr<SomeType> * cx{UnwrapExpr<Expr<SomeType>>(args[0])}) {
       auto restorer{context.messages().DiscardMessages()};
@@ -348,7 +370,6 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: is_iostat_end, is_iostat_eor, logical, matmul, parity
   return Expr<T>{std::move(funcRef)};
 }
 

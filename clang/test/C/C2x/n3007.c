@@ -3,6 +3,10 @@
 /* WG14 N3007: Yes
  * Type Inference for object definitions
  */
+void test_auto_int(void) {
+  auto int auto_int = 12;
+}
+
 void test_qualifiers(int x, const int y, int * restrict z) {
   const auto a = x;
   auto b = y;

@@ -24,7 +24,7 @@
 // CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_11]](%[[VAL_12]]) typeparams %[[VAL_4]] : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
 // CHECK:           fir.store %[[VAL_13]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
-// CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQcl.ce30ef70ff16a711a97719fb946c0b3d) : !fir.ref<!fir.char<1>>
+// CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQclXce30ef70ff16a711a97719fb946c0b3d) : !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_14]], %[[VAL_16]], %[[VAL_2]], %[[VAL_1]], %[[VAL_17]], %[[VAL_0]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
@@ -98,7 +98,7 @@ func.func @_QPtest1() {
   %8 = fir.embox %6(%7) typeparams %c0 : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
   fir.store %8 to %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>
   %9 = fir.convert %0 : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
-  %10 = fir.address_of(@_QQcl.ce30ef70ff16a711a97719fb946c0b3d) : !fir.ref<!fir.char<1,1>>
+  %10 = fir.address_of(@_QQclXce30ef70ff16a711a97719fb946c0b3d) : !fir.ref<!fir.char<1,1>>
   %11 = fir.convert %1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
   %12 = fir.convert %10 : (!fir.ref<!fir.char<1,1>>) -> !fir.ref<i8>
   %13 = fir.call @_FortranAInitArrayConstructorVector(%9, %11, %true, %c80_i32, %12, %c1_i32) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
@@ -138,7 +138,7 @@ func.func @_QPtest1() {
   return
 }
 func.func private @_FortranAInitArrayConstructorVector(!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
-fir.global linkonce @_QQcl.ce30ef70ff16a711a97719fb946c0b3d constant : !fir.char<1,1> {
+fir.global linkonce @_QQclXce30ef70ff16a711a97719fb946c0b3d constant : !fir.char<1,1> {
   %0 = fir.string_lit "\00"(1) : !fir.char<1,1>
   fir.has_value %0 : !fir.char<1,1>
 }

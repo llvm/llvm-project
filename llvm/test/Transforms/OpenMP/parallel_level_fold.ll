@@ -3,29 +3,29 @@
 target triple = "nvptx64"
 
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @G = external global i16
-@none_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2 }, ptr null, ptr null }
-@parallel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2 }, ptr null, ptr null }
+@none_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+@spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+@parallel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 ;.
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i16
-; CHECK: @[[NONE_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-; CHECK: @[[SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2 }, ptr null, ptr null }
-; CHECK: @[[PARALLEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2 }, ptr null, ptr null }
+; CHECK: @[[NONE_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @[[SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @[[PARALLEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 define weak void @none_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@none_spmd
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment, ptr null)
 ; CHECK-NEXT:    call void @none_spmd_helper()
 ; CHECK-NEXT:    call void @mixed_helper()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment, ptr null)
   call void @none_spmd_helper()
   call void @mixed_helper()
   call void @__kmpc_target_deinit()
@@ -35,13 +35,13 @@ define weak void @none_spmd() "kernel" {
 define weak void @spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@spmd
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @spmd_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @spmd_kernel_environment, ptr null)
 ; CHECK-NEXT:    call void @spmd_helper()
 ; CHECK-NEXT:    call void @mixed_helper()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @spmd_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr @spmd_kernel_environment, ptr null)
   call void @spmd_helper()
   call void @mixed_helper()
   call void @__kmpc_target_deinit()
@@ -51,13 +51,13 @@ define weak void @spmd() "kernel" {
 define weak void @parallel() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@parallel
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @parallel_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @parallel_kernel_environment, ptr null)
 ; CHECK-NEXT:    call void @spmd_helper()
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @parallel_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr @parallel_kernel_environment, ptr null)
   call void @spmd_helper()
   call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
   call void @__kmpc_target_deinit()
@@ -132,7 +132,7 @@ define internal void @parallel_helper() {
 declare void @foo()
 declare void @bar()
 declare zeroext i16 @__kmpc_parallel_level(ptr, i32)
-declare i32 @__kmpc_target_init(ptr) #1
+declare i32 @__kmpc_target_init(ptr, ptr) #1
 declare void @__kmpc_target_deinit() #1
 
 !llvm.module.flags = !{!0, !1}

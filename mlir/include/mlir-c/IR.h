@@ -73,7 +73,6 @@ DEFINE_C_API_STRUCT(MlirValue, const void);
 ///
 /// A named attribute is essentially a (name, attribute) pair where the name is
 /// a string.
-
 struct MlirNamedAttribute {
   MlirIdentifier name;
   MlirAttribute attribute;
@@ -668,6 +667,13 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
+/// Same as mlirOperationPrint but accepts AsmState controlling the printing
+/// behavior as well as caching computed names.
+MLIR_CAPI_EXPORTED void mlirOperationPrintWithState(MlirOperation op,
+                                                    MlirAsmState state,
+                                                    MlirStringCallback callback,
+                                                    void *userData);
+
 /// Same as mlirOperationPrint but writing the bytecode format.
 MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
                                                    MlirStringCallback callback,
@@ -698,6 +704,24 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
 /// ownership is transferred to the block of the other operation.
 MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
                                                 MlirOperation other);
+
+/// Traversal order for operation walk.
+typedef enum MlirWalkOrder {
+  MlirWalkPreOrder,
+  MlirWalkPostOrder
+} MlirWalkOrder;
+
+/// Operation walker type. The handler is passed an (opaque) reference to an
+/// operation and a pointer to a `userData`.
+typedef void (*MlirOperationWalkCallback)(MlirOperation, void *userData);
+
+/// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
+/// `*userData` is passed to the callback as well and can be used to tunnel some
+/// context or other data into the callback.
+MLIR_CAPI_EXPORTED
+void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
+                       void *userData, MlirWalkOrder walkOrder);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
@@ -915,6 +939,9 @@ MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
 
 /// Returns whether the op operand is null.
 MLIR_CAPI_EXPORTED bool mlirOpOperandIsNull(MlirOpOperand opOperand);
+
+/// Returns the value of an op operand.
+MLIR_CAPI_EXPORTED MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand);
 
 /// Returns the owner operation of an op operand.
 MLIR_CAPI_EXPORTED MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand);

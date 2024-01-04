@@ -136,14 +136,22 @@ class RegisterCommandsTestCase(TestBase):
             rows.append(" ".join([byte] * vl))
         return "{" + " ".join(rows) + "}"
 
+    def make_zt0_value(self, generator):
+        num_bytes = 512 // 8
+        elements = []
+        for i in range(num_bytes):
+            elements.append("0x{:02x}".format(generator(i)))
+
+        return "{" + " ".join(elements) + "}"
+
     @no_debug_info_test
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(["linux"]))
     def test_aarch64_dynamic_regset_config_sme(self):
         """Test AArch64 Dynamic Register sets configuration, but only SME
         registers."""
-        if not self.isAArch64SME():
-            self.skipTest("SME must be present.")
+        if not self.isAArch64SMEFA64():
+            self.skipTest("SME and the smefa64 extension must be present")
 
         register_sets = self.setup_register_config_test("sme")
 
@@ -179,16 +187,11 @@ class RegisterCommandsTestCase(TestBase):
 
         # SVCR is read only so we do not test writing to it.
 
-    @no_debug_info_test
-    @skipIf(archs=no_match(["aarch64"]))
-    @skipIf(oslist=no_match(["linux"]))
-    def test_aarch64_dynamic_regset_config_sme_za_disabled(self):
-        """Test that ZA shows as 0s when disabled and can be enabled by writing
-        to it."""
-        if not self.isAArch64SME():
-            self.skipTest("SME must be present.")
+    def write_to_enable_za_test(self, has_zt0, write_za_first):
+        # Run a test where we start with ZA disabled, and write to either ZA
+        # or ZT0 which causes them to become enabled.
 
-        # No argument, so ZA will be disabled when we break.
+        # No argument, so ZA and ZT0 will be disabled when we break.
         register_sets = self.setup_register_config_test()
 
         # vg is the non-streaming vg as we are in non-streaming mode, so we need
@@ -205,14 +208,71 @@ class RegisterCommandsTestCase(TestBase):
 
         svl = svg * 8
         # A disabled ZA is shown as all 0s.
-        self.expect("register read za", substrs=[self.make_za_value(svl, lambda r: 0)])
+        disabled_za = self.make_za_value(svl, lambda r: 0)
+        self.expect("register read za", substrs=[disabled_za])
+
+        disabled_zt0 = self.make_zt0_value(lambda n: 0)
+        if has_zt0:
+            # A disabled zt0 is all 0s.
+            self.expect("register read zt0", substrs=[disabled_zt0])
+
+        # Writing to ZA or ZTO enables both and we should be able to read the
+        # value back.
         za_value = self.make_za_value(svl, lambda r: r + 1)
-        # Writing to it enables ZA, so the value should be there when we read
-        # it back.
-        self.runCmd("register write za '{}'".format(za_value))
-        self.expect("register read za", substrs=[za_value])
+        zt0_value = self.make_zt0_value(lambda n: n + 1)
+
+        if write_za_first:
+            # This enables ZA and ZT0.
+            self.runCmd("register write za '{}'".format(za_value))
+            self.expect("register read za", substrs=[za_value])
+
+            if has_zt0:
+                # ZT0 is still 0s at this point, though it is active.
+                self.expect("register read zt0", substrs=[disabled_zt0])
+
+                # Now write ZT0 to we can check it reads back correctly.
+                self.runCmd("register write zt0 '{}'".format(zt0_value))
+                self.expect("register read zt0", substrs=[zt0_value])
+        else:
+            if not has_zt0:
+                self.fail("Cannot write to zt0 when sme2 is not present.")
+
+            # Instead use the write of ZT0 to activate ZA.
+            self.runCmd("register write zt0 '{}'".format(zt0_value))
+            self.expect("register read zt0", substrs=[zt0_value])
+
+            # ZA will be active but 0s at this point, but it is active.
+            self.expect("register read zt0", substrs=[disabled_za])
+
+            # Write and read back ZA.
+            self.runCmd("register write za '{}'".format(za_value))
+            self.expect("register read za", substrs=[za_value])
 
         # Now SVCR.ZA should be set, which is bit 1.
         self.expect("register read svcr", substrs=["0x0000000000000002"])
 
         # SVCR is read only so we do not test writing to it.
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_aarch64_dynamic_regset_config_sme_write_za_to_enable(self):
+        """Test that ZA and ZT0 (if present) shows as 0s when disabled and
+        can be enabled by writing to ZA."""
+        if not self.isAArch64SME():
+            self.skipTest("SME must be present.")
+
+        self.write_to_enable_za_test(self.isAArch64SME2(), True)
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_aarch64_dynamic_regset_config_sme_write_zt0_to_enable(self):
+        """Test that ZA and ZT0 (if present) shows as 0s when disabled and
+        can be enabled by writing to ZT0."""
+        if not self.isAArch64SME():
+            self.skipTest("SME must be present.")
+        if not self.isAArch64SME2():
+            self.skipTest("SME2 must be present.")
+
+        self.write_to_enable_za_test(True, True)

@@ -499,13 +499,16 @@ struct LogOpConversion : public OpConversionPattern<complex::LogOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex());
-    Value resultReal = b.create<math::LogOp>(elementType, abs);
+    Value abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex(),
+                                         fmf.getValue());
+    Value resultReal = b.create<math::LogOp>(elementType, abs, fmf.getValue());
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
-    Value resultImag = b.create<math::Atan2Op>(elementType, imag, real);
+    Value resultImag =
+        b.create<math::Atan2Op>(elementType, imag, real, fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();
@@ -520,6 +523,7 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
@@ -535,15 +539,21 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
     // log1p(a+bi) = .5*log((a+1)^2+b^2) + i*atan2(b, a + 1)
     // log((a+1)+bi) = .5*log(a*a + 2*a + 1 + b*b) + i*atan2(b, a+1)
     // log((a+1)+bi) = .5*log1p(a*a + 2*a + b*b) + i*atan2(b, a+1)
-    Value sumSq = b.create<arith::MulFOp>(real, real);
-    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(real, two));
-    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(imag, imag));
-    Value logSumSq = b.create<math::Log1pOp>(elementType, sumSq);
-    Value resultReal = b.create<arith::MulFOp>(logSumSq, half);
+    Value sumSq = b.create<arith::MulFOp>(real, real, fmf.getValue());
+    sumSq = b.create<arith::AddFOp>(
+        sumSq, b.create<arith::MulFOp>(real, two, fmf.getValue()),
+        fmf.getValue());
+    sumSq = b.create<arith::AddFOp>(
+        sumSq, b.create<arith::MulFOp>(imag, imag, fmf.getValue()),
+        fmf.getValue());
+    Value logSumSq =
+        b.create<math::Log1pOp>(elementType, sumSq, fmf.getValue());
+    Value resultReal = b.create<arith::MulFOp>(logSumSq, half, fmf.getValue());
 
-    Value realPlusOne = b.create<arith::AddFOp>(real, one);
+    Value realPlusOne = b.create<arith::AddFOp>(real, one, fmf.getValue());
 
-    Value resultImag = b.create<math::Atan2Op>(elementType, imag, realPlusOne);
+    Value resultImag =
+        b.create<math::Atan2Op>(elementType, imag, realPlusOne, fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();

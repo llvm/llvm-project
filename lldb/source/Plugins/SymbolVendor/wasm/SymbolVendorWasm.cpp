@@ -17,7 +17,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
@@ -87,7 +86,7 @@ SymbolVendorWasm::CreateInstance(const lldb::ModuleSP &module_sp,
 
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec sym_fspec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
   if (!sym_fspec)
     return nullptr;
 

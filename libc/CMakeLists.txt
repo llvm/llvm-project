@@ -103,11 +103,40 @@ option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
+option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
+
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
+
+set(LIBC_CONFIG_JSON_FILE_LIST "")
+
+if(NOT LIBC_CONFIG_PATH)
+  list(APPEND LIBC_CONFIG_JSON_FILE_LIST "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}")
+  if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}")
+    list(APPEND LIBC_CONFIG_JSON_FILE_LIST "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}")
+    set(LIBC_CONFIG_PATH "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}")
+  elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}")
+    set(LIBC_CONFIG_PATH "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}")
+  endif()
+else()
+  list(APPEND LIBC_CONFIG_JSON_FILE_LIST "${LIBC_CONFIG_PATH}")
+endif()
+
+if(NOT LIBC_CONFIG_PATH)
+  message(FATAL_ERROR "Configs for the platform '${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}' do not exist and LIBC_CONFIG_PATH is not set.")
+elseif(LIBC_CMAKE_VERBOSE_LOGGING)
+  message(STATUS "Path for config files is: ${LIBC_CONFIG_PATH}")
+endif()
+
+# option(LIBC_ENABLE_WIDE_CHARACTERS 
+# "Whether to enable wide character functions on supported platforms. This may
+# also set flags to enable or disable wide character support within other
+# functions (e.g. printf)." ON)
+
+#TODO: Add carve-out specific config files to the list here.
 
 include(LibcConfig)
 # Config loading happens in three steps:
@@ -147,8 +176,14 @@ foreach(opt IN LISTS global_config)
   set(${opt_name} ${opt_value})
 endforeach()
 generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
-load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/config.json ${cmd_line_conf})
-load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/config.json ${cmd_line_conf})
+
+# Load each target specific config.
+foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Loading additional config: '${config_path}/config.json'")
+  endif()
+  load_libc_config(${config_path}/config.json ${cmd_line_conf})
+endforeach()
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -245,22 +280,43 @@ option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
 
 include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
+include(CheckCompilerFeatures)
 include(LLVMLibCRules)
 
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
-  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
-elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
-  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
-else()
-  message(FATAL_ERROR "entrypoints.txt file for the target platform '${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}' not found.")
-endif()
-include(${entrypoint_file})
+set(TARGET_LLVMLIBC_ENTRYPOINTS "")
+set(TARGET_LIBC_ENTRYPOINTS "")
+set(TARGET_LIBM_ENTRYPOINTS "")
+set(TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS "")
 
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
-elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
+# Check entrypoints.txt
+if(EXISTS "${LIBC_CONFIG_PATH}/entrypoints.txt")
+    include("${LIBC_CONFIG_PATH}/entrypoints.txt")
+else()
+  message(FATAL_ERROR "${LIBC_CONFIG_PATH}/entrypoints.txt file not found.")
 endif()
+
+# Check headers.txt
+if(EXISTS "${LIBC_CONFIG_PATH}/headers.txt")
+    include("${LIBC_CONFIG_PATH}/headers.txt")
+elseif(LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
+endif()
+
+# Check exclude.txt that appends to LIBC_EXCLUDE_ENTRYPOINTS list
+if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
+    include("${LIBC_CONFIG_PATH}/exclude.txt")
+endif()
+
+# #TODO: Set up support for premade configs adding their own exclude lists.
+
+foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Removing entrypoint ${removed_entrypoint}")
+  endif()
+  list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+endforeach()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)

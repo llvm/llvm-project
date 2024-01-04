@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Confirm enforcement of constraint C723 in F2018 for procedure pointers
 
       module m

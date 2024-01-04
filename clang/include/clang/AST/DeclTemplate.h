@@ -83,13 +83,16 @@ class TemplateParameterList final
 
   /// Whether this template parameter list contains an unexpanded parameter
   /// pack.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ContainsUnexpandedParameterPack : 1;
 
   /// Whether this template parameter list has a requires clause.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRequiresClause : 1;
 
   /// Whether any of the template parameters has constrained-parameter
   /// constraint-expression.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasConstrainedParameters : 1;
 
 protected:
@@ -1833,7 +1836,7 @@ class ClassTemplateSpecializationDecl
   SourceLocation PointOfInstantiation;
 
   /// The kind of specialization this declaration refers to.
-  /// Really a value of type TemplateSpecializationKind.
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
 protected:
@@ -2638,13 +2641,14 @@ class VarTemplateSpecializationDecl : public VarDecl,
   SourceLocation PointOfInstantiation;
 
   /// The kind of specialization this declaration refers to.
-  /// Really a value of type TemplateSpecializationKind.
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
   /// Whether this declaration is a complete definition of the
   /// variable template specialization. We can't otherwise tell apart
   /// an instantiated declaration from an instantiated definition with
   /// no initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCompleteDefinition : 1;
 
 protected:

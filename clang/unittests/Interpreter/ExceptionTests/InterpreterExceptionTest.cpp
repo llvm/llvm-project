@@ -122,11 +122,6 @@ extern "C" int throw_exception() {
                               Triple.getArch() == llvm::Triple::aarch64_32))
     GTEST_SKIP();
 
-  // FIXME: RISC-V fails as .eh_frame handling is not yet implemented in
-  // JITLink for RISC-V. See PR #66067.
-  if (Triple.isRISCV())
-    GTEST_SKIP();
-
   llvm::cantFail(Interp->ParseAndExecute(ExceptionCode));
   testing::internal::CaptureStdout();
   auto ThrowException =

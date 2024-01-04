@@ -53,7 +53,7 @@ struct __fn {
              const _OldType& __old_value,
              const _NewType& __new_value,
              _Proj __proj = {}) const {
-    auto __pred = [&](const auto& __value) { return __value == __old_value; };
+    auto __pred = [&](const auto& __value) -> bool { return __value == __old_value; };
     return ranges::__replace_copy_if_impl(
         std::move(__first), std::move(__last), std::move(__result), __pred, __new_value, __proj);
   }
@@ -68,7 +68,7 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr replace_copy_result<borrowed_iterator_t<_Range>, _OutIter> operator()(
       _Range&& __range, _OutIter __result, const _OldType& __old_value, const _NewType& __new_value, _Proj __proj = {})
       const {
-    auto __pred = [&](const auto& __value) { return __value == __old_value; };
+    auto __pred = [&](const auto& __value) -> bool { return __value == __old_value; };
     return ranges::__replace_copy_if_impl(
         ranges::begin(__range), ranges::end(__range), std::move(__result), __pred, __new_value, __proj);
   }

@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module poly
   type p1
@@ -90,7 +90,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAssociate(%[[P_CONV]], %[[C1_DESC_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
 ! CHECK: %[[P_DESC_LOAD:.*]] = fir.load %[[P_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[P_REBOX:.*]] = fir.rebox %[[P_DESC_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc"(%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc"(%[[P_DESC_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %[[C2_DESC_LOAD:.*]] = fir.load %[[C2_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[P_CONV:.*]] = fir.convert %[[P_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
@@ -98,7 +98,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAssociate(%[[P_CONV]], %[[C2_DESC_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
 ! CHECK: %[[P_DESC_LOAD:.*]] = fir.load %[[P_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[P_REBOX:.*]] = fir.rebox %[[P_DESC_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc"(%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc"(%[[P_DESC_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %[[C3_LOAD:.*]] = fir.load %[[C3_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -113,7 +113,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAssociate(%[[P_CONV]], %[[C3_EMBOX_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
 ! CHECK: %[[P_DESC_LOAD:.*]] = fir.load %[[P_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[P_REBOX:.*]] = fir.rebox %[[P_DESC_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc"(%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc"(%[[P_DESC_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %[[C4_LOAD:.*]] = fir.load %[[C4_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -128,7 +128,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAssociate(%[[P_CONV]], %[[C4_EMBOX_CONV]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
 ! CHECK: %[[P_DESC_LOAD:.*]] = fir.load %[[P_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[P_REBOX:.*]] = fir.rebox %[[P_DESC_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "proc"(%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "proc"(%[[P_DESC_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) (%[[P_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %[[C3_LOAD:.*]] = fir.load %[[C3_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[C3_REBOX:.*]] = fir.rebox %[[C3_LOAD]](%{{.*}}) : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> !fir.class<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>

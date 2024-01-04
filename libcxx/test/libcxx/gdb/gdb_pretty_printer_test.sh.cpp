@@ -17,6 +17,12 @@
 // TODO: Investigate this failure on GCC 13 (in Ubuntu Jammy)
 // UNSUPPORTED: gcc-13
 
+// The Android libc++ tests are run on a non-Android host, connected to an
+// Android device over adb. gdb needs special support to make this work (e.g.
+// gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
+// support gdb anymore, favoring lldb instead.
+// UNSUPPORTED: android
+
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
 // RUN: env LANG=en_US.UTF-8 %{gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe

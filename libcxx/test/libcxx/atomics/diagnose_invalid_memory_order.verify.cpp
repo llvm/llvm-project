@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test fails because diagnose_if doesn't emit all of the diagnostics
-// when -fdelayed-template-parsing is enabled, like it is in MSVC mode.
-// XFAIL: msvc
+// This test fails with Clang <18 because diagnose_if doesn't emit all of the
+// diagnostics when -fdelayed-template-parsing is enabled, like it is in MSVC
+// mode.
+// XFAIL: msvc && (clang-16 || clang-17)
 
 // REQUIRES: diagnose-if-support
 

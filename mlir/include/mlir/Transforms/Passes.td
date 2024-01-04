@@ -329,6 +329,11 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
+def LoopInvariantSubsetHoisting : Pass<"loop-invariant-subset-hoisting"> {
+  let summary = "Hoist loop invariant subset ops outside of the loop";
+  let constructor = "mlir::createLoopInvariantSubsetHoistingPass()";
+}
+
 def Mem2Reg : Pass<"mem2reg"> {
   let summary = "Promotes memory slots into values.";
   let description = [{

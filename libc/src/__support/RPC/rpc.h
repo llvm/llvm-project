@@ -24,7 +24,6 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/GPU/utils.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stdint.h>
 
@@ -458,7 +457,7 @@ LIBC_INLINE void Port<T, S>::send_n(const void *const *src, uint64_t *size) {
         lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
             ? sizeof(Buffer::data) - sizeof(uint64_t)
             : lane_value(size, id);
-    inline_memcpy(&buffer->data[1], lane_value(src, id), len);
+    rpc_memcpy(&buffer->data[1], lane_value(src, id), len);
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.packet[index].header.mask;
@@ -468,7 +467,7 @@ LIBC_INLINE void Port<T, S>::send_n(const void *const *src, uint64_t *size) {
                          ? sizeof(Buffer::data)
                          : lane_value(size, id) - idx;
       if (idx < lane_value(size, id))
-        inline_memcpy(buffer->data, advance(lane_value(src, id), idx), len);
+        rpc_memcpy(buffer->data, advance(lane_value(src, id), idx), len);
     });
     idx += sizeof(Buffer::data);
   }
@@ -491,7 +490,7 @@ LIBC_INLINE void Port<T, S>::recv_n(void **dst, uint64_t *size, A &&alloc) {
         lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
             ? sizeof(Buffer::data) - sizeof(uint64_t)
             : lane_value(size, id);
-    inline_memcpy(lane_value(dst, id), &buffer->data[1], len);
+    rpc_memcpy(lane_value(dst, id), &buffer->data[1], len);
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.packet[index].header.mask;
@@ -501,7 +500,7 @@ LIBC_INLINE void Port<T, S>::recv_n(void **dst, uint64_t *size, A &&alloc) {
                          ? sizeof(Buffer::data)
                          : lane_value(size, id) - idx;
       if (idx < lane_value(size, id))
-        inline_memcpy(advance(lane_value(dst, id), idx), buffer->data, len);
+        rpc_memcpy(advance(lane_value(dst, id), idx), buffer->data, len);
     });
     idx += sizeof(Buffer::data);
   }

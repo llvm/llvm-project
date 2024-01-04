@@ -113,10 +113,9 @@ static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
     cl::init(false), cl::Hidden);
 static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
     cl::desc("Print LLVM IR produced by the loop-reduce pass"));
-static cl::opt<bool> PrintISelInput("print-isel-input", cl::Hidden,
-    cl::desc("Print LLVM IR input to isel pass"));
-static cl::opt<bool> PrintGCInfo("print-gc", cl::Hidden,
-    cl::desc("Dump garbage collector data"));
+static cl::opt<bool>
+    PrintISelInput("print-isel-input", cl::Hidden,
+                   cl::desc("Print LLVM IR input to isel pass"));
 static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"));
@@ -475,6 +474,11 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(EnableIPRA)
   SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(VerifyMachineCode)
+  SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
+  SET_OPTION(DisableExpandReductions)
+  SET_OPTION(PrintAfterISel)
+  SET_OPTION(FSProfileFile)
+  SET_OPTION(GCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -491,7 +495,11 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
   SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
-  SET_BOOLEAN_OPTION(PrintGCInfo)
+  SET_BOOLEAN_OPTION(DebugifyAndStripAll)
+  SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
+  SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
+  SET_BOOLEAN_OPTION(DisableCFIFixup)
+  SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
@@ -870,7 +878,7 @@ void TargetPassConfig::addIRPasses() {
     // target lowering hook.
     if (!DisableMergeICmps)
       addPass(createMergeICmpsLegacyPass());
-    addPass(createExpandMemCmpPass());
+    addPass(createExpandMemCmpLegacyPass());
   }
 
   // Run GC lowering passes for builtin collectors
@@ -939,6 +947,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::WinEH:
@@ -1211,10 +1220,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   // GC
-  if (addGCPasses()) {
-    if (PrintGCInfo)
-      addPass(createGCInfoPrinter(dbgs()));
-  }
+  addGCPasses();
 
   // Basic block placement.
   if (getOptLevel() != CodeGenOptLevel::None)
@@ -1267,6 +1273,7 @@ void TargetPassConfig::addMachinePasses() {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderPass(
           TM->getBBSectionsFuncListBuf()));
+      addPass(llvm::createBasicBlockPathCloningPass());
     }
     addPass(llvm::createBasicBlockSectionsPass());
   } else if (TM->Options.EnableMachineFunctionSplitter ||

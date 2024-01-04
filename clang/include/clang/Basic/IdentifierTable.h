@@ -19,6 +19,9 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -107,6 +110,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.
+  LLVM_PREFERRED_TYPE(tok::TokenKind)
   unsigned TokenID : 9;
 
   // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
@@ -115,58 +119,75 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   unsigned ObjCOrBuiltinID : ObjCOrBuiltinIDBits;
 
   // True if there is a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMacro : 1;
 
   // True if there was a #define for this.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HadMacro : 1;
 
   // True if the identifier is a language extension.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExtension : 1;
 
   // True if the identifier is a keyword in a newer or proposed Standard.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFutureCompatKeyword : 1;
 
   // True if the identifier is poisoned.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPoisoned : 1;
 
   // True if the identifier is a C++ operator keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCPPOperatorKeyword : 1;
 
   // Internal bit set by the member function RecomputeNeedsHandleIdentifier.
   // See comment about RecomputeNeedsHandleIdentifier for more info.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NeedsHandleIdentifier : 1;
 
   // True if the identifier was loaded (at least partially) from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFromAST : 1;
 
   // True if the identifier has changed from the definition
   // loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ChangedAfterLoad : 1;
 
   // True if the identifier's frontend information has changed from the
   // definition loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FEChangedAfterLoad : 1;
 
   // True if revertTokenIDToIdentifier was called.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RevertedTokenID : 1;
 
   // True if there may be additional information about
   // this identifier stored externally.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned OutOfDate : 1;
 
   // True if this is the 'import' contextual keyword.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsModulesImport : 1;
 
   // True if this is a mangled OpenMP variant name.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMangledOpenMPVariantName : 1;
 
   // True if this is a deprecated macro.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDeprecatedMacro : 1;
 
   // True if this macro is unsafe in headers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRestrictExpansion : 1;
 
   // True if this macro is final.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
   // 22 bits left in a 64-bit word.
@@ -490,7 +511,7 @@ public:
   ///   function(<#int x#>);
   /// \endcode
   bool isEditorPlaceholder() const {
-    return getName().startswith("<#") && getName().endswith("#>");
+    return getName().starts_with("<#") && getName().ends_with("#>");
   }
 
   /// Determine whether \p this is a name reserved for the implementation (C99
@@ -794,6 +815,121 @@ enum ObjCStringFormatFamily {
   SFF_CFString
 };
 
+namespace detail {
+
+/// DeclarationNameExtra is used as a base of various uncommon special names.
+/// This class is needed since DeclarationName has not enough space to store
+/// the kind of every possible names. Therefore the kind of common names is
+/// stored directly in DeclarationName, and the kind of uncommon names is
+/// stored in DeclarationNameExtra. It is aligned to 8 bytes because
+/// DeclarationName needs the lower 3 bits to store the kind of common names.
+/// DeclarationNameExtra is tightly coupled to DeclarationName and any change
+/// here is very likely to require changes in DeclarationName(Table).
+class alignas(IdentifierInfoAlignment) DeclarationNameExtra {
+  friend class clang::DeclarationName;
+  friend class clang::DeclarationNameTable;
+
+protected:
+  /// The kind of "extra" information stored in the DeclarationName. See
+  /// @c ExtraKindOrNumArgs for an explanation of how these enumerator values
+  /// are used. Note that DeclarationName depends on the numerical values
+  /// of the enumerators in this enum. See DeclarationName::StoredNameKind
+  /// for more info.
+  enum ExtraKind {
+    CXXDeductionGuideName,
+    CXXLiteralOperatorName,
+    CXXUsingDirective,
+    ObjCMultiArgSelector
+  };
+
+  /// ExtraKindOrNumArgs has one of the following meaning:
+  ///  * The kind of an uncommon C++ special name. This DeclarationNameExtra
+  ///    is in this case in fact either a CXXDeductionGuideNameExtra or
+  ///    a CXXLiteralOperatorIdName.
+  ///
+  ///  * It may be also name common to C++ using-directives (CXXUsingDirective),
+  ///
+  ///  * Otherwise it is ObjCMultiArgSelector+NumArgs, where NumArgs is
+  ///    the number of arguments in the Objective-C selector, in which
+  ///    case the DeclarationNameExtra is also a MultiKeywordSelector.
+  unsigned ExtraKindOrNumArgs;
+
+  DeclarationNameExtra(ExtraKind Kind) : ExtraKindOrNumArgs(Kind) {}
+  DeclarationNameExtra(unsigned NumArgs)
+      : ExtraKindOrNumArgs(ObjCMultiArgSelector + NumArgs) {}
+
+  /// Return the corresponding ExtraKind.
+  ExtraKind getKind() const {
+    return static_cast<ExtraKind>(ExtraKindOrNumArgs >
+                                          (unsigned)ObjCMultiArgSelector
+                                      ? (unsigned)ObjCMultiArgSelector
+                                      : ExtraKindOrNumArgs);
+  }
+
+  /// Return the number of arguments in an ObjC selector. Only valid when this
+  /// is indeed an ObjCMultiArgSelector.
+  unsigned getNumArgs() const {
+    assert(ExtraKindOrNumArgs >= (unsigned)ObjCMultiArgSelector &&
+           "getNumArgs called but this is not an ObjC selector!");
+    return ExtraKindOrNumArgs - (unsigned)ObjCMultiArgSelector;
+  }
+};
+
+} // namespace detail
+
+/// One of these variable length records is kept for each
+/// selector containing more than one keyword. We use a folding set
+/// to unique aggregate names (keyword selectors in ObjC parlance). Access to
+/// this class is provided strictly through Selector.
+class alignas(IdentifierInfoAlignment) MultiKeywordSelector
+    : public detail::DeclarationNameExtra,
+      public llvm::FoldingSetNode {
+  MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
+
+public:
+  // Constructor for keyword selectors.
+  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
+      : DeclarationNameExtra(nKeys) {
+    assert((nKeys > 1) && "not a multi-keyword selector");
+
+    // Fill in the trailing keyword array.
+    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
+    for (unsigned i = 0; i != nKeys; ++i)
+      KeyInfo[i] = IIV[i];
+  }
+
+  // getName - Derive the full selector name and return it.
+  std::string getName() const;
+
+  using DeclarationNameExtra::getNumArgs;
+
+  using keyword_iterator = IdentifierInfo *const *;
+
+  keyword_iterator keyword_begin() const {
+    return reinterpret_cast<keyword_iterator>(this + 1);
+  }
+
+  keyword_iterator keyword_end() const {
+    return keyword_begin() + getNumArgs();
+  }
+
+  IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
+    assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
+    return keyword_begin()[i];
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
+                      unsigned NumArgs) {
+    ID.AddInteger(NumArgs);
+    for (unsigned i = 0; i != NumArgs; ++i)
+      ID.AddPointer(ArgTys[i]);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, keyword_begin(), getNumArgs());
+  }
+};
+
 /// Smart pointer class that efficiently represents Objective-C method
 /// names.
 ///
@@ -809,43 +945,58 @@ class Selector {
   enum IdentifierInfoFlag {
     // Empty selector = 0. Note that these enumeration values must
     // correspond to the enumeration values of DeclarationName::StoredNameKind
-    ZeroArg  = 0x01,
-    OneArg   = 0x02,
+    ZeroArg = 0x01,
+    OneArg = 0x02,
+    // IMPORTANT NOTE: see comments in InfoPtr (below) about this enumerator
+    // value.
     MultiArg = 0x07,
-    ArgFlags = 0x07
   };
 
-  /// A pointer to the MultiKeywordSelector or IdentifierInfo. We use the low
-  /// three bits of InfoPtr to store an IdentifierInfoFlag. Note that in any
-  /// case IdentifierInfo and MultiKeywordSelector are already aligned to
-  /// 8 bytes even on 32 bits archs because of DeclarationName.
-  uintptr_t InfoPtr = 0;
+  /// IMPORTANT NOTE: the order of the types in this PointerUnion are
+  /// important! The DeclarationName class has bidirectional conversion
+  /// to/from Selector through an opaque pointer (void *) which corresponds
+  /// to this PointerIntPair. The discriminator bit from the PointerUnion
+  /// corresponds to the high bit in the MultiArg enumerator. So while this
+  /// PointerIntPair only has two bits for the integer (and we mask off the
+  /// high bit in `MultiArg` when it is used), that discrimator bit is
+  /// still necessary for the opaque conversion. The discriminator bit
+  /// from the PointerUnion and the two integer bits from the
+  /// PointerIntPair are also exposed via the DeclarationName::StoredNameKind
+  /// enumeration; see the comments in DeclarationName.h for more details.
+  /// Do not reorder or add any arguments to this template
+  /// without thoroughly understanding how tightly coupled these classes are.
+  llvm::PointerIntPair<
+      llvm::PointerUnion<IdentifierInfo *, MultiKeywordSelector *>, 2>
+      InfoPtr;
 
   Selector(IdentifierInfo *II, unsigned nArgs) {
-    InfoPtr = reinterpret_cast<uintptr_t>(II);
-    assert((InfoPtr & ArgFlags) == 0 &&"Insufficiently aligned IdentifierInfo");
     assert(nArgs < 2 && "nArgs not equal to 0/1");
-    InfoPtr |= nArgs+1;
+    InfoPtr.setPointerAndInt(II, nArgs + 1);
   }
 
   Selector(MultiKeywordSelector *SI) {
-    InfoPtr = reinterpret_cast<uintptr_t>(SI);
-    assert((InfoPtr & ArgFlags) == 0 &&"Insufficiently aligned IdentifierInfo");
-    InfoPtr |= MultiArg;
+    // IMPORTANT NOTE: we mask off the upper bit of this value because we only
+    // reserve two bits for the integer in the PointerIntPair. See the comments
+    // in `InfoPtr` for more details.
+    InfoPtr.setPointerAndInt(SI, MultiArg & 0b11);
   }
 
   IdentifierInfo *getAsIdentifierInfo() const {
-    if (getIdentifierInfoFlag() < MultiArg)
-      return reinterpret_cast<IdentifierInfo *>(InfoPtr & ~ArgFlags);
-    return nullptr;
+    return InfoPtr.getPointer().dyn_cast<IdentifierInfo *>();
   }
 
   MultiKeywordSelector *getMultiKeywordSelector() const {
-    return reinterpret_cast<MultiKeywordSelector *>(InfoPtr & ~ArgFlags);
+    return InfoPtr.getPointer().get<MultiKeywordSelector *>();
   }
 
   unsigned getIdentifierInfoFlag() const {
-    return InfoPtr & ArgFlags;
+    unsigned new_flags = InfoPtr.getInt();
+    // IMPORTANT NOTE: We have to reconstitute this data rather than use the
+    // value directly from the PointerIntPair. See the comments in `InfoPtr`
+    // for more details.
+    if (InfoPtr.getPointer().is<MultiKeywordSelector *>())
+      new_flags |= MultiArg;
+    return new_flags;
   }
 
   static ObjCMethodFamily getMethodFamilyImpl(Selector sel);
@@ -856,31 +1007,27 @@ public:
   /// The default ctor should only be used when creating data structures that
   ///  will contain selectors.
   Selector() = default;
-  explicit Selector(uintptr_t V) : InfoPtr(V) {}
+  explicit Selector(uintptr_t V) {
+    InfoPtr.setFromOpaqueValue(reinterpret_cast<void *>(V));
+  }
 
   /// operator==/!= - Indicate whether the specified selectors are identical.
   bool operator==(Selector RHS) const {
-    return InfoPtr == RHS.InfoPtr;
+    return InfoPtr.getOpaqueValue() == RHS.InfoPtr.getOpaqueValue();
   }
   bool operator!=(Selector RHS) const {
-    return InfoPtr != RHS.InfoPtr;
+    return InfoPtr.getOpaqueValue() != RHS.InfoPtr.getOpaqueValue();
   }
 
-  void *getAsOpaquePtr() const {
-    return reinterpret_cast<void*>(InfoPtr);
-  }
+  void *getAsOpaquePtr() const { return InfoPtr.getOpaqueValue(); }
 
   /// Determine whether this is the empty selector.
-  bool isNull() const { return InfoPtr == 0; }
+  bool isNull() const { return InfoPtr.getOpaqueValue() == nullptr; }
 
   // Predicates to identify the selector type.
-  bool isKeywordSelector() const {
-    return getIdentifierInfoFlag() != ZeroArg;
-  }
+  bool isKeywordSelector() const { return InfoPtr.getInt() != ZeroArg; }
 
-  bool isUnarySelector() const {
-    return getIdentifierInfoFlag() == ZeroArg;
-  }
+  bool isUnarySelector() const { return InfoPtr.getInt() == ZeroArg; }
 
   /// If this selector is the specific keyword selector described by Names.
   bool isKeywordSelector(ArrayRef<StringRef> Names) const;
@@ -991,68 +1138,6 @@ public:
   static std::string getPropertyNameFromSetterSelector(Selector Sel);
 };
 
-namespace detail {
-
-/// DeclarationNameExtra is used as a base of various uncommon special names.
-/// This class is needed since DeclarationName has not enough space to store
-/// the kind of every possible names. Therefore the kind of common names is
-/// stored directly in DeclarationName, and the kind of uncommon names is
-/// stored in DeclarationNameExtra. It is aligned to 8 bytes because
-/// DeclarationName needs the lower 3 bits to store the kind of common names.
-/// DeclarationNameExtra is tightly coupled to DeclarationName and any change
-/// here is very likely to require changes in DeclarationName(Table).
-class alignas(IdentifierInfoAlignment) DeclarationNameExtra {
-  friend class clang::DeclarationName;
-  friend class clang::DeclarationNameTable;
-
-protected:
-  /// The kind of "extra" information stored in the DeclarationName. See
-  /// @c ExtraKindOrNumArgs for an explanation of how these enumerator values
-  /// are used. Note that DeclarationName depends on the numerical values
-  /// of the enumerators in this enum. See DeclarationName::StoredNameKind
-  /// for more info.
-  enum ExtraKind {
-    CXXDeductionGuideName,
-    CXXLiteralOperatorName,
-    CXXUsingDirective,
-    ObjCMultiArgSelector
-  };
-
-  /// ExtraKindOrNumArgs has one of the following meaning:
-  ///  * The kind of an uncommon C++ special name. This DeclarationNameExtra
-  ///    is in this case in fact either a CXXDeductionGuideNameExtra or
-  ///    a CXXLiteralOperatorIdName.
-  ///
-  ///  * It may be also name common to C++ using-directives (CXXUsingDirective),
-  ///
-  ///  * Otherwise it is ObjCMultiArgSelector+NumArgs, where NumArgs is
-  ///    the number of arguments in the Objective-C selector, in which
-  ///    case the DeclarationNameExtra is also a MultiKeywordSelector.
-  unsigned ExtraKindOrNumArgs;
-
-  DeclarationNameExtra(ExtraKind Kind) : ExtraKindOrNumArgs(Kind) {}
-  DeclarationNameExtra(unsigned NumArgs)
-      : ExtraKindOrNumArgs(ObjCMultiArgSelector + NumArgs) {}
-
-  /// Return the corresponding ExtraKind.
-  ExtraKind getKind() const {
-    return static_cast<ExtraKind>(ExtraKindOrNumArgs >
-                                          (unsigned)ObjCMultiArgSelector
-                                      ? (unsigned)ObjCMultiArgSelector
-                                      : ExtraKindOrNumArgs);
-  }
-
-  /// Return the number of arguments in an ObjC selector. Only valid when this
-  /// is indeed an ObjCMultiArgSelector.
-  unsigned getNumArgs() const {
-    assert(ExtraKindOrNumArgs >= (unsigned)ObjCMultiArgSelector &&
-           "getNumArgs called but this is not an ObjC selector!");
-    return ExtraKindOrNumArgs - (unsigned)ObjCMultiArgSelector;
-  }
-};
-
-} // namespace detail
-
 }  // namespace clang
 
 namespace llvm {
@@ -1087,34 +1172,6 @@ struct PointerLikeTypeTraits<clang::Selector> {
   }
 
   static constexpr int NumLowBitsAvailable = 0;
-};
-
-// Provide PointerLikeTypeTraits for IdentifierInfo pointers, which
-// are not guaranteed to be 8-byte aligned.
-template<>
-struct PointerLikeTypeTraits<clang::IdentifierInfo*> {
-  static void *getAsVoidPointer(clang::IdentifierInfo* P) {
-    return P;
-  }
-
-  static clang::IdentifierInfo *getFromVoidPointer(void *P) {
-    return static_cast<clang::IdentifierInfo*>(P);
-  }
-
-  static constexpr int NumLowBitsAvailable = 1;
-};
-
-template<>
-struct PointerLikeTypeTraits<const clang::IdentifierInfo*> {
-  static const void *getAsVoidPointer(const clang::IdentifierInfo* P) {
-    return P;
-  }
-
-  static const clang::IdentifierInfo *getFromVoidPointer(const void *P) {
-    return static_cast<const clang::IdentifierInfo*>(P);
-  }
-
-  static constexpr int NumLowBitsAvailable = 1;
 };
 
 } // namespace llvm

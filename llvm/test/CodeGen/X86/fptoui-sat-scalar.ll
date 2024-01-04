@@ -807,7 +807,7 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X86-X87-NEXT:    pushl %ebx
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $44, %esp
+; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -864,7 +864,7 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movl %ebp, 4(%ecx)
 ; X86-X87-NEXT:    movl %eax, (%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
-; X86-X87-NEXT:    addl $44, %esp
+; X86-X87-NEXT:    addl $60, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    popl %edi
 ; X86-X87-NEXT:    popl %ebx
@@ -2818,7 +2818,7 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X86-X87-NEXT:    pushl %ebx
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $44, %esp
+; X86-X87-NEXT:    subl $60, %esp
 ; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, (%esp)
 ; X86-X87-NEXT:    calll __gnu_h2f_ieee
@@ -2877,7 +2877,7 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X86-X87-NEXT:    movl %ebp, 4(%ecx)
 ; X86-X87-NEXT:    movl %eax, (%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
-; X86-X87-NEXT:    addl $44, %esp
+; X86-X87-NEXT:    addl $60, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    popl %edi
 ; X86-X87-NEXT:    popl %ebx

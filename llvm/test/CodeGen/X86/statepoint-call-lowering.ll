@@ -247,8 +247,6 @@ define i8 @test_signext_return(ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq signext_return_i1@PLT
 ; CHECK-NEXT:  .Ltmp10:
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    negb %al
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -266,7 +264,6 @@ define i8 @test_zeroext_return() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp11:
-; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -275,6 +272,24 @@ entry:
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   %ext = zext i1 %call1 to i8
   ret i8 %ext
+}
+
+define signext i1 @test_noext_signext_return() gc "statepoint-example" {
+; CHECK-LABEL: test_noext_signext_return:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq return_i1@PLT
+; CHECK-NEXT:  .Ltmp12:
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  ret i1 %call1
 }
 
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)

@@ -63,7 +63,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -644,8 +643,7 @@ bool GlobalMerge::doInitialization(Module &M) {
     StringRef Section = GV.getSection();
 
     // Ignore all 'special' globals.
-    if (GV.getName().startswith("llvm.") ||
-        GV.getName().startswith(".llvm."))
+    if (GV.getName().starts_with("llvm.") || GV.getName().starts_with(".llvm."))
       continue;
 
     // Ignore all "required" globals:

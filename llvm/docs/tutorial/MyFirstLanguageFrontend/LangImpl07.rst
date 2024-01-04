@@ -182,7 +182,7 @@ example through the pass, for example, you'll get:
 
 .. code-block:: bash
 
-    $ llvm-as < example.ll | opt -mem2reg | llvm-dis
+    $ llvm-as < example.ll | opt -passes=mem2reg | llvm-dis
     @G = weak global i32 0
     @H = weak global i32 0
 

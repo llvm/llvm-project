@@ -62,6 +62,15 @@ public:
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
+  void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
+                     const MachineInstr &MI);
+
+  void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                       const MachineInstr &MI);
+
+  void LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                       const MachineInstr &MI);
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void emitInstruction(const MachineInstr *MI) override;
@@ -97,6 +106,78 @@ private:
 
   bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
+}
+
+void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
+                                    const MachineInstr &MI) {
+  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+
+  SM.recordStackMap(*MILabel, MI);
+  assert(NumNOPBytes % NOPBytes == 0 &&
+         "Invalid number of NOP bytes requested!");
+
+  // Scan ahead to trim the shadow.
+  const MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::const_iterator MII(MI);
+  ++MII;
+  while (NumNOPBytes > 0) {
+    if (MII == MBB.end() || MII->isCall() ||
+        MII->getOpcode() == RISCV::DBG_VALUE ||
+        MII->getOpcode() == TargetOpcode::PATCHPOINT ||
+        MII->getOpcode() == TargetOpcode::STACKMAP)
+      break;
+    ++MII;
+    NumNOPBytes -= 4;
+  }
+
+  // Emit nops.
+  emitNops(NumNOPBytes / NOPBytes);
+}
+
+// Lower a patchpoint of the form:
+// [<def>], <id>, <numBytes>, <target>, <numArgs>
+void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                                      const MachineInstr &MI) {
+  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+  SM.recordPatchPoint(*MILabel, MI);
+
+  PatchPointOpers Opers(&MI);
+
+  unsigned EncodedBytes = 0;
+
+  // Emit padding.
+  unsigned NumBytes = Opers.getNumPatchBytes();
+  assert(NumBytes >= EncodedBytes &&
+         "Patchpoint can't request size less than the length of a call.");
+  assert((NumBytes - EncodedBytes) % NOPBytes == 0 &&
+         "Invalid number of NOP bytes requested!");
+  emitNops((NumBytes - EncodedBytes) / NOPBytes);
+}
+
+void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                                      const MachineInstr &MI) {
+  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+
+  StatepointOpers SOpers(&MI);
+  if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
+    assert(PatchBytes % NOPBytes == 0 &&
+           "Invalid number of NOP bytes requested!");
+    emitNops(PatchBytes / NOPBytes);
+  }
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+  SM.recordStatepoint(*MILabel, MI);
 }
 
 void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
@@ -166,6 +247,12 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::PseudoRVVInitUndefM4:
   case RISCV::PseudoRVVInitUndefM8:
     return;
+  case TargetOpcode::STACKMAP:
+    return LowerSTACKMAP(*OutStreamer, SM, *MI);
+  case TargetOpcode::PATCHPOINT:
+    return LowerPATCHPOINT(*OutStreamer, SM, *MI);
+  case TargetOpcode::STATEPOINT:
+    return LowerSTATEPOINT(*OutStreamer, SM, *MI);
   }
 
   MCInst OutInst;

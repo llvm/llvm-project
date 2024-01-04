@@ -38,13 +38,11 @@ class BitVector;
 class EdgeBundles;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
-class MachineLoopInfo;
 
 class SpillPlacement : public MachineFunctionPass {
   struct Node;
   const MachineFunction *MF = nullptr;
   const EdgeBundles *bundles = nullptr;
-  const MachineLoopInfo *loops = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
   Node *nodes = nullptr;
 

@@ -41,6 +41,7 @@ expand_template(
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
+        "@MLIR_ENABLE_SYCL_RUNNER@": "0",
         "@MLIR_ENABLE_SPIRV_CPU_RUNNER@": "0",
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
@@ -144,7 +145,6 @@ gentbl_cc_library(
         ":TestOpTdFiles",
     ],
 )
-
 
 gentbl_cc_library(
     name = "TestOpsIncGen",
@@ -468,6 +468,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:ArithDialect",
         "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
@@ -659,6 +660,8 @@ cc_library(
         "//mlir:IR",
         "//mlir:IndexDialect",
         "//mlir:IndexToLLVM",
+        "//mlir:LLVMDialect",
+        "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
         "//mlir:MemRefDialect",
         "//mlir:MemRefToLLVM",
@@ -774,6 +777,25 @@ cc_library(
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorTransforms",
+    ],
+)
+
+cc_library(
+    name = "TestMesh",
+    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    hdrs = glob(["lib/Dialect/Mesh/**/*.h"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MeshDialect",
+        "//mlir:MeshTransforms",
+        "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:Support",
+        "//mlir:Transforms",
     ],
 )
 

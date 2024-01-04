@@ -257,6 +257,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
   bool IsFreeBSD = Triple.isOSFreeBSD();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
+  bool IsHaiku = Triple.isOSHaiku();
+  bool IsOHOS = Triple.isOHOSFamily();
 
   // FIXME: the isOSBinFormatMachO is a workaround for identifying a Darwin-like
   // environment where size_t is `unsigned long` rather than `unsigned int`
@@ -323,7 +325,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD)
+      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -417,6 +419,7 @@ bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
   BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   return true;
 }
 
@@ -1227,8 +1230,7 @@ bool ARMTargetInfo::validateConstraintModifier(
   bool isInOut = (Constraint[0] == '+');
 
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   switch (Constraint[0]) {
   default:

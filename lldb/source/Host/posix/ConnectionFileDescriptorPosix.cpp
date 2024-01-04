@@ -510,7 +510,7 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           ssize_t bytes_read =
               llvm::sys::RetryAfterSignal(-1, ::read, pipe_fd, &c, 1);
           assert(bytes_read == 1);
-          (void)bytes_read;
+          UNUSED_IF_ASSERT_DISABLED(bytes_read);
           switch (c) {
           case 'q':
             LLDB_LOGF(log,

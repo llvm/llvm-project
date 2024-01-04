@@ -625,11 +625,13 @@ void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
 mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
   if (auto *v = getVal().getDefiningOp()) {
     if (auto box = mlir::dyn_cast<fir::EmboxOp>(v)) {
-      if (!box.getSlice()) // Fold only if not sliced
+      // Fold only if not sliced
+      if (!box.getSlice() && box.getMemref().getType() == getType())
         return box.getMemref();
     }
     if (auto box = mlir::dyn_cast<fir::EmboxCharOp>(v))
-      return box.getMemref();
+      if (box.getMemref().getType() == getType())
+        return box.getMemref();
   }
   return {};
 }
@@ -1933,6 +1935,13 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
+llvm::MutableArrayRef<mlir::OpOperand>
+fir::IterWhileOp::getYieldedValuesMutable() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOpOperands().drop_front()
+                         : term->getOpOperands();
+}
+
 //===----------------------------------------------------------------------===//
 // LenParamIndexOp
 //===----------------------------------------------------------------------===//
@@ -1977,8 +1986,18 @@ void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
     mlir::emitError(result.location, "not a memory reference type");
     return;
   }
+  build(builder, result, eleTy, refVal);
+}
+
+void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::Type resTy, mlir::Value refVal) {
+
+  if (!refVal) {
+    mlir::emitError(result.location, "LoadOp has null argument");
+    return;
+  }
   result.addOperands(refVal);
-  result.addTypes(eleTy);
+  result.addTypes(resTy);
 }
 
 mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
@@ -2226,6 +2245,13 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= getInitArgs().size())
     return getInitArgs()[blockArgNum - 1];
   return {};
+}
+
+llvm::MutableArrayRef<mlir::OpOperand>
+fir::DoLoopOp::getYieldedValuesMutable() {
+  auto *term = getRegion().front().getTerminator();
+  return getFinalValue() ? term->getOpOperands().drop_front()
+                         : term->getOpOperands();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3249,6 +3275,11 @@ mlir::LogicalResult fir::StoreOp::verify() {
   return mlir::success();
 }
 
+void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::Value value, mlir::Value memref) {
+  build(builder, result, value, memref, {});
+}
+
 //===----------------------------------------------------------------------===//
 // StringLitOp
 //===----------------------------------------------------------------------===//
@@ -3553,6 +3584,39 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
   term = getElseRegion().front().getTerminator();
   if (resultNum < term->getNumOperands())
     results.push_back(term->getOperand(resultNum));
+}
+
+//===----------------------------------------------------------------------===//
+// BoxOffsetOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult fir::BoxOffsetOp::verify() {
+  auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(
+      fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
+  if (!boxType)
+    return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> type");
+  if (getField() != fir::BoxFieldAttr::base_addr &&
+      getField() != fir::BoxFieldAttr::derived_type)
+    return emitOpError("cannot address provided field");
+  if (getField() == fir::BoxFieldAttr::derived_type)
+    if (!fir::boxHasAddendum(boxType))
+      return emitOpError("can only address derived_type field of derived type "
+                         "or unlimited polymorphic fir.box");
+  return mlir::success();
+}
+
+void fir::BoxOffsetOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &result, mlir::Value boxRef,
+                             fir::BoxFieldAttr field) {
+  mlir::Type valueType =
+      fir::unwrapPassByRefType(fir::unwrapRefType(boxRef.getType()));
+  mlir::Type resultType = valueType;
+  if (field == fir::BoxFieldAttr::base_addr)
+    resultType = fir::LLVMPointerType::get(fir::ReferenceType::get(valueType));
+  else if (field == fir::BoxFieldAttr::derived_type)
+    resultType = fir::LLVMPointerType::get(
+        fir::TypeDescType::get(fir::unwrapSequenceType(valueType)));
+  build(builder, result, {resultType}, boxRef, field);
 }
 
 //===----------------------------------------------------------------------===//

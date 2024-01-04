@@ -188,7 +188,7 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   uint32_t NamesOffset = calculateNamesOffset();
 
   FileInfoBuffer = MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size),
-                                           llvm::support::little);
+                                           llvm::endianness::little);
 
   WritableBinaryStreamRef MetadataBuffer =
       WritableBinaryStreamRef(FileInfoBuffer).keep_front(NamesOffset);

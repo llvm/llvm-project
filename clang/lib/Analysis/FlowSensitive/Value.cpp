@@ -34,14 +34,20 @@ bool areEquivalentValues(const Value &Val1, const Value &Val2) {
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val) {
   switch (Val.getKind()) {
-  case Value::Kind::Pointer: {
-    const auto *PV = dyn_cast<PointerValue>(&Val);
-    return OS << "Pointer(" << &PV->getPointeeLoc() << ")";
+  case Value::Kind::Integer:
+    return OS << "Integer(@" << &Val << ")";
+  case Value::Kind::Pointer:
+    return OS << "Pointer(" << &cast<PointerValue>(Val).getPointeeLoc() << ")";
+  case Value::Kind::Record:
+    return OS << "Record(" << &cast<RecordValue>(Val).getLoc() << ")";
+  case Value::Kind::TopBool:
+    return OS << "TopBool(" << cast<TopBoolValue>(Val).getAtom() << ")";
+  case Value::Kind::AtomicBool:
+    return OS << "AtomicBool(" << cast<AtomicBoolValue>(Val).getAtom() << ")";
+  case Value::Kind::FormulaBool:
+    return OS << "FormulaBool(" << cast<FormulaBoolValue>(Val).formula() << ")";
   }
-  // FIXME: support remaining cases.
-  default:
-    return OS << debugString(Val.getKind());
-  }
+  llvm_unreachable("Unknown clang::dataflow::Value::Kind enum");
 }
 
 } // namespace dataflow

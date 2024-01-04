@@ -912,9 +912,10 @@ ASTSelectorLookupTrait::ReadKey(const unsigned char* d, unsigned) {
   using namespace llvm::support;
 
   SelectorTable &SelTable = Reader.getContext().Selectors;
-  unsigned N = endian::readNext<uint16_t, little, unaligned>(d);
+  unsigned N =
+      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
   IdentifierInfo *FirstII = Reader.getLocalIdentifier(
-      F, endian::readNext<uint32_t, little, unaligned>(d));
+      F, endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d));
   if (N == 0)
     return SelTable.getNullarySelector(FirstII);
   else if (N == 1)
@@ -924,7 +925,7 @@ ASTSelectorLookupTrait::ReadKey(const unsigned char* d, unsigned) {
   Args.push_back(FirstII);
   for (unsigned I = 1; I != N; ++I)
     Args.push_back(Reader.getLocalIdentifier(
-        F, endian::readNext<uint32_t, little, unaligned>(d)));
+        F, endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d)));
 
   return SelTable.getSelector(N, Args.data());
 }
@@ -937,9 +938,11 @@ ASTSelectorLookupTrait::ReadData(Selector, const unsigned char* d,
   data_type Result;
 
   Result.ID = Reader.getGlobalSelectorID(
-      F, endian::readNext<uint32_t, little, unaligned>(d));
-  unsigned FullInstanceBits = endian::readNext<uint16_t, little, unaligned>(d);
-  unsigned FullFactoryBits = endian::readNext<uint16_t, little, unaligned>(d);
+      F, endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d));
+  unsigned FullInstanceBits =
+      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
+  unsigned FullFactoryBits =
+      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
   Result.InstanceBits = FullInstanceBits & 0x3;
   Result.InstanceHasMoreThanOneDecl = (FullInstanceBits >> 2) & 0x1;
   Result.FactoryBits = FullFactoryBits & 0x3;
@@ -950,14 +953,16 @@ ASTSelectorLookupTrait::ReadData(Selector, const unsigned char* d,
   // Load instance methods
   for (unsigned I = 0; I != NumInstanceMethods; ++I) {
     if (ObjCMethodDecl *Method = Reader.GetLocalDeclAs<ObjCMethodDecl>(
-            F, endian::readNext<uint32_t, little, unaligned>(d)))
+            F,
+            endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d)))
       Result.Instance.push_back(Method);
   }
 
   // Load factory methods
   for (unsigned I = 0; I != NumFactoryMethods; ++I) {
     if (ObjCMethodDecl *Method = Reader.GetLocalDeclAs<ObjCMethodDecl>(
-            F, endian::readNext<uint32_t, little, unaligned>(d)))
+            F,
+            endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d)))
       Result.Factory.push_back(Method);
   }
 
@@ -998,7 +1003,8 @@ static bool readBit(unsigned &Bits) {
 IdentID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) {
   using namespace llvm::support;
 
-  unsigned RawID = endian::readNext<uint32_t, little, unaligned>(d);
+  unsigned RawID =
+      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
   return Reader.getGlobalIdentifierID(F, RawID >> 1);
 }
 
@@ -1016,7 +1022,8 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
                                                    unsigned DataLen) {
   using namespace llvm::support;
 
-  unsigned RawID = endian::readNext<uint32_t, little, unaligned>(d);
+  unsigned RawID =
+      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
   bool IsInteresting = RawID & 0x01;
 
   // Wipe out the "is interesting" bit.
@@ -1039,8 +1046,10 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     return II;
   }
 
-  unsigned ObjCOrBuiltinID = endian::readNext<uint16_t, little, unaligned>(d);
-  unsigned Bits = endian::readNext<uint16_t, little, unaligned>(d);
+  unsigned ObjCOrBuiltinID =
+      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
+  unsigned Bits =
+      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
   bool CPlusPlusOperatorKeyword = readBit(Bits);
   bool HasRevertedTokenIDToIdentifier = readBit(Bits);
   bool Poisoned = readBit(Bits);
@@ -1069,7 +1078,7 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   // definition.
   if (HadMacroDefinition) {
     uint32_t MacroDirectivesOffset =
-        endian::readNext<uint32_t, little, unaligned>(d);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
     DataLen -= 4;
 
     Reader.addPendingMacro(II, &F, MacroDirectivesOffset);
@@ -1083,7 +1092,8 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     SmallVector<uint32_t, 4> DeclIDs;
     for (; DataLen > 0; DataLen -= 4)
       DeclIDs.push_back(Reader.getGlobalDeclID(
-          F, endian::readNext<uint32_t, little, unaligned>(d)));
+          F,
+          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d)));
     Reader.SetGloballyVisibleDecls(II, DeclIDs);
   }
 
@@ -1152,7 +1162,8 @@ ModuleFile *
 ASTDeclContextNameLookupTrait::ReadFileRef(const unsigned char *&d) {
   using namespace llvm::support;
 
-  uint32_t ModuleFileID = endian::readNext<uint32_t, little, unaligned>(d);
+  uint32_t ModuleFileID =
+      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
   return Reader.getLocalModuleFile(F, ModuleFileID);
 }
 
@@ -1172,15 +1183,18 @@ ASTDeclContextNameLookupTrait::ReadKey(const unsigned char *d, unsigned) {
   case DeclarationName::CXXLiteralOperatorName:
   case DeclarationName::CXXDeductionGuideName:
     Data = (uint64_t)Reader.getLocalIdentifier(
-        F, endian::readNext<uint32_t, little, unaligned>(d));
+        F, endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d));
     break;
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:
   case DeclarationName::ObjCMultiArgSelector:
     Data =
-        (uint64_t)Reader.getLocalSelector(
-                             F, endian::readNext<uint32_t, little, unaligned>(
-                                    d)).getAsOpaquePtr();
+        (uint64_t)Reader
+            .getLocalSelector(
+                F,
+                endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
+                    d))
+            .getAsOpaquePtr();
     break;
   case DeclarationName::CXXOperatorName:
     Data = *d++; // OverloadedOperatorKind
@@ -1203,7 +1217,8 @@ void ASTDeclContextNameLookupTrait::ReadDataInto(internal_key_type,
   using namespace llvm::support;
 
   for (unsigned NumDecls = DataLen / 4; NumDecls; --NumDecls) {
-    uint32_t LocalID = endian::readNext<uint32_t, little, unaligned>(d);
+    uint32_t LocalID =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
     Val.insert(Reader.getGlobalDeclID(F, LocalID));
   }
 }
@@ -1766,26 +1781,26 @@ llvm::Error ASTReader::ReadBlockAbbrevs(BitstreamCursor &Cursor,
   }
 }
 
-Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
+Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
                            unsigned &Idx) {
   Token Tok;
   Tok.startToken();
-  Tok.setLocation(ReadSourceLocation(F, Record, Idx));
+  Tok.setLocation(ReadSourceLocation(M, Record, Idx));
   Tok.setKind((tok::TokenKind)Record[Idx++]);
   Tok.setFlag((Token::TokenFlags)Record[Idx++]);
 
   if (Tok.isAnnotation()) {
-    Tok.setAnnotationEndLoc(ReadSourceLocation(F, Record, Idx));
+    Tok.setAnnotationEndLoc(ReadSourceLocation(M, Record, Idx));
     switch (Tok.getKind()) {
     case tok::annot_pragma_loop_hint: {
       auto *Info = new (PP.getPreprocessorAllocator()) PragmaLoopHintInfo;
-      Info->PragmaName = ReadToken(F, Record, Idx);
-      Info->Option = ReadToken(F, Record, Idx);
+      Info->PragmaName = ReadToken(M, Record, Idx);
+      Info->Option = ReadToken(M, Record, Idx);
       unsigned NumTokens = Record[Idx++];
       SmallVector<Token, 4> Toks;
       Toks.reserve(NumTokens);
       for (unsigned I = 0; I < NumTokens; ++I)
-        Toks.push_back(ReadToken(F, Record, Idx));
+        Toks.push_back(ReadToken(M, Record, Idx));
       Info->Toks = llvm::ArrayRef(Toks).copy(PP.getPreprocessorAllocator());
       Tok.setAnnotationValue(static_cast<void *>(Info));
       break;
@@ -1796,7 +1811,7 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
       auto SlotLabel = ReadString(Record, Idx);
       Info->SlotLabel =
           llvm::StringRef(SlotLabel).copy(PP.getPreprocessorAllocator());
-      Info->Alignment = ReadToken(F, Record, Idx);
+      Info->Alignment = ReadToken(M, Record, Idx);
       Tok.setAnnotationValue(static_cast<void *>(Info));
       break;
     }
@@ -1804,13 +1819,15 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
     case tok::annot_pragma_openmp:
     case tok::annot_pragma_openmp_end:
     case tok::annot_pragma_unused:
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
     }
   } else {
     Tok.setLength(Record[Idx++]);
-    if (IdentifierInfo *II = getLocalIdentifier(F, Record[Idx++]))
+    if (IdentifierInfo *II = getLocalIdentifier(M, Record[Idx++]))
       Tok.setIdentifierInfo(II);
   }
   return Tok;
@@ -1980,10 +1997,10 @@ unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
 }
 
 HeaderFileInfoTrait::internal_key_type
-HeaderFileInfoTrait::GetInternalKey(external_key_type FE) {
-  internal_key_type ikey = {FE.getSize(),
-                            M.HasTimestamps ? FE.getModificationTime() : 0,
-                            FE.getName(), /*Imported*/ false};
+HeaderFileInfoTrait::GetInternalKey(external_key_type ekey) {
+  internal_key_type ikey = {ekey.getSize(),
+                            M.HasTimestamps ? ekey.getModificationTime() : 0,
+                            ekey.getName(), /*Imported*/ false};
   return ikey;
 }
 
@@ -2010,8 +2027,10 @@ HeaderFileInfoTrait::ReadKey(const unsigned char *d, unsigned) {
   using namespace llvm::support;
 
   internal_key_type ikey;
-  ikey.Size = off_t(endian::readNext<uint64_t, little, unaligned>(d));
-  ikey.ModTime = time_t(endian::readNext<uint64_t, little, unaligned>(d));
+  ikey.Size =
+      off_t(endian::readNext<uint64_t, llvm::endianness::little, unaligned>(d));
+  ikey.ModTime = time_t(
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(d));
   ikey.Filename = (const char *)d;
   ikey.Imported = true;
   return ikey;
@@ -2039,9 +2058,9 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HFI.DirInfo = (Flags >> 1) & 0x07;
   HFI.IndexHeaderMapHeader = Flags & 0x01;
   HFI.ControllingMacroID = Reader.getGlobalIdentifierID(
-      M, endian::readNext<uint32_t, little, unaligned>(d));
+      M, endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d));
   if (unsigned FrameworkOffset =
-          endian::readNext<uint32_t, little, unaligned>(d)) {
+          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d)) {
     // The framework offset is 1 greater than the actual offset,
     // since 0 is used as an indicator for "no framework name".
     StringRef FrameworkName(FrameworkStrings + FrameworkOffset - 1);
@@ -2051,7 +2070,8 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   assert((End - d) % 4 == 0 &&
          "Wrong data length in HeaderFileInfo deserialization");
   while (d != End) {
-    uint32_t LocalSMID = endian::readNext<uint32_t, little, unaligned>(d);
+    uint32_t LocalSMID =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
     auto HeaderRole = static_cast<ModuleMap::ModuleHeaderRole>(LocalSMID & 7);
     LocalSMID >>= 3;
 
@@ -2511,8 +2531,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     Overridden = false;
   }
 
-  OptionalFileEntryRefDegradesToFileEntryPtr File = OptionalFileEntryRef(
-      expectedToOptional(FileMgr.getFileRef(Filename, /*OpenFile=*/false)));
+  auto File = FileMgr.getOptionalFileRef(Filename, /*OpenFile=*/false);
 
   // For an overridden file, create a virtual file with the stored
   // size/timestamp.
@@ -2539,7 +2558,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // PCH.
   SourceManager &SM = getSourceManager();
   // FIXME: Reject if the overrides are different.
-  if ((!Overridden && !Transient) && !SkipChecks && SM.isFileOverridden(File)) {
+  if ((!Overridden && !Transient) && !SkipChecks &&
+      SM.isFileOverridden(*File)) {
     if (Complain)
       Error(diag::err_fe_pch_file_overridden, Filename);
 
@@ -3132,7 +3152,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                   DisableValidationForModuleKind::Module) &&
             F.Kind != MK_ExplicitModule && F.Kind != MK_PrebuiltModule) {
-          auto BuildDir = PP.getFileManager().getDirectory(Blob);
+          auto BuildDir = PP.getFileManager().getOptionalDirectoryRef(Blob);
           if (!BuildDir || *BuildDir != M->Directory) {
             if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
               Diag(diag::err_imported_module_relocated)
@@ -4030,8 +4050,9 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     // how it goes...
     using namespace llvm::support;
     ModuleKind Kind = static_cast<ModuleKind>(
-      endian::readNext<uint8_t, little, unaligned>(Data));
-    uint16_t Len = endian::readNext<uint16_t, little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data));
+    uint16_t Len =
+        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
     ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
@@ -4047,21 +4068,21 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     }
 
     SourceLocation::UIntTy SLocOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t IdentifierIDOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t MacroIDOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t PreprocessedEntityIDOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t SubmoduleIDOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t SelectorIDOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t DeclIDOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
     uint32_t TypeIndexOffset =
-        endian::readNext<uint32_t, little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
 
     auto mapOffset = [&](uint32_t Offset, uint32_t BaseOffset,
                          RemapBuilder &Remap) {
@@ -4156,7 +4177,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
       return OutOfDate;
     }
 
-    llvm::SmallPtrSet<FileEntryRef, 1> AdditionalStoredMaps;
+    ModuleMap::AdditionalModMapsSet AdditionalStoredMaps;
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
@@ -5765,7 +5786,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                 PartialDiagnostic(diag::err_module_file_conflict,
                                   ContextObj->DiagAllocator)
                 << CurrentModule->getTopLevelModuleName() << CurFile->getName()
-                << F.File->getName();
+                << F.File.getName();
             return DiagnosticError::create(CurrentImportLoc, ConflictError);
           }
         }
@@ -8925,10 +8946,10 @@ Module *ASTReader::getModule(unsigned ID) {
   return getSubmodule(ID);
 }
 
-ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &F, unsigned ID) {
+ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) {
   if (ID & 1) {
     // It's a module, look it up by submodule ID.
-    auto I = GlobalSubmoduleMap.find(getGlobalSubmoduleID(F, ID >> 1));
+    auto I = GlobalSubmoduleMap.find(getGlobalSubmoduleID(M, ID >> 1));
     return I == GlobalSubmoduleMap.end() ? nullptr : I->second;
   } else {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
@@ -8938,19 +8959,19 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &F, unsigned ID) {
   }
 }
 
-unsigned ASTReader::getModuleFileID(ModuleFile *F) {
-  if (!F)
+unsigned ASTReader::getModuleFileID(ModuleFile *M) {
+  if (!M)
     return 1;
 
   // For a file representing a module, use the submodule ID of the top-level
   // module as the file ID. For any other kind of file, the number of such
   // files loaded beforehand will be the same on reload.
   // FIXME: Is this true even if we have an explicit module file and a PCH?
-  if (F->isModule())
-    return ((F->BaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS) << 1) | 1;
+  if (M->isModule())
+    return ((M->BaseSubmoduleID + NUM_PREDEF_SUBMODULE_IDS) << 1) | 1;
 
   auto PCHModules = getModuleManager().pch_modules();
-  auto I = llvm::find(PCHModules, F);
+  auto I = llvm::find(PCHModules, M);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
   return (I - PCHModules.end()) << 1;
 }
@@ -10096,8 +10117,7 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
     // Adding the decl to IdResolver may have failed because it was already in
     // (even though it was not added in scope). If it is already in, make sure
     // it gets in the scope as well.
-    if (std::find(SemaObj->IdResolver.begin(Name),
-                  SemaObj->IdResolver.end(), D) != SemaObj->IdResolver.end())
+    if (llvm::is_contained(SemaObj->IdResolver.decls(Name), D))
       SemaObj->TUScope->AddDecl(D);
   }
 }
@@ -10255,6 +10275,9 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   case llvm::omp::OMPC_compare:
     C = new (Context) OMPCompareClause();
+    break;
+  case llvm::omp::OMPC_fail:
+    C = new (Context) OMPFailClause();
     break;
   case llvm::omp::OMPC_seq_cst:
     C = new (Context) OMPSeqCstClause();
@@ -10648,6 +10671,16 @@ void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseReader::VisitOMPCompareClause(OMPCompareClause *) {}
+
+// Read the parameter of fail clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPFailClause(OMPFailClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation FailParameterLoc = Record.readSourceLocation();
+  C->setFailParameterLoc(FailParameterLoc);
+  OpenMPClauseKind CKind = Record.readEnum<OpenMPClauseKind>();
+  C->setFailParameter(CKind);
+}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 

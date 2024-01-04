@@ -173,6 +173,7 @@ protected:
   template <unsigned Scale = 1>
   void printVectorIndex(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
+  template <unsigned Scale = 1>
   void printMatrixIndex(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printAdrAdrpLabel(const MCInst *MI, uint64_t Address, unsigned OpNum,

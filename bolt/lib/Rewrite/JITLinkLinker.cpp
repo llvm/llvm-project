@@ -192,6 +192,13 @@ void JITLinkLinker::loadObject(MemoryBufferRef Obj,
     exit(1);
   }
 
+  if ((*LG)->getTargetTriple().getArch() != BC.TheTriple->getArch()) {
+    errs() << "BOLT-ERROR: linking object with arch "
+           << (*LG)->getTargetTriple().getArchName()
+           << " into context with arch " << BC.TheTriple->getArchName() << "\n";
+    exit(1);
+  }
+
   auto Ctx = std::make_unique<Context>(*this, MapSections);
   jitlink::link(std::move(*LG), std::move(Ctx));
 }

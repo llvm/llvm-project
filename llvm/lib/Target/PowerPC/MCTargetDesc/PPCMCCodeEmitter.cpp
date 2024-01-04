@@ -508,7 +508,8 @@ void PPCMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // Output the constant in big/little endian byte order.
   unsigned Size = getInstSizeInBytes(MI);
-  support::endianness E = IsLittleEndian ? support::little : support::big;
+  llvm::endianness E =
+      IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
   switch (Size) {
   case 0:
     break;

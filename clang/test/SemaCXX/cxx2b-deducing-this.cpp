@@ -542,3 +542,97 @@ void foo(C c) {
 }
 
 }
+
+
+namespace GH69838 {
+struct S {
+  S(this auto &self) {} // expected-error {{an explicit object parameter cannot appear in a constructor}}
+  virtual void f(this S self) {} // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+  void g(this auto &self) const {} // expected-error {{explicit object member function cannot have 'const' qualifier}}
+  void h(this S self = S{}) {} // expected-error {{the explicit object parameter cannot have a default argument}}
+  void i(int i, this S self = S{}) {} // expected-error {{an explicit object parameter can only appear as the first parameter of the function}}
+  ~S(this S &&self); // expected-error {{an explicit object parameter cannot appear in a destructor}} \
+                     // expected-error {{destructor cannot have any parameters}}
+
+  static void j(this S s); // expected-error {{an explicit object parameter cannot appear in a static function}}
+};
+
+void nonmember(this S s); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+
+int test() {
+  S s;
+  s.f();
+  s.g();
+  s.h();
+  s.i(0);
+  s.j({});
+  nonmember(S{});
+}
+
+}
+
+namespace GH69962 {
+struct S {
+    S(const S&);
+};
+
+struct Thing {
+    template<typename Self, typename ... Args>
+    Thing(this Self&& self, Args&& ... args) { } // expected-error {{an explicit object parameter cannot appear in a constructor}}
+};
+
+class Server : public Thing {
+    S name_;
+};
+}
+
+namespace GH69233 {
+struct Base {};
+struct S : Base {
+    int j;
+    S& operator=(this Base& self, const S&) = default;
+    // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+    // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+    // expected-note@-3 {{explicitly defaulted function was implicitly deleted here}}
+};
+
+struct S2 {
+    S2& operator=(this int&& self, const S2&);
+    S2& operator=(this int&& self, S2&&);
+    operator int();
+};
+
+S2& S2::operator=(this int&& self, const S2&) = default;
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should match the type of the class 'S2'}}
+
+S2& S2::operator=(this int&& self, S2&&) = default;
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should match the type of the class 'S2'}}
+
+struct Move {
+    Move& operator=(this int&, Move&&) = default;
+    // expected-warning@-1 {{explicitly defaulted move assignment operator is implicitly deleted}}
+    // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit move assignment operator}}
+    // expected-note@-3 {{copy assignment operator is implicitly deleted because 'Move' has a user-declared move assignment operator}}
+};
+
+void test() {
+    S s;
+    s = s; // expected-error {{object of type 'S' cannot be assigned because its copy assignment operator is implicitly deleted}}
+    S2 s2;
+    s2 = s2;
+
+    Move m;
+    m = Move{}; // expected-error {{object of type 'Move' cannot be assigned because its copy assignment operator is implicitly deleted}}
+}
+
+}
+
+
+namespace GH75732 {
+auto serialize(auto&& archive, auto&& c){ }
+struct D {
+    auto serialize(this auto&& self, auto&& archive) {
+        serialize(archive, self); // expected-error {{call to explicit member function without an object argument}}
+    }
+};
+}

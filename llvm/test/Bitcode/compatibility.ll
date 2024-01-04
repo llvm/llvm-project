@@ -388,8 +388,6 @@ declare ghccc void @f.ghccc()
 ; CHECK: declare ghccc void @f.ghccc()
 declare cc11 void @f.cc11()
 ; CHECK: declare cc11 void @f.cc11()
-declare webkit_jscc void @f.webkit_jscc()
-; CHECK: declare webkit_jscc void @f.webkit_jscc()
 declare anyregcc void @f.anyregcc()
 ; CHECK: declare anyregcc void @f.anyregcc()
 declare preserve_mostcc void @f.preserve_mostcc()
@@ -1360,6 +1358,10 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   ; CHECK: or i8 %op1, %op2
   xor i8 %op1, %op2
   ; CHECK: xor i8 %op1, %op2
+
+  ; disjoint
+  or disjoint i8 %op1, %op2
+  ; CHECK: or disjoint i8 %op1, %op2
 
   ret void
 }

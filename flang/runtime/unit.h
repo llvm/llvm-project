@@ -59,7 +59,8 @@ public:
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
-  void OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
+  // Returns true if an existing unit was closed
+  bool OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
       OwningPtr<char> &&path, std::size_t pathLength, Convert,
       IoErrorHandler &);
   void OpenAnonymousUnit(std::optional<OpenStatus>, std::optional<Action>,
@@ -139,6 +140,7 @@ private:
   Direction direction_{Direction::Output};
   bool impliedEndfile_{false}; // sequential/stream output has taken place
   bool beganReadingRecord_{false};
+  bool anyWriteSinceLastPositioning_{false};
   bool directAccessRecWasSet_{false}; // REC= appeared
   // Subtle: The beginning of the frame can't be allowed to advance
   // during a single list-directed READ due to the possibility of a

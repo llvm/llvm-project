@@ -330,6 +330,26 @@ void test(int x) {
 <tbody>
 
 
+<tr><td><a id="alpha.cplusplus.ArrayDelete"><div class="namedescr expandable"><span class="name">
+alpha.cplusplus.ArrayDelete</span><span class="lang">
+(C++)</span><div class="descr">
+Reports destructions of arrays of polymorphic objects that are destructed as
+their base class
+</div></div></a></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+Base *create() {
+  Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+  return x;
+}
+
+void sink(Base *x) {
+  delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' undefined
+}
+
+</pre></div></div></td></tr>
+
+
 <tr><td><a id="alpha.cplusplus.DeleteWithNonVirtualDtor"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.DeleteWithNonVirtualDtor</span><span class="lang">
 (C++)</span><div class="descr">
@@ -339,8 +359,8 @@ their base class
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 NonVirtual *create() {
-  NonVirtual *x = new NVDerived(); // note: conversion from derived to base
-                                   //       happened here
+  NonVirtual *x = new NVDerived(); // note: Casting from 'NVDerived' to
+                                   //       'NonVirtual' here
   return x;
 }
 
@@ -349,25 +369,6 @@ void sink(NonVirtual *x) {
             //       destructor
 }
 </pre></div></div></td></tr>
-
-<tr><td><a id="alpha.cplusplus.EnumCastOutOfRange"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
-(C++)</span><div class="descr">
-  Check for integer to enumeration casts that could result in undefined values.
-</div></div></a></td>
-  <td><div class="exampleContainer expandable">
-    <div class="example"><pre>
-enum TestEnum {
-  A = 0
-};
-
-void foo() {
-  TestEnum t = static_cast<TestEnum>(-1);
-      // warn: the value provided to the cast expression is not in
-               the valid range of values for the enum
-}
-</pre></div></div></td></tr>
-
 
 <tr><td><a id="alpha.cplusplus.InvalidatedIterator"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.InvalidatedIterator</span><span class="lang">

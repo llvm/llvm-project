@@ -35,6 +35,7 @@ add_llvm_unittest(ADTTests
   HashingTest.cpp
   IListBaseTest.cpp
   IListIteratorTest.cpp
+  IListIteratorBitsTest.cpp
   IListNodeBaseTest.cpp
   IListNodeTest.cpp
   IListSentinelTest.cpp

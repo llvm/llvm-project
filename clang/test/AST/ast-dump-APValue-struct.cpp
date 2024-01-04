@@ -60,12 +60,12 @@ struct S5 : S4 {
 
 void Test() {
   constexpr S0 s0{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s0 'const S0':'const S0' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s0 'const S0' constexpr listinit
   // CHECK-NEXT:  |   |-value: Struct
   // CHECK-NEXT:  |   | `-fields: Int 0, Union .j Int 0
 
   constexpr S1 s1{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s1 'const S1':'const S1' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s1 'const S1' constexpr listinit
   // CHECK-NEXT:  |   |-value: Struct
   // CHECK-NEXT:  |   | |-field: Int 0
   // CHECK-NEXT:  |   | `-field: Union .s
@@ -73,12 +73,12 @@ void Test() {
   // CHECK-NEXT:  |   |     `-field: Int 0
 
   constexpr S2 s2{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s2 'const S2':'const S2' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s2 'const S2' constexpr listinit
   // CHECK-NEXT:  |   |-value: Struct
   // CHECK-NEXT:  |   | `-fields: Int 0, Union .u Union .j Int 0
 
   constexpr S3 s3{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s3 'const S3':'const S3' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s3 'const S3' constexpr listinit
   // CHECK-NEXT:  |   |-value: Struct
   // CHECK-NEXT:  |   | |-field: Int 0
   // CHECK-NEXT:  |   | `-field: Union .u
@@ -87,7 +87,7 @@ void Test() {
   // CHECK-NEXT:  |   |       `-field: Int 0
 
   constexpr S4 s4{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s4 'const S4':'const S4' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s4 'const S4' constexpr listinit
   // CHECK-NEXT:  |   |-value: Struct
   // CHECK-NEXT:  |   | |-base: Struct
   // CHECK-NEXT:  |   | | `-fields: Int 0, Union .j Int 0
@@ -96,7 +96,7 @@ void Test() {
   // CHECK-NEXT:  |   | `-fields: Int 4, Int 5, Int 6
 
   constexpr S5 s5{};
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s5 'const S5':'const S5' constexpr listinit
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s5 'const S5' constexpr listinit
   // CHECK-NEXT:      |-value: Struct
   // CHECK-NEXT:      | |-base: Struct
   // CHECK-NEXT:      | | |-base: Struct

@@ -92,6 +92,9 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
 // element type, otherwise return Type.
 const Type *getTypedPtrEltType(const Type *Type);
 
+// Check if a string contains a builtin prefix.
+bool hasBuiltinTypePrefix(StringRef Name);
+
 // Check if given LLVM type is a special opaque builtin type.
 bool isSpecialOpaqueType(const Type *Ty);
 } // namespace llvm

@@ -66,8 +66,9 @@ public:
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::NoPHIs)
+        .set(MachineFunctionProperties::Property::NoVRegs);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;

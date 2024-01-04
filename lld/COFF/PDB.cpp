@@ -268,7 +268,7 @@ void PDBLinker::pdbMakeAbsolute(SmallVectorImpl<char> &fileName) {
   // decide that it's a unix path if we're fairly certain.  Specifically, if
   // it starts with a forward slash.
   SmallString<128> absoluteFileName = ctx.config.pdbSourcePath;
-  sys::path::Style guessedStyle = absoluteFileName.startswith("/")
+  sys::path::Style guessedStyle = absoluteFileName.starts_with("/")
                                       ? sys::path::Style::posix
                                       : sys::path::Style::windows;
   sys::path::append(absoluteFileName, guessedStyle, fileName);
@@ -656,7 +656,7 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
     auto contents =
         SectionChunk::consumeDebugMagic(sectionContents, ".debug$S");
     DebugSubsectionArray subsections;
-    BinaryStreamReader reader(contents, support::little);
+    BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
 
     uint32_t nextRelocIndex = 0;
@@ -758,7 +758,7 @@ void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
   ArrayRef<uint8_t> contents = debugChunk->getContents();
   contents = SectionChunk::consumeDebugMagic(contents, ".debug$S");
   DebugSubsectionArray subsections;
-  BinaryStreamReader reader(contents, support::little);
+  BinaryStreamReader reader(contents, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, contents.size()));
   debugChunk->sortRelocations();
@@ -868,7 +868,7 @@ Error UnrelocatedDebugSubsection::commit(BinaryStreamWriter &writer) const {
       debugChunk->file->debugTypesObj) {
     TpiSource *source = debugChunk->file->debugTypesObj;
     DebugInlineeLinesSubsectionRef inlineeLines;
-    BinaryStreamReader storageReader(relocatedBytes, support::little);
+    BinaryStreamReader storageReader(relocatedBytes, llvm::endianness::little);
     ExitOnError exitOnErr;
     exitOnErr(inlineeLines.initialize(storageReader));
     for (const InlineeSourceLine &line : inlineeLines) {
@@ -962,7 +962,7 @@ void DebugSHandler::finish() {
     // Copy each frame data record, add in rvaStart, translate string table
     // indices, and add the record to the PDB.
     DebugFrameDataSubsectionRef fds;
-    BinaryStreamReader reader(subsecData, support::little);
+    BinaryStreamReader reader(subsecData, llvm::endianness::little);
     exitOnErr(fds.initialize(reader));
     for (codeview::FrameData fd : fds) {
       fd.RvaStart += rvaStart;
@@ -1050,7 +1050,8 @@ void PDBLinker::addDebugSymbols(TpiSource *source) {
       ArrayRef<uint8_t> relocatedDebugContents =
           relocateDebugChunk(*debugChunk);
       FixedStreamArray<object::FpoData> fpoRecords;
-      BinaryStreamReader reader(relocatedDebugContents, support::little);
+      BinaryStreamReader reader(relocatedDebugContents,
+                                llvm::endianness::little);
       uint32_t count = relocatedDebugContents.size() / sizeof(object::FpoData);
       exitOnErr(reader.readArray(fpoRecords, count));
 
@@ -1772,7 +1773,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
     ArrayRef<uint8_t> contents =
         SectionChunk::consumeDebugMagic(dbgC->getContents(), ".debug$S");
     DebugSubsectionArray subsections;
-    BinaryStreamReader reader(contents, support::little);
+    BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
 
     for (const DebugSubsectionRecord &ss : subsections) {

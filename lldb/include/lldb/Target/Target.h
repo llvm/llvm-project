@@ -654,6 +654,8 @@ public:
 
   lldb::BreakpointSP GetBreakpointByID(lldb::break_id_t break_id);
 
+  lldb::BreakpointSP CreateBreakpointAtUserEntry(Status &error);
+
   // Use this to create a file and line breakpoint to a given module or all
   // module it is nullptr
   lldb::BreakpointSP CreateBreakpoint(const FileSpecList *containingModules,
@@ -681,7 +683,7 @@ public:
   // Use this to create a breakpoint from a load address and a module file spec
   lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
                                                      bool internal,
-                                                     const FileSpec *file_spec,
+                                                     const FileSpec &file_spec,
                                                      bool request_hardware);
 
   // Use this to create Address breakpoints:
@@ -761,9 +763,10 @@ public:
   WatchpointList &GetWatchpointList() { return m_watchpoint_list; }
 
   // Manages breakpoint names:
-  void AddNameToBreakpoint(BreakpointID &id, const char *name, Status &error);
+  void AddNameToBreakpoint(BreakpointID &id, llvm::StringRef name,
+                           Status &error);
 
-  void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, const char *name,
+  void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, llvm::StringRef name,
                            Status &error);
 
   void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, ConstString name);

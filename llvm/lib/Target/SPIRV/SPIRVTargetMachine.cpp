@@ -90,7 +90,7 @@ namespace {
 class SPIRVPassConfig : public TargetPassConfig {
 public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM), TM(TM) {}
 
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
@@ -109,6 +109,9 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+
+private:
+  const SPIRVTargetMachine &TM;
 };
 } // namespace
 
@@ -150,7 +153,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
-  addPass(createSPIRVPrepareFunctionsPass());
+  addPass(createSPIRVPrepareFunctionsPass(TM));
 }
 
 void SPIRVPassConfig::addISelPrepare() {

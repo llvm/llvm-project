@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace fir;
@@ -40,7 +41,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   /// previously returned by the call operation with the operands of the
   /// return.
   void handleTerminator(mlir::Operation *op,
-                        llvm::ArrayRef<mlir::Value> valuesToRepl) const final {
+                        mlir::ValueRange valuesToRepl) const final {
     auto returnOp = llvm::cast<mlir::func::ReturnOp>(op);
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
@@ -58,6 +59,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
 
 fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
     : mlir::Dialect("fir", ctx, mlir::TypeID::get<FIROpsDialect>()) {
+  getContext()->loadDialect<mlir::LLVM::LLVMDialect>();
   registerTypes();
   registerAttributes();
   addOperations<

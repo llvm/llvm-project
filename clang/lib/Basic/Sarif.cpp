@@ -20,7 +20,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
@@ -75,7 +74,7 @@ static std::string fileNameToURI(StringRef Filename) {
 
   // Get the root name to see if it has a URI authority.
   StringRef Root = sys::path::root_name(Filename);
-  if (Root.startswith("//")) {
+  if (Root.starts_with("//")) {
     // There is an authority, so add it to the URI.
     Ret += Root.drop_front(2).str();
   } else if (!Root.empty()) {

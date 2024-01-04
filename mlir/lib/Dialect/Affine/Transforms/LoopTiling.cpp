@@ -138,8 +138,7 @@ static bool checkTilingLegality(MutableArrayRef<AffineForOp> origLoops) {
                                 << Twine(d) << " between:\n";);
         LLVM_DEBUG(srcAccess.opInst->dump(););
         LLVM_DEBUG(dstAccess.opInst->dump(););
-        for (unsigned k = 0, e = depComps.size(); k < e; k++) {
-          DependenceComponent depComp = depComps[k];
+        for (const DependenceComponent &depComp : depComps) {
           if (depComp.lb.has_value() && depComp.ub.has_value() &&
               *depComp.lb < *depComp.ub && *depComp.ub < 0) {
             LLVM_DEBUG(llvm::dbgs()

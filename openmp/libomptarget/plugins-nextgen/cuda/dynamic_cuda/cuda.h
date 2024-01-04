@@ -26,6 +26,71 @@ typedef struct CUevent_st *CUevent;
 
 #define CU_DEVICE_INVALID ((CUdevice)-2)
 
+typedef unsigned long long CUmemGenericAllocationHandle_v1;
+typedef CUmemGenericAllocationHandle_v1 CUmemGenericAllocationHandle;
+
+#define CU_DEVICE_INVALID ((CUdevice)-2)
+
+typedef enum CUmemAllocationGranularity_flags_enum {
+  CU_MEM_ALLOC_GRANULARITY_MINIMUM = 0x0,
+  CU_MEM_ALLOC_GRANULARITY_RECOMMENDED = 0x1
+} CUmemAllocationGranularity_flags;
+
+typedef enum CUmemAccess_flags_enum {
+  CU_MEM_ACCESS_FLAGS_PROT_NONE = 0x0,
+  CU_MEM_ACCESS_FLAGS_PROT_READ = 0x1,
+  CU_MEM_ACCESS_FLAGS_PROT_READWRITE = 0x3,
+  CU_MEM_ACCESS_FLAGS_PROT_MAX = 0x7FFFFFFF
+} CUmemAccess_flags;
+
+typedef enum CUmemLocationType_enum {
+  CU_MEM_LOCATION_TYPE_INVALID = 0x0,
+  CU_MEM_LOCATION_TYPE_DEVICE = 0x1,
+  CU_MEM_LOCATION_TYPE_MAX = 0x7FFFFFFF
+} CUmemLocationType;
+
+typedef struct CUmemLocation_st {
+  CUmemLocationType type;
+  int id;
+} CUmemLocation_v1;
+typedef CUmemLocation_v1 CUmemLocation;
+
+typedef struct CUmemAccessDesc_st {
+  CUmemLocation location;
+  CUmemAccess_flags flags;
+} CUmemAccessDesc_v1;
+
+typedef CUmemAccessDesc_v1 CUmemAccessDesc;
+
+typedef enum CUmemAllocationType_enum {
+  CU_MEM_ALLOCATION_TYPE_INVALID = 0x0,
+  CU_MEM_ALLOCATION_TYPE_PINNED = 0x1,
+  CU_MEM_ALLOCATION_TYPE_MAX = 0x7FFFFFFF
+} CUmemAllocationType;
+
+typedef enum CUmemAllocationHandleType_enum {
+  CU_MEM_HANDLE_TYPE_NONE = 0x0,
+  CU_MEM_HANDLE_TYPE_POSIX_FILE_DESCRIPTOR = 0x1,
+  CU_MEM_HANDLE_TYPE_WIN32 = 0x2,
+  CU_MEM_HANDLE_TYPE_WIN32_KMT = 0x4,
+  CU_MEM_HANDLE_TYPE_MAX = 0x7FFFFFFF
+} CUmemAllocationHandleType;
+
+typedef struct CUmemAllocationProp_st {
+  CUmemAllocationType type;
+  CUmemAllocationHandleType requestedHandleTypes;
+  CUmemLocation location;
+
+  void *win32HandleMetaData;
+  struct {
+    unsigned char compressionType;
+    unsigned char gpuDirectRDMACapable;
+    unsigned short usage;
+    unsigned char reserved[4];
+  } allocFlags;
+} CUmemAllocationProp_v1;
+typedef CUmemAllocationProp_v1 CUmemAllocationProp;
+
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_INVALID_VALUE = 1,
@@ -228,6 +293,7 @@ CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
 CUresult cuMemAlloc(CUdeviceptr *, size_t);
 CUresult cuMemAllocHost(void **, size_t);
 CUresult cuMemAllocManaged(CUdeviceptr *, size_t, unsigned int);
+CUresult cuMemAllocAsync(CUdeviceptr *, size_t, CUstream);
 
 CUresult cuMemcpyDtoDAsync(CUdeviceptr, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
@@ -237,6 +303,7 @@ CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
 
 CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
+CUresult cuMemFreeAsync(CUdeviceptr, CUstream);
 
 CUresult cuModuleGetFunction(CUfunction *, CUmodule, const char *);
 CUresult cuModuleGetGlobal(CUdeviceptr *, size_t *, CUmodule, const char *);
@@ -267,5 +334,22 @@ CUresult cuEventRecord(CUevent, CUstream);
 CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
 CUresult cuEventSynchronize(CUevent);
 CUresult cuEventDestroy(CUevent);
+
+CUresult cuMemUnmap(CUdeviceptr ptr, size_t size);
+CUresult cuMemRelease(CUmemGenericAllocationHandle handle);
+CUresult cuMemAddressFree(CUdeviceptr ptr, size_t size);
+CUresult cuMemGetInfo(size_t *free, size_t *total);
+CUresult cuMemAddressReserve(CUdeviceptr *ptr, size_t size, size_t alignment,
+                             CUdeviceptr addr, unsigned long long flags);
+CUresult cuMemMap(CUdeviceptr ptr, size_t size, size_t offset,
+                  CUmemGenericAllocationHandle handle,
+                  unsigned long long flags);
+CUresult cuMemCreate(CUmemGenericAllocationHandle *handle, size_t size,
+                     const CUmemAllocationProp *prop, unsigned long long flags);
+CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
+                        const CUmemAccessDesc *desc, size_t count);
+CUresult cuMemGetAllocationGranularity(size_t *granularity,
+                                       const CUmemAllocationProp *prop,
+                                       CUmemAllocationGranularity_flags option);
 
 #endif

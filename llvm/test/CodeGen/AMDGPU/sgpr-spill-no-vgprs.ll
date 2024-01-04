@@ -7,11 +7,11 @@
 define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: partial_no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 s0, s0, s15
+; GCN-NEXT:    s_add_u32 s0, s0, s13
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
-; GCN-NEXT:    s_load_dword s4, s[8:9], 0x2
+; GCN-NEXT:    s_load_dword s4, s[6:7], 0x2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
@@ -123,9 +123,6 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[24:25]
-; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[24:25]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -145,6 +142,9 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    v_readlane_b32 s17, v1, 13
 ; GCN-NEXT:    v_readlane_b32 s18, v1, 14
 ; GCN-NEXT:    v_readlane_b32 s19, v1, 15
+; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[24:25]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
@@ -202,6 +202,7 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    v_readlane_b32 s21, v1, 61
 ; GCN-NEXT:    v_readlane_b32 s22, v1, 62
 ; GCN-NEXT:    v_readlane_b32 s23, v1, 63
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s4, v0, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v0, 1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -248,3 +249,6 @@ ret:
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "amdgpu-waves-per-eu"="10,10" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

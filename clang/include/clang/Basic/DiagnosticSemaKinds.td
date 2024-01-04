@@ -137,6 +137,18 @@ def err_half_const_requires_fp16 : Error<
 // C99 variable-length arrays
 def ext_vla : Extension<"variable length arrays are a C99 feature">,
   InGroup<VLAExtension>;
+// In C++ language modes, we warn by default as an extension, while in GNU++
+// language modes, we warn as an extension but add the warning group to -Wall.
+def ext_vla_cxx : ExtWarn<
+  "variable length arrays in C++ are a Clang extension">,
+  InGroup<VLACxxExtension>;
+def ext_vla_cxx_in_gnu_mode : Extension<ext_vla_cxx.Summary>,
+  InGroup<VLACxxExtension>;
+def ext_vla_cxx_static_assert : ExtWarn<
+  "variable length arrays in C++ are a Clang extension; did you mean to use "
+  "'static_assert'?">, InGroup<VLAUseStaticAssert>;
+def ext_vla_cxx_in_gnu_mode_static_assert : Extension<
+  ext_vla_cxx_static_assert.Summary>, InGroup<VLAUseStaticAssert>;
 def warn_vla_used : Warning<"variable length array used">,
   InGroup<VLA>, DefaultIgnore;
 def err_vla_in_sfinae : Error<
@@ -154,6 +166,8 @@ def ext_vla_folded_to_constant : ExtWarn<
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
   "variable length arrays are not supported for %select{the current target|'%1'}0">;
+def err_vla_in_coroutine_unsupported : Error<
+  "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
   "variable length arrays are not supported for the current target">;
 
@@ -1655,6 +1669,8 @@ def err_qualified_friend_def : Error<
   "friend function definition cannot be qualified with '%0'">;
 def err_friend_def_in_local_class : Error<
   "friend function cannot be defined in a local class">;
+def err_friend_specialization_def : Error<
+  "friend function specialization cannot be defined">;
 def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
@@ -2613,7 +2629,7 @@ def err_final_function_overridden : Error<
 
 // C++11 scoped enumerations
 def err_enum_invalid_underlying : Error<
-  "non-integral type %0 is an invalid underlying type">;
+  "%select{non-integral type %0|%0}1 is an invalid underlying type">;
 def err_enumerator_too_large : Error<
   "enumerator value is not representable in the underlying type %0">;
 def ext_enumerator_too_large : Extension<
@@ -2870,6 +2886,8 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
+def err_ms_constexpr_cannot_be_applied : Error<
+  "attribute 'msvc::constexpr' cannot be applied to the %select{constexpr|consteval|virtual}0 function %1">;
 
 // C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx20 : ExtWarn<
@@ -3134,6 +3152,12 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def warn_attribute_arm_sm_incompat_builtin : Warning<
+  "builtin call has undefined behaviour when called from a %0 function">,
+  InGroup<DiagGroup<"undefined-arm-streaming">>;
+def warn_attribute_arm_za_builtin_no_za_state : Warning<
+  "builtin call is not valid when calling from a function without active ZA state">,
+  InGroup<DiagGroup<"undefined-arm-za">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -3163,6 +3187,10 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_duplicate_target_attribute
+    : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
+              " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
+              "attribute string; ">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -3864,7 +3892,7 @@ def warn_fun_requires_negative_cap : Warning<
   "calling function %0 requires negative capability '%1'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
-// Thread safety warnings on pass by reference
+// Thread safety warnings on pass/return by reference
 def warn_guarded_pass_by_reference : Warning<
   "passing variable %1 by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
@@ -3873,6 +3901,14 @@ def warn_pt_guarded_pass_by_reference : Warning<
   "passing the value that %1 points to by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
+def warn_guarded_return_by_reference : Warning<
+  "returning variable %1 by reference requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
+def warn_pt_guarded_return_by_reference : Warning<
+  "returning the value that %1 points to by reference requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
 
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
@@ -4904,6 +4940,8 @@ def err_template_param_shadow : Error<
 def ext_template_param_shadow : ExtWarn<
   err_template_param_shadow.Summary>, InGroup<MicrosoftTemplateShadow>;
 def note_template_param_here : Note<"template parameter is declared here">;
+def note_template_param_external : Note<
+  "template parameter from hidden source: %0">;
 def warn_template_export_unsupported : Warning<
   "exported templates are unsupported">;
 def err_template_outside_namespace_or_class_scope : Error<
@@ -5032,6 +5070,8 @@ def err_template_arg_list_different_arity : Error<
   "%select{class template|function template|variable template|alias template|"
   "template template parameter|concept|template}1 %2">;
 def note_template_decl_here : Note<"template is declared here">;
+def note_template_decl_external : Note<
+  "template declaration from hidden source: %0">;
 def err_template_arg_must_be_type : Error<
   "template argument for template type parameter must be a type">;
 def err_template_arg_must_be_type_suggest : Error<
@@ -5633,9 +5673,9 @@ def err_unexpanded_parameter_pack : Error<
   "%select{expression|base type|declaration type|data member type|bit-field "
   "size|static assertion|fixed underlying type|enumerator value|"
   "using declaration|friend declaration|qualifier|initializer|default argument|"
-  "non-type template parameter type|exception type|partial specialization|"
-  "__if_exists name|__if_not_exists name|lambda|block|type constraint|"
-  "requirement|requires clause}0 "
+  "non-type template parameter type|exception type|explicit specialization|"
+  "partial specialization|__if_exists name|__if_not_exists name|lambda|block|"
+  "type constraint|requirement|requires clause}0 "
   "contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
@@ -6118,12 +6158,24 @@ def err_illegal_initializer_type : Error<"illegal initializer type %0">;
 def ext_init_list_type_narrowing : ExtWarn<
   "type %0 cannot be narrowed to %1 in initializer list">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
+// *_narrowing_const_reference diagnostics have the same messages, but are
+// controlled by -Wc++11-narrowing-const-reference for narrowing involving a
+// const reference.
+def ext_init_list_type_narrowing_const_reference : ExtWarn<
+  "type %0 cannot be narrowed to %1 in initializer list">,
+  InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;
 def ext_init_list_variable_narrowing : ExtWarn<
   "non-constant-expression cannot be narrowed from type %0 to %1 in "
   "initializer list">, InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
+def ext_init_list_variable_narrowing_const_reference : ExtWarn<
+  "non-constant-expression cannot be narrowed from type %0 to %1 in "
+  "initializer list">, InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;
 def ext_init_list_constant_narrowing : ExtWarn<
   "constant expression evaluates to %0 which cannot be narrowed to type %1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
+def ext_init_list_constant_narrowing_const_reference : ExtWarn<
+  "constant expression evaluates to %0 which cannot be narrowed to type %1">,
+  InGroup<CXX11NarrowingConstReference>, DefaultError, SFINAEFailure;
 def warn_init_list_type_narrowing : Warning<
   "type %0 cannot be narrowed to %1 in initializer list in C++11">,
   InGroup<CXX11Narrowing>, DefaultIgnore;
@@ -6388,21 +6440,6 @@ def warn_variable_sized_ivar_visibility : Warning<
 def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
-
-def err_counted_by_attr_not_on_flexible_array_member : Error<
-  "'counted_by' only applies to flexible array members">;
-def err_flexible_array_counted_by_attr_field_not_found : Error<
-  "field %0 in 'counted_by' not found">;
-def err_flexible_array_counted_by_attr_field_not_found_suggest : Error<
-  "field %0 in 'counted_by' not found; did you mean %1?">;
-def err_flexible_array_counted_by_attr_field_not_found_in_struct : Error<
-  "field %0 in 'counted_by' is not found in struct">;
-def err_flexible_array_counted_by_attr_refers_to_self : Error<
-  "field %0 in 'counted_by' cannot refer to the flexible array">;
-def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' is not a non-boolean integer type">;
-def note_flexible_array_counted_by_attr_field : Note<
-  "field %0 declared here">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -6737,7 +6774,7 @@ def warn_floatingpoint_eq : Warning<
 
 def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "
-  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'}1">;
+  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'|'#pragma clang fp reciprocal'}1">;
 
 def warn_remainder_division_by_zero : Warning<
   "%select{remainder|division}0 by zero is undefined">,
@@ -7198,6 +7235,11 @@ def warn_arith_conv_enum_float_cxx20 : Warning<
   "%plural{2:with|4:from|:and}0 "
   "%select{enumeration|floating-point}1 type %3 is deprecated">,
   InGroup<DeprecatedEnumFloatConversion>;
+def err_arith_conv_enum_float_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "%select{floating-point|enumeration}1 type %2 "
+  "%plural{2:with|4:from|:and}0 "
+  "%select{enumeration|floating-point}1 type %3">;
 def warn_arith_conv_mixed_enum_types : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">,
@@ -7206,6 +7248,10 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
+def err_conv_mixed_enum_types_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "different enumeration types%diff{ ($ and $)|}1,2">;
+
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
   InGroup<AnonEnumEnumConversion>, DefaultIgnore;
@@ -7959,6 +8005,8 @@ def err_return_in_constructor_handler : Error<
 def warn_cdtor_function_try_handler_mem_expr : Warning<
   "cannot refer to a non-static member from the handler of a "
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
+def err_throw_object_throwing_dtor : Error<
+  "cannot throw object of type %0 with a potentially-throwing destructor">;
 
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
@@ -8685,7 +8733,7 @@ def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
-  "memory order argument to atomic operation is invalid">,
+  "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
 def err_atomic_op_has_invalid_synch_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
@@ -8694,10 +8742,13 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 
 def err_overflow_builtin_must_be_int : Error<
-  "operand argument to overflow builtin must be an integer (%0 invalid)">;
+  "operand argument to %select{overflow builtin|checked integer operation}0 "
+  "must be an integer type %select{|other than plain 'char', 'bool', bit-precise, "
+  "or an enumeration }0(%1 invalid)">;
 def err_overflow_builtin_must_be_ptr_int : Error<
-  "result argument to overflow builtin must be a pointer "
-  "to a non-const integer (%0 invalid)">;
+  "result argument to %select{overflow builtin|checked integer operation}0 "
+  "must be a pointer to a non-const integer type %select{|other than plain 'char', "
+  "'bool', bit-precise, or an enumeration }0(%1 invalid)">;
 def err_overflow_builtin_bit_int_max_size : Error<
   "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
@@ -9459,6 +9510,9 @@ def err_defaulted_special_member_return_type : Error<
 def err_defaulted_special_member_quals : Error<
   "an explicitly-defaulted %select{copy|move}0 assignment operator may not "
   "have 'const'%select{, 'constexpr'|}1 or 'volatile' qualifiers">;
+def err_defaulted_special_member_explicit_object_mismatch : Error<
+  "the type of the explicit object parameter of an explicitly-defaulted "
+  "%select{copy|move}0 assignment operator should match the type of the class %1">;
 def err_defaulted_special_member_volatile_param : Error<
   "the parameter for an explicitly-defaulted %sub{select_special_member_kind}0 "
   "may not be volatile">;
@@ -9999,6 +10053,11 @@ def err_duplicate_case_differing_expr : Error<
 def warn_case_empty_range : Warning<"empty case range specified">;
 def warn_missing_case_for_condition :
   Warning<"no case matching constant switch condition '%0'">;
+def err_loop_attr_conflict : Error<
+  "conflicting loop attribute %0">;
+def err_attribute_power_of_two_in_range : Error<
+  "%0 attribute requires an integer argument which is a constant power of two "
+  "between %1 and %2 inclusive; provided argument was %3">;
 
 def warn_def_missing_case : Warning<"%plural{"
   "1:enumeration value %1 not explicitly handled in switch|"
@@ -10013,6 +10072,8 @@ def warn_missing_case : Warning<"%plural{"
   "3:enumeration values %1, %2, and %3 not handled in switch|"
   ":%0 enumeration values not handled in switch: %1, %2, %3...}0">,
   InGroup<Switch>;
+def warn_switch_default : Warning<"'switch' missing 'default' label">,
+  InGroup<SwitchDefault>, DefaultIgnore;
 
 def warn_unannotated_fallthrough : Warning<
   "unannotated fall-through between switch labels">,
@@ -10159,8 +10220,8 @@ def err_shufflevector_argument_too_large : Error<
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
-def err_convertvector_non_vector_type : Error<
-  "second argument to __builtin_convertvector must be a vector type">;
+def err_builtin_non_vector_type : Error<
+  "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
   "first two arguments to __builtin_convertvector must have the same number of elements">;
 
@@ -10936,6 +10997,8 @@ def note_omp_atomic_compare: Note<
   "expect binary operator in conditional expression|expect '<', '>' or '==' as order operator|expect comparison in a form of 'x == e', 'e == x', 'x ordop expr', or 'expr ordop x'|"
   "expect lvalue for result value|expect scalar value|expect integer value|unexpected 'else' statement|expect '==' operator|expect an assignment statement 'v = x'|"
   "expect a 'if' statement|expect no more than two statements|expect a compound statement|expect 'else' statement|expect a form 'r = x == e; if (r) ...'}0">;
+def err_omp_atomic_fail_wrong_or_no_clauses : Error<"expected a memory order clause">;
+def err_omp_atomic_fail_no_compare : Error<"expected 'compare' clause with the 'fail' modifier">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
@@ -11006,6 +11069,8 @@ def err_omp_wrong_linear_modifier : Error<
   "expected %select{'val' modifier|one of 'ref', val' or 'uval' modifiers}0">;
 def err_omp_wrong_linear_modifier_non_reference : Error<
   "variable of non-reference type %0 can be used only with 'val' modifier, but used with '%1'">;
+def err_omp_step_simple_modifier_exclusive : Error<
+  "step simple modifier is exclusive and can't be use with 'val', 'uval' or 'ref' modifier">;
 def err_omp_wrong_simdlen_safelen_values : Error<
   "the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter">;
 def err_omp_wrong_if_directive_name_modifier : Error<
@@ -11307,6 +11372,8 @@ def err_openmp_vla_in_task_untied : Error<
 def warn_omp_unterminated_declare_target : Warning<
   "expected '#pragma omp end declare target' at end of file to match '#pragma omp %0'">,
   InGroup<SourceUsesOpenMP>;
+def err_ompx_bare_no_grid : Error<
+  "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -11562,6 +11629,10 @@ def err_conflicting_aligned_options : Error <
 >;
 def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines."
+>;
+def err_coroutine_return_type : Error<
+  "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
+  "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
 } // end of coroutines issue category
 
@@ -11937,7 +12008,7 @@ def warn_tcb_enforcement_violation : Warning<
 
 // RISC-V builtin required extension warning
 def err_riscv_builtin_requires_extension : Error<
-  "builtin requires%select{| at least one of the following extensions to be enabled}0: %1">;
+  "builtin requires%select{| at least one of the following extensions}0: %1">;
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 def err_riscv_type_requires_extension : Error<
@@ -11961,6 +12032,7 @@ def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numt
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
+def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
@@ -11976,6 +12048,9 @@ def err_hlsl_pointers_unsupported : Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
+def err_hlsl_param_qualifier_mismatch :
+  Error<"conflicting parameter qualifier %0 on parameter %1">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
@@ -11989,7 +12064,7 @@ def warn_unsafe_buffer_variable : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;

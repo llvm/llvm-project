@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/Transform/IR/Utils.h"
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -67,26 +68,30 @@ TEST(Preload, ContextPreloadConstructedLibrary) {
   OwningOpRef<ModuleOp> transformLibrary =
       parseSourceString<ModuleOp>(library, parserConfig, "<transform-library>");
   EXPECT_TRUE(transformLibrary) << "failed to parse transform module";
-  dialect->registerLibraryModule(std::move(transformLibrary));
+  LogicalResult diag =
+      dialect->loadIntoLibraryModule(std::move(transformLibrary));
+  EXPECT_TRUE(succeeded(diag));
 
   ModuleOp retrievedTransformLibrary =
       transform::detail::getPreloadedTransformModule(&context);
   EXPECT_TRUE(retrievedTransformLibrary)
       << "failed to retrieve transform module";
 
+  OwningOpRef<Operation *> clonedTransformModule(
+      retrievedTransformLibrary->clone());
+
+  LogicalResult res = transform::detail::mergeSymbolsInto(
+      inputModule->getOperation(), std::move(clonedTransformModule));
+  EXPECT_TRUE(succeeded(res)) << "failed to define declared symbols";
+
   transform::TransformOpInterface entryPoint =
       transform::detail::findTransformEntryPoint(inputModule->getOperation(),
                                                  retrievedTransformLibrary);
   EXPECT_TRUE(entryPoint) << "failed to find entry point";
 
-  OwningOpRef<Operation *> clonedTransformModule(
-      retrievedTransformLibrary->clone());
-  LogicalResult res = transform::detail::mergeSymbolsInto(
-      inputModule->getOperation(), std::move(clonedTransformModule));
-  EXPECT_TRUE(succeeded(res)) << "failed to define declared symbols";
-
   transform::TransformOptions options;
   res = transform::applyTransformNamedSequence(
-      inputModule->getOperation(), retrievedTransformLibrary, options);
+      inputModule->getOperation(), entryPoint, retrievedTransformLibrary,
+      options);
   EXPECT_TRUE(succeeded(res)) << "failed to apply named sequence";
 }

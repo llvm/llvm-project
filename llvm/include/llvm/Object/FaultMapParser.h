@@ -42,7 +42,7 @@ class FaultMapParser {
 
   template <typename T> static T read(const uint8_t *P, const uint8_t *E) {
     assert(P + sizeof(T) <= E && "out of bounds read!");
-    return support::endian::read<T, support::little, 1>(P);
+    return support::endian::read<T, llvm::endianness::little>(P);
   }
 
 public:
