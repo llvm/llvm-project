@@ -485,6 +485,9 @@ public:
            SanitizeBinaryMetadataUAR;
   }
 
+  /// Reset all of options to their default value.
+  void resetAllOptions();
+
   /// Reset all of the options that are not considered when building a
   /// module.
   void resetNonModularOptions();

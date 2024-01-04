@@ -11,7 +11,10 @@
 
 namespace clang {
 
-CodeGenOptions::CodeGenOptions() { resetNonModularOptions(); }
+CodeGenOptions::CodeGenOptions() { resetAllOptions(); }
+
+// FIXME: really reset all codegen options.
+void CodeGenOptions::resetAllOptions() { resetNonModularOptions(); }
 
 void CodeGenOptions::resetNonModularOptions() {
 #define CODEGENOPT(Name, Bits, Default) Name = Default;
