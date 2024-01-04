@@ -484,7 +484,6 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
   raw_svector_ostream OS(Buffer);
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-          BC.Key.RegisterInitialValues,
           Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
                            GenerateMemoryInstructions),
           OS, BC.Key, GenerateMemoryInstructions)) {
