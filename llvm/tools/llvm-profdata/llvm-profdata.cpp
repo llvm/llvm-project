@@ -998,13 +998,14 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   auto buildStaticFuncMap = [&StaticFuncMap,
                              SampleProfileHasFUnique](const StringRef Name) {
-    std::string Prefixes[] = {".cpp:", "cc:", ".c:", ".hpp:", ".h:"};
+    std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
-    for (auto &Prefix : Prefixes) {
-      PrefixPos = Name.find_insensitive(Prefix);
+    for (auto &FilePrefix : FilePrefixes) {
+      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
-      PrefixPos += Prefix.size();
+      PrefixPos += NamePrefix.size();
       break;
     }
 
@@ -1088,17 +1089,17 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   //
   // InstrProfile has two entries:
   //  foo
-  //  bar.cc:bar
+  //  bar.cc;bar
   //
   // After BuildMaxSampleMap, we should have the following in FlattenSampleMap:
   // {"foo", {1000, 5000}}
-  // {"bar.cc:bar", {11000, 30000}}
+  // {"bar.cc;bar", {11000, 30000}}
   //
   // foo's has an entry count of 1000, and max body count of 5000.
-  // bar.cc:bar has an entry count of 11000 (sum two callsites of 1000 and
+  // bar.cc;bar has an entry count of 11000 (sum two callsites of 1000 and
   // 10000), and max count of 30000 (from the callsite in line 8).
   //
-  // Note that goo's count will remain in bar.cc:bar() as it does not have an
+  // Note that goo's count will remain in bar.cc;bar() as it does not have an
   // entry in InstrProfile.
   llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
   auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
