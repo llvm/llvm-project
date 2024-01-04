@@ -169,7 +169,15 @@
 
 #define BUILTIN_AMDGPU_RSQRT_F32 __builtin_amdgcn_rsqf
 #define BUILTIN_AMDGPU_RSQRT_F64 __builtin_amdgcn_rsq
-#define BUILTIN_RSQRT_F16(X) (1.0h / __builtin_sqrtf16(X))
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+static inline half __ocml_priv_rsqrt_f16(half x) {
+  #pragma clang fp contract(fast)
+  return 1.0h / __builtin_sqrtf16(x);
+}
+#pragma OPENCL EXTENSION cl_khr_fp16 : disable
+
+#define BUILTIN_RSQRT_F16(X) __ocml_priv_rsqrt_f16(X)
 
 #define BUILTIN_AMDGPU_SIN_F32 __builtin_amdgcn_sinf
 

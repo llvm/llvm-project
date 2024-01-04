@@ -10,12 +10,12 @@ half test_rsqrt_f16(half x) {
 }
 
 // CHECK-LABEL: {{^}}test_rsqrt_f32:
+// IEEE: v_mul_f32
 // IEEE: v_cmp_gt_f32
 // IEEE: v_cndmask_b32
-// IEEE: v_mul_f32
 // IEEE: v_rsq_f32
-// IEEE: v_cndmask_b32
 // IEEE: v_mul_f32
+// IEEE: v_cndmask_b32
 
 // DAZ: s_waitcnt
 // DAZ-NEXT: v_rsq_f32{{(_e32)?}} v0, v0
