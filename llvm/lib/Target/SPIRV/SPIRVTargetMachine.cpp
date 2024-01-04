@@ -156,6 +156,12 @@ void SPIRVPassConfig::addIRPasses() {
     // Once legalized, we need to structurize the CFG to follow the spec.
     // This is done through the following 8 steps.
     // TODO(#75801): add the remaining steps.
+
+    // 1.  Simplify loop for subsequent transformations. After this steps, loops
+    // have the following properties:
+    //  - loops have a single entry edge (pre-header to loop header).
+    //  - all loop exits are dominated by the loop pre-header.
+    //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
   }
 
