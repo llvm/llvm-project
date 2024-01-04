@@ -2213,6 +2213,18 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
   }];
 }
 
+def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
+    NoTerminator,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorRegions"]>
+  ]> {
+  let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let assemblyFormat = [{
+    $arg attr-dict custom<SwitchCases>($cases, $caseRegions)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test TableGen generated build() methods
 //===----------------------------------------------------------------------===//
