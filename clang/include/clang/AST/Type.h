@@ -911,7 +911,6 @@ public:
   /// CXXRecordDecl::isCXX11StandardLayout, this takes DRs into account.
   bool isCXX11PODType(const ASTContext &Context) const;
 
-
   /// Return true if this is a trivial type per (C++0x [basic.types]p9)
   bool isTrivialType(const ASTContext &Context) const;
 
