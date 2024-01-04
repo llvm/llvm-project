@@ -107,8 +107,7 @@ Symbols:
       - Type:               AUX_CSECT
         ParameterHashIndex: 1
         TypeChkSectNum:     2
-        SymbolAlignment: 5
-        SymbolType: XTY_SD
+        SymbolAlignmentAndType: 41
         SectionOrLength:    3
         StabInfoIndex:      4
         StabSectNum:        5

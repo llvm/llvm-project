@@ -1,0 +1,209 @@
+## Check that obj2yaml can parse SymbolAlignmentAndType, SymbolAlignment, and SymbolType.
+
+# RUN: yaml2obj %s --docnum=1 -o %t32
+# RUN: obj2yaml %t32 | FileCheck %s --check-prefix=CHECK32
+
+# CHECK32:      --- !XCOFF
+# CHECK32-NEXT: FileHeader:
+# CHECK32-NEXT:   MagicNumber:     0x1DF
+# CHECK32-NEXT:   NumberOfSections: 0
+# CHECK32-NEXT:   CreationTime:    0
+# CHECK32-NEXT:   OffsetToSymbolTable: 0x14
+# CHECK32-NEXT:   EntriesInSymbolTable: 10
+# CHECK32-NEXT:   AuxiliaryHeaderSize: 0
+# CHECK32-NEXT:   Flags:           0x0
+# CHECK32-NEXT: Symbols:
+# CHECK32:       - Name:            .fcn1
+# CHECK32-NEXT:    Value:           0x0
+# CHECK32-NEXT:    Section:         N_UNDEF
+# CHECK32-NEXT:    Type:            0x0
+# CHECK32-NEXT:    StorageClass:    C_EXT
+# CHECK32-NEXT:    NumberOfAuxEntries: 1
+# CHECK32-NEXT:    AuxEntries:
+# CHECK32-NEXT:      - Type:            AUX_CSECT
+# CHECK32-NEXT:        ParameterHashIndex: 0
+# CHECK32-NEXT:        TypeChkSectNum:  0
+# CHECK32-NEXT:        SymbolType:      XTY_SD
+# CHECK32-NEXT:        SymbolAlignment: 4
+# CHECK32-NEXT:        StorageMappingClass: XMC_PR
+# CHECK32:       - Name:            .fcn2
+# CHECK32-NEXT:    Value:           0x0
+# CHECK32-NEXT:    Section:         N_UNDEF
+# CHECK32-NEXT:    Type:            0x0
+# CHECK32-NEXT:    StorageClass:    C_EXT
+# CHECK32-NEXT:    NumberOfAuxEntries: 1
+# CHECK32-NEXT:    AuxEntries:
+# CHECK32-NEXT:      - Type:            AUX_CSECT
+# CHECK32-NEXT:        ParameterHashIndex: 0
+# CHECK32-NEXT:        TypeChkSectNum:  0
+# CHECK32-NEXT:        SymbolType:      XTY_SD
+# CHECK32-NEXT:        SymbolAlignment: 2
+# CHECK32-NEXT:        StorageMappingClass: XMC_PR
+# CHECK32:       - Name:            .fcn3
+# CHECK32-NEXT:    Value:           0x0
+# CHECK32-NEXT:    Section:         N_UNDEF
+# CHECK32-NEXT:    Type:            0x0
+# CHECK32-NEXT:    StorageClass:    C_EXT
+# CHECK32-NEXT:    NumberOfAuxEntries: 1
+# CHECK32-NEXT:    AuxEntries:
+# CHECK32-NEXT:      - Type:            AUX_CSECT
+# CHECK32-NEXT:        ParameterHashIndex: 0
+# CHECK32-NEXT:        TypeChkSectNum:  0
+# CHECK32-NEXT:        SymbolType:      XTY_SD
+# CHECK32-NEXT:        SymbolAlignment: 0
+# CHECK32-NEXT:        StorageMappingClass: XMC_PR
+# CHECK32:       - Name:            .fcn4
+# CHECK32-NEXT:    Value:           0x0
+# CHECK32-NEXT:    Section:         N_UNDEF
+# CHECK32-NEXT:    Type:            0x0
+# CHECK32-NEXT:    StorageClass:    C_EXT
+# CHECK32-NEXT:    NumberOfAuxEntries: 1
+# CHECK32-NEXT:    AuxEntries:
+# CHECK32-NEXT:      - Type:            AUX_CSECT
+# CHECK32-NEXT:        ParameterHashIndex: 0
+# CHECK32-NEXT:        TypeChkSectNum:  0
+# CHECK32-NEXT:        SymbolType:      XTY_ER
+# CHECK32-NEXT:        SymbolAlignment: 5
+# CHECK32-NEXT:        StorageMappingClass: XMC_PR
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - StorageClass:    C_FILE
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: FileName
+        FileStringType:   XFT_CD
+  - StorageClass:    C_EXT
+    Name:               .fcn1
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolAlignmentAndType: 17
+        SymbolAlignment: 4
+        SectionOrLength:    4
+  - StorageClass:    C_EXT
+    Name:               .fcn2
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolAlignmentAndType: 18
+        SymbolType: XTY_SD
+        SectionOrLength:    4
+  - StorageClass:    C_EXT
+    Name:               .fcn3
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolType: XTY_SD
+        SectionOrLength:    4
+  - StorageClass:    C_EXT
+    Name:               .fcn4
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolAlignment: 5
+        SectionOrLength:    4
+
+# RUN: yaml2obj %s --docnum=2 -o %t64
+# RUN: obj2yaml %t64 | FileCheck %s --check-prefix=CHECK64
+#
+# CHECK64:      --- !XCOFF
+# CHECK64-NEXT: FileHeader:
+# CHECK64-NEXT:   MagicNumber:     0x1F7
+# CHECK64-NEXT:   NumberOfSections: 0
+# CHECK64-NEXT:   CreationTime:    0
+# CHECK64-NEXT:   OffsetToSymbolTable: 0x18
+# CHECK64-NEXT:   EntriesInSymbolTable: 10
+# CHECK64-NEXT:   AuxiliaryHeaderSize: 0
+# CHECK64-NEXT:   Flags:           0x0
+# CHECK64-NEXT: Symbols:
+# CHECK64:        - Name:            .fcn1
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_EXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolType:      XTY_SD
+# CHECK64-NEXT:         SymbolAlignment: 4
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 4
+# CHECK64:        - Name:            .fcn2
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_EXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolType:      XTY_SD
+# CHECK64-NEXT:         SymbolAlignment: 2
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 4
+# CHECK64:        - Name:            .fcn3
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_EXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolType:      XTY_SD
+# CHECK64-NEXT:         SymbolAlignment: 0
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 4
+# CHECK64:        - Name:            .fcn4
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_EXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolType:      XTY_ER
+# CHECK64-NEXT:         SymbolAlignment: 5
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 4
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1F7
+Symbols:
+  - StorageClass:    C_FILE
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: FileName
+        FileStringType:   XFT_CD
+  - StorageClass:    C_EXT
+    Name:               .fcn1
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolAlignmentAndType: 17
+        SymbolAlignment: 4
+        SectionOrLengthLo:    4
+  - StorageClass:    C_EXT
+    Name:               .fcn2
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolAlignmentAndType: 18
+        SymbolType: XTY_SD
+        SectionOrLengthLo:    4
+  - StorageClass:    C_EXT
+    Name:               .fcn3
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolType: XTY_SD
+        SectionOrLengthLo:    4
+  - StorageClass:    C_EXT
+    Name:               .fcn4
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolAlignment: 5
+        SectionOrLengthLo:    4
