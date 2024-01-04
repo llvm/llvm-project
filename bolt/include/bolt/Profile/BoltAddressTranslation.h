@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -78,9 +79,20 @@ public:
 
   BoltAddressTranslation() {}
 
+  /// Write the serialized address translation table for a function.
+  template <bool Cold>
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
+                 raw_ostream &OS);
+
   /// Write the serialized address translation tables for each reordered
   /// function
   void write(const BinaryContext &BC, raw_ostream &OS);
+
+  /// Read the serialized address translation table for a function.
+  /// Return a parse error if failed.
+  template <bool Cold>
+  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
+                 DataExtractor &DE, uint64_t &Offset, Error &Err);
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
@@ -110,6 +122,9 @@ public:
   /// addresses when aggregating profile
   bool enabledFor(llvm::object::ELFObjectFileBase *InputFile) const;
 
+  /// Save function and basic block hashes used for metadata dump.
+  void saveMetadata(BinaryContext &BC);
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
@@ -118,14 +133,26 @@ private:
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
                          uint64_t FuncAddress);
 
+  /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
+  /// entries in function address translation map.
+  APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
+
+  /// Calculate the number of equal offsets (output = input) in the beginning
+  /// of the function.
+  size_t getNumEqualOffsets(const MapTy &Map) const;
+
   std::map<uint64_t, MapTy> Maps;
+  std::map<uint64_t, MapTy> ColdMaps;
+
+  using BBHashMap = std::unordered_map<uint32_t, size_t>;
+  std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry
-  const static uint32_t BRANCHENTRY = 0x80000000;
+  const static uint32_t BRANCHENTRY = 0x1;
 };
 } // namespace bolt
 
