@@ -261,7 +261,7 @@ transform.sequence failures(propagate) {
 
   // The actual tiling transformation takes tile sizes as attributes. It
   // produces a handle to the loop generated during tiling.
-  %loop, %tiled_max =
+  %tiled_max, %loop =
       transform.structured.tile_using_forall %max tile_sizes [8, 32]
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
@@ -271,12 +271,12 @@ transform.sequence failures(propagate) {
   // important. We could also use "transform.merge_handles" to obtain a single
   // handle to all operations and give it to `fuse_into_containing_op` that
   // would take care of the ordering in this case.
-  %loop_0, %tiled_add =
+  %add_fused, %loop_0 =
       transform.structured.fuse_into_containing_op %add into %loop
         : (!transform.any_op, !transform.any_op)
           -> (!transform.any_op, !transform.any_op)
-  %loop_1, %tiled_matmul =
-      transform.structured.fuse_into_containing_op %arg1 into %loop
+  %matmul_fused, %loop_1 =
+      transform.structured.fuse_into_containing_op %arg1 into %loop_0
         : (!transform.op<"linalg.matmul">, !transform.any_op)
           -> (!transform.any_op, !transform.any_op)
 
@@ -304,7 +304,7 @@ transform.sequence failures(propagate) {
 
   // The actual tiling transformation takes tile sizes as attributes. It
   // produces a handle to the loop generated during tiling.
-  %loop, %tiled = transform.structured.tile_using_forall %max tile_sizes [8, 32]
+  %tiled, %loop  = transform.structured.tile_using_forall %max tile_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // We can now fuse the other operations into the loop. Here, we fuse
@@ -318,7 +318,7 @@ transform.sequence failures(propagate) {
         : (!transform.any_op, !transform.any_op)
           -> (!transform.any_op, !transform.any_op)
   %matmul_fused, %loop_1 =
-      transform.structured.fuse_into_containing_op %arg1 into %loop
+      transform.structured.fuse_into_containing_op %arg1 into %loop_0
         : (!transform.op<"linalg.matmul">, !transform.any_op)
           -> (!transform.any_op, !transform.any_op)
 
@@ -327,7 +327,7 @@ transform.sequence failures(propagate) {
   // "max" operation. This illustrates the precise targeting with the transform
   // dialect. Otherwise, it is difficult to differentiate "add" and "max", both
   // of which having the same kind.
-  %loop_2, %tiled_2 =
+  %tiled_2, %loop_2 =
       transform.structured.tile_using_forall %add_fused tile_sizes [4, 4]
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %matmul_fused_2, %loop_3 =
@@ -338,7 +338,7 @@ transform.sequence failures(propagate) {
   // Since outlining is currently only implemented for region-holding operations
   // such as loops, use tiling to size 1 to materialize the outer loop that is
   // going to be outlined.
-  %outline_target, %_ =
+  %_, %outline_target =
       transform.structured.tile_using_forall %tiled_2 tile_sizes [1]
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   transform.structured.fuse_into_containing_op %matmul_fused_2
