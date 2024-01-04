@@ -60,26 +60,6 @@ LogicalResult AtomicAndOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.AtomicExchange
-//===----------------------------------------------------------------------===//
-
-LogicalResult AtomicExchangeOp::verify() {
-  if (getType() != getValue().getType())
-    return emitOpError("value operand must have the same type as the op "
-                       "result, but found ")
-           << getValue().getType() << " vs " << getType();
-
-  Type pointeeType =
-      llvm::cast<spirv::PointerType>(getPointer().getType()).getPointeeType();
-  if (getType() != pointeeType)
-    return emitOpError("pointer operand's pointee type must have the same "
-                       "as the op result type, but found ")
-           << pointeeType << " vs " << getType();
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.AtomicIAddOp
 //===----------------------------------------------------------------------===//
 

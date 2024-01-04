@@ -41,6 +41,8 @@ class SPIRV_AtomicUpdateOp<string mnemonic, list<Trait> traits = []>
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
   }];
+
+  let hasCustomAssemblyFormat = 0;
 }
 
 class SPIRV_AtomicUpdateWithValueOp<string mnemonic, list<Trait> traits = []>
@@ -62,6 +64,8 @@ class SPIRV_AtomicUpdateWithValueOp<string mnemonic, list<Trait> traits = []>
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
   }];
+
+  let hasCustomAssemblyFormat = 0;
 }
 
 // -----
@@ -183,6 +187,9 @@ def SPIRV_AtomicCompareExchangeOp : SPIRV_Op<"AtomicCompareExchange", [
     $memory_scope $equal_semantics $unequal_semantics operands attr-dict `:`
       type($pointer)
   }];
+
+  let hasCustomAssemblyFormat = 0;
+  let hasVerifier = 0;
 }
 
 // -----
@@ -241,6 +248,9 @@ def SPIRV_AtomicCompareExchangeWeakOp : SPIRV_Op<"AtomicCompareExchangeWeak", [
     $memory_scope $equal_semantics $unequal_semantics operands attr-dict `:`
       type($pointer)
   }];
+
+  let hasCustomAssemblyFormat = 0;
+  let hasVerifier = 0;
 }
 
 // -----
@@ -300,6 +310,9 @@ def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", [
   let assemblyFormat = [{
     $memory_scope $semantics operands attr-dict `:` type($pointer)
   }];
+
+  let hasCustomAssemblyFormat = 0;
+  let hasVerifier = 0;
 }
 
 // -----
