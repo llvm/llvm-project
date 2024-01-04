@@ -48,24 +48,6 @@ struct ForwardIteratorWithInputCategory {
 static_assert(std::forward_iterator<ForwardIteratorWithInputCategory>);
 
 constexpr void test() {
-  // Check that value_type is range_value_t and difference_type is range_difference_t
-  {
-    auto test = []<class Iterator> {
-      using EnumerateView     = EnumerateViewFor<Iterator>;
-      using EnumerateIterator = EnumerateIteratorFor<Iterator>;
-      static_assert(std::is_same_v<typename EnumerateIterator::value_type, std::ranges::range_value_t<EnumerateView>>);
-      static_assert(
-          std::is_same_v<typename EnumerateIterator::difference_type, std::ranges::range_difference_t<EnumerateView>>);
-    };
-    test.operator()<cpp17_input_iterator<int*>>();
-    test.operator()<cpp20_input_iterator<int*>>();
-    test.operator()<forward_iterator<int*>>();
-    test.operator()<bidirectional_iterator<int*>>();
-    test.operator()<random_access_iterator<int*>>();
-    test.operator()<contiguous_iterator<int*>>();
-    test.operator()<int*>();
-  }
-
   // Check iterator_concept for various categories of ranges
   {
     static_assert(

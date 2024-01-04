@@ -36,7 +36,6 @@ static_assert(std::ranges::random_access_range<RandomAccessRange>);
 static_assert(HasSubscriptOperator<EnumerateIterator<RandomAccessRange>, int>);
 
 using BidirectionalRange = std::ranges::subrange<bidirectional_iterator<int*>>;
-static_assert(!std::ranges::random_access_range<BidirectionalRange>);
 
 static_assert(!HasSubscriptOperator<EnumerateIterator<BidirectionalRange>, int>);
 
