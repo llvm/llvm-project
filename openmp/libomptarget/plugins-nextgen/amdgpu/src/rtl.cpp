@@ -4394,6 +4394,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     ImplArgs->GridDims = 1;
     ImplArgs->HeapV1Ptr =
         (uint64_t)AMDGPUDevice.getPreAllocatedDeviceMemoryPool();
+    ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
 
   // Push the kernel launch into the stream.
