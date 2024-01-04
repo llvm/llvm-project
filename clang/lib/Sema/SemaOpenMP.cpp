@@ -5075,7 +5075,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
     // for a detailed explanation
     if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
-        ((BindKind == OMPC_BIND_parallel) || (BindKind == OMPC_BIND_teams)) &&
+        (BindKind == OMPC_BIND_parallel || BindKind == OMPC_BIND_teams) &&
         (isOpenMPWorksharingDirective(ParentRegion) ||
          ParentRegion == OMPD_loop)) {
       int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
@@ -6236,7 +6236,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   // Variable used to note down the DirectiveKind because mapLoopConstruct may
   // change "Kind" variable, due to mapping of "omp loop" to other directives.
   OpenMPDirectiveKind DK = Kind;
-  if ((Kind == OMPD_loop) || (PrevMappedDirective == OMPD_loop)) {
+  if (Kind == OMPD_loop || PrevMappedDirective == OMPD_loop) {
     UseClausesWithoutBind = mapLoopConstruct(
         ClausesWithoutBind, Clauses, BindKind, Kind, PrevMappedDirective,
         StartLoc, EndLoc, DirName, CancelRegion);

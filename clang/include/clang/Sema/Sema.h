@@ -11335,7 +11335,6 @@ private:
   /// on the parameter of the bind clause. In the methods for the
   /// mapped directives, check the parameters of the lastprivate clause.
   bool checkLastPrivateForMappedDirectives(ArrayRef<OMPClause *> Clauses);
-
   /// Depending on the bind clause of OMPD_loop map the directive to new
   /// directives.
   ///    1) loop bind(parallel) --> OMPD_for
