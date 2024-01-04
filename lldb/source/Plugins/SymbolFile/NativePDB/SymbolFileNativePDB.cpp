@@ -2265,7 +2265,8 @@ void SymbolFileNativePDB::BuildParentMap() {
   }
   for (TypeIndex fwd : fwd_keys) {
     TypeIndex full = forward_to_full[fwd];
-    m_parent_types[full] = m_parent_types[fwd];
+    TypeIndex parent_idx = m_parent_types[fwd];
+    m_parent_types[full] = parent_idx;
   }
   for (TypeIndex full : full_keys) {
     TypeIndex fwd = full_to_forward[full];
