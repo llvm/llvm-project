@@ -1,0 +1,60 @@
+
+name: Build CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+
+jobs:
+  build-ci-container:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Write Variables
+        id: vars
+        run: |
+          tag=`date +%s`
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
+          echo "container-name=$container_name" >> $GITHUB_OUTPUT
+          echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
+
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci/
+
+      - name: Build Container
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build -t ${{ steps.vars.outputs.container-name-tag }} .
+          podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
+
+      - name: Test Container
+        run: |
+          for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
+            podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+          done
+
+      - name: Push Container
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
+          podman push ${{ steps.vars.outputs.container-name-tag }}
+          podman push ${{ steps.vars.outputs.container-name }}:latest
