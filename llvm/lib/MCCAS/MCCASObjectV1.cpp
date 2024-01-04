@@ -1901,6 +1901,7 @@ struct DIEDataWriter : public DataWriter {
 /// is described by some DIEAbbrevRef block.
 struct DistinctDataWriter : public DataWriter {
   Expected<DIEDistinctDataRef> getCASNode(MCCASBuilder &CASBuilder) {
+#if LLVM_ENABLE_ZLIB
     SmallVector<uint8_t> CompressedBuff;
     compression::zlib::compress(arrayRefFromStringRef(toStringRef(Data)),
                                 CompressedBuff);
@@ -1908,6 +1909,9 @@ struct DistinctDataWriter : public DataWriter {
     CompressedBuff.append(8, 0);
     encodeULEB128(Data.size(), CompressedBuff.end() - 8, 8 /*Pad to*/);
     return DIEDistinctDataRef::create(CASBuilder, toStringRef(CompressedBuff));
+#else
+    return DIEDistinctDataRef::create(CASBuilder, toStringRef(Data));
+#endif
   }
 };
 
@@ -3404,6 +3408,7 @@ Error mccasformats::v1::visitDebugInfo(
     return LoadedTopRef.takeError();
 
   StringRef DistinctData = LoadedTopRef->DistinctData.getData();
+#if LLVM_ENABLE_ZLIB
   ArrayRef<uint8_t> BuffRef = arrayRefFromStringRef(DistinctData);
   auto UncompressedSize = decodeULEB128(BuffRef.data() + BuffRef.size() - 8);
   BuffRef = BuffRef.drop_back(8);
@@ -3411,9 +3416,11 @@ Error mccasformats::v1::visitDebugInfo(
   if (auto E =
           compression::zlib::decompress(BuffRef, OutBuff, UncompressedSize))
     return E;
-  auto UncompressedDistinctData = toStringRef(OutBuff);
-  BinaryStreamReader DistinctReader(UncompressedDistinctData,
-                                    endianness::little);
+  DistinctData = toStringRef(OutBuff);
+  BinaryStreamReader DistinctReader(DistinctData, endianness::little);
+#else
+  BinaryStreamReader DistinctReader(DistinctData, endianness::little);
+#endif
   ArrayRef<char> HeaderData;
 
   auto BeginOffset = DistinctReader.getOffset();
@@ -3435,15 +3442,9 @@ Error mccasformats::v1::visitDebugInfo(
   HeaderCallback(toStringRef(HeaderData));
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{DwarfVersion,
-                     {},
-                     TotAbbrevEntries,
-                     DistinctReader,
-                     UncompressedDistinctData,
-                     HeaderCallback,
-                     StartTagCallback,
-                     AttrCallback,
-                     EndTagCallback,
+  DIEVisitor Visitor{DwarfVersion,     {},           TotAbbrevEntries,
+                     DistinctReader,   DistinctData, HeaderCallback,
+                     StartTagCallback, AttrCallback, EndTagCallback,
                      NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
 }
