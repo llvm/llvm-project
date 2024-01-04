@@ -1,5 +1,6 @@
-//===- X86EvexToVex.cpp ---------------------------------------------------===//
-// Compress EVEX instructions to VEX encoding when possible to reduce code size
+//===- X86EvexToNonEvex.cpp -----------------------------------------------===//
+// Compress EVEX instructions to Non-EVEX encoding when possible to reduce code
+// size.
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +17,11 @@
 /// accessed by instruction is less than 512 bits and when it does not use
 //  the xmm or the mask registers or xmm/ymm registers with indexes higher
 //  than 15.
-/// The pass applies code reduction on the generated code for AVX-512 instrs.
+//  APX promoted instrs use evex encoding which could let them use r16-r31, if
+//  they don't use egpr, we could compress them back to legacy encoding to save
+//  code size.
+/// The pass applies code reduction on the generated code for AVX-512 instrs and
+/// APX promoted instrs.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,34 +43,35 @@
 
 using namespace llvm;
 
-// Including the generated EVEX2VEX tables.
-struct X86EvexToVexCompressTableEntry {
+// Including the generated EVEX2NonEVEX tables.
+struct X86EvexToNonEvexCompressTableEntry {
   uint16_t EvexOpc;
-  uint16_t VexOpc;
+  uint16_t NonEvexOpc;
 
-  bool operator<(const X86EvexToVexCompressTableEntry &RHS) const {
+  bool operator<(const X86EvexToNonEvexCompressTableEntry &RHS) const {
     return EvexOpc < RHS.EvexOpc;
   }
 
-  friend bool operator<(const X86EvexToVexCompressTableEntry &TE,
+  friend bool operator<(const X86EvexToNonEvexCompressTableEntry &TE,
                         unsigned Opc) {
     return TE.EvexOpc < Opc;
   }
 };
-#include "X86GenEVEX2VEXTables.inc"
+#include "X86GenEVEX2NonEVEXTables.inc"
 
-#define EVEX2VEX_DESC "Compressing EVEX instrs to VEX encoding when possible"
-#define EVEX2VEX_NAME "x86-evex-to-vex-compress"
+#define EVEX2NONEVEX_DESC                                                      \
+  "Compressing EVEX instrs to Non-EVEX encoding when possible"
+#define EVEX2NONEVEX_NAME "x86-evex-to-non-evex-compress"
 
-#define DEBUG_TYPE EVEX2VEX_NAME
+#define DEBUG_TYPE EVEX2NONEVEX_NAME
 
 namespace {
 
-class EvexToVexInstPass : public MachineFunctionPass {
+class EvexToNonEvexInstPass : public MachineFunctionPass {
 public:
   static char ID;
-  EvexToVexInstPass() : MachineFunctionPass(ID) {}
-  StringRef getPassName() const override { return EVEX2VEX_DESC; }
+  EvexToNonEvexInstPass() : MachineFunctionPass(ID) {}
+  StringRef getPassName() const override { return EVEX2NONEVEX_DESC; }
 
   /// Loop over all of the basic blocks, replacing EVEX instructions
   /// by equivalent VEX instructions when possible for reducing code size.
@@ -80,7 +86,7 @@ public:
 
 } // end anonymous namespace
 
-char EvexToVexInstPass::ID = 0;
+char EvexToNonEvexInstPass::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
   auto isHiRegIdx = [](unsigned Reg) {
@@ -151,15 +157,15 @@ static bool checkVEXInstPredicate(unsigned EvexOpc, const X86Subtarget &ST) {
 }
 
 // Do any custom cleanup needed to finalize the conversion.
-static bool performCustomAdjustments(MachineInstr &MI, unsigned VexOpc) {
-  (void)VexOpc;
+static bool performCustomAdjustments(MachineInstr &MI, unsigned NonEvexOpc) {
+  (void)NonEvexOpc;
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case X86::VALIGNDZ128rri:
   case X86::VALIGNDZ128rmi:
   case X86::VALIGNQZ128rri:
   case X86::VALIGNQZ128rmi: {
-    assert((VexOpc == X86::VPALIGNRrri || VexOpc == X86::VPALIGNRrmi) &&
+    assert((NonEvexOpc == X86::VPALIGNRrri || NonEvexOpc == X86::VPALIGNRrmi) &&
            "Unexpected new opcode!");
     unsigned Scale =
         (Opc == X86::VALIGNQZ128rri || Opc == X86::VALIGNQZ128rmi) ? 8 : 4;
@@ -175,8 +181,8 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned VexOpc) {
   case X86::VSHUFI32X4Z256rri:
   case X86::VSHUFI64X2Z256rmi:
   case X86::VSHUFI64X2Z256rri: {
-    assert((VexOpc == X86::VPERM2F128rr || VexOpc == X86::VPERM2I128rr ||
-            VexOpc == X86::VPERM2F128rm || VexOpc == X86::VPERM2I128rm) &&
+    assert((NonEvexOpc == X86::VPERM2F128rr || NonEvexOpc == X86::VPERM2I128rr ||
+            NonEvexOpc == X86::VPERM2F128rm || NonEvexOpc == X86::VPERM2I128rm) &&
            "Unexpected new opcode!");
     MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands() - 1);
     int64_t ImmVal = Imm.getImm();
@@ -214,6 +220,8 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned VexOpc) {
 // For EVEX instructions that can be encoded using VEX encoding
 // replace them by the VEX encoding in order to reduce size.
 static bool CompressEvexToVexImpl(MachineInstr &MI, const X86Subtarget &ST) {
+  if (!ST.hasAVX512())
+    return false;
   // VEX format.
   // # of bytes: 0,2,3  1      1      0,1   0,1,2,4  0,1
   //  [Prefixes] [VEX]  OPCODE ModR/M [SIB] [DISP]  [IMM]
@@ -239,7 +247,7 @@ static bool CompressEvexToVexImpl(MachineInstr &MI, const X86Subtarget &ST) {
     return false;
 
   // Use the VEX.L bit to select the 128 or 256-bit table.
-  ArrayRef<X86EvexToVexCompressTableEntry> Table =
+  ArrayRef<X86EvexToNonEvexCompressTableEntry> Table =
       (Desc.TSFlags & X86II::VEX_L) ? ArrayRef(X86EvexToVex256CompressTable)
                                     : ArrayRef(X86EvexToVex128CompressTable);
 
@@ -252,15 +260,36 @@ static bool CompressEvexToVexImpl(MachineInstr &MI, const X86Subtarget &ST) {
     return false;
   if (!checkVEXInstPredicate(EvexOpc, ST))
     return false;
-  if (!performCustomAdjustments(MI, I->VexOpc))
+  if (!performCustomAdjustments(MI, I->NonEvexOpc))
     return false;
 
-  MI.setDesc(ST.getInstrInfo()->get(I->VexOpc));
+  MI.setDesc(ST.getInstrInfo()->get(I->NonEvexOpc));
   MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
   return true;
 }
 
-bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
+// For apx promoted instructions, if they don't use egpr, we could try to use
+// legacy encoding to save code size.
+static bool CompressEVEX2LegacyImpl(MachineInstr &MI, const X86Subtarget &ST) {
+  if (!ST.hasEGPR())
+    return false;
+  ArrayRef<X86EvexToNonEvexCompressTableEntry> Table = X86EvexToLegacyCompressTable;
+  unsigned EvexOpc = MI.getOpcode();
+  const auto *I = llvm::lower_bound(Table, EvexOpc);
+  if (I == Table.end() || I->EvexOpc != EvexOpc)
+    return false;
+  unsigned NewOpc = I->NonEvexOpc;
+  for (unsigned Index = 0, Size = MI.getNumOperands(); Index < Size; Index++) {
+    const MachineOperand &Op = MI.getOperand(Index);
+    if (Op.isReg() && X86II::isApxExtendedReg(Op.getReg()))
+      return false;
+  }
+  MI.setDesc(ST.getInstrInfo()->get(NewOpc));
+  MI.setAsmPrinterFlag(X86::AC_EVEX_2_LEGACY);
+  return true;
+}
+
+bool EvexToNonEvexInstPass::runOnMachineFunction(MachineFunction &MF) {
 #ifndef NDEBUG
   // Make sure the tables are sorted.
   static std::atomic<bool> TableChecked(false);
@@ -269,28 +298,33 @@ bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
            "X86EvexToVex128CompressTable is not sorted!");
     assert(llvm::is_sorted(X86EvexToVex256CompressTable) &&
            "X86EvexToVex256CompressTable is not sorted!");
+    assert(llvm::is_sorted(X86EvexToLegacyCompressTable) &&
+           "X86EvexToLegacyCompressTable is not sorted!");
     TableChecked.store(true, std::memory_order_relaxed);
   }
 #endif
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX512())
+  if (!ST.hasAVX512() && !ST.hasEGPR())
     return false;
 
   bool Changed = false;
 
   /// Go over all basic blocks in function and replace
-  /// EVEX encoded instrs by VEX encoding when possible.
+  /// EVEX encoded instrs by VEX/Legacy encoding when possible.
   for (MachineBasicBlock &MBB : MF) {
     // Traverse the basic block.
-    for (MachineInstr &MI : MBB)
+    for (MachineInstr &MI : MBB) {
       Changed |= CompressEvexToVexImpl(MI, ST);
+      Changed |= CompressEVEX2LegacyImpl(MI, ST);
+    }
   }
 
   return Changed;
 }
 
-INITIALIZE_PASS(EvexToVexInstPass, EVEX2VEX_NAME, EVEX2VEX_DESC, false, false)
+INITIALIZE_PASS(EvexToNonEvexInstPass, EVEX2NONEVEX_NAME, EVEX2NONEVEX_DESC,
+                false, false)
 
-FunctionPass *llvm::createX86EvexToVexInsts() {
-  return new EvexToVexInstPass();
+FunctionPass *llvm::createX86EvexToNonEvexInsts() {
+  return new EvexToNonEvexInstPass();
 }

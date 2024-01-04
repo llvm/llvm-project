@@ -81,7 +81,7 @@ add_tablegen(llvm-tblgen LLVM
   Types.cpp
   VarLenCodeEmitterGen.cpp
   X86DisassemblerTables.cpp
-  X86EVEX2VEXTablesEmitter.cpp
+  X86EVEX2NonEVEXTablesEmitter.cpp
   X86FoldTablesEmitter.cpp
   X86MnemonicTables.cpp
   X86ModRMFilters.cpp

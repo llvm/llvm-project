@@ -1,4 +1,4 @@
-//===- utils/TableGen/X86EVEX2VEXTablesEmitter.cpp - X86 backend-*- C++ -*-===//
+//=- utils/TableGen/X86EVEX2NonEVEXTablesEmitter.cpp - X86 backend-*- C++ -*-//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,12 @@ using namespace X86Disassembler;
 
 namespace {
 
-class X86EVEX2VEXTablesEmitter {
+const std::map<StringRef, StringRef> ManualMap = {
+#define EVEXENTRY(EVEX, NonEVEXInstStr) {#EVEX, #NonEVEXInstStr},
+#include "X86ManualEVEXCompressTables.def"
+};
+
+class X86EVEX2NonEVEXTablesEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
 
@@ -40,28 +45,55 @@ class X86EVEX2VEXTablesEmitter {
   std::vector<Entry> EVEX2VEX128;
   std::vector<Entry> EVEX2VEX256;
 
+  // Hold all possibly compressed APX instructions, including only ND and EGPR
+  // instruction so far
+  std::vector<const CodeGenInstruction *> APXInsts;
+  // Hold all X86 instructions. Divided into groups with same opcodes
+  // to make the search more efficient
+  std::map<uint64_t, std::vector<const CodeGenInstruction *>> LegacyInsts;
+  // Represent EVEX to Legacy compress tables.
+  std::vector<Entry> EVEX2LegacyTable;
+
 public:
-  X86EVEX2VEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86EVEX2NonEVEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Output X86 EVEX2VEX tables.
   void run(raw_ostream &OS);
 
 private:
   // Prints the given table as a C++ array of type
-  // X86EvexToVexCompressTableEntry
+  // X86EvexToNonEvexCompressTableEntry
   void printTable(const std::vector<Entry> &Table, raw_ostream &OS);
+  // X86EVEXToLegacyCompressTableEntry
+  void printEVEX2LegacyTable(const std::vector<Entry> &Table, raw_ostream &OS);
+  void addManualEntry(const CodeGenInstruction *EVEXInstr,
+                      const CodeGenInstruction *LegacyInstr,
+                      const char *TableName);
 };
 
-void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
+void X86EVEX2NonEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
                                           raw_ostream &OS) {
-  StringRef Size = (Table == EVEX2VEX128) ? "128" : "256";
 
-  OS << "// X86 EVEX encoded instructions that have a VEX " << Size
-     << " encoding\n"
-     << "// (table format: <EVEX opcode, VEX-" << Size << " opcode>).\n"
-     << "static const X86EvexToVexCompressTableEntry X86EvexToVex" << Size
+  StringRef TargetEnc;
+  StringRef TableName;
+  StringRef Size;
+  if (Table == EVEX2LegacyTable){
+    TargetEnc = "Legacy";
+    TableName = "X86EvexToLegacy";
+  }
+  else {
+    TargetEnc = "VEX";
+    TableName = "X86EvexToVex";
+    Size = (Table == EVEX2VEX128) ? "128" : "256";
+  }
+
+  OS << "// X86 EVEX encoded instructions that have a " << TargetEnc << " "
+     << Size << " encoding\n"
+     << "// (table format: <EVEX opcode, " << TargetEnc << Size
+     << " opcode>).\n"
+     << "static const X86EvexToNonEvexCompressTableEntry " << TableName << Size
      << "CompressTable[] = {\n"
-     << "  // EVEX scalar with corresponding VEX.\n";
+     << "  // EVEX scalar with corresponding " << TargetEnc << ".\n";
 
   // Print all entries added to the table
   for (const auto &Pair : Table) {
@@ -83,6 +115,31 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
       PrintFatalError("Invalid VectSize bit");
   }
   return Value;
+}
+
+static bool checkMatchable(const CodeGenInstruction *EVEXInst,
+                           const CodeGenInstruction *NonEVEXInst) {
+  for (unsigned I = 0, E = NonEVEXInst->Operands.size(); I < E; I++) {
+    Record *OpRec1 = EVEXInst->Operands[I].Rec;
+    Record *OpRec2 = NonEVEXInst->Operands[I].Rec;
+
+    if (OpRec1 == OpRec2)
+      continue;
+
+    if (isRegisterOperand(OpRec1) && isRegisterOperand(OpRec2)) {
+      if (getRegOperandSize(OpRec1) != getRegOperandSize(OpRec2))
+        return false;
+    } else if (isMemoryOperand(OpRec1) && isMemoryOperand(OpRec2)) {
+      if (getMemOperandSize(OpRec1) != getMemOperandSize(OpRec2))
+        return false;
+    } else if (isImmediateOperand(OpRec1) && isImmediateOperand(OpRec2)) {
+      if (OpRec1->getValueAsDef("Type") != OpRec2->getValueAsDef("Type")) {
+        return false;
+      }
+    } else
+      return false;
+  }
+  return true;
 }
 
 // Function object - Operator() returns true if the given VEX instruction
@@ -121,31 +178,47 @@ public:
     // Also for instructions that their EVEX version was upgraded to work with
     // k-registers. For example VPCMPEQBrm (xmm output register) and
     // VPCMPEQBZ128rm (k register output register).
-    for (unsigned i = 0, e = EVEXInst->Operands.size(); i < e; i++) {
-      Record *OpRec1 = EVEXInst->Operands[i].Rec;
-      Record *OpRec2 = VEXInst->Operands[i].Rec;
-
-      if (OpRec1 == OpRec2)
-        continue;
-
-      if (isRegisterOperand(OpRec1) && isRegisterOperand(OpRec2)) {
-        if (getRegOperandSize(OpRec1) != getRegOperandSize(OpRec2))
-          return false;
-      } else if (isMemoryOperand(OpRec1) && isMemoryOperand(OpRec2)) {
-        return false;
-      } else if (isImmediateOperand(OpRec1) && isImmediateOperand(OpRec2)) {
-        if (OpRec1->getValueAsDef("Type") != OpRec2->getValueAsDef("Type")) {
-          return false;
-        }
-      } else
-        return false;
-    }
-
-    return true;
+    return checkMatchable(EVEXInst, VEXInst);
   }
 };
 
-void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
+class IsMatchAPX {
+  const CodeGenInstruction *EVEXInst;
+
+public:
+  IsMatchAPX(const CodeGenInstruction *EVEXInst) : EVEXInst(EVEXInst) {}
+
+  bool operator()(const CodeGenInstruction *LegacyInst) {
+    Record *RecEVEX = EVEXInst->TheDef;
+    Record *RecLegacy = LegacyInst->TheDef;
+    if (RecLegacy->getValueAsDef("OpSize")->getName() == "OpSize16" &&
+        RecEVEX->getValueAsDef("OpPrefix")->getName() != "PD")
+      return false;
+
+    if (RecLegacy->getValueAsDef("OpSize")->getName() == "OpSize32" &&
+        RecEVEX->getValueAsDef("OpPrefix")->getName() != "PS")
+      return false;
+
+    if (RecEVEX->getValueAsBit("hasREX_W") !=
+        RecLegacy->getValueAsBit("hasREX_W"))
+      return false;
+
+    if (RecLegacy->getValueAsDef("AdSize")->getName() !=
+        RecEVEX->getValueAsDef("AdSize")->getName())
+      return false;
+
+    if (RecLegacy->getValueAsDef("Form") != RecEVEX->getValueAsDef("Form"))
+      return false;
+
+    if (RecLegacy->getValueAsBit("isCodeGenOnly") !=
+        RecEVEX->getValueAsBit("isCodeGenOnly"))
+      return false;
+
+    return checkMatchable(EVEXInst, LegacyInst);
+  }
+};
+
+void X86EVEX2NonEVEXTablesEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 EVEX2VEX tables", OS);
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
@@ -169,6 +242,17 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
     else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_B &&
              !RI.HasEVEX_L2 && !Def->getValueAsBit("notEVEX2VEXConvertible"))
       EVEXInsts.push_back(Inst);
+
+    if (RI.Encoding == X86Local::EVEX && RI.OpMap == X86Local::T_MAP4 &&
+        !RI.HasEVEX_NF &&
+        !getValueFromBitsInit(
+            Def->getValueAsBitsInit("explicitOpPrefixBits"))) {
+      APXInsts.push_back(Inst);
+    } else if (Inst->TheDef->getValueAsDef("OpEnc")->getName() == "EncNormal") {
+      uint64_t Opcode =
+          getValueFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
+      LegacyInsts[Opcode].push_back(Inst);
+    }
   }
 
   for (const CodeGenInstruction *EVEXInst : EVEXInsts) {
@@ -203,8 +287,33 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
   // Print both tables
   printTable(EVEX2VEX128, OS);
   printTable(EVEX2VEX256, OS);
+
+  for (const CodeGenInstruction *EVEXInst : APXInsts) {
+    // REV instrs should not appear before encoding optimization.
+    if (EVEXInst->TheDef->getName().ends_with("_REV"))
+      continue;
+    const CodeGenInstruction *LegacyInst = nullptr;
+    if (ManualMap.count(EVEXInst->TheDef->getName())) {
+      auto NonEVEXInstStr =
+          ManualMap.at(StringRef(EVEXInst->TheDef->getName()));
+      Record *LegacyRec = Records.getDef(NonEVEXInstStr);
+      LegacyInst = &(Target.getInstruction(LegacyRec));
+    } else {
+      uint64_t Opcode =
+          getValueFromBitsInit(EVEXInst->TheDef->getValueAsBitsInit("Opcode"));
+      auto Match = llvm::find_if(LegacyInsts[Opcode], IsMatchAPX(EVEXInst));
+      if (Match != LegacyInsts[Opcode].end())
+        LegacyInst = *Match;
+    }
+    if (LegacyInst) {
+      if (!EVEXInst->TheDef->getValueAsBit("hasEVEX_B"))
+        EVEX2LegacyTable.push_back(std::make_pair(EVEXInst, LegacyInst));
+    }
+  }
+  printTable(EVEX2LegacyTable, OS);
 }
 } // namespace
 
-static TableGen::Emitter::OptClass<X86EVEX2VEXTablesEmitter>
-    X("gen-x86-EVEX2VEX-tables", "Generate X86 EVEX to VEX compress tables");
+static TableGen::Emitter::OptClass<X86EVEX2NonEVEXTablesEmitter>
+    X("gen-x86-EVEX2NonEVEX-tables",
+      "Generate X86 EVEX to NonEVEX compress tables");
