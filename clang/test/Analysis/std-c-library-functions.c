@@ -53,8 +53,6 @@
 // CHECK-NEXT: Loaded summary for: int toupper(int)
 // CHECK-NEXT: Loaded summary for: int tolower(int)
 // CHECK-NEXT: Loaded summary for: int toascii(int)
-// CHECK-NEXT: Loaded summary for: int getc(FILE *)
-// CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
 // CHECK-NEXT: Loaded summary for: int getchar(void)
 // CHECK-NEXT: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
@@ -63,6 +61,8 @@
 // CHECK-NEXT: Loaded summary for: ssize_t getline(char **restrict, size_t *restrict, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: char *getenv(const char *)
+// CHECK-NEXT: Loaded summary for: int getc(FILE *)
+// CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
 
 #include "Inputs/std-c-library-functions.h"
 
