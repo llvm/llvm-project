@@ -2589,8 +2589,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
               MFI.getObjectAlign(FrameIdx));
           MIB.addMemOperand(MMO);
           FI->setHasSpills();
-          Register MergeEnd = PPC::R31;
-          for (unsigned I = MergeFrom.id(); I <= MergeEnd.id(); ++I)
+          for (unsigned I = MergeFrom.id(); I <= Register(PPC::R31).id(); ++I)
             MIB.addUse(Register(I), RegState::Implicit);
         } else
           TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(), RC,
