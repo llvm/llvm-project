@@ -331,6 +331,7 @@ enum NodeType : unsigned {
   SETCC_VL,
 
   // General vmerge node with mask, true, false, passthru, and vl operands.
+  // Tail agnostic vselect can be implemented by setting passthru to undef.
   VMERGE_VL,
 
   // Mask binary operators.
