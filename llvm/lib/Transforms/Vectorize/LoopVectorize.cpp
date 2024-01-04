@@ -3728,6 +3728,9 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
       else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
         ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
                                        ReducedPartRdx, RdxPart);
+      else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+        ReducedPartRdx =
+            createFindLastIVOp(Builder, RK, ReducedPartRdx, RdxPart);
       else
         ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
     }
@@ -3745,6 +3748,10 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
                            ? Builder.CreateSExt(ReducedPartRdx, PhiTy)
                            : Builder.CreateZExt(ReducedPartRdx, PhiTy);
   }
+
+  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+    ReducedPartRdx =
+        createSentinelValueHandling(Builder, RdxDesc, ReducedPartRdx);
 
   PHINode *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
@@ -5681,8 +5688,9 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
         HasReductions &&
         any_of(Legal->getReductionVars(), [&](auto &Reduction) -> bool {
           const RecurrenceDescriptor &RdxDesc = Reduction.second;
-          return RecurrenceDescriptor::isAnyOfRecurrenceKind(
-              RdxDesc.getRecurrenceKind());
+          RecurKind RK = RdxDesc.getRecurrenceKind();
+          return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+                 RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
         });
     if (HasSelectCmpReductions) {
       LLVM_DEBUG(dbgs() << "LV: Not interleaving select-cmp reductions.\n");
@@ -9055,8 +9063,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   for (VPReductionPHIRecipe *PhiR : InLoopReductionPhis) {
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
     RecurKind Kind = RdxDesc.getRecurrenceKind();
-    assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-           "AnyOf reductions are not allowed for in-loop reductions");
+    assert(
+        (!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind)) &&
+        "AnyOf and FindLast reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
     SetVector<VPRecipeBase *> Worklist;
