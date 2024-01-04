@@ -184,52 +184,139 @@ def IMUL64rmi32 : IMulOpMI_R<Xi64, WriteIMul64Imm>;
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //
-class IncOpR_RF<X86TypeInfo t> : UnaryOpR_RF<0xFF, MRM0r, "inc", t, null_frag> {
+class IncOpR_RF<X86TypeInfo t, bit ndd = 0> : UnaryOpR_RF<0xFF, MRM0r, "inc", t, null_frag, ndd> {
   let Pattern = [(set t.RegClass:$dst, EFLAGS,
                  (X86add_flag_nocf t.RegClass:$src1, 1))];
 }
-class DecOpR_RF<X86TypeInfo t> : UnaryOpR_RF<0xFF, MRM1r, "dec", t, null_frag> {
+class DecOpR_RF<X86TypeInfo t, bit ndd = 0> : UnaryOpR_RF<0xFF, MRM1r, "dec", t, null_frag, ndd> {
   let Pattern = [(set t.RegClass:$dst, EFLAGS,
                  (X86sub_flag_nocf t.RegClass:$src1, 1))];
 }
-class IncOpM_M<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM0m, "inc", t, null_frag> {
+class IncOpR_R<X86TypeInfo t, bit ndd = 0> : UnaryOpR_R<0xFF, MRM0r, "inc", t, null_frag, ndd>;
+class DecOpR_R<X86TypeInfo t, bit ndd = 0> : UnaryOpR_R<0xFF, MRM1r, "dec", t, null_frag, ndd>;
+class IncOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM0m, "inc", t, null_frag> {
   let Pattern = [(store (add (t.LoadNode addr:$src1), 1), addr:$src1),
                  (implicit EFLAGS)];
 }
-class DecOpM_M<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM1m, "dec", t, null_frag> {
+class DecOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM1m, "dec", t, null_frag> {
   let Pattern = [(store (add (t.LoadNode addr:$src1), -1), addr:$src1),
                  (implicit EFLAGS)];
 }
+class IncOpM_RF<X86TypeInfo t> : UnaryOpM_RF<0xFF, MRM0m, "inc", t, null_frag> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS, (add (t.LoadNode addr:$src1), 1))];
+}
+class DecOpM_RF<X86TypeInfo t> : UnaryOpM_RF<0xFF, MRM1m, "dec", t, null_frag> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS, (add (t.LoadNode addr:$src1), -1))];
+}
+class IncOpM_M<X86TypeInfo t> : UnaryOpM_M<0xFF, MRM0m, "inc", t, null_frag>;
+class DecOpM_M<X86TypeInfo t> : UnaryOpM_M<0xFF, MRM1m, "dec", t, null_frag>;
+class IncOpM_R<X86TypeInfo t> : UnaryOpM_R<0xFF, MRM0m, "inc", t, null_frag>;
+class DecOpM_R<X86TypeInfo t> : UnaryOpM_R<0xFF, MRM1m, "dec", t, null_frag>;
+
 // IncDec_Alt - Instructions like "inc reg" short forms.
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
 class IncDec_Alt<bits<8> o, string m, X86TypeInfo t>
   : UnaryOpR_RF<o, AddRegFrm, m, t, null_frag>, Requires<[Not64BitMode]>;
 
 let isConvertibleToThreeAddress = 1 in {
-def INC16r_alt : IncDec_Alt<0x40, "inc", Xi16>, OpSize16;
-def INC32r_alt : IncDec_Alt<0x40, "inc", Xi32>, OpSize32;
-def DEC16r_alt : IncDec_Alt<0x48, "dec", Xi16>, OpSize16;
-def DEC32r_alt : IncDec_Alt<0x48, "dec", Xi32>, OpSize32;
-def INC8r  : IncOpR_RF<Xi8>;
-def INC16r : IncOpR_RF<Xi16>, OpSize16;
-def INC32r : IncOpR_RF<Xi32>, OpSize32;
-def INC64r : IncOpR_RF<Xi64>;
-def DEC8r  : DecOpR_RF<Xi8>;
-def DEC16r : DecOpR_RF<Xi16>, OpSize16;
-def DEC32r : DecOpR_RF<Xi32>, OpSize32;
-def DEC64r : DecOpR_RF<Xi64>;
+  def INC16r_alt : IncDec_Alt<0x40, "inc", Xi16>, OpSize16;
+  def INC32r_alt : IncDec_Alt<0x40, "inc", Xi32>, OpSize32;
+  def DEC16r_alt : IncDec_Alt<0x48, "dec", Xi16>, OpSize16;
+  def DEC32r_alt : IncDec_Alt<0x48, "dec", Xi32>, OpSize32;
+  let Predicates = [NoNDD] in {
+    def INC8r  : IncOpR_RF<Xi8>;
+    def INC16r : IncOpR_RF<Xi16>, OpSize16;
+    def INC32r : IncOpR_RF<Xi32>, OpSize32;
+    def INC64r : IncOpR_RF<Xi64>;
+    def DEC8r  : DecOpR_RF<Xi8>;
+    def DEC16r : DecOpR_RF<Xi16>, OpSize16;
+    def DEC32r : DecOpR_RF<Xi32>, OpSize32;
+    def DEC64r : DecOpR_RF<Xi64>;
+  }
+  let Predicates = [HasNDD, In64BitMode] in {
+    def INC8r_ND  : IncOpR_RF<Xi8, 1>;
+    def INC16r_ND : IncOpR_RF<Xi16, 1>, PD;
+    def INC32r_ND : IncOpR_RF<Xi32, 1>;
+    def INC64r_ND : IncOpR_RF<Xi64, 1>;
+    def DEC8r_ND  : DecOpR_RF<Xi8, 1>;
+    def DEC16r_ND : DecOpR_RF<Xi16, 1>, PD;
+    def DEC32r_ND : DecOpR_RF<Xi32, 1>;
+    def DEC64r_ND : DecOpR_RF<Xi64, 1>;
+  }
+  let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+    def INC8r_NF  : IncOpR_R<Xi8>, NF;
+    def INC16r_NF : IncOpR_R<Xi16>, NF, PD;
+    def INC32r_NF : IncOpR_R<Xi32>, NF;
+    def INC64r_NF : IncOpR_R<Xi64>, NF;
+    def DEC8r_NF  : DecOpR_R<Xi8>, NF;
+    def DEC16r_NF : DecOpR_R<Xi16>, NF, PD;
+    def DEC32r_NF : DecOpR_R<Xi32>, NF;
+    def DEC64r_NF : DecOpR_R<Xi64>, NF;
+    def INC8r_NF_ND  : IncOpR_R<Xi8, 1>, NF;
+    def INC16r_NF_ND : IncOpR_R<Xi16, 1>, NF, PD;
+    def INC32r_NF_ND : IncOpR_R<Xi32, 1>, NF;
+    def INC64r_NF_ND : IncOpR_R<Xi64, 1>, NF;
+    def DEC8r_NF_ND  : DecOpR_R<Xi8, 1>, NF;
+    def DEC16r_NF_ND : DecOpR_R<Xi16, 1>, NF, PD;
+    def DEC32r_NF_ND : DecOpR_R<Xi32, 1>, NF;
+    def DEC64r_NF_ND : DecOpR_R<Xi64, 1>, NF;
+    def INC8r_EVEX  : IncOpR_RF<Xi8>, PL;
+    def INC16r_EVEX : IncOpR_RF<Xi16>, PL, PD;
+    def INC32r_EVEX : IncOpR_RF<Xi32>, PL;
+    def INC64r_EVEX : IncOpR_RF<Xi64>, PL;
+    def DEC8r_EVEX  : DecOpR_RF<Xi8>, PL;
+    def DEC16r_EVEX : DecOpR_RF<Xi16>, PL, PD;
+    def DEC32r_EVEX : DecOpR_RF<Xi32>, PL;
+    def DEC64r_EVEX : DecOpR_RF<Xi64>, PL;
+  }
 }
 let Predicates = [UseIncDec] in {
-def INC8m  : IncOpM_M<Xi8>;
-def INC16m : IncOpM_M<Xi16>, OpSize16;
-def INC32m : IncOpM_M<Xi32>, OpSize32;
-def DEC8m  : DecOpM_M<Xi8>;
-def DEC16m : DecOpM_M<Xi16>, OpSize16;
-def DEC32m : DecOpM_M<Xi32>, OpSize32;
+  def INC8m  : IncOpM_MF<Xi8>;
+  def INC16m : IncOpM_MF<Xi16>, OpSize16;
+  def INC32m : IncOpM_MF<Xi32>, OpSize32;
+  def DEC8m  : DecOpM_MF<Xi8>;
+  def DEC16m : DecOpM_MF<Xi16>, OpSize16;
+  def DEC32m : DecOpM_MF<Xi32>, OpSize32;
 }
 let Predicates = [UseIncDec, In64BitMode] in {
-def INC64m : IncOpM_M<Xi64>;
-def DEC64m : DecOpM_M<Xi64>;
+  def INC64m : IncOpM_MF<Xi64>;
+  def DEC64m : DecOpM_MF<Xi64>;
+}
+let Predicates = [HasNDD, In64BitMode, UseIncDec] in {
+  def INC8m_ND  : IncOpM_RF<Xi8>;
+  def INC16m_ND : IncOpM_RF<Xi16>, PD;
+  def INC32m_ND : IncOpM_RF<Xi32>;
+  def DEC8m_ND  : DecOpM_RF<Xi8>;
+  def DEC16m_ND : DecOpM_RF<Xi16>, PD;
+  def DEC32m_ND : DecOpM_RF<Xi32>;
+  def INC64m_ND : IncOpM_RF<Xi64>;
+  def DEC64m_ND : DecOpM_RF<Xi64>;
+}
+let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+  def INC8m_NF  : IncOpM_M<Xi8>, NF;
+  def INC16m_NF : IncOpM_M<Xi16>, NF, PD;
+  def INC32m_NF : IncOpM_M<Xi32>, NF;
+  def INC64m_NF : IncOpM_M<Xi64>, NF;
+  def DEC8m_NF  : DecOpM_M<Xi8>, NF;
+  def DEC16m_NF : DecOpM_M<Xi16>, NF, PD;
+  def DEC32m_NF : DecOpM_M<Xi32>, NF;
+  def DEC64m_NF : DecOpM_M<Xi64>, NF;
+  def INC8m_NF_ND  : IncOpM_R<Xi8>, NF;
+  def INC16m_NF_ND : IncOpM_R<Xi16>, NF, PD;
+  def INC32m_NF_ND : IncOpM_R<Xi32>, NF;
+  def INC64m_NF_ND : IncOpM_R<Xi64>, NF;
+  def DEC8m_NF_ND  : DecOpM_R<Xi8>, NF;
+  def DEC16m_NF_ND : DecOpM_R<Xi16>, NF, PD;
+  def DEC32m_NF_ND : DecOpM_R<Xi32>, NF;
+  def DEC64m_NF_ND : DecOpM_R<Xi64>, NF;
+  def INC8m_EVEX  : IncOpM_MF<Xi8>, PL;
+  def INC16m_EVEX : IncOpM_MF<Xi16>, PL, PD;
+  def INC32m_EVEX : IncOpM_MF<Xi32>, PL;
+  def INC64m_EVEX : IncOpM_MF<Xi64>, PL;
+  def DEC8m_EVEX  : DecOpM_MF<Xi8>, PL;
+  def DEC16m_EVEX : DecOpM_MF<Xi16>, PL, PD;
+  def DEC32m_EVEX : DecOpM_MF<Xi32>, PL;
+  def DEC64m_EVEX : DecOpM_MF<Xi64>, PL;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1119,14 +1206,34 @@ defm MULX64 : MulX<Xi64, WriteMULX64>, REX_W;
 // We don't have patterns for these as there is no advantage over ADC for
 // most code.
 let Form = MRMSrcReg in {
-def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32>, T8, PD;
+  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64>, T8, PD;
+  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32>, T8, XS;
+  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64>, T8, XS;
+  let Predicates =[In64BitMode] in {
+    def ADCX32rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi32>, EVEX, T_MAP4, PD;
+    def ADCX64rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi64>, EVEX, T_MAP4, PD;
+    def ADOX32rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi32>, EVEX, T_MAP4, XS;
+    def ADOX64rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi64>, EVEX, T_MAP4, XS;
+    def ADCX32rr_ND : BinOpRRF_RF<0x66, "adcx", Xi32, null_frag, 1>, PD;
+    def ADCX64rr_ND : BinOpRRF_RF<0x66, "adcx", Xi64, null_frag, 1>, PD;
+    def ADOX32rr_ND : BinOpRRF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;
+    def ADOX64rr_ND : BinOpRRF_RF<0x66, "adox", Xi64, null_frag, 1>, XS;
+  }
 }
 let Form = MRMSrcMem in {
-def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32>, T8, PD;
+  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64>, T8, PD;
+  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32>, T8, XS;
+  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64>, T8, XS;
+  let Predicates =[In64BitMode] in {
+    def ADCX32rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi32>, EVEX, T_MAP4, PD;
+    def ADCX64rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi64>, EVEX, T_MAP4, PD;
+    def ADOX32rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi32>, EVEX, T_MAP4, XS;
+    def ADOX64rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi64>, EVEX, T_MAP4, XS;
+    def ADCX32rm_ND : BinOpRMF_RF<0x66, "adcx", Xi32, null_frag, 1>, PD;
+    def ADCX64rm_ND : BinOpRMF_RF<0x66, "adcx", Xi64, null_frag, 1>, PD;
+    def ADOX32rm_ND : BinOpRMF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;
+    def ADOX64rm_ND : BinOpRMF_RF<0x66, "adox", Xi64, null_frag, 1>, XS;
+  }
 }
