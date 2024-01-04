@@ -182,6 +182,9 @@ static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
   DECODE_SrcOp(decodeOperand_##RegClass##_Imm##ImmWidth, 9, OpWidth, Imm,      \
                false, ImmWidth)
 
+#define DECODE_OPERAND_SRC_REG_OR_IMM_9_TYPED(Name, OpWidth, ImmWidth)         \
+  DECODE_SrcOp(decodeOperand_##Name, 9, OpWidth, Imm, false, ImmWidth)
+
 // Decoder for Src(9-bit encoding) AGPR or immediate. Set Imm{9} to 1 (set acc)
 // and decode using 'enum10' from decodeSrcOp.
 #define DECODE_OPERAND_SRC_REG_OR_IMM_A9(RegClass, OpWidth, ImmWidth)          \
@@ -261,6 +264,9 @@ DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_128, OPW128, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_256, OPW256, 64)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_512, OPW512, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VReg_1024, OPW1024, 32)
+
+DECODE_OPERAND_SRC_REG_OR_IMM_9_TYPED(VS_32_ImmV2I16, OPW32, 32)
+DECODE_OPERAND_SRC_REG_OR_IMM_9_TYPED(VS_32_ImmV2F16, OPW32, 16)
 
 DECODE_OPERAND_SRC_REG_OR_IMM_A9(AReg_64, OPW64, 64)
 DECODE_OPERAND_SRC_REG_OR_IMM_A9(AReg_128, OPW128, 32)
