@@ -14,7 +14,6 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s32_s32
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -38,7 +37,6 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s32_s64
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
@@ -65,7 +63,6 @@ body: |
     ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[UV1]](s32)
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FPTOUI]](s32), [[FPTOUI1]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ;
     ; VI-LABEL: name: test_fptoui_v2s32_to_v2s32
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
@@ -95,7 +92,6 @@ body: |
     ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[UV1]](s64)
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FPTOUI]](s32), [[FPTOUI1]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ;
     ; VI-LABEL: name: test_fptoui_v2s64_to_v2s32
     ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
@@ -124,7 +120,6 @@ body: |
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s16
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -152,7 +147,6 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s32_to_s16
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -177,7 +171,6 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s64_to_s16
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
@@ -235,7 +228,6 @@ body: |
     ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s64)
     ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
-    ;
     ; VI-LABEL: name: test_fptoui_s64_s64
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
@@ -298,7 +290,6 @@ body: |
     ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s64)
     ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
-    ;
     ; VI-LABEL: name: test_fptoui_s64_s64_flags
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
@@ -388,7 +379,6 @@ body: |
     ; SI-NEXT: [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI3]](s32), [[FPTOUI2]](s32)
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV1]](s64), [[MV3]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    ;
     ; VI-LABEL: name: test_fptoui_v2s64_to_v2s64
     ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
@@ -427,135 +417,30 @@ body: |
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2139095040
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C1]](s32)
-    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
-    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[AND1]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
-    ; SI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388607
-    ; SI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C4]]
-    ; SI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388608
-    ; SI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[C5]]
-    ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[OR]](s32)
-    ; SI-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LSHR]], [[C6]]
-    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SUB]], [[C1]]
-    ; SI-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB]]
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[SUB1]](s32)
-    ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT]], [[SUB2]](s32)
-    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[SHL]], [[LSHR1]]
-    ; SI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SELECT]], [[SEXT]]
-    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR]](s64)
-    ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
-    ; SI-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[ASHR]]
-    ; SI-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
-    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; SI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C7]]
-    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[C8]], [[MV]]
-    ; SI-NEXT: [[C9:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x43E0000000000000
-    ; SI-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C9]]
-    ; SI-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C]]
-    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
-    ; SI-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C2]]
-    ; SI-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[AND4]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[ASHR1]](s32)
-    ; SI-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C4]]
-    ; SI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[C5]]
-    ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[OR1]](s32)
-    ; SI-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LSHR2]], [[C6]]
-    ; SI-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB3]], [[C1]]
-    ; SI-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB3]]
-    ; SI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[SUB4]](s32)
-    ; SI-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT1]], [[SUB5]](s32)
-    ; SI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB3]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[SHL1]], [[LSHR3]]
-    ; SI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[SELECT2]], [[SEXT1]]
-    ; SI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR1]](s64)
-    ; SI-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT1]](s64)
-    ; SI-NEXT: [[USUBO2:%[0-9]+]]:_(s32), [[USUBO3:%[0-9]+]]:_(s1) = G_USUBO [[UV4]], [[ASHR1]]
-    ; SI-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV5]], [[UV7]], [[USUBO3]]
-    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO2]](s32), [[USUBE2]](s32)
-    ; SI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB3]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[C8]], [[MV1]]
-    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-    ; SI-NEXT: [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[SELECT3]], [[C10]]
-    ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[COPY]](s32), [[C9]]
-    ; SI-NEXT: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[SELECT1]], [[XOR2]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT4]](s64)
-    ;
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
+    ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
+    ; SI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
+    ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
+    ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; VI-LABEL: name: test_fptoui_s32_to_s64
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2139095040
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C1]](s32)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
-    ; VI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; VI-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[AND1]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
-    ; VI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388607
-    ; VI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C4]]
-    ; VI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388608
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[C5]]
-    ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[OR]](s32)
-    ; VI-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; VI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LSHR]], [[C6]]
-    ; VI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SUB]], [[C1]]
-    ; VI-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB]]
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[SUB1]](s32)
-    ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT]], [[SUB2]](s32)
-    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[SHL]], [[LSHR1]]
-    ; VI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SELECT]], [[SEXT]]
-    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR]](s64)
-    ; VI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
-    ; VI-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[ASHR]]
-    ; VI-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
-    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; VI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C7]]
-    ; VI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[C8]], [[MV]]
-    ; VI-NEXT: [[C9:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x43E0000000000000
-    ; VI-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C9]]
-    ; VI-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C]]
-    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
-    ; VI-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C2]]
-    ; VI-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[AND4]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[ASHR1]](s32)
-    ; VI-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C4]]
-    ; VI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[C5]]
-    ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[OR1]](s32)
-    ; VI-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LSHR2]], [[C6]]
-    ; VI-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB3]], [[C1]]
-    ; VI-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB3]]
-    ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[SUB4]](s32)
-    ; VI-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT1]], [[SUB5]](s32)
-    ; VI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB3]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[SHL1]], [[LSHR3]]
-    ; VI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[SELECT2]], [[SEXT1]]
-    ; VI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR1]](s64)
-    ; VI-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT1]](s64)
-    ; VI-NEXT: [[USUBO2:%[0-9]+]]:_(s32), [[USUBO3:%[0-9]+]]:_(s1) = G_USUBO [[UV4]], [[ASHR1]]
-    ; VI-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV5]], [[UV7]], [[USUBO3]]
-    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO2]](s32), [[USUBE2]](s32)
-    ; VI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB3]](s32), [[C7]]
-    ; VI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[C8]], [[MV1]]
-    ; VI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-    ; VI-NEXT: [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[SELECT3]], [[C10]]
-    ; VI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[COPY]](s32), [[C9]]
-    ; VI-NEXT: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[SELECT1]], [[XOR2]]
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT4]](s64)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
+    ; VI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
+    ; VI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
+    ; VI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s32) = COPY $vgpr0
     %1:_(s64) = G_FPTOUI %0
     $vgpr0_vgpr1 = COPY %1
@@ -572,237 +457,46 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2139095040
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C]]
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C1]](s32)
-    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C2]]
-    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[AND1]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
-    ; SI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388607
-    ; SI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C4]]
-    ; SI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388608
-    ; SI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[C5]]
-    ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[OR]](s32)
-    ; SI-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LSHR]], [[C6]]
-    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SUB]], [[C1]]
-    ; SI-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB]]
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[SUB1]](s32)
-    ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT]], [[SUB2]](s32)
-    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[SHL]], [[LSHR1]]
-    ; SI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SELECT]], [[SEXT]]
-    ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR]](s64)
-    ; SI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
-    ; SI-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV2]], [[ASHR]]
-    ; SI-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV3]], [[UV5]], [[USUBO1]]
-    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; SI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C7]]
-    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[C8]], [[MV]]
-    ; SI-NEXT: [[C9:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x43E0000000000000
-    ; SI-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[UV]], [[C9]]
-    ; SI-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C]]
-    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
-    ; SI-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C2]]
-    ; SI-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[AND4]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[ASHR1]](s32)
-    ; SI-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C4]]
-    ; SI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[C5]]
-    ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[OR1]](s32)
-    ; SI-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LSHR2]], [[C6]]
-    ; SI-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB3]], [[C1]]
-    ; SI-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB3]]
-    ; SI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[SUB4]](s32)
-    ; SI-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT1]], [[SUB5]](s32)
-    ; SI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB3]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[SHL1]], [[LSHR3]]
-    ; SI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[SELECT2]], [[SEXT1]]
-    ; SI-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR1]](s64)
-    ; SI-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT1]](s64)
-    ; SI-NEXT: [[USUBO2:%[0-9]+]]:_(s32), [[USUBO3:%[0-9]+]]:_(s1) = G_USUBO [[UV6]], [[ASHR1]]
-    ; SI-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV7]], [[UV9]], [[USUBO3]]
-    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO2]](s32), [[USUBE2]](s32)
-    ; SI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB3]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[C8]], [[MV1]]
-    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-    ; SI-NEXT: [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[SELECT3]], [[C10]]
-    ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[UV]](s32), [[C9]]
-    ; SI-NEXT: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[SELECT1]], [[XOR2]]
-    ; SI-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C]]
-    ; SI-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[C1]](s32)
-    ; SI-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; SI-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[AND7]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT2:%[0-9]+]]:_(s64) = G_SEXT [[ASHR2]](s32)
-    ; SI-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C4]]
-    ; SI-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND8]], [[C5]]
-    ; SI-NEXT: [[ZEXT2:%[0-9]+]]:_(s64) = G_ZEXT [[OR2]](s32)
-    ; SI-NEXT: [[SUB6:%[0-9]+]]:_(s32) = G_SUB [[LSHR4]], [[C6]]
-    ; SI-NEXT: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[SUB6]], [[C1]]
-    ; SI-NEXT: [[SUB8:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB6]]
-    ; SI-NEXT: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[ZEXT2]], [[SUB7]](s32)
-    ; SI-NEXT: [[LSHR5:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT2]], [[SUB8]](s32)
-    ; SI-NEXT: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB6]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[ICMP4]](s1), [[SHL2]], [[LSHR5]]
-    ; SI-NEXT: [[XOR3:%[0-9]+]]:_(s64) = G_XOR [[SELECT5]], [[SEXT2]]
-    ; SI-NEXT: [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR3]](s64)
-    ; SI-NEXT: [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT2]](s64)
-    ; SI-NEXT: [[USUBO4:%[0-9]+]]:_(s32), [[USUBO5:%[0-9]+]]:_(s1) = G_USUBO [[UV10]], [[ASHR2]]
-    ; SI-NEXT: [[USUBE4:%[0-9]+]]:_(s32), [[USUBE5:%[0-9]+]]:_(s1) = G_USUBE [[UV11]], [[UV13]], [[USUBO5]]
-    ; SI-NEXT: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO4]](s32), [[USUBE4]](s32)
-    ; SI-NEXT: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB6]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT6:%[0-9]+]]:_(s64) = G_SELECT [[ICMP5]](s1), [[C8]], [[MV2]]
-    ; SI-NEXT: [[FSUB1:%[0-9]+]]:_(s32) = G_FSUB [[UV1]], [[C9]]
-    ; SI-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[FSUB1]], [[C]]
-    ; SI-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[AND9]], [[C1]](s32)
-    ; SI-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[FSUB1]], [[C2]]
-    ; SI-NEXT: [[ASHR3:%[0-9]+]]:_(s32) = G_ASHR [[AND10]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT3:%[0-9]+]]:_(s64) = G_SEXT [[ASHR3]](s32)
-    ; SI-NEXT: [[AND11:%[0-9]+]]:_(s32) = G_AND [[FSUB1]], [[C4]]
-    ; SI-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[AND11]], [[C5]]
-    ; SI-NEXT: [[ZEXT3:%[0-9]+]]:_(s64) = G_ZEXT [[OR3]](s32)
-    ; SI-NEXT: [[SUB9:%[0-9]+]]:_(s32) = G_SUB [[LSHR6]], [[C6]]
-    ; SI-NEXT: [[SUB10:%[0-9]+]]:_(s32) = G_SUB [[SUB9]], [[C1]]
-    ; SI-NEXT: [[SUB11:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB9]]
-    ; SI-NEXT: [[SHL3:%[0-9]+]]:_(s64) = G_SHL [[ZEXT3]], [[SUB10]](s32)
-    ; SI-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT3]], [[SUB11]](s32)
-    ; SI-NEXT: [[ICMP6:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB9]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT7:%[0-9]+]]:_(s64) = G_SELECT [[ICMP6]](s1), [[SHL3]], [[LSHR7]]
-    ; SI-NEXT: [[XOR4:%[0-9]+]]:_(s64) = G_XOR [[SELECT7]], [[SEXT3]]
-    ; SI-NEXT: [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR4]](s64)
-    ; SI-NEXT: [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT3]](s64)
-    ; SI-NEXT: [[USUBO6:%[0-9]+]]:_(s32), [[USUBO7:%[0-9]+]]:_(s1) = G_USUBO [[UV14]], [[ASHR3]]
-    ; SI-NEXT: [[USUBE6:%[0-9]+]]:_(s32), [[USUBE7:%[0-9]+]]:_(s1) = G_USUBE [[UV15]], [[UV17]], [[USUBO7]]
-    ; SI-NEXT: [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO6]](s32), [[USUBE6]](s32)
-    ; SI-NEXT: [[ICMP7:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB9]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT8:%[0-9]+]]:_(s64) = G_SELECT [[ICMP7]](s1), [[C8]], [[MV3]]
-    ; SI-NEXT: [[XOR5:%[0-9]+]]:_(s64) = G_XOR [[SELECT8]], [[C10]]
-    ; SI-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[UV1]](s32), [[C9]]
-    ; SI-NEXT: [[SELECT9:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[SELECT6]], [[XOR5]]
-    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT4]](s64), [[SELECT9]](s64)
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
+    ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
+    ; SI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
+    ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
+    ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
+    ; SI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
+    ; SI-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC1]], [[C]]
+    ; SI-NEXT: [[FFLOOR1:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL1]]
+    ; SI-NEXT: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR1]], [[C1]], [[INTRINSIC_TRUNC1]]
+    ; SI-NEXT: [[FPTOUI2:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR1]](s32)
+    ; SI-NEXT: [[FPTOUI3:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA1]](s32)
+    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI3]](s32), [[FPTOUI2]](s32)
+    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    ;
     ; VI-LABEL: name: test_fptoui_v2s32_to_v2s64
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2139095040
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C]]
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C1]](s32)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C2]]
-    ; VI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; VI-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[AND1]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
-    ; VI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388607
-    ; VI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C4]]
-    ; VI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388608
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[C5]]
-    ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[OR]](s32)
-    ; VI-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; VI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LSHR]], [[C6]]
-    ; VI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SUB]], [[C1]]
-    ; VI-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB]]
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[SUB1]](s32)
-    ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT]], [[SUB2]](s32)
-    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[SHL]], [[LSHR1]]
-    ; VI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SELECT]], [[SEXT]]
-    ; VI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR]](s64)
-    ; VI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
-    ; VI-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV2]], [[ASHR]]
-    ; VI-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV3]], [[UV5]], [[USUBO1]]
-    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; VI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C7]]
-    ; VI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[C8]], [[MV]]
-    ; VI-NEXT: [[C9:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x43E0000000000000
-    ; VI-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[UV]], [[C9]]
-    ; VI-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C]]
-    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
-    ; VI-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C2]]
-    ; VI-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[AND4]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[ASHR1]](s32)
-    ; VI-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C4]]
-    ; VI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[C5]]
-    ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[OR1]](s32)
-    ; VI-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LSHR2]], [[C6]]
-    ; VI-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB3]], [[C1]]
-    ; VI-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB3]]
-    ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[SUB4]](s32)
-    ; VI-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT1]], [[SUB5]](s32)
-    ; VI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB3]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[SHL1]], [[LSHR3]]
-    ; VI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[SELECT2]], [[SEXT1]]
-    ; VI-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR1]](s64)
-    ; VI-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT1]](s64)
-    ; VI-NEXT: [[USUBO2:%[0-9]+]]:_(s32), [[USUBO3:%[0-9]+]]:_(s1) = G_USUBO [[UV6]], [[ASHR1]]
-    ; VI-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV7]], [[UV9]], [[USUBO3]]
-    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO2]](s32), [[USUBE2]](s32)
-    ; VI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB3]](s32), [[C7]]
-    ; VI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[C8]], [[MV1]]
-    ; VI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-    ; VI-NEXT: [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[SELECT3]], [[C10]]
-    ; VI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[UV]](s32), [[C9]]
-    ; VI-NEXT: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[SELECT1]], [[XOR2]]
-    ; VI-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C]]
-    ; VI-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[C1]](s32)
-    ; VI-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C2]]
-    ; VI-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[AND7]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT2:%[0-9]+]]:_(s64) = G_SEXT [[ASHR2]](s32)
-    ; VI-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C4]]
-    ; VI-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND8]], [[C5]]
-    ; VI-NEXT: [[ZEXT2:%[0-9]+]]:_(s64) = G_ZEXT [[OR2]](s32)
-    ; VI-NEXT: [[SUB6:%[0-9]+]]:_(s32) = G_SUB [[LSHR4]], [[C6]]
-    ; VI-NEXT: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[SUB6]], [[C1]]
-    ; VI-NEXT: [[SUB8:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB6]]
-    ; VI-NEXT: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[ZEXT2]], [[SUB7]](s32)
-    ; VI-NEXT: [[LSHR5:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT2]], [[SUB8]](s32)
-    ; VI-NEXT: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB6]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[ICMP4]](s1), [[SHL2]], [[LSHR5]]
-    ; VI-NEXT: [[XOR3:%[0-9]+]]:_(s64) = G_XOR [[SELECT5]], [[SEXT2]]
-    ; VI-NEXT: [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR3]](s64)
-    ; VI-NEXT: [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT2]](s64)
-    ; VI-NEXT: [[USUBO4:%[0-9]+]]:_(s32), [[USUBO5:%[0-9]+]]:_(s1) = G_USUBO [[UV10]], [[ASHR2]]
-    ; VI-NEXT: [[USUBE4:%[0-9]+]]:_(s32), [[USUBE5:%[0-9]+]]:_(s1) = G_USUBE [[UV11]], [[UV13]], [[USUBO5]]
-    ; VI-NEXT: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO4]](s32), [[USUBE4]](s32)
-    ; VI-NEXT: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB6]](s32), [[C7]]
-    ; VI-NEXT: [[SELECT6:%[0-9]+]]:_(s64) = G_SELECT [[ICMP5]](s1), [[C8]], [[MV2]]
-    ; VI-NEXT: [[FSUB1:%[0-9]+]]:_(s32) = G_FSUB [[UV1]], [[C9]]
-    ; VI-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[FSUB1]], [[C]]
-    ; VI-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[AND9]], [[C1]](s32)
-    ; VI-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[FSUB1]], [[C2]]
-    ; VI-NEXT: [[ASHR3:%[0-9]+]]:_(s32) = G_ASHR [[AND10]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT3:%[0-9]+]]:_(s64) = G_SEXT [[ASHR3]](s32)
-    ; VI-NEXT: [[AND11:%[0-9]+]]:_(s32) = G_AND [[FSUB1]], [[C4]]
-    ; VI-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[AND11]], [[C5]]
-    ; VI-NEXT: [[ZEXT3:%[0-9]+]]:_(s64) = G_ZEXT [[OR3]](s32)
-    ; VI-NEXT: [[SUB9:%[0-9]+]]:_(s32) = G_SUB [[LSHR6]], [[C6]]
-    ; VI-NEXT: [[SUB10:%[0-9]+]]:_(s32) = G_SUB [[SUB9]], [[C1]]
-    ; VI-NEXT: [[SUB11:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB9]]
-    ; VI-NEXT: [[SHL3:%[0-9]+]]:_(s64) = G_SHL [[ZEXT3]], [[SUB10]](s32)
-    ; VI-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT3]], [[SUB11]](s32)
-    ; VI-NEXT: [[ICMP6:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB9]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT7:%[0-9]+]]:_(s64) = G_SELECT [[ICMP6]](s1), [[SHL3]], [[LSHR7]]
-    ; VI-NEXT: [[XOR4:%[0-9]+]]:_(s64) = G_XOR [[SELECT7]], [[SEXT3]]
-    ; VI-NEXT: [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR4]](s64)
-    ; VI-NEXT: [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT3]](s64)
-    ; VI-NEXT: [[USUBO6:%[0-9]+]]:_(s32), [[USUBO7:%[0-9]+]]:_(s1) = G_USUBO [[UV14]], [[ASHR3]]
-    ; VI-NEXT: [[USUBE6:%[0-9]+]]:_(s32), [[USUBE7:%[0-9]+]]:_(s1) = G_USUBE [[UV15]], [[UV17]], [[USUBO7]]
-    ; VI-NEXT: [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO6]](s32), [[USUBE6]](s32)
-    ; VI-NEXT: [[ICMP7:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB9]](s32), [[C7]]
-    ; VI-NEXT: [[SELECT8:%[0-9]+]]:_(s64) = G_SELECT [[ICMP7]](s1), [[C8]], [[MV3]]
-    ; VI-NEXT: [[XOR5:%[0-9]+]]:_(s64) = G_XOR [[SELECT8]], [[C10]]
-    ; VI-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[UV1]](s32), [[C9]]
-    ; VI-NEXT: [[SELECT9:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[SELECT6]], [[XOR5]]
-    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT4]](s64), [[SELECT9]](s64)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
+    ; VI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
+    ; VI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
+    ; VI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
+    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
+    ; VI-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC1]], [[C]]
+    ; VI-NEXT: [[FFLOOR1:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL1]]
+    ; VI-NEXT: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR1]], [[C1]], [[INTRINSIC_TRUNC1]]
+    ; VI-NEXT: [[FPTOUI2:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR1]](s32)
+    ; VI-NEXT: [[FPTOUI3:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA1]](s32)
+    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI3]](s32), [[FPTOUI2]](s32)
+    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s64>) = G_FPTOUI %0
@@ -823,7 +517,6 @@ body: |
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
     ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s64
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -859,7 +552,6 @@ body: |
     ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI1]](s32)
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[ZEXT]](s64), [[ZEXT1]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    ;
     ; VI-LABEL: name: test_fptoui_v2s16_to_v2s64
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -894,7 +586,6 @@ body: |
     ; SI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[FPTOSI]](s32)
     ; SI-NEXT: S_ENDPGM 0, implicit [[TRUNC1]](s1)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s1
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -923,7 +614,6 @@ body: |
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s15
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -952,7 +642,6 @@ body: |
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s17
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -977,135 +666,30 @@ body: |
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2139095040
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C1]](s32)
-    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
-    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[AND1]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
-    ; SI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388607
-    ; SI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C4]]
-    ; SI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388608
-    ; SI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[C5]]
-    ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[OR]](s32)
-    ; SI-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LSHR]], [[C6]]
-    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SUB]], [[C1]]
-    ; SI-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB]]
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[SUB1]](s32)
-    ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT]], [[SUB2]](s32)
-    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[SHL]], [[LSHR1]]
-    ; SI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SELECT]], [[SEXT]]
-    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR]](s64)
-    ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
-    ; SI-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[ASHR]]
-    ; SI-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
-    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; SI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C7]]
-    ; SI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[C8]], [[MV]]
-    ; SI-NEXT: [[C9:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x43E0000000000000
-    ; SI-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C9]]
-    ; SI-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C]]
-    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
-    ; SI-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C2]]
-    ; SI-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[AND4]], [[C3]](s32)
-    ; SI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[ASHR1]](s32)
-    ; SI-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C4]]
-    ; SI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[C5]]
-    ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[OR1]](s32)
-    ; SI-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LSHR2]], [[C6]]
-    ; SI-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB3]], [[C1]]
-    ; SI-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB3]]
-    ; SI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[SUB4]](s32)
-    ; SI-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT1]], [[SUB5]](s32)
-    ; SI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB3]](s32), [[C1]]
-    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[SHL1]], [[LSHR3]]
-    ; SI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[SELECT2]], [[SEXT1]]
-    ; SI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR1]](s64)
-    ; SI-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT1]](s64)
-    ; SI-NEXT: [[USUBO2:%[0-9]+]]:_(s32), [[USUBO3:%[0-9]+]]:_(s1) = G_USUBO [[UV4]], [[ASHR1]]
-    ; SI-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV5]], [[UV7]], [[USUBO3]]
-    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO2]](s32), [[USUBE2]](s32)
-    ; SI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB3]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[C8]], [[MV1]]
-    ; SI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-    ; SI-NEXT: [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[SELECT3]], [[C10]]
-    ; SI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[COPY]](s32), [[C9]]
-    ; SI-NEXT: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[SELECT1]], [[XOR2]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT4]](s64)
-    ;
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
+    ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
+    ; SI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
+    ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
+    ; SI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; VI-LABEL: name: test_fptoui_s32_to_s33
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2139095040
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C1]](s32)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
-    ; VI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; VI-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[AND1]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[ASHR]](s32)
-    ; VI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388607
-    ; VI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C4]]
-    ; VI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8388608
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[C5]]
-    ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[OR]](s32)
-    ; VI-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; VI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[LSHR]], [[C6]]
-    ; VI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SUB]], [[C1]]
-    ; VI-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB]]
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[SUB1]](s32)
-    ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT]], [[SUB2]](s32)
-    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[SHL]], [[LSHR1]]
-    ; VI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SELECT]], [[SEXT]]
-    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR]](s64)
-    ; VI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
-    ; VI-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[ASHR]]
-    ; VI-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
-    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; VI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C7]]
-    ; VI-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[C8]], [[MV]]
-    ; VI-NEXT: [[C9:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x43E0000000000000
-    ; VI-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C9]]
-    ; VI-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C]]
-    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C1]](s32)
-    ; VI-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C2]]
-    ; VI-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[AND4]], [[C3]](s32)
-    ; VI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[ASHR1]](s32)
-    ; VI-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[FSUB]], [[C4]]
-    ; VI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND5]], [[C5]]
-    ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[OR1]](s32)
-    ; VI-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[LSHR2]], [[C6]]
-    ; VI-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB3]], [[C1]]
-    ; VI-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[SUB3]]
-    ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[SUB4]](s32)
-    ; VI-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[ZEXT1]], [[SUB5]](s32)
-    ; VI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB3]](s32), [[C1]]
-    ; VI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[SHL1]], [[LSHR3]]
-    ; VI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[SELECT2]], [[SEXT1]]
-    ; VI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[XOR1]](s64)
-    ; VI-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT1]](s64)
-    ; VI-NEXT: [[USUBO2:%[0-9]+]]:_(s32), [[USUBO3:%[0-9]+]]:_(s1) = G_USUBO [[UV4]], [[ASHR1]]
-    ; VI-NEXT: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV5]], [[UV7]], [[USUBO3]]
-    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO2]](s32), [[USUBE2]](s32)
-    ; VI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB3]](s32), [[C7]]
-    ; VI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[C8]], [[MV1]]
-    ; VI-NEXT: [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-    ; VI-NEXT: [[XOR2:%[0-9]+]]:_(s64) = G_XOR [[SELECT3]], [[C10]]
-    ; VI-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[COPY]](s32), [[C9]]
-    ; VI-NEXT: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[SELECT1]], [[XOR2]]
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT4]](s64)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3DF0000000000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC1F0000000000000
+    ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INTRINSIC_TRUNC]], [[C]]
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(s32) = G_FFLOOR [[FMUL]]
+    ; VI-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FFLOOR]], [[C1]], [[INTRINSIC_TRUNC]]
+    ; VI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FFLOOR]](s32)
+    ; VI-NEXT: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s32)
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s32) = COPY $vgpr0
     %1:_(s33) = G_FPTOUI %0
     %2:_(s64) = G_ANYEXT %1
@@ -1126,7 +710,6 @@ body: |
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s7
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -1155,7 +738,6 @@ body: |
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s8
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -1184,7 +766,6 @@ body: |
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FPEXT]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s16_to_s9
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -1211,7 +792,6 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s32_to_s15
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -1236,7 +816,6 @@ body: |
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[FPTOUI]](s32)
-    ;
     ; VI-LABEL: name: test_fptoui_s32_to_s17
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}

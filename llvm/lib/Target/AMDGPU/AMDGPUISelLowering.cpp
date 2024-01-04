@@ -3343,12 +3343,14 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
   return LowerINT_TO_FP64(Op, DAG, true);
 }
 
-SDValue AMDGPUTargetLowering::LowerFP64_TO_INT(SDValue Op, SelectionDAG &DAG,
+SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
   SDLoc SL(Op);
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
+
+  assert(SrcVT == MVT::f32 || SrcVT == MVT::f64);
 
   // The basic idea of converting a floating point number into a pair of 32-bit
   // integers is illustrated as follows:
@@ -3388,20 +3390,32 @@ SDValue AMDGPUTargetLowering::LowerFP64_TO_INT(SDValue Op, SelectionDAG &DAG,
         llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)), SL, SrcVT);
   }
   // TODO: Should this propagate fast-math-flags?
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f64, Trunc, K0);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, SrcVT, Trunc, K0);
 
-  SDValue FloorMul = DAG.getNode(ISD::FFLOOR, SL, MVT::f64, Mul);
+  SDValue FloorMul = DAG.getNode(ISD::FFLOOR, SL, SrcVT, Mul);
 
+  SDValue Fma = DAG.getNode(ISD::FMA, SL, SrcVT, FloorMul, K1, Trunc);
 
-  SDValue Fma = DAG.getNode(ISD::FMA, SL, MVT::f64, FloorMul, K1, Trunc);
-
-  SDValue Hi = DAG.getNode(Signed ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, SL,
-                           MVT::i32, FloorMul);
+  SDValue Hi = DAG.getNode((Signed && SrcVT == MVT::f64) ? ISD::FP_TO_SINT
+                                                         : ISD::FP_TO_UINT,
+                           SL, MVT::i32, FloorMul);
   SDValue Lo = DAG.getNode(ISD::FP_TO_UINT, SL, MVT::i32, Fma);
 
-  SDValue Result = DAG.getBuildVector(MVT::v2i32, SL, {Lo, Hi});
+  SDValue Result = DAG.getNode(ISD::BITCAST, SL, MVT::i64,
+                               DAG.getBuildVector(MVT::v2i32, SL, {Lo, Hi}));
 
-  return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Result);
+  if (Signed && SrcVT == MVT::f32) {
+    assert(Sign);
+    // Flip the result based on the signedness, which is either all 0s or 1s.
+    Sign = DAG.getNode(ISD::BITCAST, SL, MVT::i64,
+                       DAG.getBuildVector(MVT::v2i32, SL, {Sign, Sign}));
+    // r := xor(r, sign) - sign;
+    Result =
+        DAG.getNode(ISD::SUB, SL, MVT::i64,
+                    DAG.getNode(ISD::XOR, SL, MVT::i64, Result, Sign), Sign);
+  }
+
+  return Result;
 }
 
 SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const {
@@ -3532,8 +3546,8 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT(SDValue Op,
     return DAG.getNode(Ext, DL, MVT::i64, FpToInt32);
   }
 
-  if (DestVT == MVT::i64 && SrcVT == MVT::f64)
-    return LowerFP64_TO_INT(Op, DAG, OpOpcode == ISD::FP_TO_SINT);
+  if (DestVT == MVT::i64 && (SrcVT == MVT::f32 || SrcVT == MVT::f64))
+    return LowerFP_TO_INT64(Op, DAG, OpOpcode == ISD::FP_TO_SINT);
 
   return SDValue();
 }
