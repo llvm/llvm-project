@@ -54,6 +54,14 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
       return $_op.getOperation()->getOperand(1);
     }]>,
     InterfaceMethod<
+    /*desc=*/"Returns the result value.",
+    /*retTy=*/"OpResult",
+    /*methodName=*/"res",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+      return $_op.getOperation()->getResult(0);
+    }]>,
+    InterfaceMethod<
     /*desc=*/[{
       Returns whether the given op has indexing maps that correspond to a
       row-major matmul operation.
