@@ -233,7 +233,6 @@ template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb {
   static constexpr uint16_t LoBitNoBlx = 0x1000;
 };
 
-
 /// Helper function to read the initial addend for Data-class relocations.
 Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
                                  Edge::Kind Kind);

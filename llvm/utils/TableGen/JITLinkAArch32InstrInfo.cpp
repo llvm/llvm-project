@@ -120,7 +120,7 @@ static void extractBits(BitsInit &InstBits, InstrInfo &II) {
 }
 
 static void writeArmElement(raw_ostream &OS, Twine InfoName, uint32_t Value,
-                            int Indentation = 4) {
+                            int Indentation = 2) {
   OS.indent(Indentation) << "static constexpr uint32_t " + InfoName + " = 0x";
   OS.write_hex(Value) << ";\n";
 }
@@ -136,7 +136,7 @@ static void writeArmInfo(raw_ostream &OS, InstrInfo &II, Edge::Kind Kind) {
 }
 
 static void writeThumbElement(raw_ostream &OS, Twine InfoName, uint32_t Value,
-                              int Indentation = 4) {
+                              int Indentation = 2) {
   OS.indent(Indentation) << "static constexpr HalfWords " + InfoName + " {0x";
   OS.write_hex(Value >> 16) << ", 0x";
   OS.write_hex(Value & 0x0000FFFF) << "};\n";
