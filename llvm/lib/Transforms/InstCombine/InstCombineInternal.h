@@ -276,17 +276,15 @@ private:
   bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
-  Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
 
-  // Match a pair of Phi Nodes like
-  // phi [a, BB0], [b, BB1] & phi [b, BB0], [a, BB1]
-  // Return the matched two operands.
-  std::optional<std::pair<Value *, Value *>>
-  matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS);
-
-  // Tries to fold (op phi(a, b) phi(b, a)) -> (op a, b)
-  // while op is a commutative intrinsic call.
-  Instruction *foldCommutativeIntrinsicOverPhis(IntrinsicInst &II);
+  // Return (a, b) if (LHS, RHS) is known to be (a, b) or (b, a).
+  // Otherwise, return std::nullopt
+  // Currently it matches:
+  // - LHS = (select c, a, b), RHS = (select c, b, a)
+  // - LHS = (phi [a, BB0], [b, BB1]), RHS = (phi [b, BB0], [a, BB1])
+  // - LHS = min(a, b), RHS = max(a, b)
+  std::optional<std::pair<Value *, Value *>> matchSymmetricPair(Value *LHS,
+                                                                Value *RHS);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
@@ -501,11 +499,6 @@ public:
   /// expression X % C0 + (( X / C0 ) % C1) * C0 can be simplified to
   /// X % (C0 * C1)
   Value *SimplifyAddWithRemainder(BinaryOperator &I);
-
-  // Tries to fold (Binop phi(a, b) phi(b, a)) -> (Binop a, b)
-  // while Binop is commutative.
-  Value *SimplifyPhiCommutativeBinaryOp(BinaryOperator &I, Value *LHS,
-                                        Value *RHS);
 
   // Binary Op helper for select operations where the expression can be
   // efficiently reorganized.
