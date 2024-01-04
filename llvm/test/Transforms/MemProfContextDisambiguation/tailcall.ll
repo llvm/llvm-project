@@ -56,12 +56,12 @@ define i32 @main() #0 {
   ret i32 0
 }
 
+; IR-LABEL: @_Z3barv.memprof.1()
+; IR: call ptr @_Znam(i64 10) #[[COLD:[0-9]+]]
 ; IR-LABEL: @_Z3bazv.memprof.1()
 ; IR: call ptr @_Z3barv.memprof.1()
 ; IR-LABEL: @_Z3foov.memprof.1()
 ; IR: call ptr @_Z3bazv.memprof.1()
-; IR-LABEL: @_Z3barv.memprof.1()
-; IR: call ptr @_Znam(i64 10) #[[COLD:[0-9]+]]
 
 ; IR: attributes #[[NOTCOLD]] = { builtin allocsize(0) "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { builtin allocsize(0) "memprof"="cold" }

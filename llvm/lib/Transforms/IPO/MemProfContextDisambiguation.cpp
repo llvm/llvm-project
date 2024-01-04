@@ -379,7 +379,7 @@ protected:
 
   /// Save lists of calls with MemProf metadata in each function, for faster
   /// iteration.
-  std::map<FuncTy *, std::vector<CallInfo>> FuncToCallsWithMetadata;
+  MapVector<FuncTy *, std::vector<CallInfo>> FuncToCallsWithMetadata;
 
   /// Map from callsite node to the enclosing caller function.
   std::map<const ContextNode *, const FuncTy *> NodeToCallingFunc;
@@ -689,8 +689,8 @@ private:
   // frames that we discover while building the graph.
   // It maps from the summary of the function making the tail call, to a map
   // of callee ValueInfo to corresponding synthesized callsite info.
-  std::map<FunctionSummary *,
-           std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
+  std::unordered_map<FunctionSummary *,
+                     std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
       FunctionCalleesToSynthesizedCallsiteInfos;
 };
 } // namespace
@@ -1667,7 +1667,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // effect in the summary and perform the actual speculative devirtualization
   // while cloning in the ThinLTO backend.
 
-  // Keep track of the new nodes synthesizes for discovered tail calls missing
+  // Keep track of the new nodes synthesized for discovered tail calls missing
   // from the profiled contexts.
   MapVector<CallInfo, ContextNode *> TailCallToContextNodeMap;
 
@@ -1703,7 +1703,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
 
   // Add the new nodes after the above loop so that the iteration is not
   // invalidated.
-  for (auto I : TailCallToContextNodeMap)
+  for (auto &I : TailCallToContextNodeMap)
     NonAllocationCallToContextNodeMap[I.first] = I.second;
 }
 
@@ -1761,7 +1761,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
       // back to the current edge.
       EI = Caller->CalleeEdges.insert(EI, NewEdge);
       ++EI;
-      assert(*EI == Edge);
+      assert(*EI == Edge &&
+             "Iterator position not restored after insert and increment");
     } else
       Caller->CalleeEdges.push_back(NewEdge);
   };
