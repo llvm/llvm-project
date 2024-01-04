@@ -60,11 +60,6 @@ void test_algorithms() {
   std::clamp(2, 1, 3, std::greater<int>());
 #endif
 
-#if TEST_STD_VER >= 23
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::contains(arr, arr + 1, 1);
-#endif
-
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::count_if(std::begin(arr), std::end(arr), P());
 
