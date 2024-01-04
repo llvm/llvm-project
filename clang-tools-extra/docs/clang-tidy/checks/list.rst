@@ -149,6 +149,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
@@ -226,6 +227,7 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
@@ -292,6 +294,8 @@ Clang-Tidy Checks
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
+   :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"

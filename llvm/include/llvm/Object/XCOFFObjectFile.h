@@ -411,13 +411,13 @@ public:
     return Entry64->AuxType;
   }
 
-private:
   uint8_t getSymbolAlignmentAndType() const {
     return GETVALUE(SymbolAlignmentAndType);
   }
 
 #undef GETVALUE
 
+private:
   const XCOFFCsectAuxEnt32 *Entry32 = nullptr;
   const XCOFFCsectAuxEnt64 *Entry64 = nullptr;
 };

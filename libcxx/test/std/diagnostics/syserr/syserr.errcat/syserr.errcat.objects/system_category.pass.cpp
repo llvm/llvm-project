@@ -13,7 +13,6 @@
 // const error_category& system_category();
 
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
-// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 #include <system_error>
 #include <cassert>
@@ -52,6 +51,8 @@ int main(int, char**)
             // Exact message format varies by platform.
 #if defined(_AIX)
             LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0);
+#elif defined(_NEWLIB_VERSION)
+            LIBCPP_ASSERT(msg.empty());
 #else
             LIBCPP_ASSERT(msg.rfind("Unknown error", 0) == 0);
 #endif

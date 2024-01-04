@@ -549,11 +549,11 @@ defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, int_aarch64_sme_str_zt>;
 def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
 def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
 
-defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2">;
+defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2", int_aarch64_sme_luti2_lane_zt>;
 defm LUTI2_2ZTZI : sme2_luti2_vector_vg2_index<"luti2">;
 defm LUTI2_4ZTZI : sme2_luti2_vector_vg4_index<"luti2">;
 
-defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4">;
+defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4", int_aarch64_sme_luti4_lane_zt>;
 defm LUTI4_2ZTZI : sme2_luti4_vector_vg2_index<"luti4">;
 defm LUTI4_4ZTZI : sme2_luti4_vector_vg4_index<"luti4">;
 

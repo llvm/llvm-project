@@ -29,7 +29,8 @@ LLVM_LIBC_FUNCTION(int, hsearch_r,
     }
     break;
   case ENTER:
-    *retval = table->insert(item);
+    *retval = internal::HashTable::insert(table, item);
+    htab->__opaque = table;
     if (*retval == nullptr) {
       libc_errno = ENOMEM;
       return 0;

@@ -72,6 +72,8 @@ StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
   return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
 }
 
+void MarkupStackTracePrinter::RenderContext(InternalScopedString *) {}
+
 Symbolizer *Symbolizer::PlatformInit() {
   return new (symbolizer_allocator_) Symbolizer({});
 }

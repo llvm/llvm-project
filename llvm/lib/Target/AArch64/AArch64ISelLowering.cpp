@@ -1651,6 +1651,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
   IsStrictFPEnabled = true;
+  setMaxAtomicSizeInBitsSupported(128);
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
@@ -13705,11 +13706,20 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
   assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
          "function only supposed to emit natural comparisons");
 
+  APInt SplatValue;
+  APInt SplatUndef;
+  unsigned SplatBitSize = 0;
+  bool HasAnyUndefs;
+
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(RHS.getNode());
-  APInt CnstBits(VT.getSizeInBits(), 0);
-  APInt UndefBits(VT.getSizeInBits(), 0);
-  bool IsCnst = BVN && resolveBuildVector(BVN, CnstBits, UndefBits);
-  bool IsZero = IsCnst && (CnstBits == 0);
+  bool IsCnst = BVN && BVN->isConstantSplat(SplatValue, SplatUndef,
+                                            SplatBitSize, HasAnyUndefs);
+
+  bool IsSplatUniform =
+      SrcVT.getVectorElementType().getSizeInBits() >= SplatBitSize;
+  bool IsZero = IsCnst && SplatValue == 0 && IsSplatUniform;
+  bool IsOne = IsCnst && SplatValue == 1 && IsSplatUniform;
+  bool IsMinusOne = IsCnst && SplatValue.isAllOnes() && IsSplatUniform;
 
   if (SrcVT.getVectorElementType().isFloatingPoint()) {
     switch (CC) {
@@ -13778,6 +13788,8 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
   case AArch64CC::GT:
     if (IsZero)
       return DAG.getNode(AArch64ISD::CMGTz, dl, VT, LHS);
+    if (IsMinusOne)
+      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS, RHS);
     return DAG.getNode(AArch64ISD::CMGT, dl, VT, LHS, RHS);
   case AArch64CC::LE:
     if (IsZero)
@@ -13790,6 +13802,8 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
   case AArch64CC::LT:
     if (IsZero)
       return DAG.getNode(AArch64ISD::CMLTz, dl, VT, LHS);
+    if (IsOne)
+      return DAG.getNode(AArch64ISD::CMLEz, dl, VT, LHS);
     return DAG.getNode(AArch64ISD::CMGT, dl, VT, RHS, LHS);
   case AArch64CC::HI:
     return DAG.getNode(AArch64ISD::CMHI, dl, VT, LHS, RHS);
@@ -16068,6 +16082,20 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   return Subtarget->getInstrInfo()->isLegalAddressingMode(NumBytes, AM.BaseOffs,
                                                           AM.Scale);
+}
+
+// Check whether the 2 offsets belong to the same imm24 range, and their high
+// 12bits are same, then their high part can be decoded with the offset of add.
+int64_t
+AArch64TargetLowering::getPreferredLargeGEPBaseOffset(int64_t MinOffset,
+                                                      int64_t MaxOffset) const {
+  int64_t HighPart = MinOffset & ~0xfffULL;
+  if (MinOffset >> 12 == MaxOffset >> 12 && isLegalAddImmediate(HighPart)) {
+    // Rebase the value to an integer multiple of imm12.
+    return HighPart;
+  }
+
+  return 0;
 }
 
 bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
@@ -24287,10 +24315,7 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 // Create an even/odd pair of X registers holding integer value V.
 static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
   SDLoc dl(V.getNode());
-  SDValue VLo = DAG.getAnyExtOrTrunc(V, dl, MVT::i64);
-  SDValue VHi = DAG.getAnyExtOrTrunc(
-      DAG.getNode(ISD::SRL, dl, MVT::i128, V, DAG.getConstant(64, dl, MVT::i64)),
-      dl, MVT::i64);
+  auto [VLo, VHi] = DAG.SplitScalar(V, dl, MVT::i64, MVT::i64);
   if (DAG.getDataLayout().isBigEndian())
     std::swap (VLo, VHi);
   SDValue RegClass =
@@ -24888,14 +24913,20 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
                              : AtomicExpansionKind::LLSC;
 }
 
-// For the real atomic operations, we have ldxr/stxr up to 128 bits,
+// The "default" for integer RMW operations is to expand to an LL/SC loop.
+// However, with the LSE instructions (or outline-atomics mode, which provides
+// library routines in place of the LSE-instructions), we can directly emit many
+// operations instead.
+//
+// Floating-point operations are always emitted to a cmpxchg loop, because they
+// may trigger a trap which aborts an LLSC sequence.
 TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
+  assert(Size <= 128 && "AtomicExpandPass should've handled larger sizes.");
+
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
-
-  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  if (Size > 128) return AtomicExpansionKind::None;
 
   bool CanUseLSE128 = Subtarget->hasLSE128() && Size == 128 &&
                       (AI->getOperation() == AtomicRMWInst::Xchg ||

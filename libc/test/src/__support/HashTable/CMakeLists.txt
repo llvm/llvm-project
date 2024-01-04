@@ -6,6 +6,7 @@ add_libc_test(
     bitmask_test.cpp
   DEPENDS
     libc.src.__support.HashTable.bitmask
+    libc.src.search.hsearch
 )
 
 add_libc_test(
@@ -18,6 +19,7 @@ add_libc_test(
     libc.src.__support.HashTable.randomness
     libc.src.__support.HashTable.table
     libc.src.__support.common
+    libc.src.search.hsearch
   UNIT_TEST_ONLY
 )
 
@@ -30,4 +32,5 @@ add_libc_test(
   DEPENDS
     libc.src.__support.HashTable.bitmask
     libc.src.stdlib.rand
+    libc.src.search.hsearch
 )

@@ -288,7 +288,7 @@ public:
       if (Glob) {
         // Is this clang-diagnostic-*, or *, or so?
         // (We ignore all other types of globs).
-        if (CDPrefix.startswith(Check)) {
+        if (CDPrefix.starts_with(Check)) {
           Default = Enable;
           Exceptions.clear();
         }

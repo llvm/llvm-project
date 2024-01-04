@@ -388,15 +388,13 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    vpermps %ymm4, %ymm10, %ymm10
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm5 = ymm10[0],ymm5[1,2],ymm10[3,4,5,6,7]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm5 = ymm5[0,1,2],ymm9[3,4,5],ymm5[6,7]
-; AVX2-SLOW-NEXT:    vmovddup {{.*#+}} xmm9 = [0,4,0,4]
-; AVX2-SLOW-NEXT:    # xmm9 = mem[0,0]
+; AVX2-SLOW-NEXT:    vbroadcastsd {{.*#+}} ymm9 = [0,4,0,4,0,4,0,4]
 ; AVX2-SLOW-NEXT:    vpermps %ymm6, %ymm9, %ymm6
-; AVX2-SLOW-NEXT:    vbroadcastf128 {{.*#+}} ymm9 = [0,4,0,1,0,4,0,1]
-; AVX2-SLOW-NEXT:    # ymm9 = mem[0,1,0,1]
-; AVX2-SLOW-NEXT:    vpermps %ymm4, %ymm9, %ymm4
+; AVX2-SLOW-NEXT:    vbroadcastf128 {{.*#+}} ymm10 = [0,4,0,1,0,4,0,1]
+; AVX2-SLOW-NEXT:    # ymm10 = mem[0,1,0,1]
+; AVX2-SLOW-NEXT:    vpermps %ymm4, %ymm10, %ymm4
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm6[2,3],ymm4[4,5,6,7]
-; AVX2-SLOW-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [0,4,0,4,0,4,0,4]
-; AVX2-SLOW-NEXT:    vpermps %ymm7, %ymm6, %ymm6
+; AVX2-SLOW-NEXT:    vpermps %ymm7, %ymm9, %ymm6
 ; AVX2-SLOW-NEXT:    vbroadcastss (%r10), %ymm7
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm7[6,7]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm6[4,5,6],ymm4[7]
@@ -443,15 +441,13 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm4[2],ymm5[2],ymm4[3],ymm5[3],ymm4[6],ymm5[6],ymm4[7],ymm5[7]
 ; AVX2-FAST-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[0,1,0,1,4,5,4,5]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm4 = ymm8[0,1],ymm4[2,3,4],ymm8[5,6,7]
-; AVX2-FAST-NEXT:    vmovddup {{.*#+}} xmm5 = [0,4,0,4]
-; AVX2-FAST-NEXT:    # xmm5 = mem[0,0]
+; AVX2-FAST-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [0,4,0,4,0,4,0,4]
 ; AVX2-FAST-NEXT:    vpermps %ymm3, %ymm5, %ymm3
-; AVX2-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = [0,4,0,1,0,4,0,1]
-; AVX2-FAST-NEXT:    # ymm5 = mem[0,1,0,1]
-; AVX2-FAST-NEXT:    vpermps %ymm2, %ymm5, %ymm2
+; AVX2-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm8 = [0,4,0,1,0,4,0,1]
+; AVX2-FAST-NEXT:    # ymm8 = mem[0,1,0,1]
+; AVX2-FAST-NEXT:    vpermps %ymm2, %ymm8, %ymm2
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm3[2,3],ymm2[4,5,6,7]
-; AVX2-FAST-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [0,4,0,4,0,4,0,4]
-; AVX2-FAST-NEXT:    vpermps %ymm6, %ymm3, %ymm3
+; AVX2-FAST-NEXT:    vpermps %ymm6, %ymm5, %ymm3
 ; AVX2-FAST-NEXT:    vbroadcastss (%r10), %ymm5
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1,2,3,4,5],ymm5[6,7]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4,5,6],ymm2[7]
@@ -499,15 +495,13 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vpermps %ymm4, %ymm10, %ymm10
 ; AVX2-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm5 = ymm10[0],ymm5[1,2],ymm10[3,4,5,6,7]
 ; AVX2-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm5 = ymm5[0,1,2],ymm9[3,4,5],ymm5[6,7]
-; AVX2-FAST-PERLANE-NEXT:    vmovddup {{.*#+}} xmm9 = [0,4,0,4]
-; AVX2-FAST-PERLANE-NEXT:    # xmm9 = mem[0,0]
+; AVX2-FAST-PERLANE-NEXT:    vbroadcastsd {{.*#+}} ymm9 = [0,4,0,4,0,4,0,4]
 ; AVX2-FAST-PERLANE-NEXT:    vpermps %ymm6, %ymm9, %ymm6
-; AVX2-FAST-PERLANE-NEXT:    vbroadcastf128 {{.*#+}} ymm9 = [0,4,0,1,0,4,0,1]
-; AVX2-FAST-PERLANE-NEXT:    # ymm9 = mem[0,1,0,1]
-; AVX2-FAST-PERLANE-NEXT:    vpermps %ymm4, %ymm9, %ymm4
+; AVX2-FAST-PERLANE-NEXT:    vbroadcastf128 {{.*#+}} ymm10 = [0,4,0,1,0,4,0,1]
+; AVX2-FAST-PERLANE-NEXT:    # ymm10 = mem[0,1,0,1]
+; AVX2-FAST-PERLANE-NEXT:    vpermps %ymm4, %ymm10, %ymm4
 ; AVX2-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm6[2,3],ymm4[4,5,6,7]
-; AVX2-FAST-PERLANE-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [0,4,0,4,0,4,0,4]
-; AVX2-FAST-PERLANE-NEXT:    vpermps %ymm7, %ymm6, %ymm6
+; AVX2-FAST-PERLANE-NEXT:    vpermps %ymm7, %ymm9, %ymm6
 ; AVX2-FAST-PERLANE-NEXT:    vbroadcastss (%r10), %ymm7
 ; AVX2-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm7[6,7]
 ; AVX2-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm6[4,5,6],ymm4[7]

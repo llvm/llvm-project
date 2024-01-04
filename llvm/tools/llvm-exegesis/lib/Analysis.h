@@ -23,7 +23,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
-#include <set>
 
 namespace llvm {
 namespace exegesis {

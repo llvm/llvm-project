@@ -207,6 +207,39 @@ Author: {self.pr.user.name} ({self.pr.user.login})
         return None
 
 
+class PRGreeter:
+    def __init__(self, token: str, repo: str, pr_number: int):
+        repo = github.Github(token).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+
+    def run(self) -> bool:
+        # We assume that this is only called for a PR that has just been opened
+        # by a user new to LLVM and/or GitHub itself.
+
+        # This text is using Markdown formatting.
+        comment = f"""\
+Thank you for submitting a Pull Request (PR) to the LLVM Project!
+
+This PR will be automatically labeled and the relevant teams will be
+notified.
+
+If you wish to, you can add reviewers by using the "Reviewers" section on this page.
+
+If this is not working for you, it is probably because you do not have write
+permissions for the repository. In which case you can instead tag reviewers by
+name in a comment by using `@` followed by their GitHub username.
+
+If you have received no comments on your PR for a week, you can request a review
+by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate
+is once a week. Please remember that you are asking for valuable time from other developers.
+
+If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
+
+You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
+        self.pr.as_issue().create_comment(comment)
+        return True
+
+
 def setup_llvmbot_git(git_dir="."):
     """
     Configure the git repo in `git_dir` with the llvmbot account so
@@ -651,6 +684,9 @@ pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
 pr_subscriber_parser.add_argument("--label-name", type=str, required=True)
 pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_greeter_parser = subparsers.add_parser("pr-greeter")
+pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -701,6 +737,9 @@ elif args.command == "pr-subscriber":
         args.token, args.repo, args.issue_number, args.label_name
     )
     pr_subscriber.run()
+elif args.command == "pr-greeter":
+    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
+    pr_greeter.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,

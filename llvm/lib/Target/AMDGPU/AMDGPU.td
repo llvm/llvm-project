@@ -411,6 +411,12 @@ def FeatureVGPRIndexMode : SubtargetFeature<"vgpr-index-mode",
   "Has VGPR mode register indexing"
 >;
 
+def FeatureScalarDwordx3Loads : SubtargetFeature<"scalar-dwordx3-loads",
+  "HasScalarDwordx3Loads",
+  "true",
+  "Has 96-bit scalar load instructions"
+>;
+
 def FeatureScalarStores : SubtargetFeature<"scalar-stores",
   "HasScalarStores",
   "true",
@@ -816,6 +822,18 @@ def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
   "Has single-use VGPR hint instructions"
 >;
 
+def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
+  "HasPseudoScalarTrans",
+  "true",
+  "Has Pseudo Scalar Transcendental instructions"
+>;
+
+def FeatureHasRestrictedSOffset : SubtargetFeature<"restricted-soffset",
+  "HasRestrictedSOffset",
+  "true",
+  "Has restricted SOffset (immediate not supported)."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1082,8 +1100,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureTrue16BitInsts
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
+   FeatureTrue16BitInsts
   ]
 >;
 
@@ -1460,7 +1478,12 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureMADIntraFwdBug]>;
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
+   FeatureVGPRSingleUseHintInsts,
+   FeatureMADIntraFwdBug,
+   FeatureScalarDwordx3Loads]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1771,6 +1794,11 @@ def HasUnpackedD16VMem : Predicate<"Subtarget->hasUnpackedD16VMem()">,
 def HasPackedD16VMem : Predicate<"!Subtarget->hasUnpackedD16VMem()">,
   AssemblerPredicate<(all_of (not FeatureUnpackedD16VMem))>;
 
+def HasRestrictedSOffset : Predicate<"Subtarget->hasRestrictedSOffset()">,
+  AssemblerPredicate<(all_of FeatureHasRestrictedSOffset)>;
+def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
+  AssemblerPredicate<(all_of (not FeatureHasRestrictedSOffset))>;
+
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,
   AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSRAMECC))>;
@@ -2000,6 +2028,9 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
   AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
+def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
+  AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
+
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
 def HasGWS : Predicate<"Subtarget->hasGWS()">;
@@ -2008,6 +2039,8 @@ def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
 def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
 def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
+
+def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

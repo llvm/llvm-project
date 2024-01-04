@@ -11,8 +11,8 @@
 namespace LIBC_NAMESPACE {
 namespace internal {
 
-using ShortBitMask = BitMaskAdaptor<uint16_t, 0xffff, 1>;
-using LargeBitMask = BitMaskAdaptor<uint64_t, 0x80'80'80'80'80'80'80'80, 8>;
+using ShortBitMask = BitMaskAdaptor<uint16_t, 1>;
+using LargeBitMask = BitMaskAdaptor<uint64_t, 8>;
 
 TEST(LlvmLibcHashTableBitMaskTest, SingleBitStrideLowestSetBit) {
   uint16_t data = 0xffff;
@@ -53,7 +53,7 @@ TEST(LlvmLibcHashTableBitMaskTest, SingleBitStrideIteration) {
 
 TEST(LlvmLibcHashTableBitMaskTest, MultiBitStrideIteration) {
   using Iter = IteratableBitMaskAdaptor<LargeBitMask>;
-  uint64_t data = Iter::MASK;
+  uint64_t data = 0x8080808080808080ul;
   for (size_t i = 0; i < 8; ++i) {
     Iter iter = {data};
     size_t j = i;

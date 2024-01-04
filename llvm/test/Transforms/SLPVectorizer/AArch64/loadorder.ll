@@ -205,7 +205,7 @@ entry:
   %idxprom7 = sext i32 %mul to i64
   %arrayidx8 = getelementptr inbounds i16, ptr %x, i64 %idxprom7
   %4 = load i16, ptr %arrayidx8, align 2
-  %add10 = or i32 %mul, 1
+  %add10 = or disjoint i32 %mul, 1
   %idxprom11 = sext i32 %add10 to i64
   %arrayidx12 = getelementptr inbounds i16, ptr %x, i64 %idxprom11
   %5 = load i16, ptr %arrayidx12, align 2
@@ -754,7 +754,7 @@ entry:
   %idxprom11 = sext i32 %mul to i64
   %arrayidx12 = getelementptr inbounds i32, ptr %x, i64 %idxprom11
   %5 = load i32, ptr %arrayidx12, align 4
-  %add14 = or i32 %mul, 1
+  %add14 = or disjoint i32 %mul, 1
   %idxprom15 = sext i32 %add14 to i64
   %arrayidx16 = getelementptr inbounds i32, ptr %x, i64 %idxprom15
   %6 = load i32, ptr %arrayidx16, align 4

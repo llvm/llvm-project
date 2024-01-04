@@ -56,11 +56,11 @@ LIBC_INLINE float log(double x) {
 
   // Get the 8 highest bits, use 7 bits (excluding the implicit hidden bit) for
   // lookup tables.
-  int f_index =
-      xbits.get_mantissa() >> 45; // fputil::MantissaWidth<double>::VALUE - 7
+  int f_index = static_cast<int>(xbits.get_mantissa() >>
+                                 (fputil::FPBits<double>::FRACTION_LEN - 7));
 
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x3FF);
+  xbits.set_biased_exponent(0x3FF);
   FPBits f = xbits;
 
   // Clear the lowest 45 bits.

@@ -29,10 +29,10 @@ namespace LIBC_NAMESPACE::cpp {
 // UB in the implementation.
 template <
     typename To, typename From,
-    typename = cpp::enable_if_t<sizeof(To) == sizeof(From)>,
-    typename = cpp::enable_if_t<cpp::is_trivially_constructible<To>::value>,
-    typename = cpp::enable_if_t<cpp::is_trivially_copyable<To>::value>,
-    typename = cpp::enable_if_t<cpp::is_trivially_copyable<From>::value>>
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
+                                cpp::is_trivially_constructible<To>::value &&
+                                cpp::is_trivially_copyable<To>::value &&
+                                cpp::is_trivially_copyable<From>::value>>
 LIBC_INLINE constexpr To bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
 #if LIBC_HAS_BUILTIN(__builtin_bit_cast)
@@ -78,7 +78,7 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
     return 0;
   // Bisection method.
   unsigned zero_bits = 0;
-  T shift = cpp::numeric_limits<T>::digits >> 1;
+  unsigned shift = cpp::numeric_limits<T>::digits >> 1;
   T mask = cpp::numeric_limits<T>::max() >> shift;
   while (shift) {
     if ((value & mask) == 0) {
@@ -115,7 +115,8 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
     return cpp::numeric_limits<T>::digits;
   // Bisection method.
   unsigned zero_bits = 0;
-  for (T shift = cpp::numeric_limits<T>::digits >> 1; shift; shift >>= 1) {
+  for (unsigned shift = cpp::numeric_limits<T>::digits >> 1; shift;
+       shift >>= 1) {
     T tmp = value >> shift;
     if (tmp)
       value = tmp;

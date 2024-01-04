@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=x86_64-linux-gnu -dwarfehprepare -S %s | FileCheck %s
-; RUN: opt -mtriple=x86_64-linux-gnu -passes=dwarfehprepare -S %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-linux-gnu -dwarf-eh-prepare -S %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-linux-gnu -passes=dwarf-eh-prepare -S %s | FileCheck %s
 
 declare i32 @hoge(...)
 

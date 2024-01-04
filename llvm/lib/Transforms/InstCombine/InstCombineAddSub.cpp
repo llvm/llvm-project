@@ -903,8 +903,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
 
   // (X | Op01C) + Op1C --> X + (Op01C + Op1C) iff the `or` is actually an `add`
   Constant *Op01C;
-  if (match(Op0, m_Or(m_Value(X), m_ImmConstant(Op01C))) &&
-      haveNoCommonBitsSet(X, Op01C, SQ.getWithInstruction(&Add)))
+  if (match(Op0, m_DisjointOr(m_Value(X), m_ImmConstant(Op01C))))
     return BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
 
   // (X | C2) + C --> (X | C2) ^ C2 iff (C2 == -C)
@@ -1415,8 +1414,10 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   // ResLo = (CrossSum << HalfBits) + (YLo * XLo)
   Value *XLo, *YLo;
   Value *CrossSum;
+  // Require one-use on the multiply to avoid increasing the number of
+  // multiplications.
   if (!match(&I, m_c_Add(m_Shl(m_Value(CrossSum), m_SpecificInt(HalfBits)),
-                         m_Mul(m_Value(YLo), m_Value(XLo)))))
+                         m_OneUse(m_Mul(m_Value(YLo), m_Value(XLo))))))
     return nullptr;
 
   // XLo = X & HalfMask
@@ -1581,11 +1582,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // A+B --> A|B iff A and B have no bits set in common.
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
-  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I))) {
-    auto *Or = BinaryOperator::CreateOr(LHS, RHS);
-    cast<PossiblyDisjointInst>(Or)->setIsDisjoint(true);
-    return Or;
-  }
+  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
+    return BinaryOperator::CreateDisjointOr(LHS, RHS);
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;
@@ -1687,8 +1685,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       assert(NotLHS != nullptr && NotRHS != nullptr &&
              "isFreeToInvert desynced with getFreelyInverted");
       Value *LHSPlusRHS = Builder.CreateAdd(NotLHS, NotRHS);
-      return BinaryOperator::CreateSub(ConstantInt::get(RHS->getType(), -2),
-                                       LHSPlusRHS);
+      return BinaryOperator::CreateSub(
+          ConstantInt::getSigned(RHS->getType(), -2), LHSPlusRHS);
     }
   }
 

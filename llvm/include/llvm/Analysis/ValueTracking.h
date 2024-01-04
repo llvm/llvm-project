@@ -214,27 +214,6 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
                                                 const APFloat *ConstRHS,
                                                 bool LookThroughSrc = true);
 
-/// Compute the possible floating-point classes that \p LHS could be based on an
-/// fcmp returning true. Returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
-///
-/// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
-///
-/// This is a less exact version of fcmpToClassTest (e.g. fcmpToClassTest will
-/// only succeed for a test of x > 0 implies positive, but not x > 1).
-///
-/// If \p LookThroughSrc is true, consider the input value when computing the
-/// mask. This may look through sign bit operations.
-///
-/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
-/// element will always be LHS.
-///
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 const APFloat *ConstRHS, bool LookThroughSrc = true);
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 Value *RHS, bool LookThroughSrc = true);
-
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
   FPClassTest KnownFPClasses = fcAllFlags;
@@ -883,6 +862,11 @@ ConstantRange computeConstantRange(const Value *V, bool ForSigned,
                                    const Instruction *CtxI = nullptr,
                                    const DominatorTree *DT = nullptr,
                                    unsigned Depth = 0);
+
+/// Combine constant ranges from computeConstantRange() and computeKnownBits().
+ConstantRange
+computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
+                                       bool ForSigned, const SimplifyQuery &SQ);
 
 /// Return true if this function can prove that the instruction I will
 /// always transfer execution to one of its successors (including the next

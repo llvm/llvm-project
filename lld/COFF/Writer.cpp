@@ -247,6 +247,7 @@ private:
   void maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
                         StringRef countSym, bool hasFlag=false);
   void setSectionPermissions();
+  void setECSymbols();
   void writeSections();
   void writeBuildId();
   void writePEChecksum();
@@ -314,6 +315,8 @@ private:
   OutputSection *relocSec;
   OutputSection *ctorsSec;
   OutputSection *dtorsSec;
+  // Either .rdata section or .buildid section.
+  OutputSection *debugInfoSec;
 
   // The range of .pdata sections in the output file.
   //
@@ -325,6 +328,9 @@ private:
   // the chunks that the linker creates. All .pdata chunks come from input
   // files, so we need to keep track of them separately.
   ChunkRange pdata;
+
+  // x86_64 .pdata sections on ARM64EC/ARM64X targets.
+  ChunkRange hybridPdata;
 
   COFFLinkerContext &ctx;
 };
@@ -741,6 +747,7 @@ void Writer::run() {
     removeEmptySections();
     assignOutputSectionIndices();
     setSectionPermissions();
+    setECSymbols();
     createSymbolAndStringTable();
 
     if (fileSize > UINT32_MAX)
@@ -1098,21 +1105,25 @@ void Writer::createMiscChunks() {
   }
 
   // Create Debug Information Chunks
-  OutputSection *debugInfoSec = config->mingw ? buildidSec : rdataSec;
-  if (config->debug || config->repro || config->cetCompat) {
+  debugInfoSec = config->mingw ? buildidSec : rdataSec;
+  if (config->buildIDHash != BuildIDHash::None || config->debug ||
+      config->repro || config->cetCompat) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
     debugInfoSec->addChunk(debugDirectory);
   }
 
-  if (config->debug) {
+  if (config->debug || config->buildIDHash != BuildIDHash::None) {
     // Make a CVDebugRecordChunk even when /DEBUG:CV is not specified.  We
     // output a PDB no matter what, and this chunk provides the only means of
     // allowing a debugger to match a PDB and an executable.  So we need it even
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>(ctx);
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
+    if (Symbol *buildidSym = ctx.symtab.findUnderscore("__buildid"))
+      replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
+                                      buildId, 4);
   }
 
   if (config->cetCompat) {
@@ -1368,7 +1379,7 @@ void Writer::createSymbolAndStringTable() {
     sec->setStringTableOff(addEntryToStringTable(sec->name));
   }
 
-  if (ctx.config.debugDwarf || ctx.config.debugSymtab) {
+  if (ctx.config.writeSymtab) {
     for (ObjFile *file : ctx.objFileInstances) {
       for (Symbol *b : file->getSymbols()) {
         auto *d = dyn_cast_or_null<Defined>(b);
@@ -1411,8 +1422,28 @@ void Writer::createSymbolAndStringTable() {
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
-    pdata.first = pdataSec->chunks.front();
-    pdata.last = pdataSec->chunks.back();
+    if (isArm64EC(ctx.config.machine)) {
+      // On ARM64EC .pdata may contain both ARM64 and X64 data. Split them by
+      // sorting and store their regions separately.
+      llvm::stable_sort(pdataSec->chunks, [=](const Chunk *a, const Chunk *b) {
+        return (a->getMachine() == AMD64) < (b->getMachine() == AMD64);
+      });
+
+      for (auto chunk : pdataSec->chunks) {
+        if (chunk->getMachine() == AMD64) {
+          hybridPdata.first = chunk;
+          hybridPdata.last = pdataSec->chunks.back();
+          break;
+        }
+
+        if (!pdata.first)
+          pdata.first = chunk;
+        pdata.last = chunk;
+      }
+    } else {
+      pdata.first = pdataSec->chunks.front();
+      pdata.last = pdataSec->chunks.back();
+    }
   }
 
   for (auto &p : ctx.config.merge) {
@@ -1452,7 +1483,7 @@ void Writer::sortECChunks() {
       llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
         std::optional<chpe_range_type> aType = a->getArm64ECRangeType(),
                                        bType = b->getArm64ECRangeType();
-        return !aType || (bType && *aType < *bType);
+        return bType && (!aType || *aType < *bType);
       });
   }
 }
@@ -1668,10 +1699,15 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[RESOURCE_TABLE].RelativeVirtualAddress = rsrcSec->getRVA();
     dir[RESOURCE_TABLE].Size = rsrcSec->getVirtualSize();
   }
-  if (pdata.first) {
-    dir[EXCEPTION_TABLE].RelativeVirtualAddress = pdata.first->getRVA();
-    dir[EXCEPTION_TABLE].Size =
-        pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA();
+  // ARM64EC (but not ARM64X) contains x86_64 exception table in data directory.
+  ChunkRange &exceptionTable =
+      ctx.config.machine == ARM64EC ? hybridPdata : pdata;
+  if (exceptionTable.first) {
+    dir[EXCEPTION_TABLE].RelativeVirtualAddress =
+        exceptionTable.first->getRVA();
+    dir[EXCEPTION_TABLE].Size = exceptionTable.last->getRVA() +
+                                exceptionTable.last->getSize() -
+                                exceptionTable.first->getRVA();
   }
   if (relocSec->getVirtualSize()) {
     dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = relocSec->getRVA();
@@ -2084,6 +2120,24 @@ void Writer::setSectionPermissions() {
   }
 }
 
+// Set symbols used by ARM64EC metadata.
+void Writer::setECSymbols() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
+  replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
+                                  pdata.first);
+
+  if (pdata.first) {
+    Symbol *rfeSizeSym =
+        ctx.symtab.findUnderscore("__arm64x_extra_rfe_table_size");
+    cast<DefinedAbsolute>(rfeSizeSym)
+        ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
+                pdata.first->getRVA());
+  }
+}
+
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
   llvm::TimeTraceScope timeScope("Write sections");
@@ -2122,8 +2176,8 @@ void Writer::writeBuildId() {
   // For reproducibility, instead of a timestamp we want to use a hash of the
   // PE contents.
   Configuration *config = &ctx.config;
-
-  if (config->debug) {
+  bool generateSyntheticBuildId = config->buildIDHash == BuildIDHash::Binary;
+  if (generateSyntheticBuildId) {
     assert(buildId && "BuildId is not set!");
     // BuildId->BuildId was filled in when the PDB was written.
   }
@@ -2138,8 +2192,6 @@ void Writer::writeBuildId() {
 
   uint32_t timestamp = config->timestamp;
   uint64_t hash = 0;
-  bool generateSyntheticBuildId =
-      config->mingw && config->debug && config->pdbPath.empty();
 
   if (config->repro || generateSyntheticBuildId)
     hash = xxh3_64bits(outputFileData);
@@ -2148,8 +2200,6 @@ void Writer::writeBuildId() {
     timestamp = static_cast<uint32_t>(hash);
 
   if (generateSyntheticBuildId) {
-    // For MinGW builds without a PDB file, we still generate a build id
-    // to allow associating a crash dump to the executable.
     buildId->buildId->PDB70.CVSignature = OMF::Signature::PDB70;
     buildId->buildId->PDB70.Age = 1;
     memcpy(buildId->buildId->PDB70.Signature, &hash, 8);
@@ -2206,6 +2256,10 @@ void Writer::sortExceptionTables() {
   case AMD64:
     sortExceptionTable<EntryX64>(pdata);
     break;
+  case ARM64EC:
+  case ARM64X:
+    sortExceptionTable<EntryX64>(hybridPdata);
+    [[fallthrough]];
   case ARMNT:
   case ARM64:
     sortExceptionTable<EntryArm>(pdata);

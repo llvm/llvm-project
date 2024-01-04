@@ -36,9 +36,19 @@ using namespace mlir::detail;
 // PassExecutionAction
 //===----------------------------------------------------------------------===//
 
+PassExecutionAction::PassExecutionAction(ArrayRef<IRUnit> irUnits,
+                                         const Pass &pass)
+    : Base(irUnits), pass(pass) {}
+
 void PassExecutionAction::print(raw_ostream &os) const {
   os << llvm::formatv("`{0}` running `{1}` on Operation `{2}`", tag,
                       pass.getName(), getOp()->getName());
+}
+
+Operation *PassExecutionAction::getOp() const {
+  ArrayRef<IRUnit> irUnits = getContextIRUnits();
+  return irUnits.empty() ? nullptr
+                         : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
 }
 
 //===----------------------------------------------------------------------===//

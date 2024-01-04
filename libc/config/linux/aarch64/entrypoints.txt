@@ -16,7 +16,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
-    
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -136,7 +136,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
-    libc.src.sys.mman.mincore
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -165,6 +164,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -237,7 +239,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atanf
-    libc.src.math.atanhf    
+    libc.src.math.atanhf
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -351,6 +353,9 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+
     # network.h entrypoints
     libc.src.network.htonl
     libc.src.network.htons

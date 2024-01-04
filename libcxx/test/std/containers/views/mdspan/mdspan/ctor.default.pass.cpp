@@ -74,8 +74,7 @@ constexpr void mixin_layout(const H& handle, const A& acc) {
 
   // Use weird layout, make sure it has the properties we want to test
   constexpr size_t D = std::dynamic_extent;
-  static_assert(!std::is_default_constructible_v<
-                typename layout_wrapping_integral<4>::template mapping<std::extents<signed char, D>>>);
+  static_assert(!std::is_default_constructible_v< layout_wrapping_integral<4>::mapping<std::extents<signed char, D>>>);
   mixin_extents<hc, false, ac>(handle, layout_wrapping_integral<4>(), acc);
 }
 

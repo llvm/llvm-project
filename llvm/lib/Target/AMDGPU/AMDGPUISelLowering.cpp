@@ -169,11 +169,17 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32bf16, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
@@ -185,10 +191,15 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16bf16, Expand);
 
   setOperationAction(ISD::STORE, MVT::f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::f32, MVT::i32);
@@ -506,9 +517,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT, MVT::v12f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v12f32, MVT::v12i32);
 
-  // There are no libcalls of any kind.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
-    setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  // Disable most libcalls.
+  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
+    if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
+      setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  }
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
@@ -556,6 +569,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                        ISD::FSUB,       ISD::FNEG,
                        ISD::FABS,       ISD::AssertZext,
                        ISD::AssertSext, ISD::INTRINSIC_WO_CHAIN});
+
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
@@ -585,6 +600,8 @@ static bool fnegFoldsIntoOpcode(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::SELECT:
   case ISD::FSIN:
   case ISD::FTRUNC:
@@ -3053,18 +3070,26 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
 
   bool ZeroUndef = Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF ||
                    Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+  bool Is64BitScalar = !Src->isDivergent() && Src.getValueType() == MVT::i64;
 
-  if (Src.getValueType() == MVT::i32) {
+  if (Src.getValueType() == MVT::i32 || Is64BitScalar) {
     // (ctlz hi:lo) -> (umin (ffbh src), 32)
     // (cttz hi:lo) -> (umin (ffbl src), 32)
     // (ctlz_zero_undef src) -> (ffbh src)
     // (cttz_zero_undef src) -> (ffbl src)
+
+    //  64-bit scalar version produce 32-bit result
+    // (ctlz hi:lo) -> (umin (S_FLBIT_I32_B64 src), 64)
+    // (cttz hi:lo) -> (umin (S_FF1_I32_B64 src), 64)
+    // (ctlz_zero_undef src) -> (S_FLBIT_I32_B64 src)
+    // (cttz_zero_undef src) -> (S_FF1_I32_B64 src)
     SDValue NewOpr = DAG.getNode(NewOpc, SL, MVT::i32, Src);
     if (!ZeroUndef) {
-      const SDValue Const32 = DAG.getConstant(32, SL, MVT::i32);
-      NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, Const32);
+      const SDValue ConstVal = DAG.getConstant(
+          Op.getValueType().getScalarSizeInBits(), SL, MVT::i32);
+      NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, ConstVal);
     }
-    return NewOpr;
+    return DAG.getNode(ISD::ZERO_EXTEND, SL, Src.getValueType(), NewOpr);
   }
 
   SDValue Lo, Hi;
@@ -4572,6 +4597,10 @@ static unsigned inverseMinMax(unsigned Opc) {
     return ISD::FMINNUM_IEEE;
   case ISD::FMINNUM_IEEE:
     return ISD::FMAXNUM_IEEE;
+  case ISD::FMAXIMUM:
+    return ISD::FMINIMUM;
+  case ISD::FMINIMUM:
+    return ISD::FMAXIMUM;
   case AMDGPUISD::FMAX_LEGACY:
     return AMDGPUISD::FMIN_LEGACY;
   case AMDGPUISD::FMIN_LEGACY:
@@ -4695,6 +4724,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMINNUM:
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case AMDGPUISD::FMAX_LEGACY:
   case AMDGPUISD::FMIN_LEGACY: {
     // fneg (fmaxnum x, y) -> fminnum (fneg x), (fneg y)
@@ -5305,6 +5336,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMED3)
   NODE_NAME_CASE(SMED3)
   NODE_NAME_CASE(UMED3)
+  NODE_NAME_CASE(FMAXIMUM3)
+  NODE_NAME_CASE(FMINIMUM3)
   NODE_NAME_CASE(FDOT2)
   NODE_NAME_CASE(URECIP)
   NODE_NAME_CASE(DIV_SCALE)
@@ -5759,6 +5792,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMIN3:
   case AMDGPUISD::FMAX3:
+  case AMDGPUISD::FMINIMUM3:
+  case AMDGPUISD::FMAXIMUM3:
   case AMDGPUISD::FMAD_FTZ: {
     if (SNaN)
       return true;

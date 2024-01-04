@@ -132,7 +132,7 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
-  Mode = SIModeRegisterDefaults(MF.getFunction());
+  Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
@@ -1166,6 +1166,11 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Addr) const {
   if (isNoUnsignedWrap(Addr))
     return true;
 
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(*Subtarget))
+    return true;
+
   auto LHS = Addr.getOperand(0);
   auto RHS = Addr.getOperand(1);
 
@@ -1319,7 +1324,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
   Idxen = CurDAG->getTargetConstant(0, DL, MVT::i1);
   Offen = CurDAG->getTargetConstant(0, DL, MVT::i1);
   Addr64 = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  SOffset = Subtarget->hasRestrictedSOffset()
+                ? CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32)
+                : CurDAG->getTargetConstant(0, DL, MVT::i32);
 
   ConstantSDNode *C1 = nullptr;
   SDValue N0 = Addr;
@@ -1374,7 +1381,8 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
     return true;
   }
 
-  if (SIInstrInfo::isLegalMUBUFImmOffset(C1->getZExtValue())) {
+  const SIInstrInfo *TII = Subtarget->getInstrInfo();
+  if (TII->isLegalMUBUFImmOffset(C1->getZExtValue())) {
     // Legal offset for instruction.
     Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i32);
     return true;
@@ -1448,7 +1456,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
         AMDGPUTargetMachine::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
     // Don't fold null pointer.
     if (Imm != NullPtr) {
-      const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+      const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
       SDValue HighBits =
           CurDAG->getTargetConstant(Imm & ~MaxOffset, DL, MVT::i32);
       MachineSDNode *MovHighBits = CurDAG->getMachineNode(
@@ -1482,8 +1490,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
     // Therefore it should be safe to fold any VGPR offset on gfx9 into the
     // MUBUF vaddr, but not on older subtargets which can only do this if the
     // sign bit is known 0.
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
     ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
-    if (SIInstrInfo::isLegalMUBUFImmOffset(C1->getZExtValue()) &&
+    if (TII->isLegalMUBUFImmOffset(C1->getZExtValue()) &&
         (!Subtarget->privateMemoryResourceIsRangeChecked() ||
          CurDAG->SignBitIsZero(N0))) {
       std::tie(VAddr, SOffset) = foldFrameIndex(N0);
@@ -1515,6 +1524,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
                                                   SDValue &Offset) const {
   const SIRegisterInfo *TRI =
       static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
+  const SIInstrInfo *TII = Subtarget->getInstrInfo();
   MachineFunction &MF = CurDAG->getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   SDLoc DL(Addr);
@@ -1531,14 +1541,14 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
   if (Addr.getOpcode() == ISD::ADD) {
     // Add (CopyFromReg <sgpr>) <constant>
     CAddr = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
-    if (!CAddr || !SIInstrInfo::isLegalMUBUFImmOffset(CAddr->getZExtValue()))
+    if (!CAddr || !TII->isLegalMUBUFImmOffset(CAddr->getZExtValue()))
       return false;
     if (!IsCopyFromSGPR(*TRI, Addr.getOperand(0)))
       return false;
 
     SOffset = Addr.getOperand(0);
   } else if ((CAddr = dyn_cast<ConstantSDNode>(Addr)) &&
-             SIInstrInfo::isLegalMUBUFImmOffset(CAddr->getZExtValue())) {
+             TII->isLegalMUBUFImmOffset(CAddr->getZExtValue())) {
     // <constant>
     SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   } else {
@@ -1555,8 +1565,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
                                            SDValue &SOffset, SDValue &Offset
                                            ) const {
   SDValue Ptr, VAddr, Offen, Idxen, Addr64;
-  const SIInstrInfo *TII =
-    static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
+  const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
   if (!SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64))
     return false;
@@ -1575,6 +1584,21 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
     return true;
   }
   return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectBUFSOffset(SDValue ByteOffsetNode,
+                                          SDValue &SOffset) const {
+  if (Subtarget->hasRestrictedSOffset()) {
+    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(ByteOffsetNode)) {
+      if (SOffsetConst->isZero()) {
+        SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
+        return true;
+      }
+    }
+  }
+
+  SOffset = ByteOffsetNode;
+  return true;
 }
 
 // Find a load or store from corresponding pattern root.
@@ -1682,7 +1706,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
   }
 
   VAddr = Addr;
-  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i16);
+  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1750,7 +1774,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
               CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
           VOffset = SDValue(VMov, 0);
           SAddr = LHS;
-          Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+          Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
           return true;
         }
       }
@@ -1790,7 +1814,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     }
 
     if (SAddr) {
-      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
       return true;
     }
   }
@@ -1806,7 +1830,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
       CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, SDLoc(Addr), MVT::i32,
                              CurDAG->getTargetConstant(0, SDLoc(), MVT::i32));
   VOffset = SDValue(VMov, 0);
-  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -2334,9 +2358,8 @@ static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
   // Note that ballot doesn't use SETEQ condition but its easy to support it
   // here for completeness, so in this case Negate is set true on return.
   auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
-  auto *VCMP_CRHS = dyn_cast<ConstantSDNode>(VCMP.getOperand(1));
-  if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) && VCMP_CRHS &&
-      VCMP_CRHS->isZero()) {
+  if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) &&
+      isNullConstant(VCMP.getOperand(1))) {
 
     auto Cond = VCMP.getOperand(0);
     if (ISD::isExtOpcode(Cond->getOpcode())) // Skip extension.
@@ -2370,8 +2393,8 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
       Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
     SDValue VCMP = Cond->getOperand(0);
     auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
-    auto *CRHS = dyn_cast<ConstantSDNode>(Cond->getOperand(1));
-    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero() &&
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+        isNullConstant(Cond->getOperand(1)) &&
         // TODO: make condition below an assert after fixing ballot bitwidth.
         VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...

@@ -454,9 +454,15 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     Examples:
 
     ```mlir
-    // A tensor referencing a builtin dialect resource, `resource_1`, with two
-    // unsigned i32 elements.
-    dense_resource<resource_1> : tensor<2xui32>
+    "example.user_op"() {attr = dense_resource<blob1> : tensor<3xi64> } : () -> ()
+
+    {-#
+    dialect_resources: {
+        builtin: {
+          blob1: "0x08000000010000000000000002000000000000000300000000000000"
+        }
+      }
+    #-}
     ```
   }];
   let parameters = (ins

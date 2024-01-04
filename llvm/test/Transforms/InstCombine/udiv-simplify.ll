@@ -172,11 +172,9 @@ define i32 @div_by_zero_or_one_from_dom_cond(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[JOIN:%.*]], label [[ZERO_OR_ONE:%.*]]
 ; CHECK:       zero_or_one:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[B:%.*]], [[A]]
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[DIV]], [[ZERO_OR_ONE]] ], [ [[B]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 [[B:%.*]]
 ;
 entry:
   %cmp = icmp ugt i32 %a, 1

@@ -163,19 +163,6 @@ func.func @tensor.generate(%m : index, %n : index)
 
 // -----
 
-func.func @generate_negative_size() -> tensor<?x8xi32> {
-  %cst = arith.constant 0 : i32
-  %size = index.constant -128
-  // expected-error@+1 {{tensor dimensions must be non-negative}}
-  %tensor = tensor.generate %size {
-  ^bb0(%arg0: index, %arg1: index):
-    tensor.yield %cst : i32
-  } : tensor<?x8xi32>
-  return %tensor : tensor<?x8xi32>
-}
-
-// -----
-
 func.func @tensor.reshape_element_type_mismatch(
        %buf: tensor<*xf32>, %shape: tensor<1xi32>) {
   // expected-error @+1 {{element types of source and destination tensor types should be the same}}
@@ -451,6 +438,14 @@ func.func @invalid_splat(%v : f32) {
 func.func @invalid_splat(%v : vector<8xf32>) {
   // expected-error@+1 {{must be integer/index/float type}}
   %w = tensor.splat %v : tensor<8xvector<8xf32>>
+  return
+}
+
+// -----
+
+func.func @invalid_splat(%v: f32, %m: index) {
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
+  %w = tensor.splat %v[%m] : tensor<?x8x?xf32>
   return
 }
 

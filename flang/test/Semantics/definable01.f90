@@ -82,4 +82,19 @@ module m
   subroutine test3b(pp)
     procedure(sin), pointer, intent(in out) :: pp
   end subroutine
+  subroutine test4(p)
+    type(ptype), pointer, intent(in) :: p
+    p%x = 1.
+    p%ptr = 1. ! ok
+    nullify(p%ptr) ! ok
+    !CHECK: error: 'p' may not appear in NULLIFY
+    !CHECK: because: 'p' is an INTENT(IN) dummy argument
+    nullify(p)
+  end
+  subroutine test5(np)
+    type(ptype), intent(in) :: np
+    !CHECK: error: 'ptr' may not appear in NULLIFY
+    !CHECK: because: 'np' is an INTENT(IN) dummy argument
+    nullify(np%ptr)
+  end
 end module

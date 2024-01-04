@@ -31,6 +31,7 @@ protected:
   std::unique_ptr<RISCVSubtarget> ST;
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MachineFunction> MF;
+  std::unique_ptr<Module> M;
 
   static void SetUpTestSuite() {
     LLVMInitializeRISCVTargetInfo();
@@ -49,10 +50,10 @@ protected:
         CodeGenOptLevel::Default)));
 
     Ctx = std::make_unique<LLVMContext>();
-    Module M("Module", *Ctx);
-    M.setDataLayout(TM->createDataLayout());
+    M = std::make_unique<Module>("Module", *Ctx);
+    M->setDataLayout(TM->createDataLayout());
     auto *FType = FunctionType::get(Type::getVoidTy(*Ctx), false);
-    auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", &M);
+    auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", *M);
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     ST = std::make_unique<RISCVSubtarget>(
@@ -154,7 +155,6 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI);
 
-  // TODO: AArch64 can handle this case, and we probably should too.
   BaseOps.clear();
   MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                  MachineMemOperand::MOStore, 4, Align(4));
@@ -165,7 +165,13 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addMemOperand(MMO);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI);
-  EXPECT_FALSE(Res);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(BaseOps.size(), 1u);
+  ASSERT_TRUE(BaseOps.front()->isFI());
+  EXPECT_EQ(BaseOps.front()->getIndex(), 2);
+  EXPECT_EQ(Offset, 4);
+  EXPECT_FALSE(OffsetIsScalable);
+  EXPECT_EQ(Width, 4u);
 }
 
 } // namespace

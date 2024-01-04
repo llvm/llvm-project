@@ -26,7 +26,7 @@ getArchiveAndObjectName(StringRef Filename) {
   return {Archive, Object};
 }
 
-static bool isArchive(StringRef Filename) { return Filename.endswith(")"); }
+static bool isArchive(StringRef Filename) { return Filename.ends_with(")"); }
 
 static std::vector<MemoryBufferRef>
 getMachOFatMemoryBuffers(StringRef Filename, MemoryBuffer &Mem,

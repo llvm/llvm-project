@@ -6888,6 +6888,30 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
               ParamsOk = false;
             break;
           }
+          case VFParamKind::OMP_Linear: {
+            Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
+            // Find the stride for the scalar parameter in this loop and see if
+            // it matches the stride for the variant.
+            // TODO: do we need to figure out the cost of an extract to get the
+            // first lane? Or do we hope that it will be folded away?
+            ScalarEvolution *SE = PSE.getSE();
+            const auto *SAR =
+                dyn_cast<SCEVAddRecExpr>(SE->getSCEV(ScalarParam));
+
+            if (!SAR || SAR->getLoop() != TheLoop) {
+              ParamsOk = false;
+              break;
+            }
+
+            const SCEVConstant *Step =
+                dyn_cast<SCEVConstant>(SAR->getStepRecurrence(*SE));
+
+            if (!Step ||
+                Step->getAPInt().getSExtValue() != Param.LinearStepOrPos)
+              ParamsOk = false;
+
+            break;
+          }
           case VFParamKind::GlobalPredicate:
             UsesMask = true;
             break;
@@ -8578,8 +8602,8 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   }
 
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
-    return toVPRecipeResult(
-        new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(), CI));
+    return toVPRecipeResult(new VPWidenCastRecipe(CI->getOpcode(), Operands[0],
+                                                  CI->getType(), *CI));
   }
 
   return toVPRecipeResult(tryToWiden(Instr, Operands, VPBB, Plan));
@@ -8621,7 +8645,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
   // Add a CanonicalIVIncrement{NUW} VPInstruction to increment the scalar
   // IV by VF * UF.
   auto *CanonicalIVIncrement =
-      new VPInstruction(VPInstruction::CanonicalIVIncrement, {CanonicalIVPHI},
+      new VPInstruction(Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()},
                         {HasNUW, false}, DL, "index.next");
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
@@ -9451,8 +9475,8 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
   bool isMaskRequired = getMask();
   if (isMaskRequired) {
-    // Mask reversal is only neede for non-all-one (null) masks, as reverse of a
-    // null all-one mask is a null mask.
+    // Mask reversal is only needed for non-all-one (null) masks, as reverse of
+    // a null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Mask = State.get(getMask(), Part);
       if (isReverse())

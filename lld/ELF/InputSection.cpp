@@ -22,6 +22,7 @@
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -897,10 +898,16 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const TargetInfo &target = *elf::target;
   const auto emachine = config->emachine;
   const bool isDebug = isDebugSection(*this);
-  const bool isDebugLocOrRanges =
-      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
+  if (isDebug) {
+    if (name == ".debug_loc" || name == ".debug_ranges")
+      tombstone = 1;
+    else if (name == ".debug_names")
+      tombstone = UINT64_MAX; // tombstone value
+    else
+      tombstone = 0;
+  }
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
@@ -909,16 +916,8 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
 
   for (size_t i = 0, relsSize = rels.size(); i != relsSize; ++i) {
     const RelTy &rel = rels[i];
-    RelType type = rel.getType(config->isMips64EL);
-
-    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
-    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed
-    // in 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we
-    // need to keep this bug-compatible code for a while.
-    if (emachine == EM_386 && type == R_386_GOTPC)
-      continue;
-
-    uint64_t offset = rel.r_offset;
+    const RelType type = rel.getType(config->isMips64EL);
+    const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
     if (!RelTy::IsRela)
@@ -953,8 +952,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       return;
     }
 
-    if (tombstone ||
-        (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
+    if (tombstone && (expr == R_ABS || expr == R_DTPREL)) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -985,8 +983,13 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // value. Enable -1 in a future release.
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
-        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
-                                         : (isDebugLocOrRanges ? 1 : 0);
+        uint64_t value = SignExtend64<bits>(*tombstone);
+        // For a 32-bit local TU reference in .debug_names, X86_64::relocate
+        // requires that the unsigned value for R_X86_64_32 is truncated to
+        // 32-bit. Other 64-bit targets's don't discern signed/unsigned 32-bit
+        // absolute relocations and do not need this change.
+        if (emachine == EM_X86_64 && type == R_X86_64_32)
+          value = static_cast<uint32_t>(value);
         target.relocateNoSym(bufLoc, type, value);
         continue;
       }
@@ -998,25 +1001,25 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
       continue;
 
+    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
+    // sections.
+    if (LLVM_LIKELY(expr == R_ABS) || expr == R_DTPREL || expr == R_GOTPLTREL ||
+        expr == R_RISCV_ADD) {
+      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+      continue;
+    }
+
     if (expr == R_SIZE) {
       target.relocateNoSym(bufLoc, type,
                            SignExtend64<bits>(sym.getSize() + addend));
       continue;
     }
 
-    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
-    // sections.
-    if (expr == R_ABS || expr == R_DTPREL || expr == R_GOTPLTREL ||
-        expr == R_RISCV_ADD) {
-      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
-      continue;
-    }
-
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
-    if (expr != R_PC) {
-      error(msg);
+    if (expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC)) {
+      errorOrWarn(msg);
       return;
     }
 
@@ -1028,11 +1031,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
     //
-    // RELA -r stopped earlier and does not get the warning. Suppress the
-    // warning for REL -r as well
-    // (https://github.com/ClangBuiltLinux/linux/issues/1937).
-    if (RelTy::IsRela || !config->relocatable)
-      warn(msg);
+    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
+    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
+    // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
+    // keep this bug-compatible code for a while.
+    warn(msg);
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));

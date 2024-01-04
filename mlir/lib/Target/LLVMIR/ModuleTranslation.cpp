@@ -59,6 +59,113 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
+namespace {
+/// A customized inserter for LLVM's IRBuilder that captures all LLVM IR
+/// instructions that are created for future reference.
+///
+/// This is intended to be used with the `CollectionScope` RAII object:
+///
+///     llvm::IRBuilder<..., InstructionCapturingInserter> builder;
+///     {
+///       InstructionCapturingInserter::CollectionScope scope(builder);
+///       // Call IRBuilder methods as usual.
+///
+///       // This will return a list of all instructions created by the builder,
+///       // in order of creation.
+///       builder.getInserter().getCapturedInstructions();
+///     }
+///     // This will return an empty list.
+///     builder.getInserter().getCapturedInstructions();
+///
+/// The capturing functionality is _disabled_ by default for performance
+/// consideration. It needs to be explicitly enabled, which is achieved by
+/// creating a `CollectionScope`.
+class InstructionCapturingInserter : public llvm::IRBuilderCallbackInserter {
+public:
+  /// Constructs the inserter.
+  InstructionCapturingInserter()
+      : llvm::IRBuilderCallbackInserter([this](llvm::Instruction *instruction) {
+          if (LLVM_LIKELY(enabled))
+            capturedInstructions.push_back(instruction);
+        }) {}
+
+  /// Returns the list of LLVM IR instructions captured since the last cleanup.
+  ArrayRef<llvm::Instruction *> getCapturedInstructions() const {
+    return capturedInstructions;
+  }
+
+  /// Clears the list of captured LLVM IR instructions.
+  void clearCapturedInstructions() { capturedInstructions.clear(); }
+
+  /// RAII object enabling the capture of created LLVM IR instructions.
+  class CollectionScope {
+  public:
+    /// Creates the scope for the given inserter.
+    CollectionScope(llvm::IRBuilderBase &irBuilder, bool isBuilderCapturing);
+
+    /// Ends the scope.
+    ~CollectionScope();
+
+    ArrayRef<llvm::Instruction *> getCapturedInstructions() {
+      if (!inserter)
+        return {};
+      return inserter->getCapturedInstructions();
+    }
+
+  private:
+    /// Back reference to the inserter.
+    InstructionCapturingInserter *inserter = nullptr;
+
+    /// List of instructions in the inserter prior to this scope.
+    SmallVector<llvm::Instruction *> previouslyCollectedInstructions;
+
+    /// Whether the inserter was enabled prior to this scope.
+    bool wasEnabled;
+  };
+
+  /// Enable or disable the capturing mechanism.
+  void setEnabled(bool enabled = true) { this->enabled = enabled; }
+
+private:
+  /// List of captured instructions.
+  SmallVector<llvm::Instruction *> capturedInstructions;
+
+  /// Whether the collection is enabled.
+  bool enabled = false;
+};
+
+using CapturingIRBuilder =
+    llvm::IRBuilder<llvm::ConstantFolder, InstructionCapturingInserter>;
+} // namespace
+
+InstructionCapturingInserter::CollectionScope::CollectionScope(
+    llvm::IRBuilderBase &irBuilder, bool isBuilderCapturing) {
+
+  if (!isBuilderCapturing)
+    return;
+
+  auto &capturingIRBuilder = static_cast<CapturingIRBuilder &>(irBuilder);
+  inserter = &capturingIRBuilder.getInserter();
+  wasEnabled = inserter->enabled;
+  if (wasEnabled)
+    previouslyCollectedInstructions.swap(inserter->capturedInstructions);
+  inserter->setEnabled(true);
+}
+
+InstructionCapturingInserter::CollectionScope::~CollectionScope() {
+  if (!inserter)
+    return;
+
+  previouslyCollectedInstructions.swap(inserter->capturedInstructions);
+  // If collection was enabled (likely in another, surrounding scope), keep
+  // the instructions collected in this scope.
+  if (wasEnabled) {
+    llvm::append_range(inserter->capturedInstructions,
+                       previouslyCollectedInstructions);
+  }
+  inserter->setEnabled(wasEnabled);
+}
+
 /// Translates the given data layout spec attribute to the LLVM IR data layout.
 /// Only integer, float, pointer and endianness entries are currently supported.
 static FailureOr<llvm::DataLayout>
@@ -161,7 +268,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
   }
   layoutStream.flush();
   StringRef layoutSpec(llvmDataLayout);
-  if (layoutSpec.startswith("-"))
+  if (layoutSpec.starts_with("-"))
     layoutSpec = layoutSpec.drop_front();
 
   return llvm::DataLayout(layoutSpec);
@@ -631,9 +738,9 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
-LogicalResult
-ModuleTranslation::convertOperation(Operation &op,
-                                    llvm::IRBuilderBase &builder) {
+LogicalResult ModuleTranslation::convertOperation(Operation &op,
+                                                  llvm::IRBuilderBase &builder,
+                                                  bool recordInsertions) {
   const LLVMTranslationDialectInterface *opIface = iface.getInterfaceFor(&op);
   if (!opIface)
     return op.emitError("cannot be converted to LLVM IR: missing "
@@ -641,11 +748,13 @@ ModuleTranslation::convertOperation(Operation &op,
                         "dialect for op: ")
            << op.getName();
 
+  InstructionCapturingInserter::CollectionScope scope(builder,
+                                                      recordInsertions);
   if (failed(opIface->convertOperation(&op, builder, *this)))
     return op.emitError("LLVM Translation failed for operation: ")
            << op.getName();
 
-  return convertDialectAttributes(&op);
+  return convertDialectAttributes(&op, scope.getCapturedInstructions());
 }
 
 /// Convert block to LLVM IR.  Unless `ignoreArguments` is set, emit PHI nodes
@@ -655,8 +764,10 @@ ModuleTranslation::convertOperation(Operation &op,
 /// been created for `bb` and included in the block mapping.  Inserts new
 /// instructions at the end of the block and leaves `builder` in a state
 /// suitable for further insertion into the end of the block.
-LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments,
-                                              llvm::IRBuilderBase &builder) {
+LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
+                                                  bool ignoreArguments,
+                                                  llvm::IRBuilderBase &builder,
+                                                  bool recordInsertions) {
   builder.SetInsertPoint(lookupBlock(&bb));
   auto *subprogram = builder.GetInsertBlock()->getParent()->getSubprogram();
 
@@ -687,7 +798,7 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments,
     builder.SetCurrentDebugLocation(
         debugTranslation->translateLoc(op.getLoc(), subprogram));
 
-    if (failed(convertOperation(op, builder)))
+    if (failed(convertOperation(op, builder, recordInsertions)))
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
@@ -726,6 +837,9 @@ static void addRuntimePreemptionSpecifier(bool dsoLocalRequested,
 /// Create named global variables that correspond to llvm.mlir.global
 /// definitions. Convert llvm.global_ctors and global_dtors ops.
 LogicalResult ModuleTranslation::convertGlobals() {
+  // Mapping from compile unit to its respective set of global variables.
+  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> allGVars;
+
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = convertType(op.getType());
     llvm::Constant *cst = nullptr;
@@ -782,6 +896,23 @@ LogicalResult ModuleTranslation::convertGlobals() {
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
 
     globalsMapping.try_emplace(op, var);
+
+    // Add debug information if present.
+    if (op.getDbgExpr()) {
+      llvm::DIGlobalVariableExpression *diGlobalExpr =
+          debugTranslation->translateGlobalVariableExpression(op.getDbgExpr());
+      llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
+      var->addDebugInfo(diGlobalExpr);
+
+      // Get the compile unit (scope) of the the global variable.
+      if (llvm::DICompileUnit *compileUnit =
+              dyn_cast_if_present<llvm::DICompileUnit>(
+                  diGlobalVar->getScope())) {
+        // Update the compile unit with this incoming global variable expression
+        // during the finalizing step later.
+        allGVars[compileUnit].push_back(diGlobalExpr);
+      }
+    }
   }
 
   // Convert global variable bodies. This is done after all global variables
@@ -824,8 +955,15 @@ LogicalResult ModuleTranslation::convertGlobals() {
   }
 
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>())
-    if (failed(convertDialectAttributes(op)))
+    if (failed(convertDialectAttributes(op, {})))
       return failure();
+
+  // Finally, update the compile units their respective sets of global variables
+  // created earlier.
+  for (const auto &[compileUnit, globals] : allGVars) {
+    compileUnit->replaceGlobalVariables(
+        llvm::MDTuple::get(getLLVMContext(), globals));
+  }
 
   return success();
 }
@@ -938,14 +1076,25 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
   else if (func.getArmLocallyStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_body");
+  else if (func.getArmStreamingCompatible())
+    llvmFunc->addFnAttr("aarch64_pstate_sm_compatible");
 
   if (func.getArmNewZa())
     llvmFunc->addFnAttr("aarch64_pstate_za_new");
+
+  if (auto targetFeatures = func.getTargetFeatures())
+    llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
 
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
+
+  // Add function attribute frame-pointer, if found.
+  if (FramePointerKindAttr attr = func.getFramePointerAttr())
+    llvmFunc->addFnAttr("frame-pointer",
+                        LLVM::framePointerKind::stringifyFramePointerKind(
+                            (attr.getFramePointerKind())));
 
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
@@ -959,8 +1108,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // converted before uses.
   auto blocks = getTopologicallySortedBlocks(func.getBody());
   for (Block *bb : blocks) {
-    llvm::IRBuilder<> builder(llvmContext);
-    if (failed(convertBlock(*bb, bb->isEntryBlock(), builder)))
+    CapturingIRBuilder builder(llvmContext);
+    if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
+                                /*recordInsertions=*/true)))
       return failure();
   }
 
@@ -969,12 +1119,13 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   detail::connectPHINodes(func.getBody(), *this);
 
   // Finally, convert dialect attributes attached to the function.
-  return convertDialectAttributes(func);
+  return convertDialectAttributes(func, {});
 }
 
-LogicalResult ModuleTranslation::convertDialectAttributes(Operation *op) {
+LogicalResult ModuleTranslation::convertDialectAttributes(
+    Operation *op, ArrayRef<llvm::Instruction *> instructions) {
   for (NamedAttribute attribute : op->getDialectAttrs())
-    if (failed(iface.amendOperation(op, attribute, *this)))
+    if (failed(iface.amendOperation(op, instructions, attribute, *this)))
       return failure();
   return success();
 }
@@ -1096,7 +1247,7 @@ LogicalResult ModuleTranslation::convertFunctions() {
     // Do not convert external functions, but do process dialect attributes
     // attached to them.
     if (function.isExternal()) {
-      if (failed(convertDialectAttributes(function)))
+      if (failed(convertDialectAttributes(function, {})))
         return failure();
       continue;
     }
@@ -1327,6 +1478,17 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
 llvm::DILocation *ModuleTranslation::translateLoc(Location loc,
                                                   llvm::DILocalScope *scope) {
   return debugTranslation->translateLoc(loc, scope);
+}
+
+llvm::DIExpression *
+ModuleTranslation::translateExpression(LLVM::DIExpressionAttr attr) {
+  return debugTranslation->translateExpression(attr);
+}
+
+llvm::DIGlobalVariableExpression *
+ModuleTranslation::translateGlobalVariableExpression(
+    LLVM::DIGlobalVariableExpressionAttr attr) {
+  return debugTranslation->translateGlobalVariableExpression(attr);
 }
 
 llvm::Metadata *ModuleTranslation::translateDebugInfo(LLVM::DINodeAttr attr) {

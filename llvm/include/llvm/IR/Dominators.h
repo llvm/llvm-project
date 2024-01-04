@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Hashing.h"
@@ -24,7 +23,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/PassManager.h"

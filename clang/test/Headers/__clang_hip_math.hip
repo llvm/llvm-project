@@ -43,7 +43,7 @@ typedef unsigned long long uint64_t;
 // CHECK-NEXT:    br i1 [[OR_COND_I]], label [[IF_THEN_I:%.*]], label [[CLEANUP_I]]
 // CHECK:       if.then.i:
 // CHECK-NEXT:    [[MUL_I:%.*]] = shl i64 [[__R_0_I]], 3
-// CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV5_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // CHECK-NEXT:    [[SUB_I:%.*]] = add i64 [[ADD_I]], [[CONV5_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I]], i64 1
@@ -75,7 +75,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // CHECK-NEXT:    br i1 [[OR_COND_I]], label [[IF_THEN_I:%.*]], label [[CLEANUP_I]]
 // CHECK:       if.then.i:
 // CHECK-NEXT:    [[MUL_I:%.*]] = mul i64 [[__R_0_I]], 10
-// CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV5_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // CHECK-NEXT:    [[SUB_I:%.*]] = add i64 [[ADD_I]], [[CONV5_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I]], i64 1
@@ -116,7 +116,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // CHECK:       if.end31.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I]] ], [ -87, [[IF_ELSE_I]] ], [ -55, [[IF_ELSE17_I]] ]
 // CHECK-NEXT:    [[MUL24_I:%.*]] = shl i64 [[__R_0_I]], 4
-// CHECK-NEXT:    [[CONV25_I:%.*]] = sext i8 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV25_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD26_I:%.*]] = add i64 [[MUL24_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I:%.*]] = add i64 [[ADD26_I]], [[CONV25_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I]], i64 1
@@ -169,7 +169,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK:       if.end31.i.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I]] ], [ -87, [[IF_ELSE_I_I]] ], [ -55, [[IF_ELSE17_I_I]] ]
 // CHECK-NEXT:    [[MUL24_I_I:%.*]] = shl i64 [[__R_0_I32_I]], 4
-// CHECK-NEXT:    [[CONV25_I_I:%.*]] = sext i8 [[TMP2]] to i64
+// CHECK-NEXT:    [[CONV25_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I:%.*]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I40_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I31_I]], i64 1
@@ -191,7 +191,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    br i1 [[OR_COND_I_I]], label [[IF_THEN_I_I:%.*]], label [[CLEANUP_I_I]]
 // CHECK:       if.then.i.i:
 // CHECK-NEXT:    [[MUL_I_I:%.*]] = shl i64 [[__R_0_I_I]], 3
-// CHECK-NEXT:    [[CONV5_I_I:%.*]] = sext i8 [[TMP6]] to i64
+// CHECK-NEXT:    [[CONV5_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_I_I:%.*]] = add i64 [[MUL_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I:%.*]] = add i64 [[ADD_I_I]], [[CONV5_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I_I]], i64 1
@@ -212,7 +212,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    br i1 [[OR_COND_I19_I]], label [[IF_THEN_I24_I:%.*]], label [[CLEANUP_I20_I]]
 // CHECK:       if.then.i24.i:
 // CHECK-NEXT:    [[MUL_I25_I:%.*]] = mul i64 [[__R_0_I16_I]], 10
-// CHECK-NEXT:    [[CONV5_I26_I:%.*]] = sext i8 [[TMP8]] to i64
+// CHECK-NEXT:    [[CONV5_I26_I:%.*]] = zext nneg i8 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_I27_I:%.*]] = add i64 [[MUL_I25_I]], -48
 // CHECK-NEXT:    [[SUB_I28_I:%.*]] = add i64 [[ADD_I27_I]], [[CONV5_I26_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I29_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I15_I]], i64 1
@@ -2395,7 +2395,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK:       if.end31.i.i.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
 // CHECK-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I32_I_I]], 4
-// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = sext i8 [[TMP2]] to i64
+// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I40_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
@@ -2417,7 +2417,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[CLEANUP_I_I_I]]
 // CHECK:       if.then.i.i.i:
 // CHECK-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = sext i8 [[TMP6]] to i64
+// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I_I_I]], i64 1
@@ -2438,7 +2438,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[IF_THEN_I24_I_I:%.*]], label [[CLEANUP_I20_I_I]]
 // CHECK:       if.then.i24.i.i:
 // CHECK-NEXT:    [[MUL_I25_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = sext i8 [[TMP8]] to i64
+// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_I27_I_I:%.*]] = add i64 [[MUL_I25_I_I]], -48
 // CHECK-NEXT:    [[SUB_I28_I_I:%.*]] = add i64 [[ADD_I27_I_I]], [[CONV5_I26_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I29_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I15_I_I]], i64 1
@@ -2494,7 +2494,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK:       if.end31.i.i.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
 // CHECK-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I32_I_I]], 4
-// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = sext i8 [[TMP2]] to i64
+// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I40_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
@@ -2516,7 +2516,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[CLEANUP_I_I_I]]
 // CHECK:       if.then.i.i.i:
 // CHECK-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = sext i8 [[TMP6]] to i64
+// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I_I_I]], i64 1
@@ -2537,7 +2537,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[IF_THEN_I24_I_I:%.*]], label [[CLEANUP_I20_I_I]]
 // CHECK:       if.then.i24.i.i:
 // CHECK-NEXT:    [[MUL_I25_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = sext i8 [[TMP8]] to i64
+// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_I27_I_I:%.*]] = add i64 [[MUL_I25_I_I]], -48
 // CHECK-NEXT:    [[SUB_I28_I_I:%.*]] = add i64 [[ADD_I27_I_I]], [[CONV5_I26_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I29_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I15_I_I]], i64 1

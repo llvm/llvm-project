@@ -32,7 +32,7 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
   if (MangledName.empty())
     return ParseRet::Error;
 
-  if (MangledName.startswith(VFABI::_LLVM_)) {
+  if (MangledName.starts_with(VFABI::_LLVM_)) {
     MangledName = MangledName.drop_front(strlen(VFABI::_LLVM_));
     ISA = VFISAKind::LLVM;
   } else {
@@ -126,7 +126,7 @@ static ParseRet tryParseLinearTokenWithRuntimeStep(StringRef &ParseString,
   return ParseRet::None;
 }
 
-/// The function looks for the following stringt at the beginning of
+/// The function looks for the following string at the beginning of
 /// the input string `ParseString`:
 ///
 ///  <token> <number>
@@ -369,14 +369,14 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
 std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
-                                                 const CallInst &CI) {
+                                                 const FunctionType *FTy) {
   const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of
   // _ZGV<isa><mask><vlen><parameters>_<scalarname>.
   StringRef VectorName = MangledName;
 
-  // Parse the fixed size part of the manled name
+  // Parse the fixed size part of the mangled name
   if (!MangledName.consume_front("_ZGV"))
     return std::nullopt;
 
@@ -434,7 +434,7 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // demangled parameter types and the scalar function signature.
   std::optional<ElementCount> EC;
   if (ParsedVF.second) {
-    EC = getScalableECFromSignature(CI.getFunctionType(), ISA, Parameters);
+    EC = getScalableECFromSignature(FTy, ISA, Parameters);
     if (!EC)
       return std::nullopt;
   } else

@@ -147,9 +147,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
                             options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
-                            options::OPT_fppc_native_vec_elem_order,
-                            options::OPT_falias_analysis,
-                            options::OPT_fno_alias_analysis});
+                            options::OPT_fppc_native_vec_elem_order});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -184,7 +182,7 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.endswith("+"))
+      if (Val.ends_with("+"))
         Val = Val.substr(0, Val.size() - 1);
       else {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
@@ -233,6 +231,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
+  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
+  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
@@ -250,7 +250,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
@@ -258,7 +259,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
@@ -266,7 +268,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
@@ -275,7 +278,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;

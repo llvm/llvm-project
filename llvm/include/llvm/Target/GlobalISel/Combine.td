@@ -259,6 +259,12 @@ def sext_inreg_to_zext_inreg : GICombineRule<
   }])
 >;
 
+def combine_extracted_vector_load : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
+        [{ return Helper.matchCombineExtractedVectorLoad(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+  
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD, G_STORE):$root,
@@ -1291,8 +1297,8 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
-    extract_vec_elt_combines, combines_for_extload,
-    undef_combines, identity_combines, phi_combines,
+    extract_vec_elt_combines, combines_for_extload, combine_extracted_vector_load,
+    undef_combines, identity_combines, phi_combines, 
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,

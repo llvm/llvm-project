@@ -48,7 +48,7 @@
 template <class E>
 constexpr void
 test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> strides, bool exhaustive) {
-  using M = std::layout_stride::template mapping<E>;
+  using M = std::layout_stride::mapping<E>;
   M m(ext, strides);
   const M c_m = m;
   assert(m.strides() == strides);

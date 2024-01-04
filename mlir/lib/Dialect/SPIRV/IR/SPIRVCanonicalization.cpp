@@ -644,6 +644,45 @@ OpFoldResult spirv::UModOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.SNegate
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SNegateOp::fold(FoldAdaptor adaptor) {
+  // -(-x) = 0 - (0 - x) = x
+  auto op = getOperand();
+  if (auto negateOp = op.getDefiningOp<spirv::SNegateOp>())
+    return negateOp->getOperand(0);
+
+  // According to the SPIR-V spec:
+  //
+  // Signed-integer subtract of Operand from zero.
+  return constFoldUnaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a) {
+        APInt zero = APInt::getZero(a.getBitWidth());
+        return zero - a;
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.NotOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::NotOp::fold(spirv::NotOp::FoldAdaptor adaptor) {
+  // !(!x) = x
+  auto op = getOperand();
+  if (auto notOp = op.getDefiningOp<spirv::NotOp>())
+    return notOp->getOperand(0);
+
+  // According to the SPIR-V spec:
+  //
+  // Complement the bits of Operand.
+  return constFoldUnaryOp<IntegerAttr>(adaptor.getOperands(), [&](APInt a) {
+    a.flipAllBits();
+    return a;
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LogicalAnd
 //===----------------------------------------------------------------------===//
 
@@ -663,23 +702,72 @@ OpFoldResult spirv::LogicalAndOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.LogicalEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::LogicalEqualOp::fold(spirv::LogicalEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LogicalNotEqualOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::LogicalNotEqualOp::fold(FoldAdaptor adaptor) {
   if (std::optional<bool> rhs =
           getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
-    // x && false = x
+    // x != false -> x
     if (!rhs.value())
       return getOperand1();
   }
 
-  return Attribute();
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.LogicalNot
 //===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::LogicalNotOp::fold(FoldAdaptor adaptor) {
+  // !(!x) = x
+  auto op = getOperand();
+  if (auto notOp = op.getDefiningOp<spirv::LogicalNotOp>())
+    return notOp->getOperand(0);
+
+  // According to the SPIR-V spec:
+  //
+  // Complement the bits of Operand.
+  return constFoldUnaryOp<IntegerAttr>(adaptor.getOperands(),
+                                       [](const APInt &a) {
+                                         APInt zero = APInt::getZero(1);
+                                         return a == 1 ? zero : (zero + 1);
+                                       });
+}
 
 void spirv::LogicalNotOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -707,6 +795,235 @@ OpFoldResult spirv::LogicalOrOp::fold(FoldAdaptor adaptor) {
   }
 
   return Attribute();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.IEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::IEqualOp::fold(spirv::IEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.INotEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::INotEqualOp::fold(spirv::INotEqualOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ShiftLeftLogical
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::ShiftLeftLogicalOp::fold(
+    spirv::ShiftLeftLogicalOp::FoldAdaptor adaptor) {
+  // x << 0 -> x
+  if (matchPattern(adaptor.getOperand2(), m_Zero())) {
+    return getOperand1();
+  }
+
+  // Unfortunately due to below undefined behaviour can't fold 0 for Base.
+
+  // Results are computed per component, and within each component, per bit...
+  //
+  // The result is undefined if Shift is greater than or equal to the bit width
+  // of the components of Base.
+  //
+  // So we can use the APInt << method, but don't fold if undefined behaviour.
+  bool shiftToLarge = false;
+  auto res = constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
+        if (shiftToLarge || b.uge(a.getBitWidth())) {
+          shiftToLarge = true;
+          return a;
+        }
+        return a << b;
+      });
+  return shiftToLarge ? Attribute() : res;
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ShiftRightArithmetic
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::ShiftRightArithmeticOp::fold(
+    spirv::ShiftRightArithmeticOp::FoldAdaptor adaptor) {
+  // x >> 0 -> x
+  if (matchPattern(adaptor.getOperand2(), m_Zero())) {
+    return getOperand1();
+  }
+
+  // Unfortunately due to below undefined behaviour can't fold 0, -1 for Base.
+
+  // Results are computed per component, and within each component, per bit...
+  //
+  // The result is undefined if Shift is greater than or equal to the bit width
+  // of the components of Base.
+  //
+  // So we can use the APInt ashr method, but don't fold if undefined behaviour.
+  bool shiftToLarge = false;
+  auto res = constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
+        if (shiftToLarge || b.uge(a.getBitWidth())) {
+          shiftToLarge = true;
+          return a;
+        }
+        return a.ashr(b);
+      });
+  return shiftToLarge ? Attribute() : res;
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ShiftRightLogical
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::ShiftRightLogicalOp::fold(
+    spirv::ShiftRightLogicalOp::FoldAdaptor adaptor) {
+  // x >> 0 -> x
+  if (matchPattern(adaptor.getOperand2(), m_Zero())) {
+    return getOperand1();
+  }
+
+  // Unfortunately due to below undefined behaviour can't fold 0 for Base.
+
+  // Results are computed per component, and within each component, per bit...
+  //
+  // The result is undefined if Shift is greater than or equal to the bit width
+  // of the components of Base.
+  //
+  // So we can use the APInt lshr method, but don't fold if undefined behaviour.
+  bool shiftToLarge = false;
+  auto res = constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
+        if (shiftToLarge || b.uge(a.getBitWidth())) {
+          shiftToLarge = true;
+          return a;
+        }
+        return a.lshr(b);
+      });
+  return shiftToLarge ? Attribute() : res;
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BitwiseAndOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
+  // x & x -> x
+  if (getOperand1() == getOperand2()) {
+    return getOperand1();
+  }
+
+  APInt rhsMask;
+  if (matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask))) {
+    // x & 0 -> 0
+    if (rhsMask.isZero())
+      return getOperand2();
+
+    // x & <all ones> -> x
+    if (rhsMask.isAllOnes())
+      return getOperand1();
+
+    // (UConvert x : iN to iK) & <mask with N low bits set> -> UConvert x
+    if (auto zext = getOperand1().getDefiningOp<spirv::UConvertOp>()) {
+      int valueBits =
+          getElementTypeOrSelf(zext.getOperand()).getIntOrFloatBitWidth();
+      if (rhsMask.zextOrTrunc(valueBits).isAllOnes())
+        return getOperand1();
+    }
+  }
+
+  // According to the SPIR-V spec:
+  //
+  // Type is a scalar or vector of integer type.
+  // Results are computed per component, and within each component, per bit.
+  // So we can use the APInt & method.
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(),
+      [](const APInt &a, const APInt &b) { return a & b; });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BitwiseOrOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::BitwiseOrOp::fold(spirv::BitwiseOrOp::FoldAdaptor adaptor) {
+  // x | x -> x
+  if (getOperand1() == getOperand2()) {
+    return getOperand1();
+  }
+
+  APInt rhsMask;
+  if (matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask))) {
+    // x | 0 -> x
+    if (rhsMask.isZero())
+      return getOperand1();
+
+    // x | <all ones> -> <all ones>
+    if (rhsMask.isAllOnes())
+      return getOperand2();
+  }
+
+  // According to the SPIR-V spec:
+  //
+  // Type is a scalar or vector of integer type.
+  // Results are computed per component, and within each component, per bit.
+  // So we can use the APInt | method.
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(),
+      [](const APInt &a, const APInt &b) { return a | b; });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.BitwiseXorOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::BitwiseXorOp::fold(spirv::BitwiseXorOp::FoldAdaptor adaptor) {
+  // x ^ 0 -> x
+  if (matchPattern(adaptor.getOperand2(), m_Zero())) {
+    return getOperand1();
+  }
+
+  // x ^ x -> 0
+  if (getOperand1() == getOperand2())
+    return Builder(getContext()).getZeroAttr(getType());
+
+  // According to the SPIR-V spec:
+  //
+  // Type is a scalar or vector of integer type.
+  // Results are computed per component, and within each component, per bit.
+  // So we can use the APInt ^ method.
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(),
+      [](const APInt &a, const APInt &b) { return a ^ b; });
 }
 
 //===----------------------------------------------------------------------===//

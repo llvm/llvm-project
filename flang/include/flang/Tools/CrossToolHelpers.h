@@ -35,6 +35,7 @@ struct MLIRToLLVMPassPipelineConfig {
     LoopVersioning = opts.LoopVersioning;
     DebugInfo = opts.getDebugInfo();
     AliasAnalysis = opts.AliasAnalysis;
+    FramePointerKind = opts.getFramePointer();
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -44,6 +45,8 @@ struct MLIRToLLVMPassPipelineConfig {
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
+  llvm::FramePointerKind FramePointerKind =
+      llvm::FramePointerKind::None; ///< Add frame pointer to functions.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
 };

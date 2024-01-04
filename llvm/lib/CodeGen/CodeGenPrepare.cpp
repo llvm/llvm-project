@@ -460,6 +460,7 @@ private:
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgValue(Instruction *I);
   bool fixupDPValue(DPValue &I);
+  bool fixupDPValuesOnInst(Instruction &I);
   bool placeDbgValues(Function &F);
   bool placePseudoProbes(Function &F);
   bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
@@ -1383,7 +1384,8 @@ static bool SinkCast(CastInst *CI) {
       BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
       assert(InsertPt != UserBB->end());
       InsertedCast = CastInst::Create(CI->getOpcode(), CI->getOperand(0),
-                                      CI->getType(), "", &*InsertPt);
+                                      CI->getType(), "");
+      InsertedCast->insertBefore(*UserBB, InsertPt);
       InsertedCast->setDebugLoc(CI->getDebugLoc());
     }
 
@@ -2057,12 +2059,13 @@ SinkShiftAndTruncate(BinaryOperator *ShiftI, Instruction *User, ConstantInt *CI,
       assert(InsertPt != TruncUserBB->end());
       // Sink the shift
       if (ShiftI->getOpcode() == Instruction::AShr)
-        InsertedShift = BinaryOperator::CreateAShr(ShiftI->getOperand(0), CI,
-                                                   "", &*InsertPt);
+        InsertedShift =
+            BinaryOperator::CreateAShr(ShiftI->getOperand(0), CI, "");
       else
-        InsertedShift = BinaryOperator::CreateLShr(ShiftI->getOperand(0), CI,
-                                                   "", &*InsertPt);
+        InsertedShift =
+            BinaryOperator::CreateLShr(ShiftI->getOperand(0), CI, "");
       InsertedShift->setDebugLoc(ShiftI->getDebugLoc());
+      InsertedShift->insertBefore(*TruncUserBB, InsertPt);
 
       // Sink the trunc
       BasicBlock::iterator TruncInsertPt = TruncUserBB->getFirstInsertionPt();
@@ -2161,11 +2164,12 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
       assert(InsertPt != UserBB->end());
 
       if (ShiftI->getOpcode() == Instruction::AShr)
-        InsertedShift = BinaryOperator::CreateAShr(ShiftI->getOperand(0), CI,
-                                                   "", &*InsertPt);
+        InsertedShift =
+            BinaryOperator::CreateAShr(ShiftI->getOperand(0), CI, "");
       else
-        InsertedShift = BinaryOperator::CreateLShr(ShiftI->getOperand(0), CI,
-                                                   "", &*InsertPt);
+        InsertedShift =
+            BinaryOperator::CreateLShr(ShiftI->getOperand(0), CI, "");
+      InsertedShift->insertBefore(*UserBB, InsertPt);
       InsertedShift->setDebugLoc(ShiftI->getDebugLoc());
 
       MadeChange = true;
@@ -3214,10 +3218,6 @@ public:
   /// Same as IRBuilder::createZExt.
   Value *createZExt(Instruction *Inst, Value *Opnd, Type *Ty);
 
-  /// Same as Instruction::moveBefore.
-  void moveBefore(Instruction *Inst, Instruction *Before);
-  /// @}
-
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
@@ -3275,13 +3275,6 @@ Value *TypePromotionTransaction::createZExt(Instruction *Inst, Value *Opnd,
   Value *Val = Ptr->getBuiltValue();
   Actions.push_back(std::move(Ptr));
   return Val;
-}
-
-void TypePromotionTransaction::moveBefore(Instruction *Inst,
-                                          Instruction *Before) {
-  Actions.push_back(
-      std::make_unique<TypePromotionTransaction::InstructionMoveBefore>(
-          Inst, Before));
 }
 
 TypePromotionTransaction::ConstRestorationPt
@@ -6121,6 +6114,55 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
     int64_t BaseOffset = LargeOffsetGEPs.begin()->second;
     Value *NewBaseGEP = nullptr;
 
+    auto createNewBase = [&](int64_t BaseOffset, Value *OldBase,
+                             GetElementPtrInst *GEP) {
+      LLVMContext &Ctx = GEP->getContext();
+      Type *PtrIdxTy = DL->getIndexType(GEP->getType());
+      Type *I8PtrTy =
+          PointerType::get(Ctx, GEP->getType()->getPointerAddressSpace());
+      Type *I8Ty = Type::getInt8Ty(Ctx);
+
+      BasicBlock::iterator NewBaseInsertPt;
+      BasicBlock *NewBaseInsertBB;
+      if (auto *BaseI = dyn_cast<Instruction>(OldBase)) {
+        // If the base of the struct is an instruction, the new base will be
+        // inserted close to it.
+        NewBaseInsertBB = BaseI->getParent();
+        if (isa<PHINode>(BaseI))
+          NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
+        else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
+          NewBaseInsertBB =
+              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), DT.get(), LI);
+          NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
+        } else
+          NewBaseInsertPt = std::next(BaseI->getIterator());
+      } else {
+        // If the current base is an argument or global value, the new base
+        // will be inserted to the entry block.
+        NewBaseInsertBB = &BaseGEP->getFunction()->getEntryBlock();
+        NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
+      }
+      IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
+      // Create a new base.
+      Value *BaseIndex = ConstantInt::get(PtrIdxTy, BaseOffset);
+      NewBaseGEP = OldBase;
+      if (NewBaseGEP->getType() != I8PtrTy)
+        NewBaseGEP = NewBaseBuilder.CreatePointerCast(NewBaseGEP, I8PtrTy);
+      NewBaseGEP =
+          NewBaseBuilder.CreateGEP(I8Ty, NewBaseGEP, BaseIndex, "splitgep");
+      NewGEPBases.insert(NewBaseGEP);
+      return;
+    };
+
+    // Check whether all the offsets can be encoded with prefered common base.
+    if (int64_t PreferBase = TLI->getPreferredLargeGEPBaseOffset(
+            LargeOffsetGEPs.front().second, LargeOffsetGEPs.back().second)) {
+      BaseOffset = PreferBase;
+      // Create a new base if the offset of the BaseGEP can be decoded with one
+      // instruction.
+      createNewBase(BaseOffset, OldBase, BaseGEP);
+    }
+
     auto *LargeOffsetGEP = LargeOffsetGEPs.begin();
     while (LargeOffsetGEP != LargeOffsetGEPs.end()) {
       GetElementPtrInst *GEP = LargeOffsetGEP->first;
@@ -6146,56 +6188,20 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       // Generate a new GEP to replace the current one.
       LLVMContext &Ctx = GEP->getContext();
       Type *PtrIdxTy = DL->getIndexType(GEP->getType());
-      Type *I8PtrTy =
-          PointerType::get(Ctx, GEP->getType()->getPointerAddressSpace());
       Type *I8Ty = Type::getInt8Ty(Ctx);
 
       if (!NewBaseGEP) {
         // Create a new base if we don't have one yet.  Find the insertion
         // pointer for the new base first.
-        BasicBlock::iterator NewBaseInsertPt;
-        BasicBlock *NewBaseInsertBB;
-        if (auto *BaseI = dyn_cast<Instruction>(OldBase)) {
-          // If the base of the struct is an instruction, the new base will be
-          // inserted close to it.
-          NewBaseInsertBB = BaseI->getParent();
-          if (isa<PHINode>(BaseI))
-            NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
-          else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
-            NewBaseInsertBB =
-                SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), DT.get(), LI);
-            NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
-          } else
-            NewBaseInsertPt = std::next(BaseI->getIterator());
-        } else {
-          // If the current base is an argument or global value, the new base
-          // will be inserted to the entry block.
-          NewBaseInsertBB = &BaseGEP->getFunction()->getEntryBlock();
-          NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
-        }
-        IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
-        // Create a new base.
-        Value *BaseIndex = ConstantInt::get(PtrIdxTy, BaseOffset);
-        NewBaseGEP = OldBase;
-        if (NewBaseGEP->getType() != I8PtrTy)
-          NewBaseGEP = NewBaseBuilder.CreatePointerCast(NewBaseGEP, I8PtrTy);
-        NewBaseGEP =
-            NewBaseBuilder.CreateGEP(I8Ty, NewBaseGEP, BaseIndex, "splitgep");
-        NewGEPBases.insert(NewBaseGEP);
+        createNewBase(BaseOffset, OldBase, GEP);
       }
 
       IRBuilder<> Builder(GEP);
       Value *NewGEP = NewBaseGEP;
-      if (Offset == BaseOffset) {
-        if (GEP->getType() != I8PtrTy)
-          NewGEP = Builder.CreatePointerCast(NewGEP, GEP->getType());
-      } else {
+      if (Offset != BaseOffset) {
         // Calculate the new offset for the new GEP.
         Value *Index = ConstantInt::get(PtrIdxTy, Offset - BaseOffset);
         NewGEP = Builder.CreateGEP(I8Ty, NewBaseGEP, Index);
-
-        if (GEP->getType() != I8PtrTy)
-          NewGEP = Builder.CreatePointerCast(NewGEP, GEP->getType());
       }
       replaceAllUsesWith(GEP, NewGEP, FreshBBs, IsHugeFunc);
       LargeOffsetGEPID.erase(GEP);
@@ -6606,7 +6612,8 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     if (!InsertedTrunc) {
       BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
       assert(InsertPt != UserBB->end());
-      InsertedTrunc = new TruncInst(I, Src->getType(), "", &*InsertPt);
+      InsertedTrunc = new TruncInst(I, Src->getType(), "");
+      InsertedTrunc->insertBefore(*UserBB, InsertPt);
       InsertedInsts.insert(InsertedTrunc);
     }
 
@@ -6965,6 +6972,11 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // Increment the current iterator to skip all the rest of select instructions
   // because they will be either "not lowered" or "all lowered" to branch.
   CurInstIterator = std::next(LastSI->getIterator());
+  // Examine debug-info attached to the consecutive select instructions. They
+  // won't be individually optimised by optimizeInst, so we need to perform
+  // DPValue maintenence here instead.
+  for (SelectInst *SI : ArrayRef(ASI).drop_front())
+    fixupDPValuesOnInst(*SI);
 
   bool VectorCond = !SI->getCondition()->getType()->isIntegerTy(1);
 
@@ -8120,8 +8132,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
 
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
-  for (DPValue &DPV : I->getDbgValueRange())
-    AnyChange |= fixupDPValue(DPV);
+  AnyChange = fixupDPValuesOnInst(*I);
 
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
@@ -8384,6 +8395,13 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
       AnyChange = true;
     }
   }
+  return AnyChange;
+}
+
+bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
+  bool AnyChange = false;
+  for (DPValue &DPV : I.getDbgValueRange())
+    AnyChange |= fixupDPValue(DPV);
   return AnyChange;
 }
 

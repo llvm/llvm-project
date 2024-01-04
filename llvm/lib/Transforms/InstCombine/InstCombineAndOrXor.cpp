@@ -2127,10 +2127,10 @@ Instruction *InstCombinerImpl::foldBinOpOfDisplacedShifts(BinaryOperator &I) {
   Constant *ShiftedC1, *ShiftedC2, *AddC;
   Type *Ty = I.getType();
   unsigned BitWidth = Ty->getScalarSizeInBits();
-  if (!match(&I,
-             m_c_BinOp(m_Shift(m_ImmConstant(ShiftedC1), m_Value(ShAmt)),
-                       m_Shift(m_ImmConstant(ShiftedC2),
-                               m_Add(m_Deferred(ShAmt), m_ImmConstant(AddC))))))
+  if (!match(&I, m_c_BinOp(m_Shift(m_ImmConstant(ShiftedC1), m_Value(ShAmt)),
+                           m_Shift(m_ImmConstant(ShiftedC2),
+                                   m_AddLike(m_Deferred(ShAmt),
+                                             m_ImmConstant(AddC))))))
     return nullptr;
 
   // Make sure the add constant is a valid shift amount.
@@ -3393,9 +3393,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   // If the operands have no common bits set:
   // or (mul X, Y), X --> add (mul X, Y), X --> mul X, (Y + 1)
-  if (match(&I,
-            m_c_Or(m_OneUse(m_Mul(m_Value(X), m_Value(Y))), m_Deferred(X))) &&
-      cast<PossiblyDisjointInst>(I).isDisjoint()) {
+  if (match(&I, m_c_DisjointOr(m_OneUse(m_Mul(m_Value(X), m_Value(Y))),
+                               m_Deferred(X)))) {
     Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
     return BinaryOperator::CreateMul(X, IncrementY);
   }
@@ -3514,8 +3513,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateOr(Op0, C);
 
   // ((B | C) & A) | B -> B | (A & C)
-  if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
+  if (match(Op0, m_c_And(m_c_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
+
+  // B | ((B | C) & A) -> B | (A & C)
+  if (match(Op1, m_c_And(m_c_Or(m_Specific(Op0), m_Value(C)), m_Value(A))))
+    return BinaryOperator::CreateOr(Op0, Builder.CreateAnd(A, C));
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
@@ -3757,6 +3760,35 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  /// Res, Overflow = xxx_with_overflow X, C1
+  /// Try to canonicalize the pattern "Overflow | icmp pred Res, C2" into
+  /// "Overflow | icmp pred X, C2 +/- C1".
+  const WithOverflowInst *WO;
+  const Value *WOV;
+  const APInt *C1, *C2;
+  if (match(&I, m_c_Or(m_CombineAnd(m_ExtractValue<1>(m_CombineAnd(
+                                        m_WithOverflowInst(WO), m_Value(WOV))),
+                                    m_Value(Ov)),
+                       m_OneUse(m_ICmp(Pred, m_ExtractValue<0>(m_Deferred(WOV)),
+                                       m_APInt(C2))))) &&
+      (WO->getBinaryOp() == Instruction::Add ||
+       WO->getBinaryOp() == Instruction::Sub) &&
+      (ICmpInst::isEquality(Pred) ||
+       WO->isSigned() == ICmpInst::isSigned(Pred)) &&
+      match(WO->getRHS(), m_APInt(C1))) {
+    bool Overflow;
+    APInt NewC = WO->getBinaryOp() == Instruction::Add
+                     ? (ICmpInst::isSigned(Pred) ? C2->ssub_ov(*C1, Overflow)
+                                                 : C2->usub_ov(*C1, Overflow))
+                     : (ICmpInst::isSigned(Pred) ? C2->sadd_ov(*C1, Overflow)
+                                                 : C2->uadd_ov(*C1, Overflow));
+    if (!Overflow || ICmpInst::isEquality(Pred)) {
+      Value *NewCmp = Builder.CreateICmp(
+          Pred, WO->getLHS(), ConstantInt::get(WO->getLHS()->getType(), NewC));
+      return BinaryOperator::CreateOr(Ov, NewCmp);
+    }
+  }
+
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
   if (sinkNotIntoOtherHandOfLogicalOp(I))
     return &I;
@@ -3844,6 +3876,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  // (X & C1) | C2 -> X & (C1 | C2) iff (X & C2) == C2
+  if (match(Op0, m_OneUse(m_And(m_Value(X), m_APInt(C1)))) &&
+      match(Op1, m_APInt(C2))) {
+    KnownBits KnownX = computeKnownBits(X, /*Depth*/ 0, &I);
+    if ((KnownX.One & *C2) == *C2)
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *C1 | *C2));
+  }
+
   return nullptr;
 }
 
@@ -3928,35 +3968,50 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   const APInt *LC, *RC;
   if (match(LHS1, m_APInt(LC)) && match(RHS1, m_APInt(RC)) &&
       LHS0->getType() == RHS0->getType() &&
-      LHS0->getType()->isIntOrIntVectorTy() &&
-      (LHS->hasOneUse() || RHS->hasOneUse())) {
+      LHS0->getType()->isIntOrIntVectorTy()) {
     // Convert xor of signbit tests to signbit test of xor'd values:
     // (X > -1) ^ (Y > -1) --> (X ^ Y) < 0
     // (X <  0) ^ (Y <  0) --> (X ^ Y) < 0
     // (X > -1) ^ (Y <  0) --> (X ^ Y) > -1
     // (X <  0) ^ (Y > -1) --> (X ^ Y) > -1
     bool TrueIfSignedL, TrueIfSignedR;
-    if (isSignBitCheck(PredL, *LC, TrueIfSignedL) &&
+    if ((LHS->hasOneUse() || RHS->hasOneUse()) &&
+        isSignBitCheck(PredL, *LC, TrueIfSignedL) &&
         isSignBitCheck(PredR, *RC, TrueIfSignedR)) {
       Value *XorLR = Builder.CreateXor(LHS0, RHS0);
       return TrueIfSignedL == TrueIfSignedR ? Builder.CreateIsNeg(XorLR) :
                                               Builder.CreateIsNotNeg(XorLR);
     }
 
-    // (X > C) ^ (X < C + 2) --> X != C + 1
-    // (X < C + 2) ^ (X > C) --> X != C + 1
-    // Considering the correctness of this pattern, we should avoid that C is
-    // non-negative and C + 2 is negative, although it will be matched by other
-    // patterns.
-    const APInt *C1, *C2;
-    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_APInt(C1)) &&
-         PredR == CmpInst::ICMP_SLT && match(RHS1, m_APInt(C2))) ||
-        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_APInt(C2)) &&
-         PredR == CmpInst::ICMP_SGT && match(RHS1, m_APInt(C1))))
-      if (LHS0 == RHS0 && *C1 + 2 == *C2 &&
-          (C1->isNegative() || C2->isNonNegative()))
-        return Builder.CreateICmpNE(LHS0,
-                                    ConstantInt::get(LHS0->getType(), *C1 + 1));
+    // Fold (icmp pred1 X, C1) ^ (icmp pred2 X, C2)
+    // into a single comparison using range-based reasoning.
+    if (LHS0 == RHS0) {
+      ConstantRange CR1 = ConstantRange::makeExactICmpRegion(PredL, *LC);
+      ConstantRange CR2 = ConstantRange::makeExactICmpRegion(PredR, *RC);
+      auto CRUnion = CR1.exactUnionWith(CR2);
+      auto CRIntersect = CR1.exactIntersectWith(CR2);
+      if (CRUnion && CRIntersect)
+        if (auto CR = CRUnion->exactIntersectWith(CRIntersect->inverse())) {
+          if (CR->isFullSet())
+            return ConstantInt::getTrue(I.getType());
+          if (CR->isEmptySet())
+            return ConstantInt::getFalse(I.getType());
+
+          CmpInst::Predicate NewPred;
+          APInt NewC, Offset;
+          CR->getEquivalentICmp(NewPred, NewC, Offset);
+
+          if ((Offset.isZero() && (LHS->hasOneUse() || RHS->hasOneUse())) ||
+              (LHS->hasOneUse() && RHS->hasOneUse())) {
+            Value *NewV = LHS0;
+            Type *Ty = LHS0->getType();
+            if (!Offset.isZero())
+              NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
+            return Builder.CreateICmp(NewPred, NewV,
+                                      ConstantInt::get(Ty, NewC));
+          }
+        }
+    }
   }
 
   // Instead of trying to imitate the folds for and/or, decompose this 'xor'
@@ -4281,6 +4336,12 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
       return BinaryOperator::CreateAShr(X, Y);
 
+    // Treat lshr with non-negative operand as ashr.
+    // ~(~X >>u Y) --> (X >>s Y) iff X is known negative
+    if (match(NotVal, m_LShr(m_Not(m_Value(X)), m_Value(Y))) &&
+        isKnownNegative(X, SQ.getWithInstruction(NotVal)))
+      return BinaryOperator::CreateAShr(X, Y);
+
     // Bit-hack form of a signbit test for iN type:
     // ~(X >>s (N - 1)) --> sext i1 (X > -1) to iN
     unsigned FullShift = Ty->getScalarSizeInBits() - 1;
@@ -4463,7 +4524,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   Value *M;
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value()))))
-    return BinaryOperator::CreateOr(Op0, Op1);
+    return BinaryOperator::CreateDisjointOr(Op0, Op1);
 
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;

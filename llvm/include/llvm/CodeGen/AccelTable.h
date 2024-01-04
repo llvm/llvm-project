@@ -103,7 +103,6 @@
 namespace llvm {
 
 class AsmPrinter;
-class DwarfUnit;
 class DwarfDebug;
 class DwarfTypeUnit;
 class MCSymbol;
@@ -271,16 +270,14 @@ public:
 #endif
 
   uint64_t getDieOffset() const {
-    assert(std::holds_alternative<uint64_t>(OffsetVal) &&
-           "Accessing DIE Offset before normalizing.");
+    assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     return std::get<uint64_t>(OffsetVal);
   }
   unsigned getDieTag() const { return DieTag; }
   unsigned getUnitID() const { return UnitID; }
   bool isTU() const { return IsTU; }
   void normalizeDIEToOffset() {
-    assert(std::holds_alternative<const DIE *>(OffsetVal) &&
-           "Accessing offset after normalizing.");
+    assert(!isNormalized() && "Accessing offset after normalizing.");
     OffsetVal = std::get<const DIE *>(OffsetVal)->getOffset();
   }
   bool isNormalized() const {
@@ -297,25 +294,27 @@ protected:
 };
 
 struct TypeUnitMetaInfo {
-  // Symbol for start of the TU section.
-  MCSymbol *Label;
+  // Symbol for start of the TU section or signature if this is SplitDwarf.
+  std::variant<MCSymbol *, uint64_t> LabelOrSignature;
   // Unique ID of Type Unit.
   unsigned UniqueID;
 };
 using TUVectorTy = SmallVector<TypeUnitMetaInfo, 1>;
 class DWARF5AccelTable : public AccelTable<DWARF5AccelTableData> {
   // Symbols to start of all the TU sections that were generated.
-  TUVectorTy TUSymbols;
+  TUVectorTy TUSymbolsOrHashes;
 
 public:
   struct UnitIndexAndEncoding {
     unsigned Index;
-    DWARF5AccelTableData::AttributeEncoding Endoding;
+    DWARF5AccelTableData::AttributeEncoding Encoding;
   };
   /// Returns type units that were constructed.
-  const TUVectorTy &getTypeUnitsSymbols() { return TUSymbols; }
+  const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }
   /// Add a type unit start symbol.
   void addTypeUnitSymbol(DwarfTypeUnit &U);
+  /// Add a type unit Signature.
+  void addTypeUnitSignature(DwarfTypeUnit &U);
   /// Convert DIE entries to explicit offset.
   /// Needs to be called after DIE offsets are computed.
   void convertDieToOffset() {

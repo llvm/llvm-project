@@ -145,6 +145,10 @@ void MoveChildMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "MoveChild " << ChildNo << '\n';
 }
 
+void MoveSiblingMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
+  OS.indent(Indent) << "MoveSibling " << SiblingNo << '\n';
+}
+
 void MoveParentMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "MoveParent\n";
 }

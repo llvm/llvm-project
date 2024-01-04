@@ -141,8 +141,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   StringRef MappedPathStr = Path.toStringRef(MappedPathStorage);
 
   // If use system headers while cross-compiling, emit the warning.
-  if (HasSysroot && (MappedPathStr.startswith("/usr/include") ||
-                     MappedPathStr.startswith("/usr/local/include"))) {
+  if (HasSysroot && (MappedPathStr.starts_with("/usr/include") ||
+                     MappedPathStr.starts_with("/usr/local/include"))) {
     Headers.getDiags().Report(diag::warn_poison_system_directories)
         << MappedPathStr;
   }
@@ -324,6 +324,9 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     break;
   }
 
+  if (triple.isOSDarwin())
+    return false;
+
   return true; // Everything else uses AddDefaultIncludePaths().
 }
 
@@ -337,21 +340,6 @@ void InitHeaderSearch::AddDefaultIncludePaths(
   // delete the entire pile of code.
   if (!ShouldAddDefaultIncludePaths(triple))
     return;
-
-  // NOTE: some additional header search logic is handled in the driver for
-  // Darwin.
-  if (triple.isOSDarwin()) {
-    if (HSOpts.UseStandardSystemIncludes) {
-      // Add the default framework include paths on Darwin.
-      if (triple.isDriverKit()) {
-        AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
-      } else {
-        AddPath("/System/Library/Frameworks", System, true);
-        AddPath("/Library/Frameworks", System, true);
-      }
-    }
-    return;
-  }
 
   if (Lang.CPlusPlus && !Lang.AsmPreprocessor &&
       HSOpts.UseStandardCXXIncludes && HSOpts.UseStandardSystemIncludes) {
@@ -513,9 +501,8 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   unsigned NonSystemRemoved = RemoveDuplicates(SearchList, NumQuoted, Verbose);
   NumAngled -= NonSystemRemoved;
 
-  bool DontSearchCurDir = false;  // TODO: set to true if -I- is set?
   Headers.SetSearchPaths(extractLookups(SearchList), NumQuoted, NumAngled,
-                         DontSearchCurDir, mapToUserEntries(SearchList));
+                         mapToUserEntries(SearchList));
 
   Headers.SetSystemHeaderPrefixes(SystemHeaderPrefixes);
 

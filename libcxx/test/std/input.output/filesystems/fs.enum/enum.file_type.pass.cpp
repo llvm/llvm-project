@@ -29,7 +29,7 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  LIBCPP_ONLY(static_assert(std::is_same<UT, signed char>::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<UT, signed char>::value, ""); // Implementation detail
 
   // The standard doesn't specify the numeric values of the enum.
   LIBCPP_STATIC_ASSERT(

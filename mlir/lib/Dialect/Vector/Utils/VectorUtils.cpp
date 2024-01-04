@@ -265,6 +265,11 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
     return false;
   auto strides = ArrayRef<int64_t>(stridesFull).take_back(vecRank);
 
+  // TODO: Add support for memref with trailing dynamic shapes. Memrefs
+  // with leading dynamic dimensions are already supported.
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
   // Cond 1: A contiguous memref will always have a unit trailing stride.
   if (strides.back() != 1)
     return false;

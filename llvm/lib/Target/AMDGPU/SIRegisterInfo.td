@@ -414,7 +414,7 @@ def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
 // SGPR 64-bit registers
 def SGPR_64Regs : SIRegisterTuples<getSubRegs<2>.ret, SGPR_32, 105, 2, 2, "s">;
 
-// SGPR 96-bit registers. No operations use these, but for symmetry with 96-bit VGPRs.
+// SGPR 96-bit registers.
 def SGPR_96Regs : SIRegisterTuples<getSubRegs<3>.ret, SGPR_32, 105, 4, 3, "s">;
 
 // SGPR 128-bit registers
@@ -588,20 +588,6 @@ def Reg16Types : RegisterTypes<[i16, f16]>;
 def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, p2, p3, p5, p6]>;
 
 let HasVGPR = 1 in {
-def VGPR_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                              (add (sequence "VGPR%u_LO16", 0, 255))> {
-  let AllocationPriority = 0;
-  let Size = 16;
-  let GeneratePressureSet = 0;
-}
-
-def VGPR_HI16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                              (add (sequence "VGPR%u_HI16", 0, 255))> {
-  let AllocationPriority = 0;
-  let Size = 16;
-  let GeneratePressureSet = 0;
-}
-
 // VOP3 and VINTERP can access 256 lo and 256 hi registers.
 def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
                             (add (interleave (sequence "VGPR%u_LO16", 0, 255),

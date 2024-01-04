@@ -758,18 +758,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
       .customIf([](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() == 128;
       })
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
        G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
        G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({p0});
 
@@ -1127,6 +1127,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
 
+  getActionDefinitionsBuilder(G_PREFETCH).custom();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -1176,6 +1178,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeExtractVectorElt(MI, MRI, Helper);
   case TargetOpcode::G_DYN_STACKALLOC:
     return legalizeDynStackAlloc(MI, Helper);
+  case TargetOpcode::G_PREFETCH:
+    return legalizePrefetch(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1349,30 +1353,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Value.setReg(ExtValueReg);
     return true;
   }
-  case Intrinsic::prefetch: {
-    MachineIRBuilder MIB(MI);
-    auto &AddrVal = MI.getOperand(1);
-
-    int64_t IsWrite = MI.getOperand(2).getImm();
-    int64_t Locality = MI.getOperand(3).getImm();
-    int64_t IsData = MI.getOperand(4).getImm();
-
-    bool IsStream = Locality == 0;
-    if (Locality != 0) {
-      assert(Locality <= 3 && "Prefetch locality out-of-range");
-      // The locality degree is the opposite of the cache speed.
-      // Put the number the other way around.
-      // The encoding starts at 0 for level 1
-      Locality = 3 - Locality;
-    }
-
-    unsigned PrfOp =
-        (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
-
-    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
-    MI.eraseFromParent();
-    return true;
-  }
   case Intrinsic::aarch64_prefetch: {
     MachineIRBuilder MIB(MI);
     auto &AddrVal = MI.getOperand(1);
@@ -1387,7 +1367,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                      (Target << 1) |     // Cache level bits
                      (unsigned)IsStream; // Stream bit
 
-    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
+    MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
     MI.eraseFromParent();
     return true;
   }
@@ -1426,7 +1406,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_umax:
   case Intrinsic::aarch64_neon_umin:
   case Intrinsic::aarch64_neon_fmax:
-  case Intrinsic::aarch64_neon_fmin: {
+  case Intrinsic::aarch64_neon_fmin:
+  case Intrinsic::aarch64_neon_fmaxnm:
+  case Intrinsic::aarch64_neon_fminnm: {
     MachineIRBuilder MIB(MI);
     if (IntrinsicID == Intrinsic::aarch64_neon_smax)
       MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
@@ -1441,6 +1423,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                      {MI.getOperand(2), MI.getOperand(3)});
     else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
       MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmaxnm)
+      MIB.buildInstr(TargetOpcode::G_FMAXNUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fminnm)
+      MIB.buildInstr(TargetOpcode::G_FMINNUM, {MI.getOperand(0)},
                      {MI.getOperand(2), MI.getOperand(3)});
     MI.eraseFromParent();
     return true;
@@ -1983,6 +1971,31 @@ bool AArch64LegalizerInfo::legalizeDynStackAlloc(
   MIRBuilder.setInsertPt(*NewMI->getParent(), NewMI);
   MIRBuilder.buildCopy(Dst, SPTmp);
 
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
+                                            LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+  auto &AddrVal = MI.getOperand(0);
+
+  int64_t IsWrite = MI.getOperand(1).getImm();
+  int64_t Locality = MI.getOperand(2).getImm();
+  int64_t IsData = MI.getOperand(3).getImm();
+
+  bool IsStream = Locality == 0;
+  if (Locality != 0) {
+    assert(Locality <= 3 && "Prefetch locality out-of-range");
+    // The locality degree is the opposite of the cache speed.
+    // Put the number the other way around.
+    // The encoding starts at 0 for level 1
+    Locality = 3 - Locality;
+  }
+
+  unsigned PrfOp = (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
+
+  MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
   MI.eraseFromParent();
   return true;
 }

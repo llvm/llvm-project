@@ -53,7 +53,7 @@ jobs:
     runs-on: libcxx-runners-8-set
     continue-on-error: false
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config: [
           'generic-cxx03',
@@ -92,7 +92,7 @@ jobs:
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config: [
           'generic-cxx11',
@@ -160,6 +160,7 @@ jobs:
           'generic-no-tzdb',
           'generic-no-unicode',
           'generic-no-wide-characters',
+          'generic-no-rtti',
           'generic-static',
           'generic-with_llvm_unwinder',
           # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
@@ -184,7 +185,7 @@ jobs:
           std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-32-set
+          machine: libcxx-runners-8-set
           std_modules: 'OFF'
     runs-on: ${{ matrix.machine }}
     steps:

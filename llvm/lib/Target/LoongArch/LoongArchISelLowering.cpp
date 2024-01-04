@@ -246,6 +246,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+
+      setOperationAction(ISD::SETCC, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
@@ -258,11 +261,19 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
+      setCondCodeAction(
+          {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
+          Expand);
     }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
+      setOperationAction(ISD::FSQRT, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Legal);
+      setCondCodeAction({ISD::SETGE, ISD::SETGT, ISD::SETOGE, ISD::SETOGT,
+                         ISD::SETUGE, ISD::SETUGT},
+                        VT, Expand);
     }
   }
 
@@ -275,8 +286,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UNDEF, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+
+      setOperationAction(ISD::SETCC, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Legal);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
@@ -289,11 +303,19 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
+      setCondCodeAction(
+          {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
+          Expand);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
+      setOperationAction(ISD::FSQRT, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Legal);
+      setCondCodeAction({ISD::SETGE, ISD::SETGT, ISD::SETOGE, ISD::SETOGT,
+                         ISD::SETUGE, ISD::SETUGT},
+                        VT, Expand);
     }
   }
 
@@ -314,6 +336,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(LoongArch::R3);
 
   setBooleanContents(ZeroOrOneBooleanContent);
+  setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
   setMaxAtomicSizeInBitsSupported(Subtarget.getGRLen());
 
@@ -383,6 +406,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerWRITE_REGISTER(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return lowerINSERT_VECTOR_ELT(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
@@ -486,6 +511,23 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     }
     return Vector;
   }
+
+  return SDValue();
+}
+
+SDValue
+LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VecTy = Op->getOperand(0)->getValueType(0);
+  SDValue Idx = Op->getOperand(1);
+  EVT EltTy = VecTy.getVectorElementType();
+  unsigned NumElts = VecTy.getVectorNumElements();
+
+  if (isa<ConstantSDNode>(Idx) &&
+      (EltTy == MVT::i32 || EltTy == MVT::i64 || EltTy == MVT::f32 ||
+       EltTy == MVT::f64 ||
+       cast<ConstantSDNode>(Idx)->getZExtValue() < NumElts / 2))
+    return Op;
 
   return SDValue();
 }
@@ -4642,8 +4684,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
   // decode the usage of register name aliases into their official names. And
   // AFAIK, the not yet upstreamed `rustc` for LoongArch will always use
   // official register names.
-  if (Constraint.startswith("{$r") || Constraint.startswith("{$f") ||
-      Constraint.startswith("{$vr") || Constraint.startswith("{$xr")) {
+  if (Constraint.starts_with("{$r") || Constraint.starts_with("{$f") ||
+      Constraint.starts_with("{$vr") || Constraint.starts_with("{$xr")) {
     bool IsFP = Constraint[2] == 'f';
     std::pair<StringRef, StringRef> Temp = Constraint.split('$');
     std::pair<unsigned, const TargetRegisterClass *> R;

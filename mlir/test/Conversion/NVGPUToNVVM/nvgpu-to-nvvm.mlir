@@ -666,6 +666,19 @@ func.func @async_tma_load(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d
   func.return 
 }
 
+// CHECK-LABEL: func @async_tma_load
+!tensorMap1dgpuspace = !nvgpu.tensormap.descriptor<tensor = memref<128xf32, #gpu.address_space<workgroup>>,         swizzle=none,        l2promo = none,        oob = nan,  interleave = none>
+func.func @async_tma_load_gpu_address_space(%tensorMap1d: !tensorMap1dgpuspace,
+                          %buffer1d: memref<128xf32, #gpu.address_space<workgroup>>,
+                          %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  %crd0 = arith.constant 0 : index
+  %crd1 = arith.constant 0 : index
+  // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}] 
+  nvgpu.tma.async.load %tensorMap1d[%crd0], %mbarrier[%c0] to %buffer1d : !tensorMap1dgpuspace, !mbarrier -> memref<128xf32,#gpu.address_space<workgroup>>
+   func.return 
+}
+
 // CHECK-LABEL: func @async_tma_load_pred
 func.func @async_tma_load_pred(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d, %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d, %tensorMap5d: !tensorMap5d, 
                               %buffer1d: memref<128xf32,3>,      
