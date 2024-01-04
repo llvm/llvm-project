@@ -618,9 +618,9 @@ static void checkFoldResultTypes(Operation *op,
   for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults())) {
     if (auto value = dyn_cast<Value>(ofr)) {
       if (value.getType() != opResult.getType()) {
-        llvm::errs() << "Folder produced a value of incorrect type for: " << *op
-                     << "\nOriginal type: '" << value.getType()
-                     << "'\nNew type: '" << opResult.getType() << "'\n";
+        op->emitOpError() << "folder produced a value of incorrect type: "
+                          << opResult.getType()
+                          << ", expected: " << value.getType();
         assert(false && "incorrect fold result type");
       }
     }
