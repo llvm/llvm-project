@@ -1211,6 +1211,7 @@ add_fp_unittest(
     nanf_test.cpp
   DEPENDS
     libc.include.math
+    libc.include.signal
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1223,6 +1224,7 @@ add_fp_unittest(
     nan_test.cpp
   DEPENDS
     libc.include.math
+    libc.include.signal
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1235,6 +1237,7 @@ add_fp_unittest(
     nanl_test.cpp
   DEPENDS
     libc.include.math
+    libc.include.signal
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
 )

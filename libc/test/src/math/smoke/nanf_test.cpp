@@ -10,6 +10,7 @@
 #include "src/math/nanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include <signal.h>
 
 class LlvmLibcNanfTest : public LIBC_NAMESPACE::testing::Test {
 public:
@@ -37,4 +38,8 @@ TEST_F(LlvmLibcNanfTest, RandomString) {
   run_test("-1234", 0x7fc00000);
   run_test("asd&f", 0x7fc00000);
   run_test("123 ", 0x7fc00000);
+}
+
+TEST_F(LlvmLibcNanfTest, InvalidInput) {
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }

@@ -10,6 +10,7 @@
 #include "src/math/nanl.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include <signal.h>
 
 #if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_LONG_DOUBLE(val, _, __) val
@@ -61,4 +62,8 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
   run_test("-1234", expected);
   run_test("asd&f", expected);
   run_test("123 ", expected);
+}
+
+TEST_F(LlvmLibcNanlTest, InvalidInput) {
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }
