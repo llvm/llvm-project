@@ -243,13 +243,13 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %tmp1 = getelementptr inbounds x86_fp80, ptr %a, i64 %i
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
-; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
-; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %index
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I1]]
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I2]]
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I3]]
+; CHECK:       %[[GEP1:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr x86_fp80, ptr %[[GEP1]], i64 1
+; CHECK:       %[[GEP2:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr x86_fp80, ptr %[[GEP2]], i64 2
+; CHECK:       %[[GEP3:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr x86_fp80, ptr %[[GEP3]], i64 3
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @irregular_type(ptr %a, i64 %n) {
@@ -313,14 +313,20 @@ for.end:
 ; INTER:       %[[I0:.+]] = shl i64 %index, 4
 ; INTER:       %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
 ; INTER:       %[[S1:.+]] = shl i64 %index, 4
-; INTER:       %[[I1:.+]] = or disjoint i64 %[[S1]], 16
-; INTER:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
+; INTER:       %[[GEP1:.+]] = getelementptr i8, ptr %a, i64 %[[S1]]
 ; INTER:       %[[S2:.+]] = shl i64 %index, 4
-; INTER:       %[[I2:.+]] = or disjoint i64 %[[S2]], 32
-; INTER:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
+; INTER:       %[[GEP2:.+]] = getelementptr i8, ptr %a, i64 %[[S2]]
 ; INTER:       %[[S3:.+]] = shl i64 %index, 4
-; INTER:       %[[I3:.+]] = or disjoint i64 %[[S3]], 48
-; INTER:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
+; INTER:       %[[GEP3:.+]] = getelementptr i8, ptr %a, i64 %[[S3]]
+; INTER:       getelementptr inbounds i32, ptr %next.gep, i64 4
+; INTER:       getelementptr inbounds i32, ptr %next.gep, i64 2
+; INTER:       getelementptr i8, ptr %[[GEP1]], i64 24
+; INTER:       getelementptr i8, ptr %[[GEP2]], i64 40
+; INTER:       getelementptr i8, ptr %[[GEP3]], i64 56
+; INTER:       getelementptr inbounds i32, ptr %next.gep, i64 3
+; INTER:       getelementptr i8, ptr %[[GEP1]], i64 28
+; INTER:       getelementptr i8, ptr %[[GEP2]], i64 44
+; INTER:       getelementptr i8, ptr %[[GEP3]], i64 60
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
@@ -363,14 +369,14 @@ for.end:
 ; CHECK:       [[SHL1:%.+]] = shl i64 %index, 4
 ; CHECK:       %next.gep = getelementptr i8, ptr %a, i64 [[SHL1]]
 ; CHECK:       [[SHL2:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I1:.+]] = or disjoint i64 [[SHL2]], 16
-; CHECK:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
+; CHECK:       %[[GEP2:.+]] = getelementptr i8, ptr %a, i64 [[SHL2]]
+; CHECK:       %next.gep2 = getelementptr i8, ptr %[[GEP2]], i64 16
 ; CHECK:       [[SHL3:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I2:.+]] = or disjoint i64 [[SHL3]], 32
-; CHECK:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
+; CHECK:       %[[GEP3:.+]] = getelementptr i8, ptr %a, i64 [[SHL3]]
+; CHECK:       %next.gep3 = getelementptr i8, ptr %[[GEP3]], i64 32
 ; CHECK:       [[SHL4:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I3:.+]] = or disjoint i64 [[SHL4]], 48
-; CHECK:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
+; CHECK:       %[[GEP4:.+]] = getelementptr i8, ptr %a, i64 [[SHL4]]
+; CHECK:       %next.gep4 = getelementptr i8, ptr %[[GEP4]], i64 48
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
