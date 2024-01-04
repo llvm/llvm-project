@@ -45,7 +45,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     MiscSourceExtensions, AllocateToOtherLength, LongNames, IntrinsicAsSpecific,
     BenignNameClash, BenignRedundancy, NullMoldAllocatableComponentValue,
     NopassScalarBase, MiscUseExtensions, ImpliedDoIndexScope,
-    DistinctCommonSizes)
+    DistinctCommonSizes, OddIndexVariableRestrictions)
 
 // Portability and suspicious usage warnings for conforming code
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
