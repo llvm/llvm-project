@@ -750,6 +750,13 @@ std::optional<KernelDim3> LaunchOp::getClusterSizeOperandValues() {
   return KernelDim3{operands[6], operands[7], operands[8]};
 }
 
+LogicalResult LaunchOp::verify() {
+  if (!(hasClusterSize()) &&
+      (getClusterSizeX() || getClusterSizeY() || getClusterSizeZ()))
+    return emitOpError() << "cluster size must be all present";
+  return success();
+}
+
 LogicalResult LaunchOp::verifyRegions() {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
@@ -809,7 +816,7 @@ void LaunchOp::print(OpAsmPrinter &p) {
       p << " [" << getAsyncDependencies() << ']';
   }
   // Print the launch configuration.
-  if (getClusterSizeX()) {
+  if (hasClusterSize()) {
     p << ' ' << getClustersKeyword();
     printSizeAssignment(p, getClusterSize().value(),
                         getClusterSizeOperandValues().value(),
