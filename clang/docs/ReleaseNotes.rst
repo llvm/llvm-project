@@ -686,9 +686,11 @@ Bug Fixes in This Version
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
 - Fix an issue where clang doesn't respect detault template arguments that
   are added in a later redeclaration for CTAD.
-  Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
+  Fixes (`#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
 - Fix an issue where CTAD fails for explicit type conversion.
-  Fixes (#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+  Fixes (`#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+- Fix crash when using C++ only tokens like ``::`` in C compiler clang.
+  Fixes (`#73559 <https://github.com/llvm/llvm-project/issues/73559>`_)
 
 
 Bug Fixes to Compiler Builtins
