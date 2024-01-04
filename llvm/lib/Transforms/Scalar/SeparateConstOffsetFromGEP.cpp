@@ -174,6 +174,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -519,12 +520,14 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   }
 
   Value *LHS = BO->getOperand(0), *RHS = BO->getOperand(1);
-  // Do not trace into "or" unless it is equivalent to "add". If LHS and RHS
-  // don't have common bits, (LHS | RHS) is equivalent to (LHS + RHS).
-  // FIXME: this does not appear to be covered by any tests
-  //        (with x86/aarch64 backends at least)
+  // Do not trace into "or" unless it is equivalent to "add".
+  // This is the case if the "or"'s disjoint flag is set, or (because we
+  // currently don't infer the disjoint flags) if its left and right operands
+  // have nothing in commen.
   if (BO->getOpcode() == Instruction::Or &&
-      !haveNoCommonBitsSet(LHS, RHS, SimplifyQuery(DL, DT, /*AC*/ nullptr, BO)))
+      !(cast<PossiblyDisjointInst>(BO)->isDisjoint() ||
+        haveNoCommonBitsSet(LHS, RHS,
+                            SimplifyQuery(DL, DT, /*AC*/ nullptr, BO))))
     return false;
 
   // FIXME: We don't currently support constants from the RHS of subs,
