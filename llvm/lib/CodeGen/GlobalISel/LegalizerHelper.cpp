@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -796,6 +797,132 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   return LegalizerHelper::Legalized;
 }
 
+static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  auto &AtomicMI = cast<GMemOperation>(MI);
+  auto &MMO = AtomicMI.getMMO();
+  auto Ordering = MMO.getMergedOrdering();
+  LLT MemType = MMO.getMemoryType();
+  uint64_t MemSize = MemType.getSizeInBytes();
+  if (MemType.isVector())
+    return RTLIB::UNKNOWN_LIBCALL;
+
+#define LCALLS(A, B)                                                           \
+  { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
+#define LCALL5(A)                                                              \
+  LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
+  switch (Opc) {
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_CAS)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_SWP)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_AND: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDCLR)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_OR: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDSET)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_XOR: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDEOR)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+#undef LCALLS
+#undef LCALL5
+}
+
+static LegalizerHelper::LegalizeResult
+createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
+  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+
+  Type *RetTy;
+  SmallVector<Register> RetRegs;
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    Register Success;
+    LLT SuccessLLT;
+    auto [Ret, RetLLT, Mem, MemLLT, Cmp, CmpLLT, New, NewLLT] =
+        MI.getFirst4RegLLTs();
+    RetRegs.push_back(Ret);
+    RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
+    if (Opc == TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS) {
+      std::tie(Ret, RetLLT, Success, SuccessLLT, Mem, MemLLT, Cmp, CmpLLT, New,
+               NewLLT) = MI.getFirst5RegLLTs();
+      RetRegs.push_back(Success);
+      RetTy = StructType::get(
+          Ctx, {RetTy, IntegerType::get(Ctx, SuccessLLT.getSizeInBits())});
+    }
+    Args.push_back({Cmp, IntegerType::get(Ctx, CmpLLT.getSizeInBits()), 0});
+    Args.push_back({New, IntegerType::get(Ctx, NewLLT.getSizeInBits()), 0});
+    Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
+    break;
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB:
+  case TargetOpcode::G_ATOMICRMW_AND:
+  case TargetOpcode::G_ATOMICRMW_OR:
+  case TargetOpcode::G_ATOMICRMW_XOR: {
+    auto [Ret, RetLLT, Mem, MemLLT, Val, ValLLT] = MI.getFirst3RegLLTs();
+    RetRegs.push_back(Ret);
+    RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
+    if (Opc == TargetOpcode::G_ATOMICRMW_AND)
+      Val =
+          MIRBuilder.buildXor(ValLLT, MIRBuilder.buildConstant(ValLLT, -1), Val)
+              .getReg(0);
+    else if (Opc == TargetOpcode::G_ATOMICRMW_SUB)
+      Val =
+          MIRBuilder.buildSub(ValLLT, MIRBuilder.buildConstant(ValLLT, 0), Val)
+              .getReg(0);
+    Args.push_back({Val, IntegerType::get(Ctx, ValLLT.getSizeInBits()), 0});
+    Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
+    break;
+  }
+  default:
+    llvm_unreachable("unsupported opcode");
+  }
+
+  auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
+  const char *Name = TLI.getLibcallName(RTLibcall);
+
+  // Unsupported libcall on the target.
+  if (!Name) {
+    LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
+                      << MIRBuilder.getTII().getName(Opc) << "\n");
+    return LegalizerHelper::UnableToLegalize;
+  }
+
+  CallLowering::CallLoweringInfo Info;
+  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
+  Info.Callee = MachineOperand::CreateES(Name);
+  Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
+
+  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  if (!CLI.lowerCall(MIRBuilder, Info))
+    return LegalizerHelper::UnableToLegalize;
+
+  return LegalizerHelper::Legalized;
+}
+
 static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
                                        Type *FromType) {
   auto ToMVT = MVT::getVT(ToType);
@@ -1077,6 +1204,19 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
         ToSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
         FromSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
         LocObserver);
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB:
+  case TargetOpcode::G_ATOMICRMW_AND:
+  case TargetOpcode::G_ATOMICRMW_OR:
+  case TargetOpcode::G_ATOMICRMW_XOR:
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    auto Status = createAtomicLibcall(MIRBuilder, MI);
     if (Status != Legalized)
       return Status;
     break;
