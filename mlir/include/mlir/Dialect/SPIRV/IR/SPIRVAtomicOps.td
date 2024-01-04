@@ -19,8 +19,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class PointeeTypeMatchTrait<string pointer, string name>
     : TypesMatchWith<
-      "$" # name # " type matches pointee type of " # "$" # pointer, pointer,
-      name, "llvm::cast<PointerType>($_self).getPointeeType()">;
+      "`" # name # "` type matches pointee type of " # "`" # pointer # "`",
+      pointer, name, "llvm::cast<PointerType>($_self).getPointeeType()">;
 
 // -----
 
@@ -95,7 +95,7 @@ def SPIRV_AtomicAndOp : SPIRV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
     <!-- End of AutoGen section -->
 
     ```
-    scope ::= `<CrossDevice>` | `<Device>` | `<Workgroup>` | ...
+    scopae ::= `<CrossDevice>` | `<Device>` | `<Workgroup>` | ...
 
     memory-semantics ::= `<None>` | `<Acquire>` | <Release>` | ...
 

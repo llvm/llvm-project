@@ -13,7 +13,7 @@ func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i3
 // -----
 
 func.func @atomic_and(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : i32) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicAnd' op failed to verify that $value type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicAnd' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicAnd"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<f32, StorageBuffer>, i32) -> (i32)
   return %0 : i32
 }
@@ -22,7 +22,7 @@ func.func @atomic_and(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : i32) -> i3
 // -----
 
 func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i64) -> i64 {
-  // expected-error @+1 {{'spirv.AtomicAnd' op failed to verify that $value type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicAnd' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicAnd"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, StorageBuffer>, i64) -> (i64)
   return %0 : i64
 }
@@ -50,7 +50,7 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32
 // -----
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64, %comparator: i32) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicCompareExchange' op failed to verify that $value type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64, i32) -> (i32)
   return %0: i32
 }
@@ -58,7 +58,7 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64
 // -----
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i16) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicCompareExchange' op failed to verify that $comparator type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchange' op failed to verify that `comparator` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i32, i16) -> (i32)
   return %0: i32
 }
@@ -66,7 +66,7 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32
 // -----
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32, %comparator: i32) -> i32 {
-  // expected-error @+1 {{spirv.AtomicCompareExchange' op failed to verify that $result type matches pointee type of $pointer}}
+  // expected-error @+1 {{spirv.AtomicCompareExchange' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32, i32) -> (i32)
   return %0: i32
 }
@@ -86,7 +86,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value
 // -----
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64, %comparator: i32) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that $value type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64, i32) -> (i32)
   return %0: i32
 }
@@ -94,7 +94,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value
 // -----
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i16) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that $comparator type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that `comparator` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i32, i16) -> (i32)
   return %0: i32
 }
@@ -102,7 +102,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value
 // -----
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32, %comparator: i32) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that $result type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32, i32) -> (i32)
   return %0: i32
 }
@@ -122,7 +122,7 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32) -> i32
 // -----
 
 func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that $value type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicExchange"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64) -> (i32)
   return %0: i32
 }
@@ -130,7 +130,7 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64) -> i32
 // -----
 
 func.func @atomic_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32) -> i32 {
-  // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that $value type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicExchange"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32) -> (i32)
   return %0: i32
 }
@@ -252,7 +252,7 @@ func.func @atomic_fadd(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f
 // -----
 
 func.func @atomic_fadd(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : f32) -> f32 {
-  // expected-error @+1 {{'spirv.EXT.AtomicFAdd' op failed to verify that $result type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.EXT.AtomicFAdd' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.EXT.AtomicFAdd"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, StorageBuffer>, f32) -> (f32)
   return %0 : f32
 }
@@ -260,7 +260,7 @@ func.func @atomic_fadd(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : f32) -> f
 // -----
 
 func.func @atomic_fadd(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f64) -> f64 {
-  // expected-error @+1 {{'spirv.EXT.AtomicFAdd' op failed to verify that $result type matches pointee type of $pointer}}
+  // expected-error @+1 {{'spirv.EXT.AtomicFAdd' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.EXT.AtomicFAdd"(%ptr, %value) {memory_scope = #spirv.scope<Device>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<f32, StorageBuffer>, f64) -> (f64)
   return %0 : f64
 }
