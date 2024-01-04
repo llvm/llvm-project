@@ -12,6 +12,7 @@ namespace std {
   template<typename T> CONSTEXPR T &&move(T &x) {
     static_assert(T::moveable, "instantiated move"); // expected-error {{no member named 'moveable' in 'B'}}
                                                      // expected-error@-1 {{no member named 'moveable' in 'C'}}
+                                                     // expected-error@-2 {{no member named 'moveable' in 'D'}}
     return static_cast<T&&>(x);
   }
 
@@ -23,6 +24,7 @@ namespace std {
 
   template<typename T> CONSTEXPR auto move_if_noexcept(T &x) -> typename ref<T, noexcept(T(static_cast<T&&>(x)))>::type {
     static_assert(T::moveable, "instantiated move_if_noexcept"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                                 // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return static_cast<typename ref<T, noexcept(T(static_cast<T&&>(x)))>::type>(x);
   }
 
@@ -36,6 +38,7 @@ namespace std {
   template<typename T> CONSTEXPR T &&forward(typename remove_reference<T>::type &x) {
     static_assert(T::moveable, "instantiated forward"); // expected-error {{no member named 'moveable' in 'B'}}
                                                         // expected-error@-1 {{no member named 'moveable' in 'C'}}
+                                                        // expected-error@-2 {{no member named 'moveable' in 'D'}}
     return static_cast<T&&>(x);
   }
   template<typename T> CONSTEXPR T &&forward(typename remove_reference<T>::type &&x) {
@@ -67,21 +70,25 @@ namespace std {
   CONSTEXPR auto forward_like(T &&t) -> ForwardLikeRetType<U, T> {
     using TT = typename remove_reference<T>::type;
     static_assert(TT::moveable, "instantiated as_const"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                          // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return static_cast<ForwardLikeRetType<U, T>>(t);
   }
 
   template<typename T> CONSTEXPR const T &as_const(T &x) {
     static_assert(T::moveable, "instantiated as_const"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                         // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return x;
   }
 
   template<typename T> CONSTEXPR T *addressof(T &x) {
     static_assert(T::moveable, "instantiated addressof"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                          // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return __builtin_addressof(x);
   }
 
   template<typename T> CONSTEXPR T *__addressof(T &x) {
     static_assert(T::moveable, "instantiated __addressof"); // expected-error {{no member named 'moveable' in 'B'}}
+                                                            // expected-error@-1 {{no member named 'moveable' in 'D'}}
     return __builtin_addressof(x);
   }
 }
@@ -161,6 +168,40 @@ void attribute_const() {
   std::addressof(n); // expected-warning {{ignoring return value}}
   std::__addressof(n); // expected-warning {{ignoring return value}}
   std::as_const(n); // expected-warning {{ignoring return value}}
+}
+
+struct D {
+  void* operator new(__SIZE_TYPE__, D&&(*)(D&));
+  void* operator new(__SIZE_TYPE__, D*(*)(D&));
+  void* operator new(__SIZE_TYPE__, const D&(*)(D&));
+};
+
+#if __cplusplus <= 201703L
+// expected-warning@#10 {{non-addressable}}
+// expected-warning@#11 {{non-addressable}}
+// expected-warning@#12 {{non-addressable}}
+// expected-warning@#13 {{non-addressable}}
+// expected-warning@#14 {{non-addressable}}
+// expected-warning@#15 {{non-addressable}}
+// expected-warning@#16 {{non-addressable}}
+#else
+// expected-error@#10 {{non-addressable}}
+// expected-error@#11 {{non-addressable}}
+// expected-error@#12 {{non-addressable}}
+// expected-error@#13 {{non-addressable}}
+// expected-error@#14 {{non-addressable}}
+// expected-error@#15 {{non-addressable}}
+// expected-error@#16 {{non-addressable}}
+#endif
+
+void placement_new() {
+  new (std::move<D>) D; // #10 expected-note {{instantiation of}}
+  new (std::move_if_noexcept<D>) D; // #11 expected-note {{instantiation of}}
+  new (std::forward<D>) D; // #12 expected-note {{instantiation of}}
+  new (std::forward_like<D>) D; // #13 expected-note {{instantiation of}}
+  new (std::addressof<D>) D; // #14 expected-note {{instantiation of}}
+  new (std::__addressof<D>) D; // #15 expected-note {{instantiation of}}
+  new (std::as_const<D>) D; // #16 expected-note {{instantiation of}}
 }
 
 namespace std {
