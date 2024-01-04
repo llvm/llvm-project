@@ -1283,8 +1283,7 @@ define i1 @shl_nsw_x8_slt_x7(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[START_SHL_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_MUL_7:%.*]] = mul nsw i8 [[START]], 7
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_MUL_7]], [[HIGH]]
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c.0 = icmp sge i8 %high, 0
   call void @llvm.assume(i1 %c.0)
@@ -1327,11 +1326,9 @@ define i1 @shl_nsw_sign_implication(i8 %x) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i8 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shl = shl nsw i8 %x, 2
   %cmp1 = icmp slt i8 %x, 0

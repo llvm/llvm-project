@@ -517,6 +517,17 @@ static Decomposition decompose(Value *V,
       return Result;
     }
 
+    // shl nsw x, shift is mul nsw x, (1<<shift),
+    // with the exception of shift == bw-1.
+    if (match(V, m_NSWShl(m_Value(Op0), m_ConstantInt(CI)))) {
+      uint64_t Shift = CI->getValue().getLimitedValue();
+      if (Shift < Ty->getIntegerBitWidth() - 1 && Shift < 64) {
+        auto Result = decompose(Op0, Preconditions, IsSigned, DL);
+        Result.mul(int64_t(1) << Shift);
+        return Result;
+      }
+    }
+
     return V;
   }
 
