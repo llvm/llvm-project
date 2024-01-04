@@ -209,9 +209,8 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
   // allow for T{} to be replaced, even if no CTOR is declared
-  auto HasConstructInitListExpr =
-      has(initListExpr(initCountLeq(1),
-                       anyOf(allOf(has(SoughtConstructExpr),
+  auto HasConstructInitListExpr = has(initListExpr(
+      initCountLeq(1), anyOf(allOf(has(SoughtConstructExpr),
                                    has(cxxConstructExpr(argumentCountIs(0)))),
                              has(cxxBindTemporaryExpr(
                                  has(SoughtConstructExpr),
