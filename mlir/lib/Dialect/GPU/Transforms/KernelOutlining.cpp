@@ -278,10 +278,18 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
   // The launch op has an optional dynamic shared memory size. If it doesn't
   // exist, we use zero.
   Value asyncToken = launchOp.getAsyncToken();
+  Value dynamicSharedSize;
+  OpFoldResult shmem = launchOp.getDynamicSharedMemorySizeValue(builder);
+  if (auto shmemValue = llvm::dyn_cast<Value>(shmem)) {
+    dynamicSharedSize = shmemValue;
+  } else if (auto shmemConst = getConstantIntValue(shmem)) {
+    dynamicSharedSize = builder.create<mlir::arith::ConstantOp>(
+        launchOp->getLoc(), builder.getIntegerType(32),
+        builder.getI32IntegerAttr(shmemConst.value()));
+  }
   auto launchFunc = builder.create<gpu::LaunchFuncOp>(
       launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(),
-      launchOp.getDynamicSharedMemorySize(), operands,
+      launchOp.getBlockSizeOperandValues(), dynamicSharedSize, operands,
       asyncToken ? asyncToken.getType() : nullptr,
       launchOp.getAsyncDependencies());
   launchOp.replaceAllUsesWith(launchFunc);

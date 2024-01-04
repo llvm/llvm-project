@@ -407,3 +407,36 @@ func.func @launch_memory_attributions_1(%arg0 : memref<*xf32>) {
 }
 
 // CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+
+
+// -----
+
+// CHECK-LABEL: func.func @dynamic_shared_memory(
+// CHECK-SAME: %[[arg0:.+]]: i32
+func.func @dynamic_shared_memory(%shmemSize : i32) {  
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size %shmemSize
+  {
+    gpu.terminator
+  }
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             dynamic_shared_memory_size 8192
+  {
+    gpu.terminator
+  }
+    gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1)              
+  {
+    gpu.terminator
+  }
+
+// CHECK: gpu.launch_func  @dynamic_shared_memory_kernel::@dynamic_shared_memory_kernel blocks in (%{{.+}}, %{{.+}}, %{{.+}}) threads in (%{{.+}}, %{{.+}}, %{{.+}})  dynamic_shared_memory_size %[[arg0]]
+// CHECK: %[[c8192:.+]] = arith.constant 8192 : i32
+// CHECK: gpu.launch_func  @dynamic_shared_memory_kernel_0::@dynamic_shared_memory_kernel blocks in (%{{.+}}, %{{.+}}, %{{.+}}) threads in (%{{.+}}, %{{.+}}, %{{.+}})  dynamic_shared_memory_size %[[c8192]]
+// CHECK: return 
+  return
+}
+

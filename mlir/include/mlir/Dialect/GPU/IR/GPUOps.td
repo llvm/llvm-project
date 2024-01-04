@@ -678,7 +678,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<I32Attr>:$dynamicSharedMemorySizeConstant)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -784,7 +785,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
-      CArg<"TypeRange", "{}">:$privateAttributions)>
+      CArg<"TypeRange", "{}">:$privateAttributions,
+      CArg<"IntegerAttr", "IntegerAttr()">:$dynamicSharedMemorySizeConstant)>
   ];
 
   let extraClassDeclaration = [{
@@ -816,9 +818,24 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// placed in the leading positions of the argument list.
     static constexpr unsigned kNumConfigRegionAttributes = 12;
 
+    /// Dynamic value of the dynamic shared memory size. This is used 
+    /// when dynamic_shared_memory_size is SSA value
+    static constexpr uint32_t kDynamic = std::numeric_limits<uint32_t>::max(); 
+
     /// Returns the keywords used in the custom syntax for this Op.
     static StringRef getWorkgroupKeyword() { return "workgroup"; }
     static StringRef getPrivateKeyword() { return "private"; }
+    static StringRef getDynamicSharedMemorySizeConstantKeyword() { 
+      return "dynamicSharedMemorySizeConstant"; 
+    }
+    
+    /// Returns a value of the dynamic shared memory size. 
+    /// If it is a constant, it builds one
+    mlir::OpFoldResult getDynamicSharedMemorySizeValue(OpBuilder &b) { 
+      if (getDynamicSharedMemorySizeConstant().value_or(kDynamic) == kDynamic)
+        return getDynamicSharedMemorySize();
+      return b.getI32IntegerAttr(getDynamicSharedMemorySizeConstant().value());
+    }
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
@@ -871,6 +888,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasRegionVerifier = 1;
+  let hasVerifier = 1;
 }
 
 def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,

@@ -646,7 +646,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value getBlockSizeZ, Value dynamicSharedMemorySize,
                      Type asyncTokenType, ValueRange asyncDependencies,
                      TypeRange workgroupAttributions,
-                     TypeRange privateAttributions) {
+                     TypeRange privateAttributions,
+                     IntegerAttr dynamicSharedMemorySizeAttr) {
   // Add a WorkGroup attribution attribute. This attribute is required to
   // identify private attributions in the list of block argguments.
   result.addAttribute(getNumWorkgroupAttributionsAttrName(),
@@ -662,7 +663,9 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                       getBlockSizeY, getBlockSizeZ});
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
-
+  if (dynamicSharedMemorySizeAttr)
+    result.addAttribute(getDynamicSharedMemorySizeConstantKeyword(),
+                        dynamicSharedMemorySizeAttr);
   // Create a kernel body region with kNumConfigRegionAttributes + N memory
   // attributions, where the first kNumConfigRegionAttributes arguments have
   // `index` type and the rest have the same types as the data operands.
@@ -717,6 +720,14 @@ KernelDim3 LaunchOp::getGridSizeOperandValues() {
 KernelDim3 LaunchOp::getBlockSizeOperandValues() {
   auto operands = getOperands().drop_front(getAsyncDependencies().size());
   return KernelDim3{operands[3], operands[4], operands[5]};
+}
+
+LogicalResult LaunchOp::verify() {
+  if (getDynamicSharedMemorySize() &&
+      getDynamicSharedMemorySizeConstant().value_or(kDynamic) != kDynamic)
+    return emitOpError() << getDynamicSharedMemorySizeKeyword()
+                         << " operand cannot be both SSA value and constant";
+  return success();
 }
 
 LogicalResult LaunchOp::verifyRegions() {
@@ -787,6 +798,10 @@ void LaunchOp::print(OpAsmPrinter &p) {
   if (getDynamicSharedMemorySize())
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
       << getDynamicSharedMemorySize();
+  else if (getDynamicSharedMemorySizeConstantAttr()) {
+    p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
+      << getDynamicSharedMemorySizeConstantAttr().getInt();
+  }
 
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
@@ -796,7 +811,8 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr(),
-                              getNumWorkgroupAttributionsAttrName()});
+                              getNumWorkgroupAttributionsAttrName(),
+                              getDynamicSharedMemorySizeConstantKeyword()});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -882,12 +898,20 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   bool hasDynamicSharedMemorySize = false;
   if (!parser.parseOptionalKeyword(
           LaunchOp::getDynamicSharedMemorySizeKeyword())) {
-    hasDynamicSharedMemorySize = true;
-    if (parser.parseOperand(dynamicSharedMemorySize) ||
-        parser.resolveOperand(dynamicSharedMemorySize,
-                              parser.getBuilder().getI32Type(),
-                              result.operands))
-      return failure();
+    IntegerAttr shmemAttr;
+    OptionalParseResult shmemAttrResult = parser.parseOptionalAttribute(
+        shmemAttr, parser.getBuilder().getIntegerType(32));
+    if (!shmemAttrResult.has_value()) {
+      hasDynamicSharedMemorySize = true;
+      shmemAttr =
+          parser.getBuilder().getI32IntegerAttr(gpu::LaunchOp::kDynamic);
+      if (parser.parseOperand(dynamicSharedMemorySize) ||
+          parser.resolveOperand(dynamicSharedMemorySize,
+                                parser.getBuilder().getI32Type(),
+                                result.operands))
+        return failure();
+    }
+    result.addAttribute(getDynamicSharedMemorySizeConstantKeyword(), shmemAttr);
   }
 
   // Create the region arguments, it has kNumConfigRegionAttributes arguments
