@@ -316,6 +316,15 @@ enum : unsigned {
   WASM_OPCODE_I64_SUB = 0x7d,
   WASM_OPCODE_I64_MUL = 0x7e,
   WASM_OPCODE_REF_NULL = 0xd0,
+  WASM_OPCODE_REF_FUNC = 0xd2,
+  WASM_OPCODE_GC_PREFIX = 0xfb,
+};
+
+// Opcodes in the GC-prefixed space (0xfb)
+enum : unsigned {
+  WASM_OPCODE_STRUCT_NEW = 0x00,
+  WASM_OPCODE_STRUCT_NEW_DEFAULT = 0x01,
+  WASM_OPCODE_ARRAY_NEW_FIXED = 0x08,
 };
 
 // Opcodes used in synthetic functions.

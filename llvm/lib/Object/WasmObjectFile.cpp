@@ -30,6 +30,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 #define DEBUG_TYPE "wasm-object"
 
@@ -174,6 +175,25 @@ static uint8_t readOpcode(WasmObjectFile::ReadContext &Ctx) {
   return readUint8(Ctx);
 }
 
+static wasm::ValType parseValType(WasmObjectFile::ReadContext &Ctx, uint32_t Code) {
+    // only directly encoded FUNCREF/EXTERNREF are supported (not ref null func/ref null extern)
+    llvm::errs() << llvm::format(" val type %x ", Code);
+    switch(Code) {
+      case wasm::WASM_TYPE_I32:
+      case wasm::WASM_TYPE_I64:
+      case wasm::WASM_TYPE_F32:
+      case wasm::WASM_TYPE_F64:
+      case wasm::WASM_TYPE_V128:
+      case wasm::WASM_TYPE_FUNCREF:
+      case wasm::WASM_TYPE_EXTERNREF:
+        return wasm::ValType(Code);
+    }
+    if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
+      /* Discard HeapType */ readVarint64(Ctx);
+    }
+    return wasm::ValType(wasm::ValType::OTHERREF);
+}
+
 static Error readInitExpr(wasm::WasmInitExpr &Expr,
                           WasmObjectFile::ReadContext &Ctx) {
   auto Start = Ctx.Ptr;
@@ -197,10 +217,10 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
     Expr.Inst.Value.Global = readULEB128(Ctx);
     break;
   case wasm::WASM_OPCODE_REF_NULL: {
-    wasm::ValType Ty = static_cast<wasm::ValType>(readULEB128(Ctx));
-    if (Ty != wasm::ValType::EXTERNREF) {
-      return make_error<GenericBinaryError>("invalid type for ref.null",
-                                            object_error::parse_failed);
+    wasm::ValType Ty = parseValType(Ctx, readVaruint32(Ctx));
+    if (Ty != wasm::ValType::EXTERNREF) { // maybe something special if the type isn't one we understand?
+      //return make_error<GenericBinaryError>("invalid type for ref.null",
+      //                                      object_error::parse_failed);
     }
     break;
   }
@@ -218,14 +238,20 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
     Ctx.Ptr = Start;
     while (true) {
       uint8_t Opcode = readOpcode(Ctx);
+      llvm::errs() << llvm::format(" opcode %x", Opcode);
       switch (Opcode) {
       case wasm::WASM_OPCODE_I32_CONST:
       case wasm::WASM_OPCODE_GLOBAL_GET:
       case wasm::WASM_OPCODE_REF_NULL:
+      case wasm::WASM_OPCODE_REF_FUNC:
       case wasm::WASM_OPCODE_I64_CONST:
-      case wasm::WASM_OPCODE_F32_CONST:
-      case wasm::WASM_OPCODE_F64_CONST:
         readULEB128(Ctx);
+        break;
+      case wasm::WASM_OPCODE_F32_CONST:
+        readFloat32(Ctx);
+        break;
+      case wasm::WASM_OPCODE_F64_CONST:
+        readFloat64(Ctx);
         break;
       case wasm::WASM_OPCODE_I32_ADD:
       case wasm::WASM_OPCODE_I32_SUB:
@@ -234,8 +260,22 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
       case wasm::WASM_OPCODE_I64_SUB:
       case wasm::WASM_OPCODE_I64_MUL:
         break;
+      case wasm::WASM_OPCODE_GC_PREFIX:
+        break;
+      // The GC opcodes are in a separate (prefixed space). This flat switch
+      // structure works as long as there is no overlap between the GC and
+      // general opcodes used in init exprs.
+      case wasm::WASM_OPCODE_STRUCT_NEW:
+      case wasm::WASM_OPCODE_STRUCT_NEW_DEFAULT:
+        readULEB128(Ctx); // heap type index
+        break;
+      case wasm::WASM_OPCODE_ARRAY_NEW_FIXED:
+        readULEB128(Ctx); // heap type index
+        readULEB128(Ctx); // array size
+        break;
       case wasm::WASM_OPCODE_END:
         Expr.Body = ArrayRef<uint8_t>(Start, Ctx.Ptr - Start);
+        llvm::errs() << "\n";
         return Error::success();
       default:
         return make_error<GenericBinaryError>(
@@ -1105,27 +1145,9 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
-  auto parseValType = [&](uint32_t Code) -> wasm::ValType {
-    // only directly encoded FUNCREF/EXTERNREF are supported (not ref null func/ref null extern)
-    llvm::errs() << llvm::format(" val type %x ", Code);
-    switch(Code) {
-      case wasm::WASM_TYPE_I32:
-      case wasm::WASM_TYPE_I64:
-      case wasm::WASM_TYPE_F32:
-      case wasm::WASM_TYPE_F64:
-      case wasm::WASM_TYPE_V128:
-      case wasm::WASM_TYPE_FUNCREF:
-      case wasm::WASM_TYPE_EXTERNREF:
-        return wasm::ValType(Code);
-    }
-    if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
-      /* Discard HeapType */ readVarint64(Ctx);
-    }
-    return wasm::ValType(wasm::ValType::OTHERREF);
-  };
   auto parseFieldDef = [&]() {
     uint32_t TypeCode = readVaruint32((Ctx));
-    /* Discard StorageType */ parseValType(TypeCode);
+    /* Discard StorageType */ parseValType(Ctx, TypeCode);
     uint32_t Mutability = readVaruint32(Ctx);
     llvm::errs() << llvm:: format(" mut %d ", Mutability);
   };
@@ -1184,14 +1206,14 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     llvm::errs() << llvm::format("param ct %d ", ParamCount);
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
-      Sig.Returns.push_back(parseValType(ParamType));
+      Sig.Returns.push_back(parseValType(Ctx, ParamType));
       continue;
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
     llvm::errs() << llvm::format("\nreturn ct %d ", ReturnCount);
     while (ReturnCount--) {
       uint32_t ReturnType = readUint8(Ctx);
-      Sig.Returns.push_back(parseValType(ReturnType));
+      Sig.Returns.push_back(parseValType(Ctx, ReturnType));
     }
     
     Signatures.push_back(std::move(Sig));
@@ -1350,8 +1372,12 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
   while (Count--) {
     wasm::WasmGlobal Global;
     Global.Index = NumImportedGlobals + Globals.size();
-    Global.Type.Type = readUint8(Ctx);
+    auto GlobalOpcode = readVaruint32(Ctx);
+    auto GlobalType = parseValType(Ctx, GlobalOpcode);
+    //assert(GlobalType <= std::numeric_limits<wasm::ValType>::max());
+    Global.Type.Type = (uint8_t)GlobalType;
     Global.Type.Mutable = readVaruint1(Ctx);
+    llvm::errs() << llvm::format("Read global %d index %d, type %x mut %d\n", Globals.capacity() -Count-1, Global.Index, GlobalOpcode, Global.Type.Mutable);
     if (Error Err = readInitExpr(Global.InitExpr, Ctx))
       return Err;
     Globals.push_back(Global);
