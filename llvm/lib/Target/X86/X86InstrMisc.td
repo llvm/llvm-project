@@ -1353,22 +1353,22 @@ multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
   def rr#Suffix : I<0xF5, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
                     !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (OpNode RC:$src1, RC:$src2))]>,
-                  VEX, VVVV, Sched<[WriteALU]>;
+                  NoCD8, VVVV, Sched<[WriteALU]>;
   def rm#Suffix : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
                     !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (OpNode RC:$src1, (ld_frag addr:$src2)))]>,
-                  VEX, VVVV, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
+                  NoCD8, VVVV, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
   defm PDEP32 : bmi_pdep_pext<"pdep{l}", GR32, i32mem,
-                               X86pdep, loadi32>, T8, XD;
+                               X86pdep, loadi32>, T8, XD, VEX;
   defm PDEP64 : bmi_pdep_pext<"pdep{q}", GR64, i64mem,
-                               X86pdep, loadi64>, T8, XD, REX_W;
+                               X86pdep, loadi64>, T8, XD, REX_W, VEX;
   defm PEXT32 : bmi_pdep_pext<"pext{l}", GR32, i32mem,
-                               X86pext, loadi32>, T8, XS;
+                               X86pext, loadi32>, T8, XS, VEX;
   defm PEXT64 : bmi_pdep_pext<"pext{q}", GR64, i64mem,
-                               X86pext, loadi64>, T8, XS, REX_W;
+                               X86pext, loadi64>, T8, XS, REX_W, VEX;
 }
 
 let Predicates = [HasBMI2, HasEGPR] in {
