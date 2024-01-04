@@ -79,10 +79,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (auto &[SS, LI] : *LS) {
-    LLVM_DEBUG(dbgs() << "Checking interval: " << LI << "\n");
-
     for (const LiveRange::Segment &Segment : LI.segments) {
-      LLVM_DEBUG(dbgs() << "  Checking segment: " << Segment << "\n");
 
       // Ignore segments that run to the end of basic block because in this case
       // slot is still live at the end of it.
