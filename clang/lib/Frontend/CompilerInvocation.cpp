@@ -4263,7 +4263,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
               << VulkanEnv << T.getOSName() << T.str();
         }
       } else {
-        llvm_unreachable();
+        llvm_unreachable("expected DXIL or SPIR-V target");
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
