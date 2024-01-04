@@ -156,4 +156,38 @@ A<int> a;
       "test.cpp"));
 }
 
+TEST_F(LoadSpecLazilyTest, ChainedTest) {
+  GenerateModuleInterface("M", R"cpp(
+export module M;
+export template <class T>
+class A {};
+  )cpp");
+
+  GenerateModuleInterface("N", R"cpp(
+export module N;
+export import M;
+export class ShouldNotBeLoaded {};
+
+export class Temp {
+   A<ShouldNotBeLoaded> AS;
+};
+  )cpp");
+
+  const char *test_file_contents = R"cpp(
+import N;
+A<int> a;
+  )cpp";
+  std::string DepArg = "-fprebuilt-module-path=" + TestDir.str().str();
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<CheckLoadSpecLazilyAction>("ShouldNotBeLoaded"),
+      test_file_contents,
+      {
+          "-std=c++20",
+          DepArg.c_str(),
+          "-I",
+          TestDir.c_str(),
+      },
+      "test.cpp"));
+}
+
 } // namespace

@@ -695,6 +695,8 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  UPDATE_SPECIALIZATION = 68,
 };
 
 /// Record types used within a source manager block.
