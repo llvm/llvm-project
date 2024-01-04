@@ -1222,8 +1222,10 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
-                                       int_amdgcn_buffer_wbinvl1>;
+let SubtargetPredicate = isNotGFX12Plus in
+def BUFFER_WBINVL1 : MUBUF_Invalidate <
+  "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
+>;
 
 let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN<

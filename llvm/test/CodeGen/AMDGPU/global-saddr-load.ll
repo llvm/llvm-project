@@ -3583,8 +3583,7 @@ define amdgpu_ps float @atomic_global_load_saddr_i32(ptr addrspace(1) inreg %sba
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] th:TH_LOAD_NT
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    buffer_gl0_inv
-; GFX12-NEXT:    buffer_gl1_inv
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3621,8 +3620,7 @@ define amdgpu_ps float @atomic_global_load_saddr_i32_immneg128(ptr addrspace(1) 
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] offset:-128 th:TH_LOAD_NT
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    buffer_gl0_inv
-; GFX12-NEXT:    buffer_gl1_inv
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3660,8 +3658,7 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64(ptr addrspace(1) inre
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] th:TH_LOAD_NT
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    buffer_gl0_inv
-; GFX12-NEXT:    buffer_gl1_inv
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3698,8 +3695,7 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64_immneg128(ptr addrspa
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:-128 th:TH_LOAD_NT
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    buffer_gl0_inv
-; GFX12-NEXT:    buffer_gl1_inv
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
