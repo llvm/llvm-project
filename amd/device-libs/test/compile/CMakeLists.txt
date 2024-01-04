@@ -32,9 +32,6 @@ function(add_compile_test test_name func_name)
 
   set(test_cpu ${COMPILE_TEST_TEST_CPU})
   set(file_name ${COMPILE_TEST_FILE_NAME})
-  if(NOT file_name)
-    set(file_name ${CMAKE_CURRENT_SOURCE_DIR}/${func_name}.cl)
-  endif()
 
   add_test(NAME ${test_name}__${test_cpu}
     COMMAND ${CMAKE_COMMAND}
@@ -53,7 +50,7 @@ endfunction()
 # Add constant folding tests
 function(add_constant_fold_test name test_cpu)
   add_compile_test(constant_fold_${name} ${name}
-    FILE_NAME ${name}.cl
+    FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cl
     SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/RunConstantFoldTest.cmake
     TEST_CPU ${test_cpu}
     EXTRA_CHECK_PREFIXES CHECK

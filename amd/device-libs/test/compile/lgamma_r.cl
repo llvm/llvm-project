@@ -66,7 +66,7 @@ kernel void constant_fold_lgamma_r_f32(volatile global float* out,
     out[0] = test_lgamma_r(0x1.0p-127f, sign_out);
 
     // CONSTANTFOLD-NEXT: store volatile i32 1,
-    // CONSTANTFOLD-NEXT: store volatile float 0x419DE28040000000,
+    // CONSTANTFOLD-NEXT: store volatile float 0x419DE28060000000,
     out[0] = test_lgamma_r(nextafter(0x1.0p+23f, __builtin_inff()), sign_out);
 
     // CONSTANTFOLD-NEXT: store volatile i32 1,
