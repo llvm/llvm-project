@@ -1875,7 +1875,7 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9-NEXT:    global_store_short_d16_hi v[0:1], v0, off
+; GFX9-NEXT:    global_store_short v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1883,7 +1883,7 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    global_store_d16_hi_b16 v[0:1], v0, off
+; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store bfloat %arg0, ptr addrspace(1) undef
   ret void
