@@ -17,6 +17,11 @@
 #include "test_range.h"
 #include "types.h"
 
+template <typename I, std::ranges::range_difference_t<I> D>
+concept CanStrideView = requires {
+  std::ranges::stride_view<I>{I{}, D};
+};
+
 // Ensure that the InputRangeNotIndirectlyReadable is a valid range.
 static_assert(std::ranges::range<InputRangeNotIndirectlyReadable>);
 // Ensure that the InputRangeNotIndirectlyReadable's is not an input range ...
