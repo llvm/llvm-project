@@ -345,18 +345,17 @@ private:
                             DiagnosticsEngine &Diags);
 
   /// Parse command line options that map to CodeGenOptions.
-  static bool ParseCodeGenArgs(CodeGenOptions &Opts, DebugOptions &DebugOpts,
-                               llvm::opt::ArgList &Args, InputKind IK,
-                               DiagnosticsEngine &Diags, const llvm::Triple &T,
+  static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
+                               InputKind IK, DiagnosticsEngine &Diags,
+                               const llvm::Triple &T,
                                const std::string &OutputFile,
                                const LangOptions &LangOptsRef);
 
   /// Parse command line options that map to DebugOptions.
-  static bool ParseDebugArgs(DebugOptions &Opts, llvm::opt::ArgList &Args,
-                             InputKind IK, DiagnosticsEngine &Diags,
-                             const llvm::Triple &T,
-                             const std::string &OutputFile,
-                             const LangOptions &LangOptsRef);
+  static bool ParseDebugArgs(DebugOptions &Opts,
+                             const CodeGenOptions &CodeGenOpts,
+                             llvm::opt::ArgList &Args, InputKind IK,
+                             DiagnosticsEngine &Diags);
 };
 
 /// Same as \c CompilerInvocation, but with copy-on-write optimization.

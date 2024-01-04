@@ -1709,10 +1709,12 @@ void CompilerInvocationBase::GenerateDebugArgs(const DebugOptions &Opts,
   }
 }
 
-bool CompilerInvocation::ParseCodeGenArgs(
-    CodeGenOptions &Opts, DebugOptions &DebugOpts, ArgList &Args, InputKind IK,
-    DiagnosticsEngine &Diags, const llvm::Triple &T,
-    const std::string &OutputFile, const LangOptions &LangOptsRef) {
+bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
+                                          InputKind IK,
+                                          DiagnosticsEngine &Diags,
+                                          const llvm::Triple &T,
+                                          const std::string &OutputFile,
+                                          const LangOptions &LangOptsRef) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
@@ -1738,11 +1740,6 @@ bool CompilerInvocation::ParseCodeGenArgs(
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef CODEGEN_OPTION_WITH_MARSHALLING
-
-#define DEBUG_OPTION_WITH_MARSHALLING(...)                                     \
-  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
-#undef DEBUG_OPTION_WITH_MARSHALLING
 
   // At O0 we want to fully disable inlining outside of cases marked with
   // 'alwaysinline' that are required for correctness.
@@ -1771,61 +1768,9 @@ bool CompilerInvocation::ParseCodeGenArgs(
       (!Args.hasArg(OPT_fno_direct_access_external_data) &&
        LangOpts->PICLevel == 0);
 
-  if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
-    unsigned Val =
-        llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", llvm::debugoptions::DebugLineTablesOnly)
-            .Case("line-directives-only",
-                  llvm::debugoptions::DebugDirectivesOnly)
-            .Case("constructor", llvm::debugoptions::DebugInfoConstructor)
-            .Case("limited", llvm::debugoptions::LimitedDebugInfo)
-            .Case("standalone", llvm::debugoptions::FullDebugInfo)
-            .Case("unused-types", llvm::debugoptions::UnusedTypeInfo)
-            .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    else
-      DebugOpts.setDebugInfo(
-          static_cast<llvm::debugoptions::DebugInfoKind>(Val));
-  }
-
-  // If -fuse-ctor-homing is set and limited debug info is already on, then use
-  // constructor homing, and vice versa for -fno-use-ctor-homing.
-  if (const Arg *A =
-          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
-    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
-        DebugOpts.getDebugInfo() == llvm::debugoptions::LimitedDebugInfo)
-      DebugOpts.setDebugInfo(llvm::debugoptions::DebugInfoConstructor);
-    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
-        DebugOpts.getDebugInfo() == llvm::debugoptions::DebugInfoConstructor)
-      DebugOpts.setDebugInfo(llvm::debugoptions::LimitedDebugInfo);
-  }
-
-  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
-    auto Split = StringRef(Arg).split('=');
-    DebugOpts.DebugPrefixMap.emplace_back(Split.first, Split.second);
-  }
-
   for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
     Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
-  }
-
-  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
-      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
-
-  if (Opts.OptimizationLevel > 0 && DebugOpts.hasReducedDebugInfo() &&
-      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
-    Opts.EmitCallSiteInfo = true;
-
-  if (!DebugOpts.EnableDIPreservationVerify &&
-      DebugOpts.DIBugsReportFilePath.size()) {
-    Diags.Report(diag::warn_ignoring_verify_debuginfo_preserve_export)
-        << DebugOpts.DIBugsReportFilePath;
-    DebugOpts.DIBugsReportFilePath = "";
   }
 
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
@@ -1839,23 +1784,6 @@ bool CompilerInvocation::ParseCodeGenArgs(
                    (Opts.OptimizationLevel > 1));
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
-
-  DebugOpts.DebugNameTable = static_cast<unsigned>(
-      Args.hasArg(OPT_ggnu_pubnames)
-          ? llvm::DICompileUnit::DebugNameTableKind::GNU
-      : Args.hasArg(OPT_gpubnames)
-          ? llvm::DICompileUnit::DebugNameTableKind::Default
-          : llvm::DICompileUnit::DebugNameTableKind::None);
-  if (const Arg *A = Args.getLastArg(OPT_gsimple_template_names_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value != "simple" && Value != "mangled")
-      Diags.Report(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << A->getValue();
-    DebugOpts.setDebugSimpleTemplateNames(
-        StringRef(A->getValue()) == "simple"
-            ? llvm::debugoptions::DebugTemplateNamesKind::Simple
-            : llvm::debugoptions::DebugTemplateNamesKind::Mangled);
-  }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -2069,20 +1997,11 @@ bool CompilerInvocation::ParseCodeGenArgs(
         << A->getSpelling() << T.str();
   }
 
-  bool NeedLocTracking = false;
-
-  if (!Opts.OptRecordFile.empty())
-    NeedLocTracking = true;
-
-  if (Arg *A = Args.getLastArg(OPT_opt_record_passes)) {
+  if (Arg *A = Args.getLastArg(OPT_opt_record_passes))
     Opts.OptRecordPasses = A->getValue();
-    NeedLocTracking = true;
-  }
 
-  if (Arg *A = Args.getLastArg(OPT_opt_record_format)) {
+  if (Arg *A = Args.getLastArg(OPT_opt_record_format))
     Opts.OptRecordFormat = A->getValue();
-    NeedLocTracking = true;
-  }
 
   Opts.OptimizationRemark =
       ParseOptimizationRemark(Diags, Args, OPT_Rpass_EQ, "pass");
@@ -2093,13 +2012,8 @@ bool CompilerInvocation::ParseCodeGenArgs(
   Opts.OptimizationRemarkAnalysis = ParseOptimizationRemark(
       Diags, Args, OPT_Rpass_analysis_EQ, "pass-analysis");
 
-  NeedLocTracking |= Opts.OptimizationRemark.hasValidPattern() ||
-                     Opts.OptimizationRemarkMissed.hasValidPattern() ||
-                     Opts.OptimizationRemarkAnalysis.hasValidPattern();
-
-  bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
   bool UsingProfile =
-      UsingSampleProfile || !Opts.ProfileInstrumentUsePath.empty();
+      !Opts.SampleProfileFile.empty() || !Opts.ProfileInstrumentUsePath.empty();
 
   if (Opts.DiagnosticsWithHotness && !UsingProfile &&
       // An IR file will contain PGO as metadata
@@ -2143,21 +2057,6 @@ bool CompilerInvocation::ParseCodeGenArgs(
     }
   }
 
-  // If the user requested to use a sample profile for PGO, then the
-  // backend will need to track source location information so the profile
-  // can be incorporated into the IR.
-  if (UsingSampleProfile)
-    NeedLocTracking = true;
-
-  if (!Opts.StackUsageOutput.empty())
-    NeedLocTracking = true;
-
-  // If the user requested a flag that requires source locations available in
-  // the backend, make sure that the backend tracks source location information.
-  if (NeedLocTracking &&
-      DebugOpts.getDebugInfo() == llvm::debugoptions::NoDebugInfo)
-    DebugOpts.setDebugInfo(llvm::debugoptions::LocTrackingOnly);
-
   // Parse -fsanitize-recover= arguments.
   // FIXME: Report unrecoverable sanitizers incorrectly specified here.
   parseSanitizerKinds("-fsanitize-recover=",
@@ -2178,6 +2077,111 @@ bool CompilerInvocation::ParseCodeGenArgs(
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
+
+  return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+bool CompilerInvocation::ParseDebugArgs(DebugOptions &DebugOpts,
+                                        const CodeGenOptions &CodeGenOpts,
+                                        llvm::opt::ArgList &Args, InputKind IK,
+                                        DiagnosticsEngine &Diags) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
+#define DEBUG_OPTION_WITH_MARSHALLING(...)                                     \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef DEBUG_OPTION_WITH_MARSHALLING
+
+  if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
+    unsigned Val =
+        llvm::StringSwitch<unsigned>(A->getValue())
+            .Case("line-tables-only", llvm::debugoptions::DebugLineTablesOnly)
+            .Case("line-directives-only",
+                  llvm::debugoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::debugoptions::DebugInfoConstructor)
+            .Case("limited", llvm::debugoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::debugoptions::FullDebugInfo)
+            .Case("unused-types", llvm::debugoptions::UnusedTypeInfo)
+            .Default(~0U);
+    if (Val == ~0U)
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+    else
+      DebugOpts.setDebugInfo(
+          static_cast<llvm::debugoptions::DebugInfoKind>(Val));
+  }
+
+  // If -fuse-ctor-homing is set and limited debug info is already on, then use
+  // constructor homing, and vice versa for -fno-use-ctor-homing.
+  if (const Arg *A =
+          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
+    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
+        DebugOpts.getDebugInfo() == llvm::debugoptions::LimitedDebugInfo)
+      DebugOpts.setDebugInfo(llvm::debugoptions::DebugInfoConstructor);
+    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
+        DebugOpts.getDebugInfo() == llvm::debugoptions::DebugInfoConstructor)
+      DebugOpts.setDebugInfo(llvm::debugoptions::LimitedDebugInfo);
+  }
+
+  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
+    auto Split = StringRef(Arg).split('=');
+    DebugOpts.DebugPrefixMap.emplace_back(Split.first, Split.second);
+  }
+
+  if (!DebugOpts.EnableDIPreservationVerify &&
+      DebugOpts.DIBugsReportFilePath.size()) {
+    Diags.Report(diag::warn_ignoring_verify_debuginfo_preserve_export)
+        << DebugOpts.DIBugsReportFilePath;
+    DebugOpts.DIBugsReportFilePath = "";
+  }
+
+  DebugOpts.DebugNameTable = static_cast<unsigned>(
+      Args.hasArg(OPT_ggnu_pubnames)
+          ? llvm::DICompileUnit::DebugNameTableKind::GNU
+      : Args.hasArg(OPT_gpubnames)
+          ? llvm::DICompileUnit::DebugNameTableKind::Default
+          : llvm::DICompileUnit::DebugNameTableKind::None);
+  if (const Arg *A = Args.getLastArg(OPT_gsimple_template_names_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value != "simple" && Value != "mangled")
+      Diags.Report(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << A->getValue();
+    DebugOpts.setDebugSimpleTemplateNames(
+        StringRef(A->getValue()) == "simple"
+            ? llvm::debugoptions::DebugTemplateNamesKind::Simple
+            : llvm::debugoptions::DebugTemplateNamesKind::Mangled);
+  }
+
+  bool NeedLocTracking = false;
+
+  if (!CodeGenOpts.OptRecordFile.empty())
+    NeedLocTracking = true;
+
+  if (!CodeGenOpts.OptRecordPasses.empty())
+    NeedLocTracking = true;
+
+  if (!CodeGenOpts.OptRecordFormat.empty())
+    NeedLocTracking = true;
+
+  NeedLocTracking |= CodeGenOpts.OptimizationRemark.hasValidPattern() ||
+                     CodeGenOpts.OptimizationRemarkMissed.hasValidPattern() ||
+                     CodeGenOpts.OptimizationRemarkAnalysis.hasValidPattern();
+
+  // If the user requested to use a sample profile for PGO, then the
+  // backend will need to track source location information so the profile
+  // can be incorporated into the IR.
+  if (!CodeGenOpts.SampleProfileFile.empty())
+    NeedLocTracking = true;
+
+  if (!CodeGenOpts.StackUsageOutput.empty())
+    NeedLocTracking = true;
+
+  // // If the user requested a flag that requires source locations available in
+  // // the backend, make sure that the backend tracks source location
+  // information.
+  if (NeedLocTracking &&
+      DebugOpts.getDebugInfo() == llvm::debugoptions::NoDebugInfo)
+    DebugOpts.setDebugInfo(llvm::debugoptions::LocTrackingOnly);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4653,8 +4657,20 @@ bool CompilerInvocation::CreateFromArgsImpl(
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
-  ParseCodeGenArgs(Res.getCodeGenOpts(), Res.getDebugOpts(), Args, DashX, Diags,
-                   T, Res.getFrontendOpts().OutputFile, LangOpts);
+  ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
+                   Res.getFrontendOpts().OutputFile, LangOpts);
+
+  ParseDebugArgs(Res.getDebugOpts(), Res.getCodeGenOpts(), Args, DashX, Diags);
+
+  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
+      llvm::Triple::x86,    llvm::Triple::x86_64, llvm::Triple::aarch64,
+      llvm::Triple::arm,    llvm::Triple::armeb,  llvm::Triple::mips,
+      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
+
+  if (Res.getCodeGenOpts().OptimizationLevel > 0 &&
+      Res.getDebugOpts().hasReducedDebugInfo() &&
+      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
+    Res.getCodeGenOpts().EmitCallSiteInfo = true;
 
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out
