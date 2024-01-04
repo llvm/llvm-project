@@ -29,6 +29,7 @@ define double @log_powi_nonconst(double %x, i32 %y) {
 ; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to double
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], [[CAST]]
 ; CHECK-NEXT:    ret double [[MUL]]
+;
   %pow = call fast double @llvm.powi.f64.i32(double %x, i32 %y)
   %log = call fast double @log(double %pow)
   ret double %log
@@ -39,6 +40,7 @@ define float @logf_powfi_const(float %x) {
 ; CHECK-NEXT:    [[LOG1:%.*]] = call fast float @llvm.log.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[LOG1]], -3.000000e+00
 ; CHECK-NEXT:    ret float [[MUL]]
+;
   %pow = call fast float @llvm.powi.f32.i32(float %x, i32 -3)
   %log = call fast float @logf(float %pow)
   ret float %log
@@ -50,6 +52,7 @@ define float @logf_powfi_nonconst(float %x, i32 %y) {
 ; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[LOG1]], [[CAST]]
 ; CHECK-NEXT:    ret float [[MUL]]
+;
   %pow = call fast float @llvm.powi.f32.i32(float %x, i32 %y)
   %log = call fast float @logf(float %pow)
   ret float %log
