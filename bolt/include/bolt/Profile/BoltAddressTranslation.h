@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -78,9 +79,20 @@ public:
 
   BoltAddressTranslation() {}
 
+  /// Write the serialized address translation table for a function.
+  template <bool Cold>
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
+                 raw_ostream &OS);
+
   /// Write the serialized address translation tables for each reordered
   /// function
   void write(const BinaryContext &BC, raw_ostream &OS);
+
+  /// Read the serialized address translation table for a function.
+  /// Return a parse error if failed.
+  template <bool Cold>
+  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
+                 DataExtractor &DE, uint64_t &Offset, Error &Err);
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
@@ -119,13 +131,14 @@ private:
                          uint64_t FuncAddress);
 
   std::map<uint64_t, MapTy> Maps;
+  std::map<uint64_t, MapTy> ColdMaps;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry
-  const static uint32_t BRANCHENTRY = 0x80000000;
+  const static uint32_t BRANCHENTRY = 0x1;
 };
 } // namespace bolt
 
