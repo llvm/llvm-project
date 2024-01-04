@@ -1,0 +1,30 @@
+# Check new BAT format containing hashes for YAML profile.
+
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/pre-aggregated.txt \
+RUN:   --pa --reorder-blocks=normal --split-functions --enable-bat --dyno-stats \
+RUN:   --skip-funcs=main.* 2>&1 | FileCheck --check-prefix WRITE-BAT-CHECK %s
+RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge.bat.preagg -w %t.yaml -o %t.fdata \
+RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
+RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
+
+WRITE-BAT-CHECK: BOLT: 3 out of 7 functions were overwritten.
+WRITE-BAT-CHECK: BOLT-INFO: Wrote 5 BAT maps
+WRITE-BAT-CHECK: BOLT-INFO: Wrote 3 function and 29 basic block hashes
+WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 384
+
+READ-BAT-CHECK-NOT: BOLT-ERROR: unable to save profile in YAML format for input file processed by BOLT
+READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
+READ-BAT-CHECK: PERF2BOLT: read 81 aggregated LBR entries
+
+YAML-BAT-CHECK:      functions:
+YAML-BAT-CHECK-NEXT: - name:    main
+YAML-BAT-CHECK-NEXT:   fid:     1
+YAML-BAT-CHECK-NEXT:   hash:    0xB6B922C48DCCADBA
+YAML-BAT-CHECK-NEXT:   exec:    0
+YAML-BAT-CHECK-NEXT:   nblocks: 35
+YAML-BAT-CHECK-NEXT:   blocks:
+YAML-BAT-CHECK-NEXT:   - bid:   0
+YAML-BAT-CHECK-NEXT:     insns: 24
+YAML-BAT-CHECK-NEXT:     hash:  0xC800F0E642630000
+YAML-BAT-CHECK-NEXT:     succ:  [ { bid: 2, cnt: 0 }, { bid: 1, cnt: 0 } ]
