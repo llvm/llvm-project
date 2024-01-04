@@ -324,7 +324,11 @@ enum : unsigned {
 enum : unsigned {
   WASM_OPCODE_STRUCT_NEW = 0x00,
   WASM_OPCODE_STRUCT_NEW_DEFAULT = 0x01,
+  WASM_OPCODE_ARRAY_NEW = 0x06,
+  WASM_OPCODE_ARRAY_NEW_DEFAULT = 0x07,
   WASM_OPCODE_ARRAY_NEW_FIXED = 0x08,
+  WASM_OPCODE_REF_I31 = 0x1c,
+  // any.convert_extern and extern.convert_any don't seem to be supported by Binaryen.
 };
 
 // Opcodes used in synthetic functions.

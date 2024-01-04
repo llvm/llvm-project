@@ -267,11 +267,15 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
       // general opcodes used in init exprs.
       case wasm::WASM_OPCODE_STRUCT_NEW:
       case wasm::WASM_OPCODE_STRUCT_NEW_DEFAULT:
+      case wasm::WASM_OPCODE_ARRAY_NEW:
+      case wasm::WASM_OPCODE_ARRAY_NEW_DEFAULT:
         readULEB128(Ctx); // heap type index
         break;
       case wasm::WASM_OPCODE_ARRAY_NEW_FIXED:
         readULEB128(Ctx); // heap type index
         readULEB128(Ctx); // array size
+        break;
+      case wasm::WASM_OPCODE_REF_I31:
         break;
       case wasm::WASM_OPCODE_END:
         Expr.Body = ArrayRef<uint8_t>(Start, Ctx.Ptr - Start);
