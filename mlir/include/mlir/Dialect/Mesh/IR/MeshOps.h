@@ -17,6 +17,15 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include <algorithm>
 
+namespace mlir {
+namespace mesh {
+
+using MeshAxis = int16_t;
+using MeshAxesAttr = DenseI16ArrayAttr;
+
+} // namespace mesh
+} // namespace mlir
+
 #include "mlir/Dialect/Mesh/IR/MeshOpsDialect.h.inc"
 
 #include "mlir/Dialect/Mesh/IR/MeshOpsEnums.h.inc"

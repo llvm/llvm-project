@@ -1536,11 +1536,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   if (II->isCommutative()) {
-    if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
-      return I;
-
-    if (Instruction *I = foldCommutativeIntrinsicOverPhis(*II))
-      return I;
+    if (auto Pair = matchSymmetricPair(II->getOperand(0), II->getOperand(1))) {
+      replaceOperand(*II, 0, Pair->first);
+      replaceOperand(*II, 1, Pair->second);
+      return II;
+    }
 
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
@@ -3850,6 +3850,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   if (Callee->hasFnAttribute("thunk"))
     return false;
 
+  // If this is a call to a naked function, the assembly might be
+  // using an argument, or otherwise rely on the frame layout,
+  // the function prototype will mismatch.
+  if (Callee->hasFnAttribute(Attribute::Naked))
+    return false;
+
   // If this is a musttail call, the callee's prototype must match the caller's
   // prototype with the exception of pointee types. The code below doesn't
   // implement that, so we can't do this transform.
@@ -4239,40 +4245,4 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // code sort out any function type mismatches.
   Call.setCalledFunction(FTy, NestF);
   return &Call;
-}
-
-// op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
-Instruction *
-InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
-  assert(II.isCommutative());
-
-  Value *A, *B, *C;
-  if (match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
-      match(II.getOperand(1),
-            m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
-    replaceOperand(II, 0, B);
-    replaceOperand(II, 1, C);
-    return &II;
-  }
-
-  return nullptr;
-}
-
-Instruction *
-InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
-  assert(II.isCommutative() && "Instruction should be commutative");
-
-  PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
-  PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
-
-  if (!LHS || !RHS)
-    return nullptr;
-
-  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
-    replaceOperand(II, 0, P->first);
-    replaceOperand(II, 1, P->second);
-    return &II;
-  }
-
-  return nullptr;
 }
