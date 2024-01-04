@@ -2508,10 +2508,10 @@ defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
 defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
 defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
-defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11_gfx12<0x018>;
-defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11_gfx12<0x019>;
-defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11_gfx12<0x01a>;
-defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11_gfx12<0x01b>;
+defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11<0x018>;
+defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11<0x019>;
+defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11<0x01a>;
+defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11<0x01b>;
 
 //===----------------------------------------------------------------------===//
 // SOPK - GFX10.
