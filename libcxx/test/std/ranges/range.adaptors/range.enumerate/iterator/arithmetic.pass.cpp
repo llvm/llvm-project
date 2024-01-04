@@ -74,10 +74,10 @@ static_assert(!CanPlusEqual<EnumerateIter<BidirectionalRange>, int>);
 static_assert(!CanMinus<EnumerateIter<BidirectionalRange>, int>);
 static_assert(!CanMinusEqual<EnumerateIter<BidirectionalRange>, int>);
 
-constexpr bool test() {
-  int ts[] = {1, 2, 3, 4, 5};
+constexpr void test_with_common_range() {
+  int ts[] = {90, 1, 2, 84};
 
-  RandomAccessRange r{ts, ts + 5};
+  RandomAccessRange r{ts, ts + 4};
   auto ev = r | std::views::enumerate;
 
   // operator+(x, n), operator+(n,x) and operator+=
@@ -99,22 +99,68 @@ constexpr bool test() {
   {
     auto it1 = ev.end();
 
-    auto it2 = it1 - 4;
+    auto it2 = it1 - 3;
     assert(it2.base() == &ts[1]);
 
-    it1 -= 4;
+    it1 -= 3;
     assert(it1 == it2);
     assert(it1.base() == &ts[1]);
   }
 
   // operator-(x, y)
   {
-    assert((ev.end() - ev.begin()) == 5);
+    assert((ev.end() - ev.begin()) == 4);
 
-    auto it1 = ev.begin() + 2;
-    auto it2 = ev.end() - 2;
-    assert((it1 - it2) == -1);
+    auto it1 = ev.begin() + 1;
+    auto it2 = ev.end() - 1;
+    assert((it1 - it2) == -2);
   }
+}
+
+constexpr void test_with_noncommon_range() {
+  int ts[] = {90, 1, 2, 84};
+
+  RandomAccessRange r{ts, ts + 4};
+  auto it = std::counted_iterator{r.begin(), std::ssize(r)};
+  auto sr = std::ranges::subrange{it, std::default_sentinel};
+  auto ev = sr | std::views::enumerate;
+
+  // operator+(x, n), operator+(n,x) and operator+=
+  {
+    auto it1 = ev.begin();
+
+    auto it2 = it1 + 3;
+    assert(*it2.base() == 84);
+
+    auto it3 = 3 + it1;
+    assert(*it3.base() == 84);
+
+    it1 += 3;
+    assert(it1 == it2);
+    assert(*it1.base() == 84);
+  }
+
+  // operator-(x, n) and operator-=
+  {
+    auto it1 = ev.begin();
+
+    auto it2 = it1 + 3;
+    assert(*(it2 - 1).base() == 2);
+
+    it2 -= 3;
+    assert(it1 == it2);
+    assert(*it2.base() == 90);
+  }
+
+  // operator-(x, y)
+  {
+    assert((ev.end() - ev.begin()) == 4);
+  }
+}
+
+constexpr bool test() {
+  test_with_common_range();
+  test_with_noncommon_range();
 
   return true;
 }
