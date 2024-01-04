@@ -55,18 +55,8 @@ public:
     if (AnyCast.matches(Call))
       return handleAnyCastCall(Call, C);
 
-    if (AnyReset.matches(Call)) {
-      const auto *AsMemberCall = dyn_cast<CXXMemberCall>(&Call);
-      if (!AsMemberCall)
-        return false;
-
-      const auto *ThisMemRegion = AsMemberCall->getCXXThisVal().getAsRegion();
-      if (!ThisMemRegion)
-        return false;
-
-      C.addTransition(setNullTypeAny(ThisMemRegion, C));
-      return true;
-    }
+    if (AnyReset.matches(Call))
+      return handleResetCall(Call, C);
 
     bool IsAnyConstructor =
         isa<CXXConstructorCall>(Call) && AnyConstructor.matches(Call);
@@ -186,6 +176,19 @@ private:
     auto R =
         std::make_unique<PathSensitiveBugReport>(BadAnyType, OS.str(), ErrNode);
     C.emitReport(std::move(R));
+    return true;
+  }
+
+  bool handleResetCall(const CallEvent &Call, CheckerContext &C) const {
+    const auto *AsMemberCall = dyn_cast<CXXMemberCall>(&Call);
+    if (!AsMemberCall)
+      return false;
+
+    const auto *ThisMemRegion = AsMemberCall->getCXXThisVal().getAsRegion();
+    if (!ThisMemRegion)
+      return false;
+
+    C.addTransition(setNullTypeAny(ThisMemRegion, C));
     return true;
   }
 };
