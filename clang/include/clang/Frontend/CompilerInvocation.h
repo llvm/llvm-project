@@ -10,8 +10,6 @@
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 
 #include "clang/APINotes/APINotesOptions.h"
-// #include "clang/Basic/CodeGenOptions.h"
-// #include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -235,20 +233,20 @@ public:
   /// @{
   // Note: These need to be pulled in manually. Otherwise, they get hidden by
   // the mutable getters with the same names.
+  using CompilerInvocationBase::getLangOpts;
+  using CompilerInvocationBase::getTargetOpts;
+  using CompilerInvocationBase::getDiagnosticOpts;
+  using CompilerInvocationBase::getHeaderSearchOpts;
+  using CompilerInvocationBase::getPreprocessorOpts;
   using CompilerInvocationBase::getAnalyzerOpts;
+  using CompilerInvocationBase::getMigratorOpts;
   using CompilerInvocationBase::getAPINotesOpts;
   using CompilerInvocationBase::getCodeGenOpts;
   using CompilerInvocationBase::getDebugOpts;
-  using CompilerInvocationBase::getDependencyOutputOpts;
-  using CompilerInvocationBase::getDiagnosticOpts;
   using CompilerInvocationBase::getFileSystemOpts;
   using CompilerInvocationBase::getFrontendOpts;
-  using CompilerInvocationBase::getHeaderSearchOpts;
-  using CompilerInvocationBase::getLangOpts;
-  using CompilerInvocationBase::getMigratorOpts;
-  using CompilerInvocationBase::getPreprocessorOpts;
+  using CompilerInvocationBase::getDependencyOutputOpts;
   using CompilerInvocationBase::getPreprocessorOutputOpts;
-  using CompilerInvocationBase::getTargetOpts;
   /// @}
 
   /// Mutable getters.
