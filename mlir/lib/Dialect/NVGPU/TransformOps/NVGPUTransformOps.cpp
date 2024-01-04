@@ -980,7 +980,7 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
       loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero,
-      Value());
+      Value(), Value());
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());

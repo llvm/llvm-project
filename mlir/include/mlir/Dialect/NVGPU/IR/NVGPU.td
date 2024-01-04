@@ -642,16 +642,18 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
 
     The Op uses `$barrier` mbarrier based completion mechanism. 
   }];  
-  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
-                       NVGPU_MBarrierGroup:$barriers,
-                       NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
-                       Variadic<Index>:$coordinates, 
-                       Index:$mbarId,
-                       Optional<I1>:$predicate);
+  let arguments = (ins  Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
+                        NVGPU_MBarrierGroup:$barriers,
+                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
+                        Variadic<Index>:$coordinates, 
+                        Index:$mbarId,
+                        Optional<I16>:$multicastMask,
+                        Optional<I1>:$predicate);
   let assemblyFormat = [{
     $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` 
       `to` $dst
-      (`,` `predicate` `=` $predicate^)? 
+      (`multicast_mask` `=` $multicastMask^ )?
+      (`,` `predicate` `=` $predicate^)?
       attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) 
       `->` type($dst)
   }];
