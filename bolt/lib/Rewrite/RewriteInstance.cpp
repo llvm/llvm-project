@@ -199,9 +199,7 @@ static cl::opt<cl::boolOrDefault> RelocationMode(
     "relocs", cl::desc("use relocations in the binary (default=autodetect)"),
     cl::cat(BoltCategory));
 
-cl::opt<std::string> SaveProfile("w",
-                                 cl::desc("save recorded profile to a file"),
-                                 cl::cat(BoltOutputCategory));
+extern cl::opt<std::string> SaveProfile;
 
 static cl::list<std::string>
 SkipFunctionNames("skip-funcs",
