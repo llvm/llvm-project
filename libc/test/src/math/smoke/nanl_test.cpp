@@ -51,6 +51,9 @@ TEST_F(LlvmLibcNanlTest, NCharSeq) {
   run_test("1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_",
            SELECT_LONG_DOUBLE(0x7ff8000000000000, (UInt128(0x7fffc00000) << 40),
                               (UInt128(0x7fff800000000000) << 64)));
+  run_test("10000000000000000000000000000000000000000000000000",
+           SELECT_LONG_DOUBLE(0x7ff8000000000000, (UInt128(0x7fffc00000) << 40),
+                              (UInt128(0x7fff800000000000) << 64)));
 }
 
 TEST_F(LlvmLibcNanlTest, RandomString) {

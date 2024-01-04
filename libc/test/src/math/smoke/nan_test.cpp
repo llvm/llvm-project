@@ -31,6 +31,8 @@ TEST_F(LlvmLibcNanTest, NCharSeq) {
   run_test("1a", 0x7ff8000000000000);
   run_test("1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_",
            0x7ff8000000000000);
+  run_test("10000000000000000000000000000000000000000000000000",
+           0x7ff8000000000000);
 }
 
 TEST_F(LlvmLibcNanTest, RandomString) {
