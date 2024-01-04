@@ -94,16 +94,6 @@ def SPIRV_AtomicAndOp : SPIRV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
 
     <!-- End of AutoGen section -->
 
-    ```
-    scopae ::= `<CrossDevice>` | `<Device>` | `<Workgroup>` | ...
-
-    memory-semantics ::= `<None>` | `<Acquire>` | <Release>` | ...
-
-    atomic-and-op ::=
-        `spirv.AtomicAnd` scope memory-semantics
-                        ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -154,13 +144,6 @@ def SPIRV_AtomicCompareExchangeOp : SPIRV_Op<"AtomicCompareExchange", [
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-compare-exchange-op ::=
-        `spirv.AtomicCompareExchange` scope memory-semantics memory-semantics
-                                    ssa-use `,` ssa-use `,` ssa-use
-                                    `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```
@@ -207,13 +190,6 @@ def SPIRV_AtomicCompareExchangeWeakOp : SPIRV_Op<"AtomicCompareExchangeWeak", [
     Memory must be a valid memory Scope.
 
     <!-- End of AutoGen section -->
-
-    ```
-    atomic-compare-exchange-weak-op ::=
-        `spirv.AtomicCompareExchangeWeak` scope memory-semantics memory-semantics
-                                        ssa-use `,` ssa-use `,` ssa-use
-                                        `:` spv-pointer-type
-    ```
 
     #### Example:
 
@@ -282,12 +258,6 @@ def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", [
 
     <!-- End of AutoGen section -->
 
-     ```
-    atomic-exchange-op ::=
-        `spirv.AtomicCompareExchange` scope memory-semantics
-                                    ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -346,12 +316,6 @@ def SPIRV_EXTAtomicFAddOp : SPIRV_ExtVendorOp<"AtomicFAdd", [
 
     Memory must be a valid memory Scope.
 
-    ```
-    atomic-fadd-op ::=
-        `spirv.EXT.AtomicFAdd` scope memory-semantics
-                            ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -409,12 +373,6 @@ def SPIRV_AtomicIAddOp : SPIRV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-iadd-op ::=
-        `spirv.AtomicIAdd` scope memory-semantics
-                         ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -449,12 +407,6 @@ def SPIRV_AtomicIDecrementOp : SPIRV_AtomicUpdateOp<"AtomicIDecrement", []> {
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-idecrement-op ::=
-        `spirv.AtomicIDecrement` scope memory-semantics ssa-use
-                               `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -487,12 +439,6 @@ def SPIRV_AtomicIIncrementOp : SPIRV_AtomicUpdateOp<"AtomicIIncrement", []> {
     Memory must be a valid memory Scope.
 
     <!-- End of AutoGen section -->
-
-    ```
-    atomic-iincrement-op ::=
-        `spirv.AtomicIIncrement` scope memory-semantics ssa-use
-                               `:` spv-pointer-type
-    ```
 
     #### Example:
 
@@ -530,12 +476,6 @@ def SPIRV_AtomicISubOp : SPIRV_AtomicUpdateWithValueOp<"AtomicISub", []> {
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-isub-op ::=
-        `spirv.AtomicISub` scope memory-semantics
-                         ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -570,12 +510,6 @@ def SPIRV_AtomicOrOp : SPIRV_AtomicUpdateWithValueOp<"AtomicOr", []> {
     Memory must be a valid memory Scope.
 
     <!-- End of AutoGen section -->
-
-    ```
-    atomic-or-op ::=
-        `spirv.AtomicOr` scope memory-semantics
-                       ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
 
     #### Example:
 
@@ -613,12 +547,6 @@ def SPIRV_AtomicSMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-smax-op ::=
-        `spirv.AtomicSMax` scope memory-semantics
-                         ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -654,12 +582,6 @@ def SPIRV_AtomicSMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
     Memory must be a valid memory Scope.
 
     <!-- End of AutoGen section -->
-
-    ```
-    atomic-smin-op ::=
-        `spirv.AtomicSMin` scope memory-semantics
-                         ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
 
     #### Example:
 
@@ -697,12 +619,6 @@ def SPIRV_AtomicUMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicUMax", [UnsignedOp
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-umax-op ::=
-        `spirv.AtomicUMax` scope memory-semantics
-                         ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -739,12 +655,6 @@ def SPIRV_AtomicUMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicUMin", [UnsignedOp
 
     <!-- End of AutoGen section -->
 
-    ```
-    atomic-umin-op ::=
-        `spirv.AtomicUMin` scope memory-semantics
-                         ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -780,12 +690,6 @@ def SPIRV_AtomicXorOp : SPIRV_AtomicUpdateWithValueOp<"AtomicXor", []> {
     Memory must be a valid memory Scope.
 
     <!-- End of AutoGen section -->
-
-    ```
-    atomic-xor-op ::=
-        `spirv.AtomicXor` scope memory-semantics
-                        ssa-use `,` ssa-use `:` spv-pointer-type
-    ```
 
     #### Example:
 
