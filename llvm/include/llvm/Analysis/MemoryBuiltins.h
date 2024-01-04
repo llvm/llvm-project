@@ -190,8 +190,7 @@ Value *lowerObjectSizeCall(
 /// SizeOffsetType - A base template class for the object size visitors. Used
 /// here as a self-documenting way to handle the values rather than using a
 /// \p std::pair.
-template <typename T>
-struct SizeOffsetType {
+template <typename T> struct SizeOffsetType {
   T Size;
   T Offset;
 
