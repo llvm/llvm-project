@@ -212,7 +212,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
     auto __tmp = *this;
@@ -227,7 +227,7 @@ public:
     __missing_ = 0;
     return *this;
   }
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
     requires bidirectional_range<_Base>
   {
     auto __tmp = *this;
