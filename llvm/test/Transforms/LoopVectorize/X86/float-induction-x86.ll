@@ -109,41 +109,41 @@ define void @fp_iv_loop2(ptr noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; AUTO_VEC:       for.body.preheader.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[ZEXT]], 2147483640
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr float, ptr [[A:%.*]], i64 1
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP1:%.*]] = getelementptr float, ptr [[A]], i64 2
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP3:%.*]] = getelementptr float, ptr [[A]], i64 3
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP5:%.*]] = getelementptr float, ptr [[A]], i64 4
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP7:%.*]] = getelementptr float, ptr [[A]], i64 5
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP9:%.*]] = getelementptr float, ptr [[A]], i64 6
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP11:%.*]] = getelementptr float, ptr [[A]], i64 7
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ 1.000000e+00, [[FOR_BODY_PREHEADER_NEW]] ], [ [[CONV1_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[FOR_BODY]] ]
-; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    store float [[X_06]], ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1:%.*]] = fadd float [[X_06]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; AUTO_VEC-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
-; AUTO_VEC-NEXT:    store float [[CONV1]], ptr [[ARRAYIDX_1]], align 4
+; AUTO_VEC-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1]], ptr [[GEP]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_1:%.*]] = fadd float [[CONV1]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
-; AUTO_VEC-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
-; AUTO_VEC-NEXT:    store float [[CONV1_1]], ptr [[ARRAYIDX_2]], align 4
+; AUTO_VEC-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr [[INVARIANT_GEP1]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1_1]], ptr [[GEP2]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_2:%.*]] = fadd float [[CONV1_1]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
-; AUTO_VEC-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
-; AUTO_VEC-NEXT:    store float [[CONV1_2]], ptr [[ARRAYIDX_3]], align 4
+; AUTO_VEC-NEXT:    [[GEP4:%.*]] = getelementptr float, ptr [[INVARIANT_GEP3]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1_2]], ptr [[GEP4]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_3:%.*]] = fadd float [[CONV1_2]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
-; AUTO_VEC-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_3]]
-; AUTO_VEC-NEXT:    store float [[CONV1_3]], ptr [[ARRAYIDX_4]], align 4
+; AUTO_VEC-NEXT:    [[GEP6:%.*]] = getelementptr float, ptr [[INVARIANT_GEP5]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1_3]], ptr [[GEP6]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_4:%.*]] = fadd float [[CONV1_3]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = or disjoint i64 [[INDVARS_IV]], 5
-; AUTO_VEC-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_4]]
-; AUTO_VEC-NEXT:    store float [[CONV1_4]], ptr [[ARRAYIDX_5]], align 4
+; AUTO_VEC-NEXT:    [[GEP8:%.*]] = getelementptr float, ptr [[INVARIANT_GEP7]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1_4]], ptr [[GEP8]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_5:%.*]] = fadd float [[CONV1_4]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = or disjoint i64 [[INDVARS_IV]], 6
-; AUTO_VEC-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_5]]
-; AUTO_VEC-NEXT:    store float [[CONV1_5]], ptr [[ARRAYIDX_6]], align 4
+; AUTO_VEC-NEXT:    [[GEP10:%.*]] = getelementptr float, ptr [[INVARIANT_GEP9]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1_5]], ptr [[GEP10]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_6:%.*]] = fadd float [[CONV1_5]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = or disjoint i64 [[INDVARS_IV]], 7
-; AUTO_VEC-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_6]]
-; AUTO_VEC-NEXT:    store float [[CONV1_6]], ptr [[ARRAYIDX_7]], align 4
+; AUTO_VEC-NEXT:    [[GEP12:%.*]] = getelementptr float, ptr [[INVARIANT_GEP11]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    store float [[CONV1_6]], ptr [[GEP12]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_7]] = fadd float [[CONV1_6]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
 ; AUTO_VEC-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
@@ -268,41 +268,41 @@ define double @external_use_without_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; AUTO_VEC:       entry.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[SMAX]], 9223372036854775800
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A:%.*]], i64 1
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP2:%.*]] = getelementptr double, ptr [[A]], i64 2
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP4:%.*]] = getelementptr double, ptr [[A]], i64 3
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP6:%.*]] = getelementptr double, ptr [[A]], i64 4
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP8:%.*]] = getelementptr double, ptr [[A]], i64 5
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP10:%.*]] = getelementptr double, ptr [[A]], i64 6
+; AUTO_VEC-NEXT:    [[INVARIANT_GEP12:%.*]] = getelementptr double, ptr [[A]], i64 7
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[I_NEXT_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ 0.000000e+00, [[ENTRY_NEW]] ], [ [[J_NEXT_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[FOR_BODY]] ]
-; AUTO_VEC-NEXT:    [[T0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[I]]
+; AUTO_VEC-NEXT:    [[T0:%.*]] = getelementptr double, ptr [[A]], i64 [[I]]
 ; AUTO_VEC-NEXT:    store double [[J]], ptr [[T0]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT:%.*]] = or disjoint i64 [[I]], 1
 ; AUTO_VEC-NEXT:    [[J_NEXT:%.*]] = fadd double [[J]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_1:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT]], ptr [[T0_1]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT_1:%.*]] = or disjoint i64 [[I]], 2
+; AUTO_VEC-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT]], ptr [[GEP]], align 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_1:%.*]] = fadd double [[J_NEXT]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_2:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT_1]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT_1]], ptr [[T0_2]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT_2:%.*]] = or disjoint i64 [[I]], 3
+; AUTO_VEC-NEXT:    [[GEP3:%.*]] = getelementptr double, ptr [[INVARIANT_GEP2]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_1]], ptr [[GEP3]], align 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_2:%.*]] = fadd double [[J_NEXT_1]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_3:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT_2]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT_2]], ptr [[T0_3]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT_3:%.*]] = or disjoint i64 [[I]], 4
+; AUTO_VEC-NEXT:    [[GEP5:%.*]] = getelementptr double, ptr [[INVARIANT_GEP4]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_2]], ptr [[GEP5]], align 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_3:%.*]] = fadd double [[J_NEXT_2]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_4:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT_3]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT_3]], ptr [[T0_4]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT_4:%.*]] = or disjoint i64 [[I]], 5
+; AUTO_VEC-NEXT:    [[GEP7:%.*]] = getelementptr double, ptr [[INVARIANT_GEP6]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_3]], ptr [[GEP7]], align 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_4:%.*]] = fadd double [[J_NEXT_3]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_5:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT_4]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT_4]], ptr [[T0_5]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT_5:%.*]] = or disjoint i64 [[I]], 6
+; AUTO_VEC-NEXT:    [[GEP9:%.*]] = getelementptr double, ptr [[INVARIANT_GEP8]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_4]], ptr [[GEP9]], align 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_5:%.*]] = fadd double [[J_NEXT_4]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_6:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT_5]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT_5]], ptr [[T0_6]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT_6:%.*]] = or disjoint i64 [[I]], 7
+; AUTO_VEC-NEXT:    [[GEP11:%.*]] = getelementptr double, ptr [[INVARIANT_GEP10]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_5]], ptr [[GEP11]], align 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_6:%.*]] = fadd double [[J_NEXT_5]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[T0_7:%.*]] = getelementptr double, ptr [[A]], i64 [[I_NEXT_6]]
-; AUTO_VEC-NEXT:    store double [[J_NEXT_6]], ptr [[T0_7]], align 8
+; AUTO_VEC-NEXT:    [[GEP13:%.*]] = getelementptr double, ptr [[INVARIANT_GEP12]], i64 [[I]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_6]], ptr [[GEP13]], align 8
 ; AUTO_VEC-NEXT:    [[I_NEXT_7]] = add nuw nsw i64 [[I]], 8
 ; AUTO_VEC-NEXT:    [[J_NEXT_7]] = fadd double [[J_NEXT_6]], 3.000000e+00
 ; AUTO_VEC-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8

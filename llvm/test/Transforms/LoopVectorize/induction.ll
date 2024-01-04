@@ -1628,16 +1628,14 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; IND:       vector.memcheck:
-; IND-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; IND-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
 ; IND-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
 ; IND-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 3
-; IND-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
+; IND-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP5]]
 ; IND-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; IND-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 4
-; IND-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP7]], 4
-; IND-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP8]]
-; IND-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; IND-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP7]]
+; IND-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[TMP8]], [[P]]
 ; IND-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
 ; IND-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; IND-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -1691,16 +1689,14 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; UNROLL:       vector.memcheck:
-; UNROLL-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; UNROLL-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
 ; UNROLL-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
 ; UNROLL-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 3
-; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP5]]
 ; UNROLL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; UNROLL-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 4
-; UNROLL-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP7]], 4
-; UNROLL-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP8]]
-; UNROLL-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP7]]
+; UNROLL-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[TMP8]], [[P]]
 ; UNROLL-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
 ; UNROLL-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -1847,16 +1843,14 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE:       vector.memcheck:
-; INTERLEAVE-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 3
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 4
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP7]], 4
-; INTERLEAVE-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP8]]
-; INTERLEAVE-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP7]]
+; INTERLEAVE-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[TMP8]], [[P]]
 ; INTERLEAVE-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
 ; INTERLEAVE-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; INTERLEAVE-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
