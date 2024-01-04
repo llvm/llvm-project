@@ -61,7 +61,7 @@ struct __fn {
           std::ref(__pred),
           std::ref(__proj1),
           std::ref(__proj2));
-      return result.empty() == false;
+      return !result.empty();
     }
   }
 
