@@ -89,7 +89,6 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
       const int FrameIndex = Register::stackSlot2Index(LI.reg());
       MachineInstr *LastLoad = nullptr;
 
-      MachineInstr *MISegmentStart = SI->getInstructionFromIndex(Segment.start);
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);
       if (!MISegmentEnd) {
         // FIXME: The start and end can refer to deleted instructions. We should
@@ -97,6 +96,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
         // instructions.
         continue;
       }
+      MachineInstr *MISegmentStart = SI->getInstructionFromIndex(Segment.start);
       MachineBasicBlock *BB = MISegmentEnd->getParent();
 
       // Start iteration backwards from segment end until the start of basic
