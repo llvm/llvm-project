@@ -1304,6 +1304,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
+  case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
@@ -5472,7 +5473,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
 
     // Get the rounding mode from the last operand
-    int RoundMode = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    int RoundMode = Op.getConstantOperandVal(1);
     if (RoundMode == (int)RoundingMode::TowardPositive)
       Opc = AMDGPUISD::FPTRUNC_ROUND_UPWARD;
     else if (RoundMode == (int)RoundingMode::TowardNegative)
@@ -5785,7 +5786,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+    unsigned IID = N->getConstantOperandVal(0);
     switch (IID) {
     case Intrinsic::amdgcn_make_buffer_rsrc:
       Results.push_back(lowerPointerAsRsrcIntrin(N, DAG));
@@ -5923,7 +5924,7 @@ static SDNode *findUser(SDValue Value, unsigned Opcode) {
 
 unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   if (Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-    switch (cast<ConstantSDNode>(Intr->getOperand(1))->getZExtValue()) {
+    switch (Intr->getConstantOperandVal(1)) {
     case Intrinsic::amdgcn_if:
       return AMDGPUISD::IF;
     case Intrinsic::amdgcn_else:
@@ -6072,7 +6073,7 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
   // Checking the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0)
+  if (Op.getConstantOperandVal(0) != 0)
     return DAG.getConstant(0, DL, VT);
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -6976,6 +6977,7 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
         // Adjust alignment for that dynamic shared memory array.
         Function &F = DAG.getMachineFunction().getFunction();
         MFI->setDynLDSAlign(F, *cast<GlobalVariable>(GV));
+        MFI->setUsesDynamicLDS(true);
         return SDValue(
             DAG.getMachineNode(AMDGPU::GET_GROUPSTATICSIZE, DL, PtrVT), 0);
       }
@@ -7721,7 +7723,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  unsigned IntrinsicID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntrinsicID = Op.getConstantOperandVal(0);
 
   // TODO: Should this propagate fast-math-flags?
 
@@ -7875,7 +7877,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
-    unsigned CPol = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+    unsigned CPol = Op.getConstantOperandVal(3);
     if (CPol & ~((Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12)
                      ? AMDGPU::CPol::ALL
                      : AMDGPU::CPol::ALL_pregfx12))
@@ -8125,7 +8127,7 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
 
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  unsigned IntrID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  unsigned IntrID = Op.getConstantOperandVal(1);
   SDLoc DL(Op);
 
   switch (IntrID) {
@@ -8221,8 +8223,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_buffer_load:
   case Intrinsic::amdgcn_buffer_load_format: {
-    unsigned Glc = cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue();
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
+    unsigned Glc = Op.getConstantOperandVal(5);
+    unsigned Slc = Op.getConstantOperandVal(6);
     unsigned IdxEn = getIdxEn(Op.getOperand(3));
     SDValue Ops[] = {
       Op.getOperand(0), // Chain
@@ -8310,10 +8312,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     EVT LoadVT = Op.getValueType();
 
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
-    unsigned Dfmt = cast<ConstantSDNode>(Op.getOperand(7))->getZExtValue();
-    unsigned Nfmt = cast<ConstantSDNode>(Op.getOperand(8))->getZExtValue();
-    unsigned Glc = cast<ConstantSDNode>(Op.getOperand(9))->getZExtValue();
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(10))->getZExtValue();
+    unsigned Dfmt = Op.getConstantOperandVal(7);
+    unsigned Nfmt = Op.getConstantOperandVal(8);
+    unsigned Glc = Op.getConstantOperandVal(9);
+    unsigned Slc = Op.getConstantOperandVal(10);
     unsigned IdxEn = getIdxEn(Op.getOperand(3));
     SDValue Ops[] = {
         Op.getOperand(0),                                        // Chain
@@ -8400,7 +8402,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_or:
   case Intrinsic::amdgcn_buffer_atomic_xor:
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
+    unsigned Slc = Op.getConstantOperandVal(6);
     unsigned IdxEn = getIdxEn(Op.getOperand(4));
     SDValue Ops[] = {
       Op.getOperand(0), // Chain
@@ -8561,7 +8563,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
 
   case Intrinsic::amdgcn_buffer_atomic_cmpswap: {
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(7))->getZExtValue();
+    unsigned Slc = Op.getConstantOperandVal(7);
     unsigned IdxEn = getIdxEn(Op.getOperand(5));
     SDValue Ops[] = {
       Op.getOperand(0), // Chain
@@ -8965,7 +8967,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
-  unsigned IntrinsicID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  unsigned IntrinsicID = Op.getConstantOperandVal(1);
   MachineFunction &MF = DAG.getMachineFunction();
 
   switch (IntrinsicID) {
@@ -9030,10 +9032,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     bool IsD16 = (VData.getValueType().getScalarType() == MVT::f16);
     if (IsD16)
       VData = handleD16VData(VData, DAG);
-    unsigned Dfmt = cast<ConstantSDNode>(Op.getOperand(8))->getZExtValue();
-    unsigned Nfmt = cast<ConstantSDNode>(Op.getOperand(9))->getZExtValue();
-    unsigned Glc = cast<ConstantSDNode>(Op.getOperand(10))->getZExtValue();
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(11))->getZExtValue();
+    unsigned Dfmt = Op.getConstantOperandVal(8);
+    unsigned Nfmt = Op.getConstantOperandVal(9);
+    unsigned Glc = Op.getConstantOperandVal(10);
+    unsigned Slc = Op.getConstantOperandVal(11);
     unsigned IdxEn = getIdxEn(Op.getOperand(4));
     SDValue Ops[] = {
       Chain,
@@ -9116,8 +9118,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     bool IsD16 = (VData.getValueType().getScalarType() == MVT::f16);
     if (IsD16)
       VData = handleD16VData(VData, DAG);
-    unsigned Glc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(7))->getZExtValue();
+    unsigned Glc = Op.getConstantOperandVal(6);
+    unsigned Slc = Op.getConstantOperandVal(7);
     unsigned IdxEn = getIdxEn(Op.getOperand(4));
     SDValue Ops[] = {
       Chain,
@@ -12156,8 +12158,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntrinsicID
-      = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned IntrinsicID = Op.getConstantOperandVal(0);
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_cvt_pkrtz:
@@ -15095,7 +15096,7 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   unsigned Opc = Op.getOpcode();
   switch (Opc) {
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned IID = Op.getConstantOperandVal(0);
     switch (IID) {
     case Intrinsic::amdgcn_mbcnt_lo:
     case Intrinsic::amdgcn_mbcnt_hi: {
@@ -15338,11 +15339,9 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case ISD::CALLSEQ_END:
     return true;
   case ISD::INTRINSIC_WO_CHAIN:
-    return AMDGPU::isIntrinsicSourceOfDivergence(
-        cast<ConstantSDNode>(N->getOperand(0))->getZExtValue());
+    return AMDGPU::isIntrinsicSourceOfDivergence(N->getConstantOperandVal(0));
   case ISD::INTRINSIC_W_CHAIN:
-    return AMDGPU::isIntrinsicSourceOfDivergence(
-        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
+    return AMDGPU::isIntrinsicSourceOfDivergence(N->getConstantOperandVal(1));
   case AMDGPUISD::ATOMIC_CMP_SWAP:
   case AMDGPUISD::ATOMIC_LOAD_FMIN:
   case AMDGPUISD::ATOMIC_LOAD_FMAX:

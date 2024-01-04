@@ -87,7 +87,7 @@
 
 # Tensor Dialect in MLIR.
 /mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Tensor/Transforms/FoldIntoPackAndUnpackPatterns.cpp @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Tensor/Transforms/* @hanhanW @nicolasvasilache
 
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache

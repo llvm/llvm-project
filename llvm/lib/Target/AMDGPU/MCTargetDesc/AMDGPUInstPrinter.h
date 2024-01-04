@@ -88,8 +88,10 @@ private:
                            raw_ostream &O);
   void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
-  void printImmediateV216(uint32_t Imm, const MCSubtargetInfo &STI,
-                          raw_ostream &O);
+  void printImmediateV216(uint32_t Imm, uint8_t OpType,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  bool printImmediateFloat32(uint32_t Imm, const MCSubtargetInfo &STI,
+                             raw_ostream &O);
   void printImmediate32(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printImmediate64(uint64_t Imm, const MCSubtargetInfo &STI,
@@ -161,6 +163,10 @@ private:
                     raw_ostream &O);
   void printWaitEXP(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printWaitVAVDst(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printExpSrcN(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O, unsigned N);

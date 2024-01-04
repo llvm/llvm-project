@@ -930,20 +930,14 @@ const AttrVec &Decl::getAttrs() const {
 
 Decl *Decl::castFromDeclContext (const DeclContext *D) {
   Decl::Kind DK = D->getDeclKind();
-  switch(DK) {
+  switch (DK) {
 #define DECL(NAME, BASE)
-#define DECL_CONTEXT(NAME) \
-    case Decl::NAME:       \
-      return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
-#define DECL_CONTEXT_BASE(NAME)
+#define DECL_CONTEXT(NAME)                                                     \
+  case Decl::NAME:                                                             \
+    return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
 #include "clang/AST/DeclNodes.inc"
-    default:
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT_BASE(NAME)                  \
-      if (DK >= first##NAME && DK <= last##NAME) \
-        return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
-#include "clang/AST/DeclNodes.inc"
-      llvm_unreachable("a decl that inherits DeclContext isn't handled");
+  default:
+    llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
 }
 
@@ -951,18 +945,12 @@ DeclContext *Decl::castToDeclContext(const Decl *D) {
   Decl::Kind DK = D->getKind();
   switch(DK) {
 #define DECL(NAME, BASE)
-#define DECL_CONTEXT(NAME) \
-    case Decl::NAME:       \
-      return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
-#define DECL_CONTEXT_BASE(NAME)
+#define DECL_CONTEXT(NAME)                                                     \
+  case Decl::NAME:                                                             \
+    return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
 #include "clang/AST/DeclNodes.inc"
-    default:
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT_BASE(NAME)                                   \
-      if (DK >= first##NAME && DK <= last##NAME)                  \
-        return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
-#include "clang/AST/DeclNodes.inc"
-      llvm_unreachable("a decl that inherits DeclContext isn't handled");
+  default:
+    llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
 }
 
@@ -1129,20 +1117,14 @@ DeclContext::DeclContext(Decl::Kind K) {
 }
 
 bool DeclContext::classof(const Decl *D) {
-  switch (D->getKind()) {
+  Decl::Kind DK = D->getKind();
+  switch (DK) {
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT(NAME) case Decl::NAME:
-#define DECL_CONTEXT_BASE(NAME)
 #include "clang/AST/DeclNodes.inc"
-      return true;
-    default:
-#define DECL(NAME, BASE)
-#define DECL_CONTEXT_BASE(NAME)                 \
-      if (D->getKind() >= Decl::first##NAME &&  \
-          D->getKind() <= Decl::last##NAME)     \
-        return true;
-#include "clang/AST/DeclNodes.inc"
-      return false;
+    return true;
+  default:
+    return false;
   }
 }
 

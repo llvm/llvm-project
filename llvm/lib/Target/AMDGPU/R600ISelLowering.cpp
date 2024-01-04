@@ -424,8 +424,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     return lowerADDRSPACECAST(Op, DAG);
   case ISD::INTRINSIC_VOID: {
     SDValue Chain = Op.getOperand(0);
-    unsigned IntrinsicID =
-                         cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    unsigned IntrinsicID = Op.getConstantOperandVal(1);
     switch (IntrinsicID) {
     case Intrinsic::r600_store_swizzle: {
       SDLoc DL(Op);
@@ -449,8 +448,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntrinsicID =
-                         cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned IntrinsicID = Op.getConstantOperandVal(0);
     EVT VT = Op.getValueType();
     SDLoc DL(Op);
     switch (IntrinsicID) {

@@ -31758,7 +31758,7 @@ static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
 
 static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG) {
-  unsigned IsData = cast<ConstantSDNode>(Op.getOperand(4))->getZExtValue();
+  unsigned IsData = Op.getConstantOperandVal(4);
 
   // We don't support non-data prefetch without PREFETCHI.
   // Just preserve the chain.
@@ -40218,6 +40218,34 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       EVT SrcVT = Src.getValueType();
       SDValue Res = DAG.getNode(X86ISD::VPERMI, DL, SrcVT, Src, N1);
       return DAG.getBitcast(VT, Res);
+    }
+    return SDValue();
+  }
+  case X86ISD::SHUF128: {
+    // If we're permuting the upper 256-bits subvectors of a concatenation, then
+    // see if we can peek through and access the subvector directly.
+    if (VT.is512BitVector()) {
+      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only the
+      // upper subvector is used.
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      uint64_t Mask = N->getConstantOperandVal(2);
+      SmallVector<SDValue> LHSOps, RHSOps;
+      SDValue NewLHS, NewRHS;
+      if ((Mask & 0x0A) == 0x0A &&
+          collectConcatOps(LHS.getNode(), LHSOps, DAG) && LHSOps.size() == 2) {
+        NewLHS = widenSubVector(LHSOps[1], false, Subtarget, DAG, DL, 512);
+        Mask &= ~0x0A;
+      }
+      if ((Mask & 0xA0) == 0xA0 &&
+          collectConcatOps(RHS.getNode(), RHSOps, DAG) && RHSOps.size() == 2) {
+        NewRHS = widenSubVector(RHSOps[1], false, Subtarget, DAG, DL, 512);
+        Mask &= ~0xA0;
+      }
+      if (NewLHS || NewRHS)
+        return DAG.getNode(X86ISD::SHUF128, DL, VT, NewLHS ? NewLHS : LHS,
+                           NewRHS ? NewRHS : RHS,
+                           DAG.getTargetConstant(Mask, DL, MVT::i8));
     }
     return SDValue();
   }
@@ -49931,18 +49959,17 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     SDValue Ptr = Ld->getBasePtr();
     SDValue Chain = Ld->getChain();
     for (SDNode *User : Chain->uses()) {
-      if (User != N &&
+      auto *UserLd = dyn_cast<MemSDNode>(User);
+      if (User != N && UserLd &&
           (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
            User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
            ISD::isNormalLoad(User)) &&
-          cast<MemSDNode>(User)->getChain() == Chain &&
-          !User->hasAnyUseOfValue(1) &&
+          UserLd->getChain() == Chain && !User->hasAnyUseOfValue(1) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
         if (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-            cast<MemSDNode>(User)->getBasePtr() == Ptr &&
-            cast<MemSDNode>(User)->getMemoryVT().getSizeInBits() ==
-                MemVT.getSizeInBits()) {
+            UserLd->getBasePtr() == Ptr &&
+            UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits()) {
           SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                              RegVT.getSizeInBits());
           Extract = DAG.getBitcast(RegVT, Extract);
@@ -49961,7 +49988,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         // See if we are loading a constant that matches in the lower
         // bits of a longer constant (but from a different constant pool ptr).
         EVT UserVT = User->getValueType(0);
-        SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
+        SDValue UserPtr = UserLd->getBasePtr();
         const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
         const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
         if (LdC && UserC && UserPtr != Ptr) {
@@ -54572,6 +54599,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           Op0.getValueType() == cast<MemSDNode>(SrcVec)->getMemoryVT())
         return Op0.getOperand(0);
     }
+
+    // concat_vectors(permq(x),permq(x)) -> permq(concat_vectors(x,x))
+    if (Op0.getOpcode() == X86ISD::VPERMI && Subtarget.useAVX512Regs() &&
+        !X86::mayFoldLoad(Op0.getOperand(0), Subtarget))
+      return DAG.getNode(Op0.getOpcode(), DL, VT,
+                         DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                                     Op0.getOperand(0), Op0.getOperand(0)),
+                         Op0.getOperand(1));
   }
 
   // concat(extract_subvector(v0,c0), extract_subvector(v1,c1)) -> vperm2x128.
@@ -54977,6 +55012,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0),
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
+      }
+      break;
+    case X86ISD::BLENDI:
+      if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
+        uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
+        uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
+        uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
+        MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
+        MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+        SDValue Sel =
+            DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
+        return DAG.getSelect(DL, VT, Sel, ConcatSubOperand(VT, Ops, 1),
+                             ConcatSubOperand(VT, Ops, 0));
       }
       break;
     case ISD::VSELECT:
