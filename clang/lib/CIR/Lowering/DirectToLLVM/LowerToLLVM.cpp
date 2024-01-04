@@ -818,9 +818,9 @@ public:
     // Replace the scopeop return with a branch that jumps out of the body.
     // Stack restore before leaving the body region.
     rewriter.setInsertionPointToEnd(afterBody);
-    auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
+    auto yieldOp = dyn_cast<mlir::cir::YieldOp>(afterBody->getTerminator());
 
-    if (!isBreakOrContinue(yieldOp)) {
+    if (yieldOp && !isBreakOrContinue(yieldOp)) {
       auto branchOp = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
           yieldOp, yieldOp.getArgs(), continueBlock);
 
