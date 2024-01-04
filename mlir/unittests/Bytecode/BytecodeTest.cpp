@@ -144,4 +144,7 @@ TEST(Bytecode, OpWithoutProperties) {
   EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
   EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);
   EXPECT_TRUE(roundtripped->getDiscardableAttr("other_attr") != Attribute());
+
+  EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
+              OperationEquivalence::computeHash(roundtripped));
 }
