@@ -1480,6 +1480,15 @@ namespace {
     }
 
     StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
+      // Currently, we instantiate the body when instantiating the lambda
+      // expression. However, `EvaluateConstraints` is disabled during the
+      // instantiation of the lambda expression, causing the instantiation
+      // failure of the return type requirement in the body. If p0588r1 is fully
+      // implemented, the body will be lazily instantiated, and this problem
+      // will not occur. Here, `EvaluateConstraints` is temporarily set to
+      // `true` to temporarily fix this issue.
+      // FIXME: This temporary fix can be removed after fully implementing
+      // p0588r1.
       bool Prev = EvaluateConstraints;
       EvaluateConstraints = true;
       StmtResult Stmt = inherited::TransformLambdaBody(E, Body);
