@@ -117,7 +117,7 @@ static_assert(E<int>);
 }
 }
 
-namespace ReturnTypeConstraintInLambda {
+namespace ReturnTypeRequirementInLambda {
 template <typename T>
 concept C1 = true;
 
@@ -148,4 +148,4 @@ void foo() {
 
   auto caller = make_caller.operator()<&S1::f1>();
 }
-} // namespace ReturnTypeConstraintInLambda
+} // namespace ReturnTypeRequirementInLambda
