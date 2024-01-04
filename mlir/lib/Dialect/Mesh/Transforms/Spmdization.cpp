@@ -147,7 +147,7 @@ handlePartialAxesDuringResharding(OpBuilder &builder,
           .getResult()
           .cast<TypedValue<ShapedType>>();
 
-  llvm::SmallVector<int32_t> remainingPartialAxes;
+  llvm::SmallVector<MeshAxis> remainingPartialAxes;
   llvm::copy_if(sourceShardingPartialAxesSet,
                 std::back_inserter(allReduceMeshAxes),
                 [&targetShardingPartialAxesSet](Axis a) {
@@ -163,17 +163,17 @@ handlePartialAxesDuringResharding(OpBuilder &builder,
 static MeshShardingAttr
 targetShardingInSplitLastAxis(MLIRContext *ctx, MeshShardingAttr sourceSharding,
                               int64_t splitTensorAxis, MeshAxis splitMeshAxis) {
-  SmallVector<DenseI32ArrayAttr> targetShardingSplitAxes =
+  SmallVector<MeshAxesAttr> targetShardingSplitAxes =
       llvm::to_vector(sourceSharding.getSplitAxes());
   while (static_cast<int64_t>(targetShardingSplitAxes.size()) <=
          splitTensorAxis) {
-    targetShardingSplitAxes.push_back(DenseI32ArrayAttr::get(ctx, {}));
+    targetShardingSplitAxes.push_back(MeshAxesAttr::get(ctx, {}));
   }
   auto targetSplitAxes =
       llvm::to_vector(targetShardingSplitAxes[splitTensorAxis].asArrayRef());
   targetSplitAxes.push_back(splitMeshAxis);
   targetShardingSplitAxes[splitTensorAxis] =
-      DenseI32ArrayAttr::get(ctx, targetSplitAxes);
+      MeshAxesAttr::get(ctx, targetSplitAxes);
   return MeshShardingAttr::get(
       ctx, sourceSharding.getCluster(), targetShardingSplitAxes,
       sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
@@ -356,7 +356,7 @@ static MeshShardingAttr
 targetShardingInUnsplitLastAxis(MLIRContext *ctx,
                                 MeshShardingAttr sourceSharding,
                                 int64_t splitTensorAxis) {
-  SmallVector<DenseI32ArrayAttr> targetShardingSplitAxes =
+  SmallVector<MeshAxesAttr> targetShardingSplitAxes =
       llvm::to_vector(sourceSharding.getSplitAxes());
   assert(static_cast<int64_t>(targetShardingSplitAxes.size()) >
          splitTensorAxis);
@@ -365,7 +365,7 @@ targetShardingInUnsplitLastAxis(MLIRContext *ctx,
 
   targetSplitAxes.pop_back();
   targetShardingSplitAxes[splitTensorAxis] =
-      DenseI32ArrayAttr::get(ctx, targetSplitAxes);
+      MeshAxesAttr::get(ctx, targetSplitAxes);
   return MeshShardingAttr::get(
       ctx, sourceSharding.getCluster(), targetShardingSplitAxes,
       sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
@@ -475,11 +475,11 @@ static MeshShardingAttr
 targetShardingInMoveLastAxis(MLIRContext *ctx, MeshShardingAttr sourceSharding,
                              int64_t sourceTensorAxis,
                              int64_t targetTensorAxis) {
-  SmallVector<DenseI32ArrayAttr> targetShardingSplitAxes =
+  SmallVector<MeshAxesAttr> targetShardingSplitAxes =
       llvm::to_vector(sourceSharding.getSplitAxes());
   while (static_cast<int64_t>(targetShardingSplitAxes.size()) <=
          targetTensorAxis) {
-    targetShardingSplitAxes.push_back(DenseI32ArrayAttr::get(ctx, {}));
+    targetShardingSplitAxes.push_back(MeshAxesAttr::get(ctx, {}));
   }
 
   auto sourceSplitAxes =
@@ -488,13 +488,13 @@ targetShardingInMoveLastAxis(MLIRContext *ctx, MeshShardingAttr sourceSharding,
   auto meshAxis = sourceSplitAxes.back();
   sourceSplitAxes.pop_back();
   targetShardingSplitAxes[sourceTensorAxis] =
-      DenseI32ArrayAttr::get(ctx, sourceSplitAxes);
+      MeshAxesAttr::get(ctx, sourceSplitAxes);
 
   auto targetSplitAxes =
       llvm::to_vector(targetShardingSplitAxes[targetTensorAxis].asArrayRef());
   targetSplitAxes.push_back(meshAxis);
   targetShardingSplitAxes[targetTensorAxis] =
-      DenseI32ArrayAttr::get(ctx, targetSplitAxes);
+      MeshAxesAttr::get(ctx, targetSplitAxes);
 
   return MeshShardingAttr::get(
       ctx, sourceSharding.getCluster(), targetShardingSplitAxes,
