@@ -4830,7 +4830,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::GET_SHADERCYCLESHILO: {
     assert(MF->getSubtarget<GCNSubtarget>().hasShaderCyclesHiLoRegisters());
     MachineRegisterInfo &MRI = MF->getRegInfo();
-    DebugLoc DL = MI.getDebugLoc();
+    const DebugLoc &DL = MI.getDebugLoc();
     // The algorithm is:
     //
     // hi1 = getreg(SHADER_CYCLES_HI)
