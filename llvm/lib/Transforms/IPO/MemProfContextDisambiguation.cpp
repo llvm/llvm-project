@@ -85,6 +85,8 @@ STATISTIC(FoundProfiledCalleeDepth,
           "Aggregate depth of profiled callees found via tail calls");
 STATISTIC(FoundProfiledCalleeMaxDepth,
           "Maximum depth of profiled callees found via tail calls");
+STATISTIC(FoundProfiledCalleeNonUniquelyCount,
+          "Number of profiled callees found via multiple tail call chains");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -587,7 +589,8 @@ private:
       std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain);
   bool findProfiledCalleeThroughTailCalls(
       const Function *ProfiledCallee, Value *CurCallee, unsigned Depth,
-      std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain);
+      std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain,
+      bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(Instruction *Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(Instruction *Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
@@ -663,7 +666,8 @@ private:
       std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain);
   bool findProfiledCalleeThroughTailCalls(
       ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
-      std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain);
+      std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
+      bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(IndexCall &Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
@@ -1810,7 +1814,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
 
 bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     const Function *ProfiledCallee, Value *CurCallee, unsigned Depth,
-    std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain) {
+    std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain,
+    bool &FoundMultipleCalleeChains) {
   // Stop recursive search if we have already explored the maximum specified
   // depth.
   if (Depth > TailCallSearchDepth)
@@ -1830,10 +1835,13 @@ bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
 
   // Look for tail calls in this function, and check if they either call the
   // profiled callee directly, or indirectly (via a recursive search).
+  // Only succeed if there is a single unique tail call chain found between the
+  // profiled caller and callee, otherwise we could perform incorrect cloning.
+  bool FoundSingleCalleeChain = false;
   for (auto &BB : *CalleeFunc) {
     for (auto &I : BB) {
       auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB->isTailCall())
+      if (!CB || !CB->isTailCall())
         continue;
       auto *CalledValue = CB->getCalledOperand();
       auto *CalledFunction = CB->getCalledFunction();
@@ -1852,22 +1860,32 @@ bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       if (!CalledFunction)
         continue;
       if (CalledFunction == ProfiledCallee) {
+        if (FoundSingleCalleeChain) {
+          FoundMultipleCalleeChains = true;
+          return false;
+        }
+        FoundSingleCalleeChain = true;
         FoundProfiledCalleeCount++;
         FoundProfiledCalleeDepth += Depth;
         if (Depth > FoundProfiledCalleeMaxDepth)
           FoundProfiledCalleeMaxDepth = Depth;
         SaveCallsiteInfo(&I, CalleeFunc);
-        return true;
-      }
-      if (findProfiledCalleeThroughTailCalls(ProfiledCallee, CalledFunction,
-                                             Depth + 1, FoundCalleeChain)) {
+      } else if (findProfiledCalleeThroughTailCalls(
+                     ProfiledCallee, CalledFunction, Depth + 1,
+                     FoundCalleeChain, FoundMultipleCalleeChains)) {
+        if (FoundMultipleCalleeChains)
+          return false;
+        if (FoundSingleCalleeChain) {
+          FoundMultipleCalleeChains = true;
+          return false;
+        }
+        FoundSingleCalleeChain = true;
         SaveCallsiteInfo(&I, CalleeFunc);
-        return true;
       }
     }
   }
 
-  return false;
+  return FoundSingleCalleeChain;
 }
 
 bool ModuleCallsiteContextGraph::calleeMatchesFunc(
@@ -1892,12 +1910,19 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(
   // mismatched callee from another callsite. We can improve this with more
   // bookkeeping of the created chain of new nodes for each mismatch.
   unsigned Depth = 1;
+  bool FoundMultipleCalleeChains = false;
   if (!findProfiledCalleeThroughTailCalls(Func, CalleeVal, Depth,
-                                          FoundCalleeChain)) {
-    LLVM_DEBUG(dbgs() << "Not found through tail calls: " << Func->getName()
-                      << " from " << CallerFunc->getName()
+                                          FoundCalleeChain,
+                                          FoundMultipleCalleeChains)) {
+    LLVM_DEBUG(dbgs() << "Not found through unique tail call chain: "
+                      << Func->getName() << " from " << CallerFunc->getName()
                       << " that actually called " << CalleeVal->getName()
+                      << (FoundMultipleCalleeChains
+                              ? " (found multiple possible chains)"
+                              : "")
                       << "\n");
+    if (FoundMultipleCalleeChains)
+      FoundProfiledCalleeNonUniquelyCount++;
     return false;
   }
 
@@ -1906,7 +1931,8 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(
 
 bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
-    std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain) {
+    std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
+    bool &FoundMultipleCalleeChains) {
   // Stop recursive search if we have already explored the maximum specified
   // depth.
   if (Depth > TailCallSearchDepth)
@@ -1928,6 +1954,9 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
 
   // Look for tail calls in this function, and check if they either call the
   // profiled callee directly, or indirectly (via a recursive search).
+  // Only succeed if there is a single unique tail call chain found between the
+  // profiled caller and callee, otherwise we could perform incorrect cloning.
+  bool FoundSingleCalleeChain = false;
   for (auto &S : CurCallee.getSummaryList()) {
     if (!GlobalValue::isLocalLinkage(S->linkage()) &&
         !isPrevailing(CurCallee.getGUID(), S.get()))
@@ -1943,6 +1972,11 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       if (!CallEdge.second.hasTailCall())
         continue;
       if (CallEdge.first == ProfiledCallee) {
+        if (FoundSingleCalleeChain) {
+          FoundMultipleCalleeChains = true;
+          return false;
+        }
+        FoundSingleCalleeChain = true;
         FoundProfiledCalleeCount++;
         FoundProfiledCalleeDepth += Depth;
         if (Depth > FoundProfiledCalleeMaxDepth)
@@ -1951,20 +1985,25 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
-        return true;
-      }
-      if (findProfiledCalleeThroughTailCalls(ProfiledCallee, CallEdge.first,
-                                             Depth + 1, FoundCalleeChain)) {
+      } else if (findProfiledCalleeThroughTailCalls(
+                     ProfiledCallee, CallEdge.first, Depth + 1,
+                     FoundCalleeChain, FoundMultipleCalleeChains)) {
+        if (FoundMultipleCalleeChains)
+          return false;
+        if (FoundSingleCalleeChain) {
+          FoundMultipleCalleeChains = true;
+          return false;
+        }
+        FoundSingleCalleeChain = true;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
-        return true;
       }
     }
   }
 
-  return false;
+  return FoundSingleCalleeChain;
 }
 
 bool IndexCallsiteContextGraph::calleeMatchesFunc(
@@ -1996,11 +2035,18 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
   // mismatched callee from another callsite. We can improve this with more
   // bookkeeping of the created chain of new nodes for each mismatch.
   unsigned Depth = 1;
-  if (!findProfiledCalleeThroughTailCalls(FuncVI, Callee, Depth,
-                                          FoundCalleeChain)) {
-    LLVM_DEBUG(dbgs() << "Not found through tail calls: " << FuncVI << " from "
-                      << FSToVIMap[CallerFunc] << " that actually called "
-                      << Callee << "\n");
+  bool FoundMultipleCalleeChains = false;
+  if (!findProfiledCalleeThroughTailCalls(
+          FuncVI, Callee, Depth, FoundCalleeChain, FoundMultipleCalleeChains)) {
+    LLVM_DEBUG(dbgs() << "Not found through unique tail call chain: " << FuncVI
+                      << " from " << FSToVIMap[CallerFunc]
+                      << " that actually called " << Callee
+                      << (FoundMultipleCalleeChains
+                              ? " (found multiple possible chains)"
+                              : "")
+                      << "\n");
+    if (FoundMultipleCalleeChains)
+      FoundProfiledCalleeNonUniquelyCount++;
     return false;
   }
 

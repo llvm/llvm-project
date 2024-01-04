@@ -46,7 +46,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; IR-LABEL: @_Z3barv()
 define ptr @_Z3barv() local_unnamed_addr #0 {
 entry:
-  ; IR: call {{.*}}  @_Znam(i64 10) #[[NOTCOLD:[0-9]+]]
+  ; IR: call {{.*}} @_Znam(i64 10) #[[NOTCOLD:[0-9]+]]
   %call = tail call ptr @_Znam(i64 10) #2, !memprof !0, !callsite !5
   ret ptr %call
 }
@@ -87,7 +87,7 @@ define i32 @main() #0 {
 }
 
 ; IR-LABEL: @_Z3barv.memprof.1()
-; IR: call {{.*}}  @_Znam(i64 10) #[[COLD:[0-9]+]]
+; IR: call {{.*}} @_Znam(i64 10) #[[COLD:[0-9]+]]
 ; IR-LABEL: @_Z3bazv.memprof.1()
 ; IR: call ptr @_Z3barv.memprof.1()
 ; IR-LABEL: @_Z3foov.memprof.1()
