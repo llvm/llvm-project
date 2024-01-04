@@ -6,32 +6,80 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Represents a defining location for a JIT symbol.
+// Represents a defining location for a symbol in the executing program.
+//
+// This file was derived from
+// llvm/include/llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORSYMBOLDEF_H
-#define LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORSYMBOLDEF_H
+#ifndef ORC_RT_EXECUTOR_SYMBOL_DEF_H
+#define ORC_RT_EXECUTOR_SYMBOL_DEF_H
 
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "bitmask_enum.h"
+#include "executor_address.h"
+#include "simple_packed_serialization.h"
 
-namespace llvm {
-namespace orc {
+namespace __orc_rt {
+
+/// Flags for symbols in the JIT.
+class JITSymbolFlags {
+public:
+  using UnderlyingType = uint8_t;
+  using TargetFlagsType = uint8_t;
+
+  /// These values must be kept in sync with \c JITSymbolFlags in the JIT.
+  enum FlagNames : UnderlyingType {
+    None = 0,
+    HasError = 1U << 0,
+    Weak = 1U << 1,
+    Common = 1U << 2,
+    Absolute = 1U << 3,
+    Exported = 1U << 4,
+    Callable = 1U << 5,
+    MaterializationSideEffectsOnly = 1U << 6,
+    ORC_RT_MARK_AS_BITMASK_ENUM( // LargestValue =
+        MaterializationSideEffectsOnly)
+  };
+
+  /// Default-construct a JITSymbolFlags instance.
+  JITSymbolFlags() = default;
+
+  /// Construct a JITSymbolFlags instance from the given flags and target
+  ///        flags.
+  JITSymbolFlags(FlagNames Flags, TargetFlagsType TargetFlags)
+      : TargetFlags(TargetFlags), Flags(Flags) {}
+
+  bool operator==(const JITSymbolFlags &RHS) const {
+    return Flags == RHS.Flags && TargetFlags == RHS.TargetFlags;
+  }
+
+  /// Get the underlying flags value as an integer.
+  UnderlyingType getRawFlagsValue() const {
+    return static_cast<UnderlyingType>(Flags);
+  }
+
+  /// Return a reference to the target-specific flags.
+  TargetFlagsType &getTargetFlags() { return TargetFlags; }
+
+  /// Return a reference to the target-specific flags.
+  const TargetFlagsType &getTargetFlags() const { return TargetFlags; }
+
+private:
+  TargetFlagsType TargetFlags = 0;
+  FlagNames Flags = None;
+};
 
 /// Represents a defining location for a JIT symbol.
 class ExecutorSymbolDef {
 public:
   ExecutorSymbolDef() = default;
   ExecutorSymbolDef(ExecutorAddr Addr, JITSymbolFlags Flags)
-    : Addr(Addr), Flags(Flags) {}
+      : Addr(Addr), Flags(Flags) {}
 
   const ExecutorAddr &getAddress() const { return Addr; }
 
   const JITSymbolFlags &getFlags() const { return Flags; }
-
-  void setFlags(JITSymbolFlags Flags) { this->Flags = Flags; }
 
   friend bool operator==(const ExecutorSymbolDef &LHS,
                          const ExecutorSymbolDef &RHS) {
@@ -39,17 +87,10 @@ public:
            LHS.getFlags() == RHS.getFlags();
   }
 
-  friend bool operator!=(const ExecutorSymbolDef &LHS,
-                         const ExecutorSymbolDef &RHS) {
-    return !(LHS == RHS);
-  }
-
 private:
   ExecutorAddr Addr;
   JITSymbolFlags Flags;
 };
-
-namespace shared {
 
 using SPSJITSymbolFlags =
     SPSTuple<JITSymbolFlags::UnderlyingType, JITSymbolFlags::TargetFlagsType>;
@@ -105,8 +146,6 @@ public:
   }
 };
 
-} // End namespace shared.
-} // End namespace orc.
-} // End namespace llvm.
+} // End namespace __orc_rt
 
-#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORSYMBOLDEF_H
+#endif // ORC_RT_EXECUTOR_SYMBOL_DEF_H
