@@ -42,7 +42,7 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);

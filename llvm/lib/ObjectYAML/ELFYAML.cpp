@@ -620,6 +620,15 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
       BCase(EF_AMDGPU_FEATURE_XNACK_V3);
       BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
       break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+      for (unsigned K = ELF::EF_AMDGPU_GENERIC_VERSION_MIN;
+           K <= ELF::EF_AMDGPU_GENERIC_VERSION_MAX; ++K) {
+        std::string Key = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(K);
+        IO.maskedBitSetCase(Value, Key.c_str(),
+                            K << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET,
+                            ELF::EF_AMDGPU_GENERIC_VERSION);
+      }
+      [[fallthrough]];
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       BCaseMask(EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4,
