@@ -121,11 +121,11 @@ multiclass RVVVQMACCDODBuiltinSet<list<list<string>> suffixes_prototypes> {
 }
 
 multiclass RVVVQMACCQOQBuiltinSet<list<list<string>> suffixes_prototypes> {
-   let OverloadedName = NAME,
-       Name = NAME,
-       HasMasked = false,
-       Log2LMUL = [-1, 0, 1, 2] in
-     defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "s", suffixes_prototypes>;
+  let OverloadedName = NAME,
+      Name = NAME,
+      HasMasked = false,
+      Log2LMUL = [-1, 0, 1, 2] in
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "s", suffixes_prototypes>;
 }
 
 multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_range> {
