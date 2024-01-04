@@ -28,6 +28,8 @@ void test() {
   std::ranges::binary_search(range, 1);
   std::ranges::binary_search(iter, iter, 1);
   std::ranges::clamp(1, 2, 3);
+  std::ranges::contains(range, 1);
+  std::ranges::contains(iter, iter, 1);
   std::ranges::count_if(range, pred);
   std::ranges::count_if(iter, iter, pred);
   std::ranges::count(range, 1);
