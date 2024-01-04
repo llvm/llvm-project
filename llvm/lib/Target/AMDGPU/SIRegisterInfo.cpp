@@ -1658,7 +1658,9 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB.addReg(SOffset, SOffsetRegState);
     }
 
-    int64_t CPol = AMDGPU::isGFX12Plus(ST) && LastUse ? AMDGPU::CPol::TH_LU : 0;
+    assert((!LastUse || AMDGPU::isGFX12Plus(ST)) &&
+           "last_use operand exists only on GFX12+");
+    int64_t CPol = LastUse ? AMDGPU::CPol::TH_LU : 0;
     MIB.addImm(Offset + RegOffset).addImm(CPol);
     if (!IsFlat)
       MIB.addImm(0); // swz
@@ -2244,9 +2246,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
       int16_t LastUseIdx =
           AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::last_use);
-      bool LastUse = (LastUseIdx != -1)
-                         ? (MI->getOperand(LastUseIdx).getImm() == 1)
-                         : false;
+      bool LastUse =
+          LastUseIdx != -1 && MI->getOperand(LastUseIdx).getImm() == 1;
 
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
