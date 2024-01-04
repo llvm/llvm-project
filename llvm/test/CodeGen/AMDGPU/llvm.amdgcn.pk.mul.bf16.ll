@@ -37,7 +37,7 @@ define amdgpu_ps float @pk_mul_bf16_vi(<2 x i16> %src0) #1 {
 define amdgpu_ps float @pk_mul_bf16_vl(<2 x i16> %src0) #1 {
 ; GCN-LABEL: pk_mul_bf16_vl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_pk_mul_bf16 v0, 0x64, v0 op_sel_hi:[0,1]
+; GCN-NEXT:    v_pk_mul_bf16 v0, 0x640064, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %val = call <2 x i16> @llvm.amdgcn.pk.mul.bf16(<2 x i16> %src0, <2 x i16> <i16 100, i16 100>) #0
   %ret = bitcast <2 x i16> %val to float

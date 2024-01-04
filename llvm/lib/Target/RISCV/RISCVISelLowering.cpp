@@ -2811,8 +2811,8 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, DstContainerVT, DAG.getUNDEF(DstContainerVT),
       DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
-  Res = DAG.getNode(RISCVISD::VSELECT_VL, DL, DstContainerVT, IsNan, SplatZero,
-                    Res, VL);
+  Res = DAG.getNode(RISCVISD::VMERGE_VL, DL, DstContainerVT, IsNan, SplatZero,
+                    Res, DAG.getUNDEF(DstContainerVT), VL);
 
   if (DstVT.isFixedLengthVector())
     Res = convertFromScalableVector(DstVT, Res, DAG, Subtarget);
@@ -5401,8 +5401,8 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
     SDValue XIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
                                     {X, X, DAG.getCondCode(ISD::SETOEQ),
                                      DAG.getUNDEF(ContainerVT), Mask, VL});
-    NewY =
-        DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, XIsNonNan, Y, X, VL);
+    NewY = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, XIsNonNan, Y, X,
+                       DAG.getUNDEF(ContainerVT), VL);
   }
 
   SDValue NewX = X;
@@ -5410,8 +5410,8 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
     SDValue YIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
                                     {Y, Y, DAG.getCondCode(ISD::SETOEQ),
                                      DAG.getUNDEF(ContainerVT), Mask, VL});
-    NewX =
-        DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, YIsNonNan, X, Y, VL);
+    NewX = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, YIsNonNan, X, Y,
+                       DAG.getUNDEF(ContainerVT), VL);
   }
 
   unsigned Opc =
@@ -5528,7 +5528,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
       return RISCVISD::VMXOR_VL;
     return RISCVISD::XOR_VL;
   case ISD::VP_SELECT:
-    return RISCVISD::VSELECT_VL;
   case ISD::VP_MERGE:
     return RISCVISD::VMERGE_VL;
   case ISD::VP_ASHR:
@@ -5563,7 +5562,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    125 &&
+                    124 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5589,7 +5588,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    125 &&
+                    124 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -7456,8 +7455,9 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
                           DAG.getUNDEF(ContainerVT), SplatZero, VL);
   SplatTrueVal = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                              DAG.getUNDEF(ContainerVT), SplatTrueVal, VL);
-  SDValue Select = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, CC,
-                               SplatTrueVal, SplatZero, VL);
+  SDValue Select =
+      DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, CC, SplatTrueVal,
+                  SplatZero, DAG.getUNDEF(ContainerVT), VL);
 
   return convertFromScalableVector(VecVT, Select, DAG, Subtarget);
 }
@@ -8240,8 +8240,8 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
       return Vec;
     // TAMU
     if (Policy == RISCVII::TAIL_AGNOSTIC)
-      return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, Mask, Vec, MaskedOff,
-                         AVL);
+      return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, Mask, Vec, MaskedOff,
+                         DAG.getUNDEF(VT), AVL);
     // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
     // It's fine because vmerge does not care mask policy.
     return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, Mask, Vec, MaskedOff,
@@ -8489,8 +8489,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT,
                     {VID, SplattedIdx, DAG.getCondCode(ISD::SETEQ),
                      DAG.getUNDEF(MaskVT), Mask, VL});
-    return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, SelectCond, SplattedVal,
-                       Vec, VL);
+    return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, SelectCond, SplattedVal,
+                       Vec, DAG.getUNDEF(VT), VL);
   }
   // EGS * EEW >= 128 bits
   case Intrinsic::riscv_vaesdf_vv:
@@ -10243,8 +10243,8 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
   SDLoc DL(Op);
   SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
-  SDValue Select =
-      DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, CC, Op1, Op2, VL);
+  SDValue Select = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, CC, Op1,
+                               Op2, DAG.getUNDEF(ContainerVT), VL);
 
   return convertFromScalableVector(VT, Select, DAG, Subtarget);
 }
@@ -10327,9 +10327,14 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
           Ops.push_back(DAG.getUNDEF(ContainerVT));
       } else if (ISD::getVPExplicitVectorLengthIdx(Op.getOpcode()) ==
                  OpIdx.index()) {
-        // For VP_MERGE, copy the false operand instead of an undef value.
-        assert(Op.getOpcode() == ISD::VP_MERGE);
-        Ops.push_back(Ops.back());
+        if (Op.getOpcode() == ISD::VP_MERGE) {
+          // For VP_MERGE, copy the false operand instead of an undef value.
+          Ops.push_back(Ops.back());
+        } else {
+          assert(Op.getOpcode() == ISD::VP_SELECT);
+          // For VP_SELECT, add an undef value.
+          Ops.push_back(DAG.getUNDEF(ContainerVT));
+        }
       }
     }
     // Pass through operands which aren't fixed-length vectors.
@@ -10379,8 +10384,8 @@ SDValue RISCVTargetLowering::lowerVPExtMaskOp(SDValue Op,
   SDValue Splat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                               DAG.getUNDEF(ContainerVT), SplatValue, VL);
 
-  SDValue Result = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, Src,
-                               Splat, ZeroSplat, VL);
+  SDValue Result = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Src, Splat,
+                               ZeroSplat, DAG.getUNDEF(ContainerVT), VL);
   if (!VT.isFixedLengthVector())
     return Result;
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
@@ -10508,8 +10513,8 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op,
             RISCVISDExtOpc == RISCVISD::VZEXT_VL ? 1 : -1, DL, XLenVT);
         SDValue OneSplat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntVT,
                                        DAG.getUNDEF(IntVT), One, VL);
-        Src = DAG.getNode(RISCVISD::VSELECT_VL, DL, IntVT, Src, OneSplat,
-                          ZeroSplat, VL);
+        Src = DAG.getNode(RISCVISD::VMERGE_VL, DL, IntVT, Src, OneSplat,
+                          ZeroSplat, DAG.getUNDEF(IntVT), VL);
       } else if (DstEltSize > (2 * SrcEltSize)) {
         // Widen before converting.
         MVT IntVT = MVT::getVectorVT(MVT::getIntegerVT(DstEltSize / 2),
@@ -10633,8 +10638,8 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     SDValue SplatZeroOp1 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                                        DAG.getUNDEF(ContainerVT),
                                        DAG.getConstant(0, DL, XLenVT), EVL1);
-    Op1 = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, Op1, SplatOneOp1,
-                      SplatZeroOp1, EVL1);
+    Op1 = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Op1, SplatOneOp1,
+                      SplatZeroOp1, DAG.getUNDEF(ContainerVT), EVL1);
 
     SDValue SplatOneOp2 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                                       DAG.getUNDEF(ContainerVT),
@@ -10642,8 +10647,8 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     SDValue SplatZeroOp2 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                                        DAG.getUNDEF(ContainerVT),
                                        DAG.getConstant(0, DL, XLenVT), EVL2);
-    Op2 = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, Op2, SplatOneOp2,
-                      SplatZeroOp2, EVL2);
+    Op2 = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, Op2, SplatOneOp2,
+                      SplatZeroOp2, DAG.getUNDEF(ContainerVT), EVL2);
   }
 
   int64_t ImmValue = cast<ConstantSDNode>(Offset)->getSExtValue();
@@ -10713,8 +10718,8 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
     SDValue SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IndicesVT,
                                     DAG.getUNDEF(IndicesVT),
                                     DAG.getConstant(0, DL, XLenVT), EVL);
-    Op1 = DAG.getNode(RISCVISD::VSELECT_VL, DL, IndicesVT, Op1, SplatOne,
-                      SplatZero, EVL);
+    Op1 = DAG.getNode(RISCVISD::VMERGE_VL, DL, IndicesVT, Op1, SplatOne,
+                      SplatZero, DAG.getUNDEF(IndicesVT), EVL);
   }
 
   unsigned EltSize = GatherVT.getScalarSizeInBits();
@@ -18683,7 +18688,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VWMACCSU_VL)
   NODE_NAME_CASE(VNSRL_VL)
   NODE_NAME_CASE(SETCC_VL)
-  NODE_NAME_CASE(VSELECT_VL)
   NODE_NAME_CASE(VMERGE_VL)
   NODE_NAME_CASE(VMAND_VL)
   NODE_NAME_CASE(VMOR_VL)

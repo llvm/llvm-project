@@ -230,7 +230,7 @@ define amdgpu_ps float @add_max_v2u16_svl(<2 x i16> inreg %a, <2 x i16> %b) {
 define amdgpu_ps float @add_max_v2u16_slv(<2 x i16> inreg %a, <2 x i16> %b) {
 ; SDAG-LABEL: add_max_v2u16_slv:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_pk_add_max_u16 v0, 0x64, s0, v0 op_sel_hi:[0,1,1]
+; SDAG-NEXT:    v_pk_add_max_u16 v0, 0x640064, s0, v0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: add_max_v2u16_slv:
