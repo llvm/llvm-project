@@ -3046,7 +3046,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     switch (II->getIntrinsicID()) {
     default:
       llvm_unreachable("Unexpected intrinsic.");
-#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC;
+#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
     case Intrinsic::x86_sse42_crc32_32_8:
       Opc = GET_EGPR_IF_ENABLED(X86::CRC32r32r8);
       RC = &X86::GR32RegClass;
