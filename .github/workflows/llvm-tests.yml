@@ -12,7 +12,7 @@ on:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
-  pull_request:
+  pull_request_target:
     branches:
       - 'release/**'
     paths:
