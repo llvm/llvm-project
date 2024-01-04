@@ -267,11 +267,6 @@ Fix fixAll(const Fix &RemoveAllUnused, const Fix &AddAllMissing) {
     FixAll.Edits.push_back(F);
   for (const auto &F : AddAllMissing.Edits)
     FixAll.Edits.push_back(F);
-
-  for (const auto &A : RemoveAllUnused.Annotations)
-    FixAll.Annotations.push_back(A);
-  for (const auto &A : AddAllMissing.Annotations)
-    FixAll.Annotations.push_back(A);
   return FixAll;
 }
 
