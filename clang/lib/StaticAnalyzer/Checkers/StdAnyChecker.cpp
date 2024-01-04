@@ -132,7 +132,8 @@ private:
 
     const auto *AnyMemRegion = ArgSVal.getAsRegion();
 
-    if (!State->contains<AnyHeldTypeMap>(AnyMemRegion))
+    const auto *TypeStored = State->get<AnyHeldTypeMap>(AnyMemRegion);
+    if (!TypeStored)
       return false;
 
     // Get the type we are trying to retrieve from any.
@@ -147,7 +148,6 @@ private:
       return false;
 
     auto TypeOut = FirstTemplateArgument.getAsType();
-    const auto *TypeStored = State->get<AnyHeldTypeMap>(AnyMemRegion);
 
     // Report when we try to use std::any_cast on a std::any that held a null
     // type.
