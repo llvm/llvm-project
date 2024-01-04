@@ -13,8 +13,7 @@ define void @multiple_pow2(i64 %count) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult i64 [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP2_I_I]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -48,8 +47,7 @@ define void @multiple_pow2_larger_than_needed(i64 %count) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult i64 [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP2_I_I]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -119,8 +117,7 @@ define void @multiple_pow2_start_offset(i64 %count) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult i64 [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP2_I_I]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -194,8 +191,7 @@ define void @multiple_pow2_start_offset_dynamic(i64 %count) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult i64 [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP2_I_I]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -231,8 +227,7 @@ define void @multiple_non_pow2_nuw(i64 %count) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult i64 [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP2_I_I]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
