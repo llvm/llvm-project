@@ -64,18 +64,6 @@
 #include <sys/sysctl.h>
 #elif KMP_OS_SOLARIS
 #include <sys/loadavg.h>
-#elif KMP_OS_AIX
-// These macros are not defined in AIX system headers.
-#define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
-  {                                                                            \
-    (ts)->tv_sec = (tv)->tv_sec;                                               \
-    (ts)->tv_nsec = (tv)->tv_usec * 1000;                                      \
-  }
-#define TIMESPEC_TO_TIMEVAL(tv, ts)                                            \
-  {                                                                            \
-    (tv)->tv_sec = (ts)->tv_sec;                                               \
-    (tv)->tv_usec = (ts)->tv_nsec / 1000;                                      \
-  }
 #endif
 
 #include <ctype.h>
