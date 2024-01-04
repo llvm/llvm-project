@@ -2283,8 +2283,8 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   return std::error_code();
 }
 
-std::error_code
-DataAggregator::writeBATYAML(BinaryContext &BC, StringRef OutputFilename) const {
+std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
+                                             StringRef OutputFilename) const {
   std::error_code EC;
   raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC)
