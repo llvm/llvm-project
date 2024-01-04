@@ -1084,3 +1084,43 @@ bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
   return ::LibcxxWStringSummaryProvider(valobj, stream, summary_options,
                                         dataobj, size);
 }
+
+bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // These are the names used in the C++20 ostream operator. Since LLVM uses
+  // C++17 it's not possible to use the ostream operator directly.
+  static const std::array<std::string_view, 12> months = {
+      "January", "February", "March",     "April",   "May",      "June",
+      "July",    "August",   "September", "October", "November", "December"};
+
+  unsigned month = valobj.GetChildMemberWithName("__m_")->GetValueAsUnsigned(0);
+  if (month >= 1 && month <= 12)
+    stream << "month=" << months[month - 1];
+  else
+    stream.Printf("month=%u", month);
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+
+  stream << "date=";
+  int year = valobj.GetChildMemberWithName("__y_")
+                 ->GetChildMemberWithName("__y_")
+                 ->GetValueAsSigned(0);
+  if (year < 0) {
+    stream << '-';
+    year = -year;
+  }
+
+  unsigned month = valobj.GetChildMemberWithName("__m_")
+                       ->GetChildMemberWithName("__m_")
+                       ->GetValueAsUnsigned(0);
+  unsigned day = valobj.GetChildMemberWithName("__d_")
+                     ->GetChildMemberWithName("__d_")
+                     ->GetValueAsUnsigned(0);
+  stream.Printf("%04d-%02u-%02u", year, month, day);
+
+  return true;
+}
