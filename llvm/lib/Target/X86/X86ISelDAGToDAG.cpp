@@ -2948,14 +2948,17 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   // 32 bit constants.
   if (N->getOpcode() != ISD::TargetGlobalAddress) {
     return TM.getCodeModel() == CodeModel::Small ||
-           TM.getCodeModel() == CodeModel::Medium;
+           (!(Subtarget->isTargetWindowsCygwin() && Subtarget->is64Bit()) &&
+            TM.getCodeModel() == CodeModel::Medium);
   }
 
   const GlobalValue *GV = cast<GlobalAddressSDNode>(N)->getGlobal();
   if (std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange())
     return CR->getUnsignedMax().ult(1ull << 32);
-
-  return !TM.isLargeGlobalValue(GV);
+  else if (Subtarget->isTargetWindowsCygwin() && Subtarget->is64Bit())
+    return TM.getCodeModel() == CodeModel::Small;
+  else
+    return !TM.isLargeGlobalValue(GV);
 }
 
 bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,
