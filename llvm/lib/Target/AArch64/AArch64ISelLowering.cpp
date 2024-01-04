@@ -4855,13 +4855,13 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
                                            SMEAttrs Attrs, SDLoc DL,
                                            EVT VT) const {
-  if (Attrs.hasStreamingInterfaceOrBody())
+  if (Attrs.hasStreamingInterfaceOrBody() &&
+      !Attrs.hasStreamingCompatibleInterface())
     return DAG.getConstant(1, DL, VT);
 
-  if (Attrs.hasNonStreamingInterfaceAndBody())
+  if (Attrs.hasNonStreamingInterfaceAndBody() &&
+      !Attrs.hasStreamingCompatibleInterface())
     return DAG.getConstant(0, DL, VT);
-
-  assert(Attrs.hasStreamingCompatibleInterface() && "Unexpected interface");
 
   SDValue Callee = DAG.getExternalSymbol("__arm_sme_state",
                                          getPointerTy(DAG.getDataLayout()));
@@ -6888,9 +6888,18 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // Insert the SMSTART if this is a locally streaming function and
   // make sure it is Glued to the last CopyFromReg value.
   if (IsLocallyStreaming) {
-    Chain =
-        changeStreamingMode(DAG, DL, /*Enable*/ true, DAG.getRoot(), Glue,
-                            DAG.getConstant(0, DL, MVT::i64), /*Entry*/ true);
+    SDValue PStateSM;
+    if (Attrs.hasStreamingCompatibleInterface()) {
+      PStateSM = getPStateSM(DAG, Chain, Attrs, DL, MVT::i64);
+      Register Reg = MF.getRegInfo().createVirtualRegister(
+          getRegClassFor(PStateSM.getValueType().getSimpleVT()));
+      FuncInfo->setPStateSMReg(Reg);
+      Chain = DAG.getCopyToReg(Chain, DL, Reg, PStateSM);
+    } else {
+      PStateSM = DAG.getConstant(0, DL, MVT::i64);
+    }
+    Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue, PStateSM,
+                                /*Entry*/ true);
 
     // Ensure that the SMSTART happens after the CopyWithChain such that its
     // chain result is used.
@@ -8200,10 +8209,18 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // Emit SMSTOP before returning from a locally streaming function
   SMEAttrs FuncAttrs(MF.getFunction());
+
   if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
-    Chain = changeStreamingMode(
-        DAG, DL, /*Enable*/ false, Chain, /*Glue*/ SDValue(),
-        DAG.getConstant(1, DL, MVT::i64), /*Entry*/ true);
+    SDValue PStateSM;
+    if (FuncAttrs.hasStreamingCompatibleInterface()) {
+      Register Reg = FuncInfo->getPStateSMReg();
+      assert(Reg.isValid() && "PStateSM Register is invalid");
+      PStateSM = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i64);
+    } else {
+      PStateSM = DAG.getConstant(1, DL, MVT::i64);
+    }
+    Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
+                                /*Glue*/ SDValue(), PStateSM, /*Entry*/ true);
     Glue = Chain.getValue(1);
   }
 
