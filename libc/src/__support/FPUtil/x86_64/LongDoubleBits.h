@@ -115,6 +115,10 @@ public:
            (get_biased_exponent() != 0 && get_implicit_bit() == 0);
   }
 
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
+    return (bits & EXP_SIG_MASK) >= (EXP_MASK | QUIET_NAN_MASK);
+  }
+
   // Methods below this are used by tests.
 
   LIBC_INLINE static constexpr long double zero() { return 0.0l; }
