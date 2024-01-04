@@ -30,39 +30,40 @@ concept HasSubscriptOperator = requires(T t, U u) { t[u]; };
 template <class BaseRange>
 using EnumerateIterator = std::ranges::iterator_t<std::ranges::enumerate_view<BaseRange>>;
 
-using RandomAccessRange = std::ranges::subrange<int*>;
-static_assert(std::ranges::random_access_range<RandomAccessRange>);
-
-static_assert(HasSubscriptOperator<EnumerateIterator<RandomAccessRange>, int>);
+using Subrange = std::ranges::subrange<int*>;
+static_assert(HasSubscriptOperator<EnumerateIterator<Subrange>, int>);
 
 using BidirectionalRange = std::ranges::subrange<bidirectional_iterator<int*>>;
-
 static_assert(!HasSubscriptOperator<EnumerateIterator<BidirectionalRange>, int>);
 
 constexpr bool test() {
   // Reference
   {
-    std::array ts = {0, 1, 2, 3, 84};
+    std::array ts = {90, 1, 2, 84};
     auto view     = ts | std::views::enumerate;
     auto it       = view.begin();
 
-    for (std::size_t index = 0; index != ts.size(); ++index) {
-      assert(it[index] == *(it + index));
-    }
+    using DifferenceT = std::iter_difference_t<std::iter_difference_t<decltype(it)>>;
+    static_assert(std::is_same_v<decltype(it[2]), std::tuple<DifferenceT, int&>>);
 
-    static_assert(std::is_same_v<decltype(it[2]), std::tuple<decltype(it)::difference_type, int&>>);
+    assert((it[0] == std::tuple<DifferenceT, int>(0, 90)));
+    assert((it[1] == std::tuple<DifferenceT, int>(1, 1)));
+    assert((it[2] == std::tuple<DifferenceT, int>(2, 2)));
+    assert((it[3] == std::tuple<DifferenceT, int>(3, 84)));
   }
 
   // Value
   {
-    auto view = std::views::iota(0, 5) | std::views::enumerate;
+    auto view = std::views::iota(0, 4) | std::views::enumerate;
     auto it   = view.begin();
 
-    for (std::size_t index = 0; index != 5; ++index) {
-      assert(it[index] == *(it + index));
-    }
+    using DifferenceT = std::iter_difference_t<std::iter_difference_t<decltype(it)>>;
+    static_assert(std::is_same_v<decltype(it[2]), std::tuple<DifferenceT, int>>);
 
-    static_assert(std::is_same_v<decltype(it[2]), std::tuple<decltype(it)::difference_type, int>>);
+    assert((it[0] == std::tuple<DifferenceT, int>(0, 0)));
+    assert((it[1] == std::tuple<DifferenceT, int>(1, 1)));
+    assert((it[2] == std::tuple<DifferenceT, int>(2, 2)));
+    assert((it[3] == std::tuple<DifferenceT, int>(3, 3)));
   }
 
   return true;
