@@ -80,8 +80,8 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
   let parameters = (ins
     AttrParameter<"::mlir::SymbolRefAttr", "cluster placed">:$cluster,
-    ArrayRefParameter<"::mlir::DenseI32ArrayAttr">:$split_axes,
-    OptionalArrayRefParameter<"int32_t">:$partial_axes,
+    ArrayRefParameter<"MeshAxesAttr">:$split_axes,
+    OptionalArrayRefParameter<"MeshAxis">:$partial_axes,
     OptionalParameter<"::mlir::mesh::Partial">:$partial_type
   );
 
@@ -146,18 +146,18 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
   let builders = [
     AttrBuilder<(ins "SymbolRefAttr":$cluster, 
-                     "ArrayRef<SmallVector<int32_t>>":$split_axes,
-                     "ArrayRef<int32_t>": $partial_axes,
+                     "ArrayRef<SmallVector<MeshAxis>>":$split_axes,
+                     "ArrayRef<MeshAxis>": $partial_axes,
                      "mesh::Partial": $partial_type), [{
-      SmallVector<DenseI32ArrayAttr> splitAxesAttr = llvm::map_to_vector(
-                  split_axes, [&](ArrayRef<int32_t> array) {
-          return DenseI32ArrayAttr::get($_ctxt, array);
+      SmallVector<MeshAxesAttr> splitAxesAttr = llvm::map_to_vector(
+                  split_axes, [&](ArrayRef<MeshAxis> array) {
+          return MeshAxesAttr::get($_ctxt, array);
       });
       return $_get($_ctxt, cluster, splitAxesAttr, partial_axes,
                    partial_type);
     }]>,
     AttrBuilder<(ins "SymbolRefAttr":$cluster, 
-                     "ArrayRef<SmallVector<int32_t>>":$split_axes), [{
+                     "ArrayRef<SmallVector<MeshAxis>>":$split_axes), [{
       return MeshShardingAttr::get($_ctxt, cluster, split_axes, {}, Partial::Sum);
     }]>
   ];
