@@ -105,10 +105,10 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
         Fusion->getValueAsListOfDefs("Predicates");
 
     OS << "bool is" << Fusion->getName() << "(\n";
-    OS.indent(5) << "const TargetInstrInfo &TII,\n";
-    OS.indent(5) << "const TargetSubtargetInfo &STI,\n";
-    OS.indent(5) << "const MachineInstr *FirstMI,\n";
-    OS.indent(5) << "const MachineInstr &SecondMI) {\n";
+    OS.indent(4) << "const TargetInstrInfo &TII,\n";
+    OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
+    OS.indent(4) << "const MachineInstr *FirstMI,\n";
+    OS.indent(4) << "const MachineInstr &SecondMI) {\n";
     OS.indent(2) << "auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
     emitPredicates(Predicates, PE, OS);

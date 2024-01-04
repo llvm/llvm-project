@@ -53,10 +53,10 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(
-// CHECK-PREDICATOR-NEXT:       const TargetInstrInfo &TII,
-// CHECK-PREDICATOR-NEXT:       const TargetSubtargetInfo &STI,
-// CHECK-PREDICATOR-NEXT:       const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:       const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
+// CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
 // CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
