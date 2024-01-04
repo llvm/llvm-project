@@ -990,7 +990,9 @@ Type *DwarfExprAST::lower(DIOp::Extend Extend, ChildrenT Children) {
 }
 
 Type *DwarfExprAST::lower(DIOp::Read Read, ChildrenT Children) {
-  return nullptr;
+  readToValue(Children[0].get());
+  emitDwarfOp(dwarf::DW_OP_stack_value);
+  return Children[0]->getResultType();
 }
 
 Type *DwarfExprAST::lower(DIOp::Reinterpret Reinterpret, ChildrenT Children) {
@@ -1005,20 +1007,25 @@ Type *DwarfExprAST::lower(DIOp::Composite Composite, ChildrenT Children) {
   return nullptr;
 }
 
-void DwarfExprAST::readToValue(DwarfExprAST::Node *OpNode, bool NeedsSwap) {
+void DwarfExprAST::readToValue(DwarfExprAST::Node *OpNode) {
   assert(OpNode->isLowered() && "Expected lowered node");
   assert(OpNode->getResultType() && "Expected non-null result type");
   uint64_t PrimitiveSizeInBits =
       OpNode->getResultType()->getPrimitiveSizeInBits();
   assert(PrimitiveSizeInBits != 0 && "Expected primitive type");
-  assert(PrimitiveSizeInBits % 8 == 0 && "Expected multiple of 8");
 
-  uint64_t PrimitiveSizeInBytes = PrimitiveSizeInBits / 8;
+  uint64_t ByteAlignedPrimitiveSizeInBits = alignTo<8>(PrimitiveSizeInBits);
+  uint64_t PrimitiveSizeInBytes = ByteAlignedPrimitiveSizeInBits / 8;
+  bool NeedsMask = ByteAlignedPrimitiveSizeInBits != PrimitiveSizeInBits;
 
   emitDwarfOp(dwarf::DW_OP_deref_size);
   emitDwarfData1(PrimitiveSizeInBytes);
-  if (NeedsSwap) {
-    emitDwarfOp(dwarf::DW_OP_swap);
+
+  if (NeedsMask) {
+    uint64_t Mask = (1ULL << PrimitiveSizeInBits) - 1ULL;
+    emitDwarfOp(dwarf::DW_OP_constu);
+    emitDwarfUnsigned(Mask);
+    emitDwarfOp(dwarf::DW_OP_and);
   }
 }
 

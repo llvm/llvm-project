@@ -556,8 +556,10 @@ protected:
                    Type *>
   lower(T MathOp, ChildrenT Children) {
     assert(Children.size() == 2 && "Expected 2 children");
-    for (auto &ChildOpNode : Children)
-      readToValue(ChildOpNode.get(), /*NeedsSwap=*/true);
+    for (auto &ChildOpNode : Children) {
+      readToValue(ChildOpNode.get());
+      emitDwarfOp(dwarf::DW_OP_swap);
+    }
     emitDwarfOp(getEquivalentDwarfOp(MathOp));
     emitDwarfOp(dwarf::DW_OP_stack_value);
     return Children[0]->getResultType();
@@ -567,12 +569,12 @@ protected:
                    Type *>
   lower(T OffsetOp, ChildrenT Children) {
     assert(Children.size() == 2 && "Expected 2 children");
-    readToValue(Children[1].get(), /*NeedsSwap=*/false);
+    readToValue(Children[1].get());
     emitDwarfOp(getEquivalentDwarfOp(OffsetOp));
     return OffsetOp.getResultType();
   }
 
-  void readToValue(DwarfExprAST::Node *OpNode, bool NeedsSwap);
+  void readToValue(DwarfExprAST::Node *OpNode);
 
   void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
   void emitSigned(int64_t SignedValue);
