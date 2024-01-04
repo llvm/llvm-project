@@ -148,7 +148,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, const SIRegisterInfo &TRI,
   LiveUnits.addReg(SpillReg);
   bool IsKill = !MBB.isLiveIn(SpillReg);
   TRI.buildSpillLoadStore(MBB, I, DL, Opc, FI, SpillReg, IsKill, FrameReg,
-                          DwordOff, MMO, nullptr, &LiveUnits);
+                          DwordOff, false, MMO, nullptr, &LiveUnits);
   if (IsKill)
     LiveUnits.removeReg(SpillReg);
 }
@@ -170,7 +170,7 @@ static void buildEpilogRestore(const GCNSubtarget &ST,
       PtrInfo, MachineMemOperand::MOLoad, FrameInfo.getObjectSize(FI),
       FrameInfo.getObjectAlign(FI));
   TRI.buildSpillLoadStore(MBB, I, DL, Opc, FI, SpillReg, false, FrameReg,
-                          DwordOff, MMO, nullptr, &LiveUnits);
+                          DwordOff, false, MMO, nullptr, &LiveUnits);
 }
 
 static void buildGitPtr(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,

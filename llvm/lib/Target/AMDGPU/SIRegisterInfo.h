@@ -427,8 +427,8 @@ public:
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
-                           int64_t InstrOffset, MachineMemOperand *MMO,
-                           RegScavenger *RS,
+                           int64_t InstrOffset, bool LastUse,
+                           MachineMemOperand *MMO, RegScavenger *RS,
                            LiveRegUnits *LiveUnits = nullptr) const;
 
   // Return alignment in register file of first register in a register tuple.

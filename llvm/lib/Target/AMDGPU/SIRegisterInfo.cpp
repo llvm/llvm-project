@@ -1320,8 +1320,8 @@ static unsigned getFlatScratchSpillOpcode(const SIInstrInfo *TII,
 void SIRegisterInfo::buildSpillLoadStore(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
     unsigned LoadStoreOp, int Index, Register ValueReg, bool IsKill,
-    MCRegister ScratchOffsetReg, int64_t InstOffset, MachineMemOperand *MMO,
-    RegScavenger *RS, LiveRegUnits *LiveUnits) const {
+    MCRegister ScratchOffsetReg, int64_t InstOffset, bool LastUse,
+    MachineMemOperand *MMO, RegScavenger *RS, LiveRegUnits *LiveUnits) const {
   assert((!RS || !LiveUnits) && "Only RS or LiveUnits can be set but not both");
 
   MachineFunction *MF = MBB.getParent();
@@ -1657,8 +1657,10 @@ void SIRegisterInfo::buildSpillLoadStore(
     } else {
       MIB.addReg(SOffset, SOffsetRegState);
     }
+
+    int64_t CPol = AMDGPU::isGFX12Plus(ST) && LastUse ? AMDGPU::CPol::TH_LU : 0;
     MIB.addImm(Offset + RegOffset)
-       .addImm(0); // cpol
+       .addImm(CPol);
     if (!IsFlat)
       MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
@@ -1734,12 +1736,12 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                           : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
     buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, false,
-                        FrameReg, Offset * SB.EltSize, MMO, SB.RS);
+                        FrameReg, Offset * SB.EltSize, false, MMO, SB.RS);
   } else {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
     buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, IsKill,
-                        FrameReg, Offset * SB.EltSize, MMO, SB.RS);
+                        FrameReg, Offset * SB.EltSize, false, MMO, SB.RS);
     // This only ever adds one VGPR spill
     SB.MFI.addToSpilledVGPRs(1);
   }
@@ -2175,7 +2177,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
-          TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
+          TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), false,
           *MI->memoperands_begin(), RS);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
       if (IsWWMRegSpill)
@@ -2241,14 +2243,20 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
                                   RS->isRegUsed(AMDGPU::SCC));
       }
+      int16_t LastUseIdx =
+          AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::last_use);
+      bool LastUse = (LastUseIdx != -1)
+                         ? (MI->getOperand(LastUseIdx).getImm() == 1)
+                         : false;
+
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
-          TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
+          TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), LastUse,
           *MI->memoperands_begin(), RS);
-      
-      if (IsWWMRegSpill) 
+
+      if (IsWWMRegSpill)
         TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
-  
+
       MI->eraseFromParent();
       return true;
     }
