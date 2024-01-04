@@ -114,37 +114,44 @@ struct SizedInputIterator {
 static_assert(std::input_iterator<SizedInputIterator>);
 static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
 
-template <bool Swappable = true, bool NoExcept = true>
-struct MaybeExceptIterSwapIterator : InputIterBase<MaybeExceptIterSwapIterator<Swappable, NoExcept>> {
+// Put IterMoveIterSwapTestRangeIterator in a namespace to test ADL of CPOs iter_swap and iter_move
+// (see iter_swap.pass.cpp and iter_move.pass.cpp).
+namespace adl {
+template <bool IsSwappable = true, bool IsNoExcept = true>
+struct IterMoveIterSwapTestRangeIterator : InputIterBase<IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept>> {
   int* counter_{nullptr};
-  constexpr MaybeExceptIterSwapIterator()                                                    = default;
-  constexpr MaybeExceptIterSwapIterator(const MaybeExceptIterSwapIterator&)                  = default;
-  constexpr MaybeExceptIterSwapIterator(MaybeExceptIterSwapIterator&&)                       = default;
-  constexpr MaybeExceptIterSwapIterator& operator=(const MaybeExceptIterSwapIterator& other) = default;
-  constexpr MaybeExceptIterSwapIterator& operator=(MaybeExceptIterSwapIterator&& other)      = default;
+  constexpr IterMoveIterSwapTestRangeIterator()                                                          = default;
+  constexpr IterMoveIterSwapTestRangeIterator(const IterMoveIterSwapTestRangeIterator&)                  = default;
+  constexpr IterMoveIterSwapTestRangeIterator(IterMoveIterSwapTestRangeIterator&&)                       = default;
+  constexpr IterMoveIterSwapTestRangeIterator& operator=(const IterMoveIterSwapTestRangeIterator& other) = default;
+  constexpr IterMoveIterSwapTestRangeIterator& operator=(IterMoveIterSwapTestRangeIterator&& other)      = default;
 
-  constexpr explicit MaybeExceptIterSwapIterator(int* counter) : counter_(counter) {}
+  constexpr explicit IterMoveIterSwapTestRangeIterator(int* counter) : counter_(counter) {}
 
-  friend constexpr void iter_swap(const MaybeExceptIterSwapIterator& t, const MaybeExceptIterSwapIterator& u) noexcept
-    requires Swappable && NoExcept
+  friend constexpr void
+  iter_swap(const IterMoveIterSwapTestRangeIterator& t, const IterMoveIterSwapTestRangeIterator& u) noexcept
+    requires IsSwappable && IsNoExcept
   {
     (*t.counter_)++;
     (*u.counter_)++;
   }
 
-  friend constexpr void iter_swap(const MaybeExceptIterSwapIterator& t, const MaybeExceptIterSwapIterator& u)
-    requires Swappable && (!NoExcept)
+  friend constexpr void
+  iter_swap(const IterMoveIterSwapTestRangeIterator& t, const IterMoveIterSwapTestRangeIterator& u)
+    requires IsSwappable && (!IsNoExcept)
   {
     (*t.counter_)++;
     (*u.counter_)++;
   }
 
-  friend constexpr int iter_move(const MaybeExceptIterSwapIterator& t) {
+  friend constexpr int iter_move(const IterMoveIterSwapTestRangeIterator& t)
+    requires(!IsNoExcept)
+  {
     (*t.counter_)++;
     return 5;
   }
-  friend constexpr int iter_move(const MaybeExceptIterSwapIterator& t) noexcept
-    requires NoExcept
+  friend constexpr int iter_move(const IterMoveIterSwapTestRangeIterator& t) noexcept
+    requires IsNoExcept
   {
     (*t.counter_)++;
     return 5;
@@ -152,23 +159,17 @@ struct MaybeExceptIterSwapIterator : InputIterBase<MaybeExceptIterSwapIterator<S
 
   constexpr int operator*() const { return 5; }
 };
+} // namespace adl
 
-template <bool Swappable = true, bool NoExcept = true>
-struct IterSwapRange : std::ranges::view_base {
-  MaybeExceptIterSwapIterator<Swappable, NoExcept> begin_;
-  MaybeExceptIterSwapIterator<Swappable, NoExcept> end_;
-  constexpr IterSwapRange(int* counter)
-      : begin_(MaybeExceptIterSwapIterator<Swappable, NoExcept>(counter)),
-        end_(MaybeExceptIterSwapIterator<Swappable, NoExcept>(counter)) {}
-  constexpr MaybeExceptIterSwapIterator<Swappable, NoExcept> begin() const { return begin_; }
-  constexpr MaybeExceptIterSwapIterator<Swappable, NoExcept> end() const { return end_; }
-};
-
-// Concepts
-
-template <typename I, std::ranges::range_difference_t<I> D>
-concept CanStrideView = requires {
-  std::ranges::stride_view<I>{I{}, D};
+template <bool IsSwappable = true, bool IsNoExcept = true>
+struct IterMoveIterSwapTestRange : std::ranges::view_base {
+  adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> begin_;
+  adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> end_;
+  constexpr IterMoveIterSwapTestRange(int* counter)
+      : begin_(adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept>(counter)),
+        end_(adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept>(counter)) {}
+  constexpr adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> begin() const { return begin_; }
+  constexpr adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> end() const { return end_; }
 };
 
 // Views

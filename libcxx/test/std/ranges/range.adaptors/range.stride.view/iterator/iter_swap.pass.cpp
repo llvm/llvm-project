@@ -15,7 +15,6 @@
 #include <ranges>
 
 #include "../types.h"
-#include "__ranges/concepts.h"
 
 template <typename T>
 concept swappable = requires(T&& t, T&& u) { std::ranges::iter_swap(t, u); };
@@ -24,7 +23,7 @@ constexpr bool test() {
   {
     int iter_move_counter_one(0);
     int iter_move_counter_two(0);
-    using View       = IterSwapRange<true, true>;
+    using View       = IterMoveIterSwapTestRange<true, true>;
     using StrideView = std::ranges::stride_view<View>;
     auto svba        = StrideView(View(&iter_move_counter_one), 1).begin();
     auto svbb        = StrideView(View(&iter_move_counter_two), 1).begin();
@@ -40,7 +39,7 @@ constexpr bool test() {
   {
     int iter_move_counter_one(0);
     int iter_move_counter_two(0);
-    using View       = IterSwapRange<true, false>;
+    using View       = IterMoveIterSwapTestRange<true, false>;
     using StrideView = std::ranges::stride_view<View>;
     auto svba        = StrideView(View(&iter_move_counter_one), 1).begin();
     auto svbb        = StrideView(View(&iter_move_counter_two), 1).begin();
@@ -54,7 +53,7 @@ constexpr bool test() {
   }
 
   {
-    using View       = IterSwapRange<false, false>;
+    using View       = IterMoveIterSwapTestRange<false, false>;
     using StrideView = std::ranges::stride_view<View>;
 
     static_assert(!swappable<std::ranges::iterator_t<StrideView>>);
