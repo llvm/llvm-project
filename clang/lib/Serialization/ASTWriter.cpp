@@ -4034,9 +4034,10 @@ unsigned CalculateODRHashForSpecs(const Decl *Spec) {
 }
 } // namespace
 
-uint64_t ASTWriter::WriteSpecializationsLookupTable(
+void ASTWriter::GenerateSpecializationsLookupTable(
     const NamedDecl *D,
-    llvm::SmallVectorImpl<const NamedDecl *> &Specializations) {
+    llvm::SmallVectorImpl<const NamedDecl *> &Specializations,
+    llvm::SmallVectorImpl<char> &LookupTable) {
   assert(D->isFirstDecl());
 
   // Create the on-disk hash table representation.
@@ -4064,13 +4065,19 @@ uint64_t ASTWriter::WriteSpecializationsLookupTable(
   for (auto Iter : SpecializationMaps)
     Generator.insert(Iter.first, Trait.getData(Iter.second), Trait);
 
-  uint64_t Offset = Stream.GetCurrentBitNo();
-
   auto *Lookups =
       Chain ? Chain->getLoadedSpecializationsLookupTables(D) : nullptr;
-  llvm::SmallString<4096> LookupTable;
   Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+}
 
+uint64_t ASTWriter::WriteSpecializationsLookupTable(
+    const NamedDecl *D,
+    llvm::SmallVectorImpl<const NamedDecl *> &Specializations) {
+
+  llvm::SmallString<4096> LookupTable;
+  GenerateSpecializationsLookupTable(D, Specializations, LookupTable);
+
+  uint64_t Offset = Stream.GetCurrentBitNo();
   RecordData::value_type Record[] = {DECL_SPECIALIZATIONS};
   Stream.EmitRecordWithBlob(DeclSpecializationsAbbrev, Record, LookupTable);
 
@@ -5250,6 +5257,10 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteTypeDeclOffsets();
   if (!DeclUpdatesOffsetsRecord.empty())
     Stream.EmitRecord(DECL_UPDATE_OFFSETS, DeclUpdatesOffsetsRecord);
+
+  if (!SpecializationsUpdates.empty())
+    WriteSpecializationsUpdates();
+
   WriteFileDeclIDsMap();
   WriteSourceManagerBlock(Context.getSourceManager(), PP);
   WriteComments();
@@ -5402,6 +5413,26 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   return backpatchSignature();
 }
 
+void ASTWriter::WriteSpecializationsUpdates() {
+  auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+  Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_SPECIALIZATION));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+  auto UpdateSpecializationAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  for (auto &SpecializationUpdate : SpecializationsUpdates) {
+    const NamedDecl *D = SpecializationUpdate.first;
+
+    llvm::SmallString<4096> LookupTable;
+    GenerateSpecializationsLookupTable(D, SpecializationUpdate.second,
+                                       LookupTable);
+
+    // Write the lookup table
+    RecordData::value_type Record[] = {UPDATE_SPECIALIZATION, getDeclID(D)};
+    Stream.EmitRecordWithBlob(UpdateSpecializationAbbrev, Record, LookupTable);
+  }
+}
+
 void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
   if (DeclUpdates.empty())
     return;
@@ -5430,7 +5461,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
       switch (Kind) {
       case UPD_CXX_ADDED_IMPLICIT_MEMBER:
-      case UPD_CXX_ADDED_TEMPLATE_SPECIALIZATION:
+      case UPD_CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION:
       case UPD_CXX_ADDED_ANONYMOUS_NAMESPACE:
         assert(Update.getDecl() && "no decl to add?");
         Record.push_back(GetDeclRef(Update.getDecl()));
