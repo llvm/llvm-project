@@ -2605,16 +2605,20 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
 }
 
 bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
-  return isTriviallyCopyableTypeImpl(*this,Context,false);
+  return isTriviallyCopyableTypeImpl(*this, Context, false);
 }
 
-bool QualType::isTriviallyCopyConstructibleType(const ASTContext &Context) const {
-  return isTriviallyCopyableTypeImpl(*this,Context,true);
+bool QualType::isTriviallyCopyConstructibleType(
+    const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this, Context, true);
 }
 
-bool QualType::isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible){
+bool QualType::isTriviallyCopyableTypeImpl(const QualType &type,
+                                           const ASTContext &Context,
+                                           bool copy_constructible) {
   if (type->isArrayType())
-    return Context.getBaseElementType(type).isTriviallyCopyableTypeImpl(type,Context,copy_constructible);
+    return Context.getBaseElementType(type).isTriviallyCopyableTypeImpl(
+        type, Context, copy_constructible);
 
   if (type.hasNonTrivialObjCLifetime())
     return false;
