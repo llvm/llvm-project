@@ -3387,6 +3387,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case BMI_DECLS_HASH:
+      if (!ReadedBMIDeclsHash)
+        ReadedBMIDeclsHash = Record[0];
+      else
+        ReadedBMIDeclsHash = llvm::hash_combine(ReadedBMIDeclsHash, Record[0]);
+      break;
+
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
@@ -5681,6 +5688,74 @@ bool ASTReader::isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
                                   PCHContainerRdr,
                                   /*FindModuleFileExtensions=*/false, validator,
                                   /*ValidateDiagnosticOptions=*/true);
+}
+
+std::optional<uint64_t> ASTReader::getBMIHash(StringRef Filename,
+                                              FileManager &FileMgr) {
+  // Open the AST file.
+  std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
+
+  // FIXME: This allows use of the VFS; we do not allow use of the
+  // VFS when actually loading a module.
+  auto BufferOrErr = FileMgr.getBufferForFile(Filename);
+  if (!BufferOrErr)
+    return std::nullopt;
+
+  OwnedBuffer = std::move(*BufferOrErr);
+  llvm::MemoryBuffer *Buffer = OwnedBuffer.get();
+
+  // Initialize the stream
+  // FIXME: Should we consider other format?
+  PCHContainerOperations PCHOperations;
+  StringRef Bytes = PCHOperations.getRawReader().ExtractPCH(*Buffer);
+  BitstreamCursor Stream(Bytes);
+
+  // Sniff for the signature.
+  if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
+    consumeError(std::move(Err)); // FIXME this drops errors on the floor.
+    return std::nullopt;
+  }
+
+  if (SkipCursorToBlock(Stream, AST_BLOCK_ID))
+    return std::nullopt;
+
+  while (true) {
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      consumeError(MaybeEntry.takeError());
+      return std::nullopt;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
+    switch (Entry.Kind) {
+    case llvm::BitstreamEntry::Error:
+    case llvm::BitstreamEntry::EndBlock:
+      return std::nullopt;
+
+    case llvm::BitstreamEntry::Record: {
+      RecordData Record;
+      StringRef Blob;
+      Expected<uint64_t> MaybeRecCode =
+          Stream.readRecord(Entry.ID, Record, &Blob);
+      if (!MaybeRecCode) {
+        consumeError(MaybeRecCode.takeError());
+        return std::nullopt;
+      }
+      if (MaybeRecCode.get() == BMI_DECLS_HASH)
+        return Record[0];
+
+      continue;
+    }
+
+    case llvm::BitstreamEntry::SubBlock:
+      if (llvm::Error Err = Stream.SkipBlock())
+        consumeError(std::move(Err));
+
+      continue;
+    }
+  }
+
+  return std::nullopt;
 }
 
 llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,

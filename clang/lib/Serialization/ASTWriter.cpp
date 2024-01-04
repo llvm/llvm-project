@@ -826,6 +826,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // AST Top-Level Block.
   BLOCK(AST_BLOCK);
+  RECORD(BMI_DECLS_HASH);
   RECORD(TYPE_OFFSET);
   RECORD(DECL_OFFSET);
   RECORD(IDENTIFIER_OFFSET);
@@ -4595,10 +4596,12 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer,
                      InMemoryModuleCache &ModuleCache,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-                     bool IncludeTimestamps, bool BuildingImplicitModule)
+                     bool IncludeTimestamps, bool BuildingImplicitModule,
+                     bool GeneratingThinBMI)
     : Stream(Stream), Buffer(Buffer), ModuleCache(ModuleCache),
       IncludeTimestamps(IncludeTimestamps),
-      BuildingImplicitModule(BuildingImplicitModule) {
+      BuildingImplicitModule(BuildingImplicitModule),
+      GeneratingThinBMI(GeneratingThinBMI) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));
@@ -5093,6 +5096,15 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   DoneWritingDeclsAndTypes = true;
 
+  if (isWritingStdCXXNamedModules()) {
+    if (Chain && Chain->getReadedBMIDeclsHash())
+      BMIDeclsHash =
+          llvm::hash_combine(BMIDeclsHash, *Chain->getReadedBMIDeclsHash());
+
+    RecordData Record = {BMIDeclsHash};
+    Stream.EmitRecord(BMI_DECLS_HASH, Record);
+  }
+
   // These things can only be done once we've written out decls and types.
   WriteTypeDeclOffsets();
   if (!DeclUpdatesOffsetsRecord.empty())
@@ -5405,18 +5417,20 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
-    if (HasUpdatedBody) {
-      const auto *Def = cast<FunctionDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
-      Record.push_back(Def->isInlined());
-      Record.AddSourceLocation(Def->getInnerLocStart());
-      Record.AddFunctionDefinition(Def);
-    } else if (HasAddedVarDefinition) {
-      const auto *VD = cast<VarDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
-      Record.push_back(VD->isInline());
-      Record.push_back(VD->isInlineSpecified());
-      Record.AddVarDeclInit(VD);
+    if (!GeneratingThinBMI || MayDefAffectABI(D)) {
+      if (HasUpdatedBody) {
+        const auto *Def = cast<FunctionDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
+        Record.push_back(Def->isInlined());
+        Record.AddSourceLocation(Def->getInnerLocStart());
+        Record.AddFunctionDefinition(Def);
+      } else if (HasAddedVarDefinition) {
+        const auto *VD = cast<VarDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
+        Record.push_back(VD->isInline());
+        Record.push_back(VD->isInlineSpecified());
+        Record.AddVarDeclInit(VD);
+      }
     }
 
     OffsetsRecord.push_back(GetDeclRef(D));

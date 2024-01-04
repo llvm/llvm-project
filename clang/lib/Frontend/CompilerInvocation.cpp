@@ -2567,12 +2567,14 @@ static const auto &getFrontendActionTable() {
 
       {frontend::GenerateModule, OPT_emit_module},
       {frontend::GenerateModuleInterface, OPT_emit_module_interface},
+      {frontend::GenerateThinModuleInterface, OPT_emit_thin_module_interface},
       {frontend::GenerateHeaderUnit, OPT_emit_header_unit},
       {frontend::GeneratePCH, OPT_emit_pch},
       {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
       {frontend::InitOnly, OPT_init_only},
       {frontend::ParseSyntaxOnly, OPT_fsyntax_only},
       {frontend::ModuleFileInfo, OPT_module_file_info},
+      {frontend::GetBMIDeclsHash, OPT_get_bmi_decls_hash},
       {frontend::VerifyPCH, OPT_verify_pch},
       {frontend::PrintPreamble, OPT_print_preamble},
       {frontend::PrintPreprocessedInput, OPT_E},
@@ -4274,11 +4276,13 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::FixIt:
   case frontend::GenerateModule:
   case frontend::GenerateModuleInterface:
+  case frontend::GenerateThinModuleInterface:
   case frontend::GenerateHeaderUnit:
   case frontend::GeneratePCH:
   case frontend::GenerateInterfaceStubs:
   case frontend::ParseSyntaxOnly:
   case frontend::ModuleFileInfo:
+  case frontend::GetBMIDeclsHash:
   case frontend::VerifyPCH:
   case frontend::PluginAction:
   case frontend::RewriteObjC:

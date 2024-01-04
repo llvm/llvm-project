@@ -7,8 +7,10 @@
 // RUN: mkdir %t
 // RUN: split-file %s %t
 //
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/Friend-in-reachable-class.cppm -o %t/X.pcm
-// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/Friend-in-reachable-class.cppm \
+// RUN:   -fthinBMI-output=%t/X.thin.pcm -o %t/X.pcm
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=X=%t/X.pcm %t/Use.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=X=%t/X.thin.pcm %t/Use.cpp -verify -fsyntax-only
 //
 //--- Friend-in-reachable-class.cppm
 module;

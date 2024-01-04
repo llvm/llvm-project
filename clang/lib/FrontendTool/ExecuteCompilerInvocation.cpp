@@ -65,6 +65,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
     return std::make_unique<GenerateModuleInterfaceAction>();
+  case GenerateThinModuleInterface:
+    return std::make_unique<GenerateThinModuleInterfaceAction>();
   case GenerateHeaderUnit:
     return std::make_unique<GenerateHeaderUnitAction>();
   case GeneratePCH:            return std::make_unique<GeneratePCHAction>();
@@ -73,6 +75,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case InitOnly:               return std::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
+  case GetBMIDeclsHash:
+    return std::make_unique<GetModuleDeclsHashAction>();
   case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
   case TemplightDump:          return std::make_unique<TemplightDumpAction>();
 

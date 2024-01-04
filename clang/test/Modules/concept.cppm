@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t -DDIFFERENT %t/B.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/B.cppm -verify
+//
+// RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-thin-module-interface -o %t/A.full.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t -DDIFFERENT %t/B.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/B.cppm -verify
 
 //--- foo.h
 #ifndef FOO_H

@@ -85,8 +85,12 @@ enum ActionKind {
   /// Generate pre-compiled module from a module map.
   GenerateModule,
 
-  /// Generate pre-compiled module from a C++ module interface file.
+  /// Generate pre-compiled module from a standard C++ module interface unit.
   GenerateModuleInterface,
+
+  /// Generate reduced module interface for a standard C++ module interface
+  /// unit.
+  GenerateThinModuleInterface,
 
   /// Generate a C++20 header unit module from a header file.
   GenerateHeaderUnit,
@@ -102,6 +106,9 @@ enum ActionKind {
 
   /// Dump information about a module file.
   ModuleFileInfo,
+
+  /// Get BMI Decls Hash about a module file.
+  GetBMIDeclsHash,
 
   /// Load and verify that a PCH file is usable.
   VerifyPCH,
@@ -548,6 +555,9 @@ public:
 
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
+
+  /// Path to the thin BMI for -fthinbmi-output=
+  std::string ThinBMIPath;
 
 public:
   FrontendOptions()

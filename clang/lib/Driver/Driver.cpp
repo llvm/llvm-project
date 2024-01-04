@@ -355,6 +355,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT_get_bmi_decls_hash)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
@@ -4086,6 +4087,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
+  // Diagnose misuse of -fthinBMI-output. It should be an error if we specify
+  // -fthinBMI-output with multiple precompilation jobs. Here we didn't check if
+  // there are multiple module units in the inputs.
+  if (C.getArgs().getLastArg(options::OPT_fthinBMI_output_EQ) &&
+      Inputs.size() > 1)
+    Diag(clang::diag::err_drv_thin_bmi_output_argument_with_multiple_files);
+
   handleArguments(C, Args, Inputs, Actions);
 
   bool UseNewOffloadingDriver =
@@ -4729,7 +4737,8 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<MigrateJobAction>(Input, types::TY_Remap);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
-    if (Args.hasArg(options::OPT_module_file_info))
+    if (Args.hasArg(options::OPT_module_file_info) ||
+        Args.hasArg(options::OPT_get_bmi_decls_hash))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
@@ -5811,7 +5820,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   }
 
   if (JA.getType() == types::TY_ModuleFile &&
-      C.getArgs().getLastArg(options::OPT_module_file_info)) {
+      (C.getArgs().getLastArg(options::OPT_module_file_info) ||
+       C.getArgs().getLastArg(options::OPT_get_bmi_decls_hash))) {
     return "-";
   }
 

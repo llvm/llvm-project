@@ -9,6 +9,18 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.pcm  \
 // RUN:     -S -emit-llvm -o - | FileCheck %t/m.cppm
 
+// Test again with thin BMI
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: cd %t
+//
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/a.cppm \
+// RUN:      -emit-thin-module-interface -o %t/a.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.cppm \
+// RUN:      -emit-thin-module-interface -fmodule-file=a=%t/a.pcm -o %t/m.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.pcm  \
+// RUN:     -S -emit-llvm -o - | FileCheck %t/m.cppm
+
 //--- a.cppm
 export module a;
 export struct A {

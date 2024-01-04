@@ -695,6 +695,9 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  /// Record code for the decls hash in the thin BMI.
+  BMI_DECLS_HASH = 68,
 };
 
 /// Record types used within a source manager block.

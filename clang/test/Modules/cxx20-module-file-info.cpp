@@ -30,6 +30,7 @@ export module A;
 void a();
 
 // CHECK-A: ====== C++20
+// CHECK-A-NEXT: Decls Hash
 // CHECK-A-NEXT: Interface Unit 'A' is the Primary Module at index #1
 
 //--- mod-info-tu2.cpp
@@ -38,6 +39,7 @@ export module B;
 void b();
 
 // CHECK-B: ====== C++20
+// CHECK-B-NEXT: Decls Hash
 // CHECK-B-NEXT: Interface Unit 'B' is the Primary Module at index #1
 
 //--- mod-info-tu3.cpp
@@ -55,6 +57,7 @@ export void say(const char *);
 void foo() {}
 
 // CHECK-FOO: ====== C++20
+// CHECK-FOO-NEXT:  Decls Hash
 // CHECK-FOO-NEXT:  Interface Unit 'Foo' is the Primary Module at index #3
 // CHECK-FOO-NEXT:   Sub Modules:
 // CHECK-FOO-NEXT:    Global Module Fragment '<global>' is at index #4

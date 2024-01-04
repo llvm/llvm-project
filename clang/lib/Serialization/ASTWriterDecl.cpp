@@ -16,6 +16,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/SourceManager.h"
@@ -40,11 +41,14 @@ namespace clang {
     serialization::DeclCode Code;
     unsigned AbbrevToUse;
 
+    bool GeneratingThinBMI = false;
+
   public:
     ASTDeclWriter(ASTWriter &Writer, ASTContext &Context,
-                  ASTWriter::RecordDataImpl &Record)
+                  ASTWriter::RecordDataImpl &Record, bool GeneratingThinBMI)
         : Writer(Writer), Context(Context), Record(Writer, Record),
-          Code((serialization::DeclCode)0), AbbrevToUse(0) {}
+          Code((serialization::DeclCode)0), AbbrevToUse(0),
+          GeneratingThinBMI(GeneratingThinBMI) {}
 
     uint64_t Emit(Decl *D) {
       if (!Code)
@@ -270,6 +274,35 @@ namespace clang {
   };
 }
 
+bool clang::MayDefAffectABI(const Decl *D) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->isInlined() || FD->isConstexpr())
+      return true;
+
+    // Non-user-provided functions get emitted as weak definitions with every
+    // use, no matter whether they've been explicitly instantiated etc.
+    if (!FD->isUserProvided())
+      return true;
+
+    if (FD->isDependentContext())
+      return true;
+
+    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return true;
+  }
+
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
+        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD))
+      return true;
+
+    if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return true;
+  }
+
+  return false;
+}
+
 void ASTDeclWriter::Visit(Decl *D) {
   DeclVisitor<ASTDeclWriter>::Visit(D);
 
@@ -285,9 +318,12 @@ void ASTDeclWriter::Visit(Decl *D) {
   // have been written. We want it last because we will not read it back when
   // retrieving it from the AST, we'll just lazily set the offset.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    Record.push_back(FD->doesThisDeclarationHaveABody());
-    if (FD->doesThisDeclarationHaveABody())
-      Record.AddFunctionDefinition(FD);
+    if (!GeneratingThinBMI || MayDefAffectABI(FD)) {
+      Record.push_back(FD->doesThisDeclarationHaveABody());
+      if (FD->doesThisDeclarationHaveABody())
+        Record.AddFunctionDefinition(FD);
+    } else
+      Record.push_back(0);
   }
 
   // Similar to FunctionDecls, handle VarDecl's initializer here and write it
@@ -295,7 +331,10 @@ void ASTDeclWriter::Visit(Decl *D) {
   // we have finished recursive deserialization, because it can recursively
   // refer back to the variable.
   if (auto *VD = dyn_cast<VarDecl>(D)) {
-    Record.AddVarDeclInit(VD);
+    if (!GeneratingThinBMI || MayDefAffectABI(VD))
+      Record.AddVarDeclInit(VD);
+    else
+      Record.push_back(0);
   }
 
   // And similarly for FieldDecls. We already serialized whether there is a
@@ -2703,6 +2742,124 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   return Context.DeclMustBeEmitted(D);
 }
 
+/// Get the hash value of D for the part which contributes to the
+/// BMI (built module interface).
+///
+/// Return std::nullopt in case we are confident the Declaration won't
+/// contribute to the BMI completely.
+///
+/// Note that, for the safety consideration, we can/should return the hash
+/// value if we are not confident that D may contribute to the interface or
+/// not.
+static std::optional<unsigned> getBMICompatibleHash(Decl *D) {
+  ODRHash Hasher;
+
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (!MayDefAffectABI(FD)) {
+      // For non-exported non-inline function, we can skip recording its hash
+      // value in the BMI.
+      if (FD->isInvisibleOutsideTheOwningModule())
+        return std::nullopt;
+
+      // For exported non-inline function, it should be fine enough to record
+      // the signature only.
+      Hasher.AddFunctionDecl(FD, /*SkipBody=*/true);
+      return Hasher.CalculateHash();
+    }
+
+    // For inlined functions, actually there are cases the BMI should keep the
+    // same after we touch the inlined functions, e.g.,
+    //
+    // export module a;
+    // inline int f() { return 43; }
+    // export int a() { return f(); }
+    //
+    // Since all the uses of `f()` is in an non-inline function, it should be
+    // fine to keep the module interface unchanged if we change the definition
+    // of `f()`.
+    //
+    // However, to make the general cases work, we have to perform a context
+    // sensitive reachable analysis to get whether the inline funciton may be
+    // used by an exported inline function transitively. Maybe it is not so hard
+    // or maybe there are simple cases we can cover easily, but we leave the
+    // oppotunities to the future.
+
+    // Otherwise we can try to use the cached ODR Hash.
+    return FD->getODRHash();
+  }
+
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!MayDefAffectABI(VD) && VD->isInvisibleOutsideTheOwningModule())
+      return std::nullopt;
+
+    Hasher.AddDecl(VD);
+    Hasher.AddQualType(VD->getType());
+    // ODRHash::AddDecl won't add the definition for variables by default.
+    if (MayDefAffectABI(VD) && VD->hasInit())
+      Hasher.AddStmt(VD->getInit());
+
+    return Hasher.CalculateHash();
+  }
+
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(D)) {
+    if (!CXXRD->hasDefinition())
+      return std::nullopt;
+
+    // We can't filter the case if the class is not exported since the
+    // non-exported class may be reachable to users:
+    //
+    //  export module a;
+    //  class A{};
+    //  export A a() { ... }
+    //
+    // The users of 'a' can get `A` by:
+    //
+    //  auto v = a();
+
+    // We can't use CXXRecordDecl::getODRHash since it'll use the ODR
+    // hash for all member functions and all member variables.
+    //
+    // The member function and field variables will be recorded seperately.
+    //
+    // TODO: We should try to merge these logics to ODRHash and StmtProfiler.
+    Hasher.AddDecl(CXXRD);
+    Hasher.AddInteger(CXXRD->getNumBases());
+    auto Bases = CXXRD->bases();
+    for (const auto &Base : Bases) {
+      Hasher.AddQualType(Base.getTypeSourceInfo()->getType());
+      Hasher.AddBoolean(Base.isVirtual());
+      Hasher.AddInteger(Base.getAccessSpecifierAsWritten());
+    }
+
+    return Hasher.CalculateHash();
+  }
+
+  if (auto *ED = dyn_cast<EnumDecl>(D)) {
+    if (ED->isInvisibleOutsideTheOwningModule())
+      return std::nullopt;
+
+    // Try to use the cached ODR Hash Value.
+    return ED->getODRHash();
+  }
+
+  if (auto *FD = dyn_cast<FieldDecl>(D)) {
+    Hasher.AddDecl(D);
+    Hasher.AddSubDecl(FD);
+    Hasher.CalculateHash();
+  }
+
+  Hasher.AddDecl(D);
+  return Hasher.CalculateHash();
+}
+
+static void conditionaly_hash_combine(llvm::hash_code &HashValue, Decl *D) {
+  std::optional<unsigned> ODRHashD = getBMICompatibleHash(D);
+  if (!ODRHashD)
+    return;
+
+  HashValue = llvm::hash_combine(HashValue, *ODRHashD);
+}
+
 void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   PrettyDeclStackTraceEntry CrashInfo(Context, D, SourceLocation(),
                                       "serializing");
@@ -2719,10 +2876,13 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   assert(ID >= FirstDeclID && "invalid decl ID");
 
   RecordData Record;
-  ASTDeclWriter W(*this, Context, Record);
+  ASTDeclWriter W(*this, Context, Record, GeneratingThinBMI);
 
   // Build a record for this declaration
   W.Visit(D);
+
+  if (isWritingStdCXXNamedModules())
+    conditionaly_hash_combine(BMIDeclsHash, D);
 
   // Emit this declaration to the bitstream.
   uint64_t Offset = W.Emit(D);

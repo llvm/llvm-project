@@ -184,12 +184,12 @@ bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   return true;
 }
 
-std::unique_ptr<ASTConsumer>
-GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
-                                        StringRef InFile) {
+std::vector<std::unique_ptr<ASTConsumer>>
+GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
+                                              StringRef InFile) {
   std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
   if (!OS)
-    return nullptr;
+    return {};
 
   std::string OutputFile = CI.getFrontendOpts().OutputFile;
   std::string Sysroot;
@@ -210,6 +210,17 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
       +CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
+  return std::move(Consumers);
+}
+
+std::unique_ptr<ASTConsumer>
+GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
+                                        StringRef InFile) {
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
+      CreateMultiplexConsumer(CI, InFile);
+  if (Consumers.empty())
+    return nullptr;
+
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -274,6 +285,35 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, "pcm");
 }
 
+static std::unique_ptr<ASTConsumer>
+CreateThinBMIGenerator(CompilerInstance &CI, StringRef OutputFile) {
+  auto Buffer = std::make_shared<PCHBuffer>();
+  return std::make_unique<ThinBMIGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Buffer,
+      /*IncludeTimestamps=*/+CI.getFrontendOpts().IncludeTimestamps);
+}
+
+std::unique_ptr<ASTConsumer>
+GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) {
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
+      CreateMultiplexConsumer(CI, InFile);
+  if (Consumers.empty())
+    return nullptr;
+
+  if (!CI.getFrontendOpts().ThinBMIPath.empty())
+    Consumers.push_back(
+        CreateThinBMIGenerator(CI, CI.getFrontendOpts().ThinBMIPath));
+
+  return std::make_unique<MultiplexConsumer>(std::move(Consumers));
+}
+
+std::unique_ptr<ASTConsumer>
+GenerateThinModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
+                                                     StringRef InFile) {
+  return CreateThinBMIGenerator(CI, CI.getFrontendOpts().OutputFile);
+}
+
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (!CI.getLangOpts().CPlusPlusModules) {
     CI.getDiagnostics().Report(diag::err_module_interface_requires_cpp_modules);
@@ -298,8 +338,8 @@ SyntaxOnlyAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 std::unique_ptr<ASTConsumer>
-DumpModuleInfoAction::CreateASTConsumer(CompilerInstance &CI,
-                                        StringRef InFile) {
+DumpModuleInfoActionBase::CreateASTConsumer(CompilerInstance &CI,
+                                            StringRef InFile) {
   return std::make_unique<ASTConsumer>();
 }
 
@@ -779,11 +819,21 @@ namespace {
   };
 }
 
-bool DumpModuleInfoAction::BeginInvocation(CompilerInstance &CI) {
+bool DumpModuleInfoActionBase::BeginInvocation(CompilerInstance &CI) {
   // The Object file reader also supports raw ast files and there is no point in
   // being strict about the module file format in -module-file-info mode.
   CI.getHeaderSearchOpts().ModuleFormat = "obj";
   return true;
+}
+
+llvm::raw_ostream &DumpModuleInfoActionBase::getOutputStream() {
+  StringRef OutputFileName = getCompilerInstance().getFrontendOpts().OutputFile;
+  if (!OutputFileName.empty() && OutputFileName != "-") {
+    std::error_code EC;
+    OutputStream.reset(new llvm::raw_fd_ostream(
+        OutputFileName.str(), EC, llvm::sys::fs::OF_TextWithCRLF));
+  }
+  return OutputStream ? *OutputStream : llvm::outs();
 }
 
 static StringRef ModuleKindName(Module::ModuleKind MK) {
@@ -812,15 +862,9 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
 
 void DumpModuleInfoAction::ExecuteAction() {
   assert(isCurrentFileAST() && "dumping non-AST?");
-  // Set up the output file.
+
   CompilerInstance &CI = getCompilerInstance();
-  StringRef OutputFileName = CI.getFrontendOpts().OutputFile;
-  if (!OutputFileName.empty() && OutputFileName != "-") {
-    std::error_code EC;
-    OutputStream.reset(new llvm::raw_fd_ostream(
-        OutputFileName.str(), EC, llvm::sys::fs::OF_TextWithCRLF));
-  }
-  llvm::raw_ostream &Out = OutputStream ? *OutputStream : llvm::outs();
+  llvm::raw_ostream &Out = getOutputStream();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
   auto &FileMgr = CI.getFileManager();
@@ -840,11 +884,16 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   const LangOptions &LO = getCurrentASTUnit().getLangOpts();
   if (LO.CPlusPlusModules && !LO.CurrentModule.empty()) {
-
     ASTReader *R = getCurrentASTUnit().getASTReader().get();
     unsigned SubModuleCount = R->getTotalNumSubmodules();
     serialization::ModuleFile &MF = R->getModuleManager().getPrimaryModule();
     Out << "  ====== C++20 Module structure ======\n";
+
+    std::optional<uint64_t> DeclsHash = R->getReadedBMIDeclsHash();
+    if (DeclsHash) {
+      Out << "  Decls Hash: ";
+      Out.write_hex(*DeclsHash) << "\n";
+    }
 
     if (MF.ModuleName != LO.CurrentModule)
       Out << "  Mismatched module names : " << MF.ModuleName << " and "
@@ -932,6 +981,23 @@ void DumpModuleInfoAction::ExecuteAction() {
       CI.getPCHContainerReader(),
       /*FindModuleFileExtensions=*/true, Listener,
       HSOpts.ModulesValidateDiagnosticOptions);
+}
+
+void GetModuleDeclsHashAction::ExecuteAction() {
+  llvm::raw_ostream &Out = getOutputStream();
+
+  if (!isCurrentFileAST()) {
+    Out << "We should only trying to get Decls hash from a module file.\n";
+    return;
+  }
+
+  ASTReader *R = getCurrentASTUnit().getASTReader().get();
+  std::optional<uint64_t> DeclsHash = R->getReadedBMIDeclsHash();
+  if (DeclsHash) {
+    Out << "Decls Hash: ";
+    Out.write_hex(*DeclsHash) << "\n";
+  } else
+    Out << "Failed to read Decls Hash.\n";
 }
 
 //===----------------------------------------------------------------------===//
