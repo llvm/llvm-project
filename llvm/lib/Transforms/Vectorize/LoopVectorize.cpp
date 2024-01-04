@@ -1248,8 +1248,7 @@ public:
   /// \return The desired interleave count.
   /// If interleave count has been specified by metadata it will be returned.
   /// Otherwise, the interleave count is computed and returned. VF and LoopCost
-  /// are the selected vectorization factor and the cost of the selected VF for
-  /// loop L.
+  /// are the selected vectorization factor and the cost of the selected VF.
   unsigned selectInterleaveCount(ElementCount VF, InstructionCost LoopCost);
 
   /// Memory access instruction may be vectorized in more than one way.
@@ -5585,7 +5584,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     if (std::optional<unsigned> VScale = getVScaleForTuning(TheLoop, TTI))
       EstimatedVF *= *VScale;
   }
-  assert((EstimatedVF >= 1) && "Estimated VF shouldn't be less than 1");
+  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
 
   unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   if (KnownTC) {
