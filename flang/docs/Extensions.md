@@ -107,6 +107,12 @@ end
   These definitions yield fairly poor results due to floating-point
   cancellation, and every Fortran compiler (including this one)
   uses better algorithms.
+* When an index variable of a `FORALL` or `DO CONCURRENT` is present
+  in the enclosing scope, and the construct does not have an explicit
+  type specification for its index variables, some weird restrictions
+  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
+  compiler properly scopes these names, violations of these restrictions
+  elicit only portability warnings by default.
 
 ## Extensions, deletions, and legacy features supported by default
 
