@@ -295,6 +295,22 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
   return FileName;
 }
 
+// The PGO name has the format [<filepath>;]<function-name> where <filepath>; is
+// provided if linkage is local and is used to discriminate possibly identical
+// function names. ";" is used because it is unlikely to be found in either
+// <filepath> or <function-name>.
+//
+// Older compilers used getPGOFuncName() which has the format
+// [<filepath>:]<function-name>. This caused trouble for Objective-C functions
+// which commonly have :'s in their names. We still need to compute this name to
+// lookup functions from profiles built by older compilers.
+static std::string
+getIRPGONameForGlobalObject(const GlobalObject &GO,
+                            GlobalValue::LinkageTypes Linkage,
+                            StringRef FileName) {
+  return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
+}
+
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
   if (MD != nullptr) {
     StringRef S = cast<MDString>(MD->getOperand(0))->getString();
@@ -303,17 +319,7 @@ static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
   return {};
 }
 
-// The PGO name has the format [<filepath>;]<function-name> where <filepath>; is
-// provided if linkage is local and is used to discriminate possibly identical
-// function names. ";" is used because it is unlikely to be found in either
-// <filepath> or <linkage-name>.
-//
-// Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<function-name>. This caused trouble for Objective-C functions
-// which commonly have :'s in their names. We still need to compute this name to
-// lookup functions from profiles built by older compilers.
-//
-// This function has some special handling
+// Returns the PGO object name. This function has some special handling
 // when called in LTO optimization. The following only applies when calling in
 // LTO passes (when \c InLTO is true): LTO's internalization privatizes many
 // global linkage symbols. This happens after value profile annotation, but
@@ -330,8 +336,7 @@ static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
                                       MDNode *PGONameMetadata) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(GO);
-    return GlobalValue::getGlobalIdentifier(GO.getName(), GO.getLinkage(),
-                                            FileName);
+    return getIRPGONameForGlobalObject(GO, GO.getLinkage(), FileName);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
@@ -341,8 +346,7 @@ static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
-  return GlobalValue::getGlobalIdentifier(GO.getName(),
-                                          GlobalValue::ExternalLinkage, "");
+  return getIRPGONameForGlobalObject(GO, GlobalValue::ExternalLinkage, "");
 }
 
 // Returns the IRPGO function name and does special handling when called
@@ -356,8 +360,8 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
 // The implementation is kept for profile matching from older profiles.
 // This is similar to `getIRPGOFuncName` except that this function calls
 // 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
-// 'getIRPGOObjectName'. See the difference between two callees in the
-// comments of `getIRPGOObjectName`.
+// 'getIRPGONameForGlobalObject'. See the difference between two callees in the
+// comments of `getIRPGONameForGlobalObject`.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(F);
@@ -386,7 +390,8 @@ getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
     return PGOFuncName;
-  // Drop the file name including ':' or ';'. See getIRPGOObjectName as well.
+  // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
+  // well.
   if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;

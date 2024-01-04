@@ -3158,9 +3158,9 @@ static int order_main(int argc, const char *argv[]) {
   BP.run(Nodes);
 
   OS << "# Ordered " << Nodes.size() << " functions\n";
-  OS << "# Warning: Mach-O prefixes symbols with \"_\" or \"l_\" depending on "
-        "the linkage and this output does not take this into account. Some "
-        "post processing may be required before passing to the linker via "
+  OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
+        "linkage and this output does not take that into account. Some "
+        "post-processing may be required before passing to the linker via "
         "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
