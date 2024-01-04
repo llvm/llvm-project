@@ -1056,6 +1056,12 @@ public:
           return mlir::success();
         }
       }
+      // Lower GlobalViewAttr to llvm.mlir.addressof
+      if (auto gv = op.getValue().dyn_cast<mlir::cir::GlobalViewAttr>()) {
+        auto newOp = lowerCirAttrAsValue(op, gv, rewriter, getTypeConverter());
+        rewriter.replaceOp(op, newOp);
+        return mlir::success();
+      }
       attr = op.getValue();
     }
     // TODO(cir): constant arrays are currently just pushed into the stack using
