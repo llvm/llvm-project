@@ -1788,14 +1788,15 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   // that because it is merely a hint).
   if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
     FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-    if (ExtInfo.AArch64SMEAttributes &
-        FunctionType::SME_PStateZAPreservedMask) {
-      unsigned ToFlags = 0;
+    FunctionType::ArmStateValue FromState =
+        FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
+    if (FromState == FunctionType::ARM_Preserves) {
+      FunctionType::ArmStateValue ToState;
       if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
-        ToFlags = ToFPT->getExtProtoInfo().AArch64SMEAttributes;
-      if (!(ToFlags & FunctionType::SME_PStateZAPreservedMask)) {
-        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask,
-                                   false);
+        ToState = FunctionType::getArmZAState(
+            ToFPT->getExtProtoInfo().AArch64SMEAttributes);
+      if (ToState == FunctionType::ARM_None) {
+        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAMask, false);
         QualType QT = Context.getFunctionType(
             FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
         FromFn = QT->getAs<FunctionType>();

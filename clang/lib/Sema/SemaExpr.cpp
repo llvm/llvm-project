@@ -9820,15 +9820,20 @@ bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType,
 
   // If the '__arm_preserves_za' is the only difference between the types,
   // check whether we're allowed to add or remove it.
-  if ((FromAttributes ^ ToAttributes) ==
-      FunctionType::SME_PStateZAPreservedMask) {
+  FunctionType::ArmStateValue FromStateZA =
+      FunctionType::getArmZAState(FromAttributes);
+  FunctionType::ArmStateValue ToStateZA =
+      FunctionType::getArmZAState(ToAttributes);
+  if (FromStateZA != ToStateZA) {
     switch (C) {
     case AArch64SMECallConversionKind::MatchExactly:
       return true;
     case AArch64SMECallConversionKind::MayAddPreservesZA:
-      return !(ToAttributes & FunctionType::SME_PStateZAPreservedMask);
+      return !(FromStateZA == FunctionType::ARM_None &&
+               ToStateZA == FunctionType::ARM_Preserves);
     case AArch64SMECallConversionKind::MayDropPreservesZA:
-      return !(FromAttributes & FunctionType::SME_PStateZAPreservedMask);
+      return !(ToStateZA == FunctionType::ARM_None &&
+               FromStateZA == FunctionType::ARM_Preserves);
     }
   }
 

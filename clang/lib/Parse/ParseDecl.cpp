@@ -6792,6 +6792,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // For consistency with attribute parsing.
       Diag(Tok, diag::err_keyword_not_allowed) << Tok.getIdentifierInfo();
       ConsumeToken();
+      BalancedDelimiterTracker T(*this, tok::l_paren);
+      if (!T.consumeOpen())
+        T.skipToEnd();
     } else if (Tok.is(tok::kw_requires) && D.hasGroupingParens()) {
       // This declarator is declaring a function, but the requires clause is
       // in the wrong place:

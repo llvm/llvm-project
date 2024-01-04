@@ -1891,6 +1891,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           break;
       } else if (Tok.isRegularKeywordAttribute()) {
         ConsumeToken();
+        BalancedDelimiterTracker T(*this, tok::l_paren);
+        if (!T.consumeOpen())
+          T.skipToEnd();
       } else {
         break;
       }
@@ -4539,8 +4542,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
   if (Tok.isRegularKeywordAttribute()) {
     SourceLocation Loc = Tok.getLocation();
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
-    Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Tok.getKind());
+    ParsedAttr::Form Form = ParsedAttr::Form(Tok.getKind());
     ConsumeToken();
+    if (Tok.is(tok::l_paren)) {
+      const LangOptions &LO = getLangOpts();
+      unsigned NumArgs = ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
+                                                  /*ScopeName*/ nullptr,
+                                                  /*ScopeLoc*/ Loc, Form);
+    } else
+      Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
     return;
   }
 
@@ -4706,11 +4716,9 @@ SourceLocation Parser::SkipCXX11Attributes() {
       T.consumeOpen();
       T.skipToEnd();
       EndLoc = T.getCloseLocation();
-    } else if (Tok.isRegularKeywordAttribute()) {
-      EndLoc = Tok.getLocation();
-      ConsumeToken();
     } else {
-      assert(Tok.is(tok::kw_alignas) && "not an attribute specifier");
+      assert((Tok.is(tok::kw_alignas) || Tok.isRegularKeywordAttribute()) &&
+             "not an attribute specifier");
       ConsumeToken();
       BalancedDelimiterTracker T(*this, tok::l_paren);
       if (!T.consumeOpen())

@@ -12180,13 +12180,18 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   // Check if the function definition uses any AArch64 SME features without
   // having the '+sme' feature enabled.
   if (DeclIsDefn) {
+    const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
-    bool UsesZA = NewFD->hasAttr<ArmNewZAAttr>();
+    bool UsesZA = Attr && Attr->isNewZA();
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
-      UsesZA |= EPI.AArch64SMEAttributes & FunctionType::SME_PStateZASharedMask;
+      FunctionType::ArmStateValue ZAState =
+          FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
+      UsesZA |= ZAState == FunctionType::ARM_In ||
+                ZAState == FunctionType::ARM_Out ||
+                ZAState == FunctionType::ARM_InOut;
     }
 
     if (UsesSM || UsesZA) {

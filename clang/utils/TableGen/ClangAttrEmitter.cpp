@@ -3556,14 +3556,9 @@ void EmitClangAttrTokenKinds(RecordKeeper &Records, raw_ostream &OS) {
   // keyword attributes.
   for (auto *R : Records.getAllDerivedDefinitions("Attr"))
     for (const auto &S : GetFlattenedSpellings(*R))
-      if (isRegularKeywordAttribute(S)) {
-        if (!R->getValueAsListOfDefs("Args").empty())
-          PrintError(R->getLoc(),
-                     "RegularKeyword attributes with arguments are not "
-                     "yet supported");
+      if (isRegularKeywordAttribute(S))
         OS << "KEYWORD_ATTRIBUTE("
            << S.getSpellingRecord().getValueAsString("Name") << ")\n";
-      }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
 }
 
