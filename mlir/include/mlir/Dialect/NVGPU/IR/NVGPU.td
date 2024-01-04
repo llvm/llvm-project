@@ -423,9 +423,9 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
     ```
   }];
   let results = (outs NVGPU_DeviceAsyncToken:$asyncToken);
-  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
+  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect, 1>]>:$dst,
                        Variadic<Index>:$dstIndices,
-                       Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src,
+                       Arg<AnyMemRef, "", [MemReadAt<0, FullEffect, 1>]>:$src,
                        Variadic<Index>:$srcIndices,
                        IndexAttr:$dstElements,
                        Optional<Index>:$srcElements,
@@ -642,7 +642,7 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
 
     The Op uses `$barrier` mbarrier based completion mechanism. 
   }];  
-  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
+  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect, 1>]>:$dst,
                        NVGPU_MBarrierGroup:$barriers,
                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
                        Variadic<Index>:$coordinates, 

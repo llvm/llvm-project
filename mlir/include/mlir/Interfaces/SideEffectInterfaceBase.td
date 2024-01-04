@@ -160,7 +160,8 @@ def PartialEffect : EffectRange<0>;
 // This class is the general base side effect class. This is used by derived
 // effect interfaces to define their effects.
 class SideEffect<EffectOpInterfaceBase interface, string effectName,
-                 Resource resourceReference, int effectStage, EffectRange range>
+                 Resource resourceReference, int effectStage, EffectRange range,
+                 bits<1> isAsync>
     : OpVariableDecorator {
   /// The name of the base effects class.
   string baseEffectName = interface.baseEffectName;
@@ -183,6 +184,9 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
 
   // Does this side effect act on every single value of resource.
   bit effectOnFullRegion = range.Value;
+
+  // Does this side effect potentially occur after op exit
+  bit asynchronous = isAsync;
 }
 
 // This class is the base used for specifying effects applied to an operation.

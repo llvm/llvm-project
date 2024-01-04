@@ -141,28 +141,28 @@ public:
   EffectInstance(EffectT *effect, Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), stage(0),
         effectOnFullRegion(false) {}
-  EffectInstance(EffectT *effect, int stage, bool effectOnFullRegion,
+  EffectInstance(EffectT *effect, int stage, bool effectOnFullRegion, bool async,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion), asynchronous(async) {}
   EffectInstance(EffectT *effect, Value value,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(0),
         effectOnFullRegion(false) {}
   EffectInstance(EffectT *effect, Value value, int stage,
-                 bool effectOnFullRegion,
+                 bool effectOnFullRegion, bool async,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion), asynchronous(async) {}
   EffectInstance(EffectT *effect, SymbolRefAttr symbol,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol), stage(0),
         effectOnFullRegion(false) {}
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, int stage,
-                 bool effectOnFullRegion,
+                 bool effectOnFullRegion, bool async,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion), asynchronous(async) {}
   EffectInstance(EffectT *effect, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), parameters(parameters), stage(0),
@@ -221,6 +221,9 @@ public:
   /// Return if this side effect act on every single value of resource.
   bool getEffectOnFullRegion() const { return effectOnFullRegion; }
 
+  /// Return if the side effect may occur after the op exits.
+  bool getAsynchronous() const { return asynchronous; }
+
 private:
   /// The specific effect being applied.
   EffectT *effect;
@@ -242,6 +245,9 @@ private:
 
   // Does this side effect act on every single value of resource.
   bool effectOnFullRegion;
+
+  /// Does this side effect potentially occur after op exit.
+  bool asynchronous;
 };
 } // namespace SideEffects
 

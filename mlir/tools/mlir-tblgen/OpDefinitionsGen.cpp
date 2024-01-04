@@ -3306,9 +3306,10 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   // {1}: Optional value or symbol reference.
   // {2}: The side effect stage.
   // {3}: Does this side effect act on every single value of resource.
-  // {4}: The resource class.
+  // {4}: Is asynchronous
+  // {5}: The resource class.
   const char *addEffectCode =
-      "  effects.emplace_back({0}::get(), {1}{2}, {3}, {4}::get());\n";
+      "  effects.emplace_back({0}::get(), {1}{2}, {3}, {4}, {5}::get());\n";
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
@@ -3327,10 +3328,11 @@ void OpEmitter::genSideEffectInterfaceMethods() {
       StringRef resource = location.effect.getResource();
       int stage = (int)location.effect.getStage();
       bool effectOnFullRegion = (int)location.effect.getEffectOnfullRegion();
+      bool async = (int)location.effect.getAsynchronous();
       if (location.kind == EffectKind::Static) {
         // A static instance has no attached value.
         body << llvm::formatv(addEffectCode, effect, "", stage,
-                              effectOnFullRegion, resource)
+                              effectOnFullRegion, async, resource)
                     .str();
       } else if (location.kind == EffectKind::Symbol) {
         // A symbol reference requires adding the proper attribute.
@@ -3339,11 +3341,11 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         if (attr->attr.isOptional()) {
           body << "  if (auto symbolRef = " << argName << "Attr())\n  "
                << llvm::formatv(addEffectCode, effect, "symbolRef, ", stage,
-                                effectOnFullRegion, resource)
+                                effectOnFullRegion, async, resource)
                       .str();
         } else {
           body << llvm::formatv(addEffectCode, effect, argName + "Attr(), ",
-                                stage, effectOnFullRegion, resource)
+                                stage, effectOnFullRegion, async, resource)
                       .str();
         }
       } else {
@@ -3352,7 +3354,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
              << (location.kind == EffectKind::Operand ? "Operands" : "Results")
              << "(" << location.index << "))\n  "
              << llvm::formatv(addEffectCode, effect, "value, ", stage,
-                              effectOnFullRegion, resource)
+                              effectOnFullRegion, async, resource)
                     .str();
       }
     }

@@ -26,15 +26,15 @@ def SideEffectOpB : TEST_Op<"side_effect_op_b",
 
 // CHECK: void SideEffectOpA::getEffects
 // CHECK:   for (::mlir::Value value : getODSOperands(0))
-// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), value, 0, false, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), value, 0, false, false, ::mlir::SideEffects::DefaultResource::get());
 // CHECK:   for (::mlir::Value value : getODSOperands(1))
-// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Write::get(), value, 1, true, ::mlir::SideEffects::DefaultResource::get());
-// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Read::get(), getSymbolAttr(), 0, false, ::mlir::SideEffects::DefaultResource::get());
-// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), getFlatSymbolAttr(), 0, false, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Write::get(), value, 1, true, false, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Read::get(), getSymbolAttr(), 0, false, false, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), getFlatSymbolAttr(), 0, false, false, ::mlir::SideEffects::DefaultResource::get());
 // CHECK:   if (auto symbolRef = getOptionalSymbolAttr())
-// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbolRef, 0, false, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbolRef, 0, false, false, ::mlir::SideEffects::DefaultResource::get());
 // CHECK:   for (::mlir::Value value : getODSResults(0))
-// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Allocate::get(), value, 0, false, CustomResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Allocate::get(), value, 0, false, false, CustomResource::get());
 
 // CHECK: void SideEffectOpB::getEffects
-// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), 0, false, CustomResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), 0, false, false, CustomResource::get());

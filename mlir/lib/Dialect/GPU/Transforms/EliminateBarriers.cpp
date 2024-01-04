@@ -519,6 +519,11 @@ static bool
 haveConflictingEffects(ArrayRef<MemoryEffects::EffectInstance> beforeEffects,
                        ArrayRef<MemoryEffects::EffectInstance> afterEffects) {
   for (const MemoryEffects::EffectInstance &before : beforeEffects) {
+    // Before may conflict with after, but since it is async, a BarrierOp cannot
+    // synchronize the effects. If the async field is set, it is presumed that
+    // some architecture-specific mechanism is needed to synchronize the effect.
+    if (before.getAsynchronous()) continue;
+
     for (const MemoryEffects::EffectInstance &after : afterEffects) {
       // If cannot alias, definitely no conflict.
       if (!mayAlias(before, after))

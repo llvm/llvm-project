@@ -42,6 +42,10 @@ bool SideEffect::getEffectOnfullRegion() const {
   return def->getValueAsBit("effectOnFullRegion");
 }
 
+bool SideEffect::getAsynchronous() const {
+  return def->getValueAsBit("asynchronous");
+}
+
 bool SideEffect::classof(const Operator::VariableDecorator *var) {
   return var->getDef().isSubClassOf("SideEffect");
 }
