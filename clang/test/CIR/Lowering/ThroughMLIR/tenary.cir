@@ -1,0 +1,44 @@
+// RUN: cir-opt %s -cir-to-mlir | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir --canonicalize | FileCheck %s --check-prefix=MLIR-CANONICALIZE
+// RUN: cir-opt %s -cir-to-mlir --canonicalize -cir-mlir-to-llvm | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module {
+cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
+    %5 = cir.ternary(%4, true {
+      %7 = cir.const(#cir.int<3> : !s32i) : !s32i
+      cir.yield %7 : !s32i
+    }, false {
+      %7 = cir.const(#cir.int<5> : !s32i) : !s32i
+      cir.yield %7 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.store %5, %1 : !s32i, cir.ptr <!s32i>
+    %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    cir.return %6 : !s32i
+  }
+}
+
+// MLIR:      %1 = arith.cmpi ugt, %0, %c0_i32 : i32
+// MLIR-NEXT: %2 = arith.extui %1 : i1 to i8
+// MLIR-NEXT: %3 = arith.trunci %2 : i8 to i1
+// MLIR-NEXT: %4 = scf.if %3 -> (i32) {
+// MLIR-NEXT:   %c3_i32 = arith.constant 3 : i32
+// MLIR-NEXT:   scf.yield %c3_i32 : i32
+// MLIR-NEXT: } else {
+// MLIR-NEXT:   %c5_i32 = arith.constant 5 : i32
+// MLIR-NEXT:   scf.yield %c5_i32 : i32
+// MLIR-NEXT: }
+// MLIR-NEXT: memref.store %4, %alloca_0[] : memref<i32>
+
+// MLIR-CANONICALIZE: %[[CMP:.*]] = arith.cmpi ugt
+// MLIR-CANONICALIZE: arith.select %[[CMP]]
+
+// LLVM: %[[CMP:.*]] = icmp ugt
+// LLVM: select i1 %[[CMP]]
