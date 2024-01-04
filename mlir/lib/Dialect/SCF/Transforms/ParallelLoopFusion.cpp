@@ -175,6 +175,8 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
     return;
 
   DominanceInfo dom;
+  // We are fusing first loop into second, make sure there are no users of the
+  // first loop results between loops.
   for (Operation *user : firstPloop->getUsers())
     if (!dom.properlyDominates(secondPloop, user, /*enclosingOpOk*/ false))
       return;
