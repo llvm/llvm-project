@@ -8,6 +8,21 @@
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
 
+!CHECK-DAG: define void @_copy_10xi32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_i64(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_f32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_2x3xf32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_z32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_10xz32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_l32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_5xl32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_c8x8(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_10xc8x8(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_c16x5(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_rec__QFtest_typesTdt(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_box_heap_Uxi32(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_box_ptr_Uxc8x9(ptr %{{.*}}, ptr %{{.*}})
+
 !CHECK-LABEL: define void @_copy_i32(
 !CHECK-SAME:                         ptr %[[DST:.*]], ptr %[[SRC:.*]]) {
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = load i32, ptr %[[SRC]]
@@ -51,5 +66,29 @@ subroutine test_scalar()
   i = 11
   j = 22
   !$omp end single copyprivate(i, j)
+  !$omp end parallel
+end subroutine
+
+subroutine test_types()
+  integer(4) :: i4, i4a(10)
+  integer(8) :: i8
+  real :: r, ra(2, 3)
+  complex :: z, za(10)
+  logical :: l, la(5)
+  character(kind=1, len=8) :: c1, c1a(10)
+  character(kind=2, len=5) :: c2
+
+  type dt
+    integer :: i
+    real :: r
+  end type
+  type(dt) :: t
+
+  integer, allocatable :: aloc(:)
+  character(kind=1, len=9), pointer :: ptr(:)
+
+  !$omp parallel private(i4, i4a, i8, r, ra, z, za, l, la, c1, c1a, c2, t, aloc, ptr)
+  !$omp single
+  !$omp end single copyprivate(i4, i4a, i8, r, ra, z, za, l, la, c1, c1a, c2, t, aloc, ptr)
   !$omp end parallel
 end subroutine

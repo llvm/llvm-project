@@ -574,12 +574,11 @@ verifyCopyPrivateVarList(Operation *op, OperandRange copyPrivateVars,
       funcOp = llvmFuncOp;
 
     auto getNumArguments = [&] {
-      return std::visit([](auto &f) { return f.getArguments().size(); },
-                        *funcOp);
+      return std::visit([](auto &f) { return f.getNumArguments(); }, *funcOp);
     };
 
     auto getArgumentType = [&](unsigned i) {
-      return std::visit([i](auto &f) { return f.getArgument(i).getType(); },
+      return std::visit([i](auto &f) { return f.getArgumentTypes()[i]; },
                         *funcOp);
     };
 
