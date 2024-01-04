@@ -620,30 +620,20 @@ void X86DomainReassignment::initConverters() {
   };
 
 #define GET_EGPR_IF_ENABLED(OPC) STI->hasEGPR() ? OPC##_EVEX : OPC
-  createReplacerDstCOPY(X86::MOVZX32rm16,
-                        GET_EGPR_IF_ENABLED(X86::KMOVWkm));
-  createReplacerDstCOPY(X86::MOVZX64rm16,
-                        GET_EGPR_IF_ENABLED(X86::KMOVWkm));
+  createReplacerDstCOPY(X86::MOVZX32rm16, GET_EGPR_IF_ENABLED(X86::KMOVWkm));
+  createReplacerDstCOPY(X86::MOVZX64rm16, GET_EGPR_IF_ENABLED(X86::KMOVWkm));
 
-  createReplacerDstCOPY(X86::MOVZX32rr16,
-                        GET_EGPR_IF_ENABLED(X86::KMOVWkk));
-  createReplacerDstCOPY(X86::MOVZX64rr16,
-                        GET_EGPR_IF_ENABLED(X86::KMOVWkk));
+  createReplacerDstCOPY(X86::MOVZX32rr16, GET_EGPR_IF_ENABLED(X86::KMOVWkk));
+  createReplacerDstCOPY(X86::MOVZX64rr16, GET_EGPR_IF_ENABLED(X86::KMOVWkk));
 
   if (STI->hasDQI()) {
-    createReplacerDstCOPY(X86::MOVZX16rm8,
-                          GET_EGPR_IF_ENABLED(X86::KMOVBkm));
-    createReplacerDstCOPY(X86::MOVZX32rm8,
-                          GET_EGPR_IF_ENABLED(X86::KMOVBkm));
-    createReplacerDstCOPY(X86::MOVZX64rm8,
-                          GET_EGPR_IF_ENABLED(X86::KMOVBkm));
+    createReplacerDstCOPY(X86::MOVZX16rm8, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
+    createReplacerDstCOPY(X86::MOVZX32rm8, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
+    createReplacerDstCOPY(X86::MOVZX64rm8, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
 
-    createReplacerDstCOPY(X86::MOVZX16rr8,
-                          GET_EGPR_IF_ENABLED(X86::KMOVBkk));
-    createReplacerDstCOPY(X86::MOVZX32rr8,
-                          GET_EGPR_IF_ENABLED(X86::KMOVBkk));
-    createReplacerDstCOPY(X86::MOVZX64rr8,
-                          GET_EGPR_IF_ENABLED(X86::KMOVBkk));
+    createReplacerDstCOPY(X86::MOVZX16rr8, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
+    createReplacerDstCOPY(X86::MOVZX32rr8, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
+    createReplacerDstCOPY(X86::MOVZX64rr8, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
   }
 
   auto createReplacer = [&](unsigned From, unsigned To) {
@@ -696,8 +686,8 @@ void X86DomainReassignment::initConverters() {
 
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
-    //createReplacer(X86::TEST32rr, X86::KTESTDrr);
-    //createReplacer(X86::TEST64rr, X86::KTESTQrr);
+    // createReplacer(X86::TEST32rr, X86::KTESTDrr);
+    // createReplacer(X86::TEST64rr, X86::KTESTQrr);
   }
 
   if (STI->hasDQI()) {
@@ -719,8 +709,8 @@ void X86DomainReassignment::initConverters() {
 
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
-    //createReplacer(X86::TEST8rr, X86::KTESTBrr);
-    //createReplacer(X86::TEST16rr, X86::KTESTWrr);
+    // createReplacer(X86::TEST8rr, X86::KTESTBrr);
+    // createReplacer(X86::TEST16rr, X86::KTESTWrr);
 
     createReplacer(X86::XOR8rr, X86::KXORBrr);
   }
