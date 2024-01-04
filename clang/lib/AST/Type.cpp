@@ -2605,52 +2605,18 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
 }
 
 bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
-  if ((*this)->isArrayType())
-    return Context.getBaseElementType(*this).isTriviallyCopyableType(Context);
-
-  if (hasNonTrivialObjCLifetime())
-    return false;
-
-  // C++11 [basic.types]p9 - See Core 2094
-  //   Scalar types, trivially copyable class types, arrays of such types, and
-  //   cv-qualified versions of these types are collectively
-  //   called trivially copyable types.
-
-  QualType CanonicalType = getCanonicalType();
-  if (CanonicalType->isDependentType())
-    return false;
-
-  if (CanonicalType->isSizelessBuiltinType())
-    return true;
-
-  // Return false for incomplete types after skipping any incomplete array types
-  // which are expressly allowed by the standard and thus our API.
-  if (CanonicalType->isIncompleteType())
-    return false;
-
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
-    return true;
-
-  if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (!ClassDecl->isTriviallyCopyable()) return false;
-    }
-
-    return true;
-  }
-
-  // No other types can match.
-  return false;
+  return isTriviallyCopyableTypeImpl(*this,Context,false);
 }
 
-bool QualType::isTriviallyCopyConstructibleType(
-    const ASTContext &Context) const {
-  if ((*this)->isArrayType())
-    return Context.getBaseElementType(*this).isTriviallyCopyConstructibleType(
-        Context);
+bool QualType::isTriviallyCopyConstructibleType(const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this,Context,true);
+}
 
-  if (hasNonTrivialObjCLifetime())
+bool QualType::isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible){
+  if (type->isArrayType())
+    return Context.getBaseElementType(type).isTriviallyCopyableTypeImpl(type,Context,copy_constructible);
+
+  if (type.hasNonTrivialObjCLifetime())
     return false;
 
   // C++11 [basic.types]p9 - See Core 2094
@@ -2658,7 +2624,7 @@ bool QualType::isTriviallyCopyConstructibleType(
   //   cv-qualified versions of these types are collectively
   //   called trivially copy constructible types.
 
-  QualType CanonicalType = getCanonicalType();
+  QualType CanonicalType = type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2676,13 +2642,14 @@ bool QualType::isTriviallyCopyConstructibleType(
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (!ClassDecl->isTriviallyCopyConstructible())
-        return false;
+      if (copy_constructible)
+        return ClassDecl->isTriviallyCopyConstructible();
+      else
+        return ClassDecl->isTriviallyCopyable();
     }
 
     return true;
   }
-
   // No other types can match.
   return false;
 }

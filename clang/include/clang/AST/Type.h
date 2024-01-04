@@ -766,6 +766,8 @@ public:
 
   bool UseExcessPrecision(const ASTContext &Ctx);
 
+  static bool isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible);
+
   /// Retrieves a pointer to the underlying (unqualified) type.
   ///
   /// This function requires that the type not be NULL. If the type might be
@@ -910,6 +912,7 @@ public:
   /// (C++0x [basic.types]p9). Note that, unlike
   /// CXXRecordDecl::isCXX11StandardLayout, this takes DRs into account.
   bool isCXX11PODType(const ASTContext &Context) const;
+
 
   /// Return true if this is a trivial type per (C++0x [basic.types]p9)
   bool isTrivialType(const ASTContext &Context) const;
