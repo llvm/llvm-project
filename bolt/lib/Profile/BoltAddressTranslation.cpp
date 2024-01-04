@@ -521,8 +521,7 @@ std::unordered_map<uint32_t, std::vector<uint32_t>>
 BoltAddressTranslation::getBFBranches(uint64_t OutputAddress) const {
   std::unordered_map<uint32_t, std::vector<uint32_t>> Branches;
   auto FuncIt = Maps.find(OutputAddress);
-  if (FuncIt == Maps.end())
-    return Branches;
+  assert(FuncIt != Maps.end());
   std::vector<uint32_t> InputOffsets;
   for (const auto &KV : FuncIt->second)
     InputOffsets.emplace_back(KV.second);
