@@ -240,7 +240,7 @@ private:
     if (FD->getTemplateSpecializationArgs()->size() < 1)
       return false;
 
-    const auto &TypeOut = FD->getTemplateSpecializationArgs()->asArray()[0];
+    const auto &TypeOut = FD->getTemplateSpecializationArgs()->get(0);
     // std::get's first template parameter can be the type we want to get
     // out of the std::variant or a natural number which is the position of
     // the requested type in the argument type list of the std::variant's

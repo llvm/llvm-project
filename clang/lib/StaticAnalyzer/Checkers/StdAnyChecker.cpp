@@ -142,7 +142,7 @@ private:
       return false;
 
     const auto &FirstTemplateArgument =
-        FD->getTemplateSpecializationArgs()->asArray()[0];
+        FD->getTemplateSpecializationArgs()->get(0);
     if (FirstTemplateArgument.getKind() != TemplateArgument::ArgKind::Type)
       return false;
 
