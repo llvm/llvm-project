@@ -19,7 +19,6 @@
 
 namespace mlir {
 namespace presburger {
-namespace public_namespace_name::detail {
 
 // A parametric point is a vector, each of whose elements
 // is an affine function of n parameters. Each row
@@ -129,7 +128,6 @@ private:
   std::vector<std::vector<Point>> denominators;
 };
 
-} // namespace public_namespace_name::detail
 } // namespace presburger
 } // namespace mlir
 

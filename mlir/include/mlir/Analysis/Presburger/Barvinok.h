@@ -52,11 +52,13 @@ inline ConeH defineHRep(int num_vars) {
 // points in its fundamental parallelepiped.
 // If the index is 1, the cone is unimodular.
 // Barvinok, A., and J. E. Pommersheim. "An algorithmic theory of lattice points
-// in polyhedra." p. 107 If it has more rays than the dimension, return 0.
+// in polyhedra." p. 107
+// If it has more rays than the dimension, return 0.
 MPInt getIndex(ConeV);
 
 // Get the dual of a cone in H-representation, returning its V-representation.
-// This assumes that the input is pointed at the origin; it fails otherwise.
+// This assumes that the input is pointed at the origin; it assert-fails
+// otherwise.
 ConeV getDual(ConeH);
 
 // Get the dual of a cone in V-representation, returning its H-representation.

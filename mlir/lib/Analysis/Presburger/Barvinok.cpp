@@ -15,18 +15,18 @@ using namespace presburger;
 // converts it to its dual in V-representation.
 // Essentially we just remove the all-zeroes constant column.
 ConeV mlir::presburger::getDual(ConeH cone) {
-  unsigned inequalities = cone.getNumInequalities();
-  unsigned variables = cone.getNumCols() - 1;
-  ConeV dual(inequalities, variables, 0, 0);
+  unsigned numIneq = cone.getNumInequalities();
+  unsigned numVar = cone.getNumCols() - 1;
+  ConeV dual(numIneq, numVar, 0, 0);
   // Assuming that an inequality of the form
   // a1*x1 + ... + an*xn + b ≥ 0
   // is represented as a row [a1, ..., an, b]
   // and that b = 0.
 
-  for (unsigned i = 0; i < inequalities; i++) {
-    assert(cone.atIneq(i, variables) == 0 &&
+  for (unsigned i = 0; i < numIneq; i++) {
+    assert(cone.atIneq(i, numVar) == 0 &&
            "H-representation of cone is not centred at the origin!");
-    for (unsigned j = 0; j < variables; j++) {
+    for (unsigned j = 0; j < numVar; j++) {
       dual.at(i, j) = cone.atIneq(i, j);
     }
   }
