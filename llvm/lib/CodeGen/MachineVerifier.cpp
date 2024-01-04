@@ -48,6 +48,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -3347,10 +3348,13 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     OwnerLI.computeSubRangeUndefs(Undefs, LaneMask, *MRI, *Indexes);
   }
 
+  bool IsEHa = MF->getMMI().getModule()->getModuleFlag("eh-asynch");
   while (true) {
     assert(LiveInts->isLiveInToMBB(LR, &*MFI));
-    // We don't know how to track physregs into a landing pad.
-    if (!Reg.isVirtual() && MFI->isEHPad()) {
+    // TODO: we don't know how to track physregs into a landing pad. For async
+    // EH, the virtual reg lives before scope begin, but we don't know seh scope
+    // range of landing pad in Machine IR. Therefore don't check its liveness.
+    if (MFI->isEHPad() && (!Reg.isVirtual() || IsEHa)) {
       if (&*MFI == EndMBB)
         break;
       ++MFI;
@@ -3364,8 +3368,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // Check that VNI is live-out of all predecessors.
     for (const MachineBasicBlock *Pred : MFI->predecessors()) {
       SlotIndex PEnd = LiveInts->getMBBEndIdx(Pred);
-      // Predecessor of landing pad live-out on last call.
+      // Predecessor of landing pad live-out on last call for sync EH.
       if (MFI->isEHPad()) {
+        assert(!IsEHa && "EHa may raise exception on non call");
         for (const MachineInstr &MI : llvm::reverse(*Pred)) {
           if (MI.isCall()) {
             PEnd = Indexes->getInstructionIndex(MI).getBoundaryIndex();
