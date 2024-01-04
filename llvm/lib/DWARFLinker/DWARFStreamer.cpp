@@ -859,21 +859,31 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
   for (auto Include : P.IncludeDirectories)
     emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool);
 
+  bool InlineSources = any_of(P.FileNames, [](auto &File) {
+    auto s = dwarf::toString(File.Source);
+    return s && !**s;
+  });
+
   if (P.FileNames.empty()) {
     // file_name_entry_format_count (ubyte).
     MS->emitInt8(0);
     LineSectionSize += 1;
   } else {
     // file_name_entry_format_count (ubyte).
-    MS->emitInt8(2);
+    MS->emitInt8(2 + (InlineSources ? 1 : 0));
     LineSectionSize += 1;
 
     // file_name_entry_format (sequence of ULEB128 pairs).
+    auto StrForm = P.FileNames[0].Name.getForm();
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_path);
-    LineSectionSize += MS->emitULEB128IntValue(P.FileNames[0].Name.getForm());
+    LineSectionSize += MS->emitULEB128IntValue(StrForm);
 
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data1);
+    if (InlineSources) {
+      LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_LLVM_source);
+      LineSectionSize += MS->emitULEB128IntValue(StrForm);
+    }
   }
 
   // file_names_count (ULEB128).
@@ -884,6 +894,8 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
     emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
     MS->emitInt8(File.DirIdx);
     LineSectionSize += 1;
+    if (InlineSources)
+      emitLineTableString(P, File.Source, DebugStrPool, DebugLineStrPool);
   }
 }
 
