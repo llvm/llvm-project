@@ -12,6 +12,7 @@
 #include "FuzzerCommand.h"
 #include "FuzzerIO.h"
 #include <mutex>
+#include <pthread.h>
 #include <signal.h>
 #include <spawn.h>
 #include <stdlib.h>
@@ -165,9 +166,8 @@ void DiscardOutput(int Fd) {
   fclose(Temp);
 }
 
-void SetThreadName(std::thread &thread, const std::string &name) {
-  // TODO ?
-  // Darwin allows to set the name only on the current thread it seems
+void SetThreadName(const std::string &name) {
+  pthread_setname_np(name.c_str());
 }
 
 } // namespace fuzzer

@@ -605,7 +605,7 @@ size_t PageSize() {
   return PageSizeCached;
 }
 
-void SetThreadName(std::thread &thread, const std::string &name) {
+void SetThreadName(const std::string &name) {
   // TODO ?
 }
 

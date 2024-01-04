@@ -229,6 +229,7 @@ static void PulseThread() {
 
 static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
                          unsigned NumJobs, std::atomic<bool> *HasErrors) {
+  SetThreadName("FuzzerWorker");
   while (true) {
     unsigned C = (*Counter)++;
     if (C >= NumJobs) break;
@@ -297,7 +298,6 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   for (unsigned i = 0; i < NumWorkers; i++) {
     V[i] = std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs,
                             &HasErrors);
-    SetThreadName(V[i], "FuzzerWorker");
   }
   for (auto &T : V)
     T.join();
