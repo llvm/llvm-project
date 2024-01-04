@@ -80,9 +80,9 @@ inline void test_native_handle_assertion() {
   StreamT f;
 
   // non-const
-  { TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened"); }
+  TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened");
   // const
-  { TEST_LIBCPP_ASSERT_FAILURE(std::as_const(f).native_handle(), "File must be opened"); }
+  TEST_LIBCPP_ASSERT_FAILURE(std::as_const(f).native_handle(), "File must be opened");
 }
 
 template <typename StreamT>
