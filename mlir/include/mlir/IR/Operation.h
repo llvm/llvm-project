@@ -500,6 +500,12 @@ public:
                                llvm::to_vector(getDiscardableAttrs()));
   }
 
+  /// Return all attributes that are not stored as properties.
+  DictionaryAttr getNonPropertyAttrDictionary() {
+    return getPropertiesStorage() ? getDiscardableAttrDictionary()
+                                  : getAttrDictionary();
+  }
+
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() { return getAttrDictionary().getValue(); }
 
