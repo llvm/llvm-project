@@ -18329,6 +18329,7 @@ unsigned X86TargetLowering::getGlobalWrapperKind(
 
   // The following OpFlags under RIP-rel PIC use RIP.
   if (Subtarget.isPICStyleRIPRel() &&
+      !(Subtarget.isTargetWindowsCygwin() && Subtarget.is64Bit()) &&
       (OpFlags == X86II::MO_NO_FLAG || OpFlags == X86II::MO_COFFSTUB ||
        OpFlags == X86II::MO_DLLIMPORT))
     return X86ISD::WrapperRIP;
