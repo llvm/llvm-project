@@ -676,7 +676,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       DeclareOpInterfaceMethods<InferIntRangeInterface>,
       RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,               
+               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<Index>:$clusterSizeX, 
                Optional<Index>:$clusterSizeY, 
