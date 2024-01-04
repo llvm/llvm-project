@@ -236,7 +236,7 @@ let Predicates = [HasNDD, In64BitMode] in {
   def IMUL64rm_ND : IMulOpRM_RF<Xi64, WriteIMul64Reg, 1>;
 }
 
-let Predicates = [In64BitMode] in {
+let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
   def IMUL16rr_NF : IMulOpRR_R<Xi16, WriteIMul16Reg>, NF, PD;
   def IMUL32rr_NF : IMulOpRR_R<Xi32, WriteIMul32Reg>, NF;
   def IMUL64rr_NF : IMulOpRR_R<Xi64, WriteIMul64Reg>, NF;
@@ -251,14 +251,12 @@ let Predicates = [In64BitMode] in {
   def IMUL32rm_NF_ND : IMulOpRM_R<Xi32, WriteIMul32Reg, 1>, EVEX_NF;
   def IMUL64rm_NF_ND : IMulOpRM_R<Xi64, WriteIMul64Reg, 1>, EVEX_NF;
 
-  let Pattern = [(null_frag)] in {
-    def IMUL16rr_EVEX : IMulOpRR_RF<Xi16, WriteIMul16Reg>, PL, PD;
-    def IMUL32rr_EVEX : IMulOpRR_RF<Xi32, WriteIMul32Reg>, PL;
-    def IMUL64rr_EVEX : IMulOpRR_RF<Xi64, WriteIMul64Reg>, PL;
-    def IMUL16rm_EVEX : IMulOpRM_RF<Xi16, WriteIMul16Reg>, PL, PD;
-    def IMUL32rm_EVEX : IMulOpRM_RF<Xi32, WriteIMul32Reg>, PL;
-    def IMUL64rm_EVEX : IMulOpRM_RF<Xi64, WriteIMul64Reg>, PL;
-  }
+  def IMUL16rr_EVEX : IMulOpRR_RF<Xi16, WriteIMul16Reg>, PL, PD;
+  def IMUL32rr_EVEX : IMulOpRR_RF<Xi32, WriteIMul32Reg>, PL;
+  def IMUL64rr_EVEX : IMulOpRR_RF<Xi64, WriteIMul64Reg>, PL;
+  def IMUL16rm_EVEX : IMulOpRM_RF<Xi16, WriteIMul16Reg>, PL, PD;
+  def IMUL32rm_EVEX : IMulOpRM_RF<Xi32, WriteIMul32Reg>, PL;
+  def IMUL64rm_EVEX : IMulOpRM_RF<Xi64, WriteIMul64Reg>, PL;
 }
 
 class IMulOpRI8<X86TypeInfo t, X86FoldableSchedWrite sched>
