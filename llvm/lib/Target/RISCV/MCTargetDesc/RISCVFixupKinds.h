@@ -75,7 +75,7 @@ enum Fixups {
   // auipc
   fixup_riscv_tlsdesc_hi20,
   // 12-bit fixup corresponding to %tlsdesc_load_lo(foo) for instructions like
-  // addi
+  // lw
   fixup_riscv_tlsdesc_load_lo12,
   // 12-bit fixup corresponding to %tlsdesc_add_lo(foo) for instructions like
   // addi
