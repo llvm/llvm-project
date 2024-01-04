@@ -1,5 +1,8 @@
 # Chapter 4: Matching Payload with Transform Operations
 
+**Check the continuously-tested version of MLIR files under
+[mlir/test/Examples/transform/Ch4](https://github.com/llvm/llvm-project/tree/main/mlir/test/Examples/transform/Ch4).**
+
 Up until now, we were applying transform dialect scripts under the assumption
 that specific payload operations are identified by the caller when the transform
 dialect interpreter is invoked. This may be seen as contrary to the idea of
@@ -69,10 +72,10 @@ module @transforms attributes { transform.with_named_sequence } {
   // pass root) given to the transform interpreter.
   transform.named_sequence @__transform_main(
       %root: !transform.any_op {transform.readonly}) {
-    // Collect operations that match the criteria specified in named named
-    // sequence. If the named sequence fails with a silenceable failure,
-    // silences it (the message is forwarded to the debug stream). If the named
-    // sequence succeeds, appends its results to the results of this operation.
+    // Collect operations that match the criteria specified in named sequence.
+    // If the named sequence fails with a silenceable failure, silences it (the
+    // message is forwarded to the debug stream). If the named sequence
+    // succeeds, appends its results to the results of this operation.
     %elemwise = transform.collect_matching @match_elemwise in %root
       : (!transform.any_op) -> !transform.any_op
     %matmul = transform.collect_matching @match_matmul in %root
@@ -129,9 +132,10 @@ stream, for example:
 
 
 ```
+<...>
 [transform-matcher] matching %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32> @0x5622eee08410
 [transform-matcher] matcher match_elemwise failed: wrong operation name
-mlir/test/Examples/transform/Ch4/sequence.mlir:14:13: remark: matmul
+<...>
 ```
 
 
@@ -189,20 +193,41 @@ transform.named_sequence @match_matmul_elemwise(
 
 This matcher is applicable in presence of other `elemwise` and `matmul`
 operations and will return the triple of _related_ operations rather than
-operations in the order in which they are found.
+operations in the order in which they are found. It can be exercised similarly
+to the previous incarnation, as follows.
+
+```mlir
+// Alternative entry point.
+transform.named_sequence @__transform_main(
+    %root: !transform.any_op {transform.readonly}) {
+  // Collect groups of operations that match the criteria specified in the
+  // named sequence.
+  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root 
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  %elemwise = transform.merge_handles %el1, %el2 : !transform.any_op
+
+  transform.include @print_elemwise failures(propagate)  (%elemwise)
+    : (!transform.any_op) -> ()
+  transform.include @print_matmul failures(propagate)  (%matmul)
+    : (!transform.any_op) -> ()
+
+  transform.yield
+}
+```
 
 
 ## Defining Match Operations
 
 The matcher of a chain of operations is correct in presence of other operations,
-but is still insufficiently robust for many cases of interest. In particular, it
-requires that the _first_ operand of elementwise operations is produced by
-another operation. The same transformation strategy may however apply regardless
-of the operand position: many binary operations are associative. Let us use this
-opportunity to introduce a new match operation. Specifically, we would like this
-operation to succeed if _any_ of the operands satisfies certain conditions that
-can be expressed as other match operations. We also want it to return some of
-the state and the position of the matched operand in the operand list.
+but is still insufficiently robust for many cases of interest. In particular,
+using `transform.get_producer_of_operand %last[0]` requires that the _first_
+operand of elementwise operations is produced by another operation. The same
+transformation strategy may however apply regardless of the operand position:
+many binary operations are associative. Let us use this opportunity to introduce
+a new match operation. Specifically, we would like this operation to succeed if
+_any_ of the operands satisfies certain conditions that can be expressed as
+other match operations. We also want it to return some of the state and the
+position of the matched operand in the operand list.
 
 Match operations are defined similarly to other transform operations, with the
 only difference of additionally implementing the `MatchOpInterface`. Note that
@@ -347,7 +372,7 @@ payload IR and must therefore specify that they only read operand handles and
 payload as their effects.
 
 
-```
+```cpp
 void transform::CollectMatchingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getRoot(), effects);
@@ -365,7 +390,7 @@ the matmul to produce the first operand for simplicity. The updated matcher
 sequence looks as follows.
 
 
-```
+```mlir
 transform.named_sequence @match_matmul_elemwise(
     %last: !transform.any_op {transform.readonly})
     -> (!transform.any_op, !transform.any_op, !transform.any_op,
