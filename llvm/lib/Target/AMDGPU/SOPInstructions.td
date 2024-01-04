@@ -1769,8 +1769,6 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
 } // End SubtargetPredicate = HasVGPRSingeUseHintInsts
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
-  def S_WAIT_ALU :
-    SOPP_Pseudo <"s_wait_alu" , (ins DepCtr:$simm16), "$simm16">;
   def S_WAIT_LOADCNT :
     SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_loadcnt timm:$simm16)]>;
