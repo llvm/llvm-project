@@ -4891,16 +4891,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     } else {
       uint64_t Imm = Op->getImm();
-      if (sopkIsZext(MI)) {
-        if (!isUInt<16>(Imm)) {
-          ErrInfo = "invalid immediate for SOPK instruction";
-          return false;
-        }
-      } else {
-        if (!isInt<16>(Imm)) {
-          ErrInfo = "invalid immediate for SOPK instruction";
-          return false;
-        }
+      if (!isUInt<16>(Imm) && !isInt<16>(Imm)) {
+        ErrInfo = "invalid immediate for SOPK instruction";
+        return false;
       }
     }
   }
