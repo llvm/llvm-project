@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(scf-uplift-while-to-for))' -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-scf-uplift-while-to-for))' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
   %0 = scf.while (%arg3 = %arg0) : (index) -> (index) {

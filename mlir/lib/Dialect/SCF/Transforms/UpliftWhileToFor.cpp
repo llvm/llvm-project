@@ -20,7 +20,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_SCFUPLIFTWHILETOFOR
+#define GEN_PASS_DEF_TESTSCFUPLIFTWHILETOFOR
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -218,9 +218,9 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
   }
 };
 
-struct SCFUpliftWhileToFor final
-    : impl::SCFUpliftWhileToForBase<SCFUpliftWhileToFor> {
-  using SCFUpliftWhileToForBase::SCFUpliftWhileToForBase;
+struct TestSCFUpliftWhileToFor final
+    : impl::TestSCFUpliftWhileToForBase<TestSCFUpliftWhileToFor> {
+  using TestSCFUpliftWhileToForBase::TestSCFUpliftWhileToForBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();

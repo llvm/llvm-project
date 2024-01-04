@@ -154,7 +154,7 @@ def SCFForToWhileLoop : Pass<"scf-for-to-while"> {
   }];
 }
 
-def SCFUpliftWhileToFor : Pass<"scf-uplift-while-to-for"> {
+def TestSCFUpliftWhileToFor : Pass<"test-scf-uplift-while-to-for"> {
   let summary = "Uplift scf.while ops to scf.for";
   let description = [{
     This pass tries to uplift `scf.while` ops to `scf.for` if they have a
