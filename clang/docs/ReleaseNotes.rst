@@ -844,7 +844,9 @@ Bug Fixes to C++ Support
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
 - Fixed a crash caused by using return type requirement in a lambda. Fixes:
+  (`#63808 <https://github.com/llvm/llvm-project/issues/63808>`_)
   (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
+  (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
