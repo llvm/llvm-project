@@ -66,7 +66,7 @@ public:
 
   /// Invoked when an unsafe operation over raw pointers is found.
   virtual void handleUnsafeOperation(const Stmt *Operation,
-                                     bool IsRelatedToDecl) = 0;
+                                     bool IsRelatedToDecl, ASTContext &Ctx) = 0;
 
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
