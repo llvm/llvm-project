@@ -30,7 +30,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <sys/types.h>
 
 #define DEBUG_TYPE "wasm-object"
 
@@ -1106,7 +1105,6 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
-
   auto parseValType = [&](uint32_t Code) -> wasm::ValType {
     // only directly encoded FUNCREF/EXTERNREF are supported (not ref null func/ref null extern)
     llvm::errs() << llvm::format(" val type %x ", Code);
@@ -1121,13 +1119,13 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
         return wasm::ValType(Code);
     }
     if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
-      readVarint64(Ctx);
+      /* Discard HeapType */ readVarint64(Ctx);
     }
     return wasm::ValType(wasm::ValType::OTHERREF);
   };
   auto parseFieldDef = [&]() {
     uint32_t TypeCode = readVaruint32((Ctx));
-    parseValType(TypeCode);
+    /* Discard StorageType */ parseValType(TypeCode);
     uint32_t Mutability = readVaruint32(Ctx);
     llvm::errs() << llvm:: format(" mut %d ", Mutability);
   };
@@ -1139,33 +1137,36 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     uint8_t Form = readUint8(Ctx);
     llvm::errs() << llvm::format("Top Count %d form %x", Count, Form) << '\n';
     if (Form == wasm::WASM_TYPE_REC) {
-      uint32_t Size = readVaruint32(Ctx);
-      assert(Size > 0); // TODO real errors here and below
-      Signatures.reserve(Signatures.size() + Size);
-      Count += Size;
-      Form = readVaruint32(Ctx);
-      wasm::WasmSignature s; s.Kind = s.Other;
-      Signatures.push_back(s);
-      Count--;
-      llvm::errs() << llvm::format(" Rec size %d form %x", Size, Form) << '\n';
+      // Rec groups expand the type index space (beyond what was declared at
+      // the top of the section, and also consume one element in that space.
+      uint32_t RecSize = readVaruint32(Ctx);
+      assert(RecSize > 0); // TODO real errors here and below
+      Signatures.reserve(Signatures.size() + RecSize);
+      Count += RecSize;
+      llvm::errs() << llvm::format(" Rec size %d\n", RecSize);
+      Sig.Kind = wasm::WasmSignature::Other;
+      Signatures.push_back(std::move(Sig));
+      continue;
     }
     if (Form != wasm::WASM_TYPE_FUNC) {
-      wasm::WasmSignature s; s.Kind = s.Other;
+      // Currently LLVM only models function types, and not other composite
+      // types. Here we parse the type declarations just enough to skip past
+      // them in the binary.
       if (Form == wasm::WASM_TYPE_SUB || Form == wasm::WASM_TYPE_SUB_FINAL) {
         uint32_t Supers = readVaruint32(Ctx);
         if (Supers > 0) {
           assert(Supers == 1);
-          uint32_t SuperIndex = readVaruint32(Ctx);
+          /* Discard SuperIndex */ readVaruint32(Ctx);
         }
         Form = readVaruint32(Ctx);
         llvm::errs() << llvm::format(" Sub Supers %d form %x", Supers, Form) << '\n';
       }
       if (Form == wasm::WASM_TYPE_STRUCT) {
-        uint32_t NumFields = readVaruint32(Ctx);
-        for (size_t i = 0; i < NumFields; i++) {
+        uint32_t FieldCount = readVaruint32(Ctx);
+        while (FieldCount--) {
           parseFieldDef();
         }
-        llvm::errs() << llvm::format(" Struct size %d", NumFields) << '\n';
+        llvm::errs() << llvm::format(" Struct size %d", FieldCount) << '\n';
       } else if (Form == wasm::WASM_TYPE_ARRAY) {
         parseFieldDef();
         llvm::errs() << llvm::format("arr form %x", Form) << '\n';
@@ -1173,10 +1174,9 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
         llvm::errs() << llvm::format(" bad form %x", Form) << '\n';
         return make_error<GenericBinaryError>("bad form", object_error::parse_failed);
       }
-      Signatures.push_back(s);
+      Sig.Kind = wasm::WasmSignature::Other;
+      Signatures.push_back(std::move(Sig));
       continue;
-      return make_error<GenericBinaryError>("invalid signature type",
-                                            object_error::parse_failed);
     }
 
     uint32_t ParamCount = readVaruint32(Ctx);
@@ -1186,7 +1186,6 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       uint32_t ParamType = readUint8(Ctx);
       Sig.Returns.push_back(parseValType(ParamType));
       continue;
-      
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
     llvm::errs() << llvm::format("\nreturn ct %d ", ReturnCount);
