@@ -43,9 +43,14 @@ public:
   // explicitly. This is the mask for that bit.
   static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
                                                    << FRACTION_LEN;
-  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0, "mask disjoint");
-  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK, "mask cover");
+  // The X80 significand is made of an explicit bit and the fractional part.
+  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0,
+                "the explicit bit and the fractional part should not overlap");
+  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK,
+                "the explicit bit and the fractional part should cover the "
+                "whole significand");
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
+  // Subnormal numbers include the implicit bit in x86 long double formats.
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
   static constexpr StorageType MIN_NORMAL =
       (StorageType(1) << SIG_LEN) | EXPLICIT_BIT_MASK;
@@ -62,6 +67,8 @@ public:
     } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
       bits = x;
     } else {
+      // We don't want accidental type promotions/conversions, so we require
+      // exact type match.
       static_assert(cpp::always_false<XType>);
     }
   }

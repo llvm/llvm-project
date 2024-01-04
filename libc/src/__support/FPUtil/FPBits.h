@@ -136,6 +136,10 @@ private:
   LIBC_INLINE static constexpr StorageType bit_at(int position) {
     return StorageType(1) << position;
   }
+
+  // Merge bits from 'a' and 'b' values according to 'mask'.
+  // Use 'a' bits when corresponding 'mask' bits are zeroes and 'b' bits when
+  // corresponding bits are ones.
   LIBC_INLINE static constexpr StorageType merge(StorageType a, StorageType b,
                                                  StorageType mask) {
     // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
@@ -324,6 +328,8 @@ public:
     } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
       bits = x;
     } else {
+      // We don't want accidental type promotions/conversions, so we require
+      // exact type match.
       static_assert(cpp::always_false<XType>);
     }
   }
