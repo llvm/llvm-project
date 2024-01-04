@@ -280,7 +280,7 @@ void ModuleListProperties::UpdateSymlinkMappings() {
   llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
   const bool notify = false;
   m_symlink_paths.Clear(notify);
-  for (FileSpec symlink : list) {
+  for (auto symlink : list) {
     FileSpec resolved;
     Status status = FileSystem::Instance().Readlink(symlink, resolved);
     if (status.Success())
