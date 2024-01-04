@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++17 -verify %s
-// RUN: %clang_cc1 -std=c++17 -verify %s -DNO_CONSTEXPR
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -DNO_CONSTEXPR
+// RUN: %clang_cc1 -std=c++20 -verify=cxx20,expected %s
 
 namespace std {
 #ifndef NO_CONSTEXPR
@@ -137,27 +137,24 @@ C &&(&rMove)(C&) = std::move; // #8 expected-note {{instantiation of}}
 C &&(&rForward)(C&) = std::forward<C>; // #9 expected-note {{instantiation of}}
 int (&rUnrelatedMove)(B, B) = std::move;
 
-#if __cplusplus <= 201703L
-// expected-warning@#1 {{non-addressable}}
-// expected-warning@#2 {{non-addressable}}
-// expected-warning@#3 {{non-addressable}}
-// expected-warning@#4 {{non-addressable}}
-// expected-warning@#5 {{non-addressable}}
-// expected-warning@#6 {{non-addressable}}
-// expected-warning@#7 {{non-addressable}}
-// expected-warning@#8 {{non-addressable}}
-// expected-warning@#9 {{non-addressable}}
-#else
-// expected-error@#1 {{non-addressable}}
-// expected-error@#2 {{non-addressable}}
-// expected-error@#3 {{non-addressable}}
-// expected-error@#4 {{non-addressable}}
-// expected-error@#5 {{non-addressable}}
-// expected-error@#6 {{non-addressable}}
-// expected-error@#7 {{non-addressable}}
-// expected-error@#8 {{non-addressable}}
-// expected-error@#9 {{non-addressable}}
-#endif
+// cxx17-warning@#1 {{non-addressable}}
+// cxx17-warning@#2 {{non-addressable}}
+// cxx17-warning@#3 {{non-addressable}}
+// cxx17-warning@#4 {{non-addressable}}
+// cxx17-warning@#5 {{non-addressable}}
+// cxx17-warning@#6 {{non-addressable}}
+// cxx17-warning@#7 {{non-addressable}}
+// cxx17-warning@#8 {{non-addressable}}
+// cxx17-warning@#9 {{non-addressable}}
+// cxx20-error@#1 {{non-addressable}}
+// cxx20-error@#2 {{non-addressable}}
+// cxx20-error@#3 {{non-addressable}}
+// cxx20-error@#4 {{non-addressable}}
+// cxx20-error@#5 {{non-addressable}}
+// cxx20-error@#6 {{non-addressable}}
+// cxx20-error@#7 {{non-addressable}}
+// cxx20-error@#8 {{non-addressable}}
+// cxx20-error@#9 {{non-addressable}}
 
 void attribute_const() {
   int n;
@@ -176,23 +173,20 @@ struct D {
   void* operator new(__SIZE_TYPE__, const D&(*)(D&));
 };
 
-#if __cplusplus <= 201703L
-// expected-warning@#10 {{non-addressable}}
-// expected-warning@#11 {{non-addressable}}
-// expected-warning@#12 {{non-addressable}}
-// expected-warning@#13 {{non-addressable}}
-// expected-warning@#14 {{non-addressable}}
-// expected-warning@#15 {{non-addressable}}
-// expected-warning@#16 {{non-addressable}}
-#else
-// expected-error@#10 {{non-addressable}}
-// expected-error@#11 {{non-addressable}}
-// expected-error@#12 {{non-addressable}}
-// expected-error@#13 {{non-addressable}}
-// expected-error@#14 {{non-addressable}}
-// expected-error@#15 {{non-addressable}}
-// expected-error@#16 {{non-addressable}}
-#endif
+// cxx17-warning@#10 {{non-addressable}}
+// cxx17-warning@#11 {{non-addressable}}
+// cxx17-warning@#12 {{non-addressable}}
+// cxx17-warning@#13 {{non-addressable}}
+// cxx17-warning@#14 {{non-addressable}}
+// cxx17-warning@#15 {{non-addressable}}
+// cxx17-warning@#16 {{non-addressable}}
+// cxx20-error@#10 {{non-addressable}}
+// cxx20-error@#11 {{non-addressable}}
+// cxx20-error@#12 {{non-addressable}}
+// cxx20-error@#13 {{non-addressable}}
+// cxx20-error@#14 {{non-addressable}}
+// cxx20-error@#15 {{non-addressable}}
+// cxx20-error@#16 {{non-addressable}}
 
 void placement_new() {
   new (std::move<D>) D; // #10 expected-note {{instantiation of}}
