@@ -46,10 +46,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace lld;
 using namespace llvm::opt;
 using namespace llvm;
