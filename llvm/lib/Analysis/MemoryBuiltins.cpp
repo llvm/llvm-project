@@ -1040,8 +1040,8 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::visitInstruction(Instruction &I) {
 }
 
 // Just set these right here...
-SizeOffsetValue::SizeOffsetType(SizeOffsetWeakTrackingVH &SOT)
-    : Size((Value *)SOT.Size), Offset((Value *)SOT.Offset) {}
+SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
+    : SizeOffsetType((Value *)SOT.Size, (Value *)SOT.Offset) {}
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::unknown;
 

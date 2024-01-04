@@ -190,36 +190,36 @@ Value *lowerObjectSizeCall(
 /// SizeOffsetType - A base template class for the object size visitors. Used
 /// here as a self-documenting way to handle the values rather than using a
 /// \p std::pair.
-template <typename T> struct SizeOffsetType {
+template <typename T>
+struct SizeOffsetType {
   T Size;
   T Offset;
 
-  bool knownSize() const;
-  bool knownOffset() const;
-  bool anyKnown() const;
-  bool bothKnown() const;
-};
-
-/// SizeOffsetType<APInt> - Used by \p ObjectSizeOffsetVisitor, which works
-/// with \p APInts.
-template <> struct SizeOffsetType<APInt> {
-  APInt Size;
-  APInt Offset;
-
   SizeOffsetType() = default;
-  SizeOffsetType(APInt Size, APInt Offset) : Size(Size), Offset(Offset) {}
+  SizeOffsetType(T Size, T Offset) : Size(Size), Offset(Offset) {}
 
-  bool knownSize() const { return Size.getBitWidth() > 1; }
-  bool knownOffset() const { return Offset.getBitWidth() > 1; }
+  bool knownSize() const { return false; }
+  bool knownOffset() const { return false; }
   bool anyKnown() const { return knownSize() || knownOffset(); }
   bool bothKnown() const { return knownSize() && knownOffset(); }
 
-  bool operator==(const SizeOffsetType<APInt> &RHS) {
-    return Size == RHS.Size && Offset == RHS.Offset;
+  bool operator==(const SizeOffsetType<T> &RHS) const {
+    return (T)Size == (T)RHS.Size && (T)Offset == (T)RHS.Offset;
   }
-  bool operator!=(const SizeOffsetType<APInt> &RHS) { return !(*this == RHS); }
+  bool operator!=(const SizeOffsetType<T> &RHS) const {
+    return !(*this == RHS);
+  }
 };
-using SizeOffsetAPInt = SizeOffsetType<APInt>;
+
+/// SizeOffsetAPInt - Used by \p ObjectSizeOffsetVisitor, which works with
+/// \p APInts.
+struct SizeOffsetAPInt : public SizeOffsetType<APInt> {
+  SizeOffsetAPInt() = default;
+  SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
+
+  bool knownSize() const { return Size.getBitWidth() > 1; }
+  bool knownOffset() const { return Offset.getBitWidth() > 1; }
+};
 
 /// Evaluate the size and offset of an object pointed to by a Value*
 /// statically. Fails if size or offset are not known at compile time.
@@ -271,63 +271,37 @@ private:
   bool CheckedZextOrTrunc(APInt &I);
 };
 
-template <> struct SizeOffsetType<WeakTrackingVH>;
-
-/// SizeOffsetType<Value *> - Used by \p ObjectSizeOffsetEvaluator, which works
-/// with \p Values.
-template <> struct SizeOffsetType<Value *> {
-  Value *Size;
-  Value *Offset;
-
-  SizeOffsetType() = default;
-  SizeOffsetType(Value *Size, Value *Offset) : Size(Size), Offset(Offset) {}
-  SizeOffsetType(SizeOffsetType<WeakTrackingVH> &SOT);
+/// SizeOffsetValue - Used by \p ObjectSizeOffsetEvaluator, which works with
+/// \p Values.
+struct SizeOffsetWeakTrackingVH;
+struct SizeOffsetValue : public SizeOffsetType<Value *> {
+  SizeOffsetValue() = default;
+  SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
+  SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
 
   bool knownSize() const { return Size != nullptr; }
   bool knownOffset() const { return Offset != nullptr; }
-  bool anyKnown() const { return knownSize() || knownOffset(); }
-  bool bothKnown() const { return knownSize() && knownOffset(); }
-
-  bool operator==(const SizeOffsetType<Value *> &RHS) {
-    return Size == RHS.Size && Offset == RHS.Offset;
-  }
-  bool operator!=(const SizeOffsetType<Value *> &RHS) {
-    return !(*this == RHS);
-  }
 };
-using SizeOffsetValue = SizeOffsetType<Value *>;
 
-/// SizeOffsetType<WeakTrackingVH> - Used by \p ObjectSizeOffsetEvaluator in a
+/// SizeOffsetWeakTrackingVH - Used by \p ObjectSizeOffsetEvaluator in a
 /// \p DenseMap.
-template <> struct SizeOffsetType<WeakTrackingVH> {
-  WeakTrackingVH Size;
-  WeakTrackingVH Offset;
-
-  SizeOffsetType() = default;
-  SizeOffsetType(Value *Size, Value *Offset) : Size(Size), Offset(Offset) {}
-  SizeOffsetType(SizeOffsetValue &SOT) : Size(SOT.Size), Offset(SOT.Offset) {}
+struct SizeOffsetWeakTrackingVH : public SizeOffsetType<WeakTrackingVH> {
+  SizeOffsetWeakTrackingVH() = default;
+  SizeOffsetWeakTrackingVH(Value *Size, Value *Offset)
+      : SizeOffsetType(Size, Offset) {}
+  SizeOffsetWeakTrackingVH(const SizeOffsetValue &SOV)
+      : SizeOffsetType(SOV.Size, SOV.Offset) {}
 
   bool knownSize() const { return Size.pointsToAliveValue(); }
   bool knownOffset() const { return Offset.pointsToAliveValue(); }
-  bool anyKnown() const { return knownSize() || knownOffset(); }
-  bool bothKnown() const { return knownSize() && knownOffset(); }
-
-  bool operator==(const SizeOffsetType<Value *> &RHS) {
-    return (Value *)Size == (Value *)RHS.Size &&
-           (Value *)Offset == (Value *)RHS.Offset;
-  }
-  bool operator!=(const SizeOffsetType<Value *> &RHS) {
-    return !(*this == RHS);
-  }
 };
-using SizeOffsetWeakTrackingVH = SizeOffsetType<WeakTrackingVH>;
 
 /// Evaluate the size and offset of an object pointed to by a Value*.
 /// May create code to compute the result at run-time.
 class ObjectSizeOffsetEvaluator
     : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetValue> {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  using WeakEvalType = SizeOffsetType<WeakTrackingVH>;
+  using WeakEvalType = SizeOffsetWeakTrackingVH;
   using CacheMapTy = DenseMap<const Value *, WeakEvalType>;
   using PtrSetTy = SmallPtrSet<const Value *, 8>;
 
