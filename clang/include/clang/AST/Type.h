@@ -766,8 +766,6 @@ public:
 
   bool UseExcessPrecision(const ASTContext &Ctx);
 
-  static bool isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible);
-
   /// Retrieves a pointer to the underlying (unqualified) type.
   ///
   /// This function requires that the type not be NULL. If the type might be
