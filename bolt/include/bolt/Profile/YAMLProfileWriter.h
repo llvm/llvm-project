@@ -9,6 +9,7 @@
 #ifndef BOLT_PROFILE_YAML_PROFILE_WRITER_H
 #define BOLT_PROFILE_YAML_PROFILE_WRITER_H
 
+#include "bolt/Profile/ProfileYAMLMapping.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
@@ -29,6 +30,9 @@ public:
 
   /// Save execution profile for that instance.
   std::error_code writeProfile(const RewriteInstance &RI);
+
+  static yaml::bolt::BinaryFunctionProfile convert(const BinaryFunction &BF,
+                                                   bool UseDFS);
 };
 
 } // namespace bolt
