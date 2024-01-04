@@ -1109,10 +1109,10 @@ def SVPFALSE : SInst<"svpfalse[_b]", "Pv", "", MergeNone, "", [IsOverloadNone, I
 def SVPTRUE_PAT : SInst<"svptrue_pat_{d}", "PI", "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsStreamingCompatible]>;
 def SVPTRUE     : SInst<"svptrue_{d}",     "Pv",  "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsAppendSVALL, IsStreamingCompatible]>;
 
-def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeNone, "", [IsStreamingCompatible]>;
-def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone, "", [IsStreamingCompatible]>;
-def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone, "", [IsStreamingCompatible]>;
-def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone, "", [IsStreamingCompatible]>;
+def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeNone>;
+def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone>;
+def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone>;
+def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone>;
 def SVDUP_N_B      : SInst<"svdup[_n]_{d}",  "Ps", "PcPsPiPl", MergeNone>;
 
 
