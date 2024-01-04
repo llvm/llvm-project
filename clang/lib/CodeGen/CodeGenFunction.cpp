@@ -1256,6 +1256,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
 void CodeGenFunction::EmitFunctionBody(const Stmt *Body) {
   incrementProfileCounter(Body);
+  maybeCreateMCDCCondBitmap();
   if (const CompoundStmt *S = dyn_cast<CompoundStmt>(Body))
     EmitCompoundStmtWithoutScope(*S);
   else
@@ -1601,6 +1602,13 @@ bool CodeGenFunction::mightAddDeclToScope(const Stmt *S) {
 bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
                                                    bool &ResultBool,
                                                    bool AllowLabels) {
+  // If MC/DC is enabled, disable folding so that we can instrument all
+  // conditions to yield complete test vectors. We still keep track of
+  // folded conditions during region mapping and visualization.
+  if (!AllowLabels && CGM.getCodeGenOpts().hasProfileClangInstr() &&
+      CGM.getCodeGenOpts().MCDCCoverage)
+    return false;
+
   llvm::APSInt ResultInt;
   if (!ConstantFoldsToSimpleInteger(Cond, ResultInt, AllowLabels))
     return false;
@@ -1629,16 +1637,20 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   return true;
 }
 
+/// Strip parentheses and simplistic logical-NOT operators.
+const Expr *CodeGenFunction::stripCond(const Expr *C) {
+  while (const UnaryOperator *Op = dyn_cast<UnaryOperator>(C->IgnoreParens())) {
+    if (Op->getOpcode() != UO_LNot)
+      break;
+    C = Op->getSubExpr();
+  }
+  return C->IgnoreParens();
+}
+
 /// Determine whether the given condition is an instrumentable condition
 /// (i.e. no "&&" or "||").
 bool CodeGenFunction::isInstrumentedCondition(const Expr *C) {
-  // Bypass simplistic logical-NOT operator before determining whether the
-  // condition contains any other logical operator.
-  if (const UnaryOperator *UnOp = dyn_cast<UnaryOperator>(C->IgnoreParens()))
-    if (UnOp->getOpcode() == UO_LNot)
-      C = UnOp->getSubExpr();
-
-  const BinaryOperator *BOp = dyn_cast<BinaryOperator>(C->IgnoreParens());
+  const BinaryOperator *BOp = dyn_cast<BinaryOperator>(stripCond(C));
   return (!BOp || !BOp->isLogicalOp());
 }
 
@@ -1717,17 +1729,19 @@ void CodeGenFunction::EmitBranchToCounterBlock(
 /// statement) to the specified blocks.  Based on the condition, this might try
 /// to simplify the codegen of the conditional based on the branch.
 /// \param LH The value of the likelihood attribute on the True branch.
-void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
-                                           llvm::BasicBlock *TrueBlock,
-                                           llvm::BasicBlock *FalseBlock,
-                                           uint64_t TrueCount,
-                                           Stmt::Likelihood LH) {
+/// \param ConditionalOp Used by MC/DC code coverage to track the result of the
+/// ConditionalOperator (ternary) through a recursive call for the operator's
+/// LHS and RHS nodes.
+void CodeGenFunction::EmitBranchOnBoolExpr(
+    const Expr *Cond, llvm::BasicBlock *TrueBlock, llvm::BasicBlock *FalseBlock,
+    uint64_t TrueCount, Stmt::Likelihood LH, const Expr *ConditionalOp) {
   Cond = Cond->IgnoreParens();
 
   if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(Cond)) {
-
     // Handle X && Y in a condition.
     if (CondBOp->getOpcode() == BO_LAnd) {
+      MCDCLogOpStack.push_back(CondBOp);
+
       // If we have "1 && X", simplify the code.  "0 && X" would have constant
       // folded if the case was simple enough.
       bool ConstantBool = false;
@@ -1735,8 +1749,10 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
           ConstantBool) {
         // br(1 && X) -> br(X).
         incrementProfileCounter(CondBOp);
-        return EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
-                                        FalseBlock, TrueCount, LH);
+        EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
+                                 FalseBlock, TrueCount, LH);
+        MCDCLogOpStack.pop_back();
+        return;
       }
 
       // If we have "X && 1", simplify the code to use an uncond branch.
@@ -1744,8 +1760,10 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
       if (ConstantFoldsToSimpleInteger(CondBOp->getRHS(), ConstantBool) &&
           ConstantBool) {
         // br(X && 1) -> br(X).
-        return EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LAnd, TrueBlock,
-                                        FalseBlock, TrueCount, LH, CondBOp);
+        EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LAnd, TrueBlock,
+                                 FalseBlock, TrueCount, LH, CondBOp);
+        MCDCLogOpStack.pop_back();
+        return;
       }
 
       // Emit the LHS as a conditional.  If the LHS conditional is false, we
@@ -1774,11 +1792,13 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
       EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
                                FalseBlock, TrueCount, LH);
       eval.end(*this);
-
+      MCDCLogOpStack.pop_back();
       return;
     }
 
     if (CondBOp->getOpcode() == BO_LOr) {
+      MCDCLogOpStack.push_back(CondBOp);
+
       // If we have "0 || X", simplify the code.  "1 || X" would have constant
       // folded if the case was simple enough.
       bool ConstantBool = false;
@@ -1786,8 +1806,10 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
           !ConstantBool) {
         // br(0 || X) -> br(X).
         incrementProfileCounter(CondBOp);
-        return EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LOr, TrueBlock,
-                                        FalseBlock, TrueCount, LH);
+        EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LOr, TrueBlock,
+                                 FalseBlock, TrueCount, LH);
+        MCDCLogOpStack.pop_back();
+        return;
       }
 
       // If we have "X || 0", simplify the code to use an uncond branch.
@@ -1795,10 +1817,11 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
       if (ConstantFoldsToSimpleInteger(CondBOp->getRHS(), ConstantBool) &&
           !ConstantBool) {
         // br(X || 0) -> br(X).
-        return EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LOr, TrueBlock,
-                                        FalseBlock, TrueCount, LH, CondBOp);
+        EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LOr, TrueBlock,
+                                 FalseBlock, TrueCount, LH, CondBOp);
+        MCDCLogOpStack.pop_back();
+        return;
       }
-
       // Emit the LHS as a conditional.  If the LHS conditional is true, we
       // want to jump to the TrueBlock.
       llvm::BasicBlock *LHSFalse = createBasicBlock("lor.lhs.false");
@@ -1829,14 +1852,20 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
                                RHSCount, LH);
 
       eval.end(*this);
-
+      MCDCLogOpStack.pop_back();
       return;
     }
   }
 
   if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(Cond)) {
     // br(!x, t, f) -> br(x, f, t)
-    if (CondUOp->getOpcode() == UO_LNot) {
+    // Avoid doing this optimization when instrumenting a condition for MC/DC.
+    // LNot is taken as part of the condition for simplicity, and changing its
+    // sense negatively impacts test vector tracking.
+    bool MCDCCondition = CGM.getCodeGenOpts().hasProfileClangInstr() &&
+                         CGM.getCodeGenOpts().MCDCCoverage &&
+                         isInstrumentedCondition(Cond);
+    if (CondUOp->getOpcode() == UO_LNot && !MCDCCondition) {
       // Negate the count.
       uint64_t FalseCount = getCurrentProfileCount() - TrueCount;
       // The values of the enum are chosen to make this negation possible.
@@ -1876,14 +1905,14 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
     {
       ApplyDebugLocation DL(*this, Cond);
       EmitBranchOnBoolExpr(CondOp->getLHS(), TrueBlock, FalseBlock,
-                           LHSScaledTrueCount, LH);
+                           LHSScaledTrueCount, LH, CondOp);
     }
     cond.end(*this);
 
     cond.begin(*this);
     EmitBlock(RHSBlock);
     EmitBranchOnBoolExpr(CondOp->getRHS(), TrueBlock, FalseBlock,
-                         TrueCount - LHSScaledTrueCount, LH);
+                         TrueCount - LHSScaledTrueCount, LH, CondOp);
     cond.end(*this);
 
     return;
@@ -1904,6 +1933,21 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
   {
     ApplyDebugLocation DL(*this, Cond);
     CondV = EvaluateExprAsBool(Cond);
+  }
+
+  // If not at the top of the logical operator nest, update MCDC temp with the
+  // boolean result of the evaluated condition.
+  if (!MCDCLogOpStack.empty()) {
+    const Expr *MCDCBaseExpr = Cond;
+    // When a nested ConditionalOperator (ternary) is encountered in a boolean
+    // expression, MC/DC tracks the result of the ternary, and this is tied to
+    // the ConditionalOperator expression and not the ternary's LHS or RHS. If
+    // this is the case, the ConditionalOperator expression is passed through
+    // the ConditionalOp parameter and then used as the MCDC base expression.
+    if (ConditionalOp)
+      MCDCBaseExpr = ConditionalOp;
+
+    maybeUpdateMCDCCondBitmap(MCDCBaseExpr, CondV);
   }
 
   llvm::MDNode *Weights = nullptr;
