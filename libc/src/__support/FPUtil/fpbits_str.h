@@ -45,7 +45,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
   cpp::string s;
 
-  const details::ZeroPaddedHexFmt<StorageType> bits(x.bits);
+  const details::ZeroPaddedHexFmt<StorageType> bits(x.uintval());
   s += bits.view();
 
   s += " = (S: ";
