@@ -186,8 +186,8 @@ def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the 
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
 defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
-defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
-  "Path to ThinLTO cached object file directory">;
+def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
+  HelpText<"Path to ThinLTO cached object file directory">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
 defm guard_cf : B<"guard-cf", "Enable Control Flow Guard" ,
   "Do not enable Control Flow Guard (default)">;
