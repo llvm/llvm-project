@@ -11,7 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchSubtarget.h"
+#include "LoongArchCallLowering.h"
 #include "LoongArchFrameLowering.h"
+#include "LoongArchLegalizerInfo.h"
+#include "LoongArchRegisterBankInfo.h"
+#include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 
 using namespace llvm;
@@ -88,4 +92,28 @@ LoongArchSubtarget::LoongArchSubtarget(const Triple &TT, StringRef CPU,
     : LoongArchGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {}
+      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+  CallLoweringInfo.reset(new LoongArchCallLowering(*getTargetLowering()));
+  Legalizer.reset(new LoongArchLegalizerInfo(*this));
+
+  auto *RBI = new LoongArchRegisterBankInfo(getHwMode());
+  RegBankInfo.reset(RBI);
+  InstSelector.reset(createLoongArchInstructionSelector(
+      *static_cast<const LoongArchTargetMachine *>(&TM), *this, *RBI));
+}
+
+const CallLowering *LoongArchSubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+InstructionSelector *LoongArchSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}
+
+const LegalizerInfo *LoongArchSubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *LoongArchSubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}

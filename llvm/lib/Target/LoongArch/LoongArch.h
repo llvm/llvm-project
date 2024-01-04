@@ -20,7 +20,10 @@
 namespace llvm {
 class AsmPrinter;
 class FunctionPass;
+class InstructionSelector;
 class LoongArchTargetMachine;
+class LoongArchRegisterBankInfo;
+class LoongArchSubtarget;
 class MCInst;
 class MCOperand;
 class MachineInstr;
@@ -41,6 +44,11 @@ void initializeLoongArchDAGToDAGISelPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);
 void initializeLoongArchExpandPseudoPass(PassRegistry &);
+
+InstructionSelector *
+createLoongArchInstructionSelector(const LoongArchTargetMachine &,
+                                   LoongArchSubtarget &,
+                                   LoongArchRegisterBankInfo &);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H

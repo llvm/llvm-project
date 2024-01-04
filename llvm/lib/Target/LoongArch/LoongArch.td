@@ -113,6 +113,7 @@ def FeatureRelax
 include "LoongArchRegisterInfo.td"
 include "LoongArchCallingConv.td"
 include "LoongArchInstrInfo.td"
+include "LoongArchRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // LoongArch processors supported.
