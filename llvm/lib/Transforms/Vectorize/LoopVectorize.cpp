@@ -5579,21 +5579,45 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       MaxInterleaveCount = ForceTargetMaxVectorInterleaveFactor;
   }
 
-  // If trip count is known or estimated compile time constant, limit the
-  // interleave count to be less than the trip count divided by VF, provided it
-  // is at least 1.
-  //
-  // For scalable vectors we can't know if interleaving is beneficial. It may
-  // not be beneficial for small loops if none of the lanes in the second vector
-  // iterations is enabled. However, for larger loops, there is likely to be a
-  // similar benefit as for fixed-width vectors. For now, we choose to leave
-  // the InterleaveCount as if vscale is '1', although if some information about
-  // the vector is known (e.g. min vector size), we can make a better decision.
-  if (BestKnownTC) {
-    MaxInterleaveCount =
-        std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
-    // Make sure MaxInterleaveCount is greater than 0.
-    MaxInterleaveCount = std::max(1u, MaxInterleaveCount);
+  unsigned EstimatedVF = VF.getKnownMinValue();
+  if (VF.isScalable()) {
+    if (std::optional<unsigned> VScale = getVScaleForTuning(TheLoop, TTI))
+      EstimatedVF *= *VScale;
+  }
+  assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
+
+  unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
+  if (KnownTC) {
+    // If trip count is known we select between two prospective ICs, where
+    // 1) the aggressive IC is capped by the trip count divided by VF
+    // 2) the conservative IC is capped by the trip count divided by (VF * 2)
+    // The final IC is selected in a way that the epilogue loop trip count is
+    // minimized while maximizing the IC itself, so that we either run the
+    // vector loop at least once if it generates a small epilogue loop, or else
+    // we run the vector loop at least twice.
+
+    unsigned InterleaveCountUB = bit_floor(
+        std::max(1u, std::min(KnownTC / EstimatedVF, MaxInterleaveCount)));
+    unsigned InterleaveCountLB = bit_floor(std::max(
+        1u, std::min(KnownTC / (EstimatedVF * 2), MaxInterleaveCount)));
+    MaxInterleaveCount = InterleaveCountLB;
+
+    if (InterleaveCountUB != InterleaveCountLB) {
+      unsigned TailTripCountUB = (KnownTC % (EstimatedVF * InterleaveCountUB));
+      unsigned TailTripCountLB = (KnownTC % (EstimatedVF * InterleaveCountLB));
+      // If both produce same scalar tail, maximize the IC to do the same work
+      // in fewer vector loop iterations
+      if (TailTripCountUB == TailTripCountLB)
+        MaxInterleaveCount = InterleaveCountUB;
+    }
+  } else if (BestKnownTC) {
+    // If trip count is an estimated compile time constant, limit the
+    // IC to be capped by the trip count divided by VF * 2, such that the vector
+    // loop runs at least twice to make interleaving seem profitable when there
+    // is an epilogue loop present. Since exact Trip count is not known we
+    // choose to be conservative in our IC estimate.
+    MaxInterleaveCount = bit_floor(std::max(
+        1u, std::min(*BestKnownTC / (EstimatedVF * 2), MaxInterleaveCount)));
   }
 
   assert(MaxInterleaveCount > 0 &&
@@ -9141,7 +9165,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    auto *Result = PhiR->getBackedgeValue()->getDefiningRecipe();
+    auto *NewExitingVPV = PhiR->getBackedgeValue();
     // If tail is folded by masking, introduce selects between the phi
     // and the live-out instruction of each reduction, at the beginning of the
     // dedicated latch block.
@@ -9151,21 +9175,20 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPValue *Red = PhiR->getBackedgeValue();
       assert(Red->getDefiningRecipe()->getParent() != LatchVPBB &&
              "reduction recipe must be defined before latch");
-      FastMathFlags FMFs = RdxDesc.getFastMathFlags();
       Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
-      Result =
+      std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
-              ? new VPInstruction(Instruction::Select, {Cond, Red, PhiR}, FMFs)
-              : new VPInstruction(Instruction::Select, {Cond, Red, PhiR});
-      Result->insertBefore(&*Builder.getInsertPoint());
-      Red->replaceUsesWithIf(
-          Result->getVPSingleValue(),
-          [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
+              ? std::make_optional(RdxDesc.getFastMathFlags())
+              : std::nullopt;
+      NewExitingVPV = Builder.createSelect(Cond, Red, PhiR, {}, "", FMFs);
+      Red->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
+        return isa<VPLiveOut>(&U);
+      });
       if (PreferPredicatedReductionSelect ||
           TTI.preferPredicatedReductionSelect(
               PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy,
               TargetTransformInfo::ReductionFlags()))
-        PhiR->setOperand(1, Result->getVPSingleValue());
+        PhiR->setOperand(1, NewExitingVPV);
     }
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -9174,17 +9197,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
-      auto *Trunc = new VPWidenCastRecipe(Instruction::Trunc,
-                                          Result->getVPSingleValue(), RdxTy);
+      auto *Trunc =
+          new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
       auto *Extnd =
           RdxDesc.isSigned()
               ? new VPWidenCastRecipe(Instruction::SExt, Trunc, PhiTy)
               : new VPWidenCastRecipe(Instruction::ZExt, Trunc, PhiTy);
 
-      Trunc->insertAfter(Result);
+      Trunc->insertAfter(NewExitingVPV->getDefiningRecipe());
       Extnd->insertAfter(Trunc);
-      Result->getVPSingleValue()->replaceAllUsesWith(Extnd);
-      Trunc->setOperand(0, Result->getVPSingleValue());
+      NewExitingVPV->replaceAllUsesWith(Extnd);
+      Trunc->setOperand(0, NewExitingVPV);
     }
   }
 
