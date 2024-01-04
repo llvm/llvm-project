@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-backtrace-limit=2 -Wno-stack-exhausted %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-backtrace-limit=2 %if {{asan|ubsan}} %{ -Wno-stack-exhausted %} %s
 // The default stack size on NetBSD is too small for this test.
 // UNSUPPORTED: system-netbsd
 
