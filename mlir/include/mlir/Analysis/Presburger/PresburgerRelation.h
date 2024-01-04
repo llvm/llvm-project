@@ -64,7 +64,8 @@ public:
   /// exceeds that of some disjunct, an assert failure will occur.
   void setSpace(const PresburgerSpace &oSpace);
 
-  void insertVarInPlace(VarKind kind, unsigned pos, unsigned num = 1);
+  void insertVarInPlace(VarKind kind, unsigned pos, unsigned num = 1,
+                        Identifier id = Identifier());
 
   /// Converts variables of the specified kind in the column range [srcPos,
   /// srcPos + num) to variables of the specified kind at position dstPos. The
