@@ -1569,10 +1569,10 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// Return true if the op has the gang attribute for the
     /// mlir::acc::DeviceType::None device_type.
-    bool hasGangOnly();
+    bool hasGang();
     /// Return true if the op has the gang attribute for the given
     /// device_type.
-    bool hasGangOnly(mlir::acc::DeviceType deviceType);
+    bool hasGang(mlir::acc::DeviceType deviceType);
 
     /// Return the value of the worker clause if present.
     mlir::Value getGangValue(mlir::acc::GangArgType gangArgType);

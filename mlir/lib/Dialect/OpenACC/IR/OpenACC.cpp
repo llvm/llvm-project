@@ -1460,7 +1460,7 @@ LogicalResult acc::LoopOp::verify() {
           getVectorValue(deviceTypeAttr.getValue()) ||
           hasWorker(deviceTypeAttr.getValue()) ||
           getWorkerValue(deviceTypeAttr.getValue()) ||
-          hasGangOnly(deviceTypeAttr.getValue()) ||
+          hasGang(deviceTypeAttr.getValue()) ||
           getGangValue(mlir::acc::GangArgType::Num,
                        deviceTypeAttr.getValue()) ||
           getGangValue(mlir::acc::GangArgType::Dim,
@@ -1627,9 +1627,9 @@ mlir::Value LoopOp::getGangValue(mlir::acc::GangArgType gangArgType,
   return {};
 }
 
-bool LoopOp::hasGangOnly() { return hasGangOnly(mlir::acc::DeviceType::None); }
+bool LoopOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
 
-bool LoopOp::hasGangOnly(mlir::acc::DeviceType deviceType) {
+bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
   if (auto arrayAttr = getGang()) {
     if (findSegment(*arrayAttr, deviceType))
       return true;
