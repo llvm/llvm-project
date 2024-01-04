@@ -177,4 +177,15 @@ module {
   //MLIR:  %[[RES8:.*]] = llvm.getelementptr %[[RES7]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
   //MLIR:  %[[RES9:.*]] = llvm.load %[[RES8]] : !llvm.ptr -> !llvm.ptr
   //MLIR:  llvm.call %[[RES9]]({{.*}}) : !llvm.ptr, (i32) -> ()
+
+  cir.global external @zero_array = #cir.zero : !cir.array<!s32i x 16>
+  cir.func @use_zero_array() {
+    %0 = cir.const(#cir.global_view<@zero_array> : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
+    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %2 = cir.ptr_stride(%0 : !cir.ptr<!s32i>, %1 : !s32i), !cir.ptr<!s32i>
+    %3 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    cir.return
+  }
+  // MLIR:  %0 = llvm.mlir.addressof @zero_array
+
 }
