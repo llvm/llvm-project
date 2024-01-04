@@ -1659,8 +1659,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     }
 
     int64_t CPol = AMDGPU::isGFX12Plus(ST) && LastUse ? AMDGPU::CPol::TH_LU : 0;
-    MIB.addImm(Offset + RegOffset)
-       .addImm(CPol);
+    MIB.addImm(Offset + RegOffset).addImm(CPol);
     if (!IsFlat)
       MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
