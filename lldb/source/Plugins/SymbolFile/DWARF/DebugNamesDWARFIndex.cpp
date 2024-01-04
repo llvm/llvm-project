@@ -13,6 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 using namespace lldb_private;
@@ -216,6 +217,103 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
       return;
 
   m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, callback);
+}
+
+namespace {
+using Entry = llvm::DWARFDebugNames::Entry;
+
+// If `entry` and all of its parents have an `IDX_parent`, use that information
+// to build and return a list of at most `max_parents` parent Entries.
+// `entry` itself is not included in the list.
+// If any parent does not have an `IDX_parent`, nullopt is returned.
+static std::optional<llvm::SmallVector<Entry, 4>>
+getParentChain(Entry entry, uint32_t max_parents) {
+  llvm::SmallVector<Entry, 4> parent_entries;
+
+  do {
+    if (!entry.hasParentInformation())
+      return std::nullopt;
+
+    llvm::Expected<std::optional<Entry>> parent = entry.getParentDIEEntry();
+    if (!parent) { // Bad data.
+      consumeError(parent.takeError());
+      return std::nullopt;
+    }
+
+    // Last parent in the chain
+    if (!parent->has_value())
+      break;
+
+    parent_entries.push_back(**parent);
+    entry = **parent;
+  } while (parent_entries.size() < max_parents);
+
+  return parent_entries;
+}
+} // namespace
+
+void DebugNamesDWARFIndex::GetFullyQualifiedType(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+
+  // Fallback: use the base class implementation.
+  auto fallback_impl = [&](const DebugNames::Entry &entry) {
+    return ProcessEntry(entry, [&](DWARFDIE die) {
+      return GetFullyQualifiedTypeImpl(context, die, callback);
+    });
+  };
+
+  if (context.GetSize() == 0)
+    return;
+  llvm::StringRef leaf_name = context[0].name;
+  auto parent_names = llvm::to_vector_of<llvm::StringRef>(
+      llvm::map_range(llvm::seq<int>(1, context.GetSize()),
+                      [&](int idx) { return context[idx].name; }));
+
+  for (const DebugNames::Entry &entry :
+       m_debug_names_up->equal_range(leaf_name)) {
+    if (!isType(entry.tag()))
+      continue;
+
+    // Grab at most one extra parent, extra parents are not useful to test
+    // equality.
+    auto parent_chain = getParentChain(entry, parent_names.size() + 1);
+
+    if (!parent_chain) {
+      if (!fallback_impl(entry))
+        return;
+      continue;
+    }
+
+    if (CheckParentChain(parent_names, *parent_chain) &&
+        (!ProcessEntry(entry, callback)))
+      return;
+  }
+}
+
+bool DebugNamesDWARFIndex::CheckParentChain(
+    llvm::ArrayRef<llvm::StringRef> expected_parent_names,
+    llvm::ArrayRef<DebugNames::Entry> parent_entries) const {
+
+  if (parent_entries.size() != expected_parent_names.size())
+    return false;
+
+  auto CompareEntryATName = [this](llvm::StringRef expected_name,
+                                   const DebugNames::Entry &entry) {
+    auto maybe_dieoffset = entry.getDIEUnitOffset();
+    if (!maybe_dieoffset)
+      return false;
+    auto die_ref = ToDIERef(entry);
+    if (!die_ref)
+      return false;
+    return expected_name == m_debug_info.PeekDIEName(*die_ref);
+  };
+
+  for (auto [expected_parent_name, parent_entry] :
+       llvm::zip_equal(expected_parent_names, parent_entries))
+    if (!CompareEntryATName(expected_parent_name, parent_entry))
+      return false;
+  return true;
 }
 
 void DebugNamesDWARFIndex::GetTypes(
