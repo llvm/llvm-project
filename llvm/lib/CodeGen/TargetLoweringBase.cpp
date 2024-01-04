@@ -567,7 +567,6 @@ RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
 
 RTLIB::Libcall RTLIB::getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order,
                                         MVT VT) {
-  unsigned ModeN, ModelN;
   if (!VT.isScalarInteger())
     return UNKNOWN_LIBCALL;
   uint64_t MemSize = VT.getScalarSizeInBits() / 8;
