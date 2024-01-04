@@ -21,41 +21,6 @@
 
 #include "test_iterators.h"
 #include "../types.h"
-// #include "../types_iterators.h"
-
-// template <bool Const>
-// struct Iterator {
-//   using value_type       = int
-//   using difference_type  = std::std::ptrdiff_t;
-//   using iterator_concept = std::input_iterator_tag;
-
-//   constexpr decltype(auto) operator*() const { return *it_; }
-//   constexpr Iterator& operator++() {
-//     ++it_;
-
-//     return *this;
-//   }
-//   constexpr void operator++(int) { ++it_; }
-
-//   std::tuple<std::ptrdiff_t, int>* it_;
-// };
-
-// template <bool Const>
-// struct Sentinel {
-//   constexpr bool operator==(const Iterator<Const>& i) const { return i.it_ == end_; }
-
-//   std::tuple<std::ptrdiff_t, int>* end_;
-// };
-
-// template <bool Const>
-// struct CrossComparableSentinel {
-//   template <bool C>
-//   constexpr bool operator==(const Iterator<C>& i) const {
-//     return i.it_ == end_;
-//   }
-
-//   std::tuple<std::ptrdiff_t, int>* end_;
-// };
 
 constexpr bool test() {
   int buff[] = {0, 1, 2, 3, 5};
