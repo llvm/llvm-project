@@ -42,8 +42,8 @@ namespace ranges {
 
 template <class _Rp>
 concept __range_with_movable_references =
-    ranges::input_range<_Rp> && std::move_constructible<ranges::range_reference_t<_Rp>> &&
-    std::move_constructible<ranges::range_rvalue_reference_t<_Rp>>;
+    input_range<_Rp> && std::move_constructible<range_reference_t<_Rp>> &&
+    std::move_constructible<range_rvalue_reference_t<_Rp>>;
 
 // [range.enumerate.view]
 
@@ -60,14 +60,9 @@ class enumerate_view : public view_interface<enumerate_view<_View>> {
   template <bool _Const>
   class __sentinel;
 
-  template <bool _AnyConst>
-  _LIBCPP_HIDE_FROM_ABI static constexpr decltype(auto) __get_current(const __iterator<_AnyConst>& __iter) {
-    return (__iter.__current_);
-  }
-
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr enumerate_view()
-    requires(default_initializable<_View>)
+    requires default_initializable<_View>
   = default;
   _LIBCPP_HIDE_FROM_ABI constexpr explicit enumerate_view(_View __base) : __base_(std::move(__base)){};
 
@@ -159,7 +154,7 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI __iterator()
-    requires(default_initializable<iterator_t<_Base>>)
+    requires default_initializable<iterator_t<_Base>>
   = default;
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
@@ -283,21 +278,21 @@ public:
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
-    return __get_current(__x) == __y.__end_;
+    return __x.__current_ == __y.__end_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
   _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
   operator-(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
-    return __get_current(__x) - __y.__end_;
+    return __x.__current_ - __y.__end_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
   _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
   operator-(const __sentinel& __x, const __iterator<_OtherConst>& __y) {
-    return __x.__end_ - __get_current(__y);
+    return __x.__end_ - __y.__current_;
   }
 };
 
@@ -309,7 +304,7 @@ namespace __enumerate {
 
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
       noexcept(noexcept(/**/ enumerate_view(std::forward<_Range>(__range))))
           -> decltype(/*--*/ enumerate_view(std::forward<_Range>(__range))) {
     return /*-------------*/ enumerate_view(std::forward<_Range>(__range));
