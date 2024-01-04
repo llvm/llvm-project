@@ -1911,8 +1911,8 @@ def TileUsingForallOp :
     tiled operations, which can all be empty.
 
     These two returned handles point to:
-      - the new scf.forall op,
-      - the tiled op that implements TilingInterface.
+      - the tiled op that implements TilingInterface,
+      - the new scf.forall op.
 
     #### Example using `num_threads`
 
