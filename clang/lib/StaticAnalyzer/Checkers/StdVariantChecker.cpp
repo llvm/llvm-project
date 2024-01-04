@@ -277,10 +277,10 @@ private:
     std::string StoredTypeName = StoredType->getAsString();
     std::string RetrievedTypeName = RetrievedType.getAsString();
     OS << "std::variant " << ArgMemRegion->getDescriptiveName() << " held "
-       << indefiniteArticleBasedOnVowel(StoredTypeName[0]) << " \'"
-       << StoredTypeName << "\', not "
-       << indefiniteArticleBasedOnVowel(RetrievedTypeName[0]) << " \'"
-       << RetrievedTypeName << "\'";
+       << indefiniteArticleBasedOnVowel(StoredTypeName[0]) << " '"
+       << StoredTypeName << "', not "
+       << indefiniteArticleBasedOnVowel(RetrievedTypeName[0]) << " '"
+       << RetrievedTypeName << "'";
     auto R = std::make_unique<PathSensitiveBugReport>(BadVariantType, OS.str(),
                                                       ErrNode);
     C.emitReport(std::move(R));

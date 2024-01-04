@@ -179,10 +179,10 @@ private:
     std::string StoredTypeName = StoredCanonicalType.getAsString();
     std::string RetrievedTypeName = RetrievedCanonicalType.getAsString();
     OS << "std::any " << AnyMemRegion->getDescriptiveName() << " held "
-       << indefiniteArticleBasedOnVowel(StoredTypeName[0]) << " \'"
-       << StoredTypeName << "\', not "
-       << indefiniteArticleBasedOnVowel(RetrievedTypeName[0]) << " \'"
-       << RetrievedTypeName << "\'";
+       << indefiniteArticleBasedOnVowel(StoredTypeName[0]) << " '"
+       << StoredTypeName << "', not "
+       << indefiniteArticleBasedOnVowel(RetrievedTypeName[0]) << " '"
+       << RetrievedTypeName << "'";
     auto R =
         std::make_unique<PathSensitiveBugReport>(BadAnyType, OS.str(), ErrNode);
     C.emitReport(std::move(R));
