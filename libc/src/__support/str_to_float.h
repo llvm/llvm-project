@@ -1067,8 +1067,11 @@ nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
     // for the input type "NAN(n-char-sequence)" that "the meaning of
     // the n-char sequence is implementation-defined."
     auto strtoint_result = strtointeger<uint64_t>(ncharseq.data(), 0);
-    nan_mantissa = strtoint_result.value;
 
+    // We intentionally ignore the error returned in strtoint_result
+    // because the specification doesn't talk about exceptions while
+    // handling n-char-sequence.
+    nan_mantissa = strtoint_result.value;
     if (strtoint_result.parsed_len != (ptrdiff_t)ncharseq.size())
       nan_mantissa = 0;
   }
