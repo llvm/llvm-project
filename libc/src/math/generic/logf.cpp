@@ -87,7 +87,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         return static_cast<float>(FPBits::neg_inf());
       }
       // Normalize denormal inputs.
-      xbits.set_val(xbits.get_val() * 0x1.0p23f);
+      xbits = FPBits(xbits.get_val() * 0x1.0p23f);
       m -= 23;
       x_u = xbits.uintval();
     }
