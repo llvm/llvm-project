@@ -86,7 +86,7 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
     ValCountersToRun.push_back(ValCounterIt->second);
   }
 
-  SmallVector<int64_t> ValCounterValues(ValCountersToRun.size(), -1);
+  SmallVector<int64_t> ValCounterValues(ValCountersToRun.size(), 0);
   // Values count for each run.
   int ValuesCount = 0;
   for (size_t I = 0; I < NumMeasurements; ++I) {
