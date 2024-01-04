@@ -1199,14 +1199,6 @@ StringRef Triple::getOSAndEnvironmentName() const {
   return Tmp.split('-').second;                      // Strip second component
 }
 
-StringRef Triple::getVersionName() const {
-  StringRef VersionName = getEnvironmentName();
-  StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
-  if (VersionName.startswith(EnvironmentTypeName))
-    return VersionName.substr(EnvironmentTypeName.size());
-  return VersionName;
-}
-
 static VersionTuple parseVersionFromName(StringRef Name) {
   VersionTuple Version;
   Version.tryParse(Name);
@@ -1214,11 +1206,14 @@ static VersionTuple parseVersionFromName(StringRef Name) {
 }
 
 VersionTuple Triple::getEnvironmentVersion() const {
+  return parseVersionFromName(getEnvironmentVersionString());
+}
+
+StringRef Triple::getEnvironmentVersionString() const {
   StringRef EnvironmentName = getEnvironmentName();
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
   EnvironmentName.consume_front(EnvironmentTypeName);
-
-  return parseVersionFromName(EnvironmentName);
+  return EnvironmentName;
 }
 
 VersionTuple Triple::getOSVersion() const {

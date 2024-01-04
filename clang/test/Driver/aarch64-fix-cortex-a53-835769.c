@@ -5,7 +5,7 @@
 // RUN: %clang --target=aarch64-linux-eabi -mno-fix-cortex-a53-835769 %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO %s
 
-// RUN: %clang --target=aarch64-android-eabi %s -### 2>&1 \
+// RUN: %clang --target=aarch64-linux-androideabi %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-YES %s
 
 // RUN: %clang --target=aarch64-fuchsia %s -### 2>&1 \

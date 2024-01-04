@@ -1433,17 +1433,13 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (TC.getTriple().isAndroid()) {
     llvm::Triple Triple = TC.getTriple();
     unsigned TripleVersion = Triple.getEnvironmentVersion().getMajor();
-    StringRef TripleVersionName = Triple.getVersionName();
-    StringRef TripleArch = Triple.getArchName();
-    StringRef TripleOS = Triple.getOSName();
-    StringRef TripleEnvironmentType =
-        Triple.getEnvironmentTypeName(Triple.getEnvironment());
+    StringRef TripleVersionName = Triple.getEnvironmentVersionString();
 
-    if (TripleVersion == 0 && TripleVersionName != "" &&
-        TripleEnvironmentType == "android" && TripleOS != "unknown") {
+    if (TripleVersion == 0 && TripleVersionName != "") {
       Diags.Report(diag::err_android_version_invalid)
-          << TripleVersionName << TripleArch << Triple.getVendorName()
-          << TripleOS << TripleEnvironmentType;
+          << TripleVersionName << Triple.getArchName()
+          << Triple.getVendorName() << Triple.getOSName()
+          << Triple.getEnvironmentTypeName(Triple.getEnvironment());
       ContainsError = true;
     }
   }

@@ -436,7 +436,9 @@ public:
 
   /// Get the version component of the environment component as a single
   /// string (the version after the environment).
-  StringRef getVersionName() const;
+  ///
+  /// For example, "fooos1.2.3" would return "1.2.3".
+  StringRef getEnvironmentVersionString() const;
 
   /// @}
   /// @name Convenience Predicates
