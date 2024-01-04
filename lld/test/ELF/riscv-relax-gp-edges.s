@@ -8,25 +8,25 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=+relax c.s -o rv32c.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=+relax c.s -o rv64c.o
 
-# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv32a.o lds.a -o rv32a
-# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv64a.o lds.a -o rv64a
-# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv32b.o lds.b -o rv32b
-# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv64b.o lds.b -o rv64b
-# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv32c.o lds.c -o rv32c
-# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv64c.o lds.c -o rv64c
-# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32a | FileCheck %s --check-prefix=CHECK-ALIGN
-# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64a | FileCheck %s --check-prefix=CHECK-ALIGN
-# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32b | FileCheck %s --check-prefix=CHECK-HI-ADD
-# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64b | FileCheck %s --check-prefix=CHECK-HI-ADD
-# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32c | FileCheck %s --check-prefix=CHECK-SIZE
-# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64c | FileCheck %s --check-prefix=CHECK-SIZE
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv32a.o a.lds -o rv32a
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv64a.o a.lds -o rv64a
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv32b.o b.lds -o rv32b
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv64b.o b.lds -o rv64b
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv32c.o c.lds -o rv32c
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ rv64c.o c.lds -o rv64c
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn --no-print-imm-hex rv32a | FileCheck %s --check-prefix=CHECK-ALIGN
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn --no-print-imm-hex rv64a | FileCheck %s --check-prefix=CHECK-ALIGN
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn --no-print-imm-hex rv32b | FileCheck %s --check-prefix=CHECK-HI-ADD
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn --no-print-imm-hex rv64b | FileCheck %s --check-prefix=CHECK-HI-ADD
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn --no-print-imm-hex rv32c | FileCheck %s --check-prefix=CHECK-SIZE
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn --no-print-imm-hex rv64c | FileCheck %s --check-prefix=CHECK-SIZE
  
 # CHECK-ALIGN: 000017e0 l       .data  {{0+}}80 Var1
 # CHECK-ALIGN: 00000ffc g       .sdata {{0+}}00 __global_pointer$
 
 # CHECK-ALIGN: <_start>:
 # CHECK-ALIGN-NEXT: lui     a1, 1
-# CHECK-ALIGN-NEXT: lw      a0, 2020(gp)
+# CHECK-ALIGN-NEXT: lw      a0, 2016(a1)
 # CHECK-ALIGN-NEXT: lw      a1, 2044(a1)
 
 #--- a.s
@@ -46,7 +46,7 @@ Var1:
   .zero 120
   .size   Var1, 128
 
-#--- lds.a
+#--- a.lds
 SECTIONS {
   .text : { }
   .sdata 0x07fc : { }
@@ -58,10 +58,8 @@ SECTIONS {
 # CHECK-HI-ADD: 00001800 g       .sdata {{0+}}00 __global_pointer$
 
 # CHECK-HI-ADD: <_start>:
-# CHECK-HI-ADD-NEXT: lui     a1, 1
 # CHECK-HI-ADD-NEXT: lw      a0, -2048(gp)
 # CHECK-HI-ADD-NEXT: lw      a1, -2044(gp)
-# CHECK-HI-ADD-NEXT: lui     a1, 2
 # CHECK-HI-ADD-NEXT: lw      a0, 1920(gp)
 # CHECK-HI-ADD-NEXT: lw      a1, 2044(gp)
 
@@ -71,12 +69,12 @@ SECTIONS {
 # the amount reachable from GP.
 .global _start
 _start:
-        lui     a1, %hi(Var0+4)        # Cannot prove that %lo relocs will be reachable
-        lw      a0, %lo(Var0)(a1)      # Reachable from GP
-        lw      a1, %lo(Var0+4)(a1)    # Reachable from GP
-        lui     a1, %hi(Var1+124)      # Cannot prove that %lo relocs will be reachable
-        lw      a0, %lo(Var1)(a1)      # Reachable from GP
-        lw      a1, %lo(Var1+124)(a1)  # Reachable from GP
+        lui     a1, %hi(Var0+4)
+        lw      a0, %lo(Var0)(a1)
+        lw      a1, %lo(Var0+4)(a1)
+        lui     a1, %hi(Var1+124)
+        lw      a0, %lo(Var1)(a1)
+        lw      a1, %lo(Var1+124)(a1)
 
 .section .sdata,"aw"
 .section .data,"aw"
@@ -92,7 +90,7 @@ Var1:
   .zero 120
   .size   Var1, 128
 
-#--- lds.b
+#--- b.lds
 SECTIONS {
   .text : { }
   .sdata 0x1000 : { }
@@ -109,7 +107,7 @@ SECTIONS {
 # CHECK-SIZE-NEXT: lw      a0, -1941(gp)
 # CHECK-SIZE-NEXT: lw      a1, -1937(gp)
 # CHECK-SIZE-NEXT: lui     a1, 1
-# CHECK-SIZE-NEXT: lw      a0, 2027(gp)
+# CHECK-SIZE-NEXT: lw      a0, 0(a1)
 # CHECK-SIZE-NEXT: lw      a1, 124(a1)
 
 #--- c.s
@@ -138,7 +136,7 @@ Var1:
   .zero 120
   .size   Var1, 128
 
-#--- lds.c
+#--- c.lds
 SECTIONS {
   .text : { }
   .sdata  0x0015 : { }
