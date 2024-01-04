@@ -151,10 +151,8 @@ define i1 @switch_same_destination_for_different_cases(i8 %x) {
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[X]], 7
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[X]], 6
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ult i8 [[X]], 11
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp ult i8 [[X]], 10
 ; CHECK-NEXT:    ret i1 [[C_6]]
 ;
@@ -190,8 +188,7 @@ define i1 @test_switch_with_same_dest(i32 %a) {
 ; CHECK-NEXT:      i32 38, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B]], 1023
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -219,8 +216,7 @@ define i1 @test_switch_with_same_dest_zext(i16 %a) {
 ; CHECK-NEXT:      i32 38, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[B]], 1023
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    ret i1 false
 ;
