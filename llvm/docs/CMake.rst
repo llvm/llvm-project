@@ -1118,10 +1118,10 @@ And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 When you are done developing your pass, you may wish to integrate it
 into the LLVM source tree. You can achieve it in two easy steps:
 
-#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transform`` directory.
+#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transforms`` directory.
 
 #. Adding ``add_subdirectory(<pass name>)`` line into
-   ``<LLVM root>/lib/Transform/CMakeLists.txt``.
+   ``<LLVM root>/lib/Transforms/CMakeLists.txt``.
 
 Compiler/Platform-specific topics
 =================================

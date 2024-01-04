@@ -874,7 +874,7 @@ static void printNumGangs(mlir::OpAsmPrinter &p, mlir::Operation *op,
   }
 }
 
-static ParseResult parseWaitOperands(
+static ParseResult parseDeviceTypeOperandsWithSegment(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
     llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &deviceTypes,
@@ -918,11 +918,10 @@ static ParseResult parseWaitOperands(
   return success();
 }
 
-static void printWaitOperands(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                              mlir::OperandRange operands,
-                              mlir::TypeRange types,
-                              std::optional<mlir::ArrayAttr> deviceTypes,
-                              std::optional<mlir::DenseI32ArrayAttr> segments) {
+static void printDeviceTypeOperandsWithSegment(
+    mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::OperandRange operands,
+    mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
+    std::optional<mlir::DenseI32ArrayAttr> segments) {
   unsigned opIdx = 0;
   for (unsigned i = 0; i < deviceTypes->size(); ++i) {
     if (i != 0)
