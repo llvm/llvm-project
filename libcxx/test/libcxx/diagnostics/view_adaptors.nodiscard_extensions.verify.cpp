@@ -19,12 +19,16 @@ void func() {
   std::vector<int> range;
 
   auto rvalue_view = std::views::as_rvalue(range);
-  std::views::as_rvalue(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::as_rvalue(rvalue_view); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::as_rvalue(range);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::as_rvalue(rvalue_view);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 
 #if TEST_STD_VER >= 23
   auto enumerate_view = std::views::enumerate(range);
-  std::views::enumerate(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::enumerate(enumerate_view); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::enumerate(range);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::enumerate(enumerate_view);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 }

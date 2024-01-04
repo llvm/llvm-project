@@ -76,10 +76,7 @@ using EnumerateSentinel = std::ranges::sentinel_t<EnumerateView<BaseView>>;
 template <class BaseView>
 using EnumerateConstSentinel = std::ranges::sentinel_t<const EnumerateView<BaseView>>;
 
-constexpr bool test() {
-
-  return true;
-}
+constexpr bool test() { return true; }
 
 int main(int, char**) {
   test();
