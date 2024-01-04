@@ -425,9 +425,10 @@ void IRNumberingState::number(Operation &op) {
 
   // Only number the operation's dictionary if it isn't empty.
   DictionaryAttr dictAttr = op.getDiscardableAttrDictionary();
-  // Prior to version 5 we need to number also the merged dictionnary
-  // containing both the inherent and discardable attribute.
-  if (config.getDesiredBytecodeVersion() < 5)
+  // Prior to version 5, or when properties are not used, we need to number also
+  // the merged dictionary containing both the inherent and discardable
+  // attribute.
+  if (config.getDesiredBytecodeVersion() < 5 || !op.getPropertiesStorage())
     dictAttr = op.getAttrDictionary();
   if (!dictAttr.empty())
     number(dictAttr);
