@@ -138,6 +138,9 @@ public:
 
   enum ExprValueKind { EVK_RValue, EVK_NonRValue };
 
+  /// Perform the final copy to DestPtr, if desired.
+  void buildFinalDestCopy(QualType type, RValue src);
+
   /// Perform the final copy to DestPtr, if desired. SrcIsRValue is true if
   /// source comes from an RValue.
   void buildFinalDestCopy(QualType type, const LValue &src,
@@ -332,6 +335,13 @@ void AggExprEmitter::buildAggLoadOfLValue(const Expr *E) {
 }
 
 /// Perform the final copy to DestPtr, if desired.
+void AggExprEmitter::buildFinalDestCopy(QualType type, RValue src) {
+  assert(src.isAggregate() && "value must be aggregate value!");
+  LValue srcLV = CGF.makeAddrLValue(src.getAggregateAddress(), type);
+  buildFinalDestCopy(type, srcLV, EVK_RValue);
+}
+
+/// Perform the final copy to DestPtr, if desired.
 void AggExprEmitter::buildFinalDestCopy(QualType type, const LValue &src,
                                         ExprValueKind SrcValueKind) {
   // If Dest is ignored, then we're evaluating an aggregate expression
@@ -342,11 +352,13 @@ void AggExprEmitter::buildFinalDestCopy(QualType type, const LValue &src,
     return;
 
   // Copy non-trivial C structs here.
-  if (Dest.isVolatile() || UnimplementedFeature::volatileTypes())
-    llvm_unreachable("volatile is NYI");
+  if (Dest.isVolatile())
+    assert(!UnimplementedFeature::volatileTypes());
 
   if (SrcValueKind == EVK_RValue) {
-    llvm_unreachable("rvalue is NYI");
+     if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
+        llvm_unreachable("move assignment/move ctor for rvalue is NYI");
+    }
   } else {
     if (type.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct)
       llvm_unreachable("non-trivial primitive copy is NYI");
@@ -811,7 +823,9 @@ void AggExprEmitter::withReturnValueSlot(
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
   } else {
-    llvm_unreachable("NYI");
+    RetAddr = CGF.CreateMemTemp(RetTy, CGF.getLoc(E->getSourceRange()),
+                                "tmp", &RetAddr);
+    assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
   }
 
   RValue Src =
@@ -822,14 +836,13 @@ void AggExprEmitter::withReturnValueSlot(
     return;
 
   assert(Dest.isIgnored() || Dest.getPointer() != Src.getAggregatePointer());
-  llvm_unreachable("NYI");
-  // TODO(cir): EmitFinalDestCopy(E->getType(), Src);
+  buildFinalDestCopy(E->getType(), Src);
 
   if (!RequiresDestruction) {
     // If there's no dtor to run, the copy was the last use of our temporary.
     // Since we're not guaranteed to be in an ExprWithCleanups, clean up
     // eagerly.
-    llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
   }
 }
 

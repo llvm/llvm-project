@@ -60,3 +60,16 @@ A foo3(void) {
 void foo4(A* a1) {
     A a2 = *a1;
 }
+
+A create() { A a; return a; }
+
+// CHECK: cir.func {{.*@foo5}}
+// CHECK:   [[TMP0]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>,
+// CHECK:   [[TMP1]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["tmp"] {alignment = 4 : i64}
+// CHECK:   [[TMP2]] = cir.call @create() : () -> !ty_22A22
+// CHECK:   cir.store [[TMP2]], [[TMP1]] : !ty_22A22, cir.ptr <!ty_22A22>
+// CHECK:   cir.copy [[TMP1]] to [[TMP0]] : !cir.ptr<!ty_22A22> 
+void foo5() {
+    A a;
+    a = create();
+}
