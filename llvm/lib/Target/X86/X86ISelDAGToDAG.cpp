@@ -1833,6 +1833,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
                                 M == CodeModel::Medium && !IsRIPRel)))
     return true;
 
+
   // Base and index reg must be 0 in order to use %rip as base.
   if (IsRIPRel && AM.hasBaseOrIndexReg())
     return true;
