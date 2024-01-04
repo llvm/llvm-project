@@ -1479,6 +1479,14 @@ namespace {
       return Result;
     }
 
+    StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
+      bool Prev = EvaluateConstraints;
+      EvaluateConstraints = true;
+      StmtResult Stmt = inherited::TransformLambdaBody(E, Body);
+      EvaluateConstraints = Prev;
+      return Stmt;
+    }
+
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       ExprResult TransReq = inherited::TransformRequiresExpr(E);
