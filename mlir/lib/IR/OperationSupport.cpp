@@ -675,7 +675,7 @@ llvm::hash_code OperationEquivalence::computeHash(
   //   - Attributes
   //   - Result Types
   llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getNonPropertyAttrDictionary(),
+      llvm::hash_combine(op->getName(), op->getRawDictionaryAttrs(),
                          op->getResultTypes(), op->hashProperties());
 
   //   - Location if required
@@ -831,8 +831,7 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
 
   // 1. Compare the operation properties.
   if (lhs->getName() != rhs->getName() ||
-      lhs->getNonPropertyAttrDictionary() !=
-          rhs->getNonPropertyAttrDictionary() ||
+      lhs->getRawDictionaryAttrs() != rhs->getRawDictionaryAttrs() ||
       lhs->getNumRegions() != rhs->getNumRegions() ||
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
@@ -923,7 +922,7 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
     if (op != topOp)
       addDataToHash(hasher, op->getParentOp());
     //   - Attributes
-    addDataToHash(hasher, op->getNonPropertyAttrDictionary());
+    addDataToHash(hasher, op->getRawDictionaryAttrs());
     //   - Properties
     addDataToHash(hasher, op->hashProperties());
     //   - Blocks in Regions

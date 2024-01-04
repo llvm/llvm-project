@@ -501,10 +501,7 @@ public:
   }
 
   /// Return all attributes that are not stored as properties.
-  DictionaryAttr getNonPropertyAttrDictionary() {
-    return getPropertiesStorage() ? getDiscardableAttrDictionary()
-                                  : getAttrDictionary();
-  }
+  DictionaryAttr getRawDictionaryAttrs() { return attrs; }
 
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() { return getAttrDictionary().getValue(); }
