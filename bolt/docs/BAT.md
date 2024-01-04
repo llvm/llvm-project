@@ -12,7 +12,7 @@ information. This information enables mapping the profile back from optimized
 binary onto the original binary.
 
 # Usage
-`--enable-bat` flag controls the generation of BAT section. Sampled profile 
+`--enable-bat` flag controls the generation of BAT section. Sampled profile
 needs to be passed along with the optimized binary containing BAT section to
 `perf2bolt` which reads BAT section and produces fdata profile for the original
 binary. Note that YAML profile generation is not supported since BAT doesn't
@@ -30,14 +30,15 @@ BAT section is created from `BoltAddressTranslation` class which captures
 address translation information provided by BOLT linker. It is then encoded as a
 note section in the output binary.
 
-During profile conversion when BAT-enabled binary is passed to perf2bolt, 
+During profile conversion when BAT-enabled binary is passed to perf2bolt,
 `BoltAddressTranslation` class is populated from BAT section. The class is then
 queried by `DataAggregator` during sample processing to reconstruct addresses/
 offsets in the input binary.
 
 ## Encoding format
-The encoding is specified in bolt/include/bolt/Profile/BoltAddressTranslation.h
-and bolt/lib/Profile/BoltAddressTranslation.cpp.
+The encoding is specified in
+[BoltAddressTranslation.h](/bolt/include/bolt/Profile/BoltAddressTranslation.h)
+and [BoltAddressTranslation.cpp](/bolt/lib/Profile/BoltAddressTranslation.cpp).
 
 ### Layout
 The general layout is as follows:
@@ -81,6 +82,7 @@ Hot indices are delta encoded, implicitly starting at zero.
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
 | `EqualElems` | ULEB128 | Hot functions only: number of equal offsets in the beginning of a function |
 | `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | Hot functions only: if `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit |
+
 Function header is followed by `EqualElems` offsets (hot functions only) and
 `NumEntries-EqualElems` (`NumEntries` for cold functions) pairs of offsets for
 current function.

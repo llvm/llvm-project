@@ -127,7 +127,7 @@ APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
   return BitMask;
 }
 
-size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy& Map) const {
+size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map) const {
   size_t EqualOffsets = 0;
   for (const std::pair<const uint32_t, uint32_t> &KeyVal : Map) {
     const uint32_t OutputOffset = KeyVal.first;
