@@ -1399,7 +1399,12 @@ mlir::cir::GlobalOp CIRGenItaniumRTTIBuilder::GetAddrOfTypeName(
   auto Align =
       CGM.getASTContext().getTypeAlignInChars(CGM.getASTContext().CharTy);
 
-  auto GV = CGM.createOrReplaceCXXRuntimeVariable(loc, Name, Init.getType(),
+  // builder.getString can return a #cir.zero if the string given to it only
+  // contains null bytes. However, type names cannot be full of null bytes.
+  // So cast Init to a ConstArrayAttr should be safe.
+  auto InitStr = cast<mlir::cir::ConstArrayAttr>(Init);
+
+  auto GV = CGM.createOrReplaceCXXRuntimeVariable(loc, Name, InitStr.getType(),
                                                   Linkage, Align);
   CIRGenModule::setInitializer(GV, Init);
   return GV;

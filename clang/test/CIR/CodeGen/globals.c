@@ -41,7 +41,7 @@ struct {
   char y[3];
   char z[3];
 } nestedString = {"1", "", "\0"};
-// CHECK: cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>}>
+// CHECK: cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.zero : !cir.array<!s8i x 3>, #cir.zero : !cir.array<!s8i x 3>}>
 
 struct {
   char *name;
