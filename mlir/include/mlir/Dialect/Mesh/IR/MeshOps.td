@@ -114,7 +114,7 @@ def Mesh_ClusterShapeOp : Mesh_Op<"cluster_shape", [Pure, DeclareOpInterfaceMeth
 
   let builders = [
     OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>,
-    OpBuilder<(ins "StringRef":$mesh, "ArrayRef<int16_t>":$axes)>
+    OpBuilder<(ins "StringRef":$mesh, "ArrayRef<MeshAxis>":$axes)>
   ];
 }
 
@@ -228,7 +228,7 @@ def Mesh_ProcessIndexOp : Mesh_Op<"process_index", [Pure, DeclareOpInterfaceMeth
   }];
   let builders = [
     OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>,
-    OpBuilder<(ins "StringRef":$mesh, "ArrayRef<int16_t>":$axes)>
+    OpBuilder<(ins "StringRef":$mesh, "ArrayRef<MeshAxis>":$axes)>
   ];
 }
 
