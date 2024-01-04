@@ -466,35 +466,37 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
   return LHS < RHS;
 }
 
-void RISCVISAInfo::toFeatures(
-    std::vector<StringRef> &Features,
-    llvm::function_ref<StringRef(const Twine &)> StrAlloc,
-    bool AddAllExtensions) const {
+std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
+                                                  bool IgnoreUnknown) const {
+  std::vector<std::string> Features;
   for (auto const &Ext : Exts) {
-    StringRef ExtName = Ext.first;
+    std::string ExtName = Ext.first;
 
-    if (ExtName == "i")
+    if (ExtName == "i") // i is not recognized in clang -cc1
+      continue;
+    if (IgnoreUnknown && !isSupportedExtension(ExtName))
       continue;
 
     if (isExperimentalExtension(ExtName)) {
-      Features.push_back(StrAlloc("+experimental-" + ExtName));
+      Features.push_back("+experimental-" + ExtName);
     } else {
-      Features.push_back(StrAlloc("+" + ExtName));
+      Features.push_back("+" + ExtName);
     }
   }
   if (AddAllExtensions) {
     for (const RISCVSupportedExtension &Ext : SupportedExtensions) {
       if (Exts.count(Ext.Name))
         continue;
-      Features.push_back(StrAlloc(Twine("-") + Ext.Name));
+      Features.push_back("-" + std::string(Ext.Name));
     }
 
     for (const RISCVSupportedExtension &Ext : SupportedExperimentalExtensions) {
       if (Exts.count(Ext.Name))
         continue;
-      Features.push_back(StrAlloc(Twine("-experimental-") + Ext.Name));
+      Features.push_back("-experimental-" + std::string(Ext.Name));
     }
   }
+  return Features;
 }
 
 // Extensions may have a version number, and may be separated by
@@ -1267,22 +1269,6 @@ std::string RISCVISAInfo::toString() const {
   }
 
   return Arch.str();
-}
-
-std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
-  std::vector<std::string> FeatureVector;
-  for (auto const &Ext : Exts) {
-    std::string ExtName = Ext.first;
-    if (ExtName == "i") // i is not recognized in clang -cc1
-      continue;
-    if (!isSupportedExtension(ExtName))
-      continue;
-    std::string Feature = isExperimentalExtension(ExtName)
-                              ? "+experimental-" + ExtName
-                              : "+" + ExtName;
-    FeatureVector.push_back(Feature);
-  }
-  return FeatureVector;
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
