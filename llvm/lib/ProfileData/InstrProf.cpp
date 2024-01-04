@@ -295,13 +295,13 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
   return FileName;
 }
 
-// The PGO name has the format [<filepath>;]<function-name> where <filepath>; is
+// The PGO name has the format [<filepath>;]<mangled-name> where <filepath>; is
 // provided if linkage is local and is used to discriminate possibly identical
-// function names. ";" is used because it is unlikely to be found in either
-// <filepath> or <function-name>.
+// mangled names. ";" is used because it is unlikely to be found in either
+// <filepath> or <mangled-name>.
 //
 // Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<function-name>. This caused trouble for Objective-C functions
+// [<filepath>:]<mangled-name>. This caused trouble for Objective-C functions
 // which commonly have :'s in their names. We still need to compute this name to
 // lookup functions from profiles built by older compilers.
 static std::string
