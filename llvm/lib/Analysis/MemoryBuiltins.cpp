@@ -1039,7 +1039,7 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::visitInstruction(Instruction &I) {
 
 // Just set these right here...
 SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
-    : SizeOffsetType((Value *)SOT.Size, (Value *)SOT.Offset) {}
+    : SizeOffsetType(SOT.Size, SOT.Offset) {}
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
     const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
