@@ -74,6 +74,20 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
   // affect the actual compilation.
   DepOpts.ExtraDeps.clear();
 
+  // Canonicalize indexing options.
+
+  // Indexing data are allowed to "escape" the CAS sandbox without indexing
+  // options affecting the CAS key. Essentially indexing data are produced when
+  // the compilation is executed but they are not replayed if the compilation is
+  // cached.
+
+  FrontendOpts.IndexStorePath.clear();
+  FrontendOpts.IndexUnitOutputPath.clear();
+  FrontendOpts.IndexIgnoreSystemSymbols = false;
+  FrontendOpts.IndexRecordCodegenName = false;
+  FrontendOpts.IndexIgnoreMacros = false;
+  FrontendOpts.IndexIgnorePcms = false;
+
   // Canonicalize diagnostic options.
 
   DiagnosticOptions &DiagOpts = CI.getDiagnosticOpts();
