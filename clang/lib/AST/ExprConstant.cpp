@@ -64,6 +64,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -73,9 +74,10 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <iomanip>
 #include <iterator>
+#include <limits>
 #include <optional>
+#include <valarray>
 
 #define DEBUG_TYPE "exprconstant"
 
@@ -6914,112 +6916,259 @@ bool HandleOperatorDeleteCall(EvalInfo &Info, const CallExpr *E) {
 //===----------------------------------------------------------------------===//
 namespace {
 
+struct BitSlice : public std::slice {
+  BitSlice(size_t Offset, size_t Num) : std::slice(Offset, Num, 1){};
+
+  inline size_t end() const { return start() + size(); }
+};
+
+struct BitFieldInfo {
+  /// The offset (in bits) within the appropriate storage type.
+  const unsigned Offset : 16;
+
+  /// The size of the value held by the bit-field, in bits.
+  const unsigned Width : 15;
+
+  /// Whether the bit-field is signed.
+  const unsigned IsSigned : 1;
+
+  /// The storage size in bits which should be used when accessing this
+  /// bitfield.
+  const unsigned StorageSize;
+
+  /// The offset of the bitfield storage from the start of the struct.
+  const CharUnits StorageOffset;
+
+  static BitFieldInfo MakeInfo(const ASTContext &Ctx, const FieldDecl *FD,
+                               const ASTRecordLayout &Layout) {
+    const unsigned StorageSize = Ctx.getTypeSize(FD->getType()),
+                   FieldOffsetBits = Layout.getFieldOffset(FD->getFieldIndex());
+
+    unsigned Width = FD->getBitWidthValue(Ctx);
+    if (Width > StorageSize) {
+      // e.g. `unsigned uint8_t c : 12`
+      // we truncate to CHAR_BIT * sizeof(T)
+      // (the extra bits are padding)
+      Width = StorageSize;
+    }
+    unsigned Offset = FieldOffsetBits % StorageSize;
+    if (Ctx.getTargetInfo().isBigEndian()) {
+      // big endian bits count from MSB to LSB
+      // so a bit-field of width 16 and size 12 will
+      // occupy bits [0-11] on a little endian machine,
+      // but [3-15] on a big endian machine
+      Offset = StorageSize - (Offset + Width);
+    }
+    return {
+        Offset,
+        Width,
+        FD->getType()->isSignedIntegerOrEnumerationType(),
+        StorageSize,
+        Ctx.toCharUnitsFromBits((FieldOffsetBits / StorageSize) * StorageSize),
+    };
+  }
+};
+
 struct BitCastBuffer {
-  // FIXME: Its possible under the C++ standard for 'char' to not be 8 bits, but
-  // we don't support a host or target where that is the case. Still, we should
-  // use a more generic type in case we ever do.
-  using byte_t = unsigned char;
-  static_assert(std::numeric_limits<byte_t>::digits >= 8,
-                "Need at least 8 bit unsigned char");
+  // The number of bits in a `char`, needed to handle endianness (which is
+  // assumed to be exclusively big or little) for values with more bits than
+  // this number.
+  //
+  // No current platforms support varying this size.
+  static const uint64_t CharBit = 8;
 
-  SmallVector<byte_t, 32> Bytes;
-  SmallVector<byte_t, 32> Valid;
+  const uint64_t BitWidth;
+  const bool IsNativeEndian;
 
-  bool TargetIsLittleEndian;
+  APInt Data;
+  APInt Invalid; // Indeterminate bits
 
-  static SmallVector<byte_t> MaskAllSet(size_t Width) {
-    SmallVector<byte_t> M;
-    M.resize(Width);
-    std::fill(M.begin(), M.end(), ~0);
-    return M;
+  BitCastBuffer(uint64_t BitWidth, bool TargetIsLittleEndian, uint64_t CharBit)
+      : BitWidth(BitWidth),
+        IsNativeEndian(llvm::sys::IsLittleEndianHost == TargetIsLittleEndian),
+        Data(BitWidth, 0), Invalid(BitWidth, ~0, /* extend "sign" bit */ true) {
+    assert(Invalid.countl_one() == BitWidth);
+    assert(CharBit == BitCastBuffer::CharBit);
   }
 
-  BitCastBuffer(CharUnits Width, bool TargetIsLittleEndian)
-      : Bytes(Width.getQuantity()), Valid(Width.getQuantity()),
-        TargetIsLittleEndian(TargetIsLittleEndian) {}
+  [[nodiscard]] bool readMasked(const uint64_t Offset, APInt &Output,
+                                const APInt &Mask) const {
+    assert(Output.getBitWidth() == Mask.getBitWidth());
+    const BitSlice Which = {Offset, Output.getBitWidth()};
 
-  [[nodiscard]] bool readObject(CharUnits Offset, CharUnits Width,
-                                SmallVectorImpl<byte_t> &Output,
-                                SmallVectorImpl<byte_t> const &Mask) const {
-    assert(Mask.size() >= static_cast<unsigned>(Width.getQuantity()));
-    assert(Output.size() >= static_cast<unsigned>(Width.getQuantity()));
-    assert(Bytes.size() >=
-           static_cast<unsigned>((Offset + Width).getQuantity()));
-
-    SmallVector<byte_t, 8> RevMask;
-    const SmallVectorImpl<byte_t> &M =
-        (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
-        ? [&]() -> const SmallVectorImpl<byte_t> & {
-      auto W = Width.getQuantity();
-      RevMask.resize_for_overwrite(W);
-      std::reverse_copy(Mask.begin(), Mask.begin() + W, RevMask.begin());
-      return RevMask;
-    }()
-        : Mask;
-
-    size_t Index = 0;
-    for (CharUnits I = Offset, E = Offset + Width; I != E; ++I, ++Index) {
-      const auto BufIdx = I.getQuantity();
-      const auto mask = M[Index];
-      // are there any bits in Mask[Index] that are not set in
-      // Valid[BufIdx]? (NB: more bits can be set, that's just
-      // fine)
-      if ((Valid[BufIdx] & M[Index]) != M[Index])
-        // If any bit of an integer is uninitialized, then the
-        // whole integer is uninitialized.
+    const auto read = [&](const APInt &Mask) {
+      if ((getBits(Invalid, Which) & Mask) != 0)
         return false;
 
-      Output[Index] = (Output[Index] & ~mask) | (Bytes[BufIdx] & mask);
+      Output = (Output & ~Mask) | (getBits(Data, Which) & Mask);
+      return true;
+    };
+
+    if (!IsNativeEndian && Output.getBitWidth() > CharBit) {
+      bool OK = read(Mask.byteSwap());
+      Output = Output.byteSwap();
+      return OK;
     }
 
-    if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
-      std::reverse(Output.begin(), Output.end());
+    return read(Mask);
+  }
+
+  [[nodiscard]] inline bool readObject(const uint64_t Offset,
+                                       APInt &Output) const {
+    return readObject({Offset, Output.getBitWidth()}, Output);
+  }
+
+  [[nodiscard]] bool readObject(const BitSlice &Which, APInt &Output) const {
+    assert(Output.getBitWidth() <= BitWidth);
+    assert(Which.size() <= Output.getBitWidth());
+    assert(Which.end() <= BitWidth);
+    assert((IsNativeEndian || withinByte(Which) ||
+            APInt::getBitsSet(BitWidth, Which.start(), Which.end())
+                .byteSwap()
+                .isShiftedMask()) &&
+           "use readMasked instead");
+
+    if (getBits(Invalid, Which) != 0)
+      return false;
+
+    copyBitsFrom(Output, {0, Which.size()}, Data, Which);
+
+    if (!IsNativeEndian && Output.getBitWidth() > CharBit)
+      Output = Output.byteSwap();
+
     return true;
   }
 
-  void writeObject(CharUnits Offset, SmallVectorImpl<byte_t> &Input,
-                   SmallVectorImpl<byte_t> &Mask) {
-    assert(Mask.size() >= Input.size());
-    assert(Bytes.size() >=
-           static_cast<unsigned>(Offset.getQuantity()) + Input.size());
+  void writeMasked(const uint64_t Offset, const APInt &Input,
+                   const APInt &Mask) {
+    assert(Input.getBitWidth() == Mask.getBitWidth());
+    const uint64_t BW = Input.getBitWidth();
+    const BitSlice Dest = {Offset, BW};
 
-    // we could promise Input and Mask were `const`, except for this
-    if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian) {
-      std::reverse(Input.begin(), Input.end());
-      // we might (will) have more mask bits than input bits
-      std::reverse(Mask.begin(), Mask.begin() + Input.size());
-    }
+    auto write = [&](const APInt &Input, const APInt &Mask) {
+      assert((~getBits(Invalid, Dest) & Mask) == 0 && "overwriting data?");
+      const APInt Val = (Input & Mask) | (getBits(Data, Dest) & ~Mask);
+      const APInt Written = getBits(Invalid, Dest) ^ Mask;
 
-    size_t Index = 0;
-    size_t BufIdx = Offset.getQuantity();
-    for (byte_t &Byte : Input) {
-      assert((Valid[BufIdx] & Mask[Index]) == 0 && "overwriting data?");
-      Bytes[BufIdx] |= Byte & Mask[Index];
-      Valid[BufIdx] |= Mask[Index];
-      ++BufIdx;
-      ++Index;
+      copyBitsFrom(Data, Dest, Val, {0, BW});
+      copyBitsFrom(Invalid, Dest, Written, {0, BW});
+    };
+
+    if (!IsNativeEndian && BW > CharBit) {
+      write(Input.byteSwap(), Mask.byteSwap());
+      return;
     }
+    write(Input, Mask);
   }
 
-  size_t size() { return Bytes.size(); }
+  void writeObject(const uint64_t Offset, const APInt &Input) {
+    writeObject({Offset, Input.getBitWidth()}, Input, {0, Input.getBitWidth()});
+  }
+
+  void writeObject(const BitSlice &Dst, const APInt &Input,
+                   const BitSlice &Src) {
+    assert(Src.size() == Dst.size());
+    assert(Src.end() <= Input.getBitWidth());
+    assert(Dst.end() <= BitWidth);
+    assert(~getBits(Invalid, Dst) == 0 && "overwriting data?");
+    assert((IsNativeEndian || (withinByte(Src) && withinByte(Dst)) ||
+            [&] {
+              unsigned lo, len;
+              return Src.size() % 8 == 0 &&
+                     APInt::getBitsSet(Src.size(), Src.start(), Src.end())
+                         .byteSwap()
+                         .isShiftedMask(lo, len) &&
+                     lo == Src.start() && len == Src.size() &&
+                     Dst.start() % CharBit == 0 && Dst.size() % CharBit == 0;
+            }()) &&
+           "use writeMasked instead");
+
+    auto write = [&](const APInt &Input) {
+      copyBitsFrom(Data, Dst, Input, Src);
+      clearBits(Invalid, Dst);
+    };
+
+    if (!IsNativeEndian && Input.getBitWidth() > CharBit) {
+      write(Input.byteSwap());
+      return;
+    }
+
+    write(Input);
+  }
+
+  // true iff the range described by Which from start (inclusive) to end
+  // (exclusive) refers to the same addressable byte, i.e.
+  //    [0, 0)     -> yes
+  //    [0, 3)     -> yes
+  //    [0, 8)     -> yes
+  //    [16, 24)   -> yes
+  //    [123, 123) -> yes
+  //    [7, 9)     -> no
+  inline static bool withinByte(const BitSlice &Which) {
+    // NB: Which.start() may equal Which.end(), and either may be zero, so
+    // care must be taken here to avoid underflow
+    return Which.size() == 0 ||
+           Which.start() / CharBit + 1 == (Which.end() + CharBit - 1) / CharBit;
+  }
+
+  inline static APInt getBits(const APInt &Int, const BitSlice &Which) {
+    // more lenient than extractBits (which asserts `start < BitWidth`)
+    // this permits e.g. zero-width reads "one past the last bit"
+    assert(Which.end() <= Int.getBitWidth());
+    if (Which.size() == 0) {
+      return APInt::getZeroWidth();
+    }
+    return Int.extractBits(Which.size(), Which.start());
+  }
+
+  // copyBitsFrom acts like `LHS[Dst] = RHS[Src];`, if `APInt`s supported
+  // slicing
+  inline static void copyBitsFrom(APInt &LHS, const BitSlice &Dst,
+                                  const APInt &RHS, const BitSlice &Src) {
+    assert(Src.size() == Dst.size());
+
+    if (Src.start() > 0 || Src.end() < RHS.getBitWidth() ||
+        RHS.getBitWidth() != Dst.size()) {
+      APInt Val = RHS.lshr(Src.start()).trunc(Src.size()).zext(Dst.size());
+      LHS.insertBits(Val, Dst.start());
+      return;
+    }
+    LHS.insertBits(RHS, Dst.start());
+  }
+
+  inline static void clearBits(APInt &Int, const BitSlice &Which) {
+    unsigned Bit = Which.start(), Rem = Which.size() % 64;
+    if (Rem > 0) // else APInt crashes when Bit == 0
+      Int.insertBits(0ull, Bit, Rem);
+    Bit += Rem;
+    for (unsigned End = Which.end(); Bit < End; Bit += 64)
+      Int.insertBits(0ull, Bit, 64u);
+  }
+
+  static llvm::FormattedBytes formatInt(const APInt &Int) {
+    // implicit in the below we're assuming that CHAR_BIT is 8.
+    //
+    // this might get confusing on a PDP-10, where "bytes" were a software
+    // abstraction that varied in size (potentially even within the same
+    // program; see https://retrocomputing.stackexchange.com/a/15514).
+    //
+    // happily, this is a dump method, so we get to do non-backwards-compatible
+    // things like assume the programmer will know if they're in the extremely
+    // unlikely context where "byte" means something other than 8 bits.
+    const auto *Data = Int.getRawData();
+    const auto NumBytes = Int.getBitWidth() / 8;
+    assert(NumBytes <= Int.getNumWords() * sizeof(*Data));
+    const ArrayRef<uint8_t> AsBytes(reinterpret_cast<const uint8_t *>(Data),
+                                    NumBytes);
+    const unsigned int NumPerLine = 40, ByteGroupSize = 1;
+
+    return format_bytes(AsBytes, std::nullopt, NumPerLine, ByteGroupSize);
+  }
 
   LLVM_DUMP_METHOD void dump() {
-    auto pp = [](std::stringstream &SS, llvm::SmallVectorImpl<byte_t> &V) {
-      bool first = true;
-      for (byte_t v : V) {
-        if (first)
-          first = false;
-        else
-          SS << " ";
-        SS << "0x" << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<unsigned>(v);
-      }
-    };
-    std::stringstream SS[2];
-    pp(SS[0], Bytes);
-    pp(SS[1], Valid);
-    llvm::dbgs() << "BitCastBuffer{Bytes: [" << SS[0].str() << "], Valid: ["
-                 << SS[1].str() << "]}\n";
+    llvm::dbgs() << "BitCastBuffer{Bytes: [" << formatInt(Data)
+                 << "], Invalid: [" << formatInt(Invalid) << "] (=> Valid: ["
+                 << formatInt(~Invalid) << "])}\n";
   }
 };
 
@@ -7032,8 +7181,9 @@ class APValueToBufferConverter {
 
   APValueToBufferConverter(EvalInfo &Info, CharUnits ObjectWidth,
                            const CastExpr *BCE)
-      : Info(Info),
-        Buffer(ObjectWidth, Info.Ctx.getTargetInfo().isLittleEndian()),
+      : Info(Info), Buffer(Info.Ctx.toBits(ObjectWidth),
+                           Info.Ctx.getTargetInfo().isLittleEndian(),
+                           Info.Ctx.getCharWidth()),
         BCE(BCE) {}
 
   bool visit(const APValue &Val, QualType Ty) {
@@ -7042,13 +7192,13 @@ class APValueToBufferConverter {
 
   // Write out Val with type Ty into Buffer starting at Offset.
   bool visit(const APValue &Val, QualType Ty, CharUnits Offset) {
-    assert((size_t)Offset.getQuantity() <= Buffer.size());
+    assert((size_t)Info.Ctx.toBits(Offset) <= Buffer.BitWidth);
 
     // As a special case, nullptr_t has an indeterminate value.
     if (Ty->isNullPtrType())
       return true;
 
-    // Dig through Val to find the byte at Offset.
+    // Dig through Val to find the bits.
     switch (Val.getKind()) {
     case APValue::Indeterminate:
     case APValue::None:
@@ -7139,54 +7289,34 @@ class APValueToBufferConverter {
       if (!FieldVal.hasValue())
         continue;
 
-      uint64_t FieldOffsetBits = Layout.getFieldOffset(FieldIdx);
-      CharUnits BufOffset = Offset;
-      uint64_t BitOffset = FieldOffsetBits;
+      const auto BF = BitFieldInfo::MakeInfo(Info.Ctx, FD, Layout);
 
-      unsigned int BitWidth = FD->getBitWidthValue(Info.Ctx);
+      APSInt BoolVal;
+      const APSInt &Val = [&]() -> const APSInt & {
+        const APSInt &Val = FieldVal.getInt();
+        if (FD->getType()->isBooleanType()) {
+          // Let's zero extend the `i1` to be the full `Width` bits
+          // Note: this works because we refuse to read boolean
+          // values that don't have their high bits zeroed; see comment
+          // in BufferToAPValueConverter::visit(BuiltinType, ...)
+          BoolVal = Val.extend(BF.Width);
+          return BoolVal;
+        }
+        return Val;
+      }();
+      assert(Val.getBitWidth() >= BF.Width);
+      if (!Buffer.IsNativeEndian && Val.getBitWidth() > 8) {
+        APInt AdjVal = (Val << BF.Offset);
+        APInt Mask = APInt::getBitsSet(Val.getBitWidth(), BF.Offset,
+                                       BF.Width + BF.Offset);
 
-      CharUnits TypeWidth = Info.Ctx.getTypeSizeInChars(FD->getType());
-      uint64_t TypeWidthBits = Info.Ctx.toBits(TypeWidth);
-      if (BitWidth > TypeWidthBits) {
-        // e.g. `unsigned uint8_t c : 12`
-        // we truncate to CHAR_BIT * sizeof(T)
-        // (the extra bits are padding)
-        BitWidth = TypeWidthBits;
+        Buffer.writeMasked(Info.Ctx.toBits(Offset + BF.StorageOffset), AdjVal,
+                           Mask);
+      } else {
+        const uint64_t BitOffset = Info.Ctx.toBits(Offset + BF.StorageOffset);
+        Buffer.writeObject({BitOffset + BF.Offset, BF.Width}, Val,
+                           {0, BF.Width});
       }
-      if (FieldOffsetBits >= TypeWidthBits) {
-        // e.g. `uint32_t : 33; uint32_t i : 12`
-        // or `uint16_t : 16; unsigned uint16_t i : 12`
-        BufOffset =
-            BufOffset + CharUnits::fromQuantity(BitOffset / TypeWidthBits) *
-                            TypeWidth.getQuantity();
-        BitOffset %= TypeWidthBits;
-      }
-
-      if (Info.Ctx.getTargetInfo().isBigEndian()) {
-        // big endian bits count from MSB to LSB
-        // so a bit-field of width 16 and size 12 will occupy bits [0-11] on a
-        // little endian machine, but [3-15] on a big endian machine
-        BitOffset = TypeWidthBits - (BitOffset + BitWidth);
-      }
-
-      assert(TypeWidth >= Info.Ctx.toCharUnitsFromBits(BitWidth));
-
-      llvm::SmallBitVector MaskBits(Info.Ctx.toBits(TypeWidth));
-      MaskBits.set(BitOffset, BitOffset + BitWidth);
-      uintptr_t Store;
-      ArrayRef<uintptr_t> Ref = MaskBits.getData(Store);
-      SmallVector<uint8_t, 8> Mask(Ref.size() * sizeof(uintptr_t));
-      std::memcpy(Mask.data(), Ref.data(), Mask.size());
-      Mask.truncate(TypeWidth.getQuantity());
-
-      SmallVector<uint8_t, 8> Bytes(TypeWidth.getQuantity());
-
-      APSInt Val = FieldVal.getInt() << BitOffset;
-      assert(Val.getBitWidth() >= BitOffset + BitWidth &&
-             "lost data in APInt -> byte buffer conversion");
-
-      llvm::StoreIntToMemory(Val, &*Bytes.begin(), TypeWidth.getQuantity());
-      Buffer.writeObject(BufOffset, Bytes, Mask);
     }
 
     return true;
@@ -7252,13 +7382,13 @@ class APValueToBufferConverter {
 
     if (VTy->isExtVectorBoolType()) {
       // Special handling for OpenCL bool vectors:
-      // Since these vectors are stored as packed bits, but we can't write
-      // individual bits to the BitCastBuffer, we'll buffer all of the elements
-      // together into an appropriately sized APInt and write them all out at
-      // once. Because we don't accept vectors where NElts * EltSize isn't a
-      // multiple of the char size, there will be no padding space, so we don't
-      // have to worry about writing data which should have been left
-      // uninitialized.
+      // Since these vectors are stored in memory as packed bits, but the
+      // constexpr interpreter stores them as individual 1-bit-wide APInts, we
+      // pack them together into a single appropriately sized APInt and write
+      // them all out at once. Because we don't accept vectors where NElts *
+      // EltSize isn't a multiple of the char size, there will be no padding
+      // space, so we don't have to worry about writing data which should have
+      // been left uninitialized.
       bool BigEndian = Info.Ctx.getTargetInfo().isBigEndian();
 
       llvm::APInt Res = llvm::APInt::getZero(NElts);
@@ -7267,13 +7397,10 @@ class APValueToBufferConverter {
         assert(EltAsInt.isUnsigned() && EltAsInt.getBitWidth() == 1 &&
                "bool vector element must be 1-bit unsigned integer!");
 
-        Res.insertBits(EltAsInt, BigEndian ? (NElts - I - 1) : I);
+        Res.setBitVal(BigEndian ? (NElts - I - 1) : I, EltAsInt[0]);
       }
 
-      SmallVector<uint8_t, 8> Bytes(NElts / 8);
-      auto Mask = BitCastBuffer::MaskAllSet(Bytes.size());
-      llvm::StoreIntToMemory(Res, &*Bytes.begin(), NElts / 8);
-      Buffer.writeObject(Offset, Bytes, Mask);
+      Buffer.writeObject(Info.Ctx.toBits(Offset), Res);
     } else {
       // Iterate over each of the elements and write them out to the buffer at
       // the appropriate offset.
@@ -7288,17 +7415,39 @@ class APValueToBufferConverter {
   }
 
   bool visitInt(const APSInt &Val, QualType Ty, CharUnits Offset) {
-    APSInt AdjustedVal = Val;
-    unsigned Width = AdjustedVal.getBitWidth();
     if (Ty->isBooleanType()) {
-      Width = Info.Ctx.getTypeSize(Ty);
-      AdjustedVal = AdjustedVal.extend(Width);
+      // Let's zero extend the `i1` to be the full 8 bits
+      // Note: this works because we refuse to read boolean
+      // values that don't have their high bits zeroed; see comment
+      // in BufferToAPValueConverter::visit(BuiltinType, ...)
+      unsigned Width = Info.Ctx.getTypeSize(Ty);
+      Buffer.writeObject(Info.Ctx.toBits(Offset), Val.zext(Width));
+      return true;
     }
 
-    SmallVector<uint8_t, 8> Bytes(Width / 8);
-    auto Mask = BitCastBuffer::MaskAllSet(Bytes.size());
-    llvm::StoreIntToMemory(AdjustedVal, &*Bytes.begin(), Width / 8);
-    Buffer.writeObject(Offset, Bytes, Mask);
+    if (Ty->isBitIntType()) {
+      // This preserves the existing behavior that used to function like so:
+      // ```c++
+      // SmallVector<uint8_t, 8> Bytes(Width / 8);
+      // llvm::StoreIntToMemory(AdjustedVal, &*Bytes.begin(), Width / 8);
+      // Buffer.writeObject(Offset, Bytes);
+      // ```
+      // which, when provided a _BitInt(N), would write N/8 bytes (when it
+      // didn't crash)
+      const CharUnits Bytes =
+          CharUnits::fromQuantity(Info.Ctx.getIntWidth(Ty) / 8);
+      const unsigned Size = Info.Ctx.toBits(Bytes);
+      if (!Buffer.IsNativeEndian && Val.getBitWidth() > 8) {
+        Buffer.writeObject(Info.Ctx.toBits(Offset), Val.trunc(Size));
+      } else {
+        Buffer.writeObject({static_cast<size_t>(Info.Ctx.toBits(Offset)), Size},
+                           Val, {0, Size});
+      }
+
+      return true;
+    }
+
+    Buffer.writeObject(Info.Ctx.toBits(Offset), Val);
     return true;
   }
 
@@ -7357,28 +7506,28 @@ class BufferToAPValueConverter {
     return std::nullopt;
   }
 
-  std::nullopt_t badBits(QualType Ty, CharUnits Offset,
-                         SmallVectorImpl<BitCastBuffer::byte_t> &M) {
+  std::nullopt_t badBits(QualType Ty, const BitSlice &Want) {
     Info.FFDiag(BCE->getExprLoc(), diag::note_constexpr_bit_cast_indet_dest, 1)
         << Ty << Info.Ctx.getLangOpts().CharIsSigned;
     uint64_t BitWidth = Info.Ctx.getTypeSize(BCE->getType());
-    uint64_t ByteWidth = Info.Ctx.toCharUnitsFromBits(BitWidth).getQuantity();
-    assert(ByteWidth == Buffer.Valid.size_in_bytes());
+    uint64_t ByteWidth =
+        Info.Ctx.getTypeSizeInChars(BCE->getType()).getQuantity();
+    assert(ByteWidth == Buffer.BitWidth / Info.Ctx.getCharWidth());
 
-    APInt Valid(BitWidth, 0);
-    llvm::LoadIntFromMemory(Valid, Buffer.Valid.begin(), ByteWidth);
-    APInt Mask(BitWidth, 0);
-    llvm::LoadIntFromMemory(Mask, M.begin(), M.size_in_bytes());
-
-    Mask = Mask.zext(Valid.getBitWidth());
-    Mask <<= Info.Ctx.toBits(Offset);
+    uint64_t BW = Info.Ctx.getTypeSize(Ty);
+    APInt Indet = Buffer.Invalid.lshr(Want.start()).trunc(BW);
+    auto Mask = APInt::getBitsSet(BW, 0, Want.size());
+    if (!Buffer.IsNativeEndian && BW % 16 == 0) {
+      Indet = Indet.byteSwap();
+      Mask = Mask.byteSwap();
+    }
 
     auto ByteAligned = true;
 
-    APInt Missing = (~Valid & Mask);
+    APInt Missing = Indet & Mask;
     assert(!Missing.isZero() && "bad bits called with no bad bits?");
     llvm::SmallVector<std::pair<size_t, size_t>> MissingBitRanges;
-    int NextBit = 0;
+    int NextBit = Want.start();
     while (!Missing.isZero()) {
       APInt Last(Missing);
       int N = Missing.countr_zero();
@@ -7426,6 +7575,16 @@ class BufferToAPValueConverter {
     return std::nullopt;
   }
 
+  static bool canStoreIndeterminate(const Type *T, const EnumType *EnumSugar) {
+    // If this is std::byte or unsigned char, then its okay to store an
+    // indeterminate value.
+    bool IsStdByte = EnumSugar && EnumSugar->isStdByteType();
+    bool IsUChar =
+        !EnumSugar && (T->isSpecificBuiltinType(BuiltinType::UChar) ||
+                       T->isSpecificBuiltinType(BuiltinType::Char_U));
+    return IsStdByte || IsUChar;
+  }
+
   std::optional<APValue> visit(const BuiltinType *T, CharUnits Offset,
                                const EnumType *EnumSugar = nullptr) {
     if (T->isNullPtrType()) {
@@ -7435,51 +7594,60 @@ class BufferToAPValueConverter {
                      APValue::NoLValuePath{}, /*IsNullPtr=*/true);
     }
 
-    CharUnits SizeOf = Info.Ctx.getTypeSizeInChars(T);
+    uint64_t SizeOf = Info.Ctx.getTypeSize(T);
 
-    // Work around floating point types that contain unused padding bytes. This
+    // Some floating point types contain unused padding bytes. This
     // is really just `long double` on x86, which is the only fundamental type
-    // with padding bytes.
+    // with padding bytes. (other than `bool`s, which are handled specially
+    // below)
     if (T->isRealFloatingType()) {
       const llvm::fltSemantics &Semantics =
           Info.Ctx.getFloatTypeSemantics(QualType(T, 0));
       unsigned NumBits = llvm::APFloatBase::getSizeInBits(Semantics);
       assert(NumBits % 8 == 0);
-      CharUnits NumBytes = CharUnits::fromQuantity(NumBits / 8);
-      if (NumBytes != SizeOf)
-        SizeOf = NumBytes;
+      if (NumBits != SizeOf)
+        SizeOf = NumBits;
     }
 
-    SmallVector<uint8_t, 8> Bytes,
-        Mask = BitCastBuffer::MaskAllSet(SizeOf.getQuantity());
-    Bytes.resize_for_overwrite(SizeOf.getQuantity());
-    if (!Buffer.readObject(Offset, SizeOf, Bytes, Mask)) {
-      // If this is std::byte or unsigned char, then its okay to store an
-      // indeterminate value.
-      bool IsStdByte = EnumSugar && EnumSugar->isStdByteType();
-      bool IsUChar =
-          !EnumSugar && (T->isSpecificBuiltinType(BuiltinType::UChar) ||
-                         T->isSpecificBuiltinType(BuiltinType::Char_U));
-      if (!IsStdByte && !IsUChar) {
+    uint64_t BitAddr = Info.Ctx.toBits(Offset);
+    APSInt Val(SizeOf, true);
+    if (!Buffer.readObject(BitAddr, Val)) {
+      if (!canStoreIndeterminate(T, EnumSugar)) {
         QualType DisplayType(EnumSugar ? (const Type *)EnumSugar : T, 0);
-        return badBits(DisplayType, Offset, Mask);
+        return badBits(DisplayType, {BitAddr, Val.getBitWidth()});
       }
 
       return APValue::IndeterminateValue();
     }
 
-    APSInt Val(SizeOf.getQuantity() * Info.Ctx.getCharWidth(), true);
-    llvm::LoadIntFromMemory(Val, &*Bytes.begin(), Bytes.size());
-
     if (T->isIntegralOrEnumerationType()) {
       Val.setIsSigned(T->isSignedIntegerOrEnumerationType());
 
-      unsigned IntWidth = Info.Ctx.getIntWidth(QualType(T, 0));
-      if (IntWidth != Val.getBitWidth()) {
-        APSInt Truncated = Val.trunc(IntWidth);
-        if (Truncated.extend(Val.getBitWidth()) != Val)
+      if (T->isBooleanType()) {
+        // booleans are special in that they have natural padding. However,
+        // rather than treating the padding bits as such, we instead choose to
+        // see them more like "tag" bits that are architecturally required to be
+        // zeroed, i.e. invoking the "no value of type `To` corresponding to the
+        // representation" undefined behavior clause, and therefore refusing to
+        // produce a constant value.
+        //
+        // We do this because on write, we'd like to zero-extend a `bool` out to
+        // 8 bits so that it's possible to `bit_cast<uint8_t>(false)` without
+        // additional ceremony. However, that means that if we permit any
+        // non-zero bit patterns to be cast _to_ a bool here, we'd permit a
+        // construct like the following:
+        // ```c++
+        // bit_cast<uint8_t>(bit_cast<bool>('\x02'))
+        // ```
+        // to produce a constant `0x0` (because we'll zero-extend the LSB).
+        //
+        // Note that this is different behavior than we'll want for _BitInt(N)
+        // types, where we have no desire for a bit cast from a `_BitInt(3)` to
+        // produce a constant value for the other bits.
+        if (Val.getActiveBits() > 1)
           return unrepresentableValue(QualType(T, 0), Val);
-        Val = Truncated;
+
+        Val = Val.trunc(1);
       }
 
       return APValue(Val);
@@ -7554,76 +7722,79 @@ class BufferToAPValueConverter {
       if (!FD->isBitField())
         continue;
 
+      // matches the existing behavior
+      if (FD->getType()->isBitIntType())
+        return unsupportedType(FD->getType());
+
       // unnamed bit fields are purely padding
       if (FD->isUnnamedBitfield())
         continue;
 
-      uint64_t FieldOffsetBits = Layout.getFieldOffset(FieldIdx);
-      CharUnits BufOffset = Offset;
-      uint64_t BitOffset = FieldOffsetBits;
+      const auto BF = BitFieldInfo::MakeInfo(Info.Ctx, FD, Layout);
+      const bool isUnsigned =
+          FD->getType()->isUnsignedIntegerOrEnumerationType();
+      APSInt Val;
+      bool ReadOK;
+      const unsigned BitAddr =
+          Info.Ctx.toBits(Offset + BF.StorageOffset) + BF.Offset;
+      if (!Buffer.IsNativeEndian && BF.StorageSize > 8) {
+        Val = APSInt(BF.StorageSize, true);
+        const APInt Mask =
+            APInt::getBitsSet(BF.StorageSize, BF.Offset, BF.Offset + BF.Width);
 
-      unsigned int BitWidth = FD->getBitWidthValue(Info.Ctx);
+        ReadOK = Buffer.readMasked(Info.Ctx.toBits(Offset + BF.StorageOffset),
+                                   Val, Mask);
 
-      CharUnits TypeWidth = Info.Ctx.getTypeSizeInChars(FD->getType());
-      uint64_t TypeWidthBits = Info.Ctx.toBits(TypeWidth);
-      if (BitWidth > TypeWidthBits) {
-        // e.g. `unsigned uint8_t c : 12`
-        // we truncate to CHAR_BIT * sizeof(T)
-        // (the extra bits are padding)
-        BitWidth = TypeWidthBits;
-      }
-      if (FieldOffsetBits >= TypeWidthBits) {
-        // e.g. `uint32_t : 33; uint32_t i : 12`
-        // or `uint16_t : 16; unsigned uint16_t i : 12`
-        BufOffset =
-            BufOffset + CharUnits::fromQuantity(BitOffset / TypeWidthBits) *
-                            TypeWidth.getQuantity();
-        BitOffset %= TypeWidthBits;
-      }
-
-      if (Info.Ctx.getTargetInfo().isBigEndian()) {
-        // big endian bits count from MSB to LSB
-        // so a bit-field of width 16 and size 12 will occupy bits [0-11] on a
-        // little endian machine, but [3-15] on a big endian machine
-        BitOffset = TypeWidthBits - (BitOffset + BitWidth);
+        Val >>= BF.Offset;
+        Val = Val.trunc(BF.Width);
+        Val.setIsUnsigned(isUnsigned);
+      } else {
+        Val = APSInt(BF.Width, isUnsigned);
+        ReadOK = Buffer.readObject(BitAddr, Val);
       }
 
-      assert(TypeWidth >= Info.Ctx.toCharUnitsFromBits(BitWidth));
-
-      llvm::SmallBitVector MaskBits(Info.Ctx.toBits(TypeWidth));
-      MaskBits.set(BitOffset, BitOffset + BitWidth);
-      uintptr_t Store;
-      ArrayRef<uintptr_t> BitRef = MaskBits.getData(Store);
-      SmallVector<uint8_t, 8> Mask(BitRef.size() * sizeof(uintptr_t));
-      std::memcpy(Mask.data(), BitRef.data(), Mask.size());
-      Mask.truncate(TypeWidth.getQuantity());
-
-      SmallVector<uint8_t, 8> Bytes(TypeWidth.getQuantity());
-      if (!Buffer.readObject(BufOffset, TypeWidth, Bytes, Mask)) {
+      if (!ReadOK) {
         const Type *T = FD->getType().getCanonicalType().getTypePtr();
         const EnumType *EnumSugar = dyn_cast<EnumType>(T);
-        // If this is std::byte or unsigned char, then its okay to store an
-        // indeterminate value.
-        bool IsStdByte = EnumSugar && EnumSugar->isStdByteType();
-        bool IsUChar =
-            !EnumSugar && (T->isSpecificBuiltinType(BuiltinType::UChar) ||
-                           T->isSpecificBuiltinType(BuiltinType::Char_U));
-        if (!IsStdByte && !IsUChar) {
+        if (!canStoreIndeterminate(T, EnumSugar)) {
           QualType DisplayType(EnumSugar ? (const Type *)EnumSugar : T, 0);
-          return badBits(DisplayType, BufOffset, Mask);
+          return badBits(DisplayType, {BitAddr, BF.Width});
         }
+
         ResultVal.getStructField(FieldIdx) = APValue::IndeterminateValue();
-      } else {
-        APSInt Val(Info.Ctx.toBits(TypeWidth), true);
-        llvm::LoadIntFromMemory(Val, &*Bytes.begin(), TypeWidth.getQuantity());
-
-        Val >>= BitOffset;
-        Val = Val.trunc(BitWidth);
-        Val.setIsSigned(FD->getType()->isSignedIntegerOrEnumerationType());
-        Val = Val.extend(Info.Ctx.toBits(TypeWidth));
-
-        ResultVal.getStructField(FieldIdx) = APValue(Val);
+        continue;
       }
+
+      if (FD->getType()->isBooleanType()) {
+        // booleans are special in that they have natural padding. However,
+        // rather than treating the padding bits as such, we instead choose to
+        // see them more like "tag" bits that are architecturally required to be
+        // zeroed, i.e. invoking the "no value of type `To` corresponding to the
+        // representation" undefined behavior clause, and therefore refusing to
+        // produce a constant value.
+        //
+        // We do this because on write, we'd like to zero-extend a `bool` out to
+        // 8 bits so that it's possible to `bit_cast<uint8_t>(false)` without
+        // additional ceremony. However, that means that if we permit any
+        // non-zero bit patterns to be cast _to_ a bool here, we'd permit a
+        // construct like the following:
+        // ```c++
+        // bit_cast<uint8_t>(bit_cast<bool>('\x02'))
+        // ```
+        // to produce a constant `0x0` (because we'll zero-extend the LSB).
+        //
+        // Note that this is different behavior than we'll want for _BitInt(N)
+        // types, where we have no desire for a bit cast from a `_BitInt(3)` to
+        // produce a constant value for the other bits.
+        if (Val.getActiveBits() > 1)
+          return unrepresentableValue(FD->getType(), Val);
+
+        Val = Val.trunc(1);
+      } else {
+        Val = Val.extend(BF.StorageSize);
+      }
+
+      ResultVal.getStructField(FieldIdx) = APValue(Val);
     }
 
     return ResultVal;
@@ -7688,28 +7859,22 @@ class BufferToAPValueConverter {
     Elts.reserve(NElts);
     if (VTy->isExtVectorBoolType()) {
       // Special handling for OpenCL bool vectors:
-      // Since these vectors are stored as packed bits, but we can't read
-      // individual bits from the BitCastBuffer, we'll buffer all of the
-      // elements together into an appropriately sized APInt and write them all
-      // out at once. Because we don't accept vectors where NElts * EltSize
-      // isn't a multiple of the char size, there will be no padding space, so
-      // we don't have to worry about reading any padding data which didn't
-      // actually need to be accessed.
+      // Since these vectors are stored in memory as packed bits, but the
+      // constexpr interpreter wants to store them as individual 1-bit-wide
+      // APInts, so we unpack them here. Because we don't accept vectors where
+      // NElts * EltSize isn't a multiple of the char size, there will be no
+      // padding space, so we don't have to worry about reading any padding data
+      // which didn't actually need to be accessed.
       bool BigEndian = Info.Ctx.getTargetInfo().isBigEndian();
 
-      size_t Width = NElts / 8;
-      SmallVector<uint8_t, 8> Bytes, Mask = BitCastBuffer::MaskAllSet(Width);
-      Bytes.resize_for_overwrite(Width);
-      if (!Buffer.readObject(Offset, CharUnits::fromQuantity(Width), Bytes,
-                             Mask))
-        return std::nullopt;
-
-      APSInt SValInt(NElts, true);
-      llvm::LoadIntFromMemory(SValInt, &*Bytes.begin(), Bytes.size());
+      const unsigned BitAddr = Info.Ctx.toBits(Offset);
+      APSInt Val(NElts, true);
+      if (!Buffer.readObject(BitAddr, Val))
+        return badBits(QualType(VTy, 0), {BitAddr, Val.getBitWidth()});
 
       for (unsigned I = 0; I < NElts; ++I) {
         llvm::APInt Elt =
-            SValInt.extractBits(1, (BigEndian ? NElts - I - 1 : I) * EltSize);
+            Val.extractBits(1, (BigEndian ? NElts - I - 1 : I) * EltSize);
         Elts.emplace_back(
             APSInt(std::move(Elt), !EltTy->isSignedIntegerType()));
       }

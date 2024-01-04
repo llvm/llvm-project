@@ -10,15 +10,13 @@
 #  error "huh?"
 #endif
 
-template <class T, class V> struct is_same {
-  static constexpr bool value = false;
-};
-template <class T> struct is_same<T, T> {
-  static constexpr bool value = true;
-};
-
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(long long) == 8);
+
+using uint8_t = unsigned char;
+using uint16_t = unsigned __INT16_TYPE__;
+using uint32_t = unsigned __INT32_TYPE__;
+using uint64_t = unsigned __INT64_TYPE__;
 
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
@@ -134,10 +132,6 @@ void test_partially_initialized() {
   static_assert(fine.x == 1 && fine.y == 5);
 }
 
-namespace std {
-enum byte : unsigned char {};
-} // namespace std
-
 template <int N, typename T = unsigned char, int Pad = 0>
 struct bits {
   T : Pad;
@@ -154,7 +148,6 @@ constexpr bool operator==(const struct bits<N, T, P>& lhs, const struct bits<N, 
 }
 
 void test_bitfields() {
-  using uint16_t = unsigned __INT16_TYPE__;
   {
     struct Q {
       // cf. CGBitFieldInfo
@@ -167,14 +160,46 @@ void test_bitfields() {
       // the LSB here.
       uint16_t q : 15;
     };
-    constexpr unsigned char bits[2] = {0xf3, 0xef};
-    constexpr Q q = bit_cast<Q>(bits);
-    static_assert(bit_cast<uint16_t>(bits) == (LITTLE_END
+    constexpr unsigned char bytes[2] = {0xf3, 0xef};
+    constexpr Q q = bit_cast<Q>(bytes);
+    static_assert(q.q == (LITTLE_END ? 0x6ff3 : (0xf3ee >> 1)));
+    static_assert(bit_cast<uint16_t>(bytes) == (LITTLE_END
                                                     ? 0xeff3
                                                     : 0xf3ef),
       "bit-field casting ought to match \"whole\"-field casting");
-    static_assert(q.q == (LITTLE_END ? 0x6ff3 : (0xf3ee >> 1)));
+
+    // similarly, "skip 1 bit of padding" followed by "read 9 bits"
+    // will truncate (shift out) either the LSB (little endian) or MSB (big endian)
+    static_assert((0xf3ee >> 1) == 0x79f7);
+    static_assert(0x01cf == (0xf3ef >> (16-9-1) & 0x1ff));
+    static_assert(bit_cast<bits<9, uint16_t, 1>>(q) == (LITTLE_END
+                                                              ? (0xeff3 >> 1) & 0x1ff
+                                                              : (0xf3ef >> (16-9-1)) & 0x1ff));
+
+    #if LITTLE_END == 0
+    // expected-note@+5 {{bit [0]}}
+    #else
+    // expected-note@+3 {{bit [15]}}
+    #endif
+    // expected-error@+1 {{constant expression}}
+    constexpr auto _i = __builtin_bit_cast(bits<15, uint16_t, 1>, q);
+    // expected-note@-1 {{indeterminate}}
   }
+
+  static_assert(round_trip<bits<8>, uint8_t>(0x8c) == 0x8c);
+  static_assert(round_trip<bits<32, uint32_t>, uint32_t>(0x8c0f'fee5) == 0x8c0ffee5);
+
+  #define MSG "endianness matters even with <=8-bit fields"
+  static_assert(bit_cast<bits<8, uint16_t, 7>, uint16_t>(0xcafe) == (LITTLE_END
+                                                                          ? 0x95
+                                                                          : 0x7f), MSG);
+  static_assert(bit_cast<bits<4, uint16_t, 10>, uint16_t>(0xcafe) == (LITTLE_END
+                                                                          ? 0x2
+                                                                          : 0xf), MSG);
+  static_assert(bit_cast<bits<4, uint32_t, 19>, uint32_t>(0xa1cafe) == (LITTLE_END
+                                                                          ? 0x4
+                                                                          : 0x5), MSG);
+  #undef MSG
 
   struct S {
     // little endian:
@@ -209,7 +234,7 @@ void test_bitfields() {
       return r == other.r;
     }
   };
-  using T = bits<31, signed long long>;
+  using T = bits<31, signed __INT64_TYPE__>;
 
   constexpr R r{0x4ac0ffee};
   constexpr T t = bit_cast<T>(r);
@@ -220,16 +245,16 @@ void test_bitfields() {
 
   struct U {
     // expected-warning@+1 {{exceeds the width of its type}}
-    unsigned __INT32_TYPE__ trunc : 33;
-    unsigned __INT32_TYPE__ u : 31;
+    uint32_t trunc : 33;
+    uint32_t u : 31;
     constexpr bool operator==(U const &other) const {
       return trunc == other.trunc && u == other.u;
     }
   };
   struct V {
-    unsigned __INT64_TYPE__ notrunc : 32;
-    unsigned __INT64_TYPE__ : 1;
-    unsigned __INT64_TYPE__ v : 31;
+    uint64_t notrunc : 32;
+    uint64_t : 1;
+    uint64_t v : 31;
     constexpr bool operator==(V const &other) const {
       return notrunc == other.notrunc && v == other.v;
     }
@@ -244,7 +269,7 @@ void test_bitfields() {
     static_assert(round_trip<V>(u) == u, MSG);
     static_assert(round_trip<U>(v) == v, MSG);
 
-    constexpr auto w = bit_cast<bits<12, unsigned long, 33>>(u);
+    constexpr auto w = bit_cast<bits<12, uint64_t, 33>>(u);
     static_assert(w == (LITTLE_END
                         ? 0x4ac0ffee & 0xFFF
                         : (0x4ac0ffee & (0xFFF << (31 - 12))) >> (31-12)
@@ -308,14 +333,20 @@ void test_bitfields() {
   }
 }
 
+namespace std {
+enum byte : unsigned char {};
+} // namespace std
+
+using uint8_t = unsigned char;
+
 template<int N>
-struct bytebuf {
-  using size_t = int;
-  unsigned char bytes[N];
+struct bytes {
+  using size_t = unsigned int;
+  unsigned char d[N];
 
   constexpr unsigned char &operator[](size_t index) {
     if (index < N)
-      return bytes[index];
+      return d[index];
   }
 };
 
@@ -342,15 +373,14 @@ void bitfield_indeterminate() {
     // expected-note@+1 {{subobject declared here}}
     unsigned char mem[sizeof(BF)];
   };
-  // expected-error@+3 {{initialized by a constant expression}}
-  // zzexpected-note@+2 {{bad bits}}
+  // expected-error@+2 {{initialized by a constant expression}}
   // expected-note@+1 {{not initialized}}
   constexpr M m = bit_cast<M>(bf);
 
   constexpr auto f = []() constexpr {
     // bits<24, unsigned int, LITTLE_END ? 0 : 8> B = {0xc0ffee};
     constexpr struct { unsigned short b1; unsigned char b0;  } B = {0xc0ff, 0xee};
-    return bit_cast<bytebuf<4>>(B);
+    return bit_cast<bytes<4>>(B);
   };
 
   static_assert(f()[0] + f()[1] + f()[2] == 0xc0 + 0xff + 0xee);
@@ -664,13 +694,109 @@ namespace test_bool {
 // expected-note@+1 {{cannot be represented in type 'bool'}}
 constexpr bool test_bad_bool = __builtin_bit_cast(bool, 'A'); // expected-error {{must be initialized by a constant expression}}
 
-static_assert(check_round_trip<signed char>(true));
-static_assert(check_round_trip<unsigned char>(false));
-static_assert(check_round_trip<bool>(false));
+static_assert(round_trip<signed char>(true));
+static_assert(round_trip<unsigned char>(true));
+static_assert(round_trip<bool>(false) == false);
 
-static_assert(check_round_trip<bool>((char)0));
-static_assert(check_round_trip<bool>((char)1));
+static_assert(static_cast<uint8_t>(false) == 0x0);
+static_assert(bit_cast<uint8_t>(false) == 0x0);
+static_assert(static_cast<uint8_t>(true) == 0x1);
+static_assert(bit_cast<uint8_t>(true) == 0x1);
+
+static_assert(round_trip<bool, uint8_t>(0x01) == 0x1);
+static_assert(round_trip<bool, uint8_t>(0x00) == 0x0);
+// expected-note@+2 {{cannot be represented in type 'bool'}}
+// expected-error@+1 {{constant expression}}
+constexpr auto test_bad_bool2 = __builtin_bit_cast(bool, (uint8_t)0x02);
+
+#if LITTLE_END == 1
+constexpr auto okbits = bit_cast<bits<1>>(true);
+#else
+constexpr auto okbits = bit_cast<bits<1, uint8_t, 7>>(true);
+#endif
+static_assert(okbits == 0x1);
+// expected-note@+3 {{bit [1-7]}}
+// expected-note@+2 {{or 'std::byte'; 'bool' is invalid}}
+// expected-error@+1 {{constant expression}}
+constexpr auto _weird_bool = __builtin_bit_cast(bool, okbits);
+
+// these don't work because we're trying to read the whole 8 bits to ensure
+// the value is representable, as above
+// static_assert(round_trip<bool, bits<1>>({0x1}) == 0x1);
+// static_assert(round_trip<bool, bits<1>>({0x0}) == 0x0);
+
+// these work because we're only reading 1 bit of "bool" to ensure
+// "representability"
+static_assert(round_trip<bits<1, bool>, bits<1>>({0x1}) == 0x1);
+static_assert(round_trip<bits<1, bool>, bits<1>>({0x0}) == 0x0);
+
+template <const int P, class B = bool>
+constexpr bool extract_bit(unsigned char v) {
+  return static_cast<bool>(bit_cast<bits<1, B, P>>(v).bits);
 }
+// 0xA5 is a palindrome, so endianness doesn't matter
+// (counting LSB->MSB is the same as MSB->LSB)
+static_assert(extract_bit<0>(0xA5) == 0x1);
+static_assert(extract_bit<2>(0xA5) == 0x1);
+static_assert(extract_bit<5>(0xA5) == 0x1);
+static_assert(extract_bit<7>(0xA5) == 0x1);
+
+static_assert(extract_bit<1>(0xA5) == 0x0);
+static_assert(extract_bit<3>(0xA5) == 0x0);
+static_assert(extract_bit<4>(0xA5) == 0x0);
+static_assert(extract_bit<6>(0xA5) == 0x0);
+
+enum byte : unsigned char {}; // not std::byte or unsigned char
+
+static_assert(extract_bit<5, byte>('\xa5') == 0x1);
+
+struct pad {
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  bool : 5; // push field down to the LSB
+#endif
+  bool b : 3;
+};
+
+static_assert(bit_cast<pad, uint8_t>(0b001).b == true);
+static_assert(bit_cast<pad, uint8_t>(0b000).b == false);
+
+// expected-note@+1 {{cannot be represented in type 'bool'}}
+constexpr auto _bad_bool3 = __builtin_bit_cast(pad, (uint8_t)0b110); // expected-error {{must be initialized by a constant expression}}
+
+struct S {
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  byte : 7;
+#endif
+  byte z : 1;
+};
+
+constexpr auto s = bit_cast<S>(pad{1});
+static_assert(s.z == 0x1);
+
+// expected-note@+3 {{bit [1-2]}}
+// expected-note@+2 {{or 'std::byte'; 'bool' is invalid}}
+// expected-error@+1 {{constant expression}}
+constexpr auto _bad_bool4 = __builtin_bit_cast(pad, s);
+
+
+// `bool` includes padding bits, but *which* single bit stores the
+// value is under-specified. These tests not-so-secretly assert that
+// it's in fact the LSB that the compiler "sees" as the value.
+struct pack {
+  bool a : 1;
+  bool b : 1;
+
+  // 1 bit of value, 5 bits of padding
+  bool c : 6;
+};
+
+constexpr auto packed = bit_cast<pack, uint8_t>(LITTLE_END ? 0x07 : 0xc1);
+static_assert(packed.a && packed.b && packed.c);
+
+static_assert(bit_cast<bits<2, uint8_t, 0>>(packed) == 0x3);
+static_assert(bit_cast<bits<1, uint8_t, LITTLE_END ? 2 : 7>>(packed) == 0x1);
+
+} // namespace test_bool
 
 namespace test_long_double {
 #ifdef __x86_64
@@ -680,9 +806,7 @@ constexpr __int128_t test_cast_to_int128 = __builtin_bit_cast(__int128_t, (long 
 
 constexpr long double ld = 3.1425926539;
 
-struct bytes {
-  unsigned char d[16];
-};
+using bytes = bytes<16>;
 
 static_assert(check_round_trip<bytes>(ld));
 
@@ -696,10 +820,10 @@ constexpr bool f(bool read_uninit) {
   };
 
   for (int i = 0; i != 10; ++i)
-    if (ld_bytes[i] != b.d[i])
+    if (ld_bytes[i] != b[i])
       return false;
 
-  if (read_uninit && b.d[10]) // expected-note{{read of uninitialized object is not allowed in a constant expression}}
+  if (read_uninit && b[10]) // expected-note{{read of uninitialized object is not allowed in a constant expression}}
     return false;
 
   return true;
@@ -722,7 +846,7 @@ static_assert(bit_cast<long double>(ld539) == fivehundredandthirtynine);
 #else
 static_assert(round_trip<__int128_t>(34.0L));
 #endif
-}
+} // namespace test_long_double
 
 namespace test_vector {
 
@@ -746,9 +870,9 @@ typedef bool bool32 __attribute__((ext_vector_type(32)));
 typedef bool bool128 __attribute__((ext_vector_type(128)));
 
 static_assert(bit_cast<unsigned char>(bool8{1,0,1,0,1,0,1,0}) == (LITTLE_END ? 0x55 : 0xAA));
-static_assert(check_round_trip<bool8>(static_cast<unsigned char>(0)));
-static_assert(check_round_trip<bool8>(static_cast<unsigned char>(1)));
-static_assert(check_round_trip<bool8>(static_cast<unsigned char>(0x55)));
+static_assert(round_trip<bool8>('\x00') == 0);
+static_assert(round_trip<bool8>('\x01') == 0x1);
+static_assert(round_trip<bool8>('\x55') == 0x55);
 
 static_assert(bit_cast<unsigned short>(bool16{1,1,1,1,1,0,0,0, 1,1,1,1,0,1,0,0}) == (LITTLE_END ? 0x2F1F : 0xF8F4));
 
@@ -766,4 +890,21 @@ constexpr bool9 bad_short_to_bool9 = __builtin_bit_cast(bool9, static_cast<unsig
 // expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(17)))' (vector of 17 'bool' values) is not allowed in a constant expression; element size 1 * element count 17 is not a multiple of the byte size 8}}
 constexpr bool17 bad_int_to_bool17 = __builtin_bit_cast(bool17, 0x0001CAFEU);
 
-}
+struct pad {
+  unsigned short s;
+  unsigned char c;
+};
+constexpr auto p = bit_cast<pad>(bit_cast<bool32>(0xa1c0ffee));
+static_assert(p.s == (LITTLE_END ? 0xffee : 0xa1c0));
+static_assert(p.c == (LITTLE_END ? 0xc0 : 0xff));
+
+#if LITTLE_END == 1
+// expected-note@+5 {{for byte [3]}}
+#else
+// expected-note@+3 {{for byte [0]}}
+#endif
+// expected-note@+1 {{indeterminate value}}
+constexpr auto _bad_p = __builtin_bit_cast(bool32, p); // expected-error {{initialized by a constant expression}}
+
+
+} // namespace test_vector
