@@ -19,6 +19,9 @@
 #include <utility>
 
 namespace mlir {
+
+class SymbolTable;
+
 namespace mesh {
 
 // If we have an algebraic op like "+" and a summing all-reduce,
@@ -103,6 +106,10 @@ void populateAllReduceEndomorphismSimplificationPatterns(
 }
 
 void populateSimplificationPatterns(RewritePatternSet &patterns);
+// It is invalid to change ops that declare symbols during the application of
+// these patterns, because symbolTable is used to cache them.
+void populateFoldingPatterns(RewritePatternSet &patterns,
+                             SymbolTableCollection &symbolTable);
 
 } // namespace mesh
 } // namespace mlir

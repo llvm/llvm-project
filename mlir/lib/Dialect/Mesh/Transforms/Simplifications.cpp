@@ -8,6 +8,17 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Simplifications.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Mesh/IR/MeshOps.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include <iterator>
+#include <numeric>
+#include <utility>
 
 namespace mlir {
 namespace mesh {
@@ -33,6 +44,81 @@ void populateSimplificationPatterns(RewritePatternSet &patterns) {
       patterns, Partial::Max);
 
   // TODO: add simplifications for all-gather and other collectives.
+}
+
+namespace {
+
+// This folding can not be done with an operation's fold method or
+// DialectFoldInterface, because it needs a SymbolTableCollection to cache the
+// symbol tables.
+// We can't use DialectFoldInterface since the cache may be invalidated by some
+// pass changing the referenced ClusterOp ops.
+struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
+  template <typename... OpRewritePatternArgs>
+  ClusterShapeFolder(SymbolTableCollection &symbolTable,
+                     OpRewritePatternArgs &&...opRewritePatternArgs)
+      : OpRewritePattern(
+            std::forward<OpRewritePatternArgs...>(opRewritePatternArgs)...),
+        symbolTable(symbolTable) {}
+  LogicalResult matchAndRewrite(ClusterShapeOp op,
+                                PatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+    ClusterOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
+        op.getOperation(), op.getMeshAttr());
+    if (!mesh) {
+      return failure();
+    }
+    ArrayRef<MeshAxis> opMeshAxes = op.getAxes();
+    SmallVector<MeshAxis> opAxesIota;
+    if (opMeshAxes.empty()) {
+      opAxesIota.resize(mesh.getRank());
+      std::iota(opAxesIota.begin(), opAxesIota.end(), 0);
+      opMeshAxes = opAxesIota;
+    }
+    if (llvm::all_of(opMeshAxes, [&mesh](MeshAxis axis) {
+          return ShapedType::isDynamic(mesh.getDimSizes()[axis]);
+        })) {
+      // All mesh dimensions are dynamic. Nothing to fold.
+      return failure();
+    }
+
+    SmallVector<Value> newResults(op->getResults().size());
+    SmallVector<MeshAxis> newShapeOpMeshAxes;
+    SmallVector<size_t> newToOldResultsIndexMap;
+
+    for (size_t i = 0; i < opMeshAxes.size(); ++i) {
+      auto meshAxisSize = mesh.getDimSizes()[opMeshAxes[i]];
+      if (ShapedType::isDynamic(meshAxisSize)) {
+        newToOldResultsIndexMap.push_back(i);
+        newShapeOpMeshAxes.push_back(opMeshAxes[i]);
+      } else {
+        // Fold static mesh axes.
+        newResults[i] = builder.create<arith::ConstantOp>(
+            builder.getIndexAttr(meshAxisSize));
+      }
+    }
+
+    // Leave only the dynamic mesh axes to be queried.
+    ClusterShapeOp newShapeOp =
+        builder.create<ClusterShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
+    for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
+      newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
+    }
+
+    rewriter.replaceAllUsesWith(op.getResults(), newResults);
+
+    return success();
+  }
+
+private:
+  SymbolTableCollection &symbolTable;
+};
+
+} // namespace
+
+void populateFoldingPatterns(RewritePatternSet &patterns,
+                             SymbolTableCollection &symbolTable) {
+  patterns.add<ClusterShapeFolder>(symbolTable, patterns.getContext());
 }
 
 } // namespace mesh
