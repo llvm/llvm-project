@@ -189,6 +189,17 @@ InternalListIoStatementState<DIR>::InternalListIoStatementState(
     : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
       ioStatementState_{*this} {}
 
+template <Direction DIR>
+int InternalListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return InternalIoStatementState<DIR>::EndIoStatement();
+}
+
 ExternalIoStatementBase::ExternalIoStatementBase(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
@@ -569,6 +580,12 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '*':
         case '\n': // for stream access
           return std::nullopt;
+        case '&':
+        case '$':
+          if (edit.IsNamelist()) {
+            return std::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return std::nullopt;
@@ -707,6 +724,13 @@ ListDirectedStatementState<Direction::Output>::GetNextDataEdit(
   return edit;
 }
 
+int ListDirectedStatementState<Direction::Input>::EndIoStatement() {
+  if (repeatPosition_) {
+    repeatPosition_->Cancel();
+  }
+  return IostatOk;
+}
+
 std::optional<DataEdit>
 ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
@@ -819,6 +843,17 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
 }
 
 template <Direction DIR>
+int ExternalListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (auto status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return ExternalIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR>
 bool ExternalUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Output) {
@@ -908,6 +943,16 @@ template <Direction DIR>
 bool ChildUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   return this->child().parent().Receive(data, bytes, elementBytes);
+}
+
+template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
+        status != IostatOk) {
+      return status;
+    }
+  }
+  return ChildIoStatementState<DIR>::EndIoStatement();
 }
 
 template class InternalIoStatementState<Direction::Output>;
@@ -1219,6 +1264,7 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("SIZE"):
     result = -1;
     if (unit().IsConnected()) {
+      unit().FlushOutput(*this);
       if (auto size{unit().knownSize()}) {
         result = *size;
       }
@@ -1346,7 +1392,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("SEQUENTIAL"):
   case HashInquiryKeyword("STREAM"):
   case HashInquiryKeyword("UNFORMATTED"):
-    str = "UNKNONN";
+    str = "UNKNOWN";
     break;
   case HashInquiryKeyword("READ"):
     str =

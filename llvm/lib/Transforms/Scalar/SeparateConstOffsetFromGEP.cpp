@@ -843,7 +843,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
         AccumulativeByteOffset +=
-            ConstantOffset * DL->getTypeAllocSize(GTI.getIndexedType());
+            ConstantOffset * GTI.getSequentialElementStride(*DL);
       }
     } else if (LowerGEP) {
       StructType *StTy = GTI.getStructType();
@@ -884,7 +884,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
           continue;
 
       APInt ElementSize = APInt(PtrIndexTy->getIntegerBitWidth(),
-                                DL->getTypeAllocSize(GTI.getIndexedType()));
+                                GTI.getSequentialElementStride(*DL));
       // Scale the index by element size.
       if (ElementSize != 1) {
         if (ElementSize.isPowerOf2()) {
@@ -946,7 +946,7 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
           continue;
 
       APInt ElementSize = APInt(IntPtrTy->getIntegerBitWidth(),
-                                DL->getTypeAllocSize(GTI.getIndexedType()));
+                                GTI.getSequentialElementStride(*DL));
       // Scale the index by element size.
       if (ElementSize != 1) {
         if (ElementSize.isPowerOf2()) {

@@ -172,10 +172,10 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA tag describing our copy.
-  MDNode *CopyMD = nullptr;
-  if (MDNode *M = MI->getMetadata(LLVMContext::MD_tbaa)) {
-    CopyMD = M;
-  } else if (MDNode *M = MI->getMetadata(LLVMContext::MD_tbaa_struct)) {
+  AAMDNodes AACopyMD = MI->getAAMetadata();
+
+  if (MDNode *M = AACopyMD.TBAAStruct) {
+    AACopyMD.TBAAStruct = nullptr;
     if (M->getNumOperands() == 3 && M->getOperand(0) &&
         mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
         mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
@@ -184,7 +184,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
         mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
         Size &&
         M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
-      CopyMD = cast<MDNode>(M->getOperand(2));
+      AACopyMD.TBAA = cast<MDNode>(M->getOperand(2));
   }
 
   Value *Src = MI->getArgOperand(1);
@@ -192,8 +192,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(*CopySrcAlign);
-  if (CopyMD)
-    L->setMetadata(LLVMContext::MD_tbaa, CopyMD);
+  L->setAAMetadata(AACopyMD);
   MDNode *LoopMemParallelMD =
     MI->getMetadata(LLVMContext::MD_mem_parallel_loop_access);
   if (LoopMemParallelMD)
@@ -205,8 +204,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   StoreInst *S = Builder.CreateStore(L, Dest);
   // Alignment from the mem intrinsic will be better, so use it.
   S->setAlignment(*CopyDstAlign);
-  if (CopyMD)
-    S->setMetadata(LLVMContext::MD_tbaa, CopyMD);
+  S->setAAMetadata(AACopyMD);
   if (LoopMemParallelMD)
     S->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
   if (AccessGroupMD)
@@ -1536,11 +1534,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   if (II->isCommutative()) {
-    if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
-      return I;
-
-    if (Instruction *I = foldCommutativeIntrinsicOverPhis(*II))
-      return I;
+    if (auto Pair = matchSymmetricPair(II->getOperand(0), II->getOperand(1))) {
+      replaceOperand(*II, 0, Pair->first);
+      replaceOperand(*II, 1, Pair->second);
+      return II;
+    }
 
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
@@ -3850,6 +3848,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   if (Callee->hasFnAttribute("thunk"))
     return false;
 
+  // If this is a call to a naked function, the assembly might be
+  // using an argument, or otherwise rely on the frame layout,
+  // the function prototype will mismatch.
+  if (Callee->hasFnAttribute(Attribute::Naked))
+    return false;
+
   // If this is a musttail call, the callee's prototype must match the caller's
   // prototype with the exception of pointee types. The code below doesn't
   // implement that, so we can't do this transform.
@@ -4239,40 +4243,4 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // code sort out any function type mismatches.
   Call.setCalledFunction(FTy, NestF);
   return &Call;
-}
-
-// op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
-Instruction *
-InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
-  assert(II.isCommutative());
-
-  Value *A, *B, *C;
-  if (match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
-      match(II.getOperand(1),
-            m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
-    replaceOperand(II, 0, B);
-    replaceOperand(II, 1, C);
-    return &II;
-  }
-
-  return nullptr;
-}
-
-Instruction *
-InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
-  assert(II.isCommutative() && "Instruction should be commutative");
-
-  PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
-  PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
-
-  if (!LHS || !RHS)
-    return nullptr;
-
-  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
-    replaceOperand(II, 0, P->first);
-    replaceOperand(II, 1, P->second);
-    return &II;
-  }
-
-  return nullptr;
 }

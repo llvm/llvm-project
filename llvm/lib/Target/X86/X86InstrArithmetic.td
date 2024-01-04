@@ -44,264 +44,24 @@ def PLEA32r   : PseudoI<(outs GR32:$dst), (ins anymem:$src), []>;
 def PLEA64r   : PseudoI<(outs GR64:$dst), (ins anymem:$src), []>;
 }
 
-// BinOpRR - Instructions that read "reg, reg".
-class BinOpRR<bits<8> o, string m, X86TypeInfo t, dag out, list<dag> p>
-  : ITy<o, MRMDestReg, t, out, (ins t.RegClass:$src1, t.RegClass:$src2), m,
-        binop_args, p>, Sched<[WriteALU]>;
-// BinOpRR_F - Instructions that read "reg, reg" and write EFLAGS only.
-class BinOpRR_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
-  : BinOpRR<o, m, t, (outs),
-            [(set EFLAGS, (node t.RegClass:$src1, t.RegClass:$src2))]>,
-    DefEFLAGS;
-// BinOpRR_F_Rev - Reversed encoding of BinOpRR_F
-class BinOpRR_F_Rev<bits<8> o, string m, X86TypeInfo t>
-  : BinOpRR_F<o, m, t, null_frag>, DisassembleOnly {
-  let Form = MRMSrcReg;
-}
-// BinOpRR_RF - Instructions that read "reg, reg", and write "reg", EFLAGS.
-class BinOpRR_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
-  : BinOpRR<o, m, t, (outs t.RegClass:$dst),
-            [(set t.RegClass:$dst, EFLAGS,
-             (node t.RegClass:$src1, t.RegClass:$src2))]>, DefEFLAGS;
-// BinOpRR_RF_Rev - Reversed encoding of BinOpRR_RF.
-class BinOpRR_RF_Rev<bits<8> o, string m, X86TypeInfo t>
-  : BinOpRR_RF<o, m, t, null_frag>, DisassembleOnly {
-  let Form = MRMSrcReg;
-}
-// BinOpRRF_RF - Instructions that read "reg, reg", write "reg" and read/write
-// EFLAGS.
-class BinOpRRF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
-  : BinOpRR<o, m, t, (outs t.RegClass:$dst),
-            [(set t.RegClass:$dst, EFLAGS,
-             (node t.RegClass:$src1, t.RegClass:$src2,
-             EFLAGS))]>, DefEFLAGS, UseEFLAGS {
-  let SchedRW = [WriteADC];
-}
-// BinOpRRF_RF_Rev - Reversed encoding of BinOpRRF_RF
-class BinOpRRF_RF_Rev<bits<8> o, string m, X86TypeInfo t>
-  : BinOpRRF_RF<o, m, t, null_frag>, DisassembleOnly {
-  let Form = MRMSrcReg;
-}
-
-// BinOpRM - Instructions that read "reg, [mem]".
-class BinOpRM<bits<8> o, string m, X86TypeInfo t, dag out, list<dag> p>
-  : ITy<o, MRMSrcMem, t, out, (ins t.RegClass:$src1, t.MemOperand:$src2), m,
-        binop_args, p>,
-    Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]> {
-  let mayLoad = 1;
-}
-// BinOpRM_F - Instructions that read "reg, [mem]" and write EFLAGS only.
-class BinOpRM_F<bits<8> o, string m, X86TypeInfo t, SDNode node>
-  : BinOpRM<o, m, t, (outs),
-            [(set EFLAGS, (node t.RegClass:$src1,
-             (t.LoadNode addr:$src2)))]>, DefEFLAGS;
-// BinOpRM_RF - Instructions that read "reg, reg", and write "reg", EFLAGS.
-class BinOpRM_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
-  : BinOpRM<o, m, t, (outs t.RegClass:$dst),
-            [(set t.RegClass:$dst, EFLAGS, (node t.RegClass:$src1,
-             (t.LoadNode addr:$src2)))]>, DefEFLAGS;
-// BinOpRMF_RF - Instructions that read "reg, [mem]", write "reg" and read/write
-// EFLAGS.
-class BinOpRMF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
-  : BinOpRM<o, m, t, (outs t.RegClass:$dst),
-            [(set t.RegClass:$dst, EFLAGS,
-             (node t.RegClass:$src1, (t.LoadNode addr:$src2), EFLAGS))]>,
-    DefEFLAGS, UseEFLAGS {
-  let SchedRW = [WriteADC.Folded, WriteADC.ReadAfterFold,
-                 // base, scale, index, offset, segment.
-                 ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                 // implicit register read.
-                 WriteADC.ReadAfterFold];
-}
-
-// BinOpRI - Instructions that read "reg, imm".
-class BinOpRI<bits<8> o, string m, string args, X86TypeInfo t, Format f, dag out, list<dag> p>
-  : ITy<o, f, t, out, (ins t.RegClass:$src1, t.ImmOperand:$src2), m,
-        args, p>, Sched<[WriteALU]> {
-  let ImmT = t.ImmEncoding;
-}
-// BinOpRI_F - Instructions that read "reg, imm" and write EFLAGS only.
-class BinOpRI_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
-                Format f>
-  : BinOpRI<o, m, binop_args, t, f, (outs),
-            [(set EFLAGS, (node t.RegClass:$src1,
-             t.ImmOperator:$src2))]>, DefEFLAGS;
-// BinOpRI_RF - Instructions that read "reg, imm" and write "reg", EFLAGS.
-class BinOpRI_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
-  : BinOpRI<o, m, binop_args, t, f, (outs t.RegClass:$dst),
-            [(set t.RegClass:$dst, EFLAGS,
-             (node t.RegClass:$src1, t.ImmOperator:$src2))]>, DefEFLAGS;
-// BinOpRIF_RF - Instructions that read "reg, imm", write "reg" and read/write
-// EFLAGS.
-class BinOpRIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
-  : BinOpRI<o, m, binop_args, t, f, (outs t.RegClass:$dst),
-            [(set t.RegClass:$dst, EFLAGS,
-             (node t.RegClass:$src1, t.ImmOperator:$src2,
-             EFLAGS))]>, DefEFLAGS, UseEFLAGS {
-  let SchedRW = [WriteADC];
-}
-// BinOpRI8 - Instructions that read "reg, imm8".
-class BinOpRI8<bits<8> o, string m, string args, X86TypeInfo t, Format f, dag out>
-  : ITy<o, f, t, out, (ins t.RegClass:$src1, t.Imm8Operand:$src2), m,
-        args, []>, Sched<[WriteALU]> {
-  let ImmT = Imm8;
-}
-// BinOpRI8_F - Instructions that read "reg, imm8" and write EFLAGS only.
-class BinOpRI8_F<bits<8> o, string m, X86TypeInfo t, Format f>
-  : BinOpRI8<o, m, binop_args, t, f, (outs)>, DefEFLAGS;
-// BinOpRI8_RF - Instructions that read "reg, imm8" and write "reg", EFLAGS.
-class BinOpRI8_RF<bits<8> o, string m, X86TypeInfo t, Format f>
-  : BinOpRI8<o, m, binop_args, t, f, (outs t.RegClass:$dst)>, DefEFLAGS;
-// BinOpRI8F_RF - Instructions that read "reg, imm", write "reg" and read/write
-// EFLAGS.
-class BinOpRI8F_RF<bits<8> o, string m, X86TypeInfo t, Format f>
-  : BinOpRI8<o, m, binop_args, t, f, (outs t.RegClass:$dst)>, DefEFLAGS, UseEFLAGS {
-  let SchedRW = [WriteADC];
-}
-
-// BinOpMR - Instructions that read "[mem], reg".
-class BinOpMR<bits<8> o, string m, X86TypeInfo t, list<dag> p>
-  : ITy<o, MRMDestMem, t, (outs), (ins t.MemOperand:$src1, t.RegClass:$src2), m,
-        binop_args, p> {
-  let mayLoad = 1;
-}
-// BinOpMR_F - Instructions that read "[mem], imm8" and write EFLAGS only.
-class BinOpMR_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
-  : BinOpMR<o, m, t,
-            [(set EFLAGS, (node (t.LoadNode addr:$src1), t.RegClass:$src2))]>,
-    Sched<[WriteALU.Folded, ReadDefault, ReadDefault, ReadDefault,
-            ReadDefault, ReadDefault, WriteALU.ReadAfterFold]>, DefEFLAGS;
-// BinOpMR_MF - Instructions that read "[mem], reg" and write "[mem]", EFLAGS.
-class BinOpMR_MF<bits<8> o, string m, X86TypeInfo t, SDNode node>
-  : BinOpMR<o, m, t,
-            [(store (node (load addr:$src1), t.RegClass:$src2), addr:$src1),
-             (implicit EFLAGS)]>,
-    Sched<[WriteALURMW,
-           // base, scale, index, offset, segment
-           ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-           WriteALU.ReadAfterFold]>, // reg
-    DefEFLAGS {
-  let mayStore = 1;
-}
-// BinOpMRF_MF - Instructions that read "[mem], reg", write "[mem]" and
-// read/write EFLAGS.
-class BinOpMRF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node>
-  : BinOpMR<o, m, t,
-            [(store (node (load addr:$src1), t.RegClass:$src2, EFLAGS),
-             addr:$src1), (implicit EFLAGS)]>,
-    Sched<[WriteADCRMW,
-          // base, scale, index, offset, segment
-          ReadDefault, ReadDefault, ReadDefault,
-          ReadDefault, ReadDefault,
-          WriteALU.ReadAfterFold,    // reg
-          WriteALU.ReadAfterFold]>,  // EFLAGS
-    DefEFLAGS, UseEFLAGS {
-  let mayStore = 1;
-}
-
-// BinOpMI - Instructions that read "[mem], imm".
-class BinOpMI<bits<8> o, string m, string args, X86TypeInfo t, Format f, dag out, list<dag> p>
-  : ITy<o, f, t, out, (ins t.MemOperand:$src1, t.ImmOperand:$src2), m,
-        args, p> {
-  let ImmT = t.ImmEncoding;
-  let mayLoad = 1;
-}
-// BinOpMI_F - Instructions that read "[mem], imm" and write EFLAGS only.
-class BinOpMI_F<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
-                Format f>
-  : BinOpMI<o, m, binop_args, t, f, (outs),
-            [(set EFLAGS, (node (t.LoadNode addr:$src1), t.ImmOperator:$src2))]>,
-    Sched<[WriteALU.Folded]>, DefEFLAGS;
-// BinOpMI_MF - Instructions that read "[mem], imm" and write "[mem]", EFLAGS.
-class BinOpMI_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
-  : BinOpMI<o, m, binop_args, t, f, (outs),
-            [(store (node (t.VT (load addr:$src1)),
-             t.ImmOperator:$src2), addr:$src1), (implicit EFLAGS)]>,
-    Sched<[WriteALURMW]>, DefEFLAGS {
-  let mayStore = 1;
-}
-// BinOpMIF_MF - Instructions that read "[mem], imm", write "[mem]" and
-// read/write EFLAGS.
-class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
-  : BinOpMI<o, m, binop_args, t, f, (outs),
-            [(store (node (t.VT (load addr:$src1)),
-             t.ImmOperator:$src2, EFLAGS), addr:$src1), (implicit EFLAGS)]>,
-    Sched<[WriteADCRMW]>, DefEFLAGS, UseEFLAGS {
-  let mayStore = 1;
-}
-
-// BinOpMI8 - Instructions that read "[mem], imm8".
-class BinOpMI8<string m, string args, X86TypeInfo t, Format f, dag out>
-  : ITy<0x83, f, t, out, (ins t.MemOperand:$src1, t.Imm8Operand:$src2), m,
-        args, []> {
-  let ImmT = Imm8;
-  let mayLoad = 1;
-}
-// BinOpMI8_F - Instructions that read "[mem], imm8" and write EFLAGS only.
-class BinOpMI8_F<string m, X86TypeInfo t, Format f>
-  : BinOpMI8<m, binop_args, t, f, (outs)>, Sched<[WriteALU.Folded]>, DefEFLAGS;
-// BinOpMI8_MF - Instructions that read "[mem], imm8" and write "[mem]", EFLAGS.
-class BinOpMI8_MF<string m, X86TypeInfo t, Format f>
-  : BinOpMI8<m, binop_args, t, f, (outs)>, Sched<[WriteALURMW]>, DefEFLAGS {
-  let mayStore = 1;
-}
-// BinOpMI8F_MF - Instructions that read "[mem], imm8", write "[mem]" and
-// read/write EFLAGS.
-class BinOpMI8F_MF<string m, X86TypeInfo t, Format f>
-  : BinOpMI8<m, binop_args, t, f, (outs)>, Sched<[WriteADCRMW]>, DefEFLAGS, UseEFLAGS {
-  let mayStore = 1;
-}
-
-// BinOpAI - Instructions that read "a-reg imm" (Accumulator register).
-class BinOpAI<bits<8> o, string m, X86TypeInfo t, Register areg, string args>
-  : ITy<o, RawFrm, t, (outs), (ins t.ImmOperand:$src), m, args, []>,
-    Sched<[WriteALU]> {
-  let ImmT = t.ImmEncoding;
-  let Uses = [areg];
-}
-// BinOpAI_F - Instructions that read "a-reg imm" and write EFLAGS only.
-class BinOpAI_F<bits<8> o, string m, X86TypeInfo t, Register areg, string args>
-  : BinOpAI<o, m, t, areg, args>, DefEFLAGS;
-
-// BinOpAI_AF - Instructions that read "a-reg imm" and write a-reg/EFLAGS.
-class BinOpAI_AF<bits<8> o, string m, X86TypeInfo t, Register areg,
-                 string args> : BinOpAI<o, m, t, areg, args> {
-  let Defs = [areg, EFLAGS];
-}
-// BinOpAIF_AF - Instructions that read "a-reg imm", write a-reg and read/write
-// EFLAGS.
-class BinOpAIF_AF<bits<8> o, string m, X86TypeInfo t, Register areg,
-                  string args> : BinOpAI<o, m, t, areg, args> {
-  let Uses = [areg, EFLAGS];
-  let Defs = [areg, EFLAGS];
-  let SchedRW = [WriteADC];
-}
-
-// UnaryOpR - Instructions that read "reg" and write "reg".
-class UnaryOpR<bits<8> o, Format f, string m, X86TypeInfo t, list<dag> p>
-  : ITy<o, f, t, (outs t.RegClass:$dst),
-        (ins t.RegClass:$src1), m, "$dst", p>, Sched<[WriteALU]>;
-
-// UnaryOpM - Instructions that read "[mem]" and writes "[mem]".
-class UnaryOpM<bits<8> o, Format f, string m, X86TypeInfo t, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.MemOperand:$dst), m, "$dst", p>,
-    Sched<[WriteALURMW]> {
-  let mayLoad = 1;
-  let mayStore = 1;
-}
-
 //===----------------------------------------------------------------------===//
 // MUL/IMUL and DIV/IDIV Instructions
 //
-class MulOpR<bits<8> o, Format f, string m, X86TypeInfo t,
+class MulDivOpR<bits<8> o, Format f, string m, X86TypeInfo t,
              X86FoldableSchedWrite sched, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.RegClass:$src), m, "$src", p>, Sched<[sched]>;
+  : UnaryOpR<o, f, m, "$src1", t, (outs), p> {
+  let SchedRW = [sched];
+}
 
-class MulOpM<bits<8> o, Format f, string m, X86TypeInfo t,
+class MulDivOpM<bits<8> o, Format f, string m, X86TypeInfo t,
              X86FoldableSchedWrite sched, list<dag> p>
-  : ITy<o, f, t, (outs), (ins t.MemOperand:$src), m,
-        "$src", p>, SchedLoadReg<sched> {
-  let mayLoad = 1;
+  : UnaryOpM<o, f, m, "$src1", t, (outs), p> {
+  let SchedRW =
+    [sched.Folded,
+     // Memory operand.
+     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+     // Register reads (implicit or explicit).
+     sched.ReadAfterFold, sched.ReadAfterFold];
 }
 
 multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOperator node> {
@@ -312,23 +72,23 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   // This probably ought to be moved to a def : Pat<> if the
   // syntax can be accepted.
   let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-  def 8r : MulOpR<o, RegMRM, m, Xi8, WriteIMul8,
-                  [(set AL, (node AL, GR8:$src)), (implicit EFLAGS)]>;
+  def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
+                  [(set AL, (node AL, GR8:$src1)), (implicit EFLAGS)]>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX] in
-  def 16r : MulOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
+  def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
-  def 32r : MulOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
+  def 32r : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
-  def 64r : MulOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
+  def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
   let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-  def 8m : MulOpM<o, MemMRM, m, Xi8, WriteIMul8,
-                  [(set AL, (node AL, (loadi8 addr:$src))), (implicit EFLAGS)]>;
+  def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
+                  [(set AL, (node AL, (loadi8 addr:$src1))), (implicit EFLAGS)]>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX] in
-  def 16m : MulOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
+  def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
-  def 32m : MulOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
+  def 32m : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
-  def 64m : MulOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
+  def 64m : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
 }
 
 defm MUL : Mul<0xF7, "mul", MRM4r, MRM4m, mul>;
@@ -340,21 +100,21 @@ multiclass Div<bits<8> o, string m, Format RegMRM, Format MemMRM> {
   defvar sched32 = !if(!eq(m, "div"), WriteDiv32, WriteIDiv32);
   defvar sched64 = !if(!eq(m, "div"), WriteDiv64, WriteIDiv64);
   let Defs = [AL,AH,EFLAGS], Uses = [AX] in
-  def 8r  : MulOpR<o, RegMRM, m, Xi8, sched8, []>;
+  def 8r  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
-  def 16r : MulOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
+  def 16r : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
-  def 32r : MulOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
+  def 32r : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
-  def 64r : MulOpR<o, RegMRM, m, Xi64, sched64, []>;
+  def 64r : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>;
   let Defs = [AL,AH,EFLAGS], Uses = [AX] in
-  def 8m  : MulOpM<o, MemMRM, m, Xi8, sched8, []>;
+  def 8m  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>;
   let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
-  def 16m : MulOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
+  def 16m : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
   let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
-  def 32m : MulOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
+  def 32m : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
   let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
-  def 64m : MulOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
+  def 64m : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
 }
 let hasSideEffects = 1 in { // so that we don't speculatively execute
 defm DIV: Div<0xF7, "div", MRM6r, MRM6m>;
@@ -374,14 +134,12 @@ let Form = MRMSrcMem;
 let SchedRW = [sched.Folded, sched.ReadAfterFold];
 }
 
-let Constraints = "$src1 = $dst" in {
 def IMUL16rr : IMulOpRR<Xi16, WriteIMul16Reg>, OpSize16;
 def IMUL32rr : IMulOpRR<Xi32, WriteIMul32Reg>, OpSize32;
 def IMUL64rr : IMulOpRR<Xi64, WriteIMul64Reg>;
 def IMUL16rm : IMulOpRM<Xi16, WriteIMul16Reg>, OpSize16;
 def IMUL32rm : IMulOpRM<Xi32, WriteIMul32Reg>, OpSize32;
 def IMUL64rm : IMulOpRM<Xi64, WriteIMul64Reg>;
-}
 
 class IMulOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpRI8<0x6B, "imul", binop_ndd_args, t, MRMSrcReg,
@@ -426,92 +184,245 @@ def IMUL64rmi32 : IMulOpMI_R<Xi64, WriteIMul64Imm>;
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //
-class INCDECR<Format f, string m, X86TypeInfo t, SDPatternOperator node>
-  : UnaryOpR<0xFF, f, m, t,
-             [(set t.RegClass:$dst, EFLAGS, (node t.RegClass:$src1, 1))]>,
-    DefEFLAGS {
-  let isConvertibleToThreeAddress = 1; // Can xform into LEA.
+class IncOpR_RF<X86TypeInfo t, bit ndd = 0> : UnaryOpR_RF<0xFF, MRM0r, "inc", t, null_frag, ndd> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS,
+                 (X86add_flag_nocf t.RegClass:$src1, 1))];
 }
-class INCDECM<Format f, string m, X86TypeInfo t, int num>
-  : UnaryOpM<0xFF, f, m, t,
-             [(store (add (t.LoadNode addr:$dst), num), addr:$dst),
-              (implicit EFLAGS)]>, DefEFLAGS;
-// INCDECR_ALT - Instructions like "inc reg" short forms.
-class INCDECR_ALT<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpR<o, AddRegFrm, m, t, []>, DefEFLAGS {
-  // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-  let Predicates = [Not64BitMode];
+class DecOpR_RF<X86TypeInfo t, bit ndd = 0> : UnaryOpR_RF<0xFF, MRM1r, "dec", t, null_frag, ndd> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS,
+                 (X86sub_flag_nocf t.RegClass:$src1, 1))];
 }
-let Constraints = "$src1 = $dst" in {
-def INC16r_alt : INCDECR_ALT<0x40, "inc", Xi16>, OpSize16;
-def INC32r_alt : INCDECR_ALT<0x40, "inc", Xi32>, OpSize32;
-def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
-def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>, OpSize16;
-def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>, OpSize32;
-def INC64r : INCDECR<MRM0r, "inc", Xi64, X86add_flag_nocf>;
-def DEC16r_alt : INCDECR_ALT<0x48, "dec", Xi16>, OpSize16;
-def DEC32r_alt : INCDECR_ALT<0x48, "dec", Xi32>, OpSize32;
-def DEC8r  : INCDECR<MRM1r, "dec", Xi8, X86sub_flag_nocf>;
-def DEC16r : INCDECR<MRM1r, "dec", Xi16, X86sub_flag_nocf>, OpSize16;
-def DEC32r : INCDECR<MRM1r, "dec", Xi32, X86sub_flag_nocf>, OpSize32;
-def DEC64r : INCDECR<MRM1r, "dec", Xi64, X86sub_flag_nocf>;
+class IncOpR_R<X86TypeInfo t, bit ndd = 0> : UnaryOpR_R<0xFF, MRM0r, "inc", t, null_frag, ndd>;
+class DecOpR_R<X86TypeInfo t, bit ndd = 0> : UnaryOpR_R<0xFF, MRM1r, "dec", t, null_frag, ndd>;
+class IncOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM0m, "inc", t, null_frag> {
+  let Pattern = [(store (add (t.LoadNode addr:$src1), 1), addr:$src1),
+                 (implicit EFLAGS)];
+}
+class DecOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM1m, "dec", t, null_frag> {
+  let Pattern = [(store (add (t.LoadNode addr:$src1), -1), addr:$src1),
+                 (implicit EFLAGS)];
+}
+class IncOpM_RF<X86TypeInfo t> : UnaryOpM_RF<0xFF, MRM0m, "inc", t, null_frag> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS, (add (t.LoadNode addr:$src1), 1))];
+}
+class DecOpM_RF<X86TypeInfo t> : UnaryOpM_RF<0xFF, MRM1m, "dec", t, null_frag> {
+  let Pattern = [(set t.RegClass:$dst, EFLAGS, (add (t.LoadNode addr:$src1), -1))];
+}
+class IncOpM_M<X86TypeInfo t> : UnaryOpM_M<0xFF, MRM0m, "inc", t, null_frag>;
+class DecOpM_M<X86TypeInfo t> : UnaryOpM_M<0xFF, MRM1m, "dec", t, null_frag>;
+class IncOpM_R<X86TypeInfo t> : UnaryOpM_R<0xFF, MRM0m, "inc", t, null_frag>;
+class DecOpM_R<X86TypeInfo t> : UnaryOpM_R<0xFF, MRM1m, "dec", t, null_frag>;
+
+// IncDec_Alt - Instructions like "inc reg" short forms.
+// Short forms only valid in 32-bit mode. Selected during MCInst lowering.
+class IncDec_Alt<bits<8> o, string m, X86TypeInfo t>
+  : UnaryOpR_RF<o, AddRegFrm, m, t, null_frag>, Requires<[Not64BitMode]>;
+
+let isConvertibleToThreeAddress = 1 in {
+  def INC16r_alt : IncDec_Alt<0x40, "inc", Xi16>, OpSize16;
+  def INC32r_alt : IncDec_Alt<0x40, "inc", Xi32>, OpSize32;
+  def DEC16r_alt : IncDec_Alt<0x48, "dec", Xi16>, OpSize16;
+  def DEC32r_alt : IncDec_Alt<0x48, "dec", Xi32>, OpSize32;
+  let Predicates = [NoNDD] in {
+    def INC8r  : IncOpR_RF<Xi8>;
+    def INC16r : IncOpR_RF<Xi16>, OpSize16;
+    def INC32r : IncOpR_RF<Xi32>, OpSize32;
+    def INC64r : IncOpR_RF<Xi64>;
+    def DEC8r  : DecOpR_RF<Xi8>;
+    def DEC16r : DecOpR_RF<Xi16>, OpSize16;
+    def DEC32r : DecOpR_RF<Xi32>, OpSize32;
+    def DEC64r : DecOpR_RF<Xi64>;
+  }
+  let Predicates = [HasNDD, In64BitMode] in {
+    def INC8r_ND  : IncOpR_RF<Xi8, 1>;
+    def INC16r_ND : IncOpR_RF<Xi16, 1>, PD;
+    def INC32r_ND : IncOpR_RF<Xi32, 1>;
+    def INC64r_ND : IncOpR_RF<Xi64, 1>;
+    def DEC8r_ND  : DecOpR_RF<Xi8, 1>;
+    def DEC16r_ND : DecOpR_RF<Xi16, 1>, PD;
+    def DEC32r_ND : DecOpR_RF<Xi32, 1>;
+    def DEC64r_ND : DecOpR_RF<Xi64, 1>;
+  }
+  let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+    def INC8r_NF  : IncOpR_R<Xi8>, NF;
+    def INC16r_NF : IncOpR_R<Xi16>, NF, PD;
+    def INC32r_NF : IncOpR_R<Xi32>, NF;
+    def INC64r_NF : IncOpR_R<Xi64>, NF;
+    def DEC8r_NF  : DecOpR_R<Xi8>, NF;
+    def DEC16r_NF : DecOpR_R<Xi16>, NF, PD;
+    def DEC32r_NF : DecOpR_R<Xi32>, NF;
+    def DEC64r_NF : DecOpR_R<Xi64>, NF;
+    def INC8r_NF_ND  : IncOpR_R<Xi8, 1>, NF;
+    def INC16r_NF_ND : IncOpR_R<Xi16, 1>, NF, PD;
+    def INC32r_NF_ND : IncOpR_R<Xi32, 1>, NF;
+    def INC64r_NF_ND : IncOpR_R<Xi64, 1>, NF;
+    def DEC8r_NF_ND  : DecOpR_R<Xi8, 1>, NF;
+    def DEC16r_NF_ND : DecOpR_R<Xi16, 1>, NF, PD;
+    def DEC32r_NF_ND : DecOpR_R<Xi32, 1>, NF;
+    def DEC64r_NF_ND : DecOpR_R<Xi64, 1>, NF;
+    def INC8r_EVEX  : IncOpR_RF<Xi8>, PL;
+    def INC16r_EVEX : IncOpR_RF<Xi16>, PL, PD;
+    def INC32r_EVEX : IncOpR_RF<Xi32>, PL;
+    def INC64r_EVEX : IncOpR_RF<Xi64>, PL;
+    def DEC8r_EVEX  : DecOpR_RF<Xi8>, PL;
+    def DEC16r_EVEX : DecOpR_RF<Xi16>, PL, PD;
+    def DEC32r_EVEX : DecOpR_RF<Xi32>, PL;
+    def DEC64r_EVEX : DecOpR_RF<Xi64>, PL;
+  }
 }
 let Predicates = [UseIncDec] in {
-def INC8m  : INCDECM<MRM0m, "inc", Xi8, 1>;
-def INC16m : INCDECM<MRM0m, "inc", Xi16, 1>, OpSize16;
-def INC32m : INCDECM<MRM0m, "inc", Xi32, 1>, OpSize32;
-def DEC8m  : INCDECM<MRM1m, "dec", Xi8, -1>;
-def DEC16m : INCDECM<MRM1m, "dec", Xi16, -1>, OpSize16;
-def DEC32m : INCDECM<MRM1m, "dec", Xi32, -1>, OpSize32;
+  def INC8m  : IncOpM_MF<Xi8>;
+  def INC16m : IncOpM_MF<Xi16>, OpSize16;
+  def INC32m : IncOpM_MF<Xi32>, OpSize32;
+  def DEC8m  : DecOpM_MF<Xi8>;
+  def DEC16m : DecOpM_MF<Xi16>, OpSize16;
+  def DEC32m : DecOpM_MF<Xi32>, OpSize32;
 }
 let Predicates = [UseIncDec, In64BitMode] in {
-def INC64m : INCDECM<MRM0m, "inc", Xi64, 1>;
-def DEC64m : INCDECM<MRM1m, "dec", Xi64, -1>;
+  def INC64m : IncOpM_MF<Xi64>;
+  def DEC64m : DecOpM_MF<Xi64>;
+}
+let Predicates = [HasNDD, In64BitMode, UseIncDec] in {
+  def INC8m_ND  : IncOpM_RF<Xi8>;
+  def INC16m_ND : IncOpM_RF<Xi16>, PD;
+  def INC32m_ND : IncOpM_RF<Xi32>;
+  def DEC8m_ND  : DecOpM_RF<Xi8>;
+  def DEC16m_ND : DecOpM_RF<Xi16>, PD;
+  def DEC32m_ND : DecOpM_RF<Xi32>;
+  def INC64m_ND : IncOpM_RF<Xi64>;
+  def DEC64m_ND : DecOpM_RF<Xi64>;
+}
+let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+  def INC8m_NF  : IncOpM_M<Xi8>, NF;
+  def INC16m_NF : IncOpM_M<Xi16>, NF, PD;
+  def INC32m_NF : IncOpM_M<Xi32>, NF;
+  def INC64m_NF : IncOpM_M<Xi64>, NF;
+  def DEC8m_NF  : DecOpM_M<Xi8>, NF;
+  def DEC16m_NF : DecOpM_M<Xi16>, NF, PD;
+  def DEC32m_NF : DecOpM_M<Xi32>, NF;
+  def DEC64m_NF : DecOpM_M<Xi64>, NF;
+  def INC8m_NF_ND  : IncOpM_R<Xi8>, NF;
+  def INC16m_NF_ND : IncOpM_R<Xi16>, NF, PD;
+  def INC32m_NF_ND : IncOpM_R<Xi32>, NF;
+  def INC64m_NF_ND : IncOpM_R<Xi64>, NF;
+  def DEC8m_NF_ND  : DecOpM_R<Xi8>, NF;
+  def DEC16m_NF_ND : DecOpM_R<Xi16>, NF, PD;
+  def DEC32m_NF_ND : DecOpM_R<Xi32>, NF;
+  def DEC64m_NF_ND : DecOpM_R<Xi64>, NF;
+  def INC8m_EVEX  : IncOpM_MF<Xi8>, PL;
+  def INC16m_EVEX : IncOpM_MF<Xi16>, PL, PD;
+  def INC32m_EVEX : IncOpM_MF<Xi32>, PL;
+  def INC64m_EVEX : IncOpM_MF<Xi64>, PL;
+  def DEC8m_EVEX  : DecOpM_MF<Xi8>, PL;
+  def DEC16m_EVEX : DecOpM_MF<Xi16>, PL, PD;
+  def DEC32m_EVEX : DecOpM_MF<Xi32>, PL;
+  def DEC64m_EVEX : DecOpM_MF<Xi64>, PL;
 }
 
 //===----------------------------------------------------------------------===//
 // NEG and NOT Instructions
 //
-class NegOpR<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpR<o, MRM3r, m, t,
-             [(set t.RegClass:$dst, (ineg t.RegClass:$src1)),
-              (implicit EFLAGS)]>, DefEFLAGS;
-class NegOpM<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpM<o, MRM3m, m, t,
-             [(store (ineg (t.LoadNode addr:$dst)), addr:$dst),
-              (implicit EFLAGS)]>, DefEFLAGS;
+class NegOpR_R<X86TypeInfo t, bit ndd = 0>
+  : UnaryOpR_R<0xF7, MRM3r, "neg", t, ineg, ndd>;
+class NegOpR_RF<X86TypeInfo t, bit ndd = 0>
+  : UnaryOpR_RF<0xF7, MRM3r, "neg", t, ineg, ndd>;
+class NegOpM_M<X86TypeInfo t> : UnaryOpM_M<0xF7, MRM3m, "neg", t, null_frag>;
+class NegOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xF7, MRM3m, "neg", t, ineg>;
+class NegOpM_R<X86TypeInfo t> : UnaryOpM_R<0xF7, MRM3m, "neg", t, null_frag>;
+class NegOpM_RF<X86TypeInfo t> : UnaryOpM_RF<0xF7, MRM3m, "neg", t, ineg>;
 
-// NOTE: NOT does not set EFLAGS!
-class NotOpR<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpR<o, MRM2r, m, t, [(set t.RegClass:$dst, (not t.RegClass:$src1))]>;
+class NotOpR_R<X86TypeInfo t, bit ndd = 0>
+  : UnaryOpR_R<0xF7, MRM2r, "not", t, not, ndd>;
+class NotOpM_M<X86TypeInfo t> : UnaryOpM_M<0xF7, MRM2m, "not", t, not>;
+class NotOpM_R<X86TypeInfo t> : UnaryOpM_R<0xF7, MRM2m, "not", t, not>;
 
-class NotOpM<bits<8> o, string m, X86TypeInfo t>
-  : UnaryOpM<o, MRM2m, m,  t,
-             [(store (not (t.LoadNode addr:$dst)), addr:$dst)]>;
-
-let Constraints = "$src1 = $dst" in {
-def NEG8r  : NegOpR<0xF6, "neg", Xi8>;
-def NEG16r : NegOpR<0xF7, "neg", Xi16>, OpSize16;
-def NEG32r : NegOpR<0xF7, "neg", Xi32>, OpSize32;
-def NEG64r : NegOpR<0xF7, "neg", Xi64>;
+let Predicates = [NoNDD] in {
+def NEG8r  : NegOpR_RF<Xi8>;
+def NEG16r : NegOpR_RF<Xi16>, OpSize16;
+def NEG32r : NegOpR_RF<Xi32>, OpSize32;
+def NEG64r : NegOpR_RF<Xi64>;
+def NOT8r  : NotOpR_R<Xi8>;
+def NOT16r : NotOpR_R<Xi16>, OpSize16;
+def NOT32r : NotOpR_R<Xi32>, OpSize32;
+def NOT64r : NotOpR_R<Xi64>;
 }
 
-def NEG8m  : NegOpM<0xF6, "neg", Xi8>;
-def NEG16m : NegOpM<0xF7, "neg", Xi16>, OpSize16;
-def NEG32m : NegOpM<0xF7, "neg", Xi32>, OpSize32;
-def NEG64m : NegOpM<0xF7, "neg", Xi64>, Requires<[In64BitMode]>;
+let Predicates = [HasNDD, In64BitMode] in {
+def NEG8r_ND  : NegOpR_RF<Xi8, 1>;
+def NEG16r_ND : NegOpR_RF<Xi16, 1>, PD;
+def NEG32r_ND : NegOpR_RF<Xi32, 1>;
+def NEG64r_ND : NegOpR_RF<Xi64, 1>;
 
-let Constraints = "$src1 = $dst" in {
-def NOT8r  : NotOpR<0xF6, "not", Xi8>;
-def NOT16r : NotOpR<0xF7, "not", Xi16>, OpSize16;
-def NOT32r : NotOpR<0xF7, "not", Xi32>, OpSize32;
-def NOT64r : NotOpR<0xF7, "not", Xi64>;
+def NOT8r_ND  : NotOpR_R<Xi8, 1>;
+def NOT16r_ND : NotOpR_R<Xi16, 1>, PD;
+def NOT32r_ND : NotOpR_R<Xi32, 1>;
+def NOT64r_ND : NotOpR_R<Xi64, 1>;
+
+def NEG8r_NF_ND  : NegOpR_R<Xi8, 1>, EVEX_NF;
+def NEG16r_NF_ND : NegOpR_R<Xi16, 1>, EVEX_NF, PD;
+def NEG32r_NF_ND : NegOpR_R<Xi32, 1>, EVEX_NF;
+def NEG64r_NF_ND : NegOpR_R<Xi64, 1>, EVEX_NF;
 }
 
-def NOT8m  : NotOpM<0xF6, "not", Xi8>;
-def NOT16m : NotOpM<0xF7, "not", Xi16>, OpSize16;
-def NOT32m : NotOpM<0xF7, "not", Xi32>, OpSize32;
-def NOT64m : NotOpM<0xF7, "not", Xi64>, Requires<[In64BitMode]>;
+def NEG8m  : NegOpM_MF<Xi8>;
+def NEG16m : NegOpM_MF<Xi16>, OpSize16;
+def NEG32m : NegOpM_MF<Xi32>, OpSize32;
+def NEG64m : NegOpM_MF<Xi64>, Requires<[In64BitMode]>;
+
+let Predicates = [HasNDD, In64BitMode] in {
+def NEG8m_ND  : NegOpM_RF<Xi8>;
+def NEG16m_ND : NegOpM_RF<Xi16>, PD;
+def NEG32m_ND : NegOpM_RF<Xi32>;
+def NEG64m_ND : NegOpM_RF<Xi64>;
+
+def NEG8m_NF_ND  : NegOpM_R<Xi8>, EVEX_NF;
+def NEG16m_NF_ND : NegOpM_R<Xi16>, EVEX_NF, PD;
+def NEG32m_NF_ND : NegOpM_R<Xi32>, EVEX_NF;
+def NEG64m_NF_ND : NegOpM_R<Xi64>, EVEX_NF;
+}
+
+def NOT8m  : NotOpM_M<Xi8>;
+def NOT16m : NotOpM_M<Xi16>, OpSize16;
+def NOT32m : NotOpM_M<Xi32>, OpSize32;
+def NOT64m : NotOpM_M<Xi64>, Requires<[In64BitMode]>;
+
+let Predicates = [HasNDD, In64BitMode] in {
+def NOT8m_ND  : NotOpM_R<Xi8>;
+def NOT16m_ND : NotOpM_R<Xi16>, PD;
+def NOT32m_ND : NotOpM_R<Xi32>;
+def NOT64m_ND : NotOpM_R<Xi64>;
+}
+
+let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+def NEG8r_NF  : NegOpR_R<Xi8>, NF;
+def NEG16r_NF : NegOpR_R<Xi16>, NF, PD;
+def NEG32r_NF : NegOpR_R<Xi32>, NF;
+def NEG64r_NF : NegOpR_R<Xi64>, NF;
+def NEG8m_NF  : NegOpM_M<Xi8>, NF;
+def NEG16m_NF : NegOpM_M<Xi16>, NF, PD;
+def NEG32m_NF : NegOpM_M<Xi32>, NF;
+def NEG64m_NF : NegOpM_M<Xi64>, NF;
+
+def NEG8r_EVEX  : NegOpR_RF<Xi8>, PL;
+def NEG16r_EVEX : NegOpR_RF<Xi16>, PL, PD;
+def NEG32r_EVEX : NegOpR_RF<Xi32>, PL;
+def NEG64r_EVEX : NegOpR_RF<Xi64>, PL;
+
+def NOT8r_EVEX  : NotOpR_R<Xi8>, PL;
+def NOT16r_EVEX : NotOpR_R<Xi16>, PL, PD;
+def NOT32r_EVEX : NotOpR_R<Xi32>, PL;
+def NOT64r_EVEX : NotOpR_R<Xi64>, PL;
+
+def NEG8m_EVEX  : NegOpM_MF<Xi8>, PL;
+def NEG16m_EVEX : NegOpM_MF<Xi16>, PL, PD;
+def NEG32m_EVEX : NegOpM_MF<Xi32>, PL;
+def NEG64m_EVEX : NegOpM_MF<Xi64>, PL;
+
+def NOT8m_EVEX  : NotOpM_M<Xi8>, PL;
+def NOT16m_EVEX : NotOpM_M<Xi16>, PL, PD;
+def NOT32m_EVEX : NotOpM_M<Xi32>, PL;
+def NOT64m_EVEX : NotOpM_M<Xi64>, PL;
+}
 
 /// ArithBinOp_RF - This is an arithmetic binary operator where the pattern is
 /// defined with "(set GPR:$dst, EFLAGS, (...".
@@ -523,72 +434,215 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                          SDNode opnodeflag, SDNode opnode,
                          bit CommutableRR, bit ConvertibleToThreeAddress,
                          bit ConvertibleToThreeAddressRR> {
-  let Constraints = "$src1 = $dst" in {
-    let isCommutable = CommutableRR,
-        isConvertibleToThreeAddress = ConvertibleToThreeAddressRR in {
-    def NAME#8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
-    def NAME#16rr : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag>, OpSize16;
-    def NAME#32rr : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag>, OpSize32;
-    def NAME#64rr : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag>;
+  let isCommutable = CommutableRR,
+      isConvertibleToThreeAddress = ConvertibleToThreeAddressRR in {
+    let Predicates = [NoNDD] in {
+      def 8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
+      def 16rr : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag>, OpSize16;
+      def 32rr : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag>, OpSize32;
+      def 64rr : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag>;
+    }
+    let Predicates = [HasNDD, In64BitMode] in {
+      def 8rr_ND  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag, 1>;
+      def 16rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag, 1>, PD;
+      def 32rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag, 1>;
+      def 64rr_ND : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag, 1>;
+      def 8rr_NF_ND  : BinOpRR_R<BaseOpc, mnemonic, Xi8, 1>, EVEX_NF;
+      def 16rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi16, 1>, EVEX_NF, PD;
+      def 32rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi32, 1>, EVEX_NF;
+      def 64rr_NF_ND : BinOpRR_R<BaseOpc, mnemonic, Xi64, 1>, EVEX_NF;
+    }
+    let Predicates = [In64BitMode] in {
+      def 8rr_NF  : BinOpRR_R<BaseOpc, mnemonic, Xi8>, NF;
+      def 16rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi16>, NF, PD;
+      def 32rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi32>, NF;
+      def 64rr_NF : BinOpRR_R<BaseOpc, mnemonic, Xi64>, NF;
+      def 8rr_EVEX  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+      def 16rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+      def 32rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+      def 64rr_EVEX : BinOpRR_RF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+    }
+  }
+
+    def 8rr_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>;
+    def 16rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
+    def 32rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
+    def 64rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>;
+    let Predicates = [In64BitMode] in {
+      def 8rr_EVEX_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>, PL;
+      def 16rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, PL, PD;
+      def 32rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, PL;
+      def 64rr_EVEX_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>, PL;
+      def 8rr_ND_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8, 1>;
+      def 16rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16, 1>, PD;
+      def 32rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32, 1>;
+      def 64rr_ND_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64, 1>;
+      def 8rr_NF_REV  : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi8>, NF;
+      def 16rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi16>, NF, PD;
+      def 32rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi32>, NF;
+      def 64rr_NF_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi64>, NF;
+      def 8rr_NF_ND_REV  : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi8, 1>, EVEX_NF;
+      def 16rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi16, 1>, EVEX_NF, PD;
+      def 32rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi32, 1>, EVEX_NF;
+      def 64rr_NF_ND_REV : BinOpRR_R_Rev<BaseOpc2, mnemonic, Xi64, 1>, EVEX_NF;
     }
 
-  def NAME#8rr_REV  : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi8>;
-  def NAME#16rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
-  def NAME#32rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
-  def NAME#64rr_REV : BinOpRR_RF_Rev<BaseOpc2, mnemonic, Xi64>;
-
-  def NAME#8rm   : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag>;
-  def NAME#16rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag>, OpSize16;
-  def NAME#32rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag>, OpSize32;
-  def NAME#64rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag>;
+    let Predicates = [NoNDD] in {
+      def 8rm   : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag>;
+      def 16rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag>, OpSize16;
+      def 32rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag>, OpSize32;
+      def 64rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag>;
+    }
+    let Predicates = [HasNDD, In64BitMode] in {
+      def 8rm_ND  : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , opnodeflag, 1>;
+      def 16rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, opnodeflag, 1>, PD;
+      def 32rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag, 1>;
+      def 64rm_ND : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag, 1>;
+      def 8rm_NF_ND  : BinOpRM_R<BaseOpc2, mnemonic, Xi8, 1>, EVEX_NF;
+      def 16rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi16, 1>, EVEX_NF, PD;
+      def 32rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi32, 1>, EVEX_NF;
+      def 64rm_NF_ND : BinOpRM_R<BaseOpc2, mnemonic, Xi64, 1>, EVEX_NF;
+    }
+    let Predicates = [In64BitMode] in {
+      def 8rm_NF  : BinOpRM_R<BaseOpc2, mnemonic, Xi8>, NF;
+      def 16rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi16>, NF, PD;
+      def 32rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi32>, NF;
+      def 64rm_NF : BinOpRM_R<BaseOpc2, mnemonic, Xi64>, NF;
+      def 8rm_EVEX  : BinOpRM_RF<BaseOpc2, mnemonic, Xi8 , null_frag>, PL;
+      def 16rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi16, null_frag>, PL, PD;
+      def 32rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, null_frag>, PL;
+      def 64rm_EVEX : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, null_frag>, PL;
+    }
 
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-    def NAME#8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
-    // NOTE: These are order specific, we want the ri8 forms to be listed
-    // first so that they are slightly preferred to the ri forms.
-    def NAME#16ri8 : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
-    def NAME#32ri8 : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
-    def NAME#64ri8 : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>;
-
-    def NAME#16ri  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM>, OpSize16;
-    def NAME#32ri  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM>, OpSize32;
-    def NAME#64ri32: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM>;
+      let Predicates = [NoNDD] in {
+        // NOTE: These are order specific, we want the ri8 forms to be listed
+        // first so that they are slightly preferred to the ri forms.
+        def 16ri8 : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
+        def 32ri8 : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
+        def 64ri8 : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>;
+        def 8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
+        def 16ri  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM>, OpSize16;
+        def 32ri  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM>, OpSize32;
+        def 64ri32: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM>;
+      }
+      let Predicates = [HasNDD, In64BitMode] in {
+        def 16ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
+        def 32ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
+        def 64ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
+        def 8ri_ND   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM, 1>;
+        def 16ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM, 1>, PD;
+        def 32ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM, 1>;
+        def 64ri32_ND: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM, 1>;
+        def 16ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
+        def 32ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
+        def 64ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
+        def 8ri_NF_ND  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM, 1>, EVEX_NF;
+        def 16ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
+        def 32ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
+        def 64ri32_NF_ND : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
+      }
+      let Predicates = [In64BitMode] in {
+        def 16ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM>, NF, PD;
+        def 32ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM>, NF;
+        def 64ri8_NF : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM>, NF;
+        def 8ri_NF  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM>, NF;
+        def 16ri_NF : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM>, NF, PD;
+        def 32ri_NF : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM>, NF;
+        def 64ri32_NF : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM>, NF;
+        def 16ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
+        def 32ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
+        def 64ri8_EVEX : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
+        def 8ri_EVEX   : BinOpRI_RF<0x80, mnemonic, Xi8 , null_frag, RegMRM>, PL;
+        def 16ri_EVEX  : BinOpRI_RF<0x81, mnemonic, Xi16, null_frag, RegMRM>, PL, PD;
+        def 32ri_EVEX  : BinOpRI_RF<0x81, mnemonic, Xi32, null_frag, RegMRM>, PL;
+        def 64ri32_EVEX: BinOpRI_RF<0x81, mnemonic, Xi64, null_frag, RegMRM>, PL;
+      }
     }
-  } // Constraints = "$src1 = $dst"
 
-  def NAME#8mr    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , opnode>;
-  def NAME#16mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, opnode>;
+    def 8mr    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , opnode>;
+    def 16mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+    def 32mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+    def 64mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, opnode>;
+    let Predicates = [HasNDD, In64BitMode] in {
+    def 8mr_ND    : BinOpMR_RF<BaseOpc, mnemonic, Xi8 , opnode>;
+    def 16mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
+    def 32mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi32, opnode>;
+    def 64mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi64, opnode>;
+    def 8mr_NF_ND    : BinOpMR_R<BaseOpc, mnemonic, Xi8>, EVEX_NF;
+    def 16mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi16>, EVEX_NF, PD;
+    def 32mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi32>, EVEX_NF;
+    def 64mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi64>, EVEX_NF;
+  }
+  let Predicates = [In64BitMode] in {
+    def 8mr_NF    : BinOpMR_M<BaseOpc, mnemonic, Xi8>, NF;
+    def 16mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi16>, NF, PD;
+    def 32mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi32>, NF;
+    def 64mr_NF   : BinOpMR_M<BaseOpc, mnemonic, Xi64>, NF;
+    def 8mr_EVEX    : BinOpMR_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+    def 16mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+    def 32mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+    def 64mr_EVEX   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+  }
 
   // NOTE: These are order specific, we want the mi8 forms to be listed
   // first so that they are slightly preferred to the mi forms.
-  def NAME#16mi8  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, OpSize16;
-  def NAME#32mi8  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, OpSize32;
+  def 16mi8  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, OpSize16;
+  def 32mi8  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi8  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>;
-
-  def NAME#8mi    : BinOpMI_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-  def NAME#16mi   : BinOpMI_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
-  def NAME#32mi   : BinOpMI_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
+    def 64mi8  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>;
+  def 8mi    : BinOpMI_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+  def 16mi   : BinOpMI_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
+  def 32mi   : BinOpMI_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi32 : BinOpMI_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 64mi32 : BinOpMI_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+  let Predicates = [HasNDD, In64BitMode] in {
+    def 16mi8_ND  : BinOpMI8_RF<mnemonic, Xi16, MemMRM>, PD;
+    def 32mi8_ND  : BinOpMI8_RF<mnemonic, Xi32, MemMRM>;
+    def 64mi8_ND  : BinOpMI8_RF<mnemonic, Xi64, MemMRM>;
+    def 8mi_ND    : BinOpMI_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+    def 16mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
+    def 32mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
+    def 64mi32_ND : BinOpMI_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 16mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi32, MemMRM>, NF;
+    def 64mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi64, MemMRM>, NF;
+    def 8mi_NF_ND    : BinOpMI_R<0x80, mnemonic, Xi8, MemMRM>, NF;
+    def 16mi_NF_ND   : BinOpMI_R<0x81, mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi_NF_ND   : BinOpMI_R<0x81, mnemonic, Xi32, MemMRM>, NF;
+    def 64mi32_NF_ND : BinOpMI_R<0x81, mnemonic, Xi64, MemMRM>, NF;
+  }
+  let Predicates = [In64BitMode] in {
+    def 16mi8_NF  : BinOpMI8_M<mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi8_NF  : BinOpMI8_M<mnemonic, Xi32, MemMRM>, NF;
+    def 64mi8_NF  : BinOpMI8_M<mnemonic, Xi64, MemMRM>, NF;
+    def 8mi_NF    : BinOpMI_M<0x80, mnemonic, Xi8, MemMRM>, NF;
+    def 16mi_NF   : BinOpMI_M<0x81, mnemonic, Xi16, MemMRM>, NF, PD;
+    def 32mi_NF   : BinOpMI_M<0x81, mnemonic, Xi32, MemMRM>, NF;
+    def 64mi32_NF : BinOpMI_M<0x81, mnemonic, Xi64, MemMRM>, NF;
+    def 16mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi16, MemMRM>, PL, PD;
+    def 32mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi32, MemMRM>, PL;
+    def 64mi8_EVEX  : BinOpMI8_MF<mnemonic, Xi64, MemMRM>, PL;
+    def 8mi_EVEX    : BinOpMI_MF<0x80, mnemonic, Xi8 , null_frag, MemMRM>, PL;
+    def 16mi_EVEX   : BinOpMI_MF<0x81, mnemonic, Xi16, null_frag, MemMRM>, PL, PD;
+    def 32mi_EVEX   : BinOpMI_MF<0x81, mnemonic, Xi32, null_frag, MemMRM>, PL;
+    def 64mi32_EVEX : BinOpMI_MF<0x81, mnemonic, Xi64, null_frag, MemMRM>, PL;
+  }
 
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode] in {
-  let Constraints = "$src1 = $dst" in
-  def NAME#8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
-  def NAME#8mi8 : BinOpMI8_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
+  def 8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
+  def 8mi8 : BinOpMI8_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
   }
 
-  def NAME#8i8 : BinOpAI_AF<BaseOpc4, mnemonic, Xi8 , AL,
+  def 8i8 : BinOpAI_AF<BaseOpc4, mnemonic, Xi8 , AL,
                             "{$src, %al|al, $src}">;
-  def NAME#16i16 : BinOpAI_AF<BaseOpc4, mnemonic, Xi16, AX,
+  def 16i16 : BinOpAI_AF<BaseOpc4, mnemonic, Xi16, AX,
                               "{$src, %ax|ax, $src}">, OpSize16;
-  def NAME#32i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi32, EAX,
+  def 32i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi32, EAX,
                               "{$src, %eax|eax, $src}">, OpSize32;
-  def NAME#64i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi64, RAX,
+  def 64i32 : BinOpAI_AF<BaseOpc4, mnemonic, Xi64, RAX,
                               "{$src, %rax|rax, $src}">;
 }
 
@@ -602,73 +656,164 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                           string mnemonic, Format RegMRM, Format MemMRM,
                           SDNode opnode, bit CommutableRR,
                            bit ConvertibleToThreeAddress> {
-  let Constraints = "$src1 = $dst" in {
-    let isCommutable = CommutableRR in {
-    def NAME#8rr  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
+  let isCommutable = CommutableRR in {
+    let Predicates = [NoNDD] in {
+      def 8rr  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
       let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-      def NAME#16rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-      def NAME#32rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-      def NAME#64rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
-    } // isConvertibleToThreeAddress
+        def 16rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+        def 32rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+        def 64rr : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
+      }
+    }
+    let Predicates = [HasNDD, In64BitMode] in {
+      def 8rr_ND  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , opnode, 1>;
+      let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+        def 16rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, opnode, 1>, PD;
+        def 32rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, opnode, 1>;
+        def 64rr_ND : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, opnode, 1>;
+      }
+    }
   } // isCommutable
 
-  def NAME#8rr_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>;
-  def NAME#16rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
-  def NAME#32rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
-  def NAME#64rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>;
+  let Predicates = [In64BitMode] in {
+    def 8rr_EVEX  : BinOpRRF_RF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+    def 16rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+    def 32rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+    def 64rr_EVEX : BinOpRRF_RF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+  }
 
-  def NAME#8rm   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>;
-  def NAME#16rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>;
+  def 8rr_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>;
+  def 16rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
+  def 32rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
+  def 64rr_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>;
+  let Predicates = [In64BitMode] in {
+    def 8rr_ND_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8, 1>;
+    def 16rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16, 1>, PD;
+    def 32rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32, 1>;
+    def 64rr_ND_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64, 1>;
+    def 8rr_EVEX_REV  : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi8>, PL;
+    def 16rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi16>, PL, PD;
+    def 32rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi32>, PL;
+    def 64rr_EVEX_REV : BinOpRRF_RF_Rev<BaseOpc2, mnemonic, Xi64>, PL;
+  }
 
-  def NAME#8ri   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>;
+  let Predicates = [NoNDD] in {
+    def 8rm   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>;
+    def 16rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
+    def 32rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
+    def 64rm  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>;
+  }
+  let Predicates = [HasNDD, In64BitMode] in {
+    def 8rm_ND   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode, 1>;
+    def 16rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode, 1>, PD;
+    def 32rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode, 1>;
+    def 64rm_ND  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode, 1>;
+  }
+  let Predicates = [In64BitMode] in {
+    def 8rm_EVEX   : BinOpRMF_RF<BaseOpc2, mnemonic, Xi8 , opnode>, PL;
+    def 16rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi16, opnode>, PL, PD;
+    def 32rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi32, opnode>, PL;
+    def 64rm_EVEX  : BinOpRMF_RF<BaseOpc2, mnemonic, Xi64, opnode>, PL;
+  }
+
+  let Predicates = [NoNDD] in {
+    def 8ri   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>;
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-    // NOTE: These are order specific, we want the ri8 forms to be listed
-    // first so that they are slightly preferred to the ri forms.
-    def NAME#16ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
-    def NAME#32ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
-    def NAME#64ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>;
+      // NOTE: These are order specific, we want the ri8 forms to be listed
+      // first so that they are slightly preferred to the ri forms.
+      def 16ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
+      def 32ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
+      def 64ri8 : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>;
 
-    def NAME#16ri  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
-    def NAME#32ri  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
-    def NAME#64ri32: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>;
+      def 16ri  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
+      def 32ri  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
+      def 64ri32: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>;
     }
-  } // Constraints = "$src1 = $dst"
+  }
 
-  def NAME#8mr    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , opnode>;
-  def NAME#16mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, opnode>;
+  let Predicates = [HasNDD, In64BitMode] in {
+    def 8ri_ND   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM, 1>;
+    let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+      def 16ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
+      def 32ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
+      def 64ri8_ND : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
+      def 16ri_ND  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM, 1>, PD;
+      def 32ri_ND  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM, 1>;
+      def 64ri32_ND: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM, 1>;
+    }
+  }
+  let Predicates = [In64BitMode] in {
+    def 8ri_EVEX   : BinOpRIF_RF<0x80, mnemonic, Xi8 , opnode, RegMRM>, PL;
+    def 16ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi16, RegMRM>, PL, PD;
+    def 32ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi32, RegMRM>, PL;
+    def 64ri8_EVEX : BinOpRI8F_RF<0x83, mnemonic, Xi64, RegMRM>, PL;
+    def 16ri_EVEX  : BinOpRIF_RF<0x81, mnemonic, Xi16, opnode, RegMRM>, PL, PD;
+    def 32ri_EVEX  : BinOpRIF_RF<0x81, mnemonic, Xi32, opnode, RegMRM>, PL;
+    def 64ri32_EVEX: BinOpRIF_RF<0x81, mnemonic, Xi64, opnode, RegMRM>, PL;
+  }
+
+  def 8mr    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , opnode>;
+  def 16mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+  def 32mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+  def 64mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, opnode>;
+  let Predicates = [HasNDD, In64BitMode] in {
+    def 8mr_ND    : BinOpMRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
+    def 16mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
+    def 32mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi32, opnode>;
+    def 64mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
+  }
+  let Predicates = [In64BitMode] in {
+    def 8mr_EVEX    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
+    def 16mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi16, null_frag>, PL, PD;
+    def 32mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, null_frag>, PL;
+    def 64mr_EVEX   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, null_frag>, PL;
+  }
 
   // NOTE: These are order specific, we want the mi8 forms to be listed
   // first so that they are slightly preferred to the mi forms.
-  def NAME#16mi8  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, OpSize16;
-  def NAME#32mi8  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, OpSize32;
+  def 8mi    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+  def 16mi8  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, OpSize16;
+  def 32mi8  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi8  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>;
+    def 64mi8  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>;
+  def 16mi   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
+  def 32mi   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
+  let Predicates = [In64BitMode] in
+    def 64mi32 : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
 
-  def NAME#8mi    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-  def NAME#16mi   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
-  def NAME#32mi   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
-  let Predicates = [In64BitMode] in
-  def NAME#64mi32 : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+  let Predicates = [HasNDD, In64BitMode] in {
+    def 8mi_ND    : BinOpMIF_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+    def 16mi8_ND  : BinOpMI8F_RF<mnemonic, Xi16, MemMRM>, PD;
+    def 32mi8_ND  : BinOpMI8F_RF<mnemonic, Xi32, MemMRM>;
+    def 64mi8_ND  : BinOpMI8F_RF<mnemonic, Xi64, MemMRM>;
+    def 16mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
+    def 32mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
+    def 64mi32_ND : BinOpMIF_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+  }
+  let Predicates = [In64BitMode] in {
+    def 8mi_EVEX    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>, PL;
+    def 16mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi16, MemMRM>, PL, PD;
+    def 32mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi32, MemMRM>, PL;
+    def 64mi8_EVEX  : BinOpMI8F_MF<mnemonic, Xi64, MemMRM>, PL;
+    def 16mi_EVEX   : BinOpMIF_MF<0x81, mnemonic, Xi16, opnode, MemMRM>, PL, PD;
+    def 32mi_EVEX   : BinOpMIF_MF<0x81, mnemonic, Xi32, opnode, MemMRM>, PL;
+    def 64mi32_EVEX : BinOpMIF_MF<0x81, mnemonic, Xi64, opnode, MemMRM>, PL;
+  }
 
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode]  in {
-    let Constraints = "$src1 = $dst" in
-    def NAME#8ri8 : BinOpRI8F_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
-  def NAME#8mi8 : BinOpMI8F_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
+    def 8ri8 : BinOpRI8F_RF<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
+  def 8mi8 : BinOpMI8F_MF<mnemonic, Xi8, MemMRM>, DisassembleOnly;
   }
 
-  def NAME#8i8 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi8 , AL,
+  def 8i8 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi8 , AL,
                              "{$src, %al|al, $src}">;
-  def NAME#16i16 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi16, AX,
+  def 16i16 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi16, AX,
                                "{$src, %ax|ax, $src}">, OpSize16;
-  def NAME#32i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi32, EAX,
+  def 32i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi32, EAX,
                                "{$src, %eax|eax, $src}">, OpSize32;
-  def NAME#64i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi64, RAX,
+  def 64i32 : BinOpAIF_AF<BaseOpc4, mnemonic, Xi64, RAX,
                                "{$src, %rax|rax, $src}">;
 }
 
@@ -681,71 +826,71 @@ multiclass ArithBinOp_F<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                         SDNode opnode, bit CommutableRR,
                         bit ConvertibleToThreeAddress> {
   let isCommutable = CommutableRR in {
-  def NAME#8rr  : BinOpRR_F<BaseOpc, mnemonic, Xi8 , opnode>;
+  def 8rr  : BinOpRR_F<BaseOpc, mnemonic, Xi8 , opnode>;
     let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
-    def NAME#16rr : BinOpRR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-    def NAME#32rr : BinOpRR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-    def NAME#64rr : BinOpRR_F<BaseOpc, mnemonic, Xi64, opnode>;
+    def 16rr : BinOpRR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+    def 32rr : BinOpRR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+    def 64rr : BinOpRR_F<BaseOpc, mnemonic, Xi64, opnode>;
     } // isConvertibleToThreeAddress
   } // isCommutable
 
-  def NAME#8rr_REV  : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi8>;
-  def NAME#16rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
-  def NAME#32rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
-  def NAME#64rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi64>;
+  def 8rr_REV  : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi8>;
+  def 16rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi16>, OpSize16;
+  def 32rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi32>, OpSize32;
+  def 64rr_REV : BinOpRR_F_Rev<BaseOpc2, mnemonic, Xi64>;
 
-  def NAME#8rm   : BinOpRM_F<BaseOpc2, mnemonic, Xi8 , opnode>;
-  def NAME#16rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi64, opnode>;
+  def 8rm   : BinOpRM_F<BaseOpc2, mnemonic, Xi8 , opnode>;
+  def 16rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi16, opnode>, OpSize16;
+  def 32rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi32, opnode>, OpSize32;
+  def 64rm  : BinOpRM_F<BaseOpc2, mnemonic, Xi64, opnode>;
 
-  def NAME#8ri   : BinOpRI_F<0x80, mnemonic, Xi8 , opnode, RegMRM>;
+  def 8ri   : BinOpRI_F<0x80, mnemonic, Xi8 , opnode, RegMRM>;
 
   let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
   // NOTE: These are order specific, we want the ri8 forms to be listed
   // first so that they are slightly preferred to the ri forms.
-  def NAME#16ri8 : BinOpRI8_F<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
-  def NAME#32ri8 : BinOpRI8_F<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
-  def NAME#64ri8 : BinOpRI8_F<0x83, mnemonic, Xi64, RegMRM>;
+  def 16ri8 : BinOpRI8_F<0x83, mnemonic, Xi16, RegMRM>, OpSize16;
+  def 32ri8 : BinOpRI8_F<0x83, mnemonic, Xi32, RegMRM>, OpSize32;
+  def 64ri8 : BinOpRI8_F<0x83, mnemonic, Xi64, RegMRM>;
 
-  def NAME#16ri  : BinOpRI_F<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
-  def NAME#32ri  : BinOpRI_F<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
-  def NAME#64ri32: BinOpRI_F<0x81, mnemonic, Xi64, opnode, RegMRM>;
+  def 16ri  : BinOpRI_F<0x81, mnemonic, Xi16, opnode, RegMRM>, OpSize16;
+  def 32ri  : BinOpRI_F<0x81, mnemonic, Xi32, opnode, RegMRM>, OpSize32;
+  def 64ri32: BinOpRI_F<0x81, mnemonic, Xi64, opnode, RegMRM>;
   }
 
-  def NAME#8mr    : BinOpMR_F<BaseOpc, mnemonic, Xi8 , opnode>;
-  def NAME#16mr   : BinOpMR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
-  def NAME#32mr   : BinOpMR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
-  def NAME#64mr   : BinOpMR_F<BaseOpc, mnemonic, Xi64, opnode>;
+  def 8mr    : BinOpMR_F<BaseOpc, mnemonic, Xi8 , opnode>;
+  def 16mr   : BinOpMR_F<BaseOpc, mnemonic, Xi16, opnode>, OpSize16;
+  def 32mr   : BinOpMR_F<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
+  def 64mr   : BinOpMR_F<BaseOpc, mnemonic, Xi64, opnode>;
 
   // NOTE: These are order specific, we want the mi8 forms to be listed
   // first so that they are slightly preferred to the mi forms.
-  def NAME#16mi8  : BinOpMI8_F<mnemonic, Xi16, MemMRM>, OpSize16;
-  def NAME#32mi8  : BinOpMI8_F<mnemonic, Xi32, MemMRM>, OpSize32;
+  def 16mi8  : BinOpMI8_F<mnemonic, Xi16, MemMRM>, OpSize16;
+  def 32mi8  : BinOpMI8_F<mnemonic, Xi32, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi8  : BinOpMI8_F<mnemonic, Xi64, MemMRM>;
+  def 64mi8  : BinOpMI8_F<mnemonic, Xi64, MemMRM>;
 
-  def NAME#8mi    : BinOpMI_F<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-  def NAME#16mi   : BinOpMI_F<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
-  def NAME#32mi   : BinOpMI_F<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
+  def 8mi    : BinOpMI_F<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+  def 16mi   : BinOpMI_F<0x81, mnemonic, Xi16, opnode, MemMRM>, OpSize16;
+  def 32mi   : BinOpMI_F<0x81, mnemonic, Xi32, opnode, MemMRM>, OpSize32;
   let Predicates = [In64BitMode] in
-  def NAME#64mi32 : BinOpMI_F<0x81, mnemonic, Xi64, opnode, MemMRM>;
+  def 64mi32 : BinOpMI_F<0x81, mnemonic, Xi64, opnode, MemMRM>;
 
   // These are for the disassembler since 0x82 opcode behaves like 0x80, but
   // not in 64-bit mode.
   let Predicates = [Not64BitMode] in {
-  def NAME#8ri8 : BinOpRI8_F<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
+  def 8ri8 : BinOpRI8_F<0x82, mnemonic, Xi8, RegMRM>, DisassembleOnly;
     let mayLoad = 1 in
-    def NAME#8mi8 : BinOpMI8_F<mnemonic, Xi8, MemMRM>;
+    def 8mi8 : BinOpMI8_F<mnemonic, Xi8, MemMRM>;
   }
 
-  def NAME#8i8 : BinOpAI_F<BaseOpc4, mnemonic, Xi8 , AL,
+  def 8i8 : BinOpAI_F<BaseOpc4, mnemonic, Xi8 , AL,
                            "{$src, %al|al, $src}">;
-  def NAME#16i16 : BinOpAI_F<BaseOpc4, mnemonic, Xi16, AX,
+  def 16i16 : BinOpAI_F<BaseOpc4, mnemonic, Xi16, AX,
                            "{$src, %ax|ax, $src}">, OpSize16;
-  def NAME#32i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi32, EAX,
+  def 32i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi32, EAX,
                            "{$src, %eax|eax, $src}">, OpSize32;
-  def NAME#64i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi64, RAX,
+  def 64i32 : BinOpAI_F<BaseOpc4, mnemonic, Xi64, RAX,
                            "{$src, %rax|rax, $src}">;
 }
 
@@ -1060,17 +1205,35 @@ defm MULX64 : MulX<Xi64, WriteMULX64>, REX_W;
 //
 // We don't have patterns for these as there is no advantage over ADC for
 // most code.
-let Constraints = "$src1 = $dst" in {
-  let Form = MRMSrcReg in {
-  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+let Form = MRMSrcReg in {
+  def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32>, T8, PD;
+  def ADCX64rr : BinOpRRF_RF<0xF6, "adcx", Xi64>, T8, PD;
+  def ADOX32rr : BinOpRRF_RF<0xF6, "adox", Xi32>, T8, XS;
+  def ADOX64rr : BinOpRRF_RF<0xF6, "adox", Xi64>, T8, XS;
+  let Predicates =[In64BitMode] in {
+    def ADCX32rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi32>, EVEX, T_MAP4, PD;
+    def ADCX64rr_EVEX : BinOpRRF_RF<0x66, "adcx", Xi64>, EVEX, T_MAP4, PD;
+    def ADOX32rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi32>, EVEX, T_MAP4, XS;
+    def ADOX64rr_EVEX : BinOpRRF_RF<0x66, "adox", Xi64>, EVEX, T_MAP4, XS;
+    def ADCX32rr_ND : BinOpRRF_RF<0x66, "adcx", Xi32, null_frag, 1>, PD;
+    def ADCX64rr_ND : BinOpRRF_RF<0x66, "adcx", Xi64, null_frag, 1>, PD;
+    def ADOX32rr_ND : BinOpRRF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;
+    def ADOX64rr_ND : BinOpRRF_RF<0x66, "adox", Xi64, null_frag, 1>, XS;
   }
-  let Form = MRMSrcMem in {
-  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32, null_frag>, T8, PD;
-  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64, null_frag>, T8, PD;
-  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32, null_frag>, T8, XS;
-  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64, null_frag>, T8, XS;
+}
+let Form = MRMSrcMem in {
+  def ADCX32rm : BinOpRMF_RF<0xF6, "adcx", Xi32>, T8, PD;
+  def ADCX64rm : BinOpRMF_RF<0xF6, "adcx", Xi64>, T8, PD;
+  def ADOX32rm : BinOpRMF_RF<0xF6, "adox", Xi32>, T8, XS;
+  def ADOX64rm : BinOpRMF_RF<0xF6, "adox", Xi64>, T8, XS;
+  let Predicates =[In64BitMode] in {
+    def ADCX32rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi32>, EVEX, T_MAP4, PD;
+    def ADCX64rm_EVEX : BinOpRMF_RF<0x66, "adcx", Xi64>, EVEX, T_MAP4, PD;
+    def ADOX32rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi32>, EVEX, T_MAP4, XS;
+    def ADOX64rm_EVEX : BinOpRMF_RF<0x66, "adox", Xi64>, EVEX, T_MAP4, XS;
+    def ADCX32rm_ND : BinOpRMF_RF<0x66, "adcx", Xi32, null_frag, 1>, PD;
+    def ADCX64rm_ND : BinOpRMF_RF<0x66, "adcx", Xi64, null_frag, 1>, PD;
+    def ADOX32rm_ND : BinOpRMF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;
+    def ADOX64rm_ND : BinOpRMF_RF<0x66, "adox", Xi64, null_frag, 1>, XS;
   }
 }

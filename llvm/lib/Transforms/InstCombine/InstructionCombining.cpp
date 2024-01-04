@@ -411,6 +411,14 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         getComplexity(I.getOperand(1)))
       Changed = !I.swapOperands();
 
+    if (I.isCommutative()) {
+      if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+        replaceOperand(I, 0, Pair->first);
+        replaceOperand(I, 1, Pair->second);
+        Changed = true;
+      }
+    }
+
     BinaryOperator *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
     BinaryOperator *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
 
@@ -1096,8 +1104,8 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
-std::optional<std::pair<Value *, Value *>>
-InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
+static std::optional<std::pair<Value *, Value *>>
+matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getParent() != RHS->getParent())
     return std::nullopt;
 
@@ -1123,25 +1131,41 @@ InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   return std::optional(std::pair(L0, R0));
 }
 
-Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
-                                                        Value *Op0,
-                                                        Value *Op1) {
-  assert(I.isCommutative() && "Instruction should be commutative");
-
-  PHINode *LHS = dyn_cast<PHINode>(Op0);
-  PHINode *RHS = dyn_cast<PHINode>(Op1);
-
-  if (!LHS || !RHS)
-    return nullptr;
-
-  if (auto P = matchSymmetricPhiNodesPair(LHS, RHS)) {
-    Value *BI = Builder.CreateBinOp(I.getOpcode(), P->first, P->second);
-    if (auto *BO = dyn_cast<BinaryOperator>(BI))
-      BO->copyIRFlags(&I);
-    return BI;
+std::optional<std::pair<Value *, Value *>>
+InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
+  Instruction *LHSInst = dyn_cast<Instruction>(LHS);
+  Instruction *RHSInst = dyn_cast<Instruction>(RHS);
+  if (!LHSInst || !RHSInst || LHSInst->getOpcode() != RHSInst->getOpcode())
+    return std::nullopt;
+  switch (LHSInst->getOpcode()) {
+  case Instruction::PHI:
+    return matchSymmetricPhiNodesPair(cast<PHINode>(LHS), cast<PHINode>(RHS));
+  case Instruction::Select: {
+    Value *Cond = LHSInst->getOperand(0);
+    Value *TrueVal = LHSInst->getOperand(1);
+    Value *FalseVal = LHSInst->getOperand(2);
+    if (Cond == RHSInst->getOperand(0) && TrueVal == RHSInst->getOperand(2) &&
+        FalseVal == RHSInst->getOperand(1))
+      return std::pair(TrueVal, FalseVal);
+    return std::nullopt;
   }
-
-  return nullptr;
+  case Instruction::Call: {
+    // Match min(a, b) and max(a, b)
+    MinMaxIntrinsic *LHSMinMax = dyn_cast<MinMaxIntrinsic>(LHSInst);
+    MinMaxIntrinsic *RHSMinMax = dyn_cast<MinMaxIntrinsic>(RHSInst);
+    if (LHSMinMax && RHSMinMax &&
+        LHSMinMax->getPredicate() ==
+            ICmpInst::getSwappedPredicate(RHSMinMax->getPredicate()) &&
+        ((LHSMinMax->getLHS() == RHSMinMax->getLHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getRHS()) ||
+         (LHSMinMax->getLHS() == RHSMinMax->getRHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getLHS())))
+      return std::pair(LHSMinMax->getLHS(), LHSMinMax->getRHS());
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
 }
 
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
@@ -1187,14 +1211,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
-    // op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
-    if (I.isCommutative() && B == F && C == E) {
-      Value *BI = Builder.CreateBinOp(I.getOpcode(), B, E);
-      if (auto *BO = dyn_cast<BinaryOperator>(BI))
-        BO->copyIRFlags(&I);
-      return BI;
-    }
-
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
@@ -1576,11 +1592,6 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   if (BO.getParent() != Phi0->getParent() ||
       BO.getParent() != Phi1->getParent())
     return nullptr;
-
-  if (BO.isCommutative()) {
-    if (Value *V = SimplifyPhiCommutativeBinaryOp(BO, Phi0, Phi1))
-      return replaceInstUsesWith(BO, V);
-  }
 
   // Fold if there is at least one specific constant value in phi0 or phi1's
   // incoming values that comes from the same block and this specific constant
@@ -2469,31 +2480,43 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         DL.getIndexSizeInBits(AS)) {
       uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
 
-      bool Matched = false;
-      uint64_t C;
-      Value *V = nullptr;
       if (TyAllocSize == 1) {
-        V = GEP.getOperand(1);
-        Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_AShr(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == 1ULL << C)
-          Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_SDiv(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == C)
-          Matched = true;
+        // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y),
+        // but only if the result pointer is only used as if it were an integer,
+        // or both point to the same underlying object (otherwise provenance is
+        // not necessarily retained).
+        Value *X = GEP.getPointerOperand();
+        Value *Y;
+        if (match(GEP.getOperand(1),
+                  m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+            GEPType == Y->getType()) {
+          bool HasSameUnderlyingObject =
+              getUnderlyingObject(X) == getUnderlyingObject(Y);
+          bool Changed = false;
+          GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            bool ShouldReplace = HasSameUnderlyingObject ||
+                                 isa<ICmpInst>(U.getUser()) ||
+                                 isa<PtrToIntInst>(U.getUser());
+            Changed |= ShouldReplace;
+            return ShouldReplace;
+          });
+          return Changed ? &GEP : nullptr;
+        }
+      } else {
+        // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
+        Value *V;
+        if ((has_single_bit(TyAllocSize) &&
+             match(GEP.getOperand(1),
+                   m_Exact(m_AShr(m_Value(V),
+                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+            match(GEP.getOperand(1),
+                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+              Builder.getInt8Ty(), GEP.getPointerOperand(), V);
+          NewGEP->setIsInBounds(GEP.isInBounds());
+          return NewGEP;
+        }
       }
-
-      // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
-      // only if both point to the same underlying object (otherwise provenance
-      // is not necessarily retained).
-      Value *Y;
-      Value *X = GEP.getOperand(0);
-      if (Matched &&
-          match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
-          getUnderlyingObject(X) == getUnderlyingObject(Y))
-        return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
   // We do not handle pointer-vector geps here.

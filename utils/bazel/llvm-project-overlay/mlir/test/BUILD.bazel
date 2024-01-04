@@ -789,9 +789,12 @@ cc_library(
         ":TestDialect",
         "//mlir:ArithDialect",
         "//mlir:FuncDialect",
+        "//mlir:IR",
         "//mlir:MeshDialect",
         "//mlir:MeshTransforms",
         "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:Support",
         "//mlir:Transforms",
     ],
 )

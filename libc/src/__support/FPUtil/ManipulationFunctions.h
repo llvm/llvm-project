@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
 #include "FPBits.h"
-#include "FloatProperties.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
 
@@ -175,13 +174,13 @@ LIBC_INLINE T nextafter(T from, U to) {
   } else {
     int_val = FPBits<T>::MIN_SUBNORMAL;
     if (to_bits.get_sign())
-      int_val |= FloatProperties<T>::SIGN_MASK;
+      int_val |= FPBits<T>::SIGN_MASK;
   }
 
-  StorageType exponent_bits = int_val & FloatProperties<T>::EXP_MASK;
+  StorageType exponent_bits = int_val & FPBits<T>::EXP_MASK;
   if (exponent_bits == StorageType(0))
     raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
-  else if (exponent_bits == FloatProperties<T>::EXP_MASK)
+  else if (exponent_bits == FPBits<T>::EXP_MASK)
     raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
 
   return cpp::bit_cast<T>(int_val);

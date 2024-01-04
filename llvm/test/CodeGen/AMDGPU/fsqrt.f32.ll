@@ -1850,7 +1850,8 @@ define float @v_sqrt_f32_ulp2(float %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -1886,7 +1887,8 @@ define float @v_sqrt_f32_ulp25(float %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -1922,7 +1924,8 @@ define float @v_sqrt_f32_ulp3(float %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -1957,7 +1960,8 @@ define float @v_sqrt_f32_ulp2_fabs(float %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, s[4:5]
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e64 v0, |v0|, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, s[4:5]
@@ -2090,10 +2094,12 @@ define <2 x float> @v_sqrt_v2f32_ulp2(<2 x float> %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], v1, v2
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v3
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 32, s[4:5]
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v1, v1
@@ -2232,10 +2238,12 @@ define <2 x float> @v_sqrt_v2f32_ulp2_fabs(<2 x float> %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 32, s[4:5]
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[4:5]
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[6:7], |v1|, v2
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[6:7]
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e64 v0, |v0|, v3
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 32, s[6:7]
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e64 v1, |v1|, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v1, v1
@@ -2328,7 +2336,8 @@ define float @v_sqrt_f32_ulp2_noncontractable_rcp(float %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -2425,7 +2434,8 @@ define float @v_sqrt_f32_ulp2_noncontractable_fdiv(float %x, float %y) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, -16, vcc
@@ -2509,7 +2519,8 @@ define float @v_sqrt_f32_ulp2_contractable_fdiv(float %x, float %y) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, -16, vcc
@@ -2589,7 +2600,8 @@ define float @v_sqrt_f32_ulp2_contractable_fdiv_arcp(float %x, float %y) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, -16, vcc
@@ -2658,10 +2670,12 @@ define <2 x float> @v_sqrt_v2f32_ulp2_noncontractable_rcp(<2 x float> %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], v1, v2
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v3
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 32, s[4:5]
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v1, v1
@@ -2802,10 +2816,12 @@ define <2 x float> @v_sqrt_v2f32_ulp2_contractable_fdiv(<2 x float> %x, <2 x flo
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v4
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v5, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], v1, v4
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v5, 5, v5
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v5
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 32, s[4:5]
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v4, 5, v4
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v4
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v1, v1
@@ -2929,10 +2945,12 @@ define <2 x float> @v_sqrt_v2f32_ulp2_contractable_fdiv_arcp(<2 x float> %x, <2 
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v4
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v5, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], v1, v4
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v5, 5, v5
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v5
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 32, s[4:5]
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v4, 5, v4
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v4
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v1, v1
@@ -3029,7 +3047,8 @@ define float @v_sqrt_f32_known_never_posdenormal_ulp2(float nofpclass(psub) %x) 
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -3064,7 +3083,8 @@ define float @v_sqrt_f32_nsz_known_never_posdenormal_ulp2(float nofpclass(psub) 
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -3099,7 +3119,8 @@ define float @v_sqrt_f32_known_never_negdenormal(float nofpclass(nsub) %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -3698,7 +3719,8 @@ define float @v_sqrt_f32_known_never_zero_never_ninf_ulp2(float nofpclass(zero n
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -3733,7 +3755,8 @@ define float @v_sqrt_f32_known_never_ninf_ulp2(float nofpclass(ninf) %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -3768,7 +3791,8 @@ define float @v_sqrt_f32_nsz_known_never_ninf_ulp2(float nofpclass(ninf) %x) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
@@ -3911,7 +3935,8 @@ define float @v_elim_redun_check_ult_sqrt_ulp3(float %in) {
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 32, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v1, v1
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, -16, vcc

@@ -460,6 +460,34 @@ void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
   }
 }
 
+// This must accept a 32-bit immediate value to correctly handle packed 16-bit
+// operations.
+static bool printImmediateFloat16(uint32_t Imm, const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  if (Imm == 0x3C00)
+    O << "1.0";
+  else if (Imm == 0xBC00)
+    O << "-1.0";
+  else if (Imm == 0x3800)
+    O << "0.5";
+  else if (Imm == 0xB800)
+    O << "-0.5";
+  else if (Imm == 0x4000)
+    O << "2.0";
+  else if (Imm == 0xC000)
+    O << "-2.0";
+  else if (Imm == 0x4400)
+    O << "4.0";
+  else if (Imm == 0xC400)
+    O << "-4.0";
+  else if (Imm == 0x3118 && STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
+    O << "0.15915494";
+  else
+    return false;
+
+  return true;
+}
+
 void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
@@ -469,47 +497,47 @@ void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
     return;
   }
 
-  if (Imm == 0x3C00)
-    O<< "1.0";
-  else if (Imm == 0xBC00)
-    O<< "-1.0";
-  else if (Imm == 0x3800)
-    O<< "0.5";
-  else if (Imm == 0xB800)
-    O<< "-0.5";
-  else if (Imm == 0x4000)
-    O<< "2.0";
-  else if (Imm == 0xC000)
-    O<< "-2.0";
-  else if (Imm == 0x4400)
-    O<< "4.0";
-  else if (Imm == 0xC400)
-    O<< "-4.0";
-  else if (Imm == 0x3118 &&
-           STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm)) {
-    O << "0.15915494";
-  } else {
-    uint64_t Imm16 = static_cast<uint16_t>(Imm);
-    O << formatHex(Imm16);
-  }
+  uint16_t HImm = static_cast<uint16_t>(Imm);
+  if (printImmediateFloat16(HImm, STI, O))
+    return;
+
+  uint64_t Imm16 = static_cast<uint16_t>(Imm);
+  O << formatHex(Imm16);
 }
 
-void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm,
+void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  uint16_t Lo16 = static_cast<uint16_t>(Imm);
-  printImmediate16(Lo16, STI, O);
-}
-
-void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
-                                         const MCSubtargetInfo &STI,
-                                         raw_ostream &O) {
   int32_t SImm = static_cast<int32_t>(Imm);
-  if (SImm >= -16 && SImm <= 64) {
+  if (isInlinableIntLiteral(SImm)) {
     O << SImm;
     return;
   }
 
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+    if (printImmediateFloat32(Imm, STI, O))
+      return;
+    break;
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
+    if (isUInt<16>(Imm) &&
+        printImmediateFloat16(static_cast<uint16_t>(Imm), STI, O))
+      return;
+    break;
+  default:
+    llvm_unreachable("bad operand type");
+  }
+
+  O << formatHex(static_cast<uint64_t>(Imm));
+}
+
+bool AMDGPUInstPrinter::printImmediateFloat32(uint32_t Imm,
+                                              const MCSubtargetInfo &STI,
+                                              raw_ostream &O) {
   if (Imm == llvm::bit_cast<uint32_t>(0.0f))
     O << "0.0";
   else if (Imm == llvm::bit_cast<uint32_t>(1.0f))
@@ -532,7 +560,24 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494";
   else
-    O << formatHex(static_cast<uint64_t>(Imm));
+    return false;
+
+  return true;
+}
+
+void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  int32_t SImm = static_cast<int32_t>(Imm);
+  if (isInlinableIntLiteral(SImm)) {
+    O << SImm;
+    return;
+  }
+
+  if (printImmediateFloat32(Imm, STI, O))
+    return;
+
+  O << formatHex(static_cast<uint64_t>(Imm));
 }
 
 void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
@@ -639,6 +684,20 @@ void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
   printU4ImmDecOperand(MI, OpNo, O);
 }
 
+void AMDGPUInstPrinter::printWaitVAVDst(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  O << " wait_va_vdst:";
+  printU4ImmDecOperand(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  O << " wait_vm_vsrc:";
+  printU4ImmDecOperand(MI, OpNo, O);
+}
+
 void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
@@ -741,25 +800,11 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
-      if (!isUInt<16>(Op.getImm()) &&
-          STI.hasFeature(AMDGPU::FeatureVOP3Literal)) {
-        printImmediate32(Op.getImm(), STI, O);
-        break;
-      }
-
-      //  Deal with 16-bit FP inline immediates not working.
-      if (OpTy == AMDGPU::OPERAND_REG_IMM_V2FP16) {
-        printImmediate16(static_cast<uint16_t>(Op.getImm()), STI, O);
-        break;
-      }
-      [[fallthrough]];
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
-      printImmediateInt16(static_cast<uint16_t>(Op.getImm()), STI, O);
-      break;
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
-      printImmediateV216(Op.getImm(), STI, O);
+      printImmediateV216(Op.getImm(), OpTy, STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_PCREL:
