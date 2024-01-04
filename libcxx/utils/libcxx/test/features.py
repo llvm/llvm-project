@@ -217,6 +217,17 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    Feature(
+        name="long-double-is-double",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) {
+              static_assert(sizeof(long double) == sizeof(double));
+            }
+            """,
+        ),
+    ),
     # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
     # on all supported platforms.
     Feature(
