@@ -52,8 +52,8 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
 
   auto ResultI = Result->front().begin();
   for (auto &KV : LookupSymbols) {
-    if (*ResultI)
-      NewSymbols[KV.first] = {*ResultI, JITSymbolFlags::Exported};
+    if (ResultI->getAddress())
+      NewSymbols[KV.first] = *ResultI;
     ++ResultI;
   }
 
