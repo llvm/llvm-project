@@ -1056,11 +1056,18 @@ hexadecimal_string_to_float(const char *__restrict src,
   return output;
 }
 
-template <class T>
-LIBC_INLINE typename fputil::FPBits<T>::StorageType
-nan_mantissa_from_ncharseq(const cpp::string_view ncharseq, int *error) {
-  using StorageType = typename fputil::FPBits<T>::StorageType;
-  StorageType nan_mantissa = 0;
+struct NanMantissaResult {
+  uint64_t value;
+  int error;
+
+  LIBC_INLINE constexpr NanMantissaResult(uint64_t value, int error)
+      : value(value), error(0) {}
+};
+
+LIBC_INLINE NanMantissaResult
+nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
+  uint64_t nan_mantissa = 0;
+  int error = 0;
 
   if (ncharseq.data() != nullptr && isdigit(*ncharseq.data())) {
     // This is to prevent errors when StorageType is larger than 64
@@ -1069,15 +1076,15 @@ nan_mantissa_from_ncharseq(const cpp::string_view ncharseq, int *error) {
     // for the input type "NAN(n-char-sequence)" that "the meaning of
     // the n-char sequence is implementation-defined."
     auto strtoint_result = strtointeger<uint64_t>(ncharseq.data(), 0);
-    if (strtoint_result.has_error() && error != nullptr)
-      *error = strtoint_result.error;
+    if (strtoint_result.has_error())
+      error = strtoint_result.error;
 
-    nan_mantissa = static_cast<StorageType>(strtoint_result.value);
+    nan_mantissa = strtoint_result.value;
     if (strtoint_result.parsed_len != (ptrdiff_t)ncharseq.size())
       nan_mantissa = 0;
   }
 
-  return nan_mantissa;
+  return NanMantissaResult(nan_mantissa, error);
 }
 
 // Takes a pointer to a string and a pointer to a string pointer. This function
@@ -1172,9 +1179,10 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           ++index;
         if (src[index] == ')') {
           ++index;
-          nan_mantissa = nan_mantissa_from_ncharseq<T>(
-              cpp::string_view(src + (left_paren + 1), index - left_paren - 2),
-              &error);
+          auto nan_mantissa_result = nan_mantissa_from_ncharseq(
+              cpp::string_view(src + (left_paren + 1), index - left_paren - 2));
+          nan_mantissa = static_cast<StorageType>(nan_mantissa_result.value);
+          error = nan_mantissa_result.error;
         } else {
           index = left_paren;
         }
@@ -1231,8 +1239,10 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
     ++index;
 
   if (arg[index] == '\0') {
-    nan_mantissa =
-        nan_mantissa_from_ncharseq<T>(cpp::string_view(arg, index), &error);
+    auto nan_mantissa_result =
+        nan_mantissa_from_ncharseq(cpp::string_view(arg, index));
+    nan_mantissa = static_cast<StorageType>(nan_mantissa_result.value);
+    error = nan_mantissa_result.error;
   }
 
   result = FPBits(result.build_quiet_nan(nan_mantissa));
