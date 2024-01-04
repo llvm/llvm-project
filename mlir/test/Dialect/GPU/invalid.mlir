@@ -16,7 +16,7 @@ func.func @no_region_attrs(%sz : index) {
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
   return
 }
 
