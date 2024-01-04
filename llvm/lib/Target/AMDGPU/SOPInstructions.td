@@ -1734,6 +1734,8 @@ let SubtargetPredicate = isGFX10Plus in {
       let simm16 = 0;
       let fixed_imm = 1;
     }
+  def S_WAITCNT_DEPCTR :
+    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;
 
   let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
@@ -1748,11 +1750,6 @@ let SubtargetPredicate = isGFX10Plus in {
     SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_ttracedata_imm timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX10Plus
-
-let SubtargetPredicate = isGFX10GFX11 in {
-  def S_WAITCNT_DEPCTR :
-    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;
-} // End SubtargetPredicate = isGFX10GFX11
 
 let SubtargetPredicate = isGFX11Plus in {
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
