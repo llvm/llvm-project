@@ -532,6 +532,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(REM_F);
   case TargetOpcode::G_FPOW:
     RTLIBCASE(POW_F);
+  case TargetOpcode::G_FPOWI:
+    RTLIBCASE(POWI_F);
   case TargetOpcode::G_FMA:
     RTLIBCASE(FMA_F);
   case TargetOpcode::G_FSIN:
@@ -1010,6 +1012,27 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return UnableToLegalize;
     }
     auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_FPOWI: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    Type *ITy = IntegerType::get(
+        Ctx, MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+    std::initializer_list<CallLowering::ArgInfo> Args = {
+        {MI.getOperand(1).getReg(), HLTy, 0},
+        {MI.getOperand(2).getReg(), ITy, 1}};
+    LegalizeResult Status =
+        createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), HLTy, 0},
+                      Args, LocObserver, &MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -4557,6 +4580,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorReductions(MI, TypeIdx, NarrowTy);
   case G_SHUFFLE_VECTOR:
     return fewerElementsVectorShuffle(MI, TypeIdx, NarrowTy);
+  case G_FPOWI:
+    return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
   default:
     return UnableToLegalize;
   }

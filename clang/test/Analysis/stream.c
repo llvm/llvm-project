@@ -102,6 +102,13 @@ void f_open(void) {
   fclose(p);
 }
 
+void f_dopen(int fd) {
+  FILE *F = fdopen(fd, "r");
+  char buf[1024];
+  fread(buf, 1, 1, F); // expected-warning {{Stream pointer might be NULL}}
+  fclose(F);
+}
+
 void f_seek(void) {
   FILE *p = fopen("foo", "r");
   if (!p)
