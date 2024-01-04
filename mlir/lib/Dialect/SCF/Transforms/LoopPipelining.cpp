@@ -67,6 +67,10 @@ protected:
   /// the Value.
   std::pair<Operation *, int64_t> getDefiningOpAndDistance(Value value);
 
+  /// Return true if the schedule is possible and return false otherwise. A
+  /// schedule is correct if all definitions are scheduled before uses.
+  bool verifySchedule();
+
 public:
   /// Initalize the information for the given `op`, return true if it
   /// satisfies the pre-condition to apply pipelining.
@@ -154,6 +158,11 @@ bool LoopPipelinerInternal::initializeLoopInfo(
       LDBG("--op not assigned a pipeline stage: " << op << " -> BAIL");
       return false;
     }
+  }
+
+  if (!verifySchedule()) {
+    LDBG("--invalid schedule: " << op << " -> BAIL");
+    return false;
   }
 
   // Currently, we do not support assigning stages to ops in nested regions. The
@@ -328,6 +337,39 @@ LoopPipelinerInternal::getDefiningOpAndDistance(Value value) {
   if (!def)
     return {nullptr, 0};
   return {def, distance};
+}
+
+/// Compute unrolled cycles of each op and verify that each op is scheduled
+/// after its operands (modulo the distance between producer and consumer).
+bool LoopPipelinerInternal::verifySchedule() {
+  int64_t numCylesPerIter = opOrder.size();
+  // Pre-compute the unrolled cycle of each op.
+  DenseMap<Operation *, int64_t> unrolledCyles;
+  for (int64_t cycle = 0; cycle < numCylesPerIter; cycle++) {
+    Operation *def = opOrder[cycle];
+    auto it = stages.find(def);
+    assert(it != stages.end());
+    int64_t stage = it->second;
+    unrolledCyles[def] = cycle + stage * numCylesPerIter;
+  }
+  for (Operation *consumer : opOrder) {
+    int64_t consumerCycle = unrolledCyles[consumer];
+    for (Value operand : consumer->getOperands()) {
+      auto [producer, distance] = getDefiningOpAndDistance(operand);
+      if (!producer)
+        continue;
+      auto it = unrolledCyles.find(producer);
+      // Skip producer coming from outside the loop.
+      if (it == unrolledCyles.end())
+        continue;
+      int64_t producerCycle = it->second;
+      if (consumerCycle < producerCycle - numCylesPerIter * distance) {
+        consumer->emitError("operation scheduled before its operands.");
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 scf::ForOp LoopPipelinerInternal::createKernelLoop(
