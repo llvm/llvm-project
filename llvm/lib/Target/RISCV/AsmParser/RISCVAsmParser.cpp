@@ -1515,7 +1515,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 1,
-        "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo/%tlsdesc_hi modifier or an "
+        "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo/%tlsdesc_hi "
+        "modifier or an "
         "integer in the range");
   case Match_InvalidSImm12Lsb0:
     return generateImmOutOfRangeError(
