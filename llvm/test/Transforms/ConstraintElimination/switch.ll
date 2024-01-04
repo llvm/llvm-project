@@ -181,4 +181,117 @@ exit.2:
   ret i1 %c.6
 }
 
+define i1 @test_switch_with_same_dest(i32 %a) {
+; CHECK-LABEL: @test_switch_with_same_dest(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], 1023
+; CHECK-NEXT:    switch i32 [[B]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 37, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 38, label [[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B]], 1023
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       sw.default:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %b = and i32 %a, 1023
+  switch i32 %b, label %sw.default [
+  i32 37, label %sw.bb
+  i32 38, label %sw.bb
+  ]
+
+sw.bb:
+  %cmp = icmp eq i32 %b, 1023
+  ret i1 %cmp
+sw.default:
+  ret i1 false
+}
+
+define i1 @test_switch_with_same_dest_zext(i16 %a) {
+; CHECK-LABEL: @test_switch_with_same_dest_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = and i16 [[A:%.*]], 1023
+; CHECK-NEXT:    [[B_EXT:%.*]] = zext nneg i16 [[B]] to i32
+; CHECK-NEXT:    switch i32 [[B_EXT]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 37, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 38, label [[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[B]], 1023
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       sw.default:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %b = and i16 %a, 1023
+  %b.ext = zext nneg i16 %b to i32
+  switch i32 %b.ext, label %sw.default [
+  i32 37, label %sw.bb
+  i32 38, label %sw.bb
+  ]
+
+sw.bb:
+  %cmp = icmp eq i16 %b, 1023
+  ret i1 %cmp
+sw.default:
+  ret i1 false
+}
+
+; Negative tests
+
+define i1 @test_switch_with_same_dest_fail1(i32 %a) {
+; CHECK-LABEL: @test_switch_with_same_dest_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], 1023
+; CHECK-NEXT:    switch i32 [[B]], label [[SW_BB:%.*]] [
+; CHECK-NEXT:      i32 37, label [[SW_BB]]
+; CHECK-NEXT:      i32 38, label [[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B]], 1023
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = and i32 %a, 1023
+  switch i32 %b, label %sw.bb [
+  i32 37, label %sw.bb
+  i32 38, label %sw.bb
+  ]
+
+sw.bb:
+  %cmp = icmp eq i32 %b, 1023
+  ret i1 %cmp
+}
+
+define i1 @test_switch_with_same_dest_fail2(i32 %a, i1 %cond) {
+; CHECK-LABEL: @test_switch_with_same_dest_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], 1023
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[SW_BB:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    switch i32 [[B]], label [[SW_BB]] [
+; CHECK-NEXT:      i32 37, label [[SW_BB]]
+; CHECK-NEXT:      i32 38, label [[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B]], 1023
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %b = and i32 %a, 1023
+  br i1 %cond, label %if.then, label %sw.bb
+
+if.then:
+  switch i32 %b, label %sw.bb [
+  i32 37, label %sw.bb
+  i32 38, label %sw.bb
+  ]
+
+sw.bb:
+  %cmp = icmp eq i32 %b, 1023
+  ret i1 %cmp
+}
+
 declare void @use(i1)
