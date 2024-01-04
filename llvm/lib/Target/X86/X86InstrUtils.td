@@ -1005,7 +1005,7 @@ class BinOpRR_RF_Rev<bits<8> o, string m, X86TypeInfo t, bit ndd = 0>
 }
 // BinOpRRF_RF - Instructions that read "reg, reg", write "reg" and read/write
 // EFLAGS.
-class BinOpRRF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, bit ndd = 0>
+class BinOpRRF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag, bit ndd = 0>
   : BinOpRR<o, m, !if(!eq(ndd, 0), binop_args, binop_ndd_args), t, (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS,
              (node t.RegClass:$src1, t.RegClass:$src2,
@@ -1041,7 +1041,7 @@ class BinOpRM_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, bit
              (t.LoadNode addr:$src2)))]>, DefEFLAGS, NDD<ndd>;
 // BinOpRMF_RF - Instructions that read "reg, [mem]", write "reg" and read/write
 // EFLAGS.
-class BinOpRMF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, bit ndd = 0>
+class BinOpRMF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag, bit ndd = 0>
   : BinOpRM<o, m, !if(!eq(ndd, 0), binop_args, binop_ndd_args), t, (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS,
              (node t.RegClass:$src1, (t.LoadNode addr:$src2), EFLAGS))]>,
