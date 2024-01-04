@@ -150,16 +150,22 @@ class CoverageMappingGen {
   SourceManager &SM;
   const LangOptions &LangOpts;
   llvm::DenseMap<const Stmt *, unsigned> *CounterMap;
+  llvm::DenseMap<const Stmt *, unsigned> *MCDCBitmapMap;
+  llvm::DenseMap<const Stmt *, unsigned> *CondIDMap;
 
 public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts)
-      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(nullptr) {}
+      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(nullptr),
+        MCDCBitmapMap(nullptr), CondIDMap(nullptr) {}
 
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts,
-                     llvm::DenseMap<const Stmt *, unsigned> *CounterMap)
-      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap) {}
+                     llvm::DenseMap<const Stmt *, unsigned> *CounterMap,
+                     llvm::DenseMap<const Stmt *, unsigned> *MCDCBitmapMap,
+                     llvm::DenseMap<const Stmt *, unsigned> *CondIDMap)
+      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
+        MCDCBitmapMap(MCDCBitmapMap), CondIDMap(CondIDMap) {}
 
   /// Emit the coverage mapping data which maps the regions of
   /// code to counters that will be used to find the execution
