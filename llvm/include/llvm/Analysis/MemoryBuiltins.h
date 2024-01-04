@@ -190,38 +190,37 @@ Value *lowerObjectSizeCall(
 /// SizeOffsetType - A base template class for the object size visitors. Used
 /// here as a self-documenting way to handle the values rather than using a
 /// \p std::pair.
-template <typename T> struct SizeOffsetType {
+template <typename T, class C> class SizeOffsetType {
+public:
   T Size;
   T Offset;
 
   SizeOffsetType() = default;
   SizeOffsetType(T Size, T Offset) : Size(Size), Offset(Offset) {}
-  virtual ~SizeOffsetType() = default;
 
-  virtual bool knownSize() const = 0;
-  virtual bool knownOffset() const = 0;
+  bool anyKnown() const { return C::known(Size) || C::known(Offset); }
+  bool bothKnown() const { return C::known(Size) && C::known(Offset); }
 
-  bool anyKnown() const { return knownSize() || knownOffset(); }
-  bool bothKnown() const { return knownSize() && knownOffset(); }
-
-  bool operator==(const SizeOffsetType<T> &RHS) const {
-    // Cast here to get the 'Value*' from the 'WeakTrackingVH' object.
-    return static_cast<T>(Size) == static_cast<T>(RHS.Size) &&
-           static_cast<T>(Offset) == static_cast<T>(RHS.Offset);
+  bool operator==(const SizeOffsetType<T, C> &RHS) const {
+    return Size == RHS.Size && Offset == RHS.Offset;
   }
-  bool operator!=(const SizeOffsetType<T> &RHS) const {
+  bool operator!=(const SizeOffsetType<T, C> &RHS) const {
     return !(*this == RHS);
   }
 };
 
 /// SizeOffsetAPInt - Used by \p ObjectSizeOffsetVisitor, which works with
 /// \p APInts.
-struct SizeOffsetAPInt : public SizeOffsetType<APInt> {
+class SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
+  friend class SizeOffsetType;
+  static bool known(APInt V) { return V.getBitWidth() > 1; }
+
+public:
   SizeOffsetAPInt() = default;
   SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
 
-  bool knownSize() const override { return Size.getBitWidth() > 1; }
-  bool knownOffset() const override { return Offset.getBitWidth() > 1; }
+  bool knownSize() const { return SizeOffsetAPInt::known(Size); }
+  bool knownOffset() const { return SizeOffsetAPInt::known(Offset); }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*
@@ -276,27 +275,36 @@ private:
 
 /// SizeOffsetValue - Used by \p ObjectSizeOffsetEvaluator, which works with
 /// \p Values.
-struct SizeOffsetWeakTrackingVH;
-struct SizeOffsetValue : public SizeOffsetType<Value *> {
+class SizeOffsetWeakTrackingVH;
+class SizeOffsetValue : public SizeOffsetType<Value *, SizeOffsetValue> {
+  friend class SizeOffsetType;
+  static bool known(Value *V) { return V != nullptr; }
+
+public:
   SizeOffsetValue() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
   SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
 
-  bool knownSize() const override { return Size != nullptr; }
-  bool knownOffset() const override { return Offset != nullptr; }
+  bool knownSize() const { return SizeOffsetValue::known(Size); }
+  bool knownOffset() const { return SizeOffsetValue::known(Offset); }
 };
 
 /// SizeOffsetWeakTrackingVH - Used by \p ObjectSizeOffsetEvaluator in a
 /// \p DenseMap.
-struct SizeOffsetWeakTrackingVH : public SizeOffsetType<WeakTrackingVH> {
+class SizeOffsetWeakTrackingVH
+    : public SizeOffsetType<WeakTrackingVH, SizeOffsetWeakTrackingVH> {
+  friend class SizeOffsetType;
+  static bool known(WeakTrackingVH V) { return V.pointsToAliveValue(); }
+
+public:
   SizeOffsetWeakTrackingVH() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetWeakTrackingVH(Value *Size, Value *Offset)
       : SizeOffsetType(Size, Offset) {}
   SizeOffsetWeakTrackingVH(const SizeOffsetValue &SOV)
       : SizeOffsetType(SOV.Size, SOV.Offset) {}
 
-  bool knownSize() const override { return Size.pointsToAliveValue(); }
-  bool knownOffset() const override { return Offset.pointsToAliveValue(); }
+  bool knownSize() const { return SizeOffsetWeakTrackingVH::known(Size); }
+  bool knownOffset() const { return SizeOffsetWeakTrackingVH::known(Offset); }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*.
