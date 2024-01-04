@@ -10,7 +10,6 @@
 
 #include "FormatTestUtils.h"
 #include "TestLexer.h"
-#include "clang/Basic/TokenKinds.h"
 #include "gtest/gtest.h"
 
 namespace clang {
