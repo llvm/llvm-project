@@ -19,7 +19,7 @@ transform.sequence failures(propagate) {
      %arg2: !transform.op<"linalg.elemwise_binary">):
   // The actual tiling transformation takes tile sizes as attributes.
   // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them}}
-  %loop, %tiled = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
+  %tiled, %loop = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
       : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
   // This is trying to use an invalidated handle leading to undefined behavior.
@@ -64,7 +64,7 @@ transform.sequence failures(propagate) {
 
   // The actual tiling transformation takes tile sizes as attributes.
   // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them}}
-  %loop, %tiled = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
+  %tiled, %loop = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
     : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
   // Consuming an operand invalidates the consumed handle and any other handle that is
