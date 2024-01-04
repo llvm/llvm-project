@@ -611,12 +611,12 @@ static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
   if (MBB.empty())
     return true;
 
-  // Branching spirv intrinsics are not detected by this generic method.
+  // Branching SPIR-V intrinsics are not detected by this generic method.
   // Thus, we can only trust negative result.
   if (!MBB.canFallThrough())
     return false;
 
-  // Otherwise, we must manually check if we have a spirv intrinsic which
+  // Otherwise, we must manually check if we have a SPIR-V intrinsic which
   // prevent an implicit fallthrough.
   for (MachineBasicBlock::reverse_iterator It = MBB.rbegin(), E = MBB.rend();
        It != E; ++It) {
