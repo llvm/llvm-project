@@ -21,7 +21,7 @@ concept iter_moveable = requires(T&& t) { std::ranges::iter_move(t); };
 constexpr bool test() {
   {
     int iter_move_counter(0);
-    using View       = IterSwapRange<true, true>;
+    using View       = IterMoveIterSwapTestRange<true, true>;
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(&iter_move_counter), 1).begin();
 
@@ -35,7 +35,7 @@ constexpr bool test() {
 
   {
     int iter_move_counter(0);
-    using View       = IterSwapRange<true, false>;
+    using View       = IterMoveIterSwapTestRange<true, false>;
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(&iter_move_counter), 1).begin();
 
