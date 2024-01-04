@@ -1369,7 +1369,7 @@ SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
 }
 
 bool SymbolFileNativePDB::ParseSupportFiles(CompileUnit &comp_unit,
-                                            FileSpecList &support_files) {
+                                            SupportFileList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   PdbSymUid cu_id(comp_unit.GetID());
   lldbassert(cu_id.kind() == PdbSymUidKind::Compiland);
@@ -1416,7 +1416,7 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
     return;
   InlineeSourceLine inlinee_line = iter->second;
 
-  const FileSpecList &files = comp_unit->GetSupportFiles();
+  const SupportFileList &files = comp_unit->GetSupportFiles();
   FileSpec decl_file;
   llvm::Expected<uint32_t> file_index_or_err =
       GetFileIndex(*cii, inlinee_line.Header->FileID);
@@ -2265,7 +2265,8 @@ void SymbolFileNativePDB::BuildParentMap() {
   }
   for (TypeIndex fwd : fwd_keys) {
     TypeIndex full = forward_to_full[fwd];
-    m_parent_types[full] = m_parent_types[fwd];
+    TypeIndex parent_idx = m_parent_types[fwd];
+    m_parent_types[full] = parent_idx;
   }
   for (TypeIndex full : full_keys) {
     TypeIndex fwd = full_to_forward[full];

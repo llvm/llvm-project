@@ -1291,16 +1291,19 @@ LLVM_READNONE
 bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
+std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);
 
 LLVM_READNONE
-bool isInlinableIntLiteralV216(int32_t Literal);
+std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
 
 LLVM_READNONE
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType);
+bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
-bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralV2I16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV2F16(uint32_t Literal);
 
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);

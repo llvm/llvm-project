@@ -1218,8 +1218,8 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
       | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments)
-        `)`
+            type($waitOperands), $waitOperandsDeviceType,
+            $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
     )
