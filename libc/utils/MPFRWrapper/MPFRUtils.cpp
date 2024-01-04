@@ -49,7 +49,7 @@ template <> struct ExtraPrecision<long double> {
 template <typename T>
 static inline unsigned int get_precision(double ulp_tolerance) {
   if (ulp_tolerance <= 0.5) {
-    return LIBC_NAMESPACE::fputil::FloatProperties<T>::MANTISSA_PRECISION;
+    return LIBC_NAMESPACE::fputil::FPBits<T>::MANTISSA_PRECISION;
   } else {
     return ExtraPrecision<T>::VALUE;
   }

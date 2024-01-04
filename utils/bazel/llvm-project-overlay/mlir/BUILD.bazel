@@ -3197,6 +3197,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Mesh/IR/MeshOps.td",
     deps = [
         ":MeshTdFiles",
+        ":ShapeOpsTdFiles",
     ],
 )
 
@@ -3275,12 +3276,16 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":MeshDialect",
         ":MeshShardingInterface",
         ":MeshTransformsPassIncGen",
         ":Pass",
+        ":Support",
+        ":TensorDialect",
         ":TransformUtils",
         "//llvm:Support",
     ],
