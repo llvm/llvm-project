@@ -2604,19 +2604,11 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   return false;
 }
 
-bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
-  return isTriviallyCopyableTypeImpl(*this,Context,false);
-}
-
-bool QualType::isTriviallyCopyConstructibleType(const ASTContext &Context) const {
-  return isTriviallyCopyableTypeImpl(*this,Context,true);
-}
-
-bool QualType::isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible){
+static bool isTriviallyCopyableTypeImpl(const QualType &type, const ASTContext &Context,bool copy_constructible){
   if (type->isArrayType())
-    return Context.getBaseElementType(type).isTriviallyCopyableTypeImpl(type,Context,copy_constructible);
+    return isTriviallyCopyableTypeImpl(Context.getBaseElementType(type),Context,copy_constructible);
 
-  if (hasNonTrivialObjCLifetime())
+  if (type.hasNonTrivialObjCLifetime())
     return false;
 
   // C++11 [basic.types]p9 - See Core 2094
@@ -2624,7 +2616,7 @@ bool QualType::isTriviallyCopyableTypeImpl(const QualType &type, const ASTContex
   //   cv-qualified versions of these types are collectively
   //   called trivially copy constructible types.
 
-  QualType CanonicalType = getCanonicalType();
+  QualType CanonicalType = type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2642,16 +2634,30 @@ bool QualType::isTriviallyCopyableTypeImpl(const QualType &type, const ASTContex
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (!ClassDecl->isTriviallyCopyConstructible())
-        return false;
+      if(copy_constructible){
+        return ClassDecl->isTriviallyCopyConstructible();
+      }
+    else{
+      return ClassDecl->isTriviallyCopyable();
+
     }
-
-    return true;
+    }
+  return true;
+ 
   }
-
-  // No other types can match.
-  return false;
+// No other types can match.
+ return false;
 }
+
+bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this,Context,/*IsCopyConstructible=*/false);
+}
+
+bool QualType::isTriviallyCopyConstructibleType(const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this,Context,/*IsCopyConstructible=*/true);
+}
+
+
 
 bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
   QualType BaseElementType = Context.getBaseElementType(*this);
