@@ -648,11 +648,10 @@ end
   only in function references, but not an explicit `INTRINSIC` statement,
   its name is not brought into other scopes by a `USE` statement.
 
-* Should hexadecimal floating-point input editing apply any rounding?
-  F'2023 subclause 13.7.2.3.8 only discusses rounding in the context of
-  decimal-to-binary conversion; it would seem to not apply, and so
-  we don't round.  This seems to be how the Intel Fortran compilers
-  behave.
+* The subclause on rounding in formatted I/O (13.7.2.3.8 in F'2023)
+  only discusses rounding for decimal-to/from-binary conversions,
+  omitting any mention of rounding for hexadecimal conversions.
+  As other compilers do apply rounding, so does this one.
 
 ## De Facto Standard Features
 
