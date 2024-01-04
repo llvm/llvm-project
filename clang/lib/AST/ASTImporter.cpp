@@ -6141,6 +6141,11 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
                                                   InsertPos))
       // Add this partial specialization to the class template.
       ClassTemplate->AddPartialSpecialization(PartSpec2, InsertPos);
+    if (Expected<ClassTemplatePartialSpecializationDecl *> ToInstOrErr =
+            import(PartialSpec->getInstantiatedFromMember()))
+      PartSpec2->setInstantiatedFromMember(*ToInstOrErr);
+    else
+      return ToInstOrErr.takeError();
 
     updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.

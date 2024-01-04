@@ -968,23 +968,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   if (!StepOffset.isOne()) {
-    auto *UpperGEP = dyn_cast<GetElementPtrInst>(B);
-    if (!UpperGEP || UpperGEP->getPointerOperand() != StartValue ||
-        !UpperGEP->isInBounds())
-      return;
-
-    MapVector<Value *, APInt> UpperVariableOffsets;
-    APInt UpperConstantOffset(StepOffset.getBitWidth(), 0);
-    const DataLayout &DL = BB.getModule()->getDataLayout();
-    if (!UpperGEP->collectOffset(DL, StepOffset.getBitWidth(),
-                                 UpperVariableOffsets, UpperConstantOffset))
-      return;
-    // All variable offsets and the constant offset have to be a multiple of the
-    // step.
-    if (!UpperConstantOffset.urem(StepOffset).isZero() ||
-        any_of(UpperVariableOffsets, [&StepOffset](const auto &P) {
-          return !P.second.urem(StepOffset).isZero();
-        }))
+    // Check whether B-Start is known to be a multiple of StepOffset.
+    const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
+    if (isa<SCEVCouldNotCompute>(BMinusStart) ||
+        !SE.getConstantMultiple(BMinusStart).urem(StepOffset).isZero())
       return;
   }
 
@@ -1655,15 +1642,14 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                            DFSInStack);
     }
 
-    LLVM_DEBUG(dbgs() << "Processing ");
-
     // For a block, check if any CmpInsts become known based on the current set
     // of constraints.
     if (CB.isCheck()) {
       Instruction *Inst = CB.getInstructionToSimplify();
       if (!Inst)
         continue;
-      LLVM_DEBUG(dbgs() << "condition to simplify: " << *Inst << "\n");
+      LLVM_DEBUG(dbgs() << "Processing condition to simplify: " << *Inst
+                        << "\n");
       if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
         Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
       } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
@@ -1682,7 +1668,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     }
 
     auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B) {
-      LLVM_DEBUG(dbgs() << "fact to add to the system: ";
+      LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
                  dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
         LLVM_DEBUG(
@@ -1731,8 +1717,17 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       A = CB.Cond.Op0;
       B = CB.Cond.Op1;
       if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
-          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1))
+          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1)) {
+        LLVM_DEBUG({
+          dbgs() << "Not adding fact ";
+          dumpUnpackedICmp(dbgs(), Pred, A, B);
+          dbgs() << " because precondition ";
+          dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
+                           CB.DoesHold.Op1);
+          dbgs() << " does not hold.\n";
+        });
         continue;
+      }
     } else {
       bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
                                         m_ICmp(Pred, m_Value(A), m_Value(B))));
