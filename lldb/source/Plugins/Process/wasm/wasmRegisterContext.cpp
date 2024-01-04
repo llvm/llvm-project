@@ -40,8 +40,34 @@ const RegisterInfo *WasmRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
     return m_reg_info_sp->GetRegisterInfoAtIndex(reg);
   }
 
-  WasmVirtualRegisterKinds kind = static_cast<WasmVirtualRegisterKinds>(tag - 1);
-  return new WasmVirtualRegisterInfo(kind, reg & 0x3fffffff);
+  reg &= 0x3fffffff;
+
+  static const uint32_t kMaxVirtualRegisters = 2048;
+  if (reg > kMaxVirtualRegisters) {
+    // Only kMaxVirtualRegisters supported.
+    return nullptr;
+    // return m_reg_info_sp->GetRegisterInfoAtIndex(reg); // ???
+  }
+
+  static WasmVirtualRegisterInfo g_register_infos[kNumWasmVirtualRegisterKinds]
+                                                 [kMaxVirtualRegisters];
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&]() {
+    for (int i_kind = WasmVirtualRegisterKinds::eLocal;
+         i_kind < WasmVirtualRegisterKinds::kNumWasmVirtualRegisterKinds;
+         i_kind++) {
+      WasmVirtualRegisterKinds kind =
+          static_cast<WasmVirtualRegisterKinds>(i_kind);
+      for (uint32_t i_reg = 0; i_reg < kMaxVirtualRegisters; i_reg++) {
+        g_register_infos[static_cast<WasmVirtualRegisterKinds>(kind)][i_reg] = {
+            kind, i_reg};
+      }
+    }
+  });
+
+  WasmVirtualRegisterKinds kind =
+      static_cast<WasmVirtualRegisterKinds>(tag - 1);
+  return &g_register_infos[kind][reg];
 }
 
 size_t WasmRegisterContext::GetRegisterSetCount() { return 0; }

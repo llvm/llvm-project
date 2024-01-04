@@ -31,6 +31,7 @@ struct WasmVirtualRegisterInfo : public RegisterInfo {
   WasmVirtualRegisterKinds kind;
   uint32_t index;
 
+  WasmVirtualRegisterInfo() : RegisterInfo(), kind(eLocal), index(0) {}
   WasmVirtualRegisterInfo(WasmVirtualRegisterKinds kind, uint32_t index)
       : RegisterInfo(), kind(kind), index(index) {}
 };
