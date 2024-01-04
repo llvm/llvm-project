@@ -14,4 +14,3 @@ start:                                  # @start
 	add	a0, a0, tp
 	#CHECK: add a0, a0, tp
 	ret
-
