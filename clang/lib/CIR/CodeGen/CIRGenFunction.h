@@ -239,13 +239,16 @@ public:
   // FIXME(cir): move this to CIRGenBuider.h
   mlir::Value buildAlloca(llvm::StringRef name, clang::QualType ty,
                           mlir::Location loc, clang::CharUnits alignment,
-                          bool insertIntoFnEntryBlock = false);
+                          bool insertIntoFnEntryBlock = false,
+                          mlir::Value arraySize = nullptr);
   mlir::Value buildAlloca(llvm::StringRef name, mlir::Type ty,
                           mlir::Location loc, clang::CharUnits alignment,
-                          bool insertIntoFnEntryBlock = false);
+                          bool insertIntoFnEntryBlock = false,
+                          mlir::Value arraySize = nullptr);
   mlir::Value buildAlloca(llvm::StringRef name, mlir::Type ty,
                           mlir::Location loc, clang::CharUnits alignment,
-                          mlir::OpBuilder::InsertPoint ip);
+                          mlir::OpBuilder::InsertPoint ip,
+                          mlir::Value arraySize = nullptr);
 
 private:
   void buildAndUpdateRetAlloca(clang::QualType ty, mlir::Location loc,
@@ -1877,14 +1880,20 @@ public:
   CreateTempAllocaInFnEntryBlock(mlir::Type Ty, mlir::Location Loc,
                                  const Twine &Name = "tmp",
                                  mlir::Value ArraySize = nullptr);
+  mlir::cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
+                                       const Twine &Name = "tmp",
+                                       mlir::OpBuilder::InsertPoint ip = {},
+                                       mlir::Value ArraySize = nullptr);
   Address CreateTempAlloca(mlir::Type Ty, CharUnits align, mlir::Location Loc,
                            const Twine &Name = "tmp",
                            mlir::Value ArraySize = nullptr,
-                           Address *Alloca = nullptr);
+                           Address *Alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address CreateTempAllocaWithoutCast(mlir::Type Ty, CharUnits align,
                                       mlir::Location Loc,
                                       const Twine &Name = "tmp",
-                                      mlir::Value ArraySize = nullptr);
+                                      mlir::Value ArraySize = nullptr,
+                                      mlir::OpBuilder::InsertPoint ip = {});
 
   /// Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns

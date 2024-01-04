@@ -2288,17 +2288,19 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
                                         mlir::Location loc, CharUnits alignment,
-                                        bool insertIntoFnEntryBlock) {
+                                        bool insertIntoFnEntryBlock,
+                                        mlir::Value arraySize) {
   mlir::Block *entryBlock = insertIntoFnEntryBlock
                                 ? getCurFunctionEntryBlock()
                                 : currLexScope->getEntryBlock();
   return buildAlloca(name, ty, loc, alignment,
-                     builder.getBestAllocaInsertPoint(entryBlock));
+                     builder.getBestAllocaInsertPoint(entryBlock), arraySize);
 }
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
                                         mlir::Location loc, CharUnits alignment,
-                                        mlir::OpBuilder::InsertPoint ip) {
+                                        mlir::OpBuilder::InsertPoint ip,
+                                        mlir::Value arraySize) {
   auto localVarPtrTy = mlir::cir::PointerType::get(builder.getContext(), ty);
   auto alignIntAttr = CGM.getSize(alignment);
 
@@ -2308,7 +2310,7 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
     builder.restoreInsertionPoint(ip);
     addr = builder.create<mlir::cir::AllocaOp>(loc, /*addr type*/ localVarPtrTy,
                                                /*var type*/ ty, name,
-                                               alignIntAttr);
+                                               alignIntAttr, arraySize);
     if (currVarDecl) {
       auto alloca = cast<mlir::cir::AllocaOp>(addr.getDefiningOp());
       alloca.setAstAttr(ASTVarDeclAttr::get(builder.getContext(), currVarDecl));
@@ -2319,9 +2321,10 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, QualType ty,
                                         mlir::Location loc, CharUnits alignment,
-                                        bool insertIntoFnEntryBlock) {
+                                        bool insertIntoFnEntryBlock,
+                                        mlir::Value arraySize) {
   return buildAlloca(name, getCIRType(ty), loc, alignment,
-                     insertIntoFnEntryBlock);
+                     insertIntoFnEntryBlock, arraySize);
 }
 
 mlir::Value CIRGenFunction::buildLoadOfScalar(LValue lvalue,
@@ -2469,12 +2472,11 @@ Address CIRGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
 
 /// This creates a alloca and inserts it into the entry block of the
 /// current region.
-Address CIRGenFunction::CreateTempAllocaWithoutCast(mlir::Type Ty,
-                                                    CharUnits Align,
-                                                    mlir::Location Loc,
-                                                    const Twine &Name,
-                                                    mlir::Value ArraySize) {
-  auto Alloca = CreateTempAlloca(Ty, Loc, Name, ArraySize);
+Address CIRGenFunction::CreateTempAllocaWithoutCast(
+    mlir::Type Ty, CharUnits Align, mlir::Location Loc, const Twine &Name,
+    mlir::Value ArraySize, mlir::OpBuilder::InsertPoint ip) {
+  auto Alloca = ip.isSet() ? CreateTempAlloca(Ty, Loc, Name, ip, ArraySize)
+                           : CreateTempAlloca(Ty, Loc, Name, ArraySize);
   Alloca.setAlignmentAttr(CGM.getSize(Align));
   return Address(Alloca, Ty, Align);
 }
@@ -2484,8 +2486,10 @@ Address CIRGenFunction::CreateTempAllocaWithoutCast(mlir::Type Ty,
 Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
                                          mlir::Location Loc, const Twine &Name,
                                          mlir::Value ArraySize,
-                                         Address *AllocaAddr) {
-  auto Alloca = CreateTempAllocaWithoutCast(Ty, Align, Loc, Name, ArraySize);
+                                         Address *AllocaAddr,
+                                         mlir::OpBuilder::InsertPoint ip) {
+  auto Alloca =
+      CreateTempAllocaWithoutCast(Ty, Align, Loc, Name, ArraySize, ip);
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   mlir::Value V = Alloca.getPointer();
@@ -2504,10 +2508,19 @@ mlir::cir::AllocaOp
 CIRGenFunction::CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
                                  const Twine &Name, mlir::Value ArraySize,
                                  bool insertIntoFnEntryBlock) {
-  if (ArraySize)
-    assert(0 && "NYI");
+  return cast<mlir::cir::AllocaOp>(buildAlloca(Name.str(), Ty, Loc, CharUnits(),
+                                               insertIntoFnEntryBlock,
+                                               ArraySize)
+                                       .getDefiningOp());
+}
+
+/// This creates an alloca and inserts it into the provided insertion point
+mlir::cir::AllocaOp CIRGenFunction::CreateTempAlloca(
+    mlir::Type Ty, mlir::Location Loc, const Twine &Name,
+    mlir::OpBuilder::InsertPoint ip, mlir::Value ArraySize) {
+  assert(ip.isSet() && "Insertion point is not set");
   return cast<mlir::cir::AllocaOp>(
-      buildAlloca(Name.str(), Ty, Loc, CharUnits(), insertIntoFnEntryBlock)
+      buildAlloca(Name.str(), Ty, Loc, CharUnits(), ip, ArraySize)
           .getDefiningOp());
 }
 
