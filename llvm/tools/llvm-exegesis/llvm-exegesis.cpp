@@ -106,10 +106,13 @@ static cl::opt<exegesis::Benchmark::RepetitionModeE> RepetitionMode(
     cl::values(
         clEnumValN(exegesis::Benchmark::Duplicate, "duplicate",
                    "Duplicate the snippet"),
-        clEnumValN(exegesis::Benchmark::Loop, "loop",
-                   "Loop over the snippet"),
+        clEnumValN(exegesis::Benchmark::Loop, "loop", "Loop over the snippet"),
         clEnumValN(exegesis::Benchmark::AggregateMin, "min",
-                   "All of the above and take the minimum of measurements")),
+                   "All of the above and take the minimum of measurements"),
+        clEnumValN(exegesis::Benchmark::MiddleHalfDuplicate,
+                   "middle-half-duplicate", "Middle half duplicate mode"),
+        clEnumValN(exegesis::Benchmark::MiddleHalfLoop, "middle-half-loop",
+                   "Middle half loop mode")),
     cl::init(exegesis::Benchmark::Duplicate));
 
 static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
@@ -399,29 +402,37 @@ static void runBenchmarkConfigurations(
   std::optional<ProgressMeter<>> Meter;
   if (BenchmarkMeasurementsPrintProgress)
     Meter.emplace(Configurations.size());
+
+  SmallVector<unsigned, 2> MinInstructions = {NumRepetitions};
+  if (RepetitionMode == Benchmark::MiddleHalfDuplicate ||
+      RepetitionMode == Benchmark::MiddleHalfLoop)
+    MinInstructions.push_back(NumRepetitions * 2);
+
   for (const BenchmarkCode &Conf : Configurations) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
     SmallVector<Benchmark, 2> AllResults;
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
-      auto RC = ExitOnErr(Runner.getRunnableConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor));
-      std::optional<StringRef> DumpFile;
-      if (DumpObjectToDisk.getNumOccurrences())
-        DumpFile = DumpObjectToDisk;
-      auto [Err, BenchmarkResult] =
-          Runner.runConfiguration(std::move(RC), DumpFile);
-      if (Err) {
-        // Errors from executing the snippets are fine.
-        // All other errors are a framework issue and should fail.
-        if (!Err.isA<SnippetExecutionFailure>()) {
-          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
-          exit(1);
+      for (unsigned IterationRepetitions : MinInstructions) {
+        auto RC = ExitOnErr(Runner.getRunnableConfiguration(
+            Conf, IterationRepetitions, LoopBodySize, *Repetitor));
+        std::optional<StringRef> DumpFile;
+        if (DumpObjectToDisk.getNumOccurrences())
+          DumpFile = DumpObjectToDisk;
+        auto [Err, BenchmarkResult] =
+            Runner.runConfiguration(std::move(RC), DumpFile);
+        if (Err) {
+          // Errors from executing the snippets are fine.
+          // All other errors are a framework issue and should fail.
+          if (!Err.isA<SnippetExecutionFailure>()) {
+            llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+            exit(1);
+          }
+          BenchmarkResult.Error = toString(std::move(Err));
         }
-        BenchmarkResult.Error = toString(std::move(Err));
+        AllResults.push_back(std::move(BenchmarkResult));
       }
-      AllResults.push_back(std::move(BenchmarkResult));
     }
     Benchmark &Result = AllResults.front();
 
@@ -453,6 +464,26 @@ static void runBenchmarkConfigurations(
                        NewMeasurement.PerInstructionValue);
           Measurement.PerSnippetValue = std::min(
               Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
+        }
+      }
+    } else if (RepetitionMode ==
+                   Benchmark::RepetitionModeE::MiddleHalfDuplicate ||
+               RepetitionMode == Benchmark::RepetitionModeE::MiddleHalfLoop) {
+      for (const Benchmark &OtherResult :
+           ArrayRef<Benchmark>(AllResults).drop_front()) {
+        if (OtherResult.Measurements.empty())
+          continue;
+        assert(OtherResult.Measurements.size() == Result.Measurements.size());
+        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
+          BenchmarkMeasure &Measurement = std::get<0>(I);
+          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
+          Measurement.RawValue = NewMeasurement.RawValue - Measurement.RawValue;
+          Measurement.PerInstructionValue = Measurement.RawValue;
+          Measurement.PerInstructionValue /= Result.NumRepetitions;
+          Measurement.PerSnippetValue = Measurement.RawValue;
+          Measurement.PerSnippetValue *=
+              static_cast<double>(Result.Key.Instructions.size()) /
+              Result.NumRepetitions;
         }
       }
     }

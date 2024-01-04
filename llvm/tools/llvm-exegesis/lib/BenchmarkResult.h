@@ -78,7 +78,7 @@ struct BenchmarkKey {
 struct BenchmarkMeasure {
   // A helper to create an unscaled BenchmarkMeasure.
   static BenchmarkMeasure Create(std::string Key, double Value) {
-    return {Key, Value, Value};
+    return {Key, Value, Value, Value};
   }
   std::string Key;
   // This is the per-instruction value, i.e. measured quantity scaled per
@@ -87,6 +87,8 @@ struct BenchmarkMeasure {
   // This is the per-snippet value, i.e. measured quantity for one repetition of
   // the whole snippet.
   double PerSnippetValue;
+  // This is the raw value collected from the full execution.
+  double RawValue;
 };
 
 // The result of an instruction benchmark.
@@ -101,7 +103,13 @@ struct Benchmark {
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
   unsigned NumRepetitions = 0;
-  enum RepetitionModeE { Duplicate, Loop, AggregateMin };
+  enum RepetitionModeE {
+    Duplicate,
+    Loop,
+    AggregateMin,
+    MiddleHalfDuplicate,
+    MiddleHalfLoop
+  };
   // Note that measurements are per instruction.
   std::vector<BenchmarkMeasure> Measurements;
   std::string Error;
