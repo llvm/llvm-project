@@ -18,8 +18,6 @@
 #include <utility>
 
 #if defined(_WIN32)
-#  define WIN32_LEAN_AND_MEAN
-#  define NOMINMAX
 #  include <io.h>
 #  include <windows.h>
 #else
