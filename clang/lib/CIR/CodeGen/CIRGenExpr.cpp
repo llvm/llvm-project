@@ -868,7 +868,8 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
 LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (E->getOpcode() == BO_Comma) {
-    assert(0 && "not implemented");
+    buildIgnoredExpr(E->getLHS());
+    return buildLValue(E->getRHS());
   }
 
   if (E->getOpcode() == BO_PtrMemD || E->getOpcode() == BO_PtrMemI)
