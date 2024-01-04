@@ -649,17 +649,19 @@ DataAggregator::getBinaryFunctionContainingAddress(uint64_t Address) const {
                                                 /*UseMaxSize=*/true);
 }
 
-StringRef DataAggregator::getLocationName(BinaryFunction &Func,
-                                          uint64_t Count) {
+std::pair<StringRef, bool>
+DataAggregator::getLocationName(const BinaryFunction &Func) const {
   if (!BAT)
-    return Func.getOneName();
+    return {Func.getOneName(), false};
 
+  bool LinkedToHot = false;
   const BinaryFunction *OrigFunc = &Func;
   if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress())) {
-    NumColdSamples += Count;
     BinaryFunction *HotFunc = getBinaryFunctionContainingAddress(HotAddr);
-    if (HotFunc)
+    if (HotFunc) {
       OrigFunc = HotFunc;
+      LinkedToHot = true;
+    }
   }
   // If it is a local function, prefer the name containing the file name where
   // the local function was declared
@@ -670,9 +672,9 @@ StringRef DataAggregator::getLocationName(BinaryFunction &Func,
     if (FileNameIdx == StringRef::npos ||
         AlternativeName.find('/', FileNameIdx + 1) == StringRef::npos)
       continue;
-    return AlternativeName;
+    return {AlternativeName, LinkedToHot};
   }
-  return OrigFunc->getOneName();
+  return {OrigFunc->getOneName(), LinkedToHot};
 }
 
 bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
@@ -680,7 +682,11 @@ bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
     bool Success;
-    StringRef LocName = getLocationName(Func, Count);
+    bool LinkedToHot;
+    StringRef LocName;
+    std::tie(LocName, LinkedToHot) = getLocationName(Func);
+    if (LinkedToHot)
+      NumColdSamples += Count;
     std::tie(I, Success) = NamesToSamples.insert(
         std::make_pair(Func.getOneName(),
                        FuncSampleData(LocName, FuncSampleData::ContainerTy())));
@@ -700,7 +706,10 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
   FuncBranchData *AggrData = getBranchData(Func);
   if (!AggrData) {
     AggrData = &NamesToBranches[Func.getOneName()];
-    AggrData->Name = getLocationName(Func, Count);
+    bool LinkedToHot;
+    std::tie(AggrData->Name, LinkedToHot) = getLocationName(Func);
+    if (LinkedToHot)
+      NumColdSamples += Count;
     setBranchData(Func, AggrData);
   }
 
@@ -729,7 +738,10 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   StringRef SrcFunc;
   StringRef DstFunc;
   if (FromFunc) {
-    SrcFunc = getLocationName(*FromFunc, Count);
+    bool LinkedToHot;
+    std::tie(SrcFunc, LinkedToHot) = getLocationName(*FromFunc);
+    if (LinkedToHot)
+      NumColdSamples += Count;
     FromAggrData = getBranchData(*FromFunc);
     if (!FromAggrData) {
       FromAggrData = &NamesToBranches[FromFunc->getOneName()];
@@ -743,7 +755,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
-    DstFunc = getLocationName(*ToFunc, 0);
+    std::tie(DstFunc, std::ignore) = getLocationName(*ToFunc);
     ToAggrData = getBranchData(*ToFunc);
     if (!ToAggrData) {
       ToAggrData = &NamesToBranches[ToFunc->getOneName()];

@@ -731,6 +731,10 @@ Error RewriteInstance::run() {
 
   processProfileData();
 
+  // Save input binary metadata if BAT section needs to be emitted
+  if (opts::EnableBAT)
+    BAT->saveMetadata(*BC);
+
   postProcessFunctions();
 
   processMetadataPostCFG();
@@ -4112,6 +4116,7 @@ void RewriteInstance::encodeBATSection() {
                                   copyByteArray(BoltInfo), BoltInfo.size(),
                                   /*Alignment=*/1,
                                   /*IsReadOnly=*/true, ELF::SHT_NOTE);
+  outs() << "BOLT-INFO: BAT section size (bytes): " << BoltInfo.size() << '\n';
 }
 
 template <typename ELFShdrTy>
