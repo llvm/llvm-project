@@ -12,5 +12,6 @@
 CONSTATTR half
 MATH_MANGLE(native_rsqrt)(half x)
 {
+    #pragma clang fp contract(fast)
     return 1.0h / __builtin_sqrtf16(x);
 }
