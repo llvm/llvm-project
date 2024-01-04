@@ -5,7 +5,6 @@ import re
 import subprocess
 import sys
 import errno
-import getpass
 
 import lit.util
 from lit.llvm.subst import FindTool
@@ -15,10 +14,9 @@ lit_path_displayed = False
 
 
 def user_is_root():
-    # getpass.getuser() can throw an exception in some cases:
-    # See https://github.com/python/cpython/issues/76912
+    # os.getuid() is not available on all platforms
     try:
-        if getpass.getuser() == "root":
+        if os.getuid() == 0:
             return True
     except:
         pass
