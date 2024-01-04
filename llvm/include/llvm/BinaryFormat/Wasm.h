@@ -263,8 +263,18 @@ enum : unsigned {
   WASM_TYPE_F32 = 0x7D,
   WASM_TYPE_F64 = 0x7C,
   WASM_TYPE_V128 = 0x7B,
+  WASM_TYPE_NULLFUNCREF = 0x73,
+  WASM_TYPE_NULLEXTERNREF = 0x72,
+  WASM_TYPE_NULLREF = 0x71,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXTERNREF = 0x6F,
+  WASM_TYPE_ANYREF = 0x6E,
+  WASM_TYPE_EQREF = 0x6D,
+  WASM_TYPE_I31REF = 0x6C,
+  WASM_TYPE_STRUCTREF = 0x6B,
+  WASM_TYPE_ARRAYREF = 0x6A,
+  WASM_TYPE_EXNREF = 0x69,
+  WASM_TYPE_NONNULLABLE = 0x64,
   WASM_TYPE_NULLABLE = 0x63,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_ARRAY = 0x5E, // Composite types, not used for codegen
@@ -437,13 +447,15 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
-  OTHERREF,
+  OTHERREF, // Unmodeled value types include ref types with heap types other than funcref or externref
 };
 
+// Represents anything that can be encoded in the type section, but only
+// signatures are actually modeled. TODO: maybe refactor to make this explicit.
 struct WasmSignature {
   SmallVector<ValType, 1> Returns;
   SmallVector<ValType, 4> Params;
-  enum {Function, Other} Kind = Function;
+  enum {Function, Other} Kind = Function; // Recursive, Composite(Array,Struct),  
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State = Plain;
 

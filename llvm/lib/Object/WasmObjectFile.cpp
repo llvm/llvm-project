@@ -1106,37 +1106,11 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
-  auto parseFieldDef = [&]() {
-    int32_t TypeCode = readVarint32((Ctx));
-    uint32_t Mutability = readVaruint32(Ctx);
-  };
-  auto parseRecType = [&]() {
-    uint8_t Form = readUint8(Ctx);
-    if (Form == wasm::WASM_TYPE_REC) {
-      uint32_t Size = readVaruint32(Ctx);
-      assert(Size > 0); // TODO real errors here and below
-      Form = readVaruint32(Ctx);
-    }
-    if (Form == wasm::WASM_TYPE_SUB || Form == wasm::WASM_TYPE_SUB_FINAL) {
-      uint32_t Supers = readVaruint32(Ctx);
-      if (Supers > 0) {
-        assert(Supers == 1);
-        uint32_t SuperIndex = readVaruint32(Ctx);
-      }
-      Form = readVaruint32(Ctx);
-    }
-    if (Form == wasm::WASM_TYPE_STRUCT) {
-      uint32_t NumFields = readVaruint32(Ctx);
-      for (size_t i = 0; i < NumFields; i++) {
-        parseFieldDef();
-      }
-    } else if (Form == wasm::WASM_TYPE_ARRAY) {
-      parseFieldDef();
-    }
 
-  };
-  auto parseParamType = [&](uint32_t code) -> wasm::ValType {
-    switch(code) {
+  auto parseValType = [&](uint32_t Code) -> wasm::ValType {
+    // only directly encoded FUNCREF/EXTERNREF are supported (not ref null func/ref null extern)
+    llvm::errs() << llvm::format(" val type %x ", Code);
+    switch(Code) {
       case wasm::WASM_TYPE_I32:
       case wasm::WASM_TYPE_I64:
       case wasm::WASM_TYPE_F32:
@@ -1144,9 +1118,20 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       case wasm::WASM_TYPE_V128:
       case wasm::WASM_TYPE_FUNCREF:
       case wasm::WASM_TYPE_EXTERNREF:
-        return wasm::ValType(code);
+        return wasm::ValType(Code);
     }
+    if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
+      readVarint64(Ctx);
+    }
+    return wasm::ValType(wasm::ValType::OTHERREF);
   };
+  auto parseFieldDef = [&]() {
+    uint32_t TypeCode = readVaruint32((Ctx));
+    parseValType(TypeCode);
+    uint32_t Mutability = readVaruint32(Ctx);
+    llvm::errs() << llvm:: format(" mut %d ", Mutability);
+  };
+
   uint32_t Count = readVaruint32(Ctx);
   Signatures.reserve(Count);
   while (Count--) {
@@ -1156,6 +1141,8 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     if (Form == wasm::WASM_TYPE_REC) {
       uint32_t Size = readVaruint32(Ctx);
       assert(Size > 0); // TODO real errors here and below
+      Signatures.reserve(Signatures.size() + Size);
+      Count += Size;
       Form = readVaruint32(Ctx);
       wasm::WasmSignature s; s.Kind = s.Other;
       Signatures.push_back(s);
@@ -1197,17 +1184,19 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     llvm::errs() << llvm::format("param ct %d ", ParamCount);
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
-      if (ParamType == )
-      Sig.Params.push_back(wasm::ValType(ParamType));
+      Sig.Returns.push_back(parseValType(ParamType));
+      continue;
+      
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
-    llvm::errs() << llvm::format("return ct %d\n", ReturnCount);
+    llvm::errs() << llvm::format("\nreturn ct %d ", ReturnCount);
     while (ReturnCount--) {
       uint32_t ReturnType = readUint8(Ctx);
-      Sig.Returns.push_back(wasm::ValType(ReturnType));
+      Sig.Returns.push_back(parseValType(ReturnType));
     }
     
     Signatures.push_back(std::move(Sig));
+    llvm::errs() << '\n';
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("type section ended prematurely",
