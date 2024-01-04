@@ -23,7 +23,8 @@ namespace llvm {
 
 class ARMSubtarget;
 
-/// This class provides the information for the target register banks.
+/// This class provides the information for the ARM target legalizer for
+/// GlobalISel.
 class ARMLegalizerInfo : public LegalizerInfo {
 public:
   ARMLegalizerInfo(const ARMSubtarget &ST);

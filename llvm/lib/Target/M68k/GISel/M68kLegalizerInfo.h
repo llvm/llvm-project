@@ -20,7 +20,8 @@ namespace llvm {
 
 class M68kSubtarget;
 
-/// This struct provides the information for the target register banks.
+/// This class provides the information for the M68k target legalizer for
+/// GlobalISel.
 struct M68kLegalizerInfo : public LegalizerInfo {
 public:
   M68kLegalizerInfo(const M68kSubtarget &ST);

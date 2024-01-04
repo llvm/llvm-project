@@ -23,7 +23,8 @@ namespace llvm {
 
 class AArch64Subtarget;
 
-/// This class provides the information for the target register banks.
+/// This class provides the information for the AArch64 target legalizer for
+/// GlobalISel.
 class AArch64LegalizerInfo : public LegalizerInfo {
 public:
   AArch64LegalizerInfo(const AArch64Subtarget &ST);
