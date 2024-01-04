@@ -250,7 +250,7 @@ bool XCoreDAGToDAGISel::tryBRIND(SDNode *N) {
   SDValue Addr = N->getOperand(1);
   if (Addr->getOpcode() != ISD::INTRINSIC_W_CHAIN)
     return false;
-  unsigned IntNo = cast<ConstantSDNode>(Addr->getOperand(1))->getZExtValue();
+  unsigned IntNo = Addr->getConstantOperandVal(1);
   if (IntNo != Intrinsic::xcore_checkevent)
     return false;
   SDValue nextAddr = Addr->getOperand(2);

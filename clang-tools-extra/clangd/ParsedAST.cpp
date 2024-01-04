@@ -653,6 +653,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   }
 
   IncludeStructure Includes;
+  include_cleaner::PragmaIncludes PI;
   // If we are using a preamble, copy existing includes.
   if (Preamble) {
     Includes = Preamble->Includes;
@@ -660,11 +661,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // Replay the preamble includes so that clang-tidy checks can see them.
     ReplayPreamble::attach(Patch->preambleIncludes(), *Clang,
                            Patch->modifiedBounds());
+    PI = *Preamble->Pragmas;
   }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Includes.collect(*Clang);
+  // Same for pragma-includes, we're already inheriting preamble includes, so we
+  // should only receive callbacks for non-preamble mainfile includes.
+  PI.record(*Clang);
   // Copy over the macros in the preamble region of the main file, and combine
   // with non-preamble macros below.
   MainFileMacros Macros;
@@ -735,7 +740,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),
                    std::move(Clang), std::move(Action), std::move(Tokens),
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
-                   std::move(Diags), std::move(Includes));
+                   std::move(Diags), std::move(Includes), std::move(PI));
   llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents),
              std::back_inserter(Result.Diags));
   return std::move(Result);
@@ -828,23 +833,21 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, IncludeStructure Includes)
+                     std::vector<Diag> Diags, IncludeStructure Includes,
+                     include_cleaner::PragmaIncludes PI)
     : TUPath(TUPath), Version(Version), Preamble(std::move(Preamble)),
       Clang(std::move(Clang)), Action(std::move(Action)),
       Tokens(std::move(Tokens)), Macros(std::move(Macros)),
       Marks(std::move(Marks)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
-      Includes(std::move(Includes)) {
-  Resolver = std::make_unique<HeuristicResolver>(getASTContext());
+      Includes(std::move(Includes)), PI(std::move(PI)),
+      Resolver(std::make_unique<HeuristicResolver>(getASTContext())) {
   assert(this->Clang);
   assert(this->Action);
 }
 
-std::shared_ptr<const include_cleaner::PragmaIncludes>
-ParsedAST::getPragmaIncludes() const {
-  if (!Preamble)
-    return nullptr;
-  return Preamble->Pragmas;
+const include_cleaner::PragmaIncludes &ParsedAST::getPragmaIncludes() const {
+  return PI;
 }
 
 std::optional<llvm::StringRef> ParsedAST::preambleVersion() const {

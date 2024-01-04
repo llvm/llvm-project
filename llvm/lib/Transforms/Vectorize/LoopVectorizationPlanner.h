@@ -167,9 +167,14 @@ public:
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL, const Twine &Name = "") {
-    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
-                        Name);
+                        DebugLoc DL, const Twine &Name = "",
+                        std::optional<FastMathFlags> FMFs = std::nullopt) {
+    auto *Select =
+        FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
+                                 *FMFs, DL, Name)
+             : new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
+                                 DL, Name);
+    return tryInsertInstruction(Select);
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A

@@ -18,8 +18,8 @@ class Operation;
 
 namespace mesh {
 
-using ShardingArray = SmallVector<SmallVector<int32_t>>;
-using ShardingArrayRef = ArrayRef<SmallVector<int32_t>>;
+using ShardingArray = SmallVector<SmallVector<MeshAxis>>;
+using ShardingArrayRef = ArrayRef<SmallVector<MeshAxis>>;
 
 struct ShardingOption {
   // An array of int array. The sub-array at the i-th position signifies the

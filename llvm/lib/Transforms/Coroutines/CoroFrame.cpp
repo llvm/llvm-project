@@ -2951,9 +2951,14 @@ void coro::salvageDebugInfo(
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
     std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      // Update DILocation only in O0 since it is easy to get out of sync in
+      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
+      // an example.
+      if (!OptimizeFrame && I->getDebugLoc())
+        DVI.setDebugLoc(I->getDebugLoc());
+    } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
       DVI.moveBefore(*(*InsertPt)->getParent(), *InsertPt);
@@ -2986,9 +2991,14 @@ void coro::salvageDebugInfo(
   // dbg.declare does.
   if (DPV.getType() == DPValue::LocationType::Declare) {
     std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      // Update DILocation only in O0 since it is easy to get out of sync in
+      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
+      // an example.
+      if (!OptimizeFrame && I->getDebugLoc())
+        DPV.setDebugLoc(I->getDebugLoc());
+    } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
       DPV.removeFromParent();

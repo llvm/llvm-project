@@ -438,6 +438,28 @@ def CastOp : TransformDialectOp<"cast",
   }];
 }
 
+def NumAssociationsOp : TransformDialectOp<"num_associations",
+    [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     MatchOpInterface]> {
+  let summary =
+    "Returns the number of payload objects associated with the argument";
+  let description = [{
+    Given an argument, handle or parameter, returns a new parameter associated
+    with a single 64-bit number that corresponds to the number of payload
+    objects (operations or values for a handle, attributes for a parameter)
+    associated with the argument.
+
+    Always succeeds.
+  }];
+  let arguments = (ins Transform_AnyHandleOrParamType:$handle);
+  let results = (outs TransformParamTypeInterface:$num);
+  let assemblyFormat = [{
+    $handle attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
 def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
