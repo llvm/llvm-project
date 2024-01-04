@@ -79,7 +79,7 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
+  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
 
