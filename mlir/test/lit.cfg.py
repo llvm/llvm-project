@@ -54,10 +54,9 @@ config.substitutions.append(("%host_cxx", config.host_cxx))
 config.substitutions.append(("%host_cc", config.host_cc))
 
 
-# Searches for a runtime library with the given name and returns a tool
-# substitution of the same name and the found path.
+# Searches for a runtime library with the given name and returns the found path.
 # Correctly handles the platforms shared library directory and naming conventions.
-def add_runtime(name):
+def find_runtime(name):
     path = ""
     for prefix in ["", "lib"]:
         path = os.path.join(
@@ -65,7 +64,13 @@ def add_runtime(name):
         )
         if os.path.isfile(path):
             break
-    return ToolSubst(f"%{name}", path)
+    return path
+
+
+# Searches for a runtime library with the given name and returns a tool
+# substitution of the same name and the found path.
+def add_runtime(name):
+    return ToolSubst(f"%{name}", find_runtime(name))
 
 
 llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
@@ -101,6 +106,7 @@ tools = [
     "mlir-capi-quant-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
@@ -125,6 +131,18 @@ if config.enable_rocm_runner:
 
 if config.enable_cuda_runner:
     tools.extend([add_runtime("mlir_cuda_runtime")])
+
+if config.enable_sycl_runner:
+    tools.extend([add_runtime("mlir_sycl_runtime")])
+
+if config.mlir_run_arm_sme_tests:
+    config.substitutions.append(
+        (
+            "%arm_sme_abi_shlib",
+            # Use passed Arm SME ABI routines, if not present default to stubs.
+            config.arm_sme_abi_routines_shlib or find_runtime("mlir_arm_sme_abi_stubs"),
+        )
+    )
 
 # The following tools are optional
 tools.extend(

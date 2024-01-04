@@ -70,7 +70,7 @@ define ptr @noop_ptrint_pair_ce2() {
 }
 
 ; COMMON-LABEL: @noop_ptrint_pair_ce2_vec(
-; AMDGCN-NEXT: ret <2 x ptr> <ptr addrspacecast (ptr addrspace(1) @g to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>
+; AMDGCN-NEXT: ret <2 x ptr> <ptr inttoptr (i64 ptrtoint (ptr addrspace(1) @g to i64) to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>
 ; NOTTI-NEXT: ret <2 x ptr> <ptr inttoptr (i64 ptrtoint (ptr addrspace(1) @g to i64) to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>
 define <2 x ptr> @noop_ptrint_pair_ce2_vec() {
   ret <2 x ptr> <ptr inttoptr (i64 ptrtoint (ptr addrspace(1) @g to i64) to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>

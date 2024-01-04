@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Confirm enforcement of constraints and restrictions in 7.5.7.3
 ! and C733, C734 and C779, C780, C782, C783, C784, and C785.
 

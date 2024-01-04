@@ -413,6 +413,10 @@ bool TargetTransformInfo::isNumRegsMajorCostOfLSR() const {
   return TTIImpl->isNumRegsMajorCostOfLSR();
 }
 
+bool TargetTransformInfo::shouldFoldTerminatingConditionAfterLSR() const {
+  return TTIImpl->shouldFoldTerminatingConditionAfterLSR();
+}
+
 bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {
   return TTIImpl->isProfitableLSRChainElement(I);
 }
@@ -678,6 +682,11 @@ TargetTransformInfo::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return Cost;
 }
 
+bool TargetTransformInfo::preferToKeepConstantsAttached(
+    const Instruction &Inst, const Function &Fn) const {
+  return TTIImpl->preferToKeepConstantsAttached(Inst, Fn);
+}
+
 unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }
@@ -849,6 +858,15 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
       TTIImpl->getArithmeticInstrCost(Opcode, Ty, CostKind,
                                       Op1Info, Op2Info,
                                       Args, CxtI);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getAltInstrCost(
+    VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenACC loop directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-fir -hlfir=false %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {

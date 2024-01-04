@@ -335,8 +335,6 @@ static unsigned getImplicitScaleFactor(MVT VT) {
 }
 
 CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
-  if (CC == CallingConv::WebKit_JS)
-    return CC_AArch64_WebKit_JS;
   if (CC == CallingConv::GHC)
     return CC_AArch64_GHC;
   if (CC == CallingConv::CFGuard_Check)
@@ -1233,15 +1231,6 @@ unsigned AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
   // Only extend the RHS within the instruction if there is a valid extend type.
   if (ExtendType != AArch64_AM::InvalidShiftExtend && RHS->hasOneUse() &&
       isValueAvailable(RHS)) {
-    if (const auto *SI = dyn_cast<BinaryOperator>(RHS))
-      if (const auto *C = dyn_cast<ConstantInt>(SI->getOperand(1)))
-        if ((SI->getOpcode() == Instruction::Shl) && (C->getZExtValue() < 4)) {
-          Register RHSReg = getRegForValue(SI->getOperand(0));
-          if (!RHSReg)
-            return 0;
-          return emitAddSub_rx(UseAdd, RetVT, LHSReg, RHSReg, ExtendType,
-                               C->getZExtValue(), SetFlags, WantResult);
-        }
     Register RHSReg = getRegForValue(RHS);
     if (!RHSReg)
       return 0;
@@ -3864,9 +3853,7 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
     // Analyze operands of the call, assigning locations to each operand.
     SmallVector<CCValAssign, 16> ValLocs;
     CCState CCInfo(CC, F.isVarArg(), *FuncInfo.MF, ValLocs, I->getContext());
-    CCAssignFn *RetCC = CC == CallingConv::WebKit_JS ? RetCC_AArch64_WebKit_JS
-                                                     : RetCC_AArch64_AAPCS;
-    CCInfo.AnalyzeReturn(Outs, RetCC);
+    CCInfo.AnalyzeReturn(Outs, RetCC_AArch64_AAPCS);
 
     // Only handle a single return value for now.
     if (ValLocs.size() != 1)

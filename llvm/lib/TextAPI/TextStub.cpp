@@ -360,6 +360,8 @@ template <> struct ScalarBitSetTraits<TBDFlags> {
     IO.bitSetCase(Flags, "not_app_extension_safe",
                   TBDFlags::NotApplicationExtensionSafe);
     IO.bitSetCase(Flags, "installapi", TBDFlags::InstallAPI);
+    IO.bitSetCase(Flags, "not_for_dyld_shared_cache",
+                  TBDFlags::OSLibNotForSharedCache);
   }
 };
 
@@ -612,7 +614,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
         for (const auto &Symbol : Section.Symbols) {
           if (Ctx->FileKind != FileType::TBD_V3 &&
-              Symbol.value.startswith(ObjC2EHTypePrefix))
+              Symbol.value.starts_with(ObjC2EHTypePrefix))
             File->addSymbol(SymbolKind::ObjectiveCClassEHType,
                             Symbol.value.drop_front(15), Targets, Flags);
           else
@@ -647,7 +649,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
             synthesizeTargets(Section.Architectures, Platforms);
         for (auto &Symbol : Section.Symbols) {
           if (Ctx->FileKind != FileType::TBD_V3 &&
-              Symbol.value.startswith(ObjC2EHTypePrefix))
+              Symbol.value.starts_with(ObjC2EHTypePrefix))
             File->addSymbol(SymbolKind::ObjectiveCClassEHType,
                             Symbol.value.drop_front(15), Targets,
                             SymbolFlags::Undefined | Flags);
@@ -782,6 +784,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
       if (!File->isTwoLevelNamespace())
         Flags |= TBDFlags::FlatNamespace;
 
+      if (File->isOSLibNotForSharedCache())
+        Flags |= TBDFlags::OSLibNotForSharedCache;
+
       {
         std::map<std::string, TargetList> valueToTargetList;
         for (const auto &it : File->umbrellas())
@@ -872,6 +877,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       File->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
       File->setApplicationExtensionSafe(
           !(Flags & TBDFlags::NotApplicationExtensionSafe));
+      File->setOSLibNotForSharedCache(
+          (Flags & TBDFlags::OSLibNotForSharedCache));
 
       for (const auto &CurrentSection : AllowableClients) {
         for (const auto &lib : CurrentSection.Values)
@@ -1066,23 +1073,23 @@ static void DiagHandler(const SMDiagnostic &Diag, void *Context) {
 
 Expected<FileType> TextAPIReader::canRead(MemoryBufferRef InputBuffer) {
   auto TAPIFile = InputBuffer.getBuffer().trim();
-  if (TAPIFile.startswith("{") && TAPIFile.endswith("}"))
+  if (TAPIFile.starts_with("{") && TAPIFile.ends_with("}"))
     return FileType::TBD_V5;
 
-  if (!TAPIFile.endswith("..."))
+  if (!TAPIFile.ends_with("..."))
     return createStringError(std::errc::not_supported, "unsupported file type");
 
-  if (TAPIFile.startswith("--- !tapi-tbd\n"))
+  if (TAPIFile.starts_with("--- !tapi-tbd\n"))
     return FileType::TBD_V4;
 
-  if (TAPIFile.startswith("--- !tapi-tbd-v3\n"))
+  if (TAPIFile.starts_with("--- !tapi-tbd-v3\n"))
     return FileType::TBD_V3;
 
-  if (TAPIFile.startswith("--- !tapi-tbd-v2\n"))
+  if (TAPIFile.starts_with("--- !tapi-tbd-v2\n"))
     return FileType::TBD_V2;
 
-  if (TAPIFile.startswith("--- !tapi-tbd-v1\n") ||
-      TAPIFile.startswith("---\narchs:"))
+  if (TAPIFile.starts_with("--- !tapi-tbd-v1\n") ||
+      TAPIFile.starts_with("---\narchs:"))
     return FileType::TBD_V1;
 
   return createStringError(std::errc::not_supported, "unsupported file type");

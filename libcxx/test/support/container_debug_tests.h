@@ -9,7 +9,8 @@
 #ifndef TEST_SUPPORT_CONTAINER_DEBUG_TESTS_H
 #define TEST_SUPPORT_CONTAINER_DEBUG_TESTS_H
 
-#include <ciso646>
+#include "test_macros.h"
+
 #ifndef _LIBCPP_VERSION
 #error This header may only be used for libc++ tests
 #endif
@@ -25,7 +26,6 @@
 
 #include "check_assertion.h"
 #include "test_allocator.h"
-#include "test_macros.h"
 
 // These test make use of 'if constexpr'.
 #if TEST_STD_VER <= 14

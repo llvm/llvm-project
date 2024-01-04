@@ -622,9 +622,14 @@ def testOperationPrint():
     print(bytes_value.__class__)
     print(bytes_value)
 
-    # Test get_asm local_scope.
+    # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+
+    # Test printing using state.
+    state = AsmState(module.operation)
+    # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(state)
 
     # Test get_asm with options.
     # CHECK: value = dense_resource<__elided__> : tensor<4xi32>

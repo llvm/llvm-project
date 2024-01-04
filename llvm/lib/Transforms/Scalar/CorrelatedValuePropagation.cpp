@@ -55,7 +55,6 @@ static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
-STATISTIC(NumMemAccess, "Number of memory access targets propagated");
 STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
@@ -93,6 +92,7 @@ STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
+STATISTIC(NumZExt, "Number of non-negative deductions");
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
@@ -263,23 +263,6 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
   return Changed;
 }
 
-static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
-  Value *Pointer = nullptr;
-  if (LoadInst *L = dyn_cast<LoadInst>(I))
-    Pointer = L->getPointerOperand();
-  else
-    Pointer = cast<StoreInst>(I)->getPointerOperand();
-
-  if (isa<Constant>(Pointer)) return false;
-
-  Constant *C = LVI->getConstant(Pointer, I);
-  if (!C) return false;
-
-  ++NumMemAccess;
-  I->replaceUsesOfWith(Pointer, C);
-  return true;
-}
-
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!CanonicalizeICmpPredicatesToUnsigned)
     return false;
@@ -295,8 +278,10 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   ICmpInst::Predicate UnsignedPred =
       ConstantRange::getEquivalentPredWithFlippedSignedness(
           Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0)),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1)));
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                     /*UndefAllowed*/ true),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                     /*UndefAllowed*/ true));
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
@@ -410,8 +395,10 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRangeAtUse(BO->getOperandUse(0));
-  ConstantRange RRange = LVI->getConstantRangeAtUse(BO->getOperandUse(1));
+  ConstantRange LRange =
+      LVI->getConstantRangeAtUse(BO->getOperandUse(0), /*UndefAllowed*/ false);
+  ConstantRange RRange =
+      LVI->getConstantRangeAtUse(BO->getOperandUse(1), /*UndefAllowed*/ false);
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);
@@ -774,7 +761,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
     Value *FrozenX = X;
-    if (!isGuaranteedNotToBeUndefOrPoison(X))
+    if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
     auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
     auto *Cmp =
@@ -838,8 +825,11 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
-  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0),
+                                                 /*UndefAllowed*/ false);
+  // Allow undef for RHS, as we can assume it is division by zero UB.
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1),
+                                                 /*UndefAllowed*/ true);
   if (expandUDivOrURem(Instr, XCR, YCR))
     return true;
 
@@ -945,11 +935,13 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   UDiv->setDebugLoc(SDI->getDebugLoc());
   UDiv->setIsExact(SDI->isExact());
 
-  Value *Res = UDiv;
+  auto *Res = UDiv;
 
   // If the operands had two different domains, we need to negate the result.
-  if (Ops[0].D != Ops[1].D)
+  if (Ops[0].D != Ops[1].D) {
     Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res->setDebugLoc(SDI->getDebugLoc());
+  }
 
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
@@ -966,8 +958,11 @@ static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  ConstantRange LCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
-  ConstantRange RCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  ConstantRange LCR =
+      LVI->getConstantRangeAtUse(Instr->getOperandUse(0), /*AllowUndef*/ false);
+  // Allow undef for RHS, as we can assume it is division by zero UB.
+  ConstantRange RCR =
+      LVI->getConstantRangeAtUse(Instr->getOperandUse(1), /*AlloweUndef*/ true);
   if (Instr->getOpcode() == Instruction::SDiv)
     if (processSDiv(Instr, LCR, RCR, LVI))
       return true;
@@ -1032,6 +1027,24 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
+  if (ZExt->getType()->isVectorTy())
+    return false;
+
+  if (ZExt->hasNonNeg())
+    return false;
+
+  const Use &Base = ZExt->getOperandUse(0);
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
+    return false;
+
+  ++NumZExt;
+  ZExt->setNonNeg();
+
+  return true;
+}
+
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
 
@@ -1047,8 +1060,10 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   Value *LHS = BinOp->getOperand(0);
   Value *RHS = BinOp->getOperand(1);
 
-  ConstantRange LRange = LVI->getConstantRange(LHS, BinOp);
-  ConstantRange RRange = LVI->getConstantRange(RHS, BinOp);
+  ConstantRange LRange =
+      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed*/ false);
+  ConstantRange RRange =
+      LVI->getConstantRange(RHS, BinOp, /*UndefAllowed*/ false);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;
@@ -1140,10 +1155,6 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       case Instruction::FCmp:
         BBChanged |= processCmp(cast<CmpInst>(&II), LVI);
         break;
-      case Instruction::Load:
-      case Instruction::Store:
-        BBChanged |= processMemAccess(&II, LVI);
-        break;
       case Instruction::Call:
       case Instruction::Invoke:
         BBChanged |= processCallSite(cast<CallBase>(II), LVI);
@@ -1161,6 +1172,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::SExt:
         BBChanged |= processSExt(cast<SExtInst>(&II), LVI);
+        break;
+      case Instruction::ZExt:
+        BBChanged |= processZExt(cast<ZExtInst>(&II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:

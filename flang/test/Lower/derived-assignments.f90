@@ -1,5 +1,5 @@
 ! Test lowering of derived type assignments
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Assignment of simple "struct" with trivial intrinsic members.
 ! CHECK-LABEL: func @_QPtest1

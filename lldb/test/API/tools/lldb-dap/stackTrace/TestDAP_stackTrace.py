@@ -3,12 +3,13 @@ Test lldb-dap setBreakpoints request
 """
 
 
+import os
+
 import dap_server
+import lldbdap_testcase
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import os
 
 
 class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
@@ -187,3 +188,19 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.assertEquals(
             0, len(stackFrames), "verify zero frames with startFrame out of bounds"
         )
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_functionNameWithArgs(self):
+        """
+        Test that the stack frame without a function name is given its pc in the response.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, customFrameFormat="${function.name-with-args}")
+        source = "main.c"
+
+        self.set_source_breakpoints(source, [line_number(source, "recurse end")])
+
+        self.continue_to_next_stop()
+        frame = self.get_stackFrames()[0]
+        self.assertEquals(frame["name"], "recurse(x=1)")

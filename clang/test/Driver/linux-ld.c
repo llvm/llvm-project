@@ -182,12 +182,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE: "-static"
-// CHECK-CLANG-LD-STATIC-PIE: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE: "-z"
-// CHECK-CLANG-LD-STATIC-PIE: "text"
 // CHECK-CLANG-LD-STATIC-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
@@ -197,12 +193,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-PIE %s
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-static"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "-z"
-// CHECK-CLANG-LD-STATIC-PIE-PIE: "text"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
@@ -212,16 +204,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-STATIC %s
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-static"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-pie"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "--no-dynamic-linker"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "-z"
-// CHECK-CLANG-LD-STATIC-PIE-STATIC: "text"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "-m" "elf_x86_64"
+// CHECK-CLANG-LD-STATIC-PIE-STATIC-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
-// RUN: not %clang -static-pie -nopie -### %s -no-pie 2>&1 \
+// RUN: not %clang -static-pie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -1873,3 +1861,7 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
+
+/// -nopie is OpenBSD-specific.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
+// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

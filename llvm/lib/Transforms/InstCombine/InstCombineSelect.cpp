@@ -1171,14 +1171,15 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
-static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
-                                    InstCombinerImpl &IC) {
+static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
+                              InstCombinerImpl &IC) {
   Value *LHS, *RHS;
   // TODO: What to do with pointer min/max patterns?
-  if (!Sel.getType()->isIntOrIntVectorTy())
+  if (!TrueVal->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  SelectPatternFlavor SPF = matchSelectPattern(&Sel, LHS, RHS).Flavor;
+  SelectPatternFlavor SPF =
+      matchDecomposedSelectPattern(&Cmp, TrueVal, FalseVal, LHS, RHS).Flavor;
   if (SPF == SelectPatternFlavor::SPF_ABS ||
       SPF == SelectPatternFlavor::SPF_NABS) {
     if (!Cmp.hasOneUse() && !RHS->hasOneUse())
@@ -1188,13 +1189,13 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
     bool IntMinIsPoison = SPF == SelectPatternFlavor::SPF_ABS &&
                           match(RHS, m_NSWNeg(m_Specific(LHS)));
     Constant *IntMinIsPoisonC =
-        ConstantInt::get(Type::getInt1Ty(Sel.getContext()), IntMinIsPoison);
+        ConstantInt::get(Type::getInt1Ty(Cmp.getContext()), IntMinIsPoison);
     Instruction *Abs =
         IC.Builder.CreateBinaryIntrinsic(Intrinsic::abs, LHS, IntMinIsPoisonC);
 
     if (SPF == SelectPatternFlavor::SPF_NABS)
-      return BinaryOperator::CreateNeg(Abs); // Always without NSW flag!
-    return IC.replaceInstUsesWith(Sel, Abs);
+      return IC.Builder.CreateNeg(Abs); // Always without NSW flag!
+    return Abs;
   }
 
   if (SelectPatternResult::isMinOrMax(SPF)) {
@@ -1215,8 +1216,7 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
     default:
       llvm_unreachable("Unexpected SPF");
     }
-    return IC.replaceInstUsesWith(
-        Sel, IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS));
+    return IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS);
   }
 
   return nullptr;
@@ -1677,8 +1677,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
     return NewSel;
 
-  if (Instruction *NewSPF = canonicalizeSPF(SI, *ICI, *this))
-    return NewSPF;
+  if (Value *V =
+          canonicalizeSPF(*ICI, SI.getTrueValue(), SI.getFalseValue(), *this))
+    return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
     return replaceInstUsesWith(SI, V);
@@ -2363,6 +2364,9 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   Value *FVal = Sel.getFalseValue();
   Type *SelType = Sel.getType();
 
+  if (ICmpInst::makeCmpResultType(TVal->getType()) != Cond->getType())
+    return nullptr;
+
   // Match select ?, TC, FC where the constants are equal but negated.
   // TODO: Generalize to handle a negated variable operand?
   const APFloat *TC, *FC;
@@ -2440,9 +2444,9 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
     return nullptr;
 
   unsigned NumElts = VecTy->getNumElements();
-  APInt UndefElts(NumElts, 0);
+  APInt PoisonElts(NumElts, 0);
   APInt AllOnesEltMask(APInt::getAllOnes(NumElts));
-  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, UndefElts)) {
+  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, PoisonElts)) {
     if (V != &Sel)
       return replaceInstUsesWith(Sel, V);
     return &Sel;
@@ -2891,8 +2895,15 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
 
   Value *AltCond = nullptr;
-  auto matchOuterCond = [OuterSel, &AltCond](auto m_InnerCond) {
-    return match(OuterSel.Cond, m_c_LogicalOp(m_InnerCond, m_Value(AltCond)));
+  auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
+    // An unsimplified select condition can match both LogicalAnd and LogicalOr
+    // (select true, true, false). Since below we assume that LogicalAnd implies
+    // InnerSel match the FVal and vice versa for LogicalOr, we can't match the
+    // alternative pattern here.
+    return IsAndVariant ? match(OuterSel.Cond,
+                                m_c_LogicalAnd(m_InnerCond, m_Value(AltCond)))
+                        : match(OuterSel.Cond,
+                                m_c_LogicalOr(m_InnerCond, m_Value(AltCond)));
   };
 
   // Finally, match the condition that was driving the outermost `select`,
@@ -3068,18 +3079,18 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     return SelectInst::Create(TrueVal, OrV, Zero);
   }
   // select (c & b), a, b -> select b, (select ~c, true, a), false
-  if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal)))) &&
-      isFreeToInvert(C, C->hasOneUse())) {
-    Value *NotC = Builder.CreateNot(C);
-    Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-    return SelectInst::Create(FalseVal, OrV, Zero);
+  if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
+    if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
+      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
+      return SelectInst::Create(FalseVal, OrV, Zero);
+    }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
-  if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C)))) &&
-      isFreeToInvert(C, C->hasOneUse())) {
-    Value *NotC = Builder.CreateNot(C);
-    Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-    return SelectInst::Create(TrueVal, One, AndV);
+  if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
+    if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
+      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
+      return SelectInst::Create(TrueVal, One, AndV);
+    }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,
@@ -3782,6 +3793,51 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *I = foldBitCeil(SI, Builder))
     return I;
+
+  // Fold:
+  // (select A && B, T, F) -> (select A, (select B, T, F), F)
+  // (select A || B, T, F) -> (select A, T, (select B, T, F))
+  // if (select B, T, F) is foldable.
+  // TODO: preserve FMF flags
+  auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
+                                     Value *B) -> Instruction * {
+    if (Value *V = simplifySelectInst(B, TrueVal, FalseVal,
+                                      SQ.getWithInstruction(&SI)))
+      return SelectInst::Create(A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V);
+
+    // Is (select B, T, F) a SPF?
+    if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
+      if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
+        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this))
+          return SelectInst::Create(A, IsAnd ? V : TrueVal,
+                                    IsAnd ? FalseVal : V);
+    }
+
+    return nullptr;
+  };
+
+  Value *LHS, *RHS;
+  if (match(CondVal, m_And(m_Value(LHS), m_Value(RHS)))) {
+    if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ true, LHS, RHS))
+      return I;
+    if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ true, RHS, LHS))
+      return I;
+  } else if (match(CondVal, m_Or(m_Value(LHS), m_Value(RHS)))) {
+    if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ false, LHS, RHS))
+      return I;
+    if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ false, RHS, LHS))
+      return I;
+  } else {
+    // We cannot swap the operands of logical and/or.
+    // TODO: Can we swap the operands by inserting a freeze?
+    if (match(CondVal, m_LogicalAnd(m_Value(LHS), m_Value(RHS)))) {
+      if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ true, LHS, RHS))
+        return I;
+    } else if (match(CondVal, m_LogicalOr(m_Value(LHS), m_Value(RHS)))) {
+      if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ false, LHS, RHS))
+        return I;
+    }
+  }
 
   return nullptr;
 }

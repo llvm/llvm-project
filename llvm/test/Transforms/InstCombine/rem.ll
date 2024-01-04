@@ -249,7 +249,7 @@ define i32 @test4(i32 %X, i1 %C) {
 
 define i32 @test5(i32 %X, i8 %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[SHIFT_UPGRD_1:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SHIFT_UPGRD_1:%.*]] = zext nneg i8 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[AMT:%.*]] = shl nuw i32 32, [[SHIFT_UPGRD_1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[AMT]], -1
 ; CHECK-NEXT:    [[V:%.*]] = and i32 [[TMP1]], [[X:%.*]]
@@ -368,7 +368,7 @@ define i32 @test16(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[Y:%.*]], 11
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[AND]], 3
 ; CHECK-NEXT:    [[REM:%.*]] = and i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[REM]]
 ;

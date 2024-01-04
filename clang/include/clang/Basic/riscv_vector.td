@@ -69,7 +69,6 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           IntrinsicTypes = {ResultType, Ops[3]->getType()};
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
         Ops.erase(Ops.begin() + 2);
         llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
@@ -150,7 +149,6 @@ let HasMaskedOffOperand = false,
         // Builtin: (ptr, value, vl). Intrinsic: (value, ptr, vl)
         std::swap(Ops[0], Ops[1]);
       }
-      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
       if (IsMasked)
         IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
       else
@@ -189,7 +187,6 @@ multiclass RVVVSSEBuiltin<list<string> types> {
           // Builtin: (ptr, stride, value, vl). Intrinsic: (value, ptr, stride, vl)
           std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         if (IsMasked)
           IntrinsicTypes = {Ops[0]->getType(), Ops[4]->getType()};
         else
@@ -215,7 +212,6 @@ multiclass RVVIndexedStore<string op> {
           // Builtin: (ptr, index, value, vl). Intrinsic: (value, ptr, index, vl)
           std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         if (IsMasked)
           IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[4]->getType()};
         else
@@ -2445,11 +2441,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
       }
       }] in {
-    let Log2LMUL = [0, 1, 2] in {
-      foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
-        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
-        def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
-      }
+    foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
+      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";
@@ -2544,7 +2538,7 @@ multiclass RVVSignedWidenBinBuiltinSetVwsll
 
 let UnMaskedPolicyScheme = HasPassthruOperand in {
   // zvkb
-  let RequiredFeatures = ["Zvkb"] in {
+  let RequiredFeatures = ["Zvkb", "Experimental"] in {
     defm vandn   : RVVUnsignedBinBuiltinSet;
     defm vbrev8  : RVVOutBuiltinSetZvbb;
     defm vrev8   : RVVOutBuiltinSetZvbb;
@@ -2553,7 +2547,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   }
 
   // zvbb
-  let RequiredFeatures = ["Zvbb"] in {
+  let RequiredFeatures = ["Zvbb", "Experimental"] in {
     defm vbrev   : RVVOutBuiltinSetZvbb;
     defm vclz    : RVVOutBuiltinSetZvbb;
     defm vctz    : RVVOutBuiltinSetZvbb;
@@ -2563,7 +2557,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   }
 
   // zvbc
-  let RequiredFeatures = ["Zvbc"] in {
+  let RequiredFeatures = ["Zvbc", "Experimental"] in {
     defm vclmul  : RVVInt64BinBuiltinSet;
     defm vclmulh : RVVInt64BinBuiltinSet;
   }
@@ -2571,13 +2565,13 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
 
 let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   // zvkg
-  let RequiredFeatures = ["Zvkg"] in {
+  let RequiredFeatures = ["Zvkg", "Experimental"] in {
     defm vghsh   : RVVOutOp2BuiltinSetVVZvk;
     defm vgmul   : RVVOutBuiltinSetZvk<HasVV=1, HasVS=0>;
   }
 
   // zvkned
-  let RequiredFeatures = ["Zvkned"] in {
+  let RequiredFeatures = ["Zvkned", "Experimental"] in {
     defm vaesdf  : RVVOutBuiltinSetZvk;
     defm vaesdm  : RVVOutBuiltinSetZvk;
     defm vaesef  : RVVOutBuiltinSetZvk;
@@ -2589,28 +2583,28 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   }
 
   // zvknha
-  let RequiredFeatures = ["Zvknha"] in {
+  let RequiredFeatures = ["Zvknha", "Experimental"] in {
     defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
     defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
     defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
   }
 
   // zvknhb
-  let RequiredFeatures = ["Zvknhb"] in {
+  let RequiredFeatures = ["Zvknhb", "Experimental"] in {
     defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
     defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
     defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
   }
 
   // zvksed
-  let RequiredFeatures = ["Zvksed"] in {
+  let RequiredFeatures = ["Zvksed", "Experimental"] in {
     let UnMaskedPolicyScheme = HasPassthruOperand in
     defm vsm4k   : RVVOutOp1BuiltinSet<"vsm4k", "i", [["vi", "Uv", "UvUvKz"]]>;
     defm vsm4r   : RVVOutBuiltinSetZvk;
   }
 
   // zvksh
-  let RequiredFeatures = ["Zvksh"] in {
+  let RequiredFeatures = ["Zvksh", "Experimental"] in {
     defm vsm3c   : RVVOutOp2BuiltinSetVIZvk;
     let UnMaskedPolicyScheme = HasPassthruOperand in
     defm vsm3me  : RVVOutOp1BuiltinSet<"vsm3me", "i", [["vv", "Uv", "UvUvUv"]]>;

@@ -1,6 +1,5 @@
 ! This test checks lowering of OpenACC set directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 program test_acc_set
@@ -34,7 +33,7 @@ end
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: acc.set device_num(%[[C0]] : i32)
 
-! CHECK: acc.set attributes {device_type = #acc.device_type<*>}
+! CHECK: acc.set attributes {device_type = #acc.device_type<star>}
 
 ! CHECK: acc.set attributes {device_type = #acc.device_type<multicore>}
 

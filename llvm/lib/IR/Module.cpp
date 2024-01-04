@@ -156,12 +156,6 @@ FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
     return {Ty, New}; // Return the new prototype.
   }
 
-  // If the function exists but has the wrong type, return a bitcast to the
-  // right type.
-  auto *PTy = PointerType::get(Ty, F->getAddressSpace());
-  if (F->getType() != PTy)
-    return {Ty, ConstantExpr::getBitCast(F, PTy)};
-
   // Otherwise, we just found the existing function or a prototype.
   return {Ty, F};
 }
@@ -211,13 +205,6 @@ Constant *Module::getOrInsertGlobal(
   if (!GV)
     GV = CreateGlobalCallback();
   assert(GV && "The CreateGlobalCallback is expected to create a global");
-
-  // If the variable exists but has the wrong type, return a bitcast to the
-  // right type.
-  Type *GVTy = GV->getType();
-  PointerType *PTy = PointerType::get(Ty, GVTy->getPointerAddressSpace());
-  if (GVTy != PTy)
-    return ConstantExpr::getBitCast(GV, PTy);
 
   // Otherwise, we just found the existing function or a prototype.
   return GV;

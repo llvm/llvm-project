@@ -111,7 +111,8 @@ public:
     CharBoxValueAttribute, // BoxChar with VALUE
     // Passing a character procedure as a <procedure address, result length>
     // tuple.
-    CharProcTuple
+    CharProcTuple,
+    BoxProcRef
   };
   /// Different properties of an entity that can be passed/returned.
   /// One-to-One mapping with PassEntityBy but for
@@ -124,7 +125,8 @@ public:
     CharProcTuple,
     Box,
     MutableBox,
-    Value
+    Value,
+    BoxProcRef
   };
 
   using FortranEntity = typename PassedEntityTypes<T>::FortranEntity;
@@ -301,6 +303,11 @@ public:
   /// index.
   std::optional<unsigned> getPassArgIndex() const;
 
+  /// Get the passed-object if any. Crashes if there is a passed object
+  /// but it was not placed in the inputs yet. Return a null value
+  /// otherwise.
+  mlir::Value getIfPassedArg() const;
+
   /// Return the procedure symbol if this is a call to a user defined
   /// procedure.
   const Fortran::semantics::Symbol *getProcedureSymbol() const;
@@ -312,8 +319,8 @@ public:
                                   mlir::Value addr, mlir::Value len);
 
   /// If this is a call to a procedure pointer or dummy, returns the related
-  /// symbol. Nullptr otherwise.
-  const Fortran::semantics::Symbol *getIfIndirectCallSymbol() const;
+  /// procedure designator. Nullptr otherwise.
+  const Fortran::evaluate::ProcedureDesignator *getIfIndirectCall() const;
 
   /// Get the input vector once it is complete.
   llvm::ArrayRef<mlir::Value> getInputs() const {

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test that we are passing the correct length when using character array as
 ! Format (Fortran 2018 12.6.2.2 point 3)

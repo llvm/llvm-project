@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic capture
 

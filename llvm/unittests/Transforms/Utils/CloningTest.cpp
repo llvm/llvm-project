@@ -440,11 +440,11 @@ for.end:
         EXPECT_NE(NewLoop, nullptr);
         EXPECT_EQ(NewLoop->getSubLoops().size(), 1u);
         Loop::block_iterator BI = NewLoop->block_begin();
-        EXPECT_TRUE((*BI)->getName().startswith("for.outer"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.inner.preheader"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.inner"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.inner.exit"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.outer.latch"));
+        EXPECT_TRUE((*BI)->getName().starts_with("for.outer"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.inner.preheader"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.inner"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.inner.exit"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.outer.latch"));
       });
 }
 

@@ -1,7 +1,7 @@
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = \
 // DEFINE:   env TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
 // DEFINE:   mlir-cpu-runner \

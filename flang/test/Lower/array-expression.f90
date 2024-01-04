@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest1
 subroutine test1(a,b,c,n)
@@ -1113,7 +1113,7 @@ end subroutine test19h
 ! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 2 : index
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 10 : index
-! CHECK:         %[[VAL_9:.*]] = arith.constant -1 : i32
+! CHECK:         %[[VAL_9:.*]] = arith.constant 6 : i32
 ! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_12:.*]] = arith.constant {{.*}} : i32

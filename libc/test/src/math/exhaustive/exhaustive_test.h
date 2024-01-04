@@ -24,7 +24,7 @@
 // 1. Define a Checker class with:
 //    - FloatType: define floating point type to be used.
 //    - FPBits: fputil::FPBits<FloatType>.
-//    - UIntType: define bit type for the corresponding floating point type.
+//    - StorageType: define bit type for the corresponding floating point type.
 //    - uint64_t check(start, stop, rounding_mode): a method to test in given
 //          range for a given rounding mode, which returns the number of
 //          failures.
@@ -41,16 +41,17 @@ template <typename T, mpfr::Operation Op, UnaryOp<T> Func>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = T;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   static constexpr UnaryOp<FloatType> *FUNC = Func;
 
   // Check in a range, return the number of failures.
-  uint64_t check(UIntType start, UIntType stop, mpfr::RoundingMode rounding) {
+  uint64_t check(StorageType start, StorageType stop,
+                 mpfr::RoundingMode rounding) {
     mpfr::ForceRoundingMode r(rounding);
     if (!r.success)
       return (stop > start);
-    UIntType bits = start;
+    StorageType bits = start;
     uint64_t failed = 0;
     do {
       FPBits xbits(bits);
@@ -68,32 +69,32 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
 };
 
 // Checker class needs inherit from LIBC_NAMESPACE::testing::Test and provide
-//   UIntType and check method.
+//   StorageType and check method.
 template <typename Checker>
 struct LlvmLibcExhaustiveMathTest
     : public virtual LIBC_NAMESPACE::testing::Test,
       public Checker {
   using FloatType = typename Checker::FloatType;
   using FPBits = typename Checker::FPBits;
-  using UIntType = typename Checker::UIntType;
+  using StorageType = typename Checker::StorageType;
 
-  static constexpr UIntType INCREMENT = (1 << 20);
+  static constexpr StorageType INCREMENT = (1 << 20);
 
   // Break [start, stop) into `nthreads` subintervals and apply *check to each
   // subinterval in parallel.
-  void test_full_range(UIntType start, UIntType stop,
+  void test_full_range(StorageType start, StorageType stop,
                        mpfr::RoundingMode rounding) {
     int n_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
     int current_percent = -1;
-    UIntType current_value = start;
+    StorageType current_value = start;
     std::atomic<uint64_t> failed(0);
 
     for (int i = 0; i < n_threads; ++i) {
       thread_list.emplace_back([&, this]() {
         while (true) {
-          UIntType range_begin, range_end;
+          StorageType range_begin, range_end;
           int new_percent = -1;
           {
             std::lock_guard<std::mutex> lock(mx_cur_val);
@@ -148,7 +149,7 @@ struct LlvmLibcExhaustiveMathTest
     ASSERT_EQ(failed.load(), uint64_t(0));
   }
 
-  void test_full_range_all_roundings(UIntType start, UIntType stop) {
+  void test_full_range_all_roundings(StorageType start, StorageType stop) {
     std::cout << "-- Testing for FE_TONEAREST in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
     test_full_range(start, stop, mpfr::RoundingMode::Nearest);

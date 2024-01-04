@@ -391,7 +391,7 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
         if (MI.getOpcode() != SPIRV::OpExtInst)
           continue;
         auto Set = MI.getOperand(2).getImm();
-        if (MAI.ExtInstSetMap.find(Set) == MAI.ExtInstSetMap.end())
+        if (!MAI.ExtInstSetMap.contains(Set))
           MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
       }
     }
@@ -528,8 +528,8 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 void SPIRV::RequirementHandler::removeCapabilityIf(
     const Capability::Capability ToRemove,
     const Capability::Capability IfPresent) {
-  if (AvailableCaps.contains(IfPresent))
-    AvailableCaps.erase(ToRemove);
+  if (AllCaps.contains(IfPresent))
+    AllCaps.erase(ToRemove);
 }
 
 namespace llvm {

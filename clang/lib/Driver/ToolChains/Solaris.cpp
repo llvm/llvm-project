@@ -49,11 +49,8 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
       Args.hasArg(options::OPT_r))
     return false;
 
-  Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
-                           options::OPT_nopie);
-  if (!A)
-    return TC.isPIEDefault(Args);
-  return A->getOption().matches(options::OPT_pie);
+  return Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                      TC.isPIEDefault(Args));
 }
 
 // FIXME: Need to handle CLANG_DEFAULT_LINKER here?
@@ -228,8 +225,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below.
     if (D.IsFlangMode()) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, CmdArgs);
+      addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
+      addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
     if (Args.hasArg(options::OPT_fstack_protector) ||
@@ -298,13 +295,12 @@ static StringRef getSolarisLibSuffix(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   case llvm::Triple::x86:
   case llvm::Triple::sparc:
+  default:
     break;
   case llvm::Triple::x86_64:
     return "/amd64";
   case llvm::Triple::sparcv9:
     return "/sparcv9";
-  default:
-    llvm_unreachable("Unsupported architecture");
   }
   return "";
 }
@@ -331,7 +327,7 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 
   // If we are currently running Clang inside of the requested system root,
   // add its parent library path to those searched.
-  if (StringRef(D.Dir).startswith(D.SysRoot))
+  if (StringRef(D.Dir).starts_with(D.SysRoot))
     addPathIfExists(D, D.Dir + "/../lib", Paths);
 
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);

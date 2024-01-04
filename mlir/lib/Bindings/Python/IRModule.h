@@ -4,6 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
@@ -53,7 +54,7 @@ public:
            "cannot construct PyObjectRef with null referrent");
     assert(this->object && "cannot construct PyObjectRef with null object");
   }
-  PyObjectRef(PyObjectRef &&other)
+  PyObjectRef(PyObjectRef &&other) noexcept
       : referrent(other.referrent), object(std::move(other.object)) {
     other.referrent = nullptr;
     assert(!other.object);
@@ -484,7 +485,8 @@ public:
       mlirDialectRegistryDestroy(registry);
   }
   PyDialectRegistry(PyDialectRegistry &) = delete;
-  PyDialectRegistry(PyDialectRegistry &&other) : registry(other.registry) {
+  PyDialectRegistry(PyDialectRegistry &&other) noexcept
+      : registry(other.registry) {
     other.registry = {nullptr};
   }
 
@@ -550,16 +552,19 @@ private:
   pybind11::handle handle;
 };
 
+class PyAsmState;
+
 /// Base class for PyOperation and PyOpView which exposes the primary, user
 /// visible methods for manipulating it.
 class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(pybind11::object fileObject, bool binary,
-             std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified);
+             bool assumeVerified, py::object fileObject, bool binary);
+  void print(PyAsmState &state, py::object fileObject, bool binary);
+
   pybind11::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,

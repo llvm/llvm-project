@@ -1239,6 +1239,45 @@ inline SpecificBinaryOp_match<LHS, RHS> m_BinOp(unsigned Opcode, const LHS &L,
   return SpecificBinaryOp_match<LHS, RHS>(Opcode, L, R);
 }
 
+template <typename LHS, typename RHS, bool Commutable = false>
+struct DisjointOr_match {
+  LHS L;
+  RHS R;
+
+  DisjointOr_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(V)) {
+      assert(PDI->getOpcode() == Instruction::Or && "Only or can be disjoint");
+      if (!PDI->isDisjoint())
+        return false;
+      return (L.match(PDI->getOperand(0)) && R.match(PDI->getOperand(1))) ||
+             (Commutable && L.match(PDI->getOperand(1)) &&
+              R.match(PDI->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS> m_DisjointOr(const LHS &L, const RHS &R) {
+  return DisjointOr_match<LHS, RHS>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
+                                                       const RHS &R) {
+  return DisjointOr_match<LHS, RHS, true>(L, R);
+}
+
+/// Match either "and" or "or disjoint".
+template <typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
+                        DisjointOr_match<LHS, RHS>>
+m_AddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Add(L, R), m_DisjointOr(L, R));
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //
@@ -1617,6 +1656,19 @@ template <typename Op_t> struct PtrToIntSameSize_match {
   }
 };
 
+template <typename Op_t> struct NNegZExt_match {
+  Op_t Op;
+
+  NNegZExt_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<Instruction>(V))
+      return I->getOpcode() == Instruction::ZExt && I->hasNonNeg() &&
+             Op.match(I->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::BitCast>
@@ -1669,6 +1721,11 @@ inline CastInst_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline NNegZExt_match<OpTy> m_NNegZExt(const OpTy &Op) {
+  return NNegZExt_match<OpTy>(Op);
+}
+
+template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, Instruction::ZExt>, OpTy>
 m_ZExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), Op);
@@ -1678,6 +1735,14 @@ template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>, OpTy>
 m_SExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), Op);
+}
+
+/// Match either "sext" or "zext nneg".
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>,
+                        NNegZExt_match<OpTy>>
+m_SExtLike(const OpTy &Op) {
+  return m_CombineOr(m_SExt(Op), m_NNegZExt(Op));
 }
 
 template <typename OpTy>

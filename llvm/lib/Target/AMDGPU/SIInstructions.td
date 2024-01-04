@@ -30,7 +30,7 @@ include "SMInstructions.td"
 include "FLATInstructions.td"
 include "BUFInstructions.td"
 include "EXPInstructions.td"
-include "LDSDIRInstructions.td"
+include "DSDIRInstructions.td"
 include "VINTERPInstructions.td"
 
 //===----------------------------------------------------------------------===//
@@ -1487,8 +1487,18 @@ foreach Index = 0-31 in {
 // 16-bit bitcast
 def : BitConvert <i16, f16, VGPR_32>;
 def : BitConvert <f16, i16, VGPR_32>;
+def : BitConvert <f16, bf16, VGPR_32>;
+def : BitConvert <bf16, f16, VGPR_32>;
+
 def : BitConvert <i16, f16, SReg_32>;
 def : BitConvert <f16, i16, SReg_32>;
+def : BitConvert <f16, bf16, SReg_32>;
+def : BitConvert <bf16, f16, SReg_32>;
+
+def : BitConvert <i16, bf16, VGPR_32>;
+def : BitConvert <bf16, i16, VGPR_32>;
+def : BitConvert <i16, bf16, SReg_32>;
+def : BitConvert <bf16, i16, SReg_32>;
 
 // 32-bit bitcast
 def : BitConvert <i32, f32, VGPR_32>;
@@ -3441,6 +3451,12 @@ defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax>;
 defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax>;
 } // End Predicates = [isGFX9Plus]
 
+let OtherPredicates = [isGFX12Plus] in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
 
 // Convert a floating-point power of 2 to the integer exponent.
 def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{

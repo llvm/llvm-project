@@ -343,6 +343,7 @@ struct InlineCostAnnotationPrinterPass
 public:
   explicit InlineCostAnnotationPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 

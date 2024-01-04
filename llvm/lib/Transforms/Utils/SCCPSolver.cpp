@@ -107,9 +107,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 static bool refineInstruction(SCCPSolver &Solver,
                               const SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
-  if (!isa<OverflowingBinaryOperator>(Inst))
-    return false;
-
+  bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<ConstantInt>(Op))
       return ConstantRange(Const->getValue());
@@ -120,23 +118,32 @@ static bool refineInstruction(SCCPSolver &Solver,
     return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
                             /*UndefAllowed=*/false);
   };
-  auto RangeA = GetRange(Inst.getOperand(0));
-  auto RangeB = GetRange(Inst.getOperand(1));
-  bool Changed = false;
-  if (!Inst.hasNoUnsignedWrap()) {
-    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB,
-        OverflowingBinaryOperator::NoUnsignedWrap);
-    if (NUWRange.contains(RangeA)) {
-      Inst.setHasNoUnsignedWrap();
-      Changed = true;
+
+  if (isa<OverflowingBinaryOperator>(Inst)) {
+    auto RangeA = GetRange(Inst.getOperand(0));
+    auto RangeB = GetRange(Inst.getOperand(1));
+    if (!Inst.hasNoUnsignedWrap()) {
+      auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoUnsignedWrap);
+      if (NUWRange.contains(RangeA)) {
+        Inst.setHasNoUnsignedWrap();
+        Changed = true;
+      }
     }
-  }
-  if (!Inst.hasNoSignedWrap()) {
-    auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB, OverflowingBinaryOperator::NoSignedWrap);
-    if (NSWRange.contains(RangeA)) {
-      Inst.setHasNoSignedWrap();
+    if (!Inst.hasNoSignedWrap()) {
+      auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoSignedWrap);
+      if (NSWRange.contains(RangeA)) {
+        Inst.setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+  } else if (isa<ZExtInst>(Inst) && !Inst.hasNonNeg()) {
+    auto Range = GetRange(Inst.getOperand(0));
+    if (Range.isAllNonNegative()) {
+      Inst.setNonNeg();
       Changed = true;
     }
   }
@@ -180,6 +187,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst->setIsExact(Inst.isExact());
     break;
   }
   case Instruction::SDiv:
@@ -192,6 +200,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
     NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    if (Inst.getOpcode() == Instruction::SDiv)
+      NewInst->setIsExact(Inst.isExact());
     break;
   }
   default:

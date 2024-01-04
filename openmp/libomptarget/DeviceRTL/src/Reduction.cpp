@@ -65,8 +65,7 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 }
 #endif
 
-static int32_t nvptx_parallel_reduce_nowait(
-                                            void *reduce_data,
+static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
                                             ShuffleReductFnTy shflFct,
                                             InterWarpCopyFnTy cpyFct) {
   uint32_t BlockThreadId = mapping::getThreadIdInBlock();

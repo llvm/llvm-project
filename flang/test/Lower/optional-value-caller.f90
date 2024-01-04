@@ -1,5 +1,5 @@
 ! Test lowering of OPTIONAL VALUE dummy argument on caller side.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! A copy must be made if the actual is a variable (and no copy-out), but care
 ! has to be take if the actual argument may be absent at runtime: the copy

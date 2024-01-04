@@ -34,7 +34,7 @@ checkOperandAffineExprRecursively(AffineExpr expr,
                                   SmallVectorImpl<bool> &seenIds) {
   switch (expr.getKind()) {
   case AffineExprKind::Add: {
-    auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+    auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
     AffineExpr lhs = binOpExpr.getLHS();
     AffineExpr rhs = binOpExpr.getRHS();
     if (failed(checkOperandAffineExprRecursively(lhs, seenIds)))
@@ -44,7 +44,7 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     return success();
   }
   case AffineExprKind::Mul: {
-    auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+    auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
     AffineExpr lhs = binOpExpr.getLHS();
     AffineExpr rhs = binOpExpr.getRHS();
     AffineExpr dimExpr;
@@ -56,14 +56,14 @@ checkOperandAffineExprRecursively(AffineExpr expr,
       dimExpr = rhs;
     } else
       return failure();
-    unsigned position = dimExpr.cast<AffineDimExpr>().getPosition();
+    unsigned position = cast<AffineDimExpr>(dimExpr).getPosition();
     if ((size_t)position >= seenIds.size() || seenIds[position])
       return failure();
     seenIds[position] = true;
     return success();
   }
   case AffineExprKind::DimId: {
-    unsigned position = expr.cast<AffineDimExpr>().getPosition();
+    unsigned position = cast<AffineDimExpr>(expr).getPosition();
     if ((size_t)position >= seenIds.size() || seenIds[position])
       return failure();
     seenIds[position] = true;
@@ -216,7 +216,7 @@ namespace {
 static LogicalResult fillShardingOption(Operation *op,
                                         ShardingOption &shardingOption,
                                         SymbolRefAttr cluster,
-                                        ArrayRef<int32_t> meshAxes,
+                                        ArrayRef<MeshAxis> meshAxes,
                                         unsigned loopIdx) {
   if ((shardingOption.cluster && cluster &&
        shardingOption.cluster != cluster) ||
@@ -230,10 +230,8 @@ static LogicalResult fillShardingOption(Operation *op,
     if (i == loopIdx)
       continue;
 
-    for (int32_t axis : meshAxes) {
-      if (std::find(shardingOption.shardingArray[i].begin(),
-                    shardingOption.shardingArray[i].end(),
-                    axis) != shardingOption.shardingArray[i].end()) {
+    for (MeshAxis axis : meshAxes) {
+      if (llvm::is_contained(shardingOption.shardingArray[i], axis)) {
         LLVM_DEBUG(DBGS() << "sharding option conflicts because mesh axes "
                           << axis << " duplicate");
         return failure();
@@ -262,7 +260,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
   SmallVector<AffineMap> maps = shardingOp.getIndexingMaps();
   unsigned numOperands = op->getNumOperands();
   shardingOption.shardingArray.resize(loopTypes.size());
-  llvm::SmallVector<int32_t> partialMeshAxes;
+  llvm::SmallVector<MeshAxis> partialMeshAxes;
   Partial partialType;
   llvm::SmallSet<unsigned, 4> visitedLoopIndices;
   bool anyShardingInResultsOrOperands = false;
@@ -279,8 +277,8 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
     // shardingOption[index]
     for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
       AffineExpr expr = std::get<0>(it);
-      ArrayRef<int32_t> axes = std::get<1>(it).asArrayRef();
-      auto dim = expr.cast<AffineDimExpr>();
+      ArrayRef<MeshAxis> axes = std::get<1>(it).asArrayRef();
+      auto dim = cast<AffineDimExpr>(expr);
       unsigned index = dim.getPosition();
       visitedLoopIndices.insert(index);
       if (failed(fillShardingOption(op, shardingOption, shardAttr.getCluster(),
@@ -290,7 +288,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
 
     // Handle the partial axes: at this stage, the exact loop index/indices
     // cannot be decided because there could be multiple reduction loops.
-    ArrayRef<int32_t> partialAxes = shardAttr.getPartialAxes();
+    ArrayRef<MeshAxis> partialAxes = shardAttr.getPartialAxes();
     if (!partialAxes.empty()) {
       if (!partialMeshAxes.empty())
         return op->emitOpError() << "at most one result with partial axes is "
@@ -323,7 +321,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
     // then the operands with multiple loop indices.
     for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
       AffineExpr expr = std::get<0>(it);
-      ArrayRef<int32_t> axes = std::get<1>(it).asArrayRef();
+      ArrayRef<MeshAxis> axes = std::get<1>(it).asArrayRef();
       FailureOr<llvm::SmallSet<unsigned, 2>> loopIndices =
           checkOperandAffineExpr(expr, numDims);
       if (failed(loopIndices))
@@ -364,7 +362,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
   if (!partialMeshAxes.empty()) {
     bool anyNonEmptyReductionLoop = llvm::any_of(
         llvm::enumerate(shardingOption.shardingArray), [&](auto it) {
-          SmallVector<int32_t> &subArray = it.value();
+          SmallVector<MeshAxis> &subArray = it.value();
           int64_t idx = it.index();
           return isReductionLoop(loopTypes[idx]) && !subArray.empty();
         });
@@ -408,15 +406,15 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
     return success();
 
   auto resultType = result.getType().cast<RankedTensorType>();
-  SmallVector<SmallVector<int32_t>> splitAxes(resultType.getRank());
-  SmallVector<int32_t> partialAxes;
+  SmallVector<SmallVector<MeshAxis>> splitAxes(resultType.getRank());
+  SmallVector<MeshAxis> partialAxes;
 
   // process the split axes
   for (auto it : llvm::enumerate(map.getResults())) {
     AffineExpr expr = it.value();
     // `expr` must be an `AffineDimExpr` because `map` is verified by
     // isProjectedPermutation
-    auto dim = expr.cast<AffineDimExpr>();
+    auto dim = cast<AffineDimExpr>(expr);
     unsigned loopIdx = dim.getPosition();
     if (loopIdx < shardingOption.shardingArray.size())
       splitAxes[it.index()].append(shardingOption.shardingArray[loopIdx]);
@@ -433,7 +431,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
         assert(partialType == curPartialType &&
                "Only one reduction type is supported");
       partialType = curPartialType;
-      const SmallVector<int32_t> &axis = std::get<1>(it);
+      const SmallVector<MeshAxis> &axis = std::get<1>(it);
       partialAxes.append(axis);
     }
   }
@@ -461,7 +459,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
     return success();
   Value operand = opOperand.get();
   auto operandType = operand.getType().cast<RankedTensorType>();
-  SmallVector<SmallVector<int32_t>> splitAxes(operandType.getRank());
+  SmallVector<SmallVector<MeshAxis>> splitAxes(operandType.getRank());
   unsigned numDims = map.getNumDims();
   for (auto it : llvm::enumerate(map.getResults())) {
     int64_t idx = it.index();

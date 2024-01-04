@@ -65,10 +65,10 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
+  bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E);
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
@@ -107,6 +107,7 @@ public:
   bool VisitSourceLocExpr(const SourceLocExpr *E);
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
   bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
+  bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -129,7 +130,13 @@ protected:
 
   /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    return E->isGLValue() ? PT_Ptr : classify(E->getType());
+    if (E->isGLValue()) {
+      if (E->getType()->isFunctionType())
+        return PT_FnPtr;
+      return PT_Ptr;
+    }
+
+    return classify(E->getType());
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
@@ -203,6 +210,7 @@ protected:
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -278,6 +286,14 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  std::optional<PrimType> classifyComplexElementType(QualType T) const {
+    assert(T->isAnyComplexType());
+
+    QualType ElemType = T->getAs<ComplexType>()->getElementType();
+
+    return this->classify(ElemType);
+  }
+
   bool emitRecordDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);

@@ -90,6 +90,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "emit-bytecode", cl::desc("Emit bytecode when generating output"),
         cl::location(emitBytecodeFlag), cl::init(false));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> elideResourcesFromBytecode(
+        "elide-resource-data-from-bytecode",
+        cl::desc("Elide resources when generating bytecode"),
+        cl::location(elideResourceDataFromBytecodeFlag), cl::init(false));
+
     static cl::opt<std::optional<int64_t>, /*ExternalStorage=*/true,
                    BytecodeVersionParser>
         bytecodeVersion(
@@ -146,6 +151,16 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
 
     static cl::list<std::string> passPlugins(
         "load-pass-plugin", cl::desc("Load passes from plugin library"));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true>
+        generateReproducerFile(
+            "mlir-generate-reproducer",
+            llvm::cl::desc(
+                "Generate an mlir reproducer at the provided filename"
+                " (no crash required)"),
+            cl::location(generateReproducerFileFlag), cl::init(""),
+            cl::value_desc("filename"));
+
     /// Set the callback to load a pass plugin.
     passPlugins.setCallback([&](const std::string &pluginPath) {
       auto plugin = PassPlugin::load(pluginPath);
@@ -379,12 +394,22 @@ performActions(raw_ostream &os,
   if (failed(pm.run(*op)))
     return failure();
 
+  // Generate reproducers if requested
+  if (!config.getReproducerFilename().empty()) {
+    StringRef anchorName = pm.getAnyOpAnchorName();
+    const auto &passes = pm.getPasses();
+    makeReproducer(anchorName, passes, op.get(),
+                   config.getReproducerFilename());
+  }
+
   // Print the output.
   TimingScope outputTiming = timing.nest("Output");
   if (config.shouldEmitBytecode()) {
     BytecodeWriterConfig writerConfig(fallbackResourceMap);
     if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
+    if (config.shouldElideResourceDataFromBytecode())
+      writerConfig.setElideResourceDataFlag();
     return writeBytecodeToFile(op.get(), os, writerConfig);
   }
 

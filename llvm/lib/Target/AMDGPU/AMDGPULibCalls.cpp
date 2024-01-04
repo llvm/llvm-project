@@ -562,11 +562,10 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!F)
     return false;
 
-  auto *BCast = B.CreatePointerCast(PtrArg, PtrTy);
   SmallVector<Value *, 6> Args;
   for (unsigned I = 0; I != PtrArgLoc; ++I)
     Args.push_back(CI->getArgOperand(I));
-  Args.push_back(BCast);
+  Args.push_back(PtrArg);
 
   auto *NCI = B.CreateCall(F, Args);
   NCI->setAttributes(CI->getAttributes());
@@ -1051,8 +1050,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                      CF->isNegative();
     } else {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
-                               (!CF || CF->isNegative());
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
     }
   } else {
     ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr0);

@@ -25,142 +25,158 @@
 struct InstructionSpecifier;
 
 namespace llvm {
-
 class Record;
-
-#define X86_INSTR_MRM_MAPPING     \
-  MAP(C0, 64)                     \
-  MAP(C1, 65)                     \
-  MAP(C2, 66)                     \
-  MAP(C3, 67)                     \
-  MAP(C4, 68)                     \
-  MAP(C5, 69)                     \
-  MAP(C6, 70)                     \
-  MAP(C7, 71)                     \
-  MAP(C8, 72)                     \
-  MAP(C9, 73)                     \
-  MAP(CA, 74)                     \
-  MAP(CB, 75)                     \
-  MAP(CC, 76)                     \
-  MAP(CD, 77)                     \
-  MAP(CE, 78)                     \
-  MAP(CF, 79)                     \
-  MAP(D0, 80)                     \
-  MAP(D1, 81)                     \
-  MAP(D2, 82)                     \
-  MAP(D3, 83)                     \
-  MAP(D4, 84)                     \
-  MAP(D5, 85)                     \
-  MAP(D6, 86)                     \
-  MAP(D7, 87)                     \
-  MAP(D8, 88)                     \
-  MAP(D9, 89)                     \
-  MAP(DA, 90)                     \
-  MAP(DB, 91)                     \
-  MAP(DC, 92)                     \
-  MAP(DD, 93)                     \
-  MAP(DE, 94)                     \
-  MAP(DF, 95)                     \
-  MAP(E0, 96)                     \
-  MAP(E1, 97)                     \
-  MAP(E2, 98)                     \
-  MAP(E3, 99)                     \
-  MAP(E4, 100)                    \
-  MAP(E5, 101)                    \
-  MAP(E6, 102)                    \
-  MAP(E7, 103)                    \
-  MAP(E8, 104)                    \
-  MAP(E9, 105)                    \
-  MAP(EA, 106)                    \
-  MAP(EB, 107)                    \
-  MAP(EC, 108)                    \
-  MAP(ED, 109)                    \
-  MAP(EE, 110)                    \
-  MAP(EF, 111)                    \
-  MAP(F0, 112)                    \
-  MAP(F1, 113)                    \
-  MAP(F2, 114)                    \
-  MAP(F3, 115)                    \
-  MAP(F4, 116)                    \
-  MAP(F5, 117)                    \
-  MAP(F6, 118)                    \
-  MAP(F7, 119)                    \
-  MAP(F8, 120)                    \
-  MAP(F9, 121)                    \
-  MAP(FA, 122)                    \
-  MAP(FB, 123)                    \
-  MAP(FC, 124)                    \
-  MAP(FD, 125)                    \
-  MAP(FE, 126)                    \
+#define X86_INSTR_MRM_MAPPING                                                  \
+  MAP(C0, 64)                                                                  \
+  MAP(C1, 65)                                                                  \
+  MAP(C2, 66)                                                                  \
+  MAP(C3, 67)                                                                  \
+  MAP(C4, 68)                                                                  \
+  MAP(C5, 69)                                                                  \
+  MAP(C6, 70)                                                                  \
+  MAP(C7, 71)                                                                  \
+  MAP(C8, 72)                                                                  \
+  MAP(C9, 73)                                                                  \
+  MAP(CA, 74)                                                                  \
+  MAP(CB, 75)                                                                  \
+  MAP(CC, 76)                                                                  \
+  MAP(CD, 77)                                                                  \
+  MAP(CE, 78)                                                                  \
+  MAP(CF, 79)                                                                  \
+  MAP(D0, 80)                                                                  \
+  MAP(D1, 81)                                                                  \
+  MAP(D2, 82)                                                                  \
+  MAP(D3, 83)                                                                  \
+  MAP(D4, 84)                                                                  \
+  MAP(D5, 85)                                                                  \
+  MAP(D6, 86)                                                                  \
+  MAP(D7, 87)                                                                  \
+  MAP(D8, 88)                                                                  \
+  MAP(D9, 89)                                                                  \
+  MAP(DA, 90)                                                                  \
+  MAP(DB, 91)                                                                  \
+  MAP(DC, 92)                                                                  \
+  MAP(DD, 93)                                                                  \
+  MAP(DE, 94)                                                                  \
+  MAP(DF, 95)                                                                  \
+  MAP(E0, 96)                                                                  \
+  MAP(E1, 97)                                                                  \
+  MAP(E2, 98)                                                                  \
+  MAP(E3, 99)                                                                  \
+  MAP(E4, 100)                                                                 \
+  MAP(E5, 101)                                                                 \
+  MAP(E6, 102)                                                                 \
+  MAP(E7, 103)                                                                 \
+  MAP(E8, 104)                                                                 \
+  MAP(E9, 105)                                                                 \
+  MAP(EA, 106)                                                                 \
+  MAP(EB, 107)                                                                 \
+  MAP(EC, 108)                                                                 \
+  MAP(ED, 109)                                                                 \
+  MAP(EE, 110)                                                                 \
+  MAP(EF, 111)                                                                 \
+  MAP(F0, 112)                                                                 \
+  MAP(F1, 113)                                                                 \
+  MAP(F2, 114)                                                                 \
+  MAP(F3, 115)                                                                 \
+  MAP(F4, 116)                                                                 \
+  MAP(F5, 117)                                                                 \
+  MAP(F6, 118)                                                                 \
+  MAP(F7, 119)                                                                 \
+  MAP(F8, 120)                                                                 \
+  MAP(F9, 121)                                                                 \
+  MAP(FA, 122)                                                                 \
+  MAP(FB, 123)                                                                 \
+  MAP(FC, 124)                                                                 \
+  MAP(FD, 125)                                                                 \
+  MAP(FE, 126)                                                                 \
   MAP(FF, 127)
 
 // A clone of X86 since we can't depend on something that is generated.
 namespace X86Local {
-  enum {
-    Pseudo        = 0,
-    RawFrm        = 1,
-    AddRegFrm     = 2,
-    RawFrmMemOffs = 3,
-    RawFrmSrc     = 4,
-    RawFrmDst     = 5,
-    RawFrmDstSrc  = 6,
-    RawFrmImm8    = 7,
-    RawFrmImm16   = 8,
-    AddCCFrm      = 9,
-    PrefixByte    = 10,
-    MRMDestMem4VOp3CC = 20,
-    MRMr0          = 21,
-    MRMSrcMemFSIB  = 22,
-    MRMDestMemFSIB = 23,
-    MRMDestMem     = 24,
-    MRMSrcMem      = 25,
-    MRMSrcMem4VOp3 = 26,
-    MRMSrcMemOp4   = 27,
-    MRMSrcMemCC    = 28,
-    MRMXmCC = 30, MRMXm = 31,
-    MRM0m = 32, MRM1m = 33, MRM2m = 34, MRM3m = 35,
-    MRM4m = 36, MRM5m = 37, MRM6m = 38, MRM7m = 39,
-    MRMDestReg     = 40,
-    MRMSrcReg      = 41,
-    MRMSrcReg4VOp3 = 42,
-    MRMSrcRegOp4   = 43,
-    MRMSrcRegCC    = 44,
-    MRMXrCC = 46, MRMXr = 47,
-    MRM0r = 48, MRM1r = 49, MRM2r = 50, MRM3r = 51,
-    MRM4r = 52, MRM5r = 53, MRM6r = 54, MRM7r = 55,
-    MRM0X = 56, MRM1X = 57, MRM2X = 58, MRM3X = 59,
-    MRM4X = 60, MRM5X = 61, MRM6X = 62, MRM7X = 63,
+enum {
+  Pseudo = 0,
+  RawFrm = 1,
+  AddRegFrm = 2,
+  RawFrmMemOffs = 3,
+  RawFrmSrc = 4,
+  RawFrmDst = 5,
+  RawFrmDstSrc = 6,
+  RawFrmImm8 = 7,
+  RawFrmImm16 = 8,
+  AddCCFrm = 9,
+  PrefixByte = 10,
+  MRMDestMem4VOp3CC = 20,
+  MRMr0 = 21,
+  MRMSrcMemFSIB = 22,
+  MRMDestMemFSIB = 23,
+  MRMDestMem = 24,
+  MRMSrcMem = 25,
+  MRMSrcMem4VOp3 = 26,
+  MRMSrcMemOp4 = 27,
+  MRMSrcMemCC = 28,
+  MRMXmCC = 30,
+  MRMXm = 31,
+  MRM0m = 32,
+  MRM1m = 33,
+  MRM2m = 34,
+  MRM3m = 35,
+  MRM4m = 36,
+  MRM5m = 37,
+  MRM6m = 38,
+  MRM7m = 39,
+  MRMDestReg = 40,
+  MRMSrcReg = 41,
+  MRMSrcReg4VOp3 = 42,
+  MRMSrcRegOp4 = 43,
+  MRMSrcRegCC = 44,
+  MRMXrCC = 46,
+  MRMXr = 47,
+  MRM0r = 48,
+  MRM1r = 49,
+  MRM2r = 50,
+  MRM3r = 51,
+  MRM4r = 52,
+  MRM5r = 53,
+  MRM6r = 54,
+  MRM7r = 55,
+  MRM0X = 56,
+  MRM1X = 57,
+  MRM2X = 58,
+  MRM3X = 59,
+  MRM4X = 60,
+  MRM5X = 61,
+  MRM6X = 62,
+  MRM7X = 63,
 #define MAP(from, to) MRM_##from = to,
-    X86_INSTR_MRM_MAPPING
+  X86_INSTR_MRM_MAPPING
 #undef MAP
-  };
+};
 
-  enum {
-    OB = 0, TB = 1, T8 = 2, TA = 3, XOP8 = 4, XOP9 = 5, XOPA = 6, ThreeDNow = 7,
-    T_MAP5 = 8, T_MAP6 = 9, T_MAP7 = 10
-  };
+enum {
+  OB = 0,
+  TB = 1,
+  T8 = 2,
+  TA = 3,
+  XOP8 = 4,
+  XOP9 = 5,
+  XOPA = 6,
+  ThreeDNow = 7,
+  T_MAP4 = 8,
+  T_MAP5 = 9,
+  T_MAP6 = 10,
+  T_MAP7 = 11
+};
 
-  enum {
-    PD = 1, XS = 2, XD = 3, PS = 4
-  };
-
-  enum {
-    VEX = 1, XOP = 2, EVEX = 3
-  };
-
-  enum {
-    OpSize16 = 1, OpSize32 = 2
-  };
-
-  enum {
-    AdSize16 = 1, AdSize32 = 2, AdSize64 = 3
-  };
-}
+enum { PD = 1, XS = 2, XD = 3, PS = 4 };
+enum { VEX = 1, XOP = 2, EVEX = 3 };
+enum { OpSize16 = 1, OpSize32 = 2 };
+enum { AdSize16 = 1, AdSize32 = 2, AdSize64 = 3 };
+enum { ExplicitREX2 = 1, ExplicitEVEX = 3 };
+} // namespace X86Local
 
 namespace X86Disassembler {
-
 class DisassemblerTables;
-
 /// Extract common fields of a single X86 instruction from a CodeGenInstruction
 struct RecognizableInstrBase {
   /// The OpPrefix field from the record
@@ -196,6 +212,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_KZ;
   /// The hasEVEX_B field from the record
   bool HasEVEX_B;
+  /// The hasEVEX_NF field from the record
+  bool HasEVEX_NF;
   /// Indicates that the instruction uses the L and L' fields for RC.
   bool EncodeRC;
   /// The isCodeGenOnly field from the record
@@ -206,6 +224,8 @@ struct RecognizableInstrBase {
   bool ForceDisassemble;
   // The CD8_Scale field from the record
   uint8_t CD8_Scale;
+  /// If explicitOpPrefix field from the record equals ExplicitREX2
+  bool ExplicitREX2Prefix;
   /// \param insn The CodeGenInstruction to extract information from.
   RecognizableInstrBase(const CodeGenInstruction &insn);
   /// \returns true if this instruction should be emitted
@@ -219,7 +239,7 @@ struct RecognizableInstrBase {
 class RecognizableInstr : public RecognizableInstrBase {
 private:
   /// The record from the .td files corresponding to this instruction
-  const Record* Rec;
+  const Record *Rec;
   /// The instruction name as listed in the tables
   std::string Name;
   // Whether the instruction has the predicate "In32BitMode"
@@ -229,13 +249,13 @@ private:
   /// The operands of the instruction, as listed in the CodeGenInstruction.
   /// They are not one-to-one with operands listed in the MCInst; for example,
   /// memory operands expand to 5 operands in the MCInst
-  const std::vector<CGIOperandList::OperandInfo>* Operands;
+  const std::vector<CGIOperandList::OperandInfo> *Operands;
 
   /// The opcode of the instruction, as used in an MCInst
   InstrUID UID;
   /// The description of the instruction that is emitted into the instruction
   /// info table
-  InstructionSpecifier* Spec;
+  InstructionSpecifier *Spec;
 
   /// insnContext - Returns the primary context in which the instruction is
   ///   valid.
@@ -255,8 +275,8 @@ private:
   ///                         If register size does not match OpSize, then
   ///                         register sizes keep their size.
   /// @return               - The operand's type.
-  static OperandType typeFromString(const std::string& s,
-                                    bool hasREX_W, uint8_t OpSize);
+  static OperandType typeFromString(const std::string &s, bool hasREX_W,
+                                    uint8_t OpSize);
 
   /// immediateEncodingFromString - Translates an immediate encoding from the
   ///   string provided in the LLVM tables to an OperandEncoding for use in
@@ -286,8 +306,8 @@ private:
                                                           uint8_t OpSize);
   static OperandEncoding vvvvRegisterEncodingFromString(const std::string &s,
                                                         uint8_t OpSize);
-  static OperandEncoding writemaskRegisterEncodingFromString(const std::string &s,
-                                                             uint8_t OpSize);
+  static OperandEncoding
+  writemaskRegisterEncodingFromString(const std::string &s, uint8_t OpSize);
 
   /// Adjust the encoding type for an operand based on the instruction.
   void adjustOperandEncoding(OperandEncoding &encoding);
@@ -310,14 +330,12 @@ private:
   /// @param operandMapping       - The operand mapping, which has an entry for
   ///                               each operand that indicates whether it is a
   ///                               duplicate, and of what.
-  void handleOperand(bool optional,
-                     unsigned &operandIndex,
+  void handleOperand(bool optional, unsigned &operandIndex,
                      unsigned &physicalOperandIndex,
                      unsigned numPhysicalOperands,
                      const unsigned *operandMapping,
-                     OperandEncoding (*encodingFromString)
-                       (const std::string&,
-                        uint8_t OpSize));
+                     OperandEncoding (*encodingFromString)(const std::string &,
+                                                           uint8_t OpSize));
 
   /// emitInstructionSpecifier - Loads the instruction specifier for the current
   ///   instruction into a DisassemblerTables.
@@ -338,8 +356,7 @@ public:
   /// \param tables The DisassemblerTables that the specifier will be added to.
   /// \param insn   The CodeGenInstruction to extract information from.
   /// \param uid    The unique ID of the current instruction.
-  RecognizableInstr(DisassemblerTables &tables,
-                    const CodeGenInstruction &insn,
+  RecognizableInstr(DisassemblerTables &tables, const CodeGenInstruction &insn,
                     InstrUID uid);
   /// processInstr - Accepts a CodeGenInstruction and loads decode information
   ///   for it into a DisassemblerTables if appropriate.
@@ -350,8 +367,7 @@ public:
   ///               information.
   /// \param uid    The unique ID of the instruction.
   static void processInstr(DisassemblerTables &tables,
-                           const CodeGenInstruction &insn,
-                           InstrUID uid);
+                           const CodeGenInstruction &insn, InstrUID uid);
 };
 
 std::string getMnemonic(const CodeGenInstruction *I, unsigned Variant);
@@ -361,7 +377,5 @@ bool isImmediateOperand(const Record *Rec);
 unsigned getRegOperandSize(const Record *RegRec);
 unsigned getMemOperandSize(const Record *MemRec);
 } // namespace X86Disassembler
-
 } // namespace llvm
-
 #endif

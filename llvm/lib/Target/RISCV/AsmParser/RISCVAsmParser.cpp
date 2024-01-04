@@ -16,7 +16,6 @@
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -203,6 +202,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
   ParseStatus parseReglist(OperandVector &Operands);
+  ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpSpimm(OperandVector &Operands);
 
@@ -286,11 +286,11 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     auto ABIName = StringRef(Options.ABIName);
-    if (ABIName.endswith("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
+    if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
                 "target-abi)\n";
-    } else if (ABIName.endswith("d") &&
+    } else if (ABIName.ends_with("d") &&
                !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
       errs() << "Hard-float 'd' ABI can't be used for a target that "
                 "doesn't support the D instruction set extension (ignoring "
@@ -325,6 +325,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     Fence,
     Rlist,
     Spimm,
+    RegReg,
   } Kind;
 
   struct RegOp {
@@ -369,6 +370,11 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     unsigned Val;
   };
 
+  struct RegRegOp {
+    MCRegister Reg1;
+    MCRegister Reg2;
+  };
+
   SMLoc StartLoc, EndLoc;
   union {
     StringRef Tok;
@@ -381,6 +387,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     struct FenceOp Fence;
     struct RlistOp Rlist;
     struct SpimmOp Spimm;
+    struct RegRegOp RegReg;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
@@ -421,6 +428,9 @@ public:
     case KindTy::Spimm:
       Spimm = o.Spimm;
       break;
+    case KindTy::RegReg:
+      RegReg = o.RegReg;
+      break;
     }
   }
 
@@ -445,6 +455,7 @@ public:
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
+  bool isRegReg() const { return Kind == KindTy::RegReg; }
   bool isRlist() const { return Kind == KindTy::Rlist; }
   bool isSpimm() const { return Kind == KindTy::Spimm; }
 
@@ -1026,6 +1037,10 @@ public:
       RISCVZC::printSpimm(Spimm.Val, OS);
       OS << '>';
       break;
+    case KindTy::RegReg:
+      OS << "<RegReg:  Reg1 " << RegName(RegReg.Reg1);
+      OS << " Reg2 " << RegName(RegReg.Reg2);
+      break;
     }
   }
 
@@ -1109,6 +1124,16 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<RISCVOperand> createRegReg(unsigned Reg1No,
+                                                    unsigned Reg2No, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::RegReg);
+    Op->RegReg.Reg1 = Reg1No;
+    Op->RegReg.Reg2 = Reg2No;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
   static std::unique_ptr<RISCVOperand> createSpimm(unsigned Spimm, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Spimm);
     Op->Spimm.Val = Spimm;
@@ -1182,6 +1207,12 @@ public:
   void addRlistOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(Rlist.Val));
+  }
+
+  void addRegRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(RegReg.Reg1));
+    Inst.addOperand(MCOperand::createReg(RegReg.Reg2));
   }
 
   void addSpimmOperands(MCInst &Inst, unsigned N) const {
@@ -1550,6 +1581,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
+  case Match_InvalidRegReg: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operands must be register and register");
+  }
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -1797,57 +1832,18 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     if (getParser().parseIdentifier(Identifier))
       return ParseStatus::Failure;
 
-    // Check for CSR names conflicts.
-    // Custom CSR names might conflict with CSR names in privileged spec.
-    // E.g. - SiFive mnscratch(0x350) and privileged spec mnscratch(0x740).
-    auto CheckCSRNameConflict = [&]() {
-      if (!(RISCVSysReg::lookupSysRegByName(Identifier))) {
-        Error(S, "system register use requires an option to be enabled");
-        return true;
-      }
-      return false;
-    };
-
-    // First check for vendor specific CSRs.
-    auto SiFiveReg = RISCVSysReg::lookupSiFiveRegByName(Identifier);
-    if (SiFiveReg) {
-      if (SiFiveReg->haveVendorRequiredFeatures(getSTI().getFeatureBits())) {
-        Operands.push_back(
-            RISCVOperand::createSysReg(Identifier, S, SiFiveReg->Encoding));
-        return ParseStatus::Success;
-      }
-      if (CheckCSRNameConflict())
-        return ParseStatus::Failure;
-    }
-
     auto SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
+    if (!SysReg)
+      SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
     if (!SysReg)
       if ((SysReg = RISCVSysReg::lookupSysRegByDeprecatedName(Identifier)))
         Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
                        SysReg->Name + "'");
 
-    // Check for CSR encoding conflicts.
-    // Custom CSR encoding might conflict with CSR encoding in privileged spec.
-    // E.g. - SiFive mnscratch(0x350) and privileged spec miselect(0x350).
-    auto CheckCSREncodingConflict = [&]() {
-      auto Reg = RISCVSysReg::lookupSiFiveRegByEncoding(SysReg->Encoding);
-      if (Reg && Reg->haveVendorRequiredFeatures(getSTI().getFeatureBits())) {
-        Warning(S, "'" + Identifier + "' CSR is not available on the current " +
-                       "subtarget. Instead '" + Reg->Name +
-                       "' CSR will be used.");
-        Operands.push_back(
-            RISCVOperand::createSysReg(Reg->Name, S, Reg->Encoding));
-        return true;
-      }
-      return false;
-    };
-
-    // Accept a named SysReg if the required features are present.
+    // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
       if (!SysReg->haveRequiredFeatures(getSTI().getFeatureBits()))
         return Error(S, "system register use requires an option to be enabled");
-      if (CheckCSREncodingConflict())
-        return ParseStatus::Success;
       Operands.push_back(
           RISCVOperand::createSysReg(Identifier, S, SysReg->Encoding));
       return ParseStatus::Success;
@@ -2378,6 +2374,37 @@ ParseStatus RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
     return Error(
         OptionalImmOp->getStartLoc(), "optional integer offset must be 0",
         SMRange(OptionalImmOp->getStartLoc(), OptionalImmOp->getEndLoc()));
+
+  return ParseStatus::Success;
+}
+
+ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
+  // RR : a2(a1)
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+
+  StringRef RegName = getLexer().getTok().getIdentifier();
+  MCRegister Reg = matchRegisterNameHelper(isRVE(), RegName);
+  if (!Reg)
+    return Error(getLoc(), "invalid register");
+  getLexer().Lex();
+
+  if (parseToken(AsmToken::LParen, "expected '(' or invalid operand"))
+    return ParseStatus::Failure;
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return Error(getLoc(), "expected register");
+
+  StringRef Reg2Name = getLexer().getTok().getIdentifier();
+  MCRegister Reg2 = matchRegisterNameHelper(isRVE(), Reg2Name);
+  if (!Reg2)
+    return Error(getLoc(), "invalid register");
+  getLexer().Lex();
+
+  if (parseToken(AsmToken::RParen, "expected ')'"))
+    return ParseStatus::Failure;
+
+  Operands.push_back(RISCVOperand::createRegReg(Reg, Reg2, getLoc()));
 
   return ParseStatus::Success;
 }

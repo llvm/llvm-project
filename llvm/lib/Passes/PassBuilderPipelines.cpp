@@ -302,7 +302,6 @@ PipelineTuningOptions::PipelineTuningOptions() {
 
 namespace llvm {
 extern cl::opt<unsigned> MaxDevirtIterations;
-extern cl::opt<bool> EnableKnowledgeRetention;
 } // namespace llvm
 
 void PassBuilder::invokePeepholeEPCallbacks(FunctionPassManager &FPM,
@@ -811,7 +810,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   Options.DoCounterPromotion = true;
   Options.UseBFIInPromotion = IsCS;
   Options.Atomic = AtomicCounterUpdate;
-  MPM.addPass(InstrProfiling(Options, IsCS));
+  MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
 }
 
 void PassBuilder::addPGOInstrPassesForO0(
@@ -838,7 +837,7 @@ void PassBuilder::addPGOInstrPassesForO0(
   Options.DoCounterPromotion = false;
   Options.UseBFIInPromotion = IsCS;
   Options.Atomic = AtomicCounterUpdate;
-  MPM.addPass(InstrProfiling(Options, IsCS));
+  MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
 }
 
 static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
@@ -1531,14 +1530,22 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 }
 
 ModulePassManager
-PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
-                                        bool EmitSummary) {
+PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level) {
   ModulePassManager MPM;
-  MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary,
-                               ThinLTO
-                                   ? buildThinLTOPreLinkDefaultPipeline(Level)
-                                   : buildLTOPreLinkDefaultPipeline(Level)));
-  MPM.addPass(buildPerModuleDefaultPipeline(Level));
+  // FatLTO always uses UnifiedLTO, so use the ThinLTOPreLink pipeline
+  MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
+  MPM.addPass(EmbedBitcodePass());
+
+  // Use the ThinLTO post-link pipeline with sample profiling, other
+  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
+    MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
+  else {
+    // otherwise, just use module optimization
+    MPM.addPass(
+        buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
+    // Emit annotation remarks.
+    addAnnotationRemarksPass(MPM);
+  }
   return MPM;
 }
 

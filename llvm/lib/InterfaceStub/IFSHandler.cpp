@@ -167,7 +167,7 @@ template <> struct MappingTraits<IFSStubTriple> {
 bool usesTriple(StringRef Buf) {
   for (line_iterator I(MemoryBufferRef(Buf, "ELFStub")); !I.is_at_eof(); ++I) {
     StringRef Line = (*I).trim();
-    if (Line.startswith("Target:")) {
+    if (Line.starts_with("Target:")) {
       if (Line == "Target:" || Line.contains("{")) {
         return false;
       }

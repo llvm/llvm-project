@@ -29,5 +29,5 @@ void not_extents() {
 
 void representable() {
   // expected-error-re@*:* {{static assertion failed {{.*}}layout_left::mapping product of static extents must be representable as index_type.}}
-  [[maybe_unused]] std::layout_left::mapping<std::extents<char, 20, 20>> mapping;
+  [[maybe_unused]] std::layout_left::mapping<std::extents<signed char, 20, 20>> mapping;
 }

@@ -358,7 +358,8 @@ public:
   ///
   /// \param IsKnownNewer \c true if this declaration is known to be newer
   /// than \p OldD (for instance, if this declaration is newly-created).
-  bool declarationReplaces(NamedDecl *OldD, bool IsKnownNewer = true) const;
+  bool declarationReplaces(const NamedDecl *OldD,
+                           bool IsKnownNewer = true) const;
 
   /// Determine whether this declaration has linkage.
   bool hasLinkage() const;
@@ -4330,30 +4331,6 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
-  }
-
-  FieldDecl *getLastField() {
-    FieldDecl *FD = nullptr;
-    for (FieldDecl *Field : fields())
-      FD = Field;
-    return FD;
-  }
-  const FieldDecl *getLastField() const {
-    return const_cast<RecordDecl *>(this)->getLastField();
-  }
-
-  template <typename Functor>
-  const FieldDecl *findFieldIf(Functor &Pred) const {
-    for (const Decl *D : decls()) {
-      if (const auto *FD = dyn_cast<FieldDecl>(D); FD && Pred(FD))
-        return FD;
-
-      if (const auto *RD = dyn_cast<RecordDecl>(D))
-        if (const FieldDecl *FD = RD->findFieldIf(Pred))
-          return FD;
-    }
-
-    return nullptr;
   }
 
   /// Note that the definition of this type is now complete.

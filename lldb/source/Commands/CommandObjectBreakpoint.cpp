@@ -2235,9 +2235,9 @@ public:
           size_t num_names = names_array->GetSize();
 
           for (size_t i = 0; i < num_names; i++) {
-            llvm::StringRef name;
-            if (names_array->GetItemAtIndexAsString(i, name))
-              request.TryCompleteCurrentArg(name);
+            if (std::optional<llvm::StringRef> maybe_name =
+                    names_array->GetItemAtIndexAsString(i))
+              request.TryCompleteCurrentArg(*maybe_name);
           }
         }
       }

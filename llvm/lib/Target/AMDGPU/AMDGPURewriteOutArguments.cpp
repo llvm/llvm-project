@@ -43,7 +43,6 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/AttributeMask.h"

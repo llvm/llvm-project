@@ -24,7 +24,6 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
-using mlir::LLVM::detail::createIntrinsicCall;
 using mlir::LLVM::detail::getLLVMConstant;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
@@ -170,6 +169,24 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   if (op.getNumResults() == 1)
     moduleTranslation.mapValue(op->getResults().front()) = inst;
   return success();
+}
+
+static void convertLinkerOptionsOp(ArrayAttr options,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::LLVMContext &context = llvmModule->getContext();
+  llvm::NamedMDNode *linkerMDNode =
+      llvmModule->getOrInsertNamedMetadata("llvm.linker.options");
+  SmallVector<llvm::Metadata *> MDNodes;
+  MDNodes.reserve(options.size());
+  for (auto s : options.getAsRange<StringAttr>()) {
+    auto *MDNode = llvm::MDString::get(context, s.getValue());
+    MDNodes.push_back(MDNode);
+  }
+
+  auto *listMDNode = llvm::MDTuple::get(context, MDNodes);
+  linkerMDNode->addOperand(listMDNode);
 }
 
 static LogicalResult

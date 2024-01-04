@@ -35,7 +35,8 @@ public:
   AMDGPULegalizerInfo(const GCNSubtarget &ST,
                       const GCNTargetMachine &TM);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
   Register getSegmentAperture(unsigned AddrSpace,
                               MachineRegisterInfo &MRI,
@@ -43,8 +44,8 @@ public:
 
   bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
-  bool legalizeFrint(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &B) const;
+  bool legalizeFroundeven(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) const;
   bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B) const;
   bool legalizeFrem(MachineInstr &MI, MachineRegisterInfo &MRI,

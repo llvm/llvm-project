@@ -646,6 +646,7 @@ class Br_I26<bits<32> op>
     : FmtI26<op, (outs), (ins simm26_b:$imm26), "$imm26"> {
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 

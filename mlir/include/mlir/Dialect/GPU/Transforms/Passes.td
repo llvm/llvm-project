@@ -37,6 +37,24 @@ def GpuMapParallelLoopsPass
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
+def GpuEliminateBarriers
+    : Pass<"gpu-eliminate-barriers", "mlir::func::FuncOp"> {
+  let summary = "Erase unnecessary barriers";
+  let description = [{
+    Barrier elimination pass. If a barrier does not enforce any conflicting
+    pair of memory effects, including a pair that is enforced by another
+    barrier, it is unnecessary and can be removed. Adapted from
+    "High-Performance GPU-to-CPU Transpilation and Optimization via High-Level
+    Parallel Constructs" by Moses, Ivanov, Domke, Endo, Doerfert, and Zinenko in
+    PPoPP 2023 and implementation in Polygeist.
+  }];
+  let dependentDialects = [
+    "mlir::gpu::GPUDialect",
+    "mlir::memref::MemRefDialect",
+    "mlir::scf::SCFDialect"
+  ];
+}
+
 def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
   let summary = "Decomposes memref index computation into explicit ops.";
   let description = [{

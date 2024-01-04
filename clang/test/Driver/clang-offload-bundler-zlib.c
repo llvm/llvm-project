@@ -55,14 +55,15 @@
 // Check unbundling archive.
 //
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%T/hip_bundle1.bc -compress
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle1.bc -compress
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%T/hip_bundle2.bc -compress
-// RUN: llvm-ar cr %T/hip_archive.a %T/hip_bundle1.bc %T/hip_bundle2.bc
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle2.bc -compress
+// RUN: rm -f %t.hip_archive.a
+// RUN: llvm-ar cr %t.hip_archive.a %t.hip_bundle1.bc %t.hip_bundle2.bc
 // RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%T/hip_900.a -output=%T/hip_906.a -input=%T/hip_archive.a
-// RUN: llvm-ar t %T/hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
-// RUN: llvm-ar t %T/hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
+// RUN:   -output=%t.hip_900.a -output=%t.hip_906.a -input=%t.hip_archive.a
+// RUN: llvm-ar t %t.hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
+// RUN: llvm-ar t %t.hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
 // HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
 // HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906

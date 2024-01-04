@@ -305,6 +305,31 @@
 // CHECK-NEXT:    [[F64M2X3:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 8
 // CHECK-NEXT:    [[F64M2X4:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 8
 // CHECK-NEXT:    [[F64M4X2:%.*]] = alloca { <vscale x 4 x double>, <vscale x 4 x double> }, align 8
+// CHECK-NEXT:    [[BF16MF4X2:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF4X3:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF4X4:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF4X5:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF4X6:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF4X7:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF4X8:%.*]] = alloca { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X2:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X3:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X4:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X5:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X6:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X7:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16MF2X8:%.*]] = alloca { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X2:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X3:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X4:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X5:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X6:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X7:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M1X8:%.*]] = alloca { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M2X2:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M2X3:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M2X4:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 2
+// CHECK-NEXT:    [[BF16M4X2:%.*]] = alloca { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> }, align 2
 // CHECK-NEXT:    ret void
 //
 void foo () {
@@ -664,4 +689,34 @@ void foo () {
   vfloat64m2x4_t f64m2x4;
 
   vfloat64m4x2_t f64m4x2;
+  // bf16
+  vbfloat16mf4x2_t bf16mf4x2;
+  vbfloat16mf4x3_t bf16mf4x3;
+  vbfloat16mf4x4_t bf16mf4x4;
+  vbfloat16mf4x5_t bf16mf4x5;
+  vbfloat16mf4x6_t bf16mf4x6;
+  vbfloat16mf4x7_t bf16mf4x7;
+  vbfloat16mf4x8_t bf16mf4x8;
+
+  vbfloat16mf2x2_t bf16mf2x2;
+  vbfloat16mf2x3_t bf16mf2x3;
+  vbfloat16mf2x4_t bf16mf2x4;
+  vbfloat16mf2x5_t bf16mf2x5;
+  vbfloat16mf2x6_t bf16mf2x6;
+  vbfloat16mf2x7_t bf16mf2x7;
+  vbfloat16mf2x8_t bf16mf2x8;
+
+  vbfloat16m1x2_t bf16m1x2;
+  vbfloat16m1x3_t bf16m1x3;
+  vbfloat16m1x4_t bf16m1x4;
+  vbfloat16m1x5_t bf16m1x5;
+  vbfloat16m1x6_t bf16m1x6;
+  vbfloat16m1x7_t bf16m1x7;
+  vbfloat16m1x8_t bf16m1x8;
+
+  vbfloat16m2x2_t bf16m2x2;
+  vbfloat16m2x3_t bf16m2x3;
+  vbfloat16m2x4_t bf16m2x4;
+
+  vbfloat16m4x2_t bf16m4x2;
 }

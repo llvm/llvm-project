@@ -20,7 +20,6 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"

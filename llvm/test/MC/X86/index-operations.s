@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple x86_64-unknown-unknown --show-encoding %s 2> %t.err | FileCheck --check-prefix=64 %s
-// RUN: FileCheck --check-prefix=ERR64 < %t.err %s
+// RUN: FileCheck --input-file=%t.err %s --check-prefix=ERR64 --implicit-check-not=error:
 // RUN: not llvm-mc -triple i386-unknown-unknown --show-encoding %s 2> %t.err | FileCheck --check-prefix=32 %s
 // RUN: FileCheck --check-prefix=ERR32 < %t.err %s
 // RUN: not llvm-mc -triple i386-unknown-unknown-code16 --show-encoding %s 2> %t.err | FileCheck --check-prefix=16 %s
@@ -21,7 +21,7 @@ lodsb (%esi), %al
 // 16: lodsb (%esi), %al # encoding: [0x67,0xac]
 
 lodsb (%si), %al
-// ERR64: invalid 16-bit base register
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid 16-bit base register
 // 32: lodsb (%si), %al # encoding: [0x67,0xac]
 // 16: lodsb (%si), %al # encoding: [0xac]
 
@@ -31,12 +31,12 @@ lodsl %gs:(%esi)
 // 16: lodsl %gs:(%esi), %eax # encoding: [0x67,0x65,0x66,0xad]
 
 lodsl (%edi), %eax
-// ERR64: invalid operand
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
 // ERR32: invalid operand
 // ERR16: invalid operand
 
 lodsl 44(%edi), %eax
-// ERR64: invalid operand
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
 // ERR32: invalid operand
 // ERR16: invalid operand
 
@@ -56,7 +56,7 @@ stos %eax, (%edi)
 // 16: stosl %eax, %es:(%edi) # encoding: [0x67,0x66,0xab]
 
 stosb %al, %fs:(%edi)
-// ERR64: invalid operand for instruction
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand for instruction
 // ERR32: invalid operand for instruction
 // ERR16: invalid operand for instruction
 
@@ -86,12 +86,12 @@ scasq %es:(%edi)
 // ERR16: 64-bit
 
 scasl %es:(%edi), %al
-// ERR64: invalid operand
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
 // ERR32: invalid operand
 // ERR16: invalid operand
 
 scas %es:(%di), %ax
-// ERR64: invalid 16-bit base register
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid 16-bit base register
 // 16: scasw %es:(%di), %ax # encoding: [0xaf]
 // 32: scasw %es:(%di), %ax # encoding: [0x67,0x66,0xaf]
 
@@ -106,7 +106,7 @@ cmpsw (%edi), (%esi)
 // 16: cmpsw %es:(%edi), (%esi) # encoding: [0x67,0xa7]
 
 cmpsb (%di), (%esi)
-// ERR64: invalid 16-bit base register
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid 16-bit base register
 // ERR32: mismatching source and destination
 // ERR16: mismatching source and destination
 
@@ -146,7 +146,7 @@ insw %dx, (%edi)
 // 16: insw %dx, %es:(%edi) # encoding: [0x67,0x6d]
 
 insw %dx, (%bx)
-// ERR64: invalid 16-bit base register
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid 16-bit base register
 // 32: insw %dx, %es:(%di) # encoding: [0x67,0x66,0x6d]
 // 16: insw %dx, %es:(%di) # encoding: [0x6d]
 
@@ -161,18 +161,20 @@ insw %dx, (%rbx)
 // ERR16: 64-bit
 
 movdir64b	291(%si), %ecx
+// ERR64: error: invalid 16-bit base register
 // ERR32: invalid operand
 // ERR16: invalid operand
 
 movdir64b	291(%esi), %cx
+// ERR64: error: invalid operand for instruction
 // ERR32: invalid operand
 // ERR16: invalid operand
 
 movdir64b (%rdx), %r15d
-// ERR64: invalid operand
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
 
 movdir64b (%edx), %r15
-// ERR64: invalid operand
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
 
 movdir64b (%eip), %ebx
 // 64: movdir64b (%eip), %ebx # encoding: [0x67,0x66,0x0f,0x38,0xf8,0x1d,0x00,0x00,0x00,0x00]

@@ -126,7 +126,7 @@ public:
   void foreachField(
       llvm::function_ref<bool(
           FieldIndex /*fieldIdx*/, SparseTensorFieldKind /*fieldKind*/,
-          Level /*lvl (if applicable)*/, DimLevelType /*DLT (if applicable)*/)>)
+          Level /*lvl (if applicable)*/, LevelType /*LT (if applicable)*/)>)
       const;
 
   /// Gets the field index for required field.
@@ -165,7 +165,7 @@ inline unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
 inline void foreachFieldInSparseTensor(
     SparseTensorEncodingAttr enc,
     llvm::function_ref<bool(FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>
+                            LevelType)>
         callback) {
   return StorageLayout(enc).foreachField(callback);
 }
@@ -173,7 +173,7 @@ inline void foreachFieldInSparseTensor(
 void foreachFieldAndTypeInSparseTensor(
     SparseTensorType,
     llvm::function_ref<bool(Type, FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>);
+                            LevelType)>);
 
 } // namespace sparse_tensor
 } // namespace mlir

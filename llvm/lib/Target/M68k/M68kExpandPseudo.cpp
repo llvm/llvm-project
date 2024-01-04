@@ -161,6 +161,16 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rf), MVT::i32,
                                 MVT::i16);
 
+  case M68k::MOVSXd16q8:
+    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dq), MVT::i16,
+                                MVT::i8);
+  case M68k::MOVSXd32q8:
+    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dq), MVT::i32,
+                                MVT::i8);
+  case M68k::MOVSXd32q16:
+    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV16dq), MVT::i32,
+                                MVT::i16);
+
   case M68k::MOVZXd16q8:
     return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i16,
                                 MVT::i8);
@@ -252,12 +262,11 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return true;
   }
   case M68k::RET: {
-    // Adjust stack to erase error code
-    int64_t StackAdj = MBBI->getOperand(0).getImm();
-    MachineInstrBuilder MIB;
-
-    if (StackAdj == 0) {
-      MIB = BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
+    if (MBB.getParent()->getFunction().getCallingConv() ==
+        CallingConv::M68k_INTR) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTE));
+    } else if (int64_t StackAdj = MBBI->getOperand(0).getImm(); StackAdj == 0) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
     } else {
       // Copy return address from stack to a free address(A0 or A1) register
       // TODO check if pseudo expand uses free address register

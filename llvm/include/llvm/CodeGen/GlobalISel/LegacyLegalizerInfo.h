@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include <unordered_map>
+#include <vector>
 
 namespace llvm {
 struct LegalityQuery;

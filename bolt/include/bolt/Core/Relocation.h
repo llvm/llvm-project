@@ -61,7 +61,7 @@ struct Relocation {
 
   /// Handle special cases when relocation should not be processed by BOLT or
   /// change relocation \p Type to proper one before continuing if \p Contents
-  /// and \P Type mismatch occured.
+  /// and \P Type mismatch occurred.
   static bool skipRelocationProcess(uint64_t &Type, uint64_t Contents);
 
   // Adjust value depending on relocation type (make it PC relative or not)

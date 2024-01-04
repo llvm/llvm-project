@@ -157,7 +157,7 @@ def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
                                 ::mlir::Location loc) const;
 
   private:
-    unsigned extractKind(::mlir::DataLayoutEntryListRef params,
+    uint64_t extractKind(::mlir::DataLayoutEntryListRef params,
                          ::llvm::StringRef expectedKind) const;
 
   public:

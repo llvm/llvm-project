@@ -27,7 +27,6 @@ BreakpointResolverFileRegex::BreakpointResolverFileRegex(
       m_function_names(func_names) {}
 
 BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
-    const lldb::BreakpointSP &bkpt,
     const StructuredData::Dictionary &options_dict, Status &error) {
   bool success;
 
@@ -56,19 +55,19 @@ BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
   if (success && names_array) {
     size_t num_names = names_array->GetSize();
     for (size_t i = 0; i < num_names; i++) {
-      llvm::StringRef name;
-      success = names_array->GetItemAtIndexAsString(i, name);
-      if (!success) {
+      std::optional<llvm::StringRef> maybe_name =
+          names_array->GetItemAtIndexAsString(i);
+      if (!maybe_name) {
         error.SetErrorStringWithFormat(
             "BRFR::CFSD: Malformed element %zu in the names array.", i);
         return nullptr;
       }
-      names_set.insert(std::string(name));
+      names_set.insert(std::string(*maybe_name));
     }
   }
 
-  return std::make_shared<BreakpointResolverFileRegex>(bkpt, std::move(regex),
-                                                       names_set, exact_match);
+  return std::make_shared<BreakpointResolverFileRegex>(
+      nullptr, std::move(regex), names_set, exact_match);
 }
 
 StructuredData::ObjectSP

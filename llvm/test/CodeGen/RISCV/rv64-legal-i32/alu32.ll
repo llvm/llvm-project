@@ -132,6 +132,18 @@ define i32 @sll(i32 %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+; Make sure we don't emit instructions to zero extend the shift amount to i64.
+define i32 @sll_shamt_zext(i32 %a, i32 %b) nounwind {
+; RV64I-LABEL: sll_shamt_zext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, a1, 1
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    ret
+  %shamt = add i32 %b, 1
+  %1 = shl i32 %a, %shamt
+  ret i32 %1
+}
+
 define i32 @sll_negative_constant_lhs(i32 %a) nounwind {
 ; RV64I-LABEL: sll_negative_constant_lhs:
 ; RV64I:       # %bb.0:
@@ -187,6 +199,18 @@ define i32 @srl(i32 %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+; Make sure we don't emit instructions to zero extend the shift amount to i64.
+define i32 @srl_shamt_zext(i32 %a, i32 %b) nounwind {
+; RV64I-LABEL: srl_shamt_zext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, a1, 1
+; RV64I-NEXT:    srlw a0, a0, a1
+; RV64I-NEXT:    ret
+  %shamt = add i32 %b, 1
+  %1 = lshr i32 %a, %shamt
+  ret i32 %1
+}
+
 define i32 @srl_negative_constant_lhs(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: srl_negative_constant_lhs:
@@ -205,6 +229,18 @@ define i32 @sra(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, %b
+  ret i32 %1
+}
+
+; Make sure we don't emit instructions to zero extend the shift amount to i64.
+define i32 @sra_shamt_zext(i32 %a, i32 %b) nounwind {
+; RV64I-LABEL: sra_shamt_zext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, a1, 1
+; RV64I-NEXT:    sraw a0, a0, a1
+; RV64I-NEXT:    ret
+  %shamt = add i32 %b, 1
+  %1 = ashr i32 %a, %shamt
   ret i32 %1
 }
 

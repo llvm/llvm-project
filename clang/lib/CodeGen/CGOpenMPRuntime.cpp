@@ -1441,6 +1441,7 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
     setLocThreadIdInsertPt(CGF);
   CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
   CGF.Builder.SetInsertPoint(Elem.second.ServiceInsertPt);
+  auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   llvm::CallInst *Call = CGF.Builder.CreateCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                             OMPRTL___kmpc_global_thread_num),
@@ -1745,136 +1746,6 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     emitThreadPrivateVarInit(*CGF, VDAddr, Ctor, CopyCtor, Dtor, Loc);
   }
   return nullptr;
-}
-
-bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
-                                                     llvm::GlobalVariable *Addr,
-                                                     bool PerformInit) {
-  if (CGM.getLangOpts().OMPTargetTriples.empty() &&
-      !CGM.getLangOpts().OpenMPIsTargetDevice)
-    return false;
-  std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
-  if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
-      ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
-       HasRequiresUnifiedSharedMemory))
-    return CGM.getLangOpts().OpenMPIsTargetDevice;
-  VD = VD->getDefinition(CGM.getContext());
-  assert(VD && "Unknown VarDecl");
-
-  if (!DeclareTargetWithDefinition.insert(CGM.getMangledName(VD)).second)
-    return CGM.getLangOpts().OpenMPIsTargetDevice;
-
-  QualType ASTTy = VD->getType();
-  SourceLocation Loc = VD->getCanonicalDecl()->getBeginLoc();
-
-  // Produce the unique prefix to identify the new target regions. We use
-  // the source location of the variable declaration which we know to not
-  // conflict with any target region.
-  llvm::TargetRegionEntryInfo EntryInfo =
-      getEntryInfoFromPresumedLoc(CGM, OMPBuilder, Loc, VD->getName());
-  SmallString<128> Buffer, Out;
-  OMPBuilder.OffloadInfoManager.getTargetRegionEntryFnName(Buffer, EntryInfo);
-
-  const Expr *Init = VD->getAnyInitializer();
-  if (CGM.getLangOpts().CPlusPlus && PerformInit) {
-    llvm::Constant *Ctor;
-    llvm::Constant *ID;
-    if (CGM.getLangOpts().OpenMPIsTargetDevice) {
-      // Generate function that re-emits the declaration's initializer into
-      // the threadprivate copy of the variable VD
-      CodeGenFunction CtorCGF(CGM);
-
-      const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
-      llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
-      llvm::Function *Fn = CGM.CreateGlobalInitOrCleanUpFunction(
-          FTy, Twine(Buffer, "_ctor"), FI, Loc, false,
-          llvm::GlobalValue::WeakODRLinkage);
-      Fn->setVisibility(llvm::GlobalValue::ProtectedVisibility);
-      if (CGM.getTriple().isAMDGCN())
-        Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
-      auto NL = ApplyDebugLocation::CreateEmpty(CtorCGF);
-      CtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI,
-                            FunctionArgList(), Loc, Loc);
-      auto AL = ApplyDebugLocation::CreateArtificial(CtorCGF);
-      llvm::Constant *AddrInAS0 = Addr;
-      if (Addr->getAddressSpace() != 0)
-        AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
-            Addr, llvm::PointerType::get(CGM.getLLVMContext(), 0));
-      CtorCGF.EmitAnyExprToMem(Init,
-                               Address(AddrInAS0, Addr->getValueType(),
-                                       CGM.getContext().getDeclAlign(VD)),
-                               Init->getType().getQualifiers(),
-                               /*IsInitializer=*/true);
-      CtorCGF.FinishFunction();
-      Ctor = Fn;
-      ID = Fn;
-    } else {
-      Ctor = new llvm::GlobalVariable(
-          CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
-          llvm::GlobalValue::PrivateLinkage,
-          llvm::Constant::getNullValue(CGM.Int8Ty), Twine(Buffer, "_ctor"));
-      ID = Ctor;
-    }
-
-    // Register the information for the entry associated with the constructor.
-    Out.clear();
-    auto CtorEntryInfo = EntryInfo;
-    CtorEntryInfo.ParentName = Twine(Buffer, "_ctor").toStringRef(Out);
-    OMPBuilder.OffloadInfoManager.registerTargetRegionEntryInfo(
-        CtorEntryInfo, Ctor, ID,
-        llvm::OffloadEntriesInfoManager::OMPTargetRegionEntryCtor);
-  }
-  if (VD->getType().isDestructedType() != QualType::DK_none) {
-    llvm::Constant *Dtor;
-    llvm::Constant *ID;
-    if (CGM.getLangOpts().OpenMPIsTargetDevice) {
-      // Generate function that emits destructor call for the threadprivate
-      // copy of the variable VD
-      CodeGenFunction DtorCGF(CGM);
-
-      const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
-      llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
-      llvm::Function *Fn = CGM.CreateGlobalInitOrCleanUpFunction(
-          FTy, Twine(Buffer, "_dtor"), FI, Loc, false,
-          llvm::GlobalValue::WeakODRLinkage);
-      Fn->setVisibility(llvm::GlobalValue::ProtectedVisibility);
-      if (CGM.getTriple().isAMDGCN())
-        Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
-      auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
-      DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI,
-                            FunctionArgList(), Loc, Loc);
-      // Create a scope with an artificial location for the body of this
-      // function.
-      auto AL = ApplyDebugLocation::CreateArtificial(DtorCGF);
-      llvm::Constant *AddrInAS0 = Addr;
-      if (Addr->getAddressSpace() != 0)
-        AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
-            Addr, llvm::PointerType::get(CGM.getLLVMContext(), 0));
-      DtorCGF.emitDestroy(Address(AddrInAS0, Addr->getValueType(),
-                                  CGM.getContext().getDeclAlign(VD)),
-                          ASTTy, DtorCGF.getDestroyer(ASTTy.isDestructedType()),
-                          DtorCGF.needsEHCleanup(ASTTy.isDestructedType()));
-      DtorCGF.FinishFunction();
-      Dtor = Fn;
-      ID = Fn;
-    } else {
-      Dtor = new llvm::GlobalVariable(
-          CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
-          llvm::GlobalValue::PrivateLinkage,
-          llvm::Constant::getNullValue(CGM.Int8Ty), Twine(Buffer, "_dtor"));
-      ID = Dtor;
-    }
-    // Register the information for the entry associated with the destructor.
-    Out.clear();
-    auto DtorEntryInfo = EntryInfo;
-    DtorEntryInfo.ParentName = Twine(Buffer, "_dtor").toStringRef(Out);
-    OMPBuilder.OffloadInfoManager.registerTargetRegionEntryInfo(
-        DtorEntryInfo, Dtor, ID,
-        llvm::OffloadEntriesInfoManager::OMPTargetRegionEntryDtor);
-  }
-  return CGM.getLangOpts().OpenMPIsTargetDevice;
 }
 
 void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
@@ -6940,8 +6811,10 @@ private:
       OpenMPMapClauseKind MapType, ArrayRef<OpenMPMapModifierKind> MapModifiers,
       ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
-      MapCombinedInfoTy &CombinedInfo, StructRangeInfoTy &PartialStruct,
-      bool IsFirstComponentList, bool IsImplicit,
+      MapCombinedInfoTy &CombinedInfo,
+      MapCombinedInfoTy &StructBaseCombinedInfo,
+      StructRangeInfoTy &PartialStruct, bool IsFirstComponentList,
+      bool IsImplicit, bool GenerateAllInfoForClauses,
       const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
@@ -7227,6 +7100,25 @@ private:
     bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
     bool IsPrevMemberReference = false;
 
+    // We need to check if we will be encountering any MEs. If we do not
+    // encounter any ME expression it means we will be mapping the whole struct.
+    // In that case we need to skip adding an entry for the struct to the
+    // CombinedInfo list and instead add an entry to the StructBaseCombinedInfo
+    // list only when generating all info for clauses.
+    bool IsMappingWholeStruct = true;
+    if (!GenerateAllInfoForClauses) {
+      IsMappingWholeStruct = false;
+    } else {
+      for (auto TempI = I; TempI != CE; ++TempI) {
+        const MemberExpr *PossibleME =
+            dyn_cast<MemberExpr>(TempI->getAssociatedExpression());
+        if (PossibleME) {
+          IsMappingWholeStruct = false;
+          break;
+        }
+      }
+    }
+
     for (; I != CE; ++I) {
       // If the current component is member of a struct (parent struct) mark it.
       if (!EncounteredME) {
@@ -7446,21 +7338,41 @@ private:
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
+        // Skip adding an entry in the CurInfo of this combined entry if the
+        // whole struct is currently being mapped. The struct needs to be added
+        // in the first position before any data internal to the struct is being
+        // mapped.
         if (!IsMemberPointerOrAddr ||
             (Next == CE && MapType != OMPC_MAP_unknown)) {
-          CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-          CombinedInfo.BasePointers.push_back(BP.getPointer());
-          CombinedInfo.DevicePtrDecls.push_back(nullptr);
-          CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-          CombinedInfo.Pointers.push_back(LB.getPointer());
-          CombinedInfo.Sizes.push_back(
-              CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
-          CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                    : 1);
+          if (!IsMappingWholeStruct) {
+            CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
+            CombinedInfo.BasePointers.push_back(BP.getPointer());
+            CombinedInfo.DevicePtrDecls.push_back(nullptr);
+            CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+            CombinedInfo.Pointers.push_back(LB.getPointer());
+            CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+                Size, CGF.Int64Ty, /*isSigned=*/true));
+            CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
+                                                                      : 1);
+          } else {
+            StructBaseCombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
+            StructBaseCombinedInfo.BasePointers.push_back(BP.getPointer());
+            StructBaseCombinedInfo.DevicePtrDecls.push_back(nullptr);
+            StructBaseCombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+            StructBaseCombinedInfo.Pointers.push_back(LB.getPointer());
+            StructBaseCombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+                Size, CGF.Int64Ty, /*isSigned=*/true));
+            StructBaseCombinedInfo.NonContigInfo.Dims.push_back(
+                IsNonContiguous ? DimSize : 1);
+          }
 
           // If Mapper is valid, the last component inherits the mapper.
           bool HasMapper = Mapper && Next == CE;
-          CombinedInfo.Mappers.push_back(HasMapper ? Mapper : nullptr);
+          if (!IsMappingWholeStruct)
+            CombinedInfo.Mappers.push_back(HasMapper ? Mapper : nullptr);
+          else
+            StructBaseCombinedInfo.Mappers.push_back(HasMapper ? Mapper
+                                                               : nullptr);
 
           // We need to add a pointer flag for each map that comes from the
           // same expression except for the first one. We also need to signal
@@ -7492,7 +7404,10 @@ private:
             }
           }
 
-          CombinedInfo.Types.push_back(Flags);
+          if (!IsMappingWholeStruct)
+            CombinedInfo.Types.push_back(Flags);
+          else
+            StructBaseCombinedInfo.Types.push_back(Flags);
         }
 
         // If we have encountered a member expression so far, keep track of the
@@ -7518,7 +7433,14 @@ private:
           } else if (FieldIndex < PartialStruct.LowestElem.first) {
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
-            PartialStruct.HighestElem = {FieldIndex, LowestElem};
+            if (IsFinalArraySection) {
+              Address HB =
+                  CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false)
+                      .getAddress(CGF);
+              PartialStruct.HighestElem = {FieldIndex, HB};
+            } else {
+              PartialStruct.HighestElem = {FieldIndex, LowestElem};
+            }
           }
         }
 
@@ -8076,8 +7998,10 @@ private:
 
     for (const auto &Data : Info) {
       StructRangeInfoTy PartialStruct;
-      // Temporary generated information.
+      // Current struct information:
       MapCombinedInfoTy CurInfo;
+      // Current struct base information:
+      MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
       for (const auto &M : Data.second) {
@@ -8087,29 +8011,55 @@ private:
 
           // Remember the current base pointer index.
           unsigned CurrentBasePointersIdx = CurInfo.BasePointers.size();
+          unsigned StructBasePointersIdx =
+              StructBaseCurInfo.BasePointers.size();
           CurInfo.NonContigInfo.IsNonContiguous =
               L.Components.back().isNonContiguous();
           generateInfoForComponentList(
               L.MapType, L.MapModifiers, L.MotionModifiers, L.Components,
-              CurInfo, PartialStruct, /*IsFirstComponentList=*/false,
-              L.IsImplicit, L.Mapper, L.ForDeviceAddr, VD, L.VarRef);
+              CurInfo, StructBaseCurInfo, PartialStruct,
+              /*IsFirstComponentList=*/false, L.IsImplicit,
+              /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
+              L.VarRef);
 
-          // If this entry relates with a device pointer, set the relevant
+          // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
           if (L.ReturnDevicePointer) {
-            assert(CurInfo.BasePointers.size() > CurrentBasePointersIdx &&
+            // Check whether a value was added to either CurInfo or
+            // StructBaseCurInfo and error if no value was added to either of
+            // them:
+            assert((CurrentBasePointersIdx < CurInfo.BasePointers.size() ||
+                    StructBasePointersIdx <
+                        StructBaseCurInfo.BasePointers.size()) &&
                    "Unexpected number of mapped base pointers.");
 
+            // Choose a base pointer index which is always valid:
             const ValueDecl *RelevantVD =
                 L.Components.back().getAssociatedDeclaration();
             assert(RelevantVD &&
                    "No relevant declaration related with device pointer??");
 
-            CurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
-            CurInfo.DevicePointers[CurrentBasePointersIdx] =
-                L.ForDeviceAddr ? DeviceInfoTy::Address : DeviceInfoTy::Pointer;
-            CurInfo.Types[CurrentBasePointersIdx] |=
-                OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+            // If StructBaseCurInfo has been updated this iteration then work on
+            // the first new entry added to it i.e. make sure that when multiple
+            // values are added to any of the lists, the first value added is
+            // being modified by the assignments below (not the last value
+            // added).
+            if (StructBasePointersIdx < StructBaseCurInfo.BasePointers.size()) {
+              StructBaseCurInfo.DevicePtrDecls[StructBasePointersIdx] =
+                  RelevantVD;
+              StructBaseCurInfo.DevicePointers[StructBasePointersIdx] =
+                  L.ForDeviceAddr ? DeviceInfoTy::Address
+                                  : DeviceInfoTy::Pointer;
+              StructBaseCurInfo.Types[StructBasePointersIdx] |=
+                  OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+            } else {
+              CurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
+              CurInfo.DevicePointers[CurrentBasePointersIdx] =
+                  L.ForDeviceAddr ? DeviceInfoTy::Address
+                                  : DeviceInfoTy::Pointer;
+              CurInfo.Types[CurrentBasePointersIdx] |=
+                  OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+            }
           }
         }
       }
@@ -8156,17 +8106,24 @@ private:
           CurInfo.Mappers.push_back(nullptr);
         }
       }
+
+      // Unify entries in one list making sure the struct mapping precedes the
+      // individual fields:
+      MapCombinedInfoTy UnionCurInfo;
+      UnionCurInfo.append(StructBaseCurInfo);
+      UnionCurInfo.append(CurInfo);
+
       // If there is an entry in PartialStruct it means we have a struct with
       // individual members mapped. Emit an extra combined entry.
       if (PartialStruct.Base.isValid()) {
-        CurInfo.NonContigInfo.Dims.push_back(0);
-        emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
+        UnionCurInfo.NonContigInfo.Dims.push_back(0);
+        // Emit a combined entry:
+        emitCombinedEntry(CombinedInfo, UnionCurInfo.Types, PartialStruct,
                           /*IsMapThis*/ !VD, OMPBuilder, VD);
       }
 
-      // We need to append the results of this capture to what we already
-      // have.
-      CombinedInfo.append(CurInfo);
+      // We need to append the results of this capture to what we already have.
+      CombinedInfo.append(UnionCurInfo);
     }
     // Append data for use_device_ptr clauses.
     CombinedInfo.append(UseDeviceDataCombinedInfo);
@@ -8676,6 +8633,7 @@ public:
     // Associated with a capture, because the mapping flags depend on it.
     // Go through all of the elements with the overlapped elements.
     bool IsFirstComponentList = true;
+    MapCombinedInfoTy StructBaseCombinedInfo;
     for (const auto &Pair : OverlappedData) {
       const MapData &L = *Pair.getFirst();
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
@@ -8690,7 +8648,8 @@ public:
           OverlappedComponents = Pair.getSecond();
       generateInfoForComponentList(
           MapType, MapModifiers, std::nullopt, Components, CombinedInfo,
-          PartialStruct, IsFirstComponentList, IsImplicit, Mapper,
+          StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
+          IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
           /*ForDeviceAddr=*/false, VD, VarRef, OverlappedComponents);
       IsFirstComponentList = false;
     }
@@ -8706,10 +8665,11 @@ public:
           L;
       auto It = OverlappedData.find(&L);
       if (It == OverlappedData.end())
-        generateInfoForComponentList(MapType, MapModifiers, std::nullopt,
-                                     Components, CombinedInfo, PartialStruct,
-                                     IsFirstComponentList, IsImplicit, Mapper,
-                                     /*ForDeviceAddr=*/false, VD, VarRef);
+        generateInfoForComponentList(
+            MapType, MapModifiers, std::nullopt, Components, CombinedInfo,
+            StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
+            IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
+            /*ForDeviceAddr=*/false, VD, VarRef);
       IsFirstComponentList = false;
     }
   }

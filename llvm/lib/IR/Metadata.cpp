@@ -249,8 +249,13 @@ SmallVector<DPValue *> ReplaceableMetadataImpl::getAllDPValueUsers() {
       continue;
     DPVUsersWithID.push_back(&UseMap[Pair.first]);
   }
+  // Order DPValue users in reverse-creation order. Normal dbg.value users
+  // of MetadataAsValues are ordered by their UseList, i.e. reverse order of
+  // when they were added: we need to replicate that here. The structure of
+  // debug-info output depends on the ordering of intrinsics, thus we need
+  // to keep them consistent for comparisons sake.
   llvm::sort(DPVUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second < UserB->second;
+    return UserA->second > UserB->second;
   });
   SmallVector<DPValue *> DPVUsers;
   for (auto UserWithID : DPVUsersWithID)
@@ -413,33 +418,25 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
-    return ArgList->Context.getOrCreateReplaceableUses();
-#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
+  if (auto ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
-    return ArgList->Context.getReplaceableUses();
-#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
+  if (auto ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (isa<DIArgList>(&MD))
-    return true;
-#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved();
-  return isa<ValueAsMetadata>(&MD);
+  return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
 }
 
 static DISubprogram *getLocalFunctionMetadata(Value *V) {
@@ -1569,7 +1566,7 @@ void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
            "Expect existing attachment to be mapped");
 
     auto &InstVec = InstrsIt->second;
-    auto *InstIt = std::find(InstVec.begin(), InstVec.end(), this);
+    auto *InstIt = llvm::find(InstVec, this);
     assert(InstIt != InstVec.end() &&
            "Expect instruction to be mapped to attachment");
     // The vector contains a ptr to this. If this is the only element in the
@@ -1610,13 +1607,10 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
 }
 
 void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
-  SmallSetVector<StringRef, 2> AnnotationsSet(Annotations.begin(),
-                                              Annotations.end());
-  MDBuilder MDB(getContext());
-
-  auto *Existing = getMetadata(LLVMContext::MD_annotation);
   SmallVector<Metadata *, 4> Names;
-  if (Existing) {
+  if (auto *Existing = getMetadata(LLVMContext::MD_annotation)) {
+    SmallSetVector<StringRef, 2> AnnotationsSet(Annotations.begin(),
+                                                Annotations.end());
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
       if (isa<MDString>(N.get())) {
@@ -1632,6 +1626,7 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
     }
   }
 
+  MDBuilder MDB(getContext());
   SmallVector<Metadata *> MDAnnotationStrings;
   for (StringRef Annotation : Annotations)
     MDAnnotationStrings.push_back(MDB.createString(Annotation));
@@ -1642,11 +1637,8 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
 }
 
 void Instruction::addAnnotationMetadata(StringRef Name) {
-  MDBuilder MDB(getContext());
-
-  auto *Existing = getMetadata(LLVMContext::MD_annotation);
   SmallVector<Metadata *, 4> Names;
-  if (Existing) {
+  if (auto *Existing = getMetadata(LLVMContext::MD_annotation)) {
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
       if (isa<MDString>(N.get()) &&
@@ -1656,6 +1648,7 @@ void Instruction::addAnnotationMetadata(StringRef Name) {
     }
   }
 
+  MDBuilder MDB(getContext());
   Names.push_back(MDB.createString(Name));
   MDNode *MD = MDTuple::get(getContext(), Names);
   setMetadata(LLVMContext::MD_annotation, MD);

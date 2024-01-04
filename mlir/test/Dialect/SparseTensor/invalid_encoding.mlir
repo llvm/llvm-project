@@ -254,6 +254,51 @@ func.func private @wrong_order_lvl_decl(%arg0: tensor<?x?xf64, #WrongOrderLvlDec
 
 // -----
 
+// expected-error@+1 {{failed to infer lvlToDim from dimToLvl}}
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i            : dense,
+    j mod 3      : dense
+  )
+}>
+func.func private @BSR(%arg0: tensor<?x?xf64, #BSR>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{failed to infer lvlToDim from dimToLvl}}
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i            : dense,
+    j floordiv 3 : compressed,
+    i floordiv 3 : dense,
+    j mod 3      : dense
+  )
+}>
+func.func private @BSR(%arg0: tensor<?x?xf64, #BSR>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{failed to infer lvlToDim from dimToLvl}}
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv -3 : dense,
+    j floordiv -3 : compressed,
+    i mod 3 : dense,
+    j mod 3      : dense
+  )
+}>
+func.func private @BSR(%arg0: tensor<?x?xf64, #BSR>) {
+  return
+}
+
+// -----
+
 // expected-error@+1 {{expected lvlToDim to be an inverse of dimToLvl}}
 #BSR_explicit = #sparse_tensor.encoding<{
   map =

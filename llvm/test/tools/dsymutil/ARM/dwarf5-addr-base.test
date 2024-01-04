@@ -50,14 +50,29 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker llvm --no-odr -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
+RUN:   -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
+RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LLVM
+
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s --check-prefix=UPD
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker llvm --no-odr --update -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
+RUN:   -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
+RUN:   FileCheck %s --check-prefix=UPD
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: dsymutil --linker llvm --update -y %p/dummy-debug-map-amr64.map \
@@ -66,30 +81,36 @@ RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
 RUN:   FileCheck %s --check-prefix=UPD
 
+
 CHECK: .debug_info contents:
-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 
-CHECK: 0x0000000c: DW_TAG_compile_unit [1] *
-CHECK:               DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+CHECK-LLVM: Compile Unit: length = 0x0000001f, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+CHECK-LLVM: DW_TAG_compile_unit
+CHECK-LLVM: DW_TAG_base_type
 
-CHECK: 0x0000002c:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+CHECK:   DW_TAG_subprogram
 CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR1:[0-9a-f]+]])
 
 
-CHECK: 0x0000004e: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x00{{00|5a}}, addr_size = 0x08
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
 
-CHECK: 0x0000005a: DW_TAG_compile_unit [1] *
+CHECK: DW_TAG_compile_unit
 CHECK:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000018)
 
-CHECK: 0x0000007a:   DW_TAG_subprogram [2] * (0x0000005a)
+CHECK: DW_TAG_subprogram
 CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR2:[0-9a-f]+]])
 
-CHECK: 0x0000009c: Compile Unit: length = 0x00000043, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x00{{00|b4}}, addr_size = 0x08
+CHECK: Compile Unit: length = 0x00000043, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
 
-CHECK: 0x000000a8: DW_TAG_compile_unit {{.*}} *
+CHECK: DW_TAG_compile_unit
 CHECK: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000028)
 
-CHECK: 0x000000c1:   DW_TAG_subprogram [2] * (0x000000a8)
+CHECK:   DW_TAG_subprogram
 CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR3:[0-9a-f]+]])
 
 CHECK: .debug_addr contents:

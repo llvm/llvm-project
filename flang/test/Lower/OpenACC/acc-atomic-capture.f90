@@ -1,16 +1,18 @@
-! RUN: %flang_fc1 -I nowhere -emit-fir -fopenacc %s -o - | FileCheck %s
+! RUN: %flang_fc1 -I nowhere -emit-hlfir -fopenacc %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic capture
 
-program acc_atomic_capture_test                                                                                                     
+program acc_atomic_capture_test
     integer :: x, y
 
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
-!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[temp:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: acc.atomic.capture {
-!CHECK: acc.atomic.read %[[X]] = %[[Y]] : !fir.ref<i32>
-!CHECK: acc.atomic.update %[[Y]] : !fir.ref<i32> {
+!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>
+!CHECK: acc.atomic.update %[[Y_DECL]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[ARG]] : i32
 !CHECK: acc.yield %[[result]] : i32
@@ -23,14 +25,14 @@ program acc_atomic_capture_test
     !$acc end atomic
 
 
-!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: %[[temp:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: acc.atomic.capture {
-!CHECK: acc.atomic.update %[[Y]] : !fir.ref<i32> {
+!CHECK: acc.atomic.update %[[Y_DECL]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[result:.*]] = arith.muli %[[temp]], %[[ARG]] : i32
 !CHECK: acc.yield %[[result]] : i32
 !CHECK: }
-!CHECK: acc.atomic.read %[[X]] = %[[Y]] : !fir.ref<i32>
+!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>
 !CHECK: }
 
     !$acc atomic capture
@@ -40,13 +42,13 @@ program acc_atomic_capture_test
 
 !CHECK: %[[constant_20:.*]] = arith.constant 20 : i32
 !CHECK: %[[constant_8:.*]] = arith.constant 8 : i32
-!CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK: %[[temp:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[result:.*]] = arith.subi %[[constant_8]], %[[temp]] : i32
-!CHECK: %[[result_noreassoc:.*]] = fir.no_reassoc %[[result]] : i32
+!CHECK: %[[result_noreassoc:.*]] = hlfir.no_reassoc %[[result]] : i32
 !CHECK: %[[result:.*]] = arith.addi %[[constant_20]], %[[result_noreassoc]] : i32
 !CHECK: acc.atomic.capture {
-!CHECK: acc.atomic.read %[[X]] = %[[Y]] : !fir.ref<i32>
-!CHECK: acc.atomic.write %[[Y]] = %[[result]] : !fir.ref<i32>, i32
+!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>
+!CHECK: acc.atomic.write %[[Y_DECL]]#1 = %[[result]] : !fir.ref<i32>, i32
 !CHECK: }
 
     !$acc atomic capture
@@ -59,24 +61,19 @@ end program
 
 subroutine pointers_in_atomic_capture()
 !CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFpointers_in_atomic_captureEa"}
-!CHECK: {{.*}} = fir.zero_bits !fir.ptr<i32>
-!CHECK: {{.*}} = fir.embox {{.*}} : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
-!CHECK: fir.store {{.*}} to %[[A]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointers_in_atomic_captureEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK: %[[B:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "b", uniq_name = "_QFpointers_in_atomic_captureEb"}
-!CHECK: {{.*}} = fir.zero_bits !fir.ptr<i32>
-!CHECK: {{.*}} = fir.embox {{.*}} : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
-!CHECK: fir.store {{.*}} to %[[B]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointers_in_atomic_captureEb"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK: %[[C:.*]] = fir.alloca i32 {bindc_name = "c", fir.target, uniq_name = "_QFpointers_in_atomic_captureEc"}
+!CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFpointers_in_atomic_captureEc"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[D:.*]] = fir.alloca i32 {bindc_name = "d", fir.target, uniq_name = "_QFpointers_in_atomic_captureEd"}
-!CHECK: {{.*}} = fir.embox {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
-!CHECK: fir.store {{.*}} to %[[A]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK: {{.*}} = fir.embox {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
-!CHECK: fir.store {{.*}} to %[[B]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK: %[[loaded_A:.*]] = fir.load %[[A]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[D_DECL:.*]]:2 = hlfir.declare %[[D]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFpointers_in_atomic_captureEd"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+!CHECK: %[[loaded_A:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[loaded_A_addr:.*]] = fir.box_addr %[[loaded_A]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-!CHECK: %[[loaded_B:.*]] = fir.load %[[B]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[loaded_B:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[loaded_B_addr:.*]] = fir.box_addr %[[loaded_B]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-!CHECK: %[[PRIVATE_LOADED_B:.*]] = fir.load %[[B]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[PRIVATE_LOADED_B:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[PRIVATE_LOADED_B_addr:.*]] = fir.box_addr %[[PRIVATE_LOADED_B]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK: %[[loaded_value:.*]] = fir.load %[[PRIVATE_LOADED_B_addr]] : !fir.ptr<i32>
 !CHECK: acc.atomic.capture   {
@@ -114,13 +111,15 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPcapture_with_convert_f32_to_i32()
 ! CHECK: %[[K:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFcapture_with_convert_f32_to_i32Ek"}
+! CHECK: %[[K_DECL:.*]]:2 = hlfir.declare %[[K]] {uniq_name = "_QFcapture_with_convert_f32_to_i32Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcapture_with_convert_f32_to_i32Ev"}
+! CHECK: %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcapture_with_convert_f32_to_i32Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[CST:.*]] = arith.constant 3.140000e+00 : f32
 ! CHECK: %[[MUL:.*]] = arith.mulf %{{.*}}, %[[CST]] fastmath<contract> : f32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[MUL]] : (f32) -> i32
 ! CHECK: acc.atomic.capture {
-! CHECK:   acc.atomic.read %[[V]] = %[[K]] : !fir.ref<i32>, i32
-! CHECK:   acc.atomic.write %[[K]] = %[[CONV]] : !fir.ref<i32>, i32
+! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[K_DECL]]#1 : !fir.ref<i32>, i32
+! CHECK:   acc.atomic.write %[[K_DECL]]#1 = %[[CONV]] : !fir.ref<i32>, i32
 ! CHECK: }
 
 subroutine array_ref_in_atomic_capture1
@@ -131,12 +130,14 @@ subroutine array_ref_in_atomic_capture1
   !$acc end atomic
 end subroutine array_ref_in_atomic_capture1
 ! CHECK-LABEL:   func.func @_QParray_ref_in_atomic_capture1() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFarray_ref_in_atomic_capture1Ev"}
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "x", uniq_name = "_QFarray_ref_in_atomic_capture1Ex"}
-! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_1]], %{{.*}} : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
+! CHECK:           %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFarray_ref_in_atomic_capture1Ev"}
+! CHECK:           %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFarray_ref_in_atomic_capture1Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[X:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "x", uniq_name = "_QFarray_ref_in_atomic_capture1Ex"}
+! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) {uniq_name = "_QFarray_ref_in_atomic_capture1Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[X_REF:.*]] = hlfir.designate %[[X_DECL]]#0 (%{{.*}})  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           acc.atomic.capture {
-! CHECK:             acc.atomic.read %[[VAL_0]] = %[[VAL_5]] : !fir.ref<i32>, i32
-! CHECK:             acc.atomic.update %[[VAL_5]] : !fir.ref<i32> {
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[X_REF]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.update %[[X_REF]] : !fir.ref<i32> {
 ! CHECK:             ^bb0(%[[VAL_7:.*]]: i32):
 ! CHECK:               %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %{{.*}} : i32
 ! CHECK:               acc.yield %[[VAL_8]] : i32
@@ -151,16 +152,18 @@ subroutine array_ref_in_atomic_capture2
   !$acc end atomic
 end subroutine array_ref_in_atomic_capture2
 ! CHECK-LABEL:   func.func @_QParray_ref_in_atomic_capture2() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFarray_ref_in_atomic_capture2Ev"}
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "x", uniq_name = "_QFarray_ref_in_atomic_capture2Ex"}
-! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_1]], %{{.*}} : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
+! CHECK:           %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFarray_ref_in_atomic_capture2Ev"}
+! CHECK:           %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFarray_ref_in_atomic_capture2Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[X:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "x", uniq_name = "_QFarray_ref_in_atomic_capture2Ex"}
+! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) {uniq_name = "_QFarray_ref_in_atomic_capture2Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[X_REF:.*]] = hlfir.designate %[[X_DECL]]#0 (%{{.*}})  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           acc.atomic.capture {
-! CHECK:             acc.atomic.update %[[VAL_5]] : !fir.ref<i32> {
+! CHECK:             acc.atomic.update %[[X_REF]] : !fir.ref<i32> {
 ! CHECK:             ^bb0(%[[VAL_7:.*]]: i32):
 ! CHECK:               %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %{{.*}} : i32
 ! CHECK:               acc.yield %[[VAL_8]] : i32
 ! CHECK:             }
-! CHECK:             acc.atomic.read %[[VAL_0]] = %[[VAL_5]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[X_REF]] : !fir.ref<i32>, i32
 ! CHECK:           }
 
 subroutine comp_ref_in_atomic_capture1
@@ -175,13 +178,14 @@ subroutine comp_ref_in_atomic_capture1
   !$acc end atomic
 end subroutine comp_ref_in_atomic_capture1
 ! CHECK-LABEL:   func.func @_QPcomp_ref_in_atomic_capture1() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcomp_ref_in_atomic_capture1Ev"}
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}> {bindc_name = "x", uniq_name = "_QFcomp_ref_in_atomic_capture1Ex"}
-! CHECK:           %[[VAL_2:.*]] = fir.field_index c, !fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>
-! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:           %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcomp_ref_in_atomic_capture1Ev"}
+! CHECK:           %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcomp_ref_in_atomic_capture1Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[X:.*]] = fir.alloca !fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}> {bindc_name = "x", uniq_name = "_QFcomp_ref_in_atomic_capture1Ex"}
+! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcomp_ref_in_atomic_capture1Ex"} : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>) -> (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>, !fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>)
+! CHECK:           %[[C:.*]] = hlfir.designate %[[X_DECL]]#0{"c"}   : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>) -> !fir.ref<i32>
 ! CHECK:           acc.atomic.capture {
-! CHECK:             acc.atomic.read %[[VAL_0]] = %[[VAL_3]] : !fir.ref<i32>, i32
-! CHECK:             acc.atomic.update %[[VAL_3]] : !fir.ref<i32> {
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[C]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.update %[[C]] : !fir.ref<i32> {
 ! CHECK:             ^bb0(%[[VAL_5:.*]]: i32):
 ! CHECK:               %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %{{.*}} : i32
 ! CHECK:               acc.yield %[[VAL_6]] : i32
@@ -200,15 +204,16 @@ subroutine comp_ref_in_atomic_capture2
   !$acc end atomic
 end subroutine comp_ref_in_atomic_capture2
 ! CHECK-LABEL:   func.func @_QPcomp_ref_in_atomic_capture2() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcomp_ref_in_atomic_capture2Ev"}
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}> {bindc_name = "x", uniq_name = "_QFcomp_ref_in_atomic_capture2Ex"}
-! CHECK:           %[[VAL_2:.*]] = fir.field_index c, !fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}>
-! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:           %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcomp_ref_in_atomic_capture2Ev"}
+! CHECK:           %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcomp_ref_in_atomic_capture2Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[X:.*]] = fir.alloca !fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}> {bindc_name = "x", uniq_name = "_QFcomp_ref_in_atomic_capture2Ex"}
+! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcomp_ref_in_atomic_capture2Ex"} : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}>>) -> (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}>>, !fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}>>)
+! CHECK:           %[[C:.*]] = hlfir.designate %[[X_DECL]]#0{"c"}   : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture2Tt1{c:i32}>>) -> !fir.ref<i32>
 ! CHECK:           acc.atomic.capture {
-! CHECK:             acc.atomic.update %[[VAL_3]] : !fir.ref<i32> {
+! CHECK:             acc.atomic.update %[[C]] : !fir.ref<i32> {
 ! CHECK:             ^bb0(%[[VAL_5:.*]]: i32):
 ! CHECK:               %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %{{.*}} : i32
 ! CHECK:               acc.yield %[[VAL_6]] : i32
 ! CHECK:             }
-! CHECK:             acc.atomic.read %[[VAL_0]] = %[[VAL_3]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[C]] : !fir.ref<i32>, i32
 ! CHECK:           }

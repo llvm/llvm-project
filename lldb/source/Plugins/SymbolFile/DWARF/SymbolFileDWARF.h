@@ -186,14 +186,8 @@ public:
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names) override;
 
-  void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
-                 uint32_t max_matches,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeMap &types) override;
-
-  void FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeMap &types) override;
+  void FindTypes(const lldb_private::TypeQuery &match,
+                 lldb_private::TypeResults &results) override;
 
   void GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                 TypeList &type_list) override;
@@ -343,6 +337,11 @@ public:
     return m_forward_decl_compiler_type_to_die;
   }
 
+  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
+      DIEToVariableSP;
+
+  virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
+
   virtual UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap();
 
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
@@ -362,9 +361,6 @@ public:
   Type *ResolveTypeUID(const DIERef &die_ref);
 
 protected:
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
-      DIEToVariableSP;
-
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
 
@@ -487,8 +483,6 @@ protected:
   GlobalVariableMap &GetGlobalAranges();
 
   void UpdateExternalModuleListIfNeeded();
-
-  virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
 
   void BuildCuTranslationTable();
   std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
