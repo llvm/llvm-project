@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
@@ -1044,6 +1045,27 @@ hexadecimal_string_to_float(const char *__restrict src,
   return output;
 }
 
+LIBC_INLINE uint64_t
+nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
+  uint64_t nan_mantissa = 0;
+
+  if (ncharseq.data() != nullptr && isdigit(ncharseq[0])) {
+    // This is to prevent errors when StorageType is larger than 64
+    // bits, since strtointeger only supports up to 64 bits. This is
+    // actually more than is required by the specification, which says
+    // for the input type "NAN(n-char-sequence)" that "the meaning of
+    // the n-char sequence is implementation-defined."
+    auto strtoint_result = strtointeger<uint64_t>(ncharseq.data(), 0);
+    if (!strtoint_result.has_error())
+      nan_mantissa = strtoint_result.value;
+
+    if (strtoint_result.parsed_len != static_cast<ptrdiff_t>(ncharseq.size()))
+      nan_mantissa = 0;
+  }
+
+  return nan_mantissa;
+}
+
 // Takes a pointer to a string and a pointer to a string pointer. This function
 // is used as the backend for all of the string to float functions.
 template <class T>
@@ -1136,31 +1158,18 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           ++index;
         if (src[index] == ')') {
           ++index;
-          if (isdigit(src[left_paren + 1])) {
-            // This is to prevent errors when StorageType is larger than 64
-            // bits, since strtointeger only supports up to 64 bits. This is
-            // actually more than is required by the specification, which says
-            // for the input type "NAN(n-char-sequence)" that "the meaning of
-            // the n-char sequence is implementation-defined."
-
-            auto strtoint_result =
-                strtointeger<uint64_t>(src + (left_paren + 1), 0);
-            if (strtoint_result.has_error()) {
-              error = strtoint_result.error;
-            }
-            nan_mantissa = static_cast<StorageType>(strtoint_result.value);
-            if (src[left_paren + 1 + strtoint_result.parsed_len] != ')')
-              nan_mantissa = 0;
-          }
+          auto nan_mantissa_result = nan_mantissa_from_ncharseq(
+              cpp::string_view(src + (left_paren + 1), index - left_paren - 2));
+          nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
         } else {
           index = left_paren;
         }
       }
+
       if (result.get_sign()) {
         result = FPBits(result.build_quiet_nan(nan_mantissa));
         result.set_sign(true);
       } else {
-        result.set_sign(false);
         result = FPBits(result.build_quiet_nan(nan_mantissa));
       }
     }
@@ -1193,6 +1202,28 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   set_implicit_bit<T>(result);
 
   return {T(result), index, error};
+}
+
+template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
+  using FPBits = typename fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+
+  FPBits result;
+  int error = 0;
+  StorageType nan_mantissa = 0;
+
+  ptrdiff_t index = 0;
+  while (isalnum(arg[index]) || arg[index] == '_')
+    ++index;
+
+  if (arg[index] == '\0') {
+    auto nan_mantissa_result =
+        nan_mantissa_from_ncharseq(cpp::string_view(arg, index));
+    nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
+  }
+
+  result = FPBits(result.build_quiet_nan(nan_mantissa));
+  return {T(result), 0, error};
 }
 
 } // namespace internal
