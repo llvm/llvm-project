@@ -21,8 +21,6 @@ class GISelChangeObserver;
 class MachineIRBuilder;
 class RISCVSubtarget;
 
-/// This class provides the information for the RISCV target legalizer for
-/// GlobalISel.
 class RISCVLegalizerInfo : public LegalizerInfo {
   const RISCVSubtarget &STI;
   const unsigned XLen;

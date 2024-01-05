@@ -27,8 +27,6 @@ class MachineIRBuilder;
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
 }
-/// This class provides the information for the AMDGPU target legalizer for
-/// GlobalISel.
 class AMDGPULegalizerInfo final : public LegalizerInfo {
   const GCNSubtarget &ST;
 
