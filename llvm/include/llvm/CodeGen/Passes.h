@@ -93,9 +93,9 @@ namespace llvm {
   MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
                                                       bool AbortOnFailedISel);
 
-  /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
+  /// createCodeGenPreparePass - Transform the code to expose more pattern
   /// matching during instruction selection.
-  FunctionPass *createCodeGenPrepareLegacyPass();
+  FunctionPass *createCodeGenPreparePass();
 
   /// This pass implements generation of target-specific intrinsics to support
   /// handling of complex number arithmetic
