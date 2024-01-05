@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-mesh-folding %s | FileCheck %s
+// RUN: mlir-opt -test-mesh-simplifications %s | FileCheck %s
 
 mesh.cluster @mesh0(rank = 3, dim_sizes = 4x?x2)
 mesh.cluster @mesh1(rank = 2, dim_sizes = 2x3)

@@ -23,7 +23,8 @@
 namespace mlir {
 namespace mesh {
 
-void populateSimplificationPatterns(RewritePatternSet &patterns) {
+void populateSimplificationPatterns(
+    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection) {
   populateAllReduceEndomorphismSimplificationPatterns<arith::AddFOp>(
       patterns, Partial::Sum);
   populateAllReduceEndomorphismSimplificationPatterns<arith::AddIOp>(
@@ -44,6 +45,8 @@ void populateSimplificationPatterns(RewritePatternSet &patterns) {
       patterns, Partial::Max);
 
   // TODO: add simplifications for all-gather and other collectives.
+
+  populateFoldingPatterns(patterns, symbolTableCollection);
 }
 
 namespace {
@@ -55,16 +58,17 @@ namespace {
 // pass changing the referenced ClusterOp ops.
 struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
   template <typename... OpRewritePatternArgs>
-  ClusterShapeFolder(SymbolTableCollection &symbolTable,
+  ClusterShapeFolder(SymbolTableCollection &symbolTableCollection,
                      OpRewritePatternArgs &&...opRewritePatternArgs)
       : OpRewritePattern(
             std::forward<OpRewritePatternArgs...>(opRewritePatternArgs)...),
-        symbolTable(symbolTable) {}
+        symbolTableCollection(symbolTableCollection) {}
   LogicalResult matchAndRewrite(ClusterShapeOp op,
                                 PatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
-    ClusterOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-        op.getOperation(), op.getMeshAttr());
+    ClusterOp mesh =
+        symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
+            op.getOperation(), op.getMeshAttr());
     if (!mesh) {
       return failure();
     }
@@ -111,14 +115,15 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
   }
 
 private:
-  SymbolTableCollection &symbolTable;
+  SymbolTableCollection &symbolTableCollection;
 };
 
 } // namespace
 
 void populateFoldingPatterns(RewritePatternSet &patterns,
-                             SymbolTableCollection &symbolTable) {
-  patterns.add<ClusterShapeFolder>(symbolTable, patterns.getContext());
+                             SymbolTableCollection &symbolTableCollection) {
+  patterns.add<ClusterShapeFolder>(symbolTableCollection,
+                                   patterns.getContext());
 }
 
 } // namespace mesh

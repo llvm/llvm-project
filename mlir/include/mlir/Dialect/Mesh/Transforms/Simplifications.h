@@ -20,7 +20,7 @@
 
 namespace mlir {
 
-class SymbolTable;
+class SymbolTableCollection;
 
 namespace mesh {
 
@@ -105,11 +105,12 @@ void populateAllReduceEndomorphismSimplificationPatterns(
       AlgebraicOp::getOperationName(), 1, patterns.getContext()));
 }
 
-void populateSimplificationPatterns(RewritePatternSet &patterns);
 // It is invalid to change ops that declare symbols during the application of
-// these patterns, because symbolTable is used to cache them.
+// these patterns, because symbolTableCollection is used to cache them.
+void populateSimplificationPatterns(
+    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection);
 void populateFoldingPatterns(RewritePatternSet &patterns,
-                             SymbolTableCollection &symbolTable);
+                             SymbolTableCollection &symbolTableCollection);
 
 } // namespace mesh
 } // namespace mlir
