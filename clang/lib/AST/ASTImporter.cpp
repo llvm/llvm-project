@@ -2034,10 +2034,14 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     return ToDCOrErr.takeError();
   }
 
+  const auto *FromRD = dyn_cast<RecordDecl>(FromDC);
+  if (!FromRD)
+    return ChildErrors;
+
   DeclContext *ToDC = *ToDCOrErr;
   // Remove all declarations, which may be in wrong order in the
   // lexical DeclContext and then add them in the proper order.
-  for (auto *D : FromDC->decls()) {
+  for (auto *D : FromRD->decls()) {
     if (!MightNeedReordering(D))
       continue;
 
@@ -2055,7 +2059,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
   }
 
   // Import everything else.
-  for (auto *From : FromDC->decls()) {
+  for (auto *From : FromRD->decls()) {
     if (MightNeedReordering(From))
       continue;
 
