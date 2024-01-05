@@ -1060,7 +1060,7 @@ LIBC_INLINE uint64_t
 nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
   uint64_t nan_mantissa = 0;
 
-  if (ncharseq.data() != nullptr && isdigit(*ncharseq.data())) {
+  if (ncharseq.data() != nullptr && isdigit(ncharseq[0])) {
     // This is to prevent errors when StorageType is larger than 64
     // bits, since strtointeger only supports up to 64 bits. This is
     // actually more than is required by the specification, which says
@@ -1070,7 +1070,7 @@ nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
     if (!strtoint_result.has_error())
       nan_mantissa = strtoint_result.value;
 
-    if (strtoint_result.parsed_len != (ptrdiff_t)ncharseq.size())
+    if (strtoint_result.parsed_len != static_cast<ptrdiff_t>(ncharseq.size()))
       nan_mantissa = 0;
   }
 
