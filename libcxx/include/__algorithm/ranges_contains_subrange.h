@@ -37,65 +37,23 @@ struct __fn {
             sentinel_for<_Iter1> _Sent1,
             forward_iterator _Iter2,
             sentinel_for<_Iter2> _Sent2,
-            class _Pred,
-            class _Proj1,
-            class _Proj2,
-            class _Offset = int>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __contains_subrange_fn_impl(
-      _Iter1 __first1,
-      _Sent1 __last1,
-      _Iter2 __first2,
-      _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2,
-      _Offset __offset) {
-    if (__offset < 0)
-      return false;
-    else {
-      auto result = ranges::search(
-          std::move(__first1),
-          std::move(__last1),
-          std::move(__first2),
-          std::move(__last2),
-          std::ref(__pred),
-          std::ref(__proj1),
-          std::ref(__proj2));
-      return !result.empty();
-    }
-  }
-
-  template <forward_iterator _Iter1,
-            sentinel_for<_Iter1> _Sent1,
-            forward_iterator _Iter2,
-            sentinel_for<_Iter2> _Sent2,
             class _Pred  = ranges::equal_to,
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<_Iter1, _Iter2, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
       _Pred __pred   = {},
       _Proj1 __proj1 = {},
-      _Proj2 __proj2 = {}) const {
-    int __n1     = ranges::distance(__first1, __last1);
-    int __n2     = ranges::distance(__first2, __last2);
-    if (__n2 == 0)
-      return true;
-    int __offset = __n1 - __n2;
+      _Proj2 __proj2 = {}) {
+    auto __n2 = ranges::distance(__first2, __last2);
+    if (__n2  == 0) return true;
 
-    return __contains_subrange_fn_impl(
-        std::move(__first1),
-        std::move(__last1),
-        std::move(__first2),
-        std::move(__last2),
-        __pred,
-        __proj1,
-        __proj2,
-        std::move(__offset));
+    auto ret = ranges::search(std::move(__first1), __last1, std::move(__first2), __last2, __pred, std::ref(__proj1), std::ref(__proj2));
+    return ret.empty() == false;
   }
 
   template <forward_range _Range1,
@@ -104,31 +62,18 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
-      _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    int __n1 = 0;
-    int __n2 = 0;
-
-    if constexpr (sized_range<_Range1> && sized_range<_Range2>) {
-      __n1 = ranges::size(__range1);
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static operator()(
+      _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) {
+    auto __n2 = 0;
+    if constexpr (sized_range<_Range2>) {
       __n2 = ranges::size(__range2);
     } else {
-      __n1 = ranges::distance(__range1);
-      __n2 = ranges::distance(__range2);
+      __n2 = std::distance(cbegin(__range2), cend(__range2));
     }
+    if (__n2  == 0) return true;
 
-    if (__n2 == 0)
-      return true;
-    int __offset = __n1 - __n2;
-    return __contains_subrange_fn_impl(
-        ranges::begin(__range1),
-        ranges::end(__range1),
-        ranges::begin(__range2),
-        ranges::end(__range2),
-        __pred,
-        __proj1,
-        __proj2,
-        __offset);
+    auto ret = ranges::search(__range1, __range2, __pred, std::ref(__proj1), std::ref(__proj2));
+    return ret.empty() == false;
   }
 };
 } // namespace __contains_subrange
