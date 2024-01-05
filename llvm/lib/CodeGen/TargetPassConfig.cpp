@@ -978,7 +978,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 /// before exception handling preparation passes.
 void TargetPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableCGP)
-    addPass(createCodeGenPrepareLegacyPass());
+    addPass(createCodeGenPreparePass());
 }
 
 /// Add common passes that perform LLVM IR to IR transforms in preparation for
@@ -1271,7 +1271,7 @@ void TargetPassConfig::addMachinePasses() {
   // together. Update this check once we have addressed any issues.
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
-      addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
+      addPass(llvm::createBasicBlockSectionsProfileReaderPass(
           TM->getBBSectionsFuncListBuf()));
       addPass(llvm::createBasicBlockPathCloningPass());
     }
