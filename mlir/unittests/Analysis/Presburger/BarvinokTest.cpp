@@ -7,11 +7,11 @@ using namespace mlir;
 using namespace presburger;
 using namespace mlir::presburger::detail;
 
-// The following are 3 randomly generated vectors with 4
-// entries each and define a cone's H-representation
-// using these numbers. We check that the dual contains
-// the same numbers.
-// We do the same in the reverse case.
+/// The following are 3 randomly generated vectors with 4
+/// entries each and define a cone's H-representation
+/// using these numbers. We check that the dual contains
+/// the same numbers.
+/// We do the same in the reverse case.
 TEST(BarvinokTest, getDual) {
   ConeH cone1 = defineHRep(4);
   cone1.addInequality({1, 2, 3, 4, 0});
@@ -35,9 +35,9 @@ TEST(BarvinokTest, getDual) {
   EXPECT_TRUE(dual2.isEqual(expected));
 }
 
-// We randomly generate a nxn matrix to use as a cone
-// with n inequalities in n variables and check for
-// the determinant being equal to the index.
+/// We randomly generate a nxn matrix to use as a cone
+/// with n inequalities in n variables and check for
+/// the determinant being equal to the index.
 TEST(BarvinokTest, getIndex) {
   ConeV cone = makeIntMatrix(3, 3, {{4, 2, 1}, {5, 2, 7}, {4, 1, 6}});
   EXPECT_EQ(getIndex(cone), cone.determinant());
