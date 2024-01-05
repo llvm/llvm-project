@@ -1094,10 +1094,6 @@ const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
   {"AMDGPU_MESA3D", "AMDGPU - MESA3D", ELF::ELFOSABI_AMDGPU_MESA3D}
 };
 
-const EnumEntry<unsigned> NVPTXElfOSABI[] = {
-  {"NVIDIA_CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA},
-};
-
 const EnumEntry<unsigned> ARMElfOSABI[] = {
   {"ARM", "ARM", ELF::ELFOSABI_ARM}
 };
