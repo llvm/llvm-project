@@ -1,0 +1,23 @@
+# UNSUPPORTED: system-darwin, system-windows
+
+# In DWARFv5, C++ static data members are represented
+# as DW_TAG_variable. We make sure LLDB's expression
+# evaluator doesn't crash when trying to parse such
+# a DW_TAG_variable DIE, whose parent DIE is only
+# a forward declaration.
+
+# RUN: %clangxx_host %S/Inputs/dwo-static-data-member.cpp \
+# RUN:   -g -gdwarf-5 -gsplit-dwarf -o %t
+# RUN: %lldb %t -s %s -o exit 2>&1 | FileCheck %s
+
+breakpoint set -n main
+process launch
+
+# CHECK: Process {{.*}} stopped
+
+# There is no definition for NoCtor anywhere
+# in the debug-info, so LLDB can't evaluate
+# this expression.
+expression NoCtor::i
+# CHECK-LABEL: expression NoCtor::i
+# CHECK:       use of undeclared identifier 'NoCtor'
