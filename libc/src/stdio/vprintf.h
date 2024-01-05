@@ -12,9 +12,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "src/__support/common.h"
+
 namespace LIBC_NAMESPACE {
 
-int vprintf(const char *__restrict format, va_list vlist);
+LIBC_FUNCTION_DECL int vprintf(const char *__restrict format, va_list vlist);
 
 } // namespace LIBC_NAMESPACE
 
