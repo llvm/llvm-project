@@ -1105,7 +1105,7 @@ public:
     LoopEmitter loopEmitter(
         ValueRange{input},
         StringAttr::get(getContext(), ForeachOp::getOperationName()));
-    loopEmitter.initializeLoopEmit(rewriter, loc, /*genDedup=*/false);
+    loopEmitter.initializeLoopEmit(rewriter, loc);
     for (Level l = 0; l < lvlRank; l++) {
       // TODO: provide utility function for loop sequences that only contains
       // one for loop?
@@ -1148,17 +1148,17 @@ public:
     SmallVector<Value> reducValue = srcBlock->getTerminator()->getOperands();
     rewriter.eraseOp(srcBlock->getTerminator());
 
-    // Inline body.
-    if (!reducValue.empty()) {
-      rewriter.mergeBlocks(srcBlock, rewriter.getBlock(), args);
-    } else {
-      // This is annoying, since scf.for inserts a implicit yield op when
-      // there is no reduction variable upon creation, in this case we need to
-      // merge the block *before* the yield op.
-      rewriter.inlineBlockBefore(srcBlock, &*rewriter.getInsertionPoint(),
-                                 args);
+    Operation &last = rewriter.getBlock()->back();
+    if (llvm::isa<scf::YieldOp>(last)) {
+      // scf.for inserts a implicit yield op when there is no reduction
+      // variable upon creation, in this case we need to merge the block
+      // *before* the yield op.
+      rewriter.setInsertionPoint(&last);
     }
 
+    rewriter.inlineBlockBefore(srcBlock, rewriter.getBlock(),
+                               rewriter.getInsertionPoint(), args);
+    rewriter.setInsertionPointToEnd(rewriter.getBlock());
     for (Level l = 0; l < lvlRank; l++) {
       // Link the reduction chain. Note that loop emitter update the reducValue
       // in place.

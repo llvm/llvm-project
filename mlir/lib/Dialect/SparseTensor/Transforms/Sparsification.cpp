@@ -294,7 +294,7 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
           .createLoopRanges(builder, loc);
 
   env.emitter().initializeLoopEmit(
-      builder, loc, /*genDedup=*/true,
+      builder, loc,
       /// Generates buffer for the output tensor.
       /// Note that all sparse kernels assume that when all elements are written
       /// to (viz. x(i) = y(i) * z(i)), the output buffer is already initialized

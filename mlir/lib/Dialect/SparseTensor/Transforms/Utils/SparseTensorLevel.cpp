@@ -22,17 +22,21 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 // File local helper functions/macros.
 //===----------------------------------------------------------------------===//
 #define CMPI(p, lhs, rhs)                                                      \
-  (b.create<arith::CmpIOp>(l, arith::CmpIPredicate::p, (lhs), (rhs)))
+  (b.create<arith::CmpIOp>(l, arith::CmpIPredicate::p, (lhs), (rhs))           \
+       .getResult())
 
+#define C_FALSE (constantI1(b, l, false))
 #define C_IDX(v) (constantIndex(b, l, (v)))
 #define YIELD(vs) (b.create<scf::YieldOp>(l, (vs)))
-#define ADDI(lhs, rhs) (b.create<arith::AddIOp>(l, (lhs), (rhs)))
-#define ANDI(lhs, rhs) (b.create<arith::AndIOp>(l, (lhs), (rhs)))
-#define SUBI(lhs, rhs) (b.create<arith::SubIOp>(l, (lhs), (rhs)))
-#define MULI(lhs, rhs) (b.create<arith::MulIOp>(l, (lhs), (rhs)))
-#define REMUI(lhs, rhs) (b.create<arith::RemUIOp>(l, (lhs), (rhs)))
-#define DIVUI(lhs, rhs) (b.create<arith::DivUIOp>(l, (lhs), (rhs)))
-#define SELECT(c, lhs, rhs) (b.create<arith::SelectOp>(l, (c), (lhs), (rhs)))
+#define ADDI(lhs, rhs) (b.create<arith::AddIOp>(l, (lhs), (rhs)).getResult())
+#define ORI(lhs, rhs) (b.create<arith::OrIOp>(l, (lhs), (rhs)).getResult())
+#define ANDI(lhs, rhs) (b.create<arith::AndIOp>(l, (lhs), (rhs)).getResult())
+#define SUBI(lhs, rhs) (b.create<arith::SubIOp>(l, (lhs), (rhs)).getResult())
+#define MULI(lhs, rhs) (b.create<arith::MulIOp>(l, (lhs), (rhs)).getResult())
+#define REMUI(lhs, rhs) (b.create<arith::RemUIOp>(l, (lhs), (rhs)).getResult())
+#define DIVUI(lhs, rhs) (b.create<arith::DivUIOp>(l, (lhs), (rhs)).getResult())
+#define SELECT(c, lhs, rhs)                                                    \
+  (b.create<arith::SelectOp>(l, (c), (lhs), (rhs)).getResult())
 
 // Helper functions that load/store into the position buffer for slice-driven
 // loops.
@@ -218,20 +222,17 @@ public:
   bool randomAccessible() const override { return isDenseLT(stl.getLT()); };
   bool iteratableByFor() const override { return true; };
 
-  ValuePair peekNxLvlRange(OpBuilder &b, Location l,
-                           const SparseTensorLevel &stl) const override {
-    assert(stl.tid == this->tid && stl.lvl - 1 == this->lvl);
-    return stl.peekRangeAt(b, l, itPos);
-  }
+  ValuePair getCurPosition() const override { return {itPos, nullptr}; }
 
   void genInit(OpBuilder &b, Location l,
                const SparseIterator *parent) override {
+    Value pos = C_IDX(0);
+    Value hi = nullptr;
     if (parent)
-      std::tie(posLo, loopHi) = parent->peekNxLvlRange(b, l, stl);
-    else
-      std::tie(posLo, loopHi) = stl.peekRangeAt(b, l, C_IDX(0));
+      std::tie(pos, hi) = parent->getCurPosition();
 
-    // Only randomly accessible iterator's position need to be linearized.
+    std::tie(posLo, loopHi) = stl.peekRangeAt(b, l, pos, hi);
+    // Seek to the lowest position.
     seek(posLo);
   }
 
@@ -240,7 +241,7 @@ public:
     return std::make_pair(getLoopLo(b, l), loopHi);
   }
 
-  Value genIsEnd(OpBuilder &b, Location l) override {
+  Value genNotEnd(OpBuilder &b, Location l) override {
     // We used the first level bound as the bound the collapsed set of levels.
     return CMPI(ult, itPos, loopHi);
   }
@@ -251,14 +252,14 @@ public:
   };
 
   ValueRange forward(OpBuilder &b, Location l) override {
-    seek(ADDI(itPos, C_IDX(1)).getResult());
+    seek(ADDI(itPos, C_IDX(1)));
     return getItVals();
   }
 
   void locate(OpBuilder &b, Location l, Value crd) override {
     assert(randomAccessible());
     // Seek to the linearized position.
-    seek(ADDI(crd, posLo).getResult());
+    seek(ADDI(crd, posLo));
     updateCrd(crd);
   }
 
@@ -286,26 +287,24 @@ public:
   bool randomAccessible() const override { return false; };
   bool iteratableByFor() const override { return false; };
 
-  ValuePair peekNxLvlRange(OpBuilder &b, Location l,
-                           const SparseTensorLevel &stl) const override {
-    assert(stl.tid == this->tid && stl.lvl - 1 == this->lvl);
-    return stl.peekRangeAt(b, l, getPos(), getSegHi());
-  }
+  ValuePair getCurPosition() const override { return {getPos(), getSegHi()}; }
 
   void genInit(OpBuilder &b, Location l,
                const SparseIterator *parent) override {
-    Value posLo;
 
+    Value pos = C_IDX(0);
+    Value hi = nullptr;
     if (parent)
-      std::tie(posLo, loopHi) = parent->peekNxLvlRange(b, l, stl);
-    else
-      std::tie(posLo, loopHi) = stl.peekRangeAt(b, l, C_IDX(0));
+      std::tie(pos, hi) = parent->getCurPosition();
+
+    Value posLo;
+    std::tie(posLo, posHi) = stl.peekRangeAt(b, l, pos, hi);
 
     seek({posLo, genSegmentHigh(b, l, posLo)});
   }
 
-  Value genIsEnd(OpBuilder &b, Location l) override {
-    return CMPI(ult, getPos(), loopHi);
+  Value genNotEnd(OpBuilder &b, Location l) override {
+    return CMPI(ult, getPos(), posHi);
   }
 
   Value deref(OpBuilder &b, Location l) override {
@@ -322,11 +321,145 @@ public:
   Value getPos() const { return posAndSegHi[0]; }
   Value getSegHi() const { return posAndSegHi[1]; }
 
-  Value loopHi;
+  Value posHi;
   Value posAndSegHi[2]; // position and segment high
   const SparseTensorLevel &stl;
 };
 
+class FilterIterator : public SparseIterator {
+  // Coorindate translation between crd loaded from the wrap iterator and the
+  // filter iterator.
+  Value fromWrapCrd(OpBuilder &b, Location l, Value wrapCrd) {
+    // crd = (wrapCrd - offset) / stride
+    return DIVUI(SUBI(wrapCrd, offset), stride);
+  }
+  Value toWrapCrd(OpBuilder &b, Location l, Value crd) {
+    // wrapCrd = crd * stride + offset
+    return ADDI(MULI(crd, stride), offset);
+  }
+
+  ValueRange genWhenWrapInBound(
+      OpBuilder &b, Location l, ValueRange elseRet,
+      llvm::function_ref<ValueRange(OpBuilder &, Location, Value)> builder);
+
+  Value genCrdNotLegitPredicate(OpBuilder &b, Location l, Value wrapCrd);
+
+  Value genShouldFilter(OpBuilder &b, Location l);
+
+public:
+  FilterIterator(std::unique_ptr<SparseIterator> &&w, Value offset,
+                 Value stride, Value size)
+      : SparseIterator(IterKind::kFilter, w.get()), offset(offset),
+        stride(stride), size(size), wrap(std::move(w)) {}
+
+  // For LLVM-style RTTI.
+  static bool classof(const SparseIterator *from) {
+    return from->kind == IterKind::kFilter;
+  }
+
+  bool randomAccessible() const override { return wrap->randomAccessible(); };
+  bool iteratableByFor() const override { return randomAccessible(); };
+
+  ValuePair getCurPosition() const override { return wrap->getCurPosition(); }
+
+  void genInit(OpBuilder &b, Location l,
+               const SparseIterator *parent) override {
+    wrap->genInit(b, l, parent);
+    if (!randomAccessible()) {
+      // TODO: we can skip this when stride == 1 and offset == 0, we can also
+      // use binary search here.
+      forwardIf(b, l, genShouldFilter(b, l));
+    }
+  }
+
+  ValuePair genForCond(OpBuilder &b, Location l) override {
+    assert(randomAccessible());
+
+    auto [lo, hi] = wrap->genForCond(b, l);
+    // if offset < lo, we use lo - offset as the new lower bound, else we use 0.
+    Value loInBound = CMPI(ult, offset, lo);
+    lo = SELECT(loInBound, SUBI(lo, offset), C_IDX(0));
+    return {lo, size};
+  }
+
+  Value genNotEnd(OpBuilder &b, Location l) override;
+
+  Value deref(OpBuilder &b, Location l) override {
+    updateCrd(fromWrapCrd(b, l, wrap->deref(b, l)));
+    return getCrd();
+  }
+
+  void locate(OpBuilder &b, Location l, Value crd) override {
+    assert(randomAccessible());
+    wrap->locate(b, l, toWrapCrd(b, l, crd));
+    updateCrd(crd);
+  }
+
+  ValueRange forward(OpBuilder &b, Location l) override;
+
+  const Value offset, stride, size;
+  std::unique_ptr<SparseIterator> wrap;
+};
+
+/*
+class NonEmptySubSectIterator : public SparseIterator {
+public:
+  NonEmptySubSectIterator(OpBuilder &b, Location l,
+                          const SparseIterator *parent,
+                          std::unique_ptr<SparseIterator> &&w, Value size)
+      : SparseIterator(IterKind::kNonEmptySubSect, w->tid, w->lvl),
+        parent(parent), wrap(std::move(w)), size(size), stride(stride) {
+
+    auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
+    if (p == nullptr) {
+      // Extract subsections along the root level.
+      prevUnResCnt = C_IDX(1);
+    } else if (p->lvl == lvl) {
+      // Extract subsections along the same level.
+      prevUnResCnt = p->prevUnResCnt;
+    } else {
+      // Extract subsections along the previous level.
+      assert(p->lvl + 1 == lvl);
+      prevUnResCnt = MULI(p->prevUnResCnt, p->size);
+    }
+
+    // We don't need an extra buffer to find subsections on dense levels.
+    if (randomAccessible())
+      return;
+    subSectPosBuf = allocSlicePosBuf(b, l, prevUnResCnt);
+  }
+
+  // For LLVM-style RTTI.
+  static bool classof(const SparseIterator *from) {
+    return from->kind == IterKind::kNonEmptySubSect;
+  }
+
+  bool randomAccessible() const override { return wrap->randomAccessible(); };
+  bool iteratableByFor() const override { return randomAccessible(); };
+
+  Value size, prevUnResCnt, subSectPosBuf;
+  unsigned stride;
+};
+
+class SubSectIterator : public SparseIterator {
+public:
+  SubSectIterator(const SparseIterator *parent,
+                  std::unique_ptr<SparseIterator> &&w)
+      : SparseIterator(IterKind::kSubSect, w->tid, w->lvl), parent(parent),
+        wrap(std::move(w)) {}
+
+  // For LLVM-style RTTI.
+  static bool classof(const SparseIterator *from) {
+    return from->kind == IterKind::kSubSect;
+  }
+
+  bool randomAccessible() const override { return wrap->randomAccessible(); };
+  bool iteratableByFor() const override { return randomAccessible(); };
+
+  const SparseIterator *parent;
+  std::unique_ptr<SparseIterator> wrap;
+};
+*/
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -353,7 +486,7 @@ Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
       l, pos.getType(), pos,
       /*beforeBuilder=*/
       [this, pos](OpBuilder &b, Location l, ValueRange ivs) {
-        Value inBound = CMPI(ult, ivs.front(), loopHi);
+        Value inBound = CMPI(ult, ivs.front(), posHi);
         auto ifInBound = b.create<scf::IfOp>(l, b.getI1Type(), inBound, true);
         {
           OpBuilder::InsertionGuard guard(b);
@@ -379,28 +512,92 @@ Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
   return whileOp.getResult(0);
 }
 
-Value FilterIterator::genShouldFilter(OpBuilder &b, Location l) {
-  Value end = wrap->genIsEnd(b, l);
+ValueRange FilterIterator::genWhenWrapInBound(
+    OpBuilder &b, Location l, ValueRange elseRet,
+    llvm::function_ref<ValueRange(OpBuilder &, Location, Value)> builder) {
+  // !it.end() ? callback(*crd) : resOOB;
+  TypeRange ifRetTypes = elseRet.getTypes();
+  auto ifOp = b.create<scf::IfOp>(l, ifRetTypes, wrap->genNotEnd(b, l), true);
 
-  auto shouldFilter = b.create<scf::IfOp>(l, b.getI1Type(), end, true);
-  // it.end() ? false : should_filter(*it);
-  b.setInsertionPointToStart(shouldFilter.thenBlock());
-  YIELD(constantI1(b, l, false));
-
-  // Iterator not at the end.
-  b.setInsertionPointToStart(shouldFilter.elseBlock());
+  b.setInsertionPointToStart(ifOp.thenBlock());
   Value wrapCrd = wrap->deref(b, l);
-  Value crd = fromWrapCrd(b, l, wrapCrd);
-  // on stride
-  Value legit = CMPI(eq, toWrapCrd(b, l, crd), wrapCrd);
-  // wrapCrd >= offset
-  legit = ANDI(CMPI(uge, wrapCrd, offset), legit);
-  //  crd < length
-  legit = ANDI(CMPI(ult, crd, size), legit);
-  YIELD(legit);
+  YIELD(builder(b, l, wrapCrd));
 
-  b.setInsertionPointAfter(shouldFilter);
-  return shouldFilter.getResult(0);
+  b.setInsertionPointToStart(ifOp.elseBlock());
+  YIELD(elseRet);
+
+  b.setInsertionPointAfter(ifOp);
+  return ifOp.getResults();
+}
+
+Value FilterIterator::genCrdNotLegitPredicate(OpBuilder &b, Location l,
+                                              Value wrapCrd) {
+  Value crd = fromWrapCrd(b, l, wrapCrd);
+  // not on stride
+  Value notlegit = CMPI(ne, toWrapCrd(b, l, crd), wrapCrd);
+  // wrapCrd < offset
+  notlegit = ORI(CMPI(ult, wrapCrd, offset), notlegit);
+  //  crd >= length
+  notlegit = ORI(CMPI(uge, crd, size), notlegit);
+  return notlegit;
+}
+
+Value FilterIterator::genShouldFilter(OpBuilder &b, Location l) {
+  ValueRange r = genWhenWrapInBound(
+      b, l, C_FALSE, [this](OpBuilder &b, Location l, Value wrapCrd) {
+        Value notLegit = genCrdNotLegitPredicate(b, l, wrapCrd);
+        return notLegit.getDefiningOp()->getResults();
+      });
+
+  assert(r.size() == 1);
+  return r.front();
+}
+
+Value FilterIterator::genNotEnd(OpBuilder &b, Location l) {
+  assert(!wrap->randomAccessible());
+  ValueRange r = genWhenWrapInBound(
+      b, l, C_FALSE, [this](OpBuilder &b, Location l, Value wrapCrd) {
+        Value crd = fromWrapCrd(b, l, wrapCrd);
+        // crd < size
+        return CMPI(ult, crd, size).getDefiningOp()->getResults();
+      });
+  assert(r.size() == 1);
+  return r.front();
+}
+
+ValueRange FilterIterator::forward(OpBuilder &b, Location l) {
+  assert(!randomAccessible());
+  // Generates
+  //
+  // wrap ++;
+  // while !it.end() && !legit(*it)
+  //   wrap ++;
+  wrap->forward(b, l);
+  auto whileOp = b.create<scf::WhileOp>(
+      l, getItVals().getTypes(), getItVals(),
+      /*beforeBuilder=*/
+      [this](OpBuilder &b, Location l, ValueRange ivs) {
+        linkNewScope(ivs);
+        ValueRange cont = genWhenWrapInBound(
+            b, l, C_FALSE, [this](OpBuilder &b, Location l, Value wrapCrd) {
+              // crd < size && !legit();
+              Value notLegit = genCrdNotLegitPredicate(b, l, wrapCrd);
+              Value crd = fromWrapCrd(b, l, wrapCrd);
+              Value ret = ANDI(CMPI(ult, crd, size), notLegit);
+              return ret.getDefiningOp()->getResults();
+            });
+        b.create<scf::ConditionOp>(l, cont.front(), ivs);
+      },
+      /*afterBuilder=*/
+      [this](OpBuilder &b, Location l, ValueRange ivs) {
+        linkNewScope(ivs);
+        wrap->forward(b, l);
+        YIELD(getItVals());
+      });
+
+  b.setInsertionPointAfter(whileOp);
+  linkNewScope(whileOp.getResults());
+  return getItVals();
 }
 
 std::unique_ptr<SparseTensorLevel>
@@ -445,33 +642,34 @@ sparse_tensor::makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl) {
 }
 
 std::unique_ptr<SparseIterator>
-sparse_tensor::makeSimpleIterator(const SparseTensorLevel &stl, bool dedup) {
-  dedup = dedup && !isUniqueLT(stl.getLT());
-  if (dedup)
+sparse_tensor::makeSimpleIterator(const SparseTensorLevel &stl) {
+  if (!isUniqueLT(stl.getLT())) {
+    // We always dedupliate the non-unique level, but we should optimize it away
+    // if possible.
     return std::make_unique<DedupIterator>(stl);
+  }
   return std::make_unique<TrivialIterator>(stl);
 }
 
 std::unique_ptr<SparseIterator>
 sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
                                        Value offset, Value stride, Value size) {
-  return nullptr;
-  // return std::make_unique<FilterIterator>(std::move(sit), offset, stride,
-  // size);
+
+  return std::make_unique<FilterIterator>(std::move(sit), offset, stride, size);
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
     OpBuilder &b, Location l, const SparseIterator *parent,
-    std::unique_ptr<SparseIterator> &&lvlIt, Value size, unsigned stride) {
+    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride) {
   return nullptr;
-  // return std::make_unique<NonEmptySubSectIterator>(
-  //     b, l, parent, std::move(lvlIt), size, stride);
+  //  return std::make_unique<NonEmptySubSectIterator>(
+  //      b, l, parent, std::move(lvlIt), size, stride);
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeTraverseSubSectIterator(
-    const SparseIterator *parent, std::unique_ptr<SparseIterator> &&lvlIt) {
-  // return std::make_unique<SubSectIterator>(parent, std::move(lvlIt));
+    const SparseIterator *, std::unique_ptr<SparseIterator> &&delegate) {
   return nullptr;
+  //  return std::make_unique<SubSectIterator>(parent, std::move(lvlIt));
 }
 
 #undef CMPI

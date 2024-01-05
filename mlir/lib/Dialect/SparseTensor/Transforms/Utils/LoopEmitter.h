@@ -95,7 +95,7 @@ public:
 
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.
-  void initializeLoopEmit(OpBuilder &builder, Location loc, bool genDedup,
+  void initializeLoopEmit(OpBuilder &builder, Location loc,
                           OutputUpdater updater = nullptr,
                           SynTensorBoundSetter synSetter = nullptr);
 
@@ -608,9 +608,8 @@ private:
   /// return true if has already been resolved.
   bool genSliceBegin(OpBuilder &builder, Location loc, TensorId tid, Level lvl);
 
-  std::unique_ptr<SparseIterator> makeLevelIterator(OpBuilder &builder,
-                                                    Location loc, TensorId tid,
-                                                    Level l, bool genDedup);
+  std::unique_ptr<SparseIterator>
+  makeLevelIterator(OpBuilder &builder, Location loc, TensorId tid, Level l);
 
   /// Generates code to get the next non-empty slices of tid on lvl.
   /// Returns a tuple of values for <NonEmpty, MinCrd, AbsOffset> (see
@@ -652,7 +651,6 @@ private:
   std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  bool genDedup; // TODO: remove it.
 
   //
   // Slice-driven loops related fields.

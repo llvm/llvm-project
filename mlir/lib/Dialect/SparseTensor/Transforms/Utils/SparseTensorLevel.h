@@ -114,13 +114,13 @@ public:
   // Core functions.
   //
 
-  // Peeks the range to iterate on child level at the current position.
-  // See SparseTensorLevel::peekRangeAt();
+  // Get the current position and the optional *position high* (for non-unique
+  // iterators), the value should be able to uniquely identify the sparse range
+  // for the next level. See SparseTensorLevel::peekRangeAt();
   //
   // Not every type of iterator supports the operations, e.g., non-empty
   // subsection iterator does not.
-  virtual std::pair<Value, Value>
-  peekNxLvlRange(OpBuilder &, Location, const SparseTensorLevel &) const {
+  virtual std::pair<Value, Value> getCurPosition() const {
     llvm_unreachable("unsupported");
   };
 
@@ -133,11 +133,11 @@ public:
     llvm_unreachable("Unsupported");
   }
 
-  virtual Value genIsEnd(OpBuilder &b, Location l) = 0;
+  virtual Value genNotEnd(OpBuilder &b, Location l) = 0;
   std::pair<Value, ValueRange> genWhileCond(OpBuilder &b, Location l,
                                             ValueRange vs) {
     seek(vs.take_front(itVals.size()));
-    return std::make_pair(genIsEnd(b, l), vs.drop_front(itVals.size()));
+    return std::make_pair(genNotEnd(b, l), vs.drop_front(itVals.size()));
   }
 
   // Dereference the iterator, loads the coordinate at the current position.
@@ -201,8 +201,8 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
                                                          unsigned tid, Level l);
 
 /// Helper function to create a SparseIterator object.
-std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
-                                                   bool dedup);
+std::unique_ptr<SparseIterator>
+makeSimpleIterator(const SparseTensorLevel &stl);
 
 std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>
 makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl);

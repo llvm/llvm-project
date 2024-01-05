@@ -410,8 +410,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
 std::unique_ptr<SparseIterator>
 LoopEmitter::makeLevelIterator(OpBuilder &builder, Location loc, TensorId t,
-                               Level l, bool genDedup) {
-  auto it = makeSimpleIterator(*lvls[t][l], genDedup);
+                               Level l) {
+  auto it = makeSimpleIterator(*lvls[t][l]);
   if (isSparseSlices[t]) {
     Value offset = genSliceOffset(builder, loc, tensors[t], l);
     Value stride = genSliceStride(builder, loc, tensors[t], l);
@@ -426,10 +426,8 @@ LoopEmitter::makeLevelIterator(OpBuilder &builder, Location loc, TensorId t,
 }
 
 void LoopEmitter::initializeLoopEmit(
-    OpBuilder &builder, Location loc, bool genDedup,
-    LoopEmitter::OutputUpdater updater,
+    OpBuilder &builder, Location loc, LoopEmitter::OutputUpdater updater,
     LoopEmitter::SynTensorBoundSetter synSetter) {
-  this->genDedup = genDedup;
   // For every synthetic tensor, set the high bound by calling the callback.
   if (synSetter) {
     TensorId synId = getSynTensorId();
@@ -478,7 +476,7 @@ void LoopEmitter::initializeLoopEmit(
       if (!dependentLvlMap[t][l].empty())
         continue;
 
-      auto it = makeLevelIterator(builder, loc, t, l, genDedup);
+      auto it = makeLevelIterator(builder, loc, t, l);
       iters[t][l].emplace_back(std::move(it));
     }
 
@@ -550,7 +548,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
       assert(curDep.first == loop);
       remDepStack[t][lvl].pop_back();
 
-      auto lvlIt = makeLevelIterator(builder, loc, t, lvl, genDedup);
+      auto lvlIt = makeLevelIterator(builder, loc, t, lvl);
       const SparseIterator *parent =
           lvl == 0 && iters[t][lvl].empty()
               ? nullptr
