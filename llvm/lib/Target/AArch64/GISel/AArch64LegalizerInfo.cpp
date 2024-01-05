@@ -1024,6 +1024,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1)
       .lower();
 
+  getActionDefinitionsBuilder({G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL})
+      .scalarize(2)
+      .lower();
+
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
       .legalFor({{s8, v16s8},
                  {s8, v8s8},
