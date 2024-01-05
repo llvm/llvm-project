@@ -216,8 +216,7 @@ def HasStdExtZbkx : Predicate<"Subtarget->hasStdExtZbkx()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbkx),
                              "'Zbkx' (Crossbar permutation instructions)">;
 
-def HasStdExtZbbOrZbkb
-    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb()">,
+def HasStdExtZbbOrZbkb : Predicate<"Subtarget->hasStdExtZbbOrZbkb()">,
                 AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb),
                                    "'Zbb' (Basic Bit-Manipulation) or "
                                    "'Zbkb' (Bitmanip instructions for Cryptography)">;

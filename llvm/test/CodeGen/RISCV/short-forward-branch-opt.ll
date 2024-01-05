@@ -1547,34 +1547,34 @@ define i64 @select_andn(i64 %A, i64 %B, i64 %C, i1 zeroext %cond) {
 ;
 ; RV64SFB-LABEL: select_andn:
 ; RV64SFB:       # %bb.0: # %entry
-; RV64SFB-NEXT:    andn a0, a0, a1
-; RV64SFB-NEXT:    beqz a3, .LBB36_2
+; RV64SFB-NEXT:    bnez a3, .LBB36_2
 ; RV64SFB-NEXT:  # %bb.1: # %entry
-; RV64SFB-NEXT:    mv a0, a2
+; RV64SFB-NEXT:    andn a2, a0, a1
 ; RV64SFB-NEXT:  .LBB36_2: # %entry
+; RV64SFB-NEXT:    mv a0, a2
 ; RV64SFB-NEXT:    ret
 ;
 ; ZICOND-LABEL: select_andn:
 ; ZICOND:       # %bb.0: # %entry
-; ZICOND-NEXT:    andn a0, a0, a1
-; ZICOND-NEXT:    beqz a3, .LBB36_2
+; ZICOND-NEXT:    bnez a3, .LBB36_2
 ; ZICOND-NEXT:  # %bb.1: # %entry
-; ZICOND-NEXT:    mv a0, a2
+; ZICOND-NEXT:    andn a2, a0, a1
 ; ZICOND-NEXT:  .LBB36_2: # %entry
+; ZICOND-NEXT:    mv a0, a2
 ; ZICOND-NEXT:    ret
 ;
 ; RV32SFB-LABEL: select_andn:
 ; RV32SFB:       # %bb.0: # %entry
-; RV32SFB-NEXT:    andn a0, a0, a2
-; RV32SFB-NEXT:    andn a1, a1, a3
-; RV32SFB-NEXT:    beqz a6, .LBB36_2
+; RV32SFB-NEXT:    bnez a6, .LBB36_2
 ; RV32SFB-NEXT:  # %bb.1: # %entry
-; RV32SFB-NEXT:    mv a0, a4
+; RV32SFB-NEXT:    andn a4, a0, a2
 ; RV32SFB-NEXT:  .LBB36_2: # %entry
-; RV32SFB-NEXT:    beqz a6, .LBB36_4
+; RV32SFB-NEXT:    bnez a6, .LBB36_4
 ; RV32SFB-NEXT:  # %bb.3: # %entry
-; RV32SFB-NEXT:    mv a1, a5
+; RV32SFB-NEXT:    andn a5, a1, a3
 ; RV32SFB-NEXT:  .LBB36_4: # %entry
+; RV32SFB-NEXT:    mv a0, a4
+; RV32SFB-NEXT:    mv a1, a5
 ; RV32SFB-NEXT:    ret
 entry:
  %0 = xor i64 %B, -1
@@ -1595,34 +1595,34 @@ define i64 @select_orn(i64 %A, i64 %B, i64 %C, i1 zeroext %cond) {
 ;
 ; RV64SFB-LABEL: select_orn:
 ; RV64SFB:       # %bb.0: # %entry
-; RV64SFB-NEXT:    orn a0, a0, a1
-; RV64SFB-NEXT:    beqz a3, .LBB37_2
+; RV64SFB-NEXT:    bnez a3, .LBB37_2
 ; RV64SFB-NEXT:  # %bb.1: # %entry
-; RV64SFB-NEXT:    mv a0, a2
+; RV64SFB-NEXT:    orn a2, a0, a1
 ; RV64SFB-NEXT:  .LBB37_2: # %entry
+; RV64SFB-NEXT:    mv a0, a2
 ; RV64SFB-NEXT:    ret
 ;
 ; ZICOND-LABEL: select_orn:
 ; ZICOND:       # %bb.0: # %entry
-; ZICOND-NEXT:    orn a0, a0, a1
-; ZICOND-NEXT:    beqz a3, .LBB37_2
+; ZICOND-NEXT:    bnez a3, .LBB37_2
 ; ZICOND-NEXT:  # %bb.1: # %entry
-; ZICOND-NEXT:    mv a0, a2
+; ZICOND-NEXT:    orn a2, a0, a1
 ; ZICOND-NEXT:  .LBB37_2: # %entry
+; ZICOND-NEXT:    mv a0, a2
 ; ZICOND-NEXT:    ret
 ;
 ; RV32SFB-LABEL: select_orn:
 ; RV32SFB:       # %bb.0: # %entry
-; RV32SFB-NEXT:    orn a0, a0, a2
-; RV32SFB-NEXT:    orn a1, a1, a3
-; RV32SFB-NEXT:    beqz a6, .LBB37_2
+; RV32SFB-NEXT:    bnez a6, .LBB37_2
 ; RV32SFB-NEXT:  # %bb.1: # %entry
-; RV32SFB-NEXT:    mv a0, a4
+; RV32SFB-NEXT:    orn a4, a0, a2
 ; RV32SFB-NEXT:  .LBB37_2: # %entry
-; RV32SFB-NEXT:    beqz a6, .LBB37_4
+; RV32SFB-NEXT:    bnez a6, .LBB37_4
 ; RV32SFB-NEXT:  # %bb.3: # %entry
-; RV32SFB-NEXT:    mv a1, a5
+; RV32SFB-NEXT:    orn a5, a1, a3
 ; RV32SFB-NEXT:  .LBB37_4: # %entry
+; RV32SFB-NEXT:    mv a0, a4
+; RV32SFB-NEXT:    mv a1, a5
 ; RV32SFB-NEXT:    ret
 entry:
  %0 = xor i64 %B, -1
@@ -1643,34 +1643,34 @@ define i64 @select_xnor(i64 %A, i64 %B, i64 %C, i1 zeroext %cond) {
 ;
 ; RV64SFB-LABEL: select_xnor:
 ; RV64SFB:       # %bb.0: # %entry
-; RV64SFB-NEXT:    xnor a0, a0, a1
-; RV64SFB-NEXT:    beqz a3, .LBB38_2
+; RV64SFB-NEXT:    bnez a3, .LBB38_2
 ; RV64SFB-NEXT:  # %bb.1: # %entry
-; RV64SFB-NEXT:    mv a0, a2
+; RV64SFB-NEXT:    xnor a2, a0, a1
 ; RV64SFB-NEXT:  .LBB38_2: # %entry
+; RV64SFB-NEXT:    mv a0, a2
 ; RV64SFB-NEXT:    ret
 ;
 ; ZICOND-LABEL: select_xnor:
 ; ZICOND:       # %bb.0: # %entry
-; ZICOND-NEXT:    xnor a0, a0, a1
-; ZICOND-NEXT:    beqz a3, .LBB38_2
+; ZICOND-NEXT:    bnez a3, .LBB38_2
 ; ZICOND-NEXT:  # %bb.1: # %entry
-; ZICOND-NEXT:    mv a0, a2
+; ZICOND-NEXT:    xnor a2, a0, a1
 ; ZICOND-NEXT:  .LBB38_2: # %entry
+; ZICOND-NEXT:    mv a0, a2
 ; ZICOND-NEXT:    ret
 ;
 ; RV32SFB-LABEL: select_xnor:
 ; RV32SFB:       # %bb.0: # %entry
-; RV32SFB-NEXT:    xnor a0, a0, a2
-; RV32SFB-NEXT:    xnor a1, a1, a3
-; RV32SFB-NEXT:    beqz a6, .LBB38_2
+; RV32SFB-NEXT:    bnez a6, .LBB38_2
 ; RV32SFB-NEXT:  # %bb.1: # %entry
-; RV32SFB-NEXT:    mv a0, a4
+; RV32SFB-NEXT:    xnor a4, a0, a2
 ; RV32SFB-NEXT:  .LBB38_2: # %entry
-; RV32SFB-NEXT:    beqz a6, .LBB38_4
+; RV32SFB-NEXT:    bnez a6, .LBB38_4
 ; RV32SFB-NEXT:  # %bb.3: # %entry
-; RV32SFB-NEXT:    mv a1, a5
+; RV32SFB-NEXT:    xnor a5, a1, a3
 ; RV32SFB-NEXT:  .LBB38_4: # %entry
+; RV32SFB-NEXT:    mv a0, a4
+; RV32SFB-NEXT:    mv a1, a5
 ; RV32SFB-NEXT:    ret
 entry:
  %0 = xor i64 %A, %B
