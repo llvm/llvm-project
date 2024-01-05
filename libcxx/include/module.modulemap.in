@@ -530,10 +530,8 @@ module std_experimental [system] {
     export *
   }
   module simd {
-    module abi_tag              { private header "experimental/__simd/abi_tag.h" }
     module aligned_tag          { private header "experimental/__simd/aligned_tag.h" }
     module declaration          { private header "experimental/__simd/declaration.h" }
-    module internal_declaration { private header "experimental/__simd/internal_declaration.h" }
     module reference            { private header "experimental/__simd/reference.h" }
     module scalar               { private header "experimental/__simd/scalar.h" }
     module simd                 { private header "experimental/__simd/simd.h" }

@@ -916,7 +916,7 @@ redo_gep:
 
       // A array/variable index is always of the form i*S where S is the
       // constant scale size.  See if we can push the scale into immediates.
-      uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+      uint64_t S = GTI.getSequentialElementStride(DL);
       for (;;) {
         if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
           // Constant-offset addressing.
@@ -1306,8 +1306,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                   TII.get(Subtarget->is64Bit() ? X86::RET64 : X86::RET32));
   }
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
   return true;
 }
 
@@ -3346,8 +3346,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign const &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     const Value *ArgVal = OutVals[VA.getValNo()];
     MVT ArgVT = OutVTs[VA.getValNo()];
 

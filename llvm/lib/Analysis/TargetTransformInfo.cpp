@@ -862,6 +862,15 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getAltInstrCost(
+    VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,

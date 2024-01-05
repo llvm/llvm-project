@@ -630,6 +630,9 @@ def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
 def FeaturePAuthLR : SubtargetFeature<"pauth-lr", "HasPAuthLR",
     "true", "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
 
+def FeatureTLBIW : SubtargetFeature<"tlbiw", "HasTLBIW", "true",
+  "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -1402,7 +1405,7 @@ def ProcessorFeatures {
                                  FeatureSSBS];
   list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
-                                 FeatureFlagM, FeatureFP16FML, FeaturePAuth,
+                                 FeatureFlagM, FeaturePAuth,
                                  FeaturePerfMon, FeatureRCPC, FeatureSPE,
                                  FeatureSSBS];
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,

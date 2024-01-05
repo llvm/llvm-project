@@ -1666,13 +1666,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Ashr = foldAddToAshr(I))
     return Ashr;
 
-  // min(A, B) + max(A, B) => A + B.
-  if (match(&I, m_CombineOr(m_c_Add(m_SMax(m_Value(A), m_Value(B)),
-                                    m_c_SMin(m_Deferred(A), m_Deferred(B))),
-                            m_c_Add(m_UMax(m_Value(A), m_Value(B)),
-                                    m_c_UMin(m_Deferred(A), m_Deferred(B))))))
-    return BinaryOperator::CreateWithCopiedFlags(Instruction::Add, A, B, &I);
-
   // (~X) + (~Y) --> -2 - (X + Y)
   {
     // To ensure we can save instructions we need to ensure that we consume both
@@ -1685,8 +1678,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       assert(NotLHS != nullptr && NotRHS != nullptr &&
              "isFreeToInvert desynced with getFreelyInverted");
       Value *LHSPlusRHS = Builder.CreateAdd(NotLHS, NotRHS);
-      return BinaryOperator::CreateSub(ConstantInt::get(RHS->getType(), -2),
-                                       LHSPlusRHS);
+      return BinaryOperator::CreateSub(
+          ConstantInt::getSigned(RHS->getType(), -2), LHSPlusRHS);
     }
   }
 

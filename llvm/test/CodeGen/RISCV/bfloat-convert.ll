@@ -39,8 +39,6 @@ define i16 @fcvt_si_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_si_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
@@ -100,8 +98,6 @@ define i16 @fcvt_si_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_si_bf16_sat:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    feq.s a0, fa5, fa5
@@ -145,8 +141,6 @@ define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_ui_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
@@ -196,8 +190,6 @@ define i16 @fcvt_ui_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV64ID-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-NEXT:    fmv.w.x fa3, zero
@@ -235,8 +227,6 @@ define i32 @fcvt_w_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_w_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
@@ -281,8 +271,6 @@ define i32 @fcvt_w_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_w_bf16_sat:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.w.s a0, fa5, rtz
@@ -321,8 +309,6 @@ define i32 @fcvt_wu_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_wu_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
@@ -361,8 +347,6 @@ define i32 @fcvt_wu_bf16_multiple_use(bfloat %x, ptr %y) nounwind {
 ; RV64ID-LABEL: fcvt_wu_bf16_multiple_use:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
@@ -413,8 +397,6 @@ define i32 @fcvt_wu_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_wu_bf16_sat:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
@@ -463,8 +445,6 @@ define i64 @fcvt_l_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_l_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
@@ -606,8 +586,6 @@ define i64 @fcvt_l_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_l_bf16_sat:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
@@ -654,8 +632,6 @@ define i64 @fcvt_lu_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_lu_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
@@ -730,8 +706,6 @@ define i64 @fcvt_lu_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_lu_bf16_sat:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
@@ -1200,8 +1174,6 @@ define float @fcvt_s_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_s_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa0, a0
 ; RV64ID-NEXT:    ret
@@ -1313,8 +1285,6 @@ define double @fcvt_d_bf16(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_d_bf16:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.d.s fa0, fa5
@@ -1521,8 +1491,6 @@ define signext i8 @fcvt_w_s_i8(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_w_s_i8:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
@@ -1582,8 +1550,6 @@ define signext i8 @fcvt_w_s_sat_i8(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_w_s_sat_i8:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    feq.s a0, fa5, fa5
@@ -1627,8 +1593,6 @@ define zeroext i8 @fcvt_wu_s_i8(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_wu_s_i8:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
@@ -1676,8 +1640,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_wu_s_sat_i8:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fmv.w.x fa4, zero
@@ -1731,8 +1693,6 @@ define zeroext i32 @fcvt_wu_bf16_sat_zext(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_wu_bf16_sat_zext:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
@@ -1784,8 +1744,6 @@ define signext i32 @fcvt_w_bf16_sat_sext(bfloat %a) nounwind {
 ; RV64ID-LABEL: fcvt_w_bf16_sat_sext:
 ; RV64ID:       # %bb.0: # %start
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
-; RV64ID-NEXT:    slli a0, a0, 48
-; RV64ID-NEXT:    srli a0, a0, 48
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
 ; RV64ID-NEXT:    fcvt.w.s a0, fa5, rtz

@@ -2044,6 +2044,14 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == RequiresExprBody; }
+
+  static DeclContext *castToDeclContext(const RequiresExprBodyDecl *D) {
+    return static_cast<DeclContext *>(const_cast<RequiresExprBodyDecl *>(D));
+  }
+
+  static RequiresExprBodyDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<RequiresExprBodyDecl *>(const_cast<DeclContext *>(DC));
+  }
 };
 
 /// Represents a static or instance method of a struct/union/class.

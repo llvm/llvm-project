@@ -10,6 +10,8 @@ def TruePredicate : Predicate<"true">;
 
 def HasEGPR      : Predicate<"Subtarget->hasEGPR()">;
 def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
+def HasNDD       : Predicate<"Subtarget->hasNDD()">;
+def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
@@ -100,7 +102,6 @@ def HasIFMA      : Predicate<"Subtarget->hasIFMA()">;
 def HasAVXIFMA   : Predicate<"Subtarget->hasAVXIFMA()">;
 def NoVLX_Or_NoIFMA : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasIFMA()">;
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;
-def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
 def HasSHA512    : Predicate<"Subtarget->hasSHA512()">;
 def HasSGX       : Predicate<"Subtarget->hasSGX()">;

@@ -1067,7 +1067,7 @@ struct GenericPluginTy {
 
   /// Top level interface to verify if a given ELF image can be executed on a
   /// given target. Returns true if the \p Image is compatible with the plugin.
-  Expected<bool> checkELFImage(__tgt_device_image &Image) const;
+  Expected<bool> checkELFImage(StringRef Image) const;
 
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So

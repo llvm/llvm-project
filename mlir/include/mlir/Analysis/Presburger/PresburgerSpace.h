@@ -290,6 +290,11 @@ public:
   /// the symbols in two spaces are aligned.
   bool isAligned(const PresburgerSpace &other, VarKind kind) const;
 
+  /// Merge and align symbol variables of `this` and `other` with respect to
+  /// identifiers. After this operation the symbol variables of both spaces have
+  /// the same identifiers in the same order.
+  void mergeAndAlignSymbols(PresburgerSpace &other);
+
   void print(llvm::raw_ostream &os) const;
   void dump() const;
 

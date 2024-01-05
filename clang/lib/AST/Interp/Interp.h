@@ -37,7 +37,6 @@
 namespace clang {
 namespace interp {
 
-using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.

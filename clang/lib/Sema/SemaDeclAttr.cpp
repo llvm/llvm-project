@@ -5825,8 +5825,7 @@ struct IntrinToName {
 static bool ArmBuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
                                  ArrayRef<IntrinToName> Map,
                                  const char *IntrinNames) {
-  if (AliasName.starts_with("__arm_"))
-    AliasName = AliasName.substr(6);
+  AliasName.consume_front("__arm_");
   const IntrinToName *It =
       llvm::lower_bound(Map, BuiltinID, [](const IntrinToName &L, unsigned Id) {
         return L.Id < Id;

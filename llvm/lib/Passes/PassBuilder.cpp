@@ -72,7 +72,9 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
@@ -452,9 +454,10 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
+  bool ShouldPopulateClassToPassNames = PIC && shouldPopulateClassToPassNames();
   if (TM)
-    TM->registerPassBuilderCallbacks(*this);
-  if (PIC && shouldPopulateClassToPassNames()) {
+    TM->registerPassBuilderCallbacks(*this, ShouldPopulateClassToPassNames);
+  if (ShouldPopulateClassToPassNames) {
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \

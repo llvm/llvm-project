@@ -11212,7 +11212,6 @@ define void @load_i8_stride8_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-SLOW-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm1, %xmm7, %xmm9
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm1, %xmm5, %xmm15
-; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm5, %xmm23
 ; AVX512F-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm15[0],xmm9[0],xmm15[1],xmm9[1],xmm15[2],xmm9[2],xmm15[3],xmm9[3]
 ; AVX512F-SLOW-NEXT:    vpblendd {{.*#+}} xmm8 = xmm9[0,1,2],xmm8[3]
 ; AVX512F-SLOW-NEXT:    vpsrlq $32, %zmm17, %zmm9
@@ -11289,7 +11288,6 @@ define void @load_i8_stride8_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm30, %xmm10
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm3, %xmm10, %xmm9
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm3, %xmm12, %xmm15
-; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm12, %xmm31
 ; AVX512F-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm15[0],xmm9[0],xmm15[1],xmm9[1],xmm15[2],xmm9[2],xmm15[3],xmm9[3]
 ; AVX512F-SLOW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
 ; AVX512F-SLOW-NEXT:    vinserti128 $1, %xmm9, %ymm0, %ymm9
@@ -11302,7 +11300,7 @@ define void @load_i8_stride8_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1],xmm9[2],xmm8[2],xmm9[3],xmm8[3]
 ; AVX512F-SLOW-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm1, %xmm6, %xmm9
-; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm23, %xmm11
+; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm21, %xmm11
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm1, %xmm11, %xmm15
 ; AVX512F-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm15[0],xmm9[0],xmm15[1],xmm9[1],xmm15[2],xmm9[2],xmm15[3],xmm9[3]
 ; AVX512F-SLOW-NEXT:    vpblendd {{.*#+}} xmm8 = xmm9[0,1,2],xmm8[3]

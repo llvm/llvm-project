@@ -15,7 +15,7 @@
 #include <__utility/integer_sequence.h>
 #include <cstddef>
 #include <experimental/__config>
-#include <experimental/__simd/internal_declaration.h>
+#include <experimental/__simd/declaration.h>
 #include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>
 

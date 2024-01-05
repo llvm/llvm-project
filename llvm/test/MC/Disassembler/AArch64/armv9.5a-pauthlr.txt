@@ -49,6 +49,22 @@
 # CHECK: autibsppc xzr
 # NO-PAUTHLR: invalid instruction encoding
 
+[0xfe,0x8b,0xc1,0xda]
+# CHECK: pacia171615
+# NO-PAUTHLR: invalid instruction encoding
+
+[0xfe,0x8f,0xc1,0xda]
+# CHECK: pacib171615
+# NO-PAUTHLR: invalid instruction encoding
+
+[0xfe,0xbb,0xc1,0xda]
+# CHECK: autia171615
+# NO-PAUTHLR: invalid instruction encoding
+
+[0xfe,0xbf,0xc1,0xda]
+# CHECK: autib171615
+# NO-PAUTHLR: invalid instruction encoding
+
 [0xbf,0x01,0x00,0x55]
 # CHECK: retaasppc #-52
 # NO-PAUTHLR: invalid instruction encoding

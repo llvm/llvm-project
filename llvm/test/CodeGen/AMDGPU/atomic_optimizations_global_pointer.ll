@@ -657,15 +657,12 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX8-NEXT:    s_ff1_i32_b32 s4, s3
-; GFX8-NEXT:    s_ff1_i32_b32 s5, s2
-; GFX8-NEXT:    s_add_i32 s4, s4, 32
-; GFX8-NEXT:    s_min_u32 s7, s5, s4
-; GFX8-NEXT:    v_readlane_b32 s8, v0, s7
-; GFX8-NEXT:    s_lshl_b64 s[4:5], 1, s7
-; GFX8-NEXT:    s_mov_b32 m0, s7
+; GFX8-NEXT:    s_ff1_i32_b64 s4, s[2:3]
+; GFX8-NEXT:    s_mov_b32 m0, s4
+; GFX8-NEXT:    v_readlane_b32 s7, v0, s4
+; GFX8-NEXT:    s_lshl_b64 s[4:5], 1, s4
 ; GFX8-NEXT:    v_writelane_b32 v1, s6, m0
-; GFX8-NEXT:    s_add_i32 s6, s6, s8
+; GFX8-NEXT:    s_add_i32 s6, s6, s7
 ; GFX8-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; GFX8-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -705,15 +702,12 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s4, s3
-; GFX9-NEXT:    s_ff1_i32_b32 s5, s2
-; GFX9-NEXT:    s_add_i32 s4, s4, 32
-; GFX9-NEXT:    s_min_u32 s7, s5, s4
-; GFX9-NEXT:    v_readlane_b32 s8, v0, s7
-; GFX9-NEXT:    s_lshl_b64 s[4:5], 1, s7
-; GFX9-NEXT:    s_mov_b32 m0, s7
+; GFX9-NEXT:    s_ff1_i32_b64 s4, s[2:3]
+; GFX9-NEXT:    s_mov_b32 m0, s4
+; GFX9-NEXT:    v_readlane_b32 s7, v0, s4
+; GFX9-NEXT:    s_lshl_b64 s[4:5], 1, s4
 ; GFX9-NEXT:    v_writelane_b32 v1, s6, m0
-; GFX9-NEXT:    s_add_i32 s6, s6, s8
+; GFX9-NEXT:    s_add_i32 s6, s6, s7
 ; GFX9-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; GFX9-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -753,10 +747,7 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
 ; GFX1064-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s4, s3
-; GFX1064-NEXT:    s_ff1_i32_b32 s5, s2
-; GFX1064-NEXT:    s_add_i32 s4, s4, 32
-; GFX1064-NEXT:    s_min_u32 s7, s5, s4
+; GFX1064-NEXT:    s_ff1_i32_b64 s7, s[2:3]
 ; GFX1064-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1064-NEXT:    s_lshl_b64 s[4:5], 1, s7
 ; GFX1064-NEXT:    v_writelane_b32 v1, s6, s7
@@ -847,16 +838,12 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1164-NEXT:    ; implicit-def: $vgpr1
 ; GFX1164-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_ctz_i32_b32 s4, s3
-; GFX1164-NEXT:    s_ctz_i32_b32 s5, s2
-; GFX1164-NEXT:    s_add_i32 s4, s4, 32
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_min_u32 s7, s5, s4
+; GFX1164-NEXT:    s_ctz_i32_b64 s7, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1164-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1164-NEXT:    s_lshl_b64 s[4:5], 1, s7
 ; GFX1164-NEXT:    v_writelane_b32 v1, s6, s7
 ; GFX1164-NEXT:    s_and_not1_b64 s[2:3], s[2:3], s[4:5]
-; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164-NEXT:    s_add_i32 s6, s6, s8
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -951,16 +938,12 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1264-NEXT:    ; implicit-def: $vgpr1
 ; GFX1264-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX1264-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1264-NEXT:    s_ctz_i32_b32 s4, s3
-; GFX1264-NEXT:    s_ctz_i32_b32 s5, s2
-; GFX1264-NEXT:    s_add_co_i32 s4, s4, 32
-; GFX1264-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1264-NEXT:    s_min_u32 s7, s5, s4
+; GFX1264-NEXT:    s_ctz_i32_b64 s7, s[2:3]
+; GFX1264-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1264-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1264-NEXT:    s_lshl_b64 s[4:5], 1, s7
 ; GFX1264-NEXT:    v_writelane_b32 v1, s6, s7
 ; GFX1264-NEXT:    s_and_not1_b64 s[2:3], s[2:3], s[4:5]
-; GFX1264-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1264-NEXT:    s_add_co_i32 s6, s6, s8
 ; GFX1264-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1264-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -2557,15 +2540,12 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX8-NEXT:    s_ff1_i32_b32 s4, s3
-; GFX8-NEXT:    s_ff1_i32_b32 s5, s2
-; GFX8-NEXT:    s_add_i32 s4, s4, 32
-; GFX8-NEXT:    s_min_u32 s7, s5, s4
-; GFX8-NEXT:    v_readlane_b32 s8, v0, s7
-; GFX8-NEXT:    s_lshl_b64 s[4:5], 1, s7
-; GFX8-NEXT:    s_mov_b32 m0, s7
+; GFX8-NEXT:    s_ff1_i32_b64 s4, s[2:3]
+; GFX8-NEXT:    s_mov_b32 m0, s4
+; GFX8-NEXT:    v_readlane_b32 s7, v0, s4
+; GFX8-NEXT:    s_lshl_b64 s[4:5], 1, s4
 ; GFX8-NEXT:    v_writelane_b32 v1, s6, m0
-; GFX8-NEXT:    s_add_i32 s6, s6, s8
+; GFX8-NEXT:    s_add_i32 s6, s6, s7
 ; GFX8-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; GFX8-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8-NEXT:    s_cbranch_scc1 .LBB8_1
@@ -2605,15 +2585,12 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s4, s3
-; GFX9-NEXT:    s_ff1_i32_b32 s5, s2
-; GFX9-NEXT:    s_add_i32 s4, s4, 32
-; GFX9-NEXT:    s_min_u32 s7, s5, s4
-; GFX9-NEXT:    v_readlane_b32 s8, v0, s7
-; GFX9-NEXT:    s_lshl_b64 s[4:5], 1, s7
-; GFX9-NEXT:    s_mov_b32 m0, s7
+; GFX9-NEXT:    s_ff1_i32_b64 s4, s[2:3]
+; GFX9-NEXT:    s_mov_b32 m0, s4
+; GFX9-NEXT:    v_readlane_b32 s7, v0, s4
+; GFX9-NEXT:    s_lshl_b64 s[4:5], 1, s4
 ; GFX9-NEXT:    v_writelane_b32 v1, s6, m0
-; GFX9-NEXT:    s_add_i32 s6, s6, s8
+; GFX9-NEXT:    s_add_i32 s6, s6, s7
 ; GFX9-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; GFX9-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB8_1
@@ -2653,10 +2630,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
 ; GFX1064-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s4, s3
-; GFX1064-NEXT:    s_ff1_i32_b32 s5, s2
-; GFX1064-NEXT:    s_add_i32 s4, s4, 32
-; GFX1064-NEXT:    s_min_u32 s7, s5, s4
+; GFX1064-NEXT:    s_ff1_i32_b64 s7, s[2:3]
 ; GFX1064-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1064-NEXT:    s_lshl_b64 s[4:5], 1, s7
 ; GFX1064-NEXT:    v_writelane_b32 v1, s6, s7
@@ -2747,16 +2721,12 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1164-NEXT:    ; implicit-def: $vgpr1
 ; GFX1164-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_ctz_i32_b32 s4, s3
-; GFX1164-NEXT:    s_ctz_i32_b32 s5, s2
-; GFX1164-NEXT:    s_add_i32 s4, s4, 32
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_min_u32 s7, s5, s4
+; GFX1164-NEXT:    s_ctz_i32_b64 s7, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1164-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1164-NEXT:    s_lshl_b64 s[4:5], 1, s7
 ; GFX1164-NEXT:    v_writelane_b32 v1, s6, s7
 ; GFX1164-NEXT:    s_and_not1_b64 s[2:3], s[2:3], s[4:5]
-; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164-NEXT:    s_add_i32 s6, s6, s8
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB8_1
@@ -2851,16 +2821,12 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1264-NEXT:    ; implicit-def: $vgpr1
 ; GFX1264-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX1264-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1264-NEXT:    s_ctz_i32_b32 s4, s3
-; GFX1264-NEXT:    s_ctz_i32_b32 s5, s2
-; GFX1264-NEXT:    s_add_co_i32 s4, s4, 32
-; GFX1264-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1264-NEXT:    s_min_u32 s7, s5, s4
+; GFX1264-NEXT:    s_ctz_i32_b64 s7, s[2:3]
+; GFX1264-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1264-NEXT:    v_readlane_b32 s8, v0, s7
 ; GFX1264-NEXT:    s_lshl_b64 s[4:5], 1, s7
 ; GFX1264-NEXT:    v_writelane_b32 v1, s6, s7
 ; GFX1264-NEXT:    s_and_not1_b64 s[2:3], s[2:3], s[4:5]
-; GFX1264-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1264-NEXT:    s_add_co_i32 s6, s6, s8
 ; GFX1264-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1264-NEXT:    s_cbranch_scc1 .LBB8_1
