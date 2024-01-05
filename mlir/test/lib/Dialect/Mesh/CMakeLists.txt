@@ -1,5 +1,6 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRMeshTestSimplifications
+  TestReshardingSpmdization.cpp
   TestSimplifications.cpp
 
   EXCLUDE_FROM_LIBMLIR

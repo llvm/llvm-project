@@ -513,7 +513,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(1);
   switch (IID) {
   default:
     return false;
@@ -730,7 +730,7 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(0);
   switch (IID) {
   default:
     return false;
@@ -1246,7 +1246,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
     Op1 = N->getOperand(2);
     Mem = cast<MemIntrinsicSDNode>(N);
-    unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    unsigned IID = N->getConstantOperandVal(1);
     switch (IID) {
     default:
       return false;

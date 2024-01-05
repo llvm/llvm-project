@@ -35,10 +35,20 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (packOp.getPaddingValue())
+      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
+
+    if (!packOp.getOuterDimsPerm().empty())
+      return rewriter.notifyMatchFailure(packOp, "expects no outer_dims_perm");
+
     RankedTensorType sourceType = packOp.getSourceType();
     RankedTensorType destType = packOp.getDestType();
-    if (sourceType.getRank() != 1 || packOp.getPaddingValue())
-      return failure();
+    ArrayRef<int64_t> dimsPos = packOp.getInnerDimsPos();
+    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != sourceType.getRank())) {
+      return rewriter.notifyMatchFailure(
+          packOp, "expects packing at the innermost dimension");
+    }
+
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
@@ -47,6 +57,47 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
         rewriter, packOp.getLoc(), packOp.getSource(), destType,
         getReassociationIndicesAttribute(rewriter, *reassociation));
     rewriter.replaceOp(packOp, expanded);
+    return success();
+  }
+};
+
+struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  Value insertCollapse(RewriterBase &rewriter, Location loc, Value operand,
+                       Type newOperandType, ArrayAttr reassociation) const {
+    if (operand.getType() == newOperandType)
+      return operand;
+    return rewriter.create<tensor::CollapseShapeOp>(loc, newOperandType,
+                                                    operand, reassociation);
+  }
+
+  LogicalResult matchAndRewrite(UnPackOp unpackOp,
+                                PatternRewriter &rewriter) const override {
+    if (!unpackOp.getOuterDimsPerm().empty()) {
+      return rewriter.notifyMatchFailure(unpackOp,
+                                         "expects no outer_dims_perm");
+    }
+
+    RankedTensorType sourceType = unpackOp.getSourceType();
+    RankedTensorType destType = unpackOp.getDestType();
+    if (!sourceType.hasStaticShape() || !destType.hasStaticShape())
+      return rewriter.notifyMatchFailure(unpackOp, "expects static shapes");
+
+    ArrayRef<int64_t> dimsPos = unpackOp.getInnerDimsPos();
+    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != destType.getRank())) {
+      return rewriter.notifyMatchFailure(
+          unpackOp, "expects unpacking at the innermost dimension");
+    }
+
+    auto reassociation =
+        getReassociationIndicesForReshape(sourceType, destType);
+    if (!reassociation)
+      return failure();
+    Value collapsed = insertCollapse(
+        rewriter, unpackOp.getLoc(), unpackOp.getSource(), destType,
+        getReassociationIndicesAttribute(rewriter, *reassociation));
+    rewriter.replaceOp(unpackOp, collapsed);
     return success();
   }
 };
@@ -181,7 +232,8 @@ void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns) {
 }
 
 void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns) {
-  patterns.add<SimplifyPackToExpandShape>(patterns.getContext());
+  patterns.add<SimplifyPackToExpandShape, SimplifyUnPackToCollapseShape>(
+      patterns.getContext());
 }
 
 } // namespace tensor

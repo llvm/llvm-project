@@ -670,7 +670,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; IND-LABEL: @scalarize_induction_variable_01(
 ; IND-NEXT:  entry:
 ; IND-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
@@ -708,7 +708,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; UNROLL-LABEL: @scalarize_induction_variable_01(
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
+; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
@@ -799,7 +799,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; INTERLEAVE-LABEL: @scalarize_induction_variable_01(
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 8
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775800
@@ -937,7 +937,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; IND-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; IND-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; IND-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 9
+; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 9
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4611686018427387902
@@ -997,7 +997,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; UNROLL-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; UNROLL-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 25
+; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 25
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4611686018427387900
@@ -1153,11 +1153,10 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ;
 ; INTERLEAVE-LABEL: @scalarize_induction_variable_02(
 ; INTERLEAVE-NEXT:  entry:
-; INTERLEAVE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 8)
-; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 65
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N:%.*]], 65
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -1
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
@@ -1298,7 +1297,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; IND-LABEL: @scalarize_induction_variable_03(
 ; IND-NEXT:  entry:
 ; IND-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
@@ -1343,7 +1342,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; UNROLL-LABEL: @scalarize_induction_variable_03(
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
+; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
@@ -1460,14 +1459,13 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ;
 ; INTERLEAVE-LABEL: @scalarize_induction_variable_03(
 ; INTERLEAVE-NEXT:  entry:
-; INTERLEAVE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 9
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N:%.*]], 9
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 7
+; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 8, i64 [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[SMAX]], [[TMP1]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2036,7 +2034,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND-LABEL: @scalarize_induction_variable_05(
 ; IND-NEXT:  entry:
 ; IND-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 1)
-; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SMAX]], 2
+; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i32 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483646
@@ -2103,7 +2101,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-LABEL: @scalarize_induction_variable_05(
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 1)
-; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SMAX]], 4
+; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i32 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483644
@@ -2291,7 +2289,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE-LABEL: @scalarize_induction_variable_05(
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 1)
-; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SMAX]], 8
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i32 [[N]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483640
@@ -4921,7 +4919,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; IND-LABEL: @non_primary_iv_trunc(
 ; IND-NEXT:  entry:
 ; IND-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
@@ -4959,7 +4957,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; UNROLL-LABEL: @non_primary_iv_trunc(
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
+; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
@@ -5046,7 +5044,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; INTERLEAVE-LABEL: @non_primary_iv_trunc(
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 8
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775800

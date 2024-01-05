@@ -65,6 +65,32 @@ define float @call_llvm.log10.f32(float %in) {
 }
 
 declare float @llvm.log10.f32(float) #0
+
+; SVML: declare <2 x double> @__svml_sin2(<2 x double>)
+; SVML: declare <4 x double> @__svml_sin4(<4 x double>)
+; SVML: declare <8 x double> @__svml_sin8(<8 x double>)
+; SVML: declare <4 x float> @__svml_log10f4(<4 x float>)
+; SVML: declare <8 x float> @__svml_log10f8(<8 x float>)
+; SVML: declare <16 x float> @__svml_log10f16(<16 x float>)
+
+; MASSV: declare <2 x double> @__sind2(<2 x double>)
+; MASSV: declare <4 x float> @__log10f4(<4 x float>)
+
+; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
+; LIBMVEC-X86: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
+
+; ACCELERATE: declare <4 x float> @vlog10f(<4 x float>)
+
+; SLEEFGNUABI: declare <2 x double> @_ZGVnN2v_sin(<2 x double>)
+; SLEEFGNUABI: declare <vscale x 2 x double> @_ZGVsMxv_sin(<vscale x 2 x double>, <vscale x 2 x i1>)
+; SLEEFGNUABI: declare <4 x float> @_ZGVnN4v_log10f(<4 x float>)
+; SLEEFGNUABI: declare <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float>, <vscale x 4 x i1>)
+
+; ARMPL: declare <2 x double> @armpl_vsinq_f64(<2 x double>)
+; ARMPL: declare <vscale x 2 x double> @armpl_svsin_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
+; ARMPL: declare <4 x float> @armpl_vlog10q_f32(<4 x float>)
+; ARMPL: declare <vscale x 4 x float> @armpl_svlog10_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
+
 attributes #0 = { nounwind readnone }
 
 ; SVML:      attributes #[[SIN]] = { "vector-function-abi-variant"=

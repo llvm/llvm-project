@@ -176,6 +176,7 @@ protected:
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
+  bool HasShaderCyclesHiLoRegisters = false;
   bool HasVOP3Literal = false;
   bool HasNoDataDepHazard = false;
   bool FlatAddressSpace = false;
@@ -819,6 +820,10 @@ public:
     return HasShaderCyclesRegister;
   }
 
+  bool hasShaderCyclesHiLoRegisters() const {
+    return HasShaderCyclesHiLoRegisters;
+  }
+
   bool hasVOP3Literal() const {
     return HasVOP3Literal;
   }
@@ -1096,7 +1101,7 @@ public:
   bool hasDstSelForwardingHazard() const { return GFX940Insts; }
 
   // Cannot use op_sel with v_dot instructions.
-  bool hasDOTOpSelHazard() const { return GFX940Insts; }
+  bool hasDOTOpSelHazard() const { return GFX940Insts || GFX11Insts; }
 
   // Does not have HW interlocs for VALU writing and then reading SGPRs.
   bool hasVDecCoExecHazard() const {

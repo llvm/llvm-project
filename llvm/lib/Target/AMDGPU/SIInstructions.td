@@ -30,7 +30,7 @@ include "SMInstructions.td"
 include "FLATInstructions.td"
 include "BUFInstructions.td"
 include "EXPInstructions.td"
-include "LDSDIRInstructions.td"
+include "DSDIRInstructions.td"
 include "VINTERPInstructions.td"
 
 //===----------------------------------------------------------------------===//
@@ -314,6 +314,12 @@ def S_UADDO_PSEUDO : SPseudoInstSI <
 
 def S_USUBO_PSEUDO : SPseudoInstSI <
   (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+>;
+
+let OtherPredicates = [HasShaderCyclesHiLoRegisters] in
+def GET_SHADERCYCLESHILO : SPseudoInstSI<
+  (outs SReg_64:$sdst), (ins),
+  [(set SReg_64:$sdst, (i64 (readcyclecounter)))]
 >;
 
 } // End usesCustomInserter = 1, Defs = [SCC]
@@ -1097,7 +1103,7 @@ def : Pat <
 multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
   // f16_to_fp patterns
   def : GCNPat <
-    (f32 (f16_to_fp i32:$src0)),
+    (f32 (any_f16_to_fp i32:$src0)),
     (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src0)
   >;
 
@@ -1122,7 +1128,7 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
   >;
 
   def : GCNPat <
-    (f64 (fpextend f16:$src)),
+    (f64 (any_fpextend f16:$src)),
     (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
   >;
 
@@ -1150,6 +1156,13 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
   def : GCNPat <
     (f16 (uint_to_fp i32:$src)),
     (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_U32_e32 VSrc_b32:$src))
+  >;
+
+  // This is only used on targets without half support
+  // TODO: Introduce strict variant of AMDGPUfp_to_f16 and share custom lowering
+  def : GCNPat <
+    (i32 (strict_fp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+    (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
   >;
 }
 
@@ -1515,6 +1528,23 @@ def : BitConvert <v2f16, f32, SReg_32>;
 def : BitConvert <f32, v2f16, SReg_32>;
 def : BitConvert <v2i16, f32, SReg_32>;
 def : BitConvert <f32, v2i16, SReg_32>;
+def : BitConvert <v2bf16, i32, SReg_32>;
+def : BitConvert <i32, v2bf16, SReg_32>;
+def : BitConvert <v2bf16, i32, VGPR_32>;
+def : BitConvert <i32, v2bf16, VGPR_32>;
+def : BitConvert <v2bf16, v2i16, SReg_32>;
+def : BitConvert <v2i16, v2bf16, SReg_32>;
+def : BitConvert <v2bf16, v2i16, VGPR_32>;
+def : BitConvert <v2i16, v2bf16, VGPR_32>;
+def : BitConvert <v2bf16, v2f16, SReg_32>;
+def : BitConvert <v2f16, v2bf16, SReg_32>;
+def : BitConvert <v2bf16, v2f16, VGPR_32>;
+def : BitConvert <v2f16, v2bf16, VGPR_32>;
+def : BitConvert <f32, v2bf16, VGPR_32>;
+def : BitConvert <v2bf16, f32, VGPR_32>;
+def : BitConvert <f32, v2bf16, SReg_32>;
+def : BitConvert <v2bf16, f32, SReg_32>;
+
 
 // 64-bit bitcast
 def : BitConvert <i64, f64, VReg_64>;
@@ -1531,6 +1561,19 @@ def : BitConvert <f64, v2i32, VReg_64>;
 def : BitConvert <v2i32, f64, VReg_64>;
 def : BitConvert <v4i16, v4f16, VReg_64>;
 def : BitConvert <v4f16, v4i16, VReg_64>;
+def : BitConvert <v4bf16, v2i32, VReg_64>;
+def : BitConvert <v2i32, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, i64, VReg_64>;
+def : BitConvert <i64, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v4i16, VReg_64>;
+def : BitConvert <v4i16, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v4f16, VReg_64>;
+def : BitConvert <v4f16, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v2f32, VReg_64>;
+def : BitConvert <v2f32, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, f64, VReg_64>;
+def : BitConvert <f64, v4bf16, VReg_64>;
+
 
 // FIXME: Make SGPR
 def : BitConvert <v2i32, v4f16, VReg_64>;
@@ -1958,19 +2001,21 @@ def : GCNPat <
   let SubtargetPredicate = HasPackedFP32Ops;
 }
 
+foreach fp16vt = [f16, bf16] in {
+
 def : GCNPat <
-  (fcopysign f16:$src0, f16:$src1),
+  (fcopysign fp16vt:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0, $src1)
 >;
 
 def : GCNPat <
-  (fcopysign f32:$src0, f16:$src1),
+  (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (V_LSHLREV_B32_e64 (i32 16), $src1))
 >;
 
 def : GCNPat <
-  (fcopysign f64:$src0, f16:$src1),
+  (fcopysign f64:$src0, fp16vt:$src1),
   (REG_SEQUENCE SReg_64,
     (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
     (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), (i32 (EXTRACT_SUBREG $src0, sub1)),
@@ -1978,16 +2023,17 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (fcopysign f16:$src0, f32:$src1),
+  (fcopysign fp16vt:$src0, f32:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), $src1))
 >;
 
 def : GCNPat <
-  (fcopysign f16:$src0, f64:$src1),
+  (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
 >;
+} // End foreach fp16vt = [f16, bf16]
 
 /********** ================== **********/
 /********** Immediate Patterns **********/
@@ -2026,6 +2072,11 @@ def : GCNPat <
   (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
 >;
 
+def : GCNPat <
+  (VGPRImm<(bf16 fpimm)>:$imm),
+  (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
 // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
 // immediate and wil be expanded as needed, but we will only use these patterns
 // for values which can be encoded.
@@ -2056,6 +2107,11 @@ def : GCNPat <
 
 def : GCNPat <
   (f16 fpimm:$imm),
+  (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : GCNPat <
+  (bf16 fpimm:$imm),
   (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
 >;
 

@@ -1097,10 +1097,8 @@ private:
           // For array or vector indices, scale the index by the size of the
           // type.
           APInt Index = OpC->getValue().sextOrTrunc(Offset.getBitWidth());
-          GEPOffset +=
-              Index *
-              APInt(Offset.getBitWidth(),
-                    DL.getTypeAllocSize(GTI.getIndexedType()).getFixedValue());
+          GEPOffset += Index * APInt(Offset.getBitWidth(),
+                                     GTI.getSequentialElementStride(DL));
         }
 
         // If this index has computed an intermediate pointer which is not

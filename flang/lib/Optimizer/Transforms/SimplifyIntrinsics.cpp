@@ -1162,14 +1162,11 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
 
   mlir::Operation::operand_range args = call.getArgs();
 
-  mlir::SymbolRefAttr callee = call.getCalleeAttr();
-  mlir::StringRef funcNameBase = callee.getLeafReference().getValue();
-  bool isDim = funcNameBase.ends_with("Dim");
-  mlir::Value back = args[isDim ? 7 : 6];
+  mlir::Value back = args[6];
   if (isTrueOrNotConstant(back))
     return;
 
-  mlir::Value mask = args[isDim ? 6 : 5];
+  mlir::Value mask = args[5];
   mlir::Value maskDef = findMaskDef(mask);
 
   // maskDef is set to NULL when the defining op is not one we accept.
@@ -1178,8 +1175,10 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
   if (maskDef == NULL)
     return;
 
+  mlir::SymbolRefAttr callee = call.getCalleeAttr();
+  mlir::StringRef funcNameBase = callee.getLeafReference().getValue();
   unsigned rank = getDimCount(args[1]);
-  if ((isDim && rank != 1) || !(rank > 0))
+  if (funcNameBase.ends_with("Dim") || !(rank > 0))
     return;
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
@@ -1220,8 +1219,6 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
 
   llvm::raw_string_ostream nameOS(funcName);
   outType.print(nameOS);
-  if (isDim)
-    nameOS << '_' << inputType;
   nameOS << '_' << fmfString;
 
   auto typeGenerator = [rank](fir::FirOpBuilder &builder) {
@@ -1237,7 +1234,7 @@ void SimplifyIntrinsicsPass::simplifyMinMaxlocReduction(
   mlir::func::FuncOp newFunc =
       getOrCreateFunction(builder, funcName, typeGenerator, bodyGenerator);
   builder.create<fir::CallOp>(loc, newFunc,
-                              mlir::ValueRange{args[0], args[1], mask});
+                              mlir::ValueRange{args[0], args[1], args[5]});
   call->dropAllReferences();
   call->erase();
 }
