@@ -486,6 +486,10 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void *rtsrand(uint64_t s);
 extern "C" MLIR_CRUNNERUTILS_EXPORT uint64_t rtrand(void *, uint64_t m);
 // Deletes the random number generator.
 extern "C" MLIR_CRUNNERUTILS_EXPORT void rtdrand(void *);
+// Returns a pointer to an array of random numbers in the range of [0, s).
+extern "C" MLIR_CRUNNERUTILS_EXPORT void *shuffle(uint64_t s, void *g);
+// Deletes the array of random numbers.
+extern "C" MLIR_CRUNNERUTILS_EXPORT void shuffleFree(void *a);
 
 //===----------------------------------------------------------------------===//
 // Runtime support library to allow the use of std::sort in MLIR program.

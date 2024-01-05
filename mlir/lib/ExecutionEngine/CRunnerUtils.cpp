@@ -160,6 +160,22 @@ extern "C" void mlirAlignedFree(void *ptr) {
 #endif
 }
 
+/// Generates an array with unique and random numbers from 0 to s-1.
+extern "C" void *shuffle(uint64_t s, void *g) {
+  std::mt19937 *generator = static_cast<std::mt19937 *>(g);
+  uint64_t *output = new uint64_t[s];
+  std::vector<uint64_t> arr(s);
+  std::iota(arr.begin(), arr.end(), 0);
+  std::shuffle(arr.begin(), arr.end(), *generator);
+  std::copy(arr.begin(), arr.end(), output);
+  return output;
+}
+
+extern "C" void shuffleFree(void *a) {
+  uint64_t *arr = static_cast<uint64_t *>(a);
+  delete[] arr;
+}
+
 extern "C" void *rtsrand(uint64_t s) {
   // Standard mersenne_twister_engine seeded with s.
   return new std::mt19937(s);
