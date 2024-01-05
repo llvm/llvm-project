@@ -91,7 +91,8 @@ struct _IterOps<_ClassicAlgPolicy> {
   // it's unclear whether _Iter has a difference_type and whether that's signed, so we play it safe:
   // use the incoming type for returning and steer clear of negative overflows
   template <class _Iter, class _Distance>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance advance(_Iter& __iter, _Distance __count, const _Iter& __sentinel) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
+  advance(_Iter& __iter, _Distance __count, const _Iter& __sentinel) {
     return _IterOps::__advance(__iter, __count, __sentinel, typename iterator_traits<_Iter>::iterator_category());
   }
 

@@ -79,12 +79,8 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
 }
 
 template <class _AlgPolicy, class _RandIter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter __lower_bound(
-    _RandIter __first,
-    _Sent __last,
-    const _Type& __value,
-    _Comp& __comp,
-    _Proj& __proj) {
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter
+__lower_bound(_RandIter __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
   const auto __dist = _IterOps<_AlgPolicy>::distance(__first, __last);
   return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
 }

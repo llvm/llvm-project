@@ -42,15 +42,14 @@ using AllContainerTypes = std::tuple<VectorContainer, SetContainer, ForwardListC
 
 // set_intersection performance may depend on where matching values lie
 enum class OverlapPosition {
-    Nowhere,
-    Front,
-    Back,
-    Interlaced,
+  None,
+  Front,
+  Back,
+  Interlaced,
 };
 
 struct AllOverlapPositions : EnumValuesAsTuple<AllOverlapPositions, OverlapPosition, 4> {
-  static constexpr const char* Names[] = {
-      "Nowhere", "Front", "Back", "Interlaced"};
+  static constexpr const char* Names[] = {"None", "Front", "Back", "Interlaced"};
 };
 
 // functor that moves elements from an iterator range into a new Container instance
@@ -59,148 +58,149 @@ struct MoveInto {};
 
 template <typename T>
 struct MoveInto<std::vector<T>> {
-    template <class It>
-    [[nodiscard]] static std::vector<T> operator()(It first, It last) {
-        std::vector<T> out;
-        std::move(first, last, std::back_inserter(out));
-        return out;
-    }
+  template <class It>
+  [[nodiscard]] static std::vector<T> operator()(It first, It last) {
+    std::vector<T> out;
+    std::move(first, last, std::back_inserter(out));
+    return out;
+  }
 };
 
 template <typename T>
 struct MoveInto<std::forward_list<T>> {
-    template <class It>
-    [[nodiscard]] static std::forward_list<T> operator()(It first, It last) {
-        std::forward_list<T> out;
-        std::move(first, last, std::front_inserter(out));
-        out.reverse();
-        return out;
-    }
+  template <class It>
+  [[nodiscard]] static std::forward_list<T> operator()(It first, It last) {
+    std::forward_list<T> out;
+    std::move(first, last, std::front_inserter(out));
+    out.reverse();
+    return out;
+  }
 };
 
 template <typename T>
 struct MoveInto<std::set<T>> {
-    template <class It>
-    [[nodiscard]] static std::set<T> operator()(It first, It last) {
-        std::set<T> out;
-        std::move(first, last, std::inserter(out, out.begin()));
-        return out;
-    }
+  template <class It>
+  [[nodiscard]] static std::set<T> operator()(It first, It last) {
+    std::set<T> out;
+    std::move(first, last, std::inserter(out, out.begin()));
+    return out;
+  }
 };
 
 // lightweight wrapping around fillValues() which puts a little effort into
 // making that would be contiguous when sorted non-contiguous in memory
 template <typename T>
 std::vector<T> getVectorOfRandom(size_t N) {
-  std::vector<T> V;
-  fillValues(V, N, Order::Random);
-  sortValues(V, Order::Random);
-  return std::vector<T>(V);
+  std::vector<T> v;
+  fillValues(v, N, Order::Random);
+  sortValues(v, Order::Random);
+  return std::vector<T>(v);
 }
 
 // forward_iterator wrapping which, for each increment, moves the underlying iterator forward Stride elements
 template <typename Wrapped>
 struct StridedFwdIt {
-  Wrapped Base;
-  unsigned Stride;
+  Wrapped base_;
+  unsigned stride_;
 
   using iterator_category = std::forward_iterator_tag;
-  using difference_type = typename Wrapped::difference_type;
-  using value_type = typename Wrapped::value_type;
-  using pointer = typename Wrapped::pointer;
-  using reference = typename Wrapped::reference;
+  using difference_type   = typename Wrapped::difference_type;
+  using value_type        = typename Wrapped::value_type;
+  using pointer           = typename Wrapped::pointer;
+  using reference         = typename Wrapped::reference;
 
-  StridedFwdIt(Wrapped B, unsigned Stride_) : Base(B), Stride(Stride_) { assert(Stride != 0); }
+  StridedFwdIt(Wrapped base, unsigned stride) : base_(base), stride_(stride) { assert(stride_ != 0); }
 
-  StridedFwdIt operator++() { for (unsigned I=0; I<Stride; ++I) ++Base; return *this; }
-  StridedFwdIt operator++(int) { auto Tmp = *this; ++*this; return Tmp; }
-  value_type& operator*() { return *Base; }
-  const value_type& operator*() const { return *Base; }
-  value_type& operator->() { return *Base; }
-  const value_type& operator->() const { return *Base; }
-  bool operator==(const StridedFwdIt& o) const { return Base==o.Base; }
+  StridedFwdIt operator++() {
+    for (unsigned i = 0; i < stride_; ++i)
+      ++base_;
+    return *this;
+  }
+  StridedFwdIt operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  value_type& operator*() { return *base_; }
+  const value_type& operator*() const { return *base_; }
+  value_type& operator->() { return *base_; }
+  const value_type& operator->() const { return *base_; }
+  bool operator==(const StridedFwdIt& o) const { return base_ == o.base_; }
   bool operator!=(const StridedFwdIt& o) const { return !operator==(o); }
 };
-template <typename Wrapped> StridedFwdIt(Wrapped, unsigned) -> StridedFwdIt<Wrapped>;
-
+template <typename Wrapped>
+StridedFwdIt(Wrapped, unsigned) -> StridedFwdIt<Wrapped>;
 
 // realistically, data won't all be nicely contiguous in a container
 // we'll go through some effort to ensure that it's shuffled through memory
 template <class Container>
-std::pair<Container, Container> genCacheUnfriendlyData(size_t Size1, size_t Size2, OverlapPosition Pos) {
+std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size2, OverlapPosition pos) {
   using ValueType = typename Container::value_type;
-  const MoveInto<Container> moveInto;
-  const auto SrcSize = Pos == OverlapPosition::Nowhere ? Size1 + Size2 : std::max(Size1, Size2);
-  std::vector<ValueType> Src = getVectorOfRandom<ValueType>(SrcSize);
+  const MoveInto<Container> move_into;
+  const auto src_size = pos == OverlapPosition::None ? size1 + size2 : std::max(size1, size2);
+  std::vector<ValueType> src = getVectorOfRandom<ValueType>(src_size);
 
-  if (Pos == OverlapPosition::Nowhere) {
-    std::sort(Src.begin(), Src.end());
-    return std::make_pair(
-        moveInto(Src.begin(), Src.begin() + Size1),
-        moveInto(Src.begin() + Size1, Src.end()));
+  if (pos == OverlapPosition::None) {
+    std::sort(src.begin(), src.end());
+    return std::make_pair(move_into(src.begin(), src.begin() + size1), move_into(src.begin() + size1, src.end()));
   }
 
   // all other overlap types will have to copy some part of the data, but if
   // we copy after sorting it will likely have high cache locality, so we sort
   // each copy separately
-  auto Copy = Src;
-  std::sort(Src.begin(), Src.end());
-  std::sort(Copy.begin(), Copy.end());
+  auto copy = src;
+  std::sort(src.begin(), src.end());
+  std::sort(copy.begin(), copy.end());
 
-  switch(Pos) {
-    case OverlapPosition::Nowhere:
-      break;
+  switch (pos) {
+  case OverlapPosition::None:
+    break;
 
-    case OverlapPosition::Front:
-      return std::make_pair(
-          moveInto(Src.begin(), Src.begin() + Size1),
-          moveInto(Copy.begin(), Copy.begin() + Size2));
+  case OverlapPosition::Front:
+    return std::make_pair(move_into(src.begin(), src.begin() + size1), move_into(copy.begin(), copy.begin() + size2));
 
-    case OverlapPosition::Back:
-      return std::make_pair(
-          moveInto(Src.begin() + (Src.size() - Size1), Src.end()),
-          moveInto(Copy.begin() + (Copy.size() - Size2), Copy.end()));
+  case OverlapPosition::Back:
+    return std::make_pair(move_into(src.begin() + (src.size() - size1), src.end()),
+                          move_into(copy.begin() + (copy.size() - size2), copy.end()));
 
-    case OverlapPosition::Interlaced:
-      const auto Stride1 = Size1 < Size2 ? Size2/Size1 : 1;
-      const auto Stride2 = Size2 < Size1 ? Size1/Size2 : 1;
-      return std::make_pair(
-          moveInto(StridedFwdIt(Src.begin(), Stride1), StridedFwdIt(Src.end(), Stride1)),
-          moveInto(StridedFwdIt(Copy.begin(), Stride2), StridedFwdIt(Copy.end(), Stride2)));
+  case OverlapPosition::Interlaced:
+    const auto stride1 = size1 < size2 ? size2 / size1 : 1;
+    const auto stride2 = size2 < size1 ? size1 / size2 : 1;
+    return std::make_pair(move_into(StridedFwdIt(src.begin(), stride1), StridedFwdIt(src.end(), stride1)),
+                          move_into(StridedFwdIt(copy.begin(), stride2), StridedFwdIt(copy.end(), stride2)));
   }
   abort();
   return std::pair<Container, Container>();
 }
 
-
 template <class ValueType, class Container, class Overlap>
 struct SetIntersection {
   using ContainerType = typename Container::template type<Value<ValueType>>;
-  size_t Size1;
-  size_t Size2;
+  size_t size1_;
+  size_t size2_;
 
-  SetIntersection(size_t M, size_t N) : Size1(M), Size2(N) {}
+  SetIntersection(size_t size1, size_t size2) : size1_(size1), size2_(size2) {}
 
   void run(benchmark::State& state) const {
     state.PauseTiming();
-    auto Input = genCacheUnfriendlyData<ContainerType>(Size1, Size2, Overlap());
-    std::vector<Value<ValueType>> out(std::min(Size1, Size2));
+    auto input = genCacheUnfriendlyData<ContainerType>(size1_, size2_, Overlap());
+    std::vector<Value<ValueType>> out(std::min(size1_, size2_));
 
     size_t cmp;
-    auto trackingLess = [&cmp](const Value<ValueType>& lhs, const Value<ValueType>& rhs) {
-        ++cmp;
-        return std::less<Value<ValueType>>{}(lhs, rhs);
+    auto tracking_less = [&cmp](const Value<ValueType>& lhs, const Value<ValueType>& rhs) {
+      ++cmp;
+      return std::less<Value<ValueType>>{}(lhs, rhs);
     };
 
-    const auto BatchSize =  std::max(size_t{16}, (2*TestSetElements) / (Size1+Size2));
+    const auto BATCH_SIZE = std::max(size_t{16}, (2 * TestSetElements) / (size1_ + size2_));
     state.ResumeTiming();
 
     for (const auto& _ : state) {
-      while (state.KeepRunningBatch(BatchSize)) {
-        for (unsigned i=0; i<BatchSize; ++i) {
-          const auto& [C1, C2] = Input;
-          auto outIter = std::set_intersection(C1.begin(), C1.end(), C2.begin(), C2.end(), out.begin(), trackingLess);
-          benchmark::DoNotOptimize(outIter);
+      while (state.KeepRunningBatch(BATCH_SIZE)) {
+        for (unsigned i = 0; i < BATCH_SIZE; ++i) {
+          const auto& [c1, c2] = input;
+          auto res = std::set_intersection(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin(), tracking_less);
+          benchmark::DoNotOptimize(res);
           state.counters["Comparisons"] = cmp;
         }
       }
@@ -208,17 +208,18 @@ struct SetIntersection {
   }
 
   std::string name() const {
-    return std::string("SetIntersection") + Overlap::name() + '_' + Container::Name +
-        ValueType::name() + '_' + std::to_string(Size1) + '_' + std::to_string(Size2);
+    return std::string("SetIntersection") + Overlap::name() + '_' + Container::Name + ValueType::name() + '_' +
+           std::to_string(size1_) + '_' + std::to_string(size2_);
   }
 };
 
 } // namespace
 
-int main(int argc, char** argv) {/**/
+int main(int argc, char** argv) { /**/
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
     return 1;
-  makeCartesianProductBenchmark<SetIntersection, AllValueTypes, AllContainerTypes, AllOverlapPositions>(Quantities, Quantities);
+  makeCartesianProductBenchmark<SetIntersection, AllValueTypes, AllContainerTypes, AllOverlapPositions>(
+      Quantities, Quantities);
   benchmark::RunSpecifiedBenchmarks();
 }

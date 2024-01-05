@@ -60,8 +60,8 @@ struct _LIBCPP_NODISCARD_EXT __set_intersector {
         __comp_(__comp) {}
 
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
-      _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InIter1, _InIter2, _OutIter>
-      operator()() && {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InIter1, _InIter2, _OutIter>
+  operator()() && {
     while (__first2_ != __last2_) {
       __advance1_and_maybe_add_result();
       if (__first1_ == __last1_)
@@ -84,7 +84,7 @@ private:
   __advance_and_maybe_add_result(_Iter& __iter, const _Sent& __sentinel, const _Value& __value) {
     // use one-sided lower bound for improved algorithmic complexity bounds
     const auto __tmp = std::move(__iter);
-    __iter = std::__lower_bound_onesided<_AlgPolicy>(__iter, __sentinel, __value, __comp_, __proj_);
+    __iter           = std::__lower_bound_onesided<_AlgPolicy>(__iter, __sentinel, __value, __comp_, __proj_);
     __add_output_unless(__tmp != __iter);
   }
 
@@ -122,16 +122,16 @@ template <class _AlgPolicy,
           class _Sent2,
           class _OutIter>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>
-    __set_intersection(
-        _InForwardIter1 __first1,
-        _Sent1 __last1,
-        _InForwardIter2 __first2,
-        _Sent2 __last2,
-        _OutIter __result,
-        _Compare&& __comp,
-        std::forward_iterator_tag,
-        std::forward_iterator_tag) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>
+__set_intersection(
+    _InForwardIter1 __first1,
+    _Sent1 __last1,
+    _InForwardIter2 __first2,
+    _Sent2 __last2,
+    _OutIter __result,
+    _Compare&& __comp,
+    std::forward_iterator_tag,
+    std::forward_iterator_tag) {
   std::__set_intersector<_AlgPolicy, _Compare, _InForwardIter1, _Sent1, _InForwardIter2, _Sent2, _OutIter>
       __intersector(__first1, __last1, __first2, __last2, __result, __comp);
   return std::move(__intersector)();
@@ -146,16 +146,16 @@ template <class _AlgPolicy,
           class _Sent2,
           class _OutIter>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>
-    __set_intersection(
-        _InInputIter1 __first1,
-        _Sent1 __last1,
-        _InInputIter2 __first2,
-        _Sent2 __last2,
-        _OutIter __result,
-        _Compare&& __comp,
-        std::input_iterator_tag,
-        std::input_iterator_tag) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>
+__set_intersection(
+    _InInputIter1 __first1,
+    _Sent1 __last1,
+    _InInputIter2 __first2,
+    _Sent2 __last2,
+    _OutIter __result,
+    _Compare&& __comp,
+    std::input_iterator_tag,
+    std::input_iterator_tag) {
   while (__first1 != __last1 && __first2 != __last2) {
     if (__comp(*__first1, *__first2))
       ++__first1;
@@ -190,9 +190,9 @@ public:
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InIter1, _InIter2, _OutIter>
-    __set_intersection(
-        _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Compare&& __comp) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InIter1, _InIter2, _OutIter>
+__set_intersection(
+    _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Compare&& __comp) {
   return std::__set_intersection<_AlgPolicy>(
       std::move(__first1),
       std::move(__last1),
