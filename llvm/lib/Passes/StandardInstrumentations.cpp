@@ -118,10 +118,10 @@ static cl::opt<bool> PrintPassNumbers(
     "print-pass-numbers", cl::init(false), cl::Hidden,
     cl::desc("Print pass names and their ordinals"));
 
-static cl::opt<unsigned>
-    PrintBeforePassNumber("print-before-pass-number", cl::init(0), cl::Hidden,
-                cl::desc("Print IR before the pass with this number as "
-                         "reported by print-pass-numbers"));
+static cl::opt<unsigned> PrintBeforePassNumber(
+    "print-before-pass-number", cl::init(0), cl::Hidden,
+    cl::desc("Print IR before the pass with this number as "
+             "reported by print-pass-numbers"));
 
 static cl::opt<std::string> IRDumpDirectory(
     "ir-dump-directory",
@@ -889,8 +889,8 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
   auto WriteIRToStream = [&](raw_ostream &Stream, const Module *M,
                              const StringRef IRName) {
     SmallString<20> Banner;
-    Banner = formatv("; *** IR Dump After {0} on {1} (invalidated) ***",
-                     PassID, IRName);
+    Banner = formatv("; *** IR Dump After {0} on {1} (invalidated) ***", PassID,
+                     IRName);
     Stream << Banner << "\n";
     printIR(Stream, M);
   };
