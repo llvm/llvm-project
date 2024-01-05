@@ -906,7 +906,7 @@ X86 Support
   * Support intrinsic of ``_uwrmsr``.
 - Support ISA of ``AVX10.1``.
 - ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
-- Added ABI handling for ``__float128``.
+- Added ABI handling for ``__float128`` to match with GCC.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
