@@ -121,7 +121,7 @@ static cl::opt<bool> PrintPassNumbers(
 static cl::opt<unsigned>
     PrintBeforePassNumber("print-before-pass-number", cl::init(0), cl::Hidden,
                 cl::desc("Print IR before the pass with this number as "
-                         "reported by print-passes-names"));
+                         "reported by print-pass-numbers"));
 
 static cl::opt<std::string> IRDumpDirectory(
     "ir-dump-directory",
