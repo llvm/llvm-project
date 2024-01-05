@@ -71,58 +71,58 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   // FIXME: Used for 8-bit mul, ignore result upper 8 bits.
   // This probably ought to be moved to a def : Pat<> if the
   // syntax can be accepted.
-  let Defs = [AL,EFLAGS,AX], Uses = [AL] in
+  let Defs = [AL, EFLAGS, AX], Uses = [AL] in
     def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
                        [(set AL, (node AL, GR8:$src1)), (implicit EFLAGS)]>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX] in
+  let Defs = [AX, DX, EFLAGS], Uses = [AX] in
     def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
     def 32r : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
     def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
-  let Defs = [AL,EFLAGS,AX], Uses = [AL] in
+  let Defs = [AL, EFLAGS, AX], Uses = [AL] in
     def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
                        [(set AL, (node AL, (loadi8 addr:$src1))), (implicit EFLAGS)]>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX] in
+  let Defs = [AX, DX, EFLAGS], Uses = [AX] in
     def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
     def 32m : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
     def 64m : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
 
   let Predicates = [In64BitMode] in {
-    let Defs = [AL,AX], Uses = [AL] in
+    let Defs = [AL, AX], Uses = [AL] in
       def 8r_NF : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8, []>, NF;
-    let Defs = [AX,DX], Uses = [AX] in
+    let Defs = [AX, DX], Uses = [AX] in
       def 16r_NF : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, NF, PD;
-    let Defs = [EAX,EDX], Uses = [EAX] in
+    let Defs = [EAX, EDX], Uses = [EAX] in
       def 32r_NF : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, NF;
-    let Defs = [RAX,RDX], Uses = [RAX] in
+    let Defs = [RAX, RDX], Uses = [RAX] in
       def 64r_NF : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>, NF;
-    let Defs = [AL,AX], Uses = [AL] in
+    let Defs = [AL, AX], Uses = [AL] in
       def 8m_NF : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8, []>, NF;
-    let Defs = [AX,DX], Uses = [AX] in
+    let Defs = [AX, DX], Uses = [AX] in
       def 16m_NF : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, NF, PD;
-    let Defs = [EAX,EDX], Uses = [EAX] in
+    let Defs = [EAX, EDX], Uses = [EAX] in
       def 32m_NF : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, NF;
-    let Defs = [RAX,RDX], Uses = [RAX] in
+    let Defs = [RAX, RDX], Uses = [RAX] in
       def 64m_NF : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, NF;
 
-    let Defs = [AL,EFLAGS,AX], Uses = [AL] in
+    let Defs = [AL, EFLAGS, AX], Uses = [AL] in
       def 8r_EVEX : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8, []>, PL;
-    let Defs = [AX,DX,EFLAGS], Uses = [AX] in
+    let Defs = [AX, DX, EFLAGS], Uses = [AX] in
       def 16r_EVEX : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, PL, PD;
-    let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
       def 32r_EVEX : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, PL;
-    let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
       def 64r_EVEX : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>, PL;
-    let Defs = [AL,EFLAGS,AX], Uses = [AL] in
+    let Defs = [AL, EFLAGS, AX], Uses = [AL] in
       def 8m_EVEX : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8, []>, PL;
-    let Defs = [AX,DX,EFLAGS], Uses = [AX] in
+    let Defs = [AX, DX, EFLAGS], Uses = [AX] in
       def 16m_EVEX : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, PL, PD;
-    let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
       def 32m_EVEX : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, PL;
-    let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
       def 64m_EVEX : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, PL;
   }
 }
@@ -135,56 +135,56 @@ multiclass Div<bits<8> o, string m, Format RegMRM, Format MemMRM> {
   defvar sched16 = !if(!eq(m, "div"), WriteDiv16, WriteIDiv16);
   defvar sched32 = !if(!eq(m, "div"), WriteDiv32, WriteIDiv32);
   defvar sched64 = !if(!eq(m, "div"), WriteDiv64, WriteIDiv64);
-  let Defs = [AL,AH,EFLAGS], Uses = [AX] in
+  let Defs = [AL, AH, EFLAGS], Uses = [AX] in
     def 8r  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
+  let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
     def 16r : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
     def 32r : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
     def 64r : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>;
-  let Defs = [AL,AH,EFLAGS], Uses = [AX] in
+  let Defs = [AL, AH, EFLAGS], Uses = [AX] in
     def 8m  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
+  let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
     def 16m : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
     def 32m : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
     def 64m : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
 
   let Predicates = [In64BitMode] in {
-    let Defs = [AL,AH], Uses = [AX] in
+    let Defs = [AL, AH], Uses = [AX] in
       def 8r_NF  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>, NF;
-    let Defs = [AX,DX], Uses = [AX,DX] in
+    let Defs = [AX, DX], Uses = [AX, DX] in
       def 16r_NF : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, NF, PD;
-    let Defs = [EAX,EDX], Uses = [EAX,EDX] in
+    let Defs = [EAX, EDX], Uses = [EAX, EDX] in
       def 32r_NF : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, NF;
-    let Defs = [RAX,RDX], Uses = [RAX,RDX] in
+    let Defs = [RAX, RDX], Uses = [RAX, RDX] in
       def 64r_NF : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>, NF;
-    let Defs = [AL,AH], Uses = [AX] in
+    let Defs = [AL, AH], Uses = [AX] in
       def 8m_NF  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>, NF;
-    let Defs = [AX,DX], Uses = [AX,DX] in
+    let Defs = [AX, DX], Uses = [AX, DX] in
       def 16m_NF : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, NF, PD;
-    let Defs = [EAX,EDX], Uses = [EAX,EDX] in
+    let Defs = [EAX, EDX], Uses = [EAX, EDX] in
       def 32m_NF : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, NF;
-    let Defs = [RAX,RDX], Uses = [RAX,RDX] in
+    let Defs = [RAX, RDX], Uses = [RAX, RDX] in
       def 64m_NF : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, NF;
 
-    let Defs = [AL,AH,EFLAGS], Uses = [AX] in
+    let Defs = [AL, AH, EFLAGS], Uses = [AX] in
       def 8r_EVEX  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>, PL;
-    let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
+    let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
       def 16r_EVEX : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, PL, PD;
-    let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
       def 32r_EVEX : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, PL;
-    let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
       def 64r_EVEX : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>, PL;
-    let Defs = [AL,AH,EFLAGS], Uses = [AX] in
+    let Defs = [AL, AH, EFLAGS], Uses = [AX] in
       def 8m_EVEX  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>, PL;
-    let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
+    let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
       def 16m_EVEX : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, PL, PD;
-    let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
       def 32m_EVEX : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, PL;
-    let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
       def 64m_EVEX : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, PL;
   }
 }
