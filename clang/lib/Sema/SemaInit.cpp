@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -33,6 +34,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -7575,15 +7577,27 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
     Path.pop_back();
   };
 
-  if (ObjectArg && implicitObjectParamIsLifetimeBound(Callee))
-    VisitLifetimeBoundArg(Callee, ObjectArg);
-
   bool CheckCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
                     RD->hasAttr<CoroReturnTypeAttr>() &&
                     !Callee->hasAttr<CoroDisableLifetimeBoundAttr>();
   }
+
+  if (ObjectArg) {
+    bool CheckCoroObjArg = CheckCoroCall;
+    // Ignore `__promise.get_return_object()` as it not lifetimebound.
+    if (Callee->getDeclName().isIdentifier() &&
+        Callee->getName() == "get_return_object")
+      CheckCoroObjArg = false;
+    // Coroutine lambda objects with empty capture list are not lifetimebound.
+    if (auto *LE = dyn_cast<LambdaExpr>(ObjectArg->IgnoreImplicit());
+        LE && LE->captures().empty())
+      CheckCoroObjArg = false;
+    if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
+      VisitLifetimeBoundArg(Callee, ObjectArg);
+  }
+
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());
        I != N; ++I) {

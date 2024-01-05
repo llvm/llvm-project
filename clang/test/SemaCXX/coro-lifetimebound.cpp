@@ -64,6 +64,10 @@ Co<int> bar_coro(const int &b, int c) {
       : bar_coro(0, 1); // expected-warning {{returning address of local temporary object}}
 }
 
+// =============================================================================
+// Lambdas
+// =============================================================================
+namespace lambdas {
 void lambdas() {
   auto unsafe_lambda = [] [[clang::coro_wrapper]] (int b) {
     return foo_coro(b); // expected-warning {{address of stack memory associated with parameter}}
@@ -84,14 +88,46 @@ void lambdas() {
     co_return x + co_await foo_coro(b);
   };
 }
-// =============================================================================
-// Safe usage when parameters are value
-// =============================================================================
-namespace by_value {
-Co<int> value_coro(int b) { co_return co_await foo_coro(b); }
-[[clang::coro_wrapper]] Co<int> wrapper1(int b) { return value_coro(b); }
-[[clang::coro_wrapper]] Co<int> wrapper2(const int& b) { return value_coro(b); }
+
+Co<int> lambda_captures() {
+  int a = 1;
+  // Temporary lambda object dies.
+  auto lamb = [a](int x, const int& y) -> Co<int> { // expected-warning {{temporary whose address is used as value of local variable 'lamb'}}
+    co_return x + y + a;
+  }(1, a);
+  // Object dies but it has no capture.
+  auto no_capture = []() -> Co<int> { co_return 1; }();
+  auto bad_no_capture = [](const int& a) -> Co<int> { co_return a; }(1); // expected-warning {{temporary}}
+  // Temporary lambda object with lifetime extension under co_await.
+  int res = co_await [a](int x, const int& y) -> Co<int> {
+    co_return x + y + a;
+  }(1, a);
+  co_return 1;
 }
+} // namespace lambdas
+
+// =============================================================================
+// Member coroutines
+// =============================================================================
+namespace member_coroutines{
+struct S {
+  Co<int> member(const int& a) { co_return a; }  
+};
+
+Co<int> use() {
+  S s;
+  int a = 1;
+  auto test1 = s.member(1);  // expected-warning {{temporary whose address is used as value of local variable}}
+  auto test2 = s.member(a);
+  auto test3 = S{}.member(a);  // expected-warning {{temporary whose address is used as value of local variable}}
+  co_return 1;
+}
+
+[[clang::coro_wrapper]] Co<int> wrapper(const int& a) {
+  S s;
+  return s.member(a); // expected-warning {{address of stack memory}}
+}
+} // member_coroutines
 
 // =============================================================================
 // Lifetime bound but not a Coroutine Return Type: No analysis.
@@ -128,5 +164,23 @@ Co<int> foo_wrapper(const int& x) { return foo(x); }
 [[clang::coro_wrapper]] Co<int> caller() {
   // The call to foo_wrapper is wrapper is safe.
   return foo_wrapper(1);
+}
+
+struct S{
+[[clang::coro_wrapper, clang::coro_disable_lifetimebound]] 
+Co<int> member(const int& x) { return foo(x); }
+};
+
+Co<int> use() {
+  S s;
+  int a = 1;
+  auto test1 = s.member(1); // param is not flagged.
+  auto test2 = S{}.member(a); // 'this' is not flagged.
+  co_return 1;
+}
+
+[[clang::coro_wrapper]] Co<int> return_stack_addr(const int& a) {
+  S s;
+  return s.member(a); // return of stack addr is not flagged.
 }
 } // namespace disable_lifetimebound
