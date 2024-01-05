@@ -3903,6 +3903,15 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       parseParens();
   }
 
+  auto IsTemplate = [&] {
+    FormatToken *Tok = InitialToken.Previous;
+    while (Tok) {
+      if (Tok->is(tok::kw_template))
+        return true;
+      Tok = Tok->Previous;
+    }
+    return false;
+  };
   // Note that parsing away template declarations here leads to incorrectly
   // accepting function declarations as record declarations.
   // In general, we cannot solve this problem. Consider:
@@ -3921,8 +3930,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       else if (FormatTok->is(tok::greater))
         --AngleNestingLevel;
 
-      if (AngleNestingLevel == 0 && FormatTok->is(tok::r_paren))
+      if (AngleNestingLevel == 0 && !IsTemplate() &&
+          FormatTok->is(tok::r_paren)) {
         break;
+      }
       if (FormatTok->is(tok::l_brace)) {
         calculateBraceTypes(/*ExpectClassBody=*/true);
         if (!tryToParseBracedList())
