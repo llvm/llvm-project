@@ -542,22 +542,14 @@ TEST_F(InstrProfTest, test_memprof_merge) {
 TEST_F(InstrProfTest, test_irpgo_function_name) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
-  // Use Mach-O mangling so that non-private symbols get a `_` prefix.
-  M->setDataLayout(DataLayout("m:o"));
   auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
 
   std::vector<std::tuple<StringRef, Function::LinkageTypes, StringRef>> Data;
-  Data.emplace_back("ExternalFoo", Function::ExternalLinkage, "_ExternalFoo");
+  Data.emplace_back("ExternalFoo", Function::ExternalLinkage, "ExternalFoo");
   Data.emplace_back("InternalFoo", Function::InternalLinkage,
-                    "MyModule.cpp;_InternalFoo");
-  Data.emplace_back("PrivateFoo", Function::PrivateLinkage,
-                    "MyModule.cpp;l_PrivateFoo");
-  Data.emplace_back("WeakODRFoo", Function::WeakODRLinkage, "_WeakODRFoo");
-  // Test Objective-C symbols
+                    "MyModule.cpp;InternalFoo");
   Data.emplace_back("\01-[C dynamicFoo:]", Function::ExternalLinkage,
                     "-[C dynamicFoo:]");
-  Data.emplace_back("-<C directFoo:>", Function::ExternalLinkage,
-                    "_-<C directFoo:>");
   Data.emplace_back("\01-[C internalFoo:]", Function::InternalLinkage,
                     "MyModule.cpp;-[C internalFoo:]");
 
@@ -590,10 +582,6 @@ TEST_F(InstrProfTest, test_pgo_function_name) {
   Data.emplace_back("ExternalFoo", Function::ExternalLinkage, "ExternalFoo");
   Data.emplace_back("InternalFoo", Function::InternalLinkage,
                     "MyModule.cpp:InternalFoo");
-  Data.emplace_back("PrivateFoo", Function::PrivateLinkage,
-                    "MyModule.cpp:PrivateFoo");
-  Data.emplace_back("WeakODRFoo", Function::WeakODRLinkage, "WeakODRFoo");
-  // Test Objective-C symbols
   Data.emplace_back("\01-[C externalFoo:]", Function::ExternalLinkage,
                     "-[C externalFoo:]");
   Data.emplace_back("\01-[C internalFoo:]", Function::InternalLinkage,
@@ -611,8 +599,6 @@ TEST_F(InstrProfTest, test_pgo_function_name) {
 TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
-  // Use Mach-O mangling so that non-private symbols get a `_` prefix.
-  M->setDataLayout(DataLayout("m:o"));
   auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
   auto *InternalFooF =
       Function::Create(FTy, Function::InternalLinkage, "InternalFoo", M.get());
