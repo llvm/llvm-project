@@ -19,10 +19,14 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -30,7 +34,9 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <type_traits>
@@ -1393,6 +1399,121 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   return success();
 }
 
+/// Given a tensor::PackOp, return the permutation from the "tiled"
+/// shape to the "packed" shape, defined as the following:
+/// The "packed" shape is the same as the `dest` shape of the pack op.
+/// The "tiled" shape is a permutation of the `dest` shape such that
+/// each outer dimension is in the original `source` order, and the
+/// inner_tile dimensions immediately follow their corresponding outer
+/// dimension.
+/// i.e. for the following tensor.pack:
+/// ```mlir
+/// %pack = tensor.pack %0 padding_value(%1) 
+///   outer_dims_perm = [0, 2, 1] 
+///   inner_dims_pos = [2, 1] 
+///   inner_tiles = [16, 2] 
+///   into %2 : tensor<32x8x16> -> tensor<32x1x4x16x2>
+/// ```
+/// The "packed" shape is `32x1x4x16x2`
+/// The "tiled" shape is `32x(4x2)x(1x16)`
+static SmallVector<int64_t> getTiledShapeToPackedShapePerm(tensor::PackOp packOp) {
+  auto innerTiles = packOp.getInnerTiles();
+  int64_t srcRank = packOp.getSourceRank();
+  auto innerDimsPos = packOp.getInnerDimsPos();
+  if (innerDimsPos.empty())
+    innerDimsPos = to_vector(llvm::seq<int64_t>(innerTiles.size()));
+  auto outerDimsPerm = packOp.getOuterDimsPerm();
+  if (outerDimsPerm.empty())
+    outerDimsPerm = to_vector(llvm::seq<int64_t>(srcRank));
+  auto packedIdxToTiledIdx = [&](int64_t idx) -> int64_t { 
+    int64_t srcIdx;
+    if (idx >= srcRank)
+      srcIdx = innerDimsPos[idx - srcRank];
+    else
+      srcIdx = outerDimsPerm[idx];
+    int64_t tiledIdx = srcIdx;
+    for (int64_t pos : innerDimsPos)
+      if (pos < srcIdx)
+        tiledIdx++;
+    if (idx >= srcRank)
+      tiledIdx++;
+    return tiledIdx;
+  };
+  SmallVector<int64_t> perm;
+  for (int i = 0; i < packOp.getDestRank(); i++) 
+    perm.push_back(packedIdxToTiledIdx(i));
+  return perm;
+}
+
+/// Given a tensor::PackOp, return the "tiled" `dest` shape as described
+/// above in `getTiledShapeToPackedShapePerm`.
+static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp) {
+  auto perm = getTiledShapeToPackedShapePerm(packOp);
+  auto destShape = packOp.getDestType().getShape();
+  return applyPermutation(destShape, invertPermutationVector(perm));
+}
+
+/// 
+static LogicalResult
+vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
+                       ArrayRef<int64_t> inputVectorSizes,
+                       SmallVectorImpl<Value> &newResults) {
+  auto padValue = packOp.getPaddingValue();
+  Location loc = packOp.getLoc();
+  int64_t inputRank = inputVectorSizes.size();
+  int64_t outputRank = packOp.getDestRank();
+  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
+
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(packOp);
+
+  ReifiedRankedShapedTypeDims reifiedReturnShapes;
+  LogicalResult status =
+      cast<ReifyRankedShapedTypeOpInterface>(packOp.getOperation())
+          .reifyResultShapes(rewriter, reifiedReturnShapes);
+  (void)status; // prevent unused variable warning on non-assert builds
+  assert(succeeded(status) && "failed to reify result shapes");
+  auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
+                                                  padValue.getType());
+  SmallVector<OpFoldResult> mixedSourceDims =
+      tensor::getMixedSizes(rewriter, loc, packOp.getSource());
+  Value mask =
+      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/packOp.getSource(),
+      /*indices=*/SmallVector<Value>(inputRank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/SmallVector<bool>(inputRank, true));
+  auto maskedOp = cast<vector::MaskOp>(
+      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
+  // ShapeCast
+  auto tiledPackShape = getTiledPackShape(packOp);
+  auto tiledPackType = VectorType::get(tiledPackShape, packOp.getDestType().getElementType());
+  auto shapeCastOp = rewriter.create<vector::ShapeCastOp>(loc, tiledPackType, maskedOp->getResult(0));
+  auto tiledShapeToPackedShapePerm = getTiledShapeToPackedShapePerm(packOp);
+  auto transposeOp = rewriter.create<vector::TransposeOp>(loc, shapeCastOp->getResult(0), tiledShapeToPackedShapePerm);
+  Operation *write = rewriter.create<vector::TransferWriteOp>(
+      loc,
+      /*vector=*/transposeOp->getResult(0),
+      /*source=*/emptyOp,
+      /*indices=*/SmallVector<Value>(outputRank, zero),
+      /*inBounds=*/SmallVector<bool>(outputRank, true));
+  // bool needMaskForWrite = llvm::any_of(
+  //     llvm::zip_equal(inputVectorSizes, packOp.getResultType().getShape()),
+  //     [](auto it) { return std::get<0>(it) != std::get<1>(it); });
+  // if (needMaskForWrite) {
+  //   Value maskForWrite = rewriter.create<vector::CreateMaskOp>(
+  //       loc, maskType, reifiedReturnShapes[0]);
+  //   write = mlir::vector::maskOperation(rewriter, write, maskForWrite);
+  // }
+  newResults.push_back(write->getResult(0));
+  return success();
+}
+
 /// Vectorize a `padOp` with (1) static result type, (2) constant padding value
 /// and (3) all-zero lowPad to
 ///   `transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))`.
@@ -1586,6 +1707,30 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
 }
 
 static LogicalResult
+vectorizePackOpPrecondition(tensor::PackOp packOp,
+                           ArrayRef<int64_t> inputVectorSizes) {
+  auto padValue = packOp.getPaddingValue();
+  if (!padValue) {
+    LDBG("pad value is not constant: " << packOp << "\n");
+    return failure();
+  }
+
+  ArrayRef<int64_t> resultTensorShape = packOp.getSourceType().getShape();
+  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
+    return failure();
+
+  if (llvm::any_of(packOp.getInnerTiles(), [](OpFoldResult v) {
+        std::optional<int64_t> res = getConstantIntValue(v);
+        return !res.has_value();
+      })) {
+    LDBG("inner_tiles must be constant: " << packOp << "\n");
+    return failure();
+  }
+
+  return success();
+}
+
+static LogicalResult
 vectorizePadOpPrecondition(tensor::PadOp padOp,
                            ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = padOp.getConstantPaddingValue();
@@ -1643,6 +1788,9 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       })
       .Case<tensor::PadOp>([&](auto padOp) {
         return vectorizePadOpPrecondition(padOp, inputVectorSizes);
+      })
+      .Case<tensor::PackOp>([&](auto packOp) {
+        return vectorizePackOpPrecondition(packOp, inputVectorSizes);
       })
       .Default([](auto) { return failure(); });
 }
@@ -1731,6 +1879,9 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
           .Case<tensor::PadOp>([&](auto padOp) {
             return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
                                           results);
+          })
+          .Case<tensor::PackOp>([&](auto packOp) {
+            return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes, results);
           })
           .Default([](auto) { return failure(); });
 
