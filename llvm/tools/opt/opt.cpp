@@ -426,7 +426,7 @@ int main(int argc, char **argv) {
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeCallBrPreparePass(Registry);
-  initializeCodeGenPreparePass(Registry);
+  initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeAtomicExpandPass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
