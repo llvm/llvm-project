@@ -3220,6 +3220,33 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     return replaceOperand(SI, 0, Op0);
   }
 
+  uint64_t ShiftAmt;
+  if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
+      all_of(SI.cases(), [&](const auto &Case) {
+        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
+      })) {
+    // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
+    OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
+    if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
+        Shl->hasOneUse()) {
+      Value *NewCond = Op0;
+      if (!Shl->hasNoUnsignedWrap() && !Shl->hasNoSignedWrap()) {
+        // If the shift may wrap, we need to mask off the shifted bits.
+        unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+        NewCond = Builder.CreateAnd(
+            Op0, APInt::getLowBitsSet(BitWidth, BitWidth - ShiftAmt));
+      }
+      for (auto Case : SI.cases()) {
+        const APInt &CaseVal = Case.getCaseValue()->getValue();
+        APInt ShiftedCase = Shl->hasNoSignedWrap() ? CaseVal.ashr(ShiftAmt)
+                                                   : CaseVal.lshr(ShiftAmt);
+        Case.setValue(ConstantInt::get(SI.getContext(), ShiftedCase));
+      }
+      return replaceOperand(SI, 0, NewCond);
+    }
+  }
+
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
