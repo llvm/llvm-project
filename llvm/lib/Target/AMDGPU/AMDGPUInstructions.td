@@ -644,6 +644,7 @@ defm int_amdgcn_flat_atomic_fadd : local_addr_space_atomic_op;
 defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
 defm int_amdgcn_flat_atomic_cond_sub_u32 : noret_op;
 defm int_amdgcn_global_atomic_cond_sub_u32 : noret_op;
+defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
 defm int_amdgcn_flat_atomic_fmin_num : noret_op;
 defm int_amdgcn_flat_atomic_fmax_num : noret_op;
 defm int_amdgcn_global_atomic_fmin_num : noret_op;

@@ -1169,7 +1169,11 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXKZ;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXB;
-      if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+      // nf bit is the MSB of aaa
+      if (nfFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
+          insn->opcodeType == MAP4)
+        attrMask |= ATTR_EVEXNF;
+      else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXK;
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_VEXL;

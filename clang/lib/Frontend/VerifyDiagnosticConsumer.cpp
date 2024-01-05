@@ -1144,8 +1144,7 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
   std::string RegexStr;
   StringRef S = Text;
   while (!S.empty()) {
-    if (S.starts_with("{{")) {
-      S = S.drop_front(2);
+    if (S.consume_front("{{")) {
       size_t RegexMatchLength = S.find("}}");
       assert(RegexMatchLength != StringRef::npos);
       // Append the regex, enclosed in parentheses.

@@ -27,74 +27,72 @@ namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <>
-struct FPBits<long double>
-    : public internal::FPBitsCommon<FPType::X86_Binary80> {
-  using UP = internal::FPBitsCommon<FPType::X86_Binary80>;
+struct FPBits<long double> : public internal::FPRep<FPType::X86_Binary80> {
+  using UP = internal::FPRep<FPType::X86_Binary80>;
   using StorageType = typename UP::StorageType;
-  using UP::bits;
 
 private:
+  using UP::bits;
   using UP::EXP_SIG_MASK;
   using UP::QUIET_NAN_MASK;
 
 public:
-  using UP::EXP_BIAS;
-  using UP::EXP_LEN;
-  using UP::EXP_MASK;
-  using UP::EXP_MASK_SHIFT;
-  using UP::FP_MASK;
-  using UP::FRACTION_LEN;
-  using UP::FRACTION_MASK;
-  using UP::SIGN_MASK;
-  using UP::TOTAL_LEN;
-
-  static constexpr int MAX_BIASED_EXPONENT = 0x7FFF;
+  // Constants.
+  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
+  // The x86 80 bit float represents the leading digit of the mantissa
+  // explicitly. This is the mask for that bit.
+  static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
+                                                   << FRACTION_LEN;
+  // The X80 significand is made of an explicit bit and the fractional part.
+  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0,
+                "the explicit bit and the fractional part should not overlap");
+  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK,
+                "the explicit bit and the fractional part should cover the "
+                "whole significand");
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
-  static constexpr StorageType MAX_SUBNORMAL =
-      (StorageType(1) << FRACTION_LEN) - 1;
-  static constexpr StorageType MIN_NORMAL = (StorageType(3) << FRACTION_LEN);
+  static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
+  static constexpr StorageType MIN_NORMAL =
+      (StorageType(1) << SIG_LEN) | EXPLICIT_BIT_MASK;
   static constexpr StorageType MAX_NORMAL =
-      (StorageType(MAX_BIASED_EXPONENT - 1) << (FRACTION_LEN + 1)) |
-      (StorageType(1) << FRACTION_LEN) | MAX_SUBNORMAL;
+      (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
 
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
-    // The x86 80 bit float represents the leading digit of the mantissa
-    // explicitly. This is the mask for that bit.
-    constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1) << FRACTION_LEN;
-    return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
+  // Constructors.
+  LIBC_INLINE constexpr FPBits() = default;
+
+  template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
+    using Unqual = typename cpp::remove_cv_t<XType>;
+    if constexpr (cpp::is_same_v<Unqual, long double>) {
+      bits = cpp::bit_cast<StorageType>(x);
+    } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
+      bits = x;
+    } else {
+      // We don't want accidental type promotions/conversions, so we require
+      // exact type match.
+      static_assert(cpp::always_false<XType>);
+    }
   }
 
-  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    bits &= ~(StorageType(1) << FRACTION_LEN);
-    bits |= (StorageType(implicitVal) << FRACTION_LEN);
+  // Floating-point conversions.
+  LIBC_INLINE constexpr long double get_val() const {
+    return cpp::bit_cast<long double>(bits);
+  }
+
+  LIBC_INLINE constexpr operator long double() const {
+    return cpp::bit_cast<long double>(bits);
+  }
+
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
+    return bits & SIG_MASK;
   }
 
   LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return bool((bits & (StorageType(1) << FRACTION_LEN)) >> FRACTION_LEN);
+    return bits & EXPLICIT_BIT_MASK;
   }
 
-  LIBC_INLINE constexpr FPBits() : UP() {}
-
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x)
-      : UP(cpp::bit_cast<StorageType>(x)) {
-    // bits starts uninitialized, and setting it to a long double only
-    // overwrites the first 80 bits. This clears those upper bits.
-    bits = bits & ((StorageType(1) << 80) - 1);
-  }
-
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
-  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
-
-  LIBC_INLINE constexpr operator long double() {
-    return cpp::bit_cast<long double>(bits);
-  }
-
-  LIBC_INLINE constexpr long double get_val() const {
-    return cpp::bit_cast<long double>(bits);
+  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
+    if (get_implicit_bit() != implicitVal)
+      bits ^= EXPLICIT_BIT_MASK;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
@@ -116,35 +114,31 @@ public:
            (get_biased_exponent() != 0 && get_implicit_bit() == 0);
   }
 
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
+    return (bits & EXP_SIG_MASK) >= (EXP_MASK | QUIET_NAN_MASK);
+  }
+
   // Methods below this are used by tests.
 
-  LIBC_INLINE static constexpr long double zero() { return 0.0l; }
+  LIBC_INLINE static constexpr long double zero(bool sign = false) {
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
+                      | 0                                 // exponent
+                      | 0                                 // explicit bit
+                      | 0;                                // mantissa
+    return FPBits(rep).get_val();
+  }
 
-  LIBC_INLINE static constexpr long double neg_zero() { return -0.0l; }
+  LIBC_INLINE static constexpr long double neg_zero() { return zero(true); }
 
   LIBC_INLINE static constexpr long double inf(bool sign = false) {
-    FPBits<long double> bits(0.0l);
-    bits.set_biased_exponent(MAX_BIASED_EXPONENT);
-    bits.set_implicit_bit(1);
-    if (sign) {
-      bits.set_sign(true);
-    }
-    return bits.get_val();
+    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
+                      | EXP_MASK                          // exponent
+                      | EXPLICIT_BIT_MASK                 // explicit bit
+                      | 0;                                // mantissa
+    return FPBits(rep).get_val();
   }
 
   LIBC_INLINE static constexpr long double neg_inf() { return inf(true); }
-
-  LIBC_INLINE static constexpr long double build_nan(StorageType v) {
-    FPBits<long double> bits(0.0l);
-    bits.set_biased_exponent(MAX_BIASED_EXPONENT);
-    bits.set_implicit_bit(1);
-    bits.set_mantissa(v);
-    return bits;
-  }
-
-  LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
-    return build_nan(QUIET_NAN_MASK | v);
-  }
 
   LIBC_INLINE static constexpr long double min_normal() {
     return FPBits(MIN_NORMAL).get_val();
@@ -162,13 +156,16 @@ public:
     return FPBits(MAX_SUBNORMAL).get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<long double>
-  create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
-    FPBits<long double> result;
-    result.set_sign(sign);
-    result.set_biased_exponent(biased_exp);
-    result.set_mantissa(mantissa);
-    return result;
+  LIBC_INLINE static constexpr long double build_nan(StorageType v) {
+    StorageType rep = 0                      // sign
+                      | EXP_MASK             // exponent
+                      | EXPLICIT_BIT_MASK    // explicit bit
+                      | (v & FRACTION_MASK); // mantissa
+    return FPBits(rep).get_val();
+  }
+
+  LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
+    return build_nan(QUIET_NAN_MASK | v);
   }
 };
 

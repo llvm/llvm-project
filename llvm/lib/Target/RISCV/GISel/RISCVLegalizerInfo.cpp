@@ -101,7 +101,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb()) {
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
     RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
     // Widen s32 rotate amount to s64 so SDAG patterns will match.
     if (ST.is64Bit())
@@ -411,8 +411,9 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
-bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                        MachineInstr &MI) const {
+bool RISCVLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
   switch (MI.getOpcode()) {

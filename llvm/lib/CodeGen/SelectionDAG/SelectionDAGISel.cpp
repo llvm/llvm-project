@@ -4181,8 +4181,7 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
     Msg << "\nIn function: " << MF->getName();
   } else {
     bool HasInputChain = N->getOperand(0).getValueType() == MVT::Other;
-    unsigned iid =
-      cast<ConstantSDNode>(N->getOperand(HasInputChain))->getZExtValue();
+    unsigned iid = N->getConstantOperandVal(HasInputChain);
     if (iid < Intrinsic::num_intrinsics)
       Msg << "intrinsic %" << Intrinsic::getBaseName((Intrinsic::ID)iid);
     else if (const TargetIntrinsicInfo *TII = TM.getIntrinsicInfo())

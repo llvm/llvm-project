@@ -12,7 +12,7 @@
 
 #include <cstddef>
 #include <experimental/__config>
-#include <experimental/__simd/internal_declaration.h>
+#include <experimental/__simd/declaration.h>
 #include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)

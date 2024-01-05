@@ -1671,6 +1671,11 @@ let Predicates = [HasPAuthLR] in {
     //                              opcode2, opcode,   asm
     def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppc">;
     def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppc">;
+    //                                  opcode2, opcode,   asm
+    def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
+    def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
+    def AUTIA171615 : SignAuthFixedRegs<0b00001, 0b101110, "autia171615">;
+    def AUTIB171615 : SignAuthFixedRegs<0b00001, 0b101111, "autib171615">;
   }
 
   let Uses = [LR, SP], isReturn = 1, isTerminator = 1, isBarrier = 1 in {

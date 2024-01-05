@@ -713,7 +713,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     ```
     operation ::= `gpu.launch` (`async` (`[` ssa-id-list `]`)? )?
-                             `block` `(` ssa-id-list `)` `in` ssa-reassignment
+                             `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
                              memory-attribution

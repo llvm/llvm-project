@@ -2025,3 +2025,6 @@ flat_atomic_cond_sub_u32 v[0:1], v2 offset:64
 
 global_atomic_cond_sub_u32 v0, v2, s[0:1] offset:64
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_ordered_add_b64 v0, v[2:3], s[0:1] offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

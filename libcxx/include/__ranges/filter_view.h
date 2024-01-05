@@ -51,7 +51,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
-class filter_view : public view_interface<filter_view<_View, _Pred>> {
+class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG filter_view : public view_interface<filter_view<_View, _Pred>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
