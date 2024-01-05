@@ -305,12 +305,11 @@ TEST(ELFObjectFileTest, CheckOSAndTriple) {
   for (auto [Machine, OS, Triple] : Formats) {
     const DataForTest D(ELF::ELFCLASS64, ELF::ELFDATA2LSB, Machine, OS,
                         ELF::EF_AMDGPU_MACH_AMDGCN_LAST);
-    Expected<std::unique_ptr<ObjectFile>> ELFObjOrErr =
-        object::ObjectFile::createELFObjectFile(
-            MemoryBufferRef(toStringRef(D.Data), "dummyELF"));
+    Expected<ELF64LEObjectFile> ELFObjOrErr = ELF64LEObjectFile::create(
+        MemoryBufferRef(toStringRef(D.Data), "dummyELF"));
     ASSERT_THAT_EXPECTED(ELFObjOrErr, Succeeded());
 
-    auto &ELFObj = **ELFObjOrErr;
+    auto &ELFObj = *ELFObjOrErr;
     EXPECT_EQ(Triple, ELFObj.makeTriple().getTriple());
   }
 }
