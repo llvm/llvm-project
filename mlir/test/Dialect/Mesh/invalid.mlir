@@ -70,6 +70,14 @@ func.func @mesh_axis_negtive_in_partial(
 
 // -----
 
+func.func @sharding_attribute_invalid_nested_symbol(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+2 {{custom op 'mesh.shard' invalid kind of attribute specified}}
+  // expected-error@+1 {{custom op 'mesh.shard' failed to parse MeshSharding parameter 'cluster' which is to be a `::mlir::FlatSymbolRefAttr`}}
+  %0 = mesh.shard %arg0 to <@a::@b, [[0]]> : tensor<4x8xf32>
+}
+
+// -----
+
 mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @cluster_shape_mesh_axis_out_of_bounds() -> (index, index) {
