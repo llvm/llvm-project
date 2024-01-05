@@ -26,8 +26,8 @@ def TruePredicate : Predicate<"true">;
 // R16-R31 and make them allocatable only when the feature EGPR is available.
 //
 // Besides, some instructions in legacy space with map 2/3 and VEX space are
-// promoted into EVEX space. Encoding space will definitely change, opcode and
-// opcode map may change after the promotion. For these instructions, we add new
+// promoted into EVEX space. Encoding space changes after the promotion, opcode
+// and opcode map may change too sometimes. For these instructions, we add new
 // entries in TD to avoid overcomplicating the assembler and disassembler.
 //
 // HasEGPR is for the new entries and NoEGPR is for the entries before
