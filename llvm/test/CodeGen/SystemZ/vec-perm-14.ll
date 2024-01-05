@@ -4,8 +4,23 @@
 
 define void @fun() {
 ; CHECK-LABEL: fun:
-; CHECK: vperm
-; CHECK-NOT: vperm
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    vlrepf %v0, 0(%r1)
+; CHECK-NEXT:    vgbm %v1, 0
+; CHECK-NEXT:    larl %r1, .LCPI0_0
+; CHECK-NEXT:    vceqb %v0, %v0, %v1
+; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vperm %v0, %v0, %v0, %v1
+; CHECK-NEXT:    vlgvf %r0, %v0, 0
+; CHECK-NEXT:    tmll %r0, 1
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb1
+; CHECK-NEXT:  .LBB0_2: # %bb2
+; CHECK-NEXT:    vlgvf %r0, %v0, 1
+; CHECK-NEXT:    tmll %r0, 1
+; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %bb3
+; CHECK-NEXT:  .LBB0_4: # %bb4
 bb:
   %tmp = load <4 x i8>, ptr undef
   %tmp1 = icmp eq <4 x i8> zeroinitializer, %tmp
