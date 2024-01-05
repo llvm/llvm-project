@@ -33,16 +33,15 @@
 ; Text section of the in-memory debug-objects have non-null load-address
 ;
 ; RUN: lli --jit-linker=rtdyld --orc-lazy-debug=jit-debug-objects %s | \
-; RUN:     llvm-objdump --section-headers - | FileCheck --check-prefix=LOAD_ADDR_RTDYLD %s
-; LOAD_ADDR_RTDYLD:      .text
-; LOAD_ADDR_RTDYLD-NOT:  0000000000000000
-; LOAD_ADDR_RTDYLD-SAME: TEXT
-;
+; RUN:                              llvm-objdump --section-headers - | \
+; RUN:                              FileCheck --check-prefix=CHECK_LOAD_ADDR %s
 ; RUN: lli --jit-linker=jitlink --orc-lazy-debug=jit-debug-objects %s | \
-; RUN:     llvm-objdump --section-headers - | FileCheck --check-prefix=LOAD_ADDR_JITLINK %s
-; LOAD_ADDR_JITLINK:      .ltext
-; LOAD_ADDR_JITLINK-NOT:  0000000000000000
-; LOAD_ADDR_JITLINK-SAME: TEXT
+; RUN:                               llvm-objdump --section-headers - | \
+; RUN:                               FileCheck --check-prefix=CHECK_LOAD_ADDR %s
+;
+; CHECK_LOAD_ADDR:      .text
+; CHECK_LOAD_ADDR-NOT:  0000000000000000
+; CHECK_LOAD_ADDR-SAME: TEXT
 
 define i32 @main() !dbg !3 {
 entry:
