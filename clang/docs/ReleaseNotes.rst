@@ -238,6 +238,8 @@ Non-comprehensive list of changes in this release
 
 * Added ``#pragma clang fp reciprocal``.
 
+* The version of Unicode used by Clang (primarily to parse identifiers) has been updated to 15.1.
+
 New Compiler Flags
 ------------------
 
