@@ -122,6 +122,7 @@ cxx_sources = [
   "condition_variable_destructor.cpp",
   "error_category.cpp",
   "exception.cpp",
+  "fstream.cpp",
   "functional.cpp",
   "future.cpp",
   "hash.cpp",

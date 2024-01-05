@@ -43,6 +43,7 @@ FILE *funopen(const void *,
               int (*)(void *));
 
 FILE *fopen(const char *restrict path, const char *restrict mode);
+FILE *fdopen(int fd, const char *mode);
 FILE *tmpfile(void);
 FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream);
 int fclose(FILE *fp);
@@ -61,6 +62,7 @@ void clearerr(FILE *stream);
 int feof(FILE *stream);
 int ferror(FILE *stream);
 int fileno(FILE *stream);
+int fflush(FILE *stream);
 
 size_t strlen(const char *);
 

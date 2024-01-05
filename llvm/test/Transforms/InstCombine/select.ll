@@ -1735,6 +1735,21 @@ define float @copysign_type_mismatch(double %x) {
 
 ; Negative test
 
+define <2 x float> @copysign_type_mismatch2(<2 x float> %x) {
+; CHECK-LABEL: @copysign_type_mismatch2(
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to i64
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to i64
+  %ispos = icmp sgt i64 %i, -1
+  %r = select i1 %ispos, <2 x float> <float 1.0, float 1.0>, <2 x float> <float -1.0, float -1.0>
+  ret <2 x float> %r
+}
+
+; Negative test
+
 define float @copysign_wrong_cmp(float %x) {
 ; CHECK-LABEL: @copysign_wrong_cmp(
 ; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
@@ -2880,10 +2895,7 @@ define i8 @select_replacement_loop(i8 %x, i8 %y, i8 %z) {
 define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
 ; CHECK-LABEL: @select_replacement_loop2(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[ARG:%.*]], [[ARG2:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], [[ARG2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], [[ARG]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[DIV]], i32 undef
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %div = udiv i32 %arg, %arg2
   %mul = mul nsw i32 %div, %arg2
@@ -3612,8 +3624,8 @@ define i32 @pr62088() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[NOT2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ -2, [[LOOP]] ]
 ; CHECK-NEXT:    [[H_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[LOOP]] ]
-; CHECK-NEXT:    [[XOR1:%.*]] = or disjoint i32 [[H_0]], [[NOT2]]
-; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR1]]
+; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[H_0]], [[NOT2]]
+; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR]]
 ; CHECK-NEXT:    [[XOR6:%.*]] = xor i32 [[SUB5]], -1260914025
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[XOR6]], 824855120
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]

@@ -196,6 +196,27 @@ def DeviceTypeArrayAttr :
   let constBuilderCall = ?;
 }
 
+// Gang arg type enumeration
+def OpenACC_GangArgNum      : I32EnumAttrCase<"Num", 0, "Num">;
+def OpenACC_GangArgDim      : I32EnumAttrCase<"Dim", 1, "Dim">;
+def OpenACC_GangArgStatic   : I32EnumAttrCase<"Static", 2, "Static">;
+
+def OpenACC_GangArgType : I32EnumAttr<"GangArgType",
+    "Differentiate the different gang arg values",
+    [OpenACC_GangArgNum, OpenACC_GangArgDim, OpenACC_GangArgStatic]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::acc";
+}
+def OpenACC_GangArgTypeAttr : EnumAttr<OpenACC_Dialect,
+                                       OpenACC_GangArgType,
+                                       "gang_arg_type"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+def GangArgTypeArrayAttr :
+  TypedArrayAttrBase<OpenACC_GangArgTypeAttr, "gang arg type array attribute"> {
+  let constBuilderCall = ?;
+}
+
 // Define a resource for the OpenACC runtime counters.
 def OpenACC_RuntimeCounters : Resource<"::mlir::acc::RuntimeCounters">;
 
@@ -976,7 +997,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
         `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
-      | `wait` `(` custom<WaitOperands>($waitOperands,
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
             type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
@@ -1075,7 +1096,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       | `private` `(` custom<SymOperandList>(
             $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
         `)`
-      | `wait` `(` custom<WaitOperands>($waitOperands,
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
             type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
@@ -1196,8 +1217,9 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
             type($numWorkers), $numWorkersDeviceType) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
-      | `wait` `(` custom<WaitOperands>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
+            type($waitOperands), $waitOperandsDeviceType,
+            $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
     )
@@ -1235,13 +1257,16 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
 
   let arguments = (ins Optional<I1>:$ifCond,
-                       Optional<IntOrIndex>:$async,
-                       UnitAttr:$asyncAttr,
-                       Optional<IntOrIndex>:$waitDevnum,
-                       Variadic<IntOrIndex>:$waitOperands,
-                       UnitAttr:$waitAttr,
-                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
-                       OptionalAttr<DefaultValueAttr>:$defaultAttr);
+      Variadic<IntOrIndex>:$async,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+      Optional<IntOrIndex>:$waitDevnum,
+      Variadic<IntOrIndex>:$waitOperands,
+      OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
+      OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$waitOnly,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
+      OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
 
@@ -1251,15 +1276,41 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Return true if the op has the async attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasAsyncOnly();
+    /// Return true if the op has the async attribute for the given device_type.
+    bool hasAsyncOnly(mlir::acc::DeviceType deviceType);
+    /// Return the value of the async clause if present.
+    mlir::Value getAsyncValue();
+    /// Return the value of the async clause for the given device_type if
+    /// present.
+    mlir::Value getAsyncValue(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has the wait attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasWaitOnly();
+    /// Return true if the op has the wait attribute for the given device_type.
+    bool hasWaitOnly(mlir::acc::DeviceType deviceType);
+    /// Return the values of the wait clause if present.
+    mlir::Operation::operand_range getWaitValues();
+    /// Return the values of the wait clause for the given device_type if
+    /// present.
+    mlir::Operation::operand_range
+    getWaitValues(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $async `:` type($async) `)`
+      | `async` `(` custom<DeviceTypeOperands>($async,
+            type($async), $asyncDeviceType) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
+            type($waitOperands), $waitOperandsDeviceType, 
+            $waitOperandsSegments) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -1432,7 +1483,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     Example:
 
     ```mlir
-    acc.loop gang vector {
+    acc.loop {
       scf.for %arg3 = %c0 to %c10 step %c1 {
         scf.for %arg4 = %c0 to %c10 step %c1 {
           scf.for %arg5 = %c0 to %c10 step %c1 {
@@ -1441,23 +1492,33 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
         }
       }
       acc.yield
-    } attributes { collapse = 3 }
+    } attributes {
+      collapse = [3], gang = [#acc.device_type<none>],
+      vector = [#acc.device_type<none>]
+    }
     ```
   }];
 
-  let arguments = (ins OptionalAttr<I64Attr>:$collapse,
-      Optional<IntOrIndex>:$gangNum,
-      Optional<IntOrIndex>:$gangDim,
-      Optional<IntOrIndex>:$gangStatic,
-      Optional<IntOrIndex>:$workerNum,
-      Optional<IntOrIndex>:$vectorLength,
-      UnitAttr:$seq,
-      UnitAttr:$independent,
-      UnitAttr:$auto_,
-      UnitAttr:$hasGang,
-      UnitAttr:$hasWorker,
-      UnitAttr:$hasVector,
+  let arguments = (ins
+      OptionalAttr<I64ArrayAttr>:$collapse,
+      OptionalAttr<DeviceTypeArrayAttr>:$collapseDeviceType,
+      Variadic<IntOrIndex>:$gangOperands,
+      OptionalAttr<GangArgTypeArrayAttr>:$gangOperandsArgType,
+      OptionalAttr<DenseI32ArrayAttr>:$gangOperandsSegments,
+      OptionalAttr<DeviceTypeArrayAttr>:$gangOperandsDeviceType,
+      Variadic<IntOrIndex>:$workerNumOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$workerNumOperandsDeviceType,
+      Variadic<IntOrIndex>:$vectorOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$vectorOperandsDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$seq,
+      OptionalAttr<DeviceTypeArrayAttr>:$independent,
+      OptionalAttr<DeviceTypeArrayAttr>:$auto_,
+      OptionalAttr<DeviceTypeArrayAttr>:$gang,
+      OptionalAttr<DeviceTypeArrayAttr>:$worker,
+      OptionalAttr<DeviceTypeArrayAttr>:$vector,
       Variadic<IntOrIndex>:$tileOperands,
+      OptionalAttr<DenseI32ArrayAttr>:$tileOperandsSegments,
+      OptionalAttr<DeviceTypeArrayAttr>:$tileOperandsDeviceType,
       Variadic<OpenACC_PointerLikeTypeInterface>:$cacheOperands,
       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
@@ -1480,18 +1541,90 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Return true if the op has the auto attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasAuto();
+    /// Return true if the op has the auto attribute for the given device_type.
+    bool hasAuto(mlir::acc::DeviceType deviceType);
+    /// Return true if the op has the independent attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasIndependent();
+    /// Return true if the op has the independent attribute for the given
+    /// device_type.
+    bool hasIndependent(mlir::acc::DeviceType deviceType);
+    /// Return true if the op has the seq attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasSeq();
+    /// Return true if the op has the seq attribute for the given device_type.
+    bool hasSeq(mlir::acc::DeviceType deviceType);
+
+    /// Return the value of the vector clause if present.
+    mlir::Value getVectorValue();
+    /// Return the value of the vector clause for the given device_type 
+    /// if present.
+    mlir::Value getVectorValue(mlir::acc::DeviceType deviceType);
+    /// Return true if the op has the vector attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasVector();
+    /// Return true if the op has the vector attribute for the given
+    /// device_type.
+    bool hasVector(mlir::acc::DeviceType deviceType);
+
+    /// Return the value of the worker clause if present.
+    mlir::Value getWorkerValue();
+    /// Return the value of the worker clause for the given device_type 
+    /// if present.
+    mlir::Value getWorkerValue(mlir::acc::DeviceType deviceType);
+    /// Return true if the op has the worker attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasWorker();
+    /// Return true if the op has the worker attribute for the given
+    /// device_type.
+    bool hasWorker(mlir::acc::DeviceType deviceType);
+
+    /// Return the values of the tile clause if present.
+    mlir::Operation::operand_range getTileValues();
+    /// Return the values of the tile clause for the given device_type if
+    /// present.
+    mlir::Operation::operand_range
+    getTileValues(mlir::acc::DeviceType deviceType);
+
+    /// Return the value of the collapse clause if present.
+    std::optional<int64_t> getCollapseValue();
+    /// Return the value of the collapse clause for the given device_type 
+    /// if present.
+    std::optional<int64_t> getCollapseValue(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has the gang attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasGang();
+    /// Return true if the op has the gang attribute for the given
+    /// device_type.
+    bool hasGang(mlir::acc::DeviceType deviceType);
+
+    /// Return the value of the worker clause if present.
+    mlir::Value getGangValue(mlir::acc::GangArgType gangArgType);
+    /// Return the value of the worker clause for the given device_type 
+    /// if present.
+    mlir::Value getGangValue(mlir::acc::GangArgType gangArgType, mlir::acc::DeviceType deviceType);
   }];
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
     oilist(
-        `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangDim, type($gangDim), $gangStatic, type($gangStatic), $hasGang)
-      | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
-      | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
+        `gang` `` `(` custom<GangClause>($gangOperands, type($gangOperands),
+            $gangOperandsArgType, $gangOperandsDeviceType,
+            $gangOperandsSegments) `)`
+      | `worker` `` `(` custom<DeviceTypeOperands>($workerNumOperands,
+            type($workerNumOperands), $workerNumOperandsDeviceType) `)`
+      | `vector` `` `(` custom<DeviceTypeOperands>($vectorOperands,
+            type($vectorOperands), $vectorOperandsDeviceType) `)`
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizations) `)`
+      | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
+            type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
-      | `tile` `(` $tileOperands `:` type($tileOperands) `)`
       | `reduction` `(` custom<SymOperandList>(
             $reductionOperands, type($reductionOperands), $reductionRecipes)
         `)`

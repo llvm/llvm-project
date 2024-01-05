@@ -271,7 +271,7 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
     return false;
 
   // Cond 1: A contiguous memref will always have a unit trailing stride.
-  if (strides.back() != 1)
+  if (strides.empty() || strides.back() != 1)
     return false;
 
   // Cond 2: Strides of a contiguous memref have to match the flattened dims.

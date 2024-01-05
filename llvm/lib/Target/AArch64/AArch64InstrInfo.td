@@ -61,6 +61,9 @@ def HasLOR           : Predicate<"Subtarget->hasLOR()">,
 def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuth), "pauth">;
 
+def HasPAuthLR       : Predicate<"Subtarget->hasPAuthLR()">,
+                       AssemblerPredicateWithAll<(all_of FeaturePAuthLR), "pauth-lr">;
+
 def HasJS            : Predicate<"Subtarget->hasJS()">,
                        AssemblerPredicateWithAll<(all_of FeatureJS), "jsconv">;
 
@@ -1645,6 +1648,47 @@ let Predicates = [HasPAuth] in {
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
 }
+
+// v9.5-A pointer authentication extensions
+
+// Always accept "pacm" as an alias for "hint #39", but don't emit it when
+// disassembling if we don't have the pauth-lr feature.
+let CRm = 0b0100 in {
+  def PACM : SystemNoOperands<0b111, "hint\t#39">;
+}
+def : InstAlias<"pacm", (PACM), 0>;
+
+let Predicates = [HasPAuthLR] in {
+  let Defs = [LR], Uses = [LR, SP] in {
+    //                                opcode2, opcode,   asm
+    def PACIASPPC : SignAuthFixedRegs<0b00001, 0b101000, "paciasppc">;
+    def PACIBSPPC : SignAuthFixedRegs<0b00001, 0b101001, "pacibsppc">;
+    def PACNBIASPPC : SignAuthFixedRegs<0b00001, 0b100000, "pacnbiasppc">;
+    def PACNBIBSPPC : SignAuthFixedRegs<0b00001, 0b100001, "pacnbibsppc">;
+    //                             opc,  asm
+    def AUTIASPPCi : SignAuthPCRel<0b00, "autiasppc">;
+    def AUTIBSPPCi : SignAuthPCRel<0b01, "autibsppc">;
+    //                              opcode2, opcode,   asm
+    def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppc">;
+    def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppc">;
+    //                                  opcode2, opcode,   asm
+    def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
+    def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
+    def AUTIA171615 : SignAuthFixedRegs<0b00001, 0b101110, "autia171615">;
+    def AUTIB171615 : SignAuthFixedRegs<0b00001, 0b101111, "autib171615">;
+  }
+
+  let Uses = [LR, SP], isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+    //                                   opc,   op2,     asm
+    def RETAASPPCi : SignAuthReturnPCRel<0b000, 0b11111, "retaasppc">;
+    def RETABSPPCi : SignAuthReturnPCRel<0b001, 0b11111, "retabsppc">;
+    //                                 op3,      asm
+    def RETAASPPCr : SignAuthReturnReg<0b000010, "retaasppc">;
+    def RETABSPPCr : SignAuthReturnReg<0b000011, "retabsppc">;
+  }
+  def : InstAlias<"pacm", (PACM), 1>;
+}
+
 
 // v8.3a floating point conversion for javascript
 let Predicates = [HasJS, HasFPARMv8], Defs = [NZCV] in
@@ -6482,23 +6526,23 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 // f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, 0)))),
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, 0)))),
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if
 // the lane number is anything other than zero.
-def : Pat<(vector_extract (v2f64 V128:$Rn), 0),
+def : Pat<(f64 (vector_extract (v2f64 V128:$Rn), (i64 0))),
           (f64 (EXTRACT_SUBREG V128:$Rn, dsub))>;
-def : Pat<(vector_extract (v4f32 V128:$Rn), 0),
+def : Pat<(f32 (vector_extract (v4f32 V128:$Rn), (i64 0))),
           (f32 (EXTRACT_SUBREG V128:$Rn, ssub))>;
-def : Pat<(vector_extract (v8f16 V128:$Rn), 0),
+def : Pat<(f16 (vector_extract (v8f16 V128:$Rn), (i64 0))),
           (f16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
-def : Pat<(vector_extract (v8bf16 V128:$Rn), 0),
+def : Pat<(bf16 (vector_extract (v8bf16 V128:$Rn), (i64 0))),
           (bf16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
 
 

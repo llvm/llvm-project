@@ -478,7 +478,7 @@ end subroutine test_proc_dummy_other
 ! CHECK-DAG:         %[[VAL_3:.*]] = arith.constant false
 ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 1 : index
 ! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant 32 : i8
-! CHECK-DAG:         %[[VAL_6:.*]] = arith.constant -1 : i32
+! CHECK-DAG:         %[[VAL_6:.*]] = arith.constant 6 : i32
 ! CHECK-DAG:         %[[VAL_8:.*]] = arith.constant 10 : i64
 ! CHECK-DAG:         %[[VAL_9:.*]] = arith.constant 40 : index
 ! CHECK-DAG:         %[[VAL_10:.*]] = arith.constant 0 : index

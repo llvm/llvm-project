@@ -534,6 +534,7 @@ def SPIRV_LogicalNotOp : SPIRV_LogicalUnaryOp<"LogicalNot",
   }];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 // -----

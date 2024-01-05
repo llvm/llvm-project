@@ -4,8 +4,16 @@
 
 from typing import Callable, Optional, Sequence, Union
 
+from ....extras.meta import region_op
 from .... import ir
-from .. import AnyOpType, OperationType, NamedSequenceOp, YieldOp
+from .. import (
+    AnyOpType,
+    OperationType,
+    NamedSequenceOp,
+    YieldOp,
+    SequenceOp,
+    ApplyPatternsOp,
+)
 from .. import structured
 
 
@@ -147,3 +155,8 @@ def insert_transform_script(
 
     if dump_script:
         print(named_sequence_op)
+
+
+sequence = region_op(SequenceOp.__base__, terminator=YieldOp)
+named_sequence = region_op(NamedSequenceOp, terminator=YieldOp)
+apply_patterns = region_op(ApplyPatternsOp)

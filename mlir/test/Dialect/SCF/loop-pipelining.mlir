@@ -547,9 +547,9 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
 // -----
 
 // CHECK: @pipeline_op_with_region(%[[ARG0:.+]]: memref<?xf32>, %[[ARG1:.+]]: memref<?xf32>, %[[ARG2:.+]]: memref<?xf32>, %[[CF:.*]]: f32) {
-// CHECK:   %[[C0:.+]] = arith.constant 0 :
-// CHECK:   %[[C3:.+]] = arith.constant 3 :
-// CHECK:   %[[C1:.+]] = arith.constant 1 :
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 :
+// CHECK-DAG: %[[C3:.+]] = arith.constant 3 :
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 :
 // CHECK:   %[[APRO:.+]] = memref.alloc() :
 // CHECK:   %[[BPRO:.+]] = memref.alloc() :
 // CHECK:   %[[ASV0:.+]] = memref.subview %[[ARG0]][%[[C0]]] [8] [1] :

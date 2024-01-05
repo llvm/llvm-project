@@ -393,4 +393,3 @@ define iXLen2 @test_urem_12(iXLen2 %x) nounwind {
   %a = urem iXLen2 %x, 12
   ret iXLen2 %a
 }
-

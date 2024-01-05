@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "../../lib/Format/MatchFilePath.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -570,6 +571,69 @@ static int dumpConfig(bool IsSTDIN) {
   return 0;
 }
 
+// Check whether `FilePath` is ignored according to the nearest
+// .clang-format-ignore file based on the rules below:
+// - A blank line is skipped.
+// - Leading and trailing spaces of a line are trimmed.
+// - A line starting with a hash (`#`) is a comment.
+// - A non-comment line is a single pattern.
+// - The slash (`/`) is used as the directory separator.
+// - A pattern is relative to the directory of the .clang-format-ignore file (or
+//   the root directory if the pattern starts with a slash).
+// - A pattern is negated if it starts with a bang (`!`).
+static bool isIgnored(StringRef FilePath) {
+  using namespace llvm::sys::fs;
+  if (!is_regular_file(FilePath))
+    return false;
+
+  using namespace llvm::sys::path;
+  SmallString<128> Path, AbsPath{FilePath};
+
+  make_absolute(AbsPath);
+  remove_dots(AbsPath, /*remove_dot_dot=*/true);
+
+  StringRef IgnoreDir{AbsPath};
+  do {
+    IgnoreDir = parent_path(IgnoreDir);
+    if (IgnoreDir.empty())
+      return false;
+
+    Path = IgnoreDir;
+    append(Path, ".clang-format-ignore");
+  } while (!is_regular_file(Path));
+
+  std::ifstream IgnoreFile{Path.c_str()};
+  if (!IgnoreFile.good())
+    return false;
+
+  const auto Pathname = convert_to_slash(AbsPath);
+  for (std::string Line; std::getline(IgnoreFile, Line);) {
+    auto Pattern = StringRef(Line).trim();
+    if (Pattern.empty() || Pattern[0] == '#')
+      continue;
+
+    const bool IsNegated = Pattern[0] == '!';
+    if (IsNegated)
+      Pattern = Pattern.drop_front();
+
+    if (Pattern.empty())
+      continue;
+
+    Pattern = Pattern.ltrim();
+    if (Pattern[0] != '/') {
+      Path = convert_to_slash(IgnoreDir);
+      append(Path, Style::posix, Pattern);
+      remove_dots(Path, /*remove_dot_dot=*/true, Style::posix);
+      Pattern = Path.str();
+    }
+
+    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
+      return true;
+  }
+
+  return false;
+}
+
 int main(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
 
@@ -618,11 +682,14 @@ int main(int argc, const char **argv) {
   unsigned FileNo = 1;
   bool Error = false;
   for (const auto &FileName : FileNames) {
+    const bool IsSTDIN = FileName == "-";
+    if (!IsSTDIN && isIgnored(FileName))
+      continue;
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName, FileName == "-");
+    Error |= clang::format::format(FileName, IsSTDIN);
   }
   return Error ? 1 : 0;
 }
