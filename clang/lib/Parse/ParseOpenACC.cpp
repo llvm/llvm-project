@@ -192,6 +192,26 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
   llvm_unreachable("Unknown 'Kind' Passed");
 }
 
+/// Used for cases where we expect an identifier-like token, but don't want to
+/// give awkward error messages in cases where it is accidentially a keyword.
+bool expectIdentifierOrKeyword(Parser &P) {
+  Token Tok = P.getCurToken();
+
+  if (Tok.is(tok::identifier)) {
+    P.ConsumeToken();
+    return false;
+  }
+
+  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() &&
+      Tok.getIdentifierInfo()->isKeyword(P.getLangOpts())) {
+    P.ConsumeToken();
+    return false;
+  }
+
+  P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
+  return true;
+}
+
 OpenACCDirectiveKind
 ParseOpenACCEnterExitDataDirective(Parser &P, Token FirstTok,
                                    OpenACCDirectiveKindEx ExtDirKind) {
@@ -328,18 +348,9 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
     switch (Kind) {
     case OpenACCClauseKind::Default: {
       Token DefKindTok = P.getCurToken();
-      // 'default' accepts 'present' or 'none'. Be a little liberal here to
-      // allow things like 'auto' or 'default'.
-      // TODO ERICH: Make 'keyword like tokens' via tok::getKeywordSpelling'
-      // or 'getIdentifierInfo' isKeyword
-      if (!DefKindTok.is(tok::identifier) &&
-          (DefKindTok.isAnnotation() || !DefKindTok.getIdentifierInfo() ||
-           !DefKindTok.getIdentifierInfo()->isKeyword(P.getLangOpts()))) {
-        P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
-        break;
-      }
 
-      P.ConsumeToken();
+      if (expectIdentifierOrKeyword(P))
+        break;
 
       if (getOpenACCDefaultClauseKind(DefKindTok) ==
           OpenACCDefaultClauseKind::Invalid)
