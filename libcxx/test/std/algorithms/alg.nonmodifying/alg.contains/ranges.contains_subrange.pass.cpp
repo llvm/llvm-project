@@ -67,7 +67,7 @@ static_assert(!HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotSentine
 
 template <class Iter1, class Sent1 = Iter1, class Iter2, class Sent2 = Iter2>
 constexpr void test_iterators() {
-  {  // simple tests
+  { // simple tests
     int a[]       = {1, 2, 3, 4, 5, 6};
     int p[]       = {3, 4, 5};
     auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
@@ -158,6 +158,21 @@ constexpr void test_iterators() {
     }
   }
 
+  { // range and subrange both have zero length
+    int a[]       = {};
+    int p[]       = {};
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
+    {
+      bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
+      assert(ret);
+    }
+    {
+      bool ret = std::ranges::contains_subrange(whole, subrange);
+      assert(ret);
+    }
+  }
+
   { // range and subrange are identical
     int a[]       = {3, 4, 11, 32, 54, 2};
     int p[]       = {3, 4, 11, 32, 54, 2};
@@ -218,7 +233,7 @@ constexpr void test_iterators() {
     }
   }
 
-  { // subrange is subsequence
+  { // subrange is a subsequence
     int a[]       = {23, 1, 0, 54, 2};
     int p[]       = {1, 0, 2};
     auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
@@ -265,10 +280,12 @@ constexpr void test_iterators() {
   }
 
   { // check that the projections are used
-    int a[]        = {1, 3, 15, 1, 2, 1, 8};
-    int p[]        = {2, 1, 2};
-    auto whole     = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
-    auto subrange  = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
+    int a[]       = {1, 3, 15, 1, 2, 1, 8};
+    int p[]       = {2, 1, 2};
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
+    auto proj1    = [](int i) { return i - 3; };
+    auto proj2    = [](int i) { return i * -1; };
     {
       bool ret = std::ranges::contains_subrange(
           whole.begin(),
@@ -276,13 +293,13 @@ constexpr void test_iterators() {
           subrange.begin(),
           subrange.end(),
           {},
-          [](int i) { return i - 3; },
-          [](int i) { return i * -1; });
+          proj1,
+          proj2);
       assert(ret);
     }
     {
       bool ret = std::ranges::contains_subrange(
-          whole, subrange, {}, [](int i) { return i - 3; }, [](int i) { return i * -1; });
+          whole, subrange, {}, proj1, proj2);
       assert(ret);
     }
   }
