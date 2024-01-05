@@ -1084,13 +1084,6 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
   >;
 
   def : GCNPat <
-    (prefetch SIMM24bitPtr:$offset, timm, timm, cache_type),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type#"_PC_REL") (as_i32timm $offset), (i32 SGPR_NULL), (i8 0))
-  > {
-    let AddedComplexity = 10;
-  }
-
-  def : GCNPat <
     (smrd_prefetch (i32 SReg_32:$sbase), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type)
         (i64 (REG_SEQUENCE SReg_64, $sbase, sub0, (i32 (S_MOV_B32 (i32 0))), sub1)),

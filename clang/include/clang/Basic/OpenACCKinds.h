@@ -90,7 +90,19 @@ enum class OpenACCClauseKind {
   Vector,
   /// 'nohost' clause, allowed on 'routine' directives.
   NoHost,
+  /// 'default' clause, allowed on parallel, serial, kernel (and compound)
+  /// constructs.
+  Default,
   /// Represents an invalid clause, for the purposes of parsing.
+  Invalid,
+};
+
+enum class OpenACCDefaultClauseKind {
+  /// 'none' option.
+  None,
+  /// 'present' option.
+  Present,
+  /// Not a valid option.
   Invalid,
 };
 } // namespace clang
