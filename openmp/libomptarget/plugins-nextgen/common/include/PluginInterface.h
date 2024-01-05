@@ -324,9 +324,6 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_XTEAM_RED:
       DP("AMD-only execution mode\n");
       return true;
-    default:
-      llvm_unreachable("ExecutionMode not supported yet.");
-      return false;
     }
   }
 

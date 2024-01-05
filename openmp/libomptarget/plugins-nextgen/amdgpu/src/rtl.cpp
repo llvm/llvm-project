@@ -1485,9 +1485,6 @@ private:
   /// The manager of signals to reuse signals.
   AMDGPUSignalManagerTy &SignalManager;
 
-  /// A reference to the associated device.
-  GenericDeviceTy &Device;
-
   /// Array of stream slots. Use std::deque because it can dynamically grow
   /// without invalidating the already inserted elements. For instance, the
   /// std::vector may invalidate the elements by reallocating the internal
@@ -3776,7 +3773,7 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
 
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
     : Agent(Device.getAgent()), Queue(nullptr),
-      SignalManager(Device.getSignalManager()), Device(Device),
+      SignalManager(Device.getSignalManager()),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCHandle(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
