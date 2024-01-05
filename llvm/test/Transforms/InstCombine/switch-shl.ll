@@ -5,11 +5,11 @@ define i1 @test_switch_with_shl_mask(i32 %a) {
 ; CHECK-LABEL: define i1 @test_switch_with_shl_mask(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = shl i32 [[A]], 24
-; CHECK-NEXT:    switch i32 [[B]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:      i32 16777216, label [[SW_BB]]
-; CHECK-NEXT:      i32 -2147483648, label [[SW_BB]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    switch i8 [[TRUNC]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_BB]]
+; CHECK-NEXT:      i8 -128, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true
@@ -36,10 +36,10 @@ define i1 @test_switch_with_shl_nuw_multiuse(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 [[A]], 24
 ; CHECK-NEXT:    call void @use(i32 [[B]])
-; CHECK-NEXT:    switch i32 [[B]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:    switch i32 [[A]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:      i32 16777216, label [[SW_BB]]
-; CHECK-NEXT:      i32 -2147483648, label [[SW_BB]]
+; CHECK-NEXT:      i32 1, label [[SW_BB]]
+; CHECK-NEXT:      i32 128, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true
@@ -67,10 +67,10 @@ define i1 @test_switch_with_shl_nsw_multiuse(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = shl nsw i32 [[A]], 24
 ; CHECK-NEXT:    call void @use(i32 [[B]])
-; CHECK-NEXT:    switch i32 [[B]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:    switch i32 [[A]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:      i32 16777216, label [[SW_BB]]
-; CHECK-NEXT:      i32 -2147483648, label [[SW_BB]]
+; CHECK-NEXT:      i32 1, label [[SW_BB]]
+; CHECK-NEXT:      i32 -128, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true
