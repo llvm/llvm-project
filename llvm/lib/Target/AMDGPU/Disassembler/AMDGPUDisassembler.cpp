@@ -247,6 +247,7 @@ DECODE_OPERAND_SRC_REG_A9(AGPR_32, OPW32)
 DECODE_SRC_OPERAND_REG_AV10(AV_32, OPW32)
 DECODE_SRC_OPERAND_REG_AV10(AV_64, OPW64)
 DECODE_SRC_OPERAND_REG_AV10(AV_128, OPW128)
+DECODE_SRC_OPERAND_REG_AV10(AV_256, OPW256)
 
 // Decoders for register or immediate RegisterOperands that use 9-bit Src
 // encoding: 'decodeOperand_<RegClass>_Imm<ImmWidth>'.

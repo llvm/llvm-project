@@ -222,6 +222,15 @@ define amdgpu_kernel void @mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x bfloa
   ret void
 }
 
+declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32>, <8 x i32>, <4 x float>, i32 immarg, i32 immarg, i32 immarg,
+                                                                   i32 immarg, i32, i32 immarg, i32)
+
+; CHECK: DIVERGENT:   %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
+define amdgpu_kernel void @mfma_f32_16x16x128_f8f6f4_scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3, i32 %arg4, ptr addrspace(1) %out) {
+  %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x128.f8f6f4.scaled(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 immarg 0, i32 %arg3, i32 immarg 0, i32 %arg4)
+  store <4 x float> %result, ptr addrspace(1) %out
+  ret void
+}
 
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1

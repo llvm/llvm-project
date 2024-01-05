@@ -637,14 +637,27 @@ def VOPProfileMAI_F32_V8F16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8F16_V8F16_V16F3
 def VOPProfileMAI_F32_V8BF16_X16     : VOPProfileMAI<VOP_V16F32_V8BF16_V8BF16_V16F32,     AISrc_512_f32,  ADst_512, AVSrc_128>;
 def VOPProfileMAI_F32_V8BF16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8BF16_V8BF16_V16F32,     VISrc_512_f32,  VDst_512, AVSrc_128>;
 
+// For f32_16x16x128_f8f6f4
+def VOPProfileMAI_F32_V8I32_X128     : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    AISrc_128_f32,  ADst_128, AVSrc_256>;
+def VOPProfileMAI_F32_V8I32_X128_VCD : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    VISrc_128_f32,  VDst_128, AVSrc_256>;
+
 class MFMATable <bit is_mac, string Name> {
   bit IsMac = is_mac;
   string FMAOp = Name;
 }
 
-class MAIFrag<SDPatternOperator Op, code pred> : PatFrag <
-  (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$abid, node:$blgp),
-  (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
+class ScaledMFMATable <bit is_scaled, string Name> {
+  bit IsScaled = is_scaled;
+  string UnscaledMFMAOp = Name;
+}
+
+class MAIFrag<SDPatternOperator Op, code pred, bit Scaled = false> : PatFrag <
+  !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$abid, node:$blgp,
+                     node:$ld_scale_src0_opsel, node:$ld_scale_src0,
+                     node:$ld_scale_src1_opsel, node:$ld_scale_src1),
+              (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$abid, node:$blgp)),
+  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp, $ld_scale_src0_opsel, $ld_scale_src0, $ld_scale_src1_opsel, $ld_scale_src1),
+              (Op $src0, $src1, $src2, $cbsz, $abid, $blgp)),
   pred
 >;
 
@@ -664,11 +677,11 @@ defvar MayNotNeedAGPRs_gisel = [{
   return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
 }];
 
-class AgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNeedAGPRs> {
+class AgprMAIFrag<SDPatternOperator Op, bit Scaled = false> : MAIFrag<Op, MayNeedAGPRs, Scaled> {
   let GISelPredicateCode = MayNeedAGPRs_gisel;
 }
 
-class VgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNotNeedAGPRs> {
+class VgprMAIFrag<SDPatternOperator Op, bit Scaled = false> : MAIFrag<Op, MayNotNeedAGPRs, Scaled> {
   let GISelPredicateCode = MayNotNeedAGPRs_gisel;
 }
 
@@ -681,26 +694,43 @@ let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
   } // End isMoveImm = 1
 } // End isAsCheapAsAMove = 1, isReMaterializable = 1
 
-class MAIInst<string OpName, VOPProfile P, SDPatternOperator node>
-  : VOP3InstBase<OpName, P, node> {
+class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = false>
+  : VOP3InstBase<OpName, P, node, /*IsVOP2=*/0, Scaled> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_dgemm = 0;
   bit is_gfx940_xdl = 0;
 }
 
-multiclass MAIInst<string OpName, string P, SDPatternOperator node,
-                   bit NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap> {
+class ScaledMAIPseudoInst<MAIInst BaseInst, SDPatternOperator node> :
+  MAIInst<BaseInst.Mnemonic, BaseInst.Pfl, node, /*Scaled=*/true> {
+  // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
+  let InOperandList = !con(BaseInst.InOperandList,
+    (ins PackedI16InputMods:$ld_scale_src0_opsel,
+         VSrc_b32:$ld_scale_src0,
+         PackedI16InputMods:$ld_scale_src1_opsel,
+         VSrc_b32:$ld_scale_src1));
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let FixedSize = 1;
+  let Size = 16;
+}
+
+multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
+                   bit NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap,
+                   bit Scaled = false> {
   let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node>)>,
-                 MFMATable<0, NAME # "_e64">;
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, Scaled>), Scaled>,
+                 MFMATable<0, NAME # "_e64">,
+                 ScaledMFMATable<Scaled, NAME # "_e64">;
 
       let SubtargetPredicate = isGFX90APlus, Mnemonic = OpName in
       def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node>)>,
-                        MFMATable<0, NAME # "_vgprcd_e64">;
+                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, Scaled>), Scaled>,
+                        MFMATable<0, NAME # "_vgprcd_e64">,
+                        ScaledMFMATable<0, NAME # "_vgprcd_e64">;
     }
 
     if NoDstOverlap then {
@@ -708,16 +738,49 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
         def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node>)>,
-                         MFMATable<1, NAME # "_e64">;
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, Scaled>), Scaled>,
+                         MFMATable<1, NAME # "_e64">,
+                         ScaledMFMATable<Scaled, NAME # "_mac_e64">;
 
         let SubtargetPredicate = isGFX90APlus in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node>)>,
-                              MFMATable<1, NAME # "_vgprcd_e64">;
+                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, Scaled>), Scaled>,
+                              MFMATable<1, NAME # "_vgprcd_e64">,
+                              ScaledMFMATable<Scaled, NAME # "_mac_vgprcd_e64">;
       }
     }
   } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
+}
+
+// Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
+multiclass ScaledMAIInst_mc<string OpName, SDPatternOperator node> {
+  defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(NAME#"_e64").Pfl).NoDstOverlap;
+
+  def _e64_scaled : ScaledMAIPseudoInst<
+        !cast<MAIInst>(NAME#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, true>)>,
+      MFMATable<0, NAME # "_e64_scaled">,
+      ScaledMFMATable<true, NAME # "_e64">;
+
+  def _vgprcd_e64_scaled : ScaledMAIPseudoInst<
+          !cast<MAIInst>(NAME#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, true>)>,
+        MFMATable<0, NAME # "_vgprcd_e64_scaled">,
+        ScaledMFMATable<true, NAME # "_vgprcd_e64">;
+
+ if NoDstOverlap then {
+   let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
+       isConvertibleToThreeAddress = NoDstOverlap,
+       Mnemonic = OpName in {
+     def "_mac_e64_scaled" : ScaledMAIPseudoInst<
+          !cast<MAIInst>(NAME # "_mac_e64"), AgprMAIFrag<node, true>>,
+        MFMATable<1, NAME # "_e64_scaled">,
+        ScaledMFMATable<true, NAME # "_mac_e64">;
+
+     def "_mac_vgprcd_e64_scaled" : ScaledMAIPseudoInst<
+          !cast<MAIInst>(NAME # "_mac_vgprcd_e64"), VgprMAIFrag<node, true>>,
+        MFMATable<1, NAME # "_vgprcd_e64_scaled">,
+        ScaledMFMATable<true, NAME # "_mac_vgprcd_e64">;
+    }
+  }
 }
 
 defm V_MFMA_F32_4X4X1F32    : MAIInst<"v_mfma_f32_4x4x1f32",    "F32_F32_X4",    int_amdgcn_mfma_f32_4x4x1f32>;
@@ -753,6 +816,9 @@ let SubtargetPredicate = HasGFX950Insts, is_gfx940_xdl = 1 in {
 defm V_MFMA_F32_16X16X32_F16   : MAIInst<"v_mfma_f32_16x16x32f16",    "F32_V8F16_X32", int_amdgcn_mfma_f32_16x16x32_f16>;
 defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
 defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF16_X16", int_amdgcn_mfma_f32_32x32x16_bf16>;
+
+defm V_MFMA_F32_16X16X128_F8F6F4  : MAIInst<"v_mfma_f32_16x16x128f8f6f4", "F32_V8I32_X128">;
+defm V_MFMA_F32_16X16X128_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_16X16X128_F8F6F4", int_amdgcn_mfma_f32_16x16x128_f8f6f4_scaled>;
 }
 
 let SubtargetPredicate = HasGFX950Insts in {
@@ -1807,6 +1873,8 @@ defm V_MFMA_F64_4X4X4F64        : VOP3P_Real_MFMA_gfx90a <0x6f>;
 defm V_MFMA_F32_16X16X32_F16     : VOP3P_Real_MFMA_gfx950 <0x54, "v_mfma_f32_16x16x32_f16">;
 defm V_MFMA_F32_32X32X16_F16     : VOP3P_Real_MFMA_gfx950 <0x55, "v_mfma_f32_32x32x16_f16">;
 defm V_MFMA_F32_32X32X16_BF16    : VOP3P_Real_MFMA_gfx950 <0x37, "v_mfma_f32_32x32x16_bf16">;
+
+defm V_MFMA_F32_16X16X128_F8F6F4 : VOP3P_Real_MFMA_gfx950 <0x2d, "v_mfma_f32_16x16x128_f8f6f4">;
 
 let SubtargetPredicate = HasGFX950Insts in {
 defm V_MFMA_LD_SCALE_B32 : VOP3P_Real_vi <0x2c>;

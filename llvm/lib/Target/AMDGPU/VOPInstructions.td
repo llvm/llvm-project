@@ -1238,6 +1238,25 @@ class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
                                             timm:$cbsz, timm:$abid))]);
 }
 
+class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
+  list<dag> ret = !if(!eq(P.Src0VT, P.Src1VT),
+                      // mfma
+                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
+                                            timm:$cbsz, timm:$abid, timm:$blgp,
+                                            MFMALdScaleModifierOp:$ld_scale_src0_opsel,
+                                            i32:$ld_scale_src0,
+                                            MFMALdScaleModifierOp:$ld_scale_src1_opsel,
+                                            i32:$ld_scale_src1
+                                            ))],
+                      // smfmac
+                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
+                                            timm:$cbsz, timm:$abid,
+                                            MFMALdScaleModifierOp:$ld_scale_src0_opsel,
+                                            i32:$ld_scale_src0,
+                                            MFMALdScaleModifierOp:$ld_scale_src1_opsel,
+                                            i32:$ld_scale_src1))]);
+}
+
 class VOP3Features<bit Clamp, bit OpSel, bit Packed, bit MAI> {
   bit HasClamp = Clamp;
   bit HasOpSel = OpSel;
@@ -1277,7 +1296,7 @@ multiclass VOP3Inst_Pseudo_Wrapper<string opName, VOPProfile P, list<dag> patter
     def _e64 : VOP3_Pseudo<opName, P, pattern, VOP3Only>;
 }
 
-class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit IsVOP2 = 0> :
+class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit IsVOP2 = 0, bit MAIScaled = false> :
   VOP3_Pseudo<OpName, P,
     !if(P.HasOpSel,
         !if(P.HasModifiers,
@@ -1290,7 +1309,7 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
               !if(P.HasIntClamp,
                   getVOP3ClampPat<P, node>.ret,
                   !if (P.IsMAI,
-                      getVOP3MAIPat<P, node>.ret,
+                      !if(MAIScaled, getVOP3MAIScaledPat<P, node>.ret, getVOP3MAIPat<P, node>.ret),
                       getVOP3Pat<P, node>.ret))))),
     0, P.HasOpSel> {
 
