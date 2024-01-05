@@ -98,11 +98,11 @@ enum class OpenACCClauseKind {
 };
 
 enum class OpenACCDefaultClauseKind {
-  // 'none' option.
+  /// 'none' option.
   None,
-  // 'present' option.
+  /// 'present' option.
   Present,
-  // Not a valid option.
+  /// Not a valid option.
   Invalid,
 };
 } // namespace clang
