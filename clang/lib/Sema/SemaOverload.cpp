@@ -5680,8 +5680,11 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
   // [class.dtor]p2: A destructor can be invoked for a const, volatile or
   //                 const volatile object.
+  // Also, a static operator can be invoked for a const, volatile or const
+  // volatile object, apparently.
+  bool IsStaticOperator = Method->getDeclName().getCXXOverloadedOperator() != OO_None && Method->isStatic();
   Qualifiers Quals = Method->getMethodQualifiers();
-  if (isa<CXXDestructorDecl>(Method)) {
+  if (isa<CXXDestructorDecl>(Method) || IsStaticOperator) {
     Quals.addConst();
     Quals.addVolatile();
   }
