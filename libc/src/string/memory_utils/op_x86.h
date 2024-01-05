@@ -129,7 +129,8 @@ LIBC_INLINE __m128i bytewise_reverse(__m128i value) {
                                               8, 9, 10, 11, 12, 13, 14, 15));
 }
 LIBC_INLINE uint16_t big_endian_cmp_mask(__m128i max, __m128i value) {
-  return static_cast<uint16_t>(_mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
+  return static_cast<uint16_t>(
+      _mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
 }
 template <> LIBC_INLINE bool eq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m128i>(p1, offset);
@@ -181,11 +182,31 @@ LIBC_INLINE __m256i bytewise_max(__m256i a, __m256i b) {
   return _mm256_max_epu8(a, b);
 }
 LIBC_INLINE __m256i bytewise_reverse(__m256i value) {
-  return _mm256_shuffle_epi8(value,
-                             _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
-                                             8, 9, 10, 11, 12, 13, 14, 15,   //
-                                             16, 17, 18, 19, 20, 21, 22, 23, //
-                                             24, 25, 26, 27, 28, 29, 30, 31));
+  const __m256i indices = _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
+                                          8, 9, 10, 11, 12, 13, 14, 15,   //
+                                          16, 17, 18, 19, 20, 21, 22, 23, //
+                                          24, 25, 26, 27, 28, 29, 30, 31);
+#if defined(__AVX512VBMI__) && defined(__AVX512VL__)
+  // AVX512 allows full __m256i byte permutation.
+  // ymm = ymm[31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,
+  //           15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+  return _mm256_permutexvar_epi8(value, indices);
+#else
+  // We can't byte-reverse __m256i in a single instruction with AVX2.
+  // '_mm256_shuffle_epi8' can only shuffle within each xmm lane
+  // leading to:
+  // ymm = ymm[15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+  //           31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16]
+  const __m256i tmp = _mm256_shuffle_epi8(value, indices);
+  // Then we shuffle accross lanes using 64 bit values.
+  // ymm = ymm[2,3,0,1]
+  // Leading to a fully reversed vector
+  // ymm = ymm[31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,
+  //           15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+  // The immediate encodes the 64 bit word indices  :    1, 0, 3, 2.
+  // Each index is encoded with 2 bits              : 0b01'00'11'10.
+  return _mm256_permute4x64_epi64(tmp, 0b01'00'11'10);
+#endif
 }
 LIBC_INLINE uint32_t big_endian_cmp_mask(__m256i max, __m256i value) {
   return _mm256_movemask_epi8(bytewise_reverse(_mm256_cmpeq_epi8(max, value)));
