@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1780,6 +1781,7 @@ void SparseTensorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
       >();
+  declarePromisedInterface<SparseTensorDialect, TransformDialectExtension>();
 }
 
 #define GET_OP_CLASSES

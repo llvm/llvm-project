@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -45,4 +46,5 @@ void TensorDialect::initialize() {
 #include "mlir/Dialect/Tensor/IR/TensorOps.cpp.inc"
       >();
   addInterfaces<TensorInlinerInterface>();
+  declarePromisedInterface<TensorDialect, TransformDialectExtension>();
 }

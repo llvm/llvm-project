@@ -67,6 +67,7 @@ void transform::TransformDialect::initialize() {
       >();
   initializeTypes();
   initializeLibraryModule();
+  declarePromisedInterface<TransformDialect, TransformDialectExtension>();
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {

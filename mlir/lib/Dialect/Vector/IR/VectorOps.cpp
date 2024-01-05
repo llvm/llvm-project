@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -374,6 +375,7 @@ void VectorDialect::initialize() {
       >();
 
   addInterfaces<VectorInlinerInterface>();
+  declarePromisedInterface<VectorDialect, TransformDialectExtension>();
 }
 
 /// Materialize a single constant operation from a given attribute value with

@@ -13,6 +13,7 @@
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -45,6 +46,7 @@ void nvgpu::NVGPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
       >();
+  declarePromisedInterface<NVGPUDialect, TransformDialectExtension>();
 }
 
 bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
