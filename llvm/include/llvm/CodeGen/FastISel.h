@@ -319,6 +319,8 @@ public:
   /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
 
+  /// Target-independent lowering of non-instruction debug info associated with
+  /// this instruction.
   void handleDbgInfo(const Instruction *II);
 
 protected:
@@ -343,18 +345,6 @@ protected:
   /// This method is called by target-independent code to do target-
   /// specific intrinsic lowering. It returns true if it was successful.
   virtual bool fastLowerIntrinsicCall(const IntrinsicInst *II);
-
-  /// This method is called by target-independent code to do target-specific
-  /// lowering of debug information. It returns false if the debug information
-  /// couldn't be lowered and was instead discarded.
-  virtual bool lowerDbgValue(const Value *V, DIExpression *Expr,
-                             DILocalVariable *Var, const DebugLoc &DL);
-
-  /// This method is called by target-independent code to do target-specific
-  /// lowering of debug information. It returns false if the debug information
-  /// couldn't be lowered and was instead discarded.
-  virtual bool lowerDbgDeclare(const Value *V, DIExpression *Expr,
-                               DILocalVariable *Var, const DebugLoc &DL);
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type and opcode be emitted.
@@ -531,6 +521,16 @@ protected:
     // TODO: Implement PGSO.
     return MF->getFunction().hasOptSize();
   }
+
+  /// Target-independent lowering of debug information. Returns false if the
+  /// debug information couldn't be lowered and was instead discarded.
+  virtual bool lowerDbgValue(const Value *V, DIExpression *Expr,
+                             DILocalVariable *Var, const DebugLoc &DL);
+
+  /// Target-independent lowering of debug information. Returns false if the
+  /// debug information couldn't be lowered and was instead discarded.
+  virtual bool lowerDbgDeclare(const Value *V, DIExpression *Expr,
+                               DILocalVariable *Var, const DebugLoc &DL);
 
 private:
   /// Handle PHI nodes in successor blocks.
