@@ -102,6 +102,10 @@ Co<int> lambda_captures() {
   int res = co_await [a](int x, const int& y) -> Co<int> {
     co_return x + y + a;
   }(1, a);
+  // Lambda object on stack should be fine.
+  auto lamb2 = [a]() -> Co<int> { co_return a; };
+  auto on_stack = lamb2();
+  auto res2 = co_await on_stack;
   co_return 1;
 }
 } // namespace lambdas
@@ -111,7 +115,7 @@ Co<int> lambda_captures() {
 // =============================================================================
 namespace member_coroutines{
 struct S {
-  Co<int> member(const int& a) { co_return a; }  
+  Co<int> member(const int& a) { co_return a; }
 };
 
 Co<int> use() {
@@ -128,6 +132,15 @@ Co<int> use() {
   return s.member(a); // expected-warning {{address of stack memory}}
 }
 } // member_coroutines
+
+// =============================================================================
+// Safe usage when parameters are value
+// =============================================================================
+namespace by_value {
+Co<int> value_coro(int b) { co_return co_await foo_coro(b); }
+[[clang::coro_wrapper]] Co<int> wrapper1(int b) { return value_coro(b); }
+[[clang::coro_wrapper]] Co<int> wrapper2(const int& b) { return value_coro(b); }
+} // namespace by_value
 
 // =============================================================================
 // Lifetime bound but not a Coroutine Return Type: No analysis.
@@ -158,7 +171,7 @@ CoNoCRT<int> bar(int a) {
 namespace disable_lifetimebound {
 Co<int> foo(int x) {  co_return x; }
 
-[[clang::coro_wrapper, clang::coro_disable_lifetimebound]] 
+[[clang::coro_wrapper, clang::coro_disable_lifetimebound]]
 Co<int> foo_wrapper(const int& x) { return foo(x); }
 
 [[clang::coro_wrapper]] Co<int> caller() {

@@ -7586,8 +7586,8 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
 
   if (ObjectArg) {
     bool CheckCoroObjArg = CheckCoroCall;
-    // Ignore `__promise.get_return_object()` as it not lifetimebound.
-    if (Callee->getDeclName().isIdentifier() &&
+    // Ignore `__promise.get_return_object()` as it is not lifetimebound.
+    if (CheckCoroObjArg && Callee->getDeclName().isIdentifier() &&
         Callee->getName() == "get_return_object")
       CheckCoroObjArg = false;
     // Coroutine lambda objects with empty capture list are not lifetimebound.
