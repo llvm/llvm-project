@@ -11,22 +11,25 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
-// template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
-//     requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
-//     constexpr bool ranges::contains(I first, S last, const T& value, Proj proj = {});       // since C++23
+// template<forward_iterator I1, sentinel_for<I1> S1,
+//          forward_iterator I2, sentinel_for<I2> S2, class Proj = identity>
+//     requires indirectly_comparable<I1, I2, Pred, Proj1, Proj2>
+//     constexpr bool ranges::contains_subrange(I1 first1, S1 last1, I2 first2, S2 last2,
+//                                     Pred pred = {}, Proj1 proj1 = {}, Proj2 proj2 = {});       // since C++23
 
-// template<input_range R, class T, class Proj = identity>
-//     requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<R>, Proj>, const T*>
-//     constexpr bool ranges::contains(R&& r, const T& value, Proj proj = {});                 // since C++23
+// template<forward_range R1, forward_range R2,
+//          class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
+//     requires indirectly_comparable<iterator_t<R1>, iterator_t<R2>, Pred, Proj1, Proj2>
+//     constexpr bool ranges::contains_subrange(R1&& r1, R2&& r2, Pred pred = {},
+//                                              Proj1 proj1 = {}, Proj2 proj2 = {});                 // since C++23
 
 #include <algorithm>
-#include <array>
 #include <cassert>
+#include <concepts>
 #include <ranges>
-#include <vector>
+#include <utility>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 struct NotEqualityComparable {};
@@ -67,15 +70,15 @@ constexpr void test_iterators() {
   {  // simple tests
     int a[]       = {1, 2, 3, 4, 5, 6};
     int p[]       = {3, 4, 5};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 6)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
-      [[maybe_unused]] std::same_as<bool> decltype(auto) ret =
+      std::same_as<bool> decltype(auto) ret =
           std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(ret);
     }
     {
-      [[maybe_unused]] std::same_as<bool> decltype(auto) ret = std::ranges::contains_subrange(whole, subrange);
+      std::same_as<bool> decltype(auto) ret = std::ranges::contains_subrange(whole, subrange);
       assert(ret);
     }
   }
@@ -83,8 +86,8 @@ constexpr void test_iterators() {
   { // no match
     int a[]       = {1, 2, 3, 4, 5, 6};
     int p[]       = {3, 4, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 6)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(!ret);
@@ -98,8 +101,8 @@ constexpr void test_iterators() {
   { // range consists of just one element
     int a[]       = {3};
     int p[]       = {3, 4, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 1)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(!ret);
@@ -113,8 +116,8 @@ constexpr void test_iterators() {
   { // subrange consists of just one element
     int a[]       = {23, 1, 20, 3, 54, 2};
     int p[]       = {3};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 6)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 1)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(ret);
@@ -129,7 +132,7 @@ constexpr void test_iterators() {
     int a[]       = {};
     int p[]       = {3, 4, 2};
     auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(!ret);
@@ -143,7 +146,7 @@ constexpr void test_iterators() {
   { // subrange has zero length
     int a[]       = {3, 4, 2};
     int p[]       = {};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
     auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
@@ -158,8 +161,8 @@ constexpr void test_iterators() {
   { // range and subrange are identical
     int a[]       = {3, 4, 11, 32, 54, 2};
     int p[]       = {3, 4, 11, 32, 54, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 6)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 6)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(ret);
@@ -173,8 +176,8 @@ constexpr void test_iterators() {
   { // subrange is longer than range
     int a[]       = {3, 4, 2};
     int p[]       = {23, 3, 4, 2, 11, 32, 54, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 3)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 8)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(!ret);
@@ -188,8 +191,8 @@ constexpr void test_iterators() {
   { // subrange is subsequence
     int a[]       = {23, 1, 0, 54, 2};
     int p[]       = {1, 0, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 5)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(!ret);
@@ -203,8 +206,8 @@ constexpr void test_iterators() {
   { // repeated subrange
     int a[]       = {23, 1, 0, 2, 54, 1, 0, 2, 23, 33};
     int p[]       = {1, 0, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 10)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(ret);
@@ -219,8 +222,8 @@ constexpr void test_iterators() {
     int a[]       = {23, 81, 61, 0, 42, 25, 1, 2, 1, 29, 2};
     int p[]       = {-1, -2, -1};
     auto pred     = [](int l, int r) { return l * -1 == r; };
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 11)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end(), pred);
       assert(ret);
@@ -234,8 +237,8 @@ constexpr void test_iterators() {
   { // check that the projections are used
     int a[]        = {1, 3, 15, 1, 2, 1, 8};
     int p[]        = {2, 1, 2};
-    auto whole     = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 7)));
-    auto subrange  = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole     = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange  = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(
           whole.begin(),
@@ -261,36 +264,22 @@ constexpr void test_iterators() {
 #pragma clang diagnostic ignored "-Wunused-result"
     int a[]       = {1, 9, 0, 13, 25};
     int p[]       = {1, 9, 0};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 5)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     std::ranges::contains_subrange(whole, subrange);
 #pragma clang diagnostic pop
   }
 }
 
-template <class Iter1, class Sent1 = Iter1>
-constexpr void test_iterators2() {
-  test_iterators<Iter1, Sent1, forward_iterator<int*>>();
-  test_iterators<Iter1, Sent1, forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>();
-  test_iterators<Iter1, Sent1, bidirectional_iterator<int*>>();
-  test_iterators<Iter1, Sent1, bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>();
-  test_iterators<Iter1, Sent1, random_access_iterator<int*>>();
-  test_iterators<Iter1, Sent1, random_access_iterator<int*>, sized_sentinel<random_access_iterator<int*>>>();
-  test_iterators<Iter1, Sent1, contiguous_iterator<int*>>();
-  test_iterators<Iter1, Sent1, contiguous_iterator<int*>, sized_sentinel<contiguous_iterator<int*>>>();
-  test_iterators<Iter1, Sent1, int*>();
-}
-
 constexpr bool test() {
-  test_iterators2<forward_iterator<int*>>();
-  test_iterators2<forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>();
-  test_iterators2<bidirectional_iterator<int*>>();
-  test_iterators2<bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>();
-  test_iterators2<random_access_iterator<int*>>();
-  test_iterators2<random_access_iterator<int*>, sized_sentinel<random_access_iterator<int*>>>();
-  test_iterators2<contiguous_iterator<int*>>();
-  test_iterators2<contiguous_iterator<int*>, sized_sentinel<contiguous_iterator<int*>>>();
-  test_iterators2<int*>();
+  types::for_each(types::forward_iterator_list<int*>{}, []<class Iter1> {
+    types::for_each(types::forward_iterator_list<int*>{}, []<class Iter2> {
+      test_iterators<Iter1, Iter1, Iter2, Iter2>();
+      test_iterators<Iter1, Iter1, Iter2, sized_sentinel<Iter2>>();
+      test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, Iter2>();
+      test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, sized_sentinel<Iter2>>();
+    });
+  });
 
   return true;
 }
