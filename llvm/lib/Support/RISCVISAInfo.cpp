@@ -469,31 +469,29 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
 std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
                                                   bool IgnoreUnknown) const {
   std::vector<std::string> Features;
-  for (auto const &Ext : Exts) {
-    StringRef ExtName = Ext.first;
-
+  for (const auto &[ExtName, _] : Exts) {
     if (ExtName == "i") // i is not recognized in clang -cc1
       continue;
     if (IgnoreUnknown && !isSupportedExtension(ExtName))
       continue;
 
     if (isExperimentalExtension(ExtName)) {
-      Features.push_back("+experimental-" + std::string(ExtName));
+      Features.push_back((llvm::Twine("+experimental-") + ExtName).str());
     } else {
-      Features.push_back("+" + std::string(ExtName));
+      Features.push_back((llvm::Twine("+") + ExtName).str());
     }
   }
   if (AddAllExtensions) {
     for (const RISCVSupportedExtension &Ext : SupportedExtensions) {
       if (Exts.count(Ext.Name))
         continue;
-      Features.push_back("-" + std::string(Ext.Name));
+      Features.push_back((llvm::Twine("-") + Ext.Name).str());
     }
 
     for (const RISCVSupportedExtension &Ext : SupportedExperimentalExtensions) {
       if (Exts.count(Ext.Name))
         continue;
-      Features.push_back("-experimental-" + std::string(Ext.Name));
+      Features.push_back((llvm::Twine("-experimental-") + Ext.Name).str());
     }
   }
   return Features;
