@@ -646,15 +646,25 @@ class LLVMConfig(object):
             self.add_tool_substitutions(tool_substitutions)
             self.config.substitutions.append(("%resource_dir", builtin_include_dir))
 
-        self.config.substitutions.append(
-            (
-                "%itanium_abi_triple",
-                self.make_itanium_abi_triple(self.config.target_triple),
+        # There will be no default target triple if one was not specifically
+        # set, and the host's architecture is not an enabled target.
+        if self.config.target_triple:
+            self.config.substitutions.append(
+                (
+                    "%itanium_abi_triple",
+                    self.make_itanium_abi_triple(self.config.target_triple),
+                )
             )
-        )
-        self.config.substitutions.append(
-            ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
-        )
+            self.config.substitutions.append(
+                ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
+            )
+        else:
+            if not self.lit_config.quiet:
+                self.lit_config.note(
+                    "No default target triple was found, some tests may fail as a result."
+                )
+            self.config.substitutions.append(("%itanium_abi_triple", ""))
+            self.config.substitutions.append(("%ms_abi_triple", ""))
 
         # The host triple might not be set, at least if we're compiling clang
         # from an already installed llvm.

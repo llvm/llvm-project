@@ -357,6 +357,7 @@ Attribute Changes in Clang
 - Clang now introduced ``[[clang::coro_lifetimebound]]`` attribute.
   All parameters of a function are considered to be lifetime bound if the function
   returns a type annotated with ``[[clang::coro_lifetimebound]]`` and ``[[clang::coro_return_type]]``.
+  This analysis can be disabled for a function by annotating the function with ``[[clang::coro_disable_lifetimebound]]``.
 
 Improvements to Clang's diagnostics
 -----------------------------------
