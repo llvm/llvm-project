@@ -1170,10 +1170,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     APInt DemandedElts;
-    if (AMDGPU::isGFX12Plus(*ST))
+    if (ST->hasDefaultComponentBroadcast())
       DemandedElts = defaultComponentBroadcast(II.getArgOperand(0));
-    else
+    else if (ST->hasDefaultComponentZero())
       DemandedElts = trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    else
+      break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
     if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
