@@ -100,8 +100,11 @@ static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
 /// works when \p I is a call to vectorized intrinsic or the frem instruction.
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                                     Instruction &I) {
+  // At the moment VFABI assumes the return type is always widened unless it is
+  // a void type.
   auto *VTy = dyn_cast<VectorType>(I.getType());
   ElementCount EC(VTy ? VTy->getElementCount() : ElementCount::getFixed(0));
+
   // Compute the argument types of the corresponding scalar call and the scalar
   // function name. For calls, it additionally finds the function to replace
   // and checks that all vector operands match the previously found EC.
