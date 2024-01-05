@@ -20842,6 +20842,12 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
       "};",
       Style);
 
+  verifyNoCrash("Foo f[] = {\n"
+                "    [0] = { 1, },\n"
+                "    [1] { 1, },\n"
+                "};",
+                Style);
+
   verifyFormat("return GradForUnaryCwise(g, {\n"
                "                                {{\"sign\"}, \"Sign\",  "
                "  {\"x\", \"dy\"}},\n"
