@@ -28,7 +28,7 @@ public:
     long double result = LIBC_NAMESPACE::nanl(input_str);
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(bits);
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
+    EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
   };
 };
 
