@@ -26,22 +26,23 @@ def TruePredicate : Predicate<"true">;
 // R16-R31 and make them allocatable only when the feature EGPR is available.
 //
 // Besides, some instructions in legacy space with map 2/3 and VEX space are
-// promoted into EVEX space. Encoding space changes and opcode, opcode map may
-// change after the promotion. For these instructions, we add new entries in TD
-// to avoid overcomplicating the assembler and disassembler.
+// promoted into EVEX space. Encoding space will definitely change, opcode and
+// opcode map may change after the promotion. For these instructions, we add new
+// entries in TD to avoid overcomplicating the assembler and disassembler.
 //
-// HasEGPR is for the new entries and NoEGPR is for the entries before promotion,
-// so that the promoted variant can be selected first to benefit RA.
+// HasEGPR is for the new entries and NoEGPR is for the entries before
+// promotion, so that the promoted variant can be selected first to benefit RA.
 def HasEGPR      : Predicate<"Subtarget->hasEGPR()">;
 def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
+
 // APX extends some instructions with a new form that has an extra register
 // operand called a new data destination (NDD). In such forms, NDD is the new
 // destination register receiving the result of the computation and all other
 // operands (including the original destination operand) become read-only source
 // operands.
 //
-// HasNDD is for the new NDD entries and NoNDD is fo the legacy 2-address entries,
-// so that the NDD variant can be selected first to benefit RA.
+// HasNDD is for the new NDD entries and NoNDD is for the legacy 2-address
+// entries, so that the NDD variant can be selected first to benefit RA.
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
