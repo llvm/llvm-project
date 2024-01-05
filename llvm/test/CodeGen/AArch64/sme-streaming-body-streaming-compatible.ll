@@ -5,8 +5,8 @@ declare void @normal_callee();
 declare void @streaming_callee() "aarch64_pstate_sm_enabled";
 declare void @streaming_compatible_callee() "aarch64_pstate_sm_compatible";
 
-define float @sm_body_sm_compatible_caller_simple() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
-; CHECK-LABEL: sm_body_sm_compatible_caller_simple:
+define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+; CHECK-LABEL: sm_body_sm_compatible_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
