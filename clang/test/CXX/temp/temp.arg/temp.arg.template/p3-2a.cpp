@@ -68,6 +68,8 @@ concept True = true;
 template<typename T>
 concept False = false; // #False
 
+template <class> struct S {};
+
 template<template<True T> typename Wrapper>
 using Test = Wrapper<int>;
 
@@ -77,10 +79,12 @@ using Test = Wrapper<int>; // expected-error {{constraints not satisfied for tem
 // expected-note@#TTP-Wrapper {{'int' does not satisfy 'False'}}
 // expected-note@#False {{evaluated to false}}
 
-template <template<False> typename T> // #TTP-foo
-void foo(T<int>); // expected-error {{constraints not satisfied for template template parameter 'T' [with $0 = int]}}
+template <typename U, template<False> typename T>
+void foo(T<U>); // #foo
 
-// expected-note@#TTP-foo {{'int' does not satisfy 'False'}}
-// expected-note@#False {{evaluated to false}}
+void bar() {
+  foo<int>(S<int>{}); // expected-error {{no matching function for call to 'foo'}}
+  // expected-note@#foo {{substitution failure [with U = int]: constraints not satisfied for template template parameter 'T' [with $0 = int]}}
+}
 
 }
