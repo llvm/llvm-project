@@ -274,25 +274,22 @@ static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
 }
 
 static bool FrameIsInternal(const SymbolizedStack *frame) {
-  if (frame == 0)
-    return false;
+  if (!frame)
+    return true;
   const char *file = frame->info.file;
   const char *module = frame->info.module;
-  if (file != 0 &&
-      (internal_strstr(file, "tsan_interceptors_posix.cpp") ||
-       internal_strstr(file, "tsan_interceptors_memintrinsics.cpp") ||
-       internal_strstr(file, "sanitizer_common_interceptors.inc") ||
-       internal_strstr(file, "tsan_interface_")))
+  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
     return true;
-  if (module != 0 && (internal_strstr(module, "libclang_rt.tsan_")))
+  if (module && (internal_strstr(module, "libclang_rt.")))
     return true;
   return false;
 }
 
 static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
-  while (FrameIsInternal(frames) && frames->next)
-    frames = frames->next;
-  return frames;
+  for (SymbolizedStack *f = frames; f; f = f->next)
+    if (!FrameIsInternal(f))
+      return f;
+  return frames;  // Fallback to the top frame.
 }
 
 void PrintReport(const ReportDesc *rep) {
