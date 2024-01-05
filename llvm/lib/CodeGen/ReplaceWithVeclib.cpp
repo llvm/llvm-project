@@ -8,7 +8,7 @@
 //
 // Replaces LLVM IR instructions with vector operands (i.e., the frem
 // instruction or calls to LLVM intrinsics) with matching calls to functions
-// from a vector library (e.g libmvec, SVML) using TargetLibraryInfo interface
+// from a vector library (e.g libmvec, SVML) using TargetLibraryInfo interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,7 +70,7 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
 }
 
 /// Replace the instruction \p I with a call to the corresponding function from
-/// the vector library ( \p TLIVecFunc ).
+/// the vector library (\p TLIVecFunc).
 static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
                                    Function *TLIVecFunc) {
   IRBuilder<> IRBuilder(&I);
@@ -100,26 +100,26 @@ static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
 /// works when \p I is a call to vectorized intrinsic or the frem instruction.
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                                     Instruction &I) {
-  std::string ScalarName;
-  ElementCount EC = ElementCount::getFixed(0);
-  Function *FuncToReplace = nullptr;
+  auto *VTy = dyn_cast<VectorType>(I.getType());
+  ElementCount EC(VTy ? VTy->getElementCount() : ElementCount::getFixed(0));
+  // Compute the argument types of the corresponding scalar call and the scalar
+  // function name. For calls, it additionally finds the function to replace
+  // and checks that all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
-  // Compute the argument types of the corresponding scalar call, the scalar
-  // function name, and EC. For calls, it additionally checks if in the vector
-  // call, all vector operands have the same EC.
+  std::string ScalarName;
+  Function *FuncToReplace = nullptr;
   if (auto *CI = dyn_cast<CallInst>(&I)) {
-    Intrinsic::ID IID = CI->getCalledFunction()->getIntrinsicID();
-    assert(IID != Intrinsic::not_intrinsic && "Not an intrinsic");
     FuncToReplace = CI->getCalledFunction();
+    Intrinsic::ID IID = FuncToReplace->getIntrinsicID();
+    assert(IID != Intrinsic::not_intrinsic && "Not an intrinsic");
     for (auto Arg : enumerate(CI->args())) {
       auto *ArgTy = Arg.value()->getType();
       if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
         ScalarArgTypes.push_back(ArgTy);
       } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
         ScalarArgTypes.push_back(VectorArgTy->getElementType());
-        // Disallow vector arguments with different VFs. When processing the
-        // first vector argument, store it's VF, and for the rest ensure that
-        // they match it.
+        // When return type is void, set EC to the first vector argument, and
+        // disallow vector arguments with different ECs.
         if (EC.isZero())
           EC = VectorArgTy->getElementCount();
         else if (EC != VectorArgTy->getElementCount())
@@ -134,15 +134,13 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                      ? Intrinsic::getName(IID, ScalarArgTypes, I.getModule())
                      : Intrinsic::getName(IID).str();
   } else {
-    assert(I.getType()->isVectorTy() && "Instruction must use vectors");
+    assert(VTy && "Return type must be a vector");
+    auto *ScalarTy = VTy->getScalarType();
     LibFunc Func;
-    auto *ScalarTy = I.getType()->getScalarType();
     if (!TLI.getLibFunc(I.getOpcode(), ScalarTy, Func))
       return false;
     ScalarName = TLI.getName(Func);
     ScalarArgTypes = {ScalarTy, ScalarTy};
-    if (auto *VTy = dyn_cast<VectorType>(I.getType()))
-      EC = VTy->getElementCount();
   }
 
   // Try to find the mapping for the scalar version of this intrinsic and the
@@ -180,13 +178,15 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   return true;
 }
 
-/// Supported instructions \p I are either frem or CallInsts to intrinsics.
+/// Supported instruction \p I must be a vectorized frem or a call to an
+/// intrinsic that returns either void or a vector.
 static bool isSupportedInstruction(Instruction *I) {
+  Type *Ty = I->getType();
   if (auto *CI = dyn_cast<CallInst>(I))
-    return CI->getCalledFunction() &&
+    return (Ty->isVectorTy() || Ty->isVoidTy()) && CI->getCalledFunction() &&
            CI->getCalledFunction()->getIntrinsicID() !=
                Intrinsic::not_intrinsic;
-  if (I->getOpcode() == Instruction::FRem && I->getType()->isVectorTy())
+  if (I->getOpcode() == Instruction::FRem && Ty->isVectorTy())
     return true;
   return false;
 }
