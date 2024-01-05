@@ -19,10 +19,10 @@ ConeV mlir::presburger::detail::getDual(ConeH cone) {
   unsigned numIneq = cone.getNumInequalities();
   unsigned numVar = cone.getNumCols() - 1;
   ConeV dual(numIneq, numVar, 0, 0);
-  /// Assuming that an inequality of the form
-  /// a1*x1 + ... + an*xn + b ≥ 0
-  /// is represented as a row [a1, ..., an, b]
-  /// and that b = 0.
+  // Assuming that an inequality of the form
+  // a1*x1 + ... + an*xn + b ≥ 0
+  // is represented as a row [a1, ..., an, b]
+  // and that b = 0.
 
   for (unsigned i = 0; i < numIneq; ++i) {
     assert(cone.atIneq(i, numVar) == 0 &&
@@ -32,8 +32,8 @@ ConeV mlir::presburger::detail::getDual(ConeH cone) {
     }
   }
 
-  /// Now dual is of the form [ [a1, ..., an] , ... ]
-  /// which is the V-representation of the dual.
+  // Now dual is of the form [ [a1, ..., an] , ... ]
+  // which is the V-representation of the dual.
   return dual;
 }
 
@@ -44,15 +44,15 @@ ConeH mlir::presburger::detail::getDual(ConeV cone) {
   unsigned rows = cone.getNumRows();
   unsigned columns = cone.getNumColumns();
   ConeH dual = defineHRep(columns);
-  /// Add a new column (for constants) at the end.
-  /// This will be initialized to zero.
+  // Add a new column (for constants) at the end.
+  // This will be initialized to zero.
   cone.insertColumn(columns);
 
   for (unsigned i = 0; i < rows; ++i)
     dual.addInequality(cone.getRow(i));
 
-  /// Now dual is of the form [ [a1, ..., an, 0] , ... ]
-  /// which is the H-representation of the dual.
+  // Now dual is of the form [ [a1, ..., an, 0] , ... ]
+  // which is the H-representation of the dual.
   return dual;
 }
 
