@@ -79,7 +79,7 @@ class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG chunk_by_view
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> __find_prev(iterator_t<_View> __current)
     requires bidirectional_range<_View>
   {
-    // Attempting to increment an end iterator is a no-op (`__find_next` would return the same argument given to it).
+    // Attempting to decrement a begin iterator is a no-op (`__find_prev` would return the same argument given to it).
     _LIBCPP_ASSERT_PEDANTIC(__current != ranges::begin(__base_), "Trying to call __find_prev() on a begin iterator.");
     // Note: this duplicates a check in `optional` but provides a better error message.
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(

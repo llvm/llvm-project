@@ -139,7 +139,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline __uint128_t __pow_10(
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char*
 __base_10_u128(char* __buffer, __uint128_t __value) noexcept {
   _LIBCPP_ASSERT_INTERNAL(
-      __value > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
+      __value > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fails when this isn't true.");
 
   // Unlike the 64 to 32 bit case the 128 bit case the "upper half" can't be
   // stored in the "lower half". Instead we first need to handle the top most

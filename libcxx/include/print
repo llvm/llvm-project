@@ -122,8 +122,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt&, char32_t) = delete;
 template <class _OutIt>
   requires __utf16_code_unit<iter_value_t<_OutIt>>
 _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
-  // From the Standard: "if `out` contains invalid code units, the behavior is undefined and implementations are
-  // encouraged to diagnose it".
+  // [print.fun]/7 : "if `out` contains invalid code units, the behavior is undefined and implementations are encouraged
+  // to diagnose it".
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-16");
 
   if (__value < 0x10000) {
@@ -139,8 +139,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value
 template <class _OutIt>
   requires __utf32_code_unit<iter_value_t<_OutIt>>
 _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
-  // From the Standard: "if `out` contains invalid code units, the behavior is undefined and implementations are
-  // encouraged to diagnose it".
+  // [print.fun]/7 : "if `out` contains invalid code units, the behavior is undefined and implementations are encouraged
+  // to diagnose it".
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-32");
   *__out_it++ = __value;
 }
