@@ -12,6 +12,7 @@
 //    requires _Const && convertible_to<ranges::iterator_t<_View>, iterator_t<_Base>> &&
 //                 convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
 
+#include <iterator>
 #include <ranges>
 
 #include "../types.h"
@@ -38,10 +39,10 @@ struct NotSimpleViewIterBegin : InputIterBase<NotSimpleViewIterBegin> {
 
 template <bool CopyConvertible, bool MoveConvertible>
 struct NotSimpleViewConstIterBegin : InputIterBase<NotSimpleViewConstIterBegin<CopyConvertible, MoveConvertible>> {
-  constexpr NotSimpleViewConstIterBegin() = default;
-  constexpr NotSimpleViewConstIterBegin(NotSimpleViewConstIterBegin&&) {}
-  constexpr NotSimpleViewConstIterBegin& operator=(const NotSimpleViewConstIterBegin&) {}
-  constexpr NotSimpleViewConstIterBegin& operator=(NotSimpleViewConstIterBegin&&) {}
+  constexpr NotSimpleViewConstIterBegin()                                              = default;
+  constexpr NotSimpleViewConstIterBegin(NotSimpleViewConstIterBegin&&)                 = default;
+  constexpr NotSimpleViewConstIterBegin& operator=(const NotSimpleViewConstIterBegin&) = default;
+  constexpr NotSimpleViewConstIterBegin& operator=(NotSimpleViewConstIterBegin&&)      = default;
 
   constexpr NotSimpleViewConstIterBegin(const NotSimpleViewConstIterBegin&) {}
   constexpr NotSimpleViewConstIterBegin(const NotSimpleViewIterBegin&)
@@ -78,10 +79,10 @@ struct NotSimpleViewIterEnd : InputIterBase<NotSimpleViewIterEnd> {
 
 template <bool CopyConvertible, bool MoveConvertible>
 struct NotSimpleViewConstIterEnd : InputIterBase<NotSimpleViewConstIterEnd<CopyConvertible, MoveConvertible>> {
-  constexpr NotSimpleViewConstIterEnd() = default;
-  constexpr NotSimpleViewConstIterEnd(NotSimpleViewConstIterEnd&&) {}
-  constexpr NotSimpleViewConstIterEnd& operator=(const NotSimpleViewConstIterEnd&) {}
-  constexpr NotSimpleViewConstIterEnd& operator=(NotSimpleViewConstIterEnd&&) {}
+  constexpr NotSimpleViewConstIterEnd()                                            = default;
+  constexpr NotSimpleViewConstIterEnd(NotSimpleViewConstIterEnd&&)                 = default;
+  constexpr NotSimpleViewConstIterEnd& operator=(const NotSimpleViewConstIterEnd&) = default;
+  constexpr NotSimpleViewConstIterEnd& operator=(NotSimpleViewConstIterEnd&&)      = default;
 
   constexpr NotSimpleViewConstIterEnd(const NotSimpleViewConstIterEnd&) {}
   constexpr NotSimpleViewConstIterEnd(const NotSimpleViewIterEnd&)
