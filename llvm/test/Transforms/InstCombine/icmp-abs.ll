@@ -206,3 +206,14 @@ define i1 @icmp_sge_abs2(i4 %arg) {
   %cmp = icmp sge i4 %x, %abs
   ret i1 %cmp
 }
+
+define i1 @icmp_sge_abs_mismatched_op(i4 %arg, i4 %arg2) {
+; CHECK-LABEL: @icmp_sge_abs_mismatched_op(
+; CHECK-NEXT:    [[ABS:%.*]] = call i4 @llvm.abs.i4(i4 [[ARG:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i4 [[ABS]], [[ARG2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %abs = call i4 @llvm.abs.i4(i4 %arg, i1 true)
+  %cmp = icmp sge i4 %abs, %arg2
+  ret i1 %cmp
+  }
