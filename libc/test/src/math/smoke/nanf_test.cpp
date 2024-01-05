@@ -41,6 +41,8 @@ TEST_F(LlvmLibcNanfTest, RandomString) {
   run_test("123 ", 0x7fc00000);
 }
 
+#ifndef LIBC_HAVE_ADDRESS_SANITIZER
 TEST_F(LlvmLibcNanfTest, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }
+#endif // LIBC_HAVE_ADDRESS_SANITIZER
