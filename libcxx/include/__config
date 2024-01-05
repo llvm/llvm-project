@@ -371,6 +371,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
