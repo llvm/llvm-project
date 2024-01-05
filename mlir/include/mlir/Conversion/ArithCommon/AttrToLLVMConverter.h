@@ -26,6 +26,14 @@ convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF);
 LLVM::FastmathFlagsAttr
 convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr);
 
+// Map arithmetic overflow enum values to LLVMIR enum values.
+LLVM::IntegerOverflowFlags
+convertArithOveflowFlagsToLLVM(arith::IntegerOverflowFlags arithFlags);
+
+// Create an LLVM overflow attribute from a given arithmetic overflow attribute.
+LLVM::IntegerOverflowFlagsAttr
+convertArithOveflowAttrToLLVM(arith::IntegerOverflowFlagsAttr flagsAttr);
+
 // Attribute converter that populates a NamedAttrList by removing the fastmath
 // attribute from the source operation attributes, and replacing it with an
 // equivalent LLVM fastmath attribute.
@@ -44,6 +52,33 @@ public:
       llvm::StringRef targetAttrName = TargetOp::getFastmathAttrName();
       convertedAttr.set(targetAttrName,
                         convertArithFastMathAttrToLLVM(arithFMFAttr));
+    }
+  }
+
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+
+private:
+  NamedAttrList convertedAttr;
+};
+
+// Attribute converter that populates a NamedAttrList by removing the overflow
+// attribute from the source operation attributes, and replacing it with an
+// equivalent LLVM fastmath attribute.
+template <typename SourceOp, typename TargetOp>
+class AttrConvertOverflowToLLVM {
+public:
+  AttrConvertOverflowToLLVM(SourceOp srcOp) {
+    // Copy the source attributes.
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    // Get the name of the arith fastmath attribute.
+    llvm::StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
+    // Remove the source fastmath attribute.
+    auto arithAttr = dyn_cast_or_null<arith::IntegerOverflowFlagsAttr>(
+        convertedAttr.erase(arithAttrName));
+    if (arithAttr) {
+      llvm::StringRef targetAttrName = TargetOp::getIntegerOverflowAttrName();
+      convertedAttr.set(targetAttrName,
+                        convertArithOveflowAttrToLLVM(arithAttr));
     }
   }
 

@@ -22,9 +22,9 @@ mlir::arith::convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF) {
       {arith::FastMathFlags::contract, LLVM::FastmathFlags::contract},
       {arith::FastMathFlags::afn, LLVM::FastmathFlags::afn},
       {arith::FastMathFlags::reassoc, LLVM::FastmathFlags::reassoc}};
-  for (auto fmfMap : flags) {
-    if (bitEnumContainsAny(arithFMF, fmfMap.first))
-      llvmFMF = llvmFMF | fmfMap.second;
+  for (auto [arithFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(arithFMF, arithFlag))
+      llvmFMF = llvmFMF | llvmFlag;
   }
   return llvmFMF;
 }
@@ -35,4 +35,27 @@ mlir::arith::convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr) {
   arith::FastMathFlags arithFMF = fmfAttr.getValue();
   return LLVM::FastmathFlagsAttr::get(
       fmfAttr.getContext(), convertArithFastMathFlagsToLLVM(arithFMF));
+}
+
+// Map arithmetic overflow enum values to LLVMIR enum values.
+LLVM::IntegerOverflowFlags mlir::arith::convertArithOveflowFlagsToLLVM(
+    arith::IntegerOverflowFlags arithFlags) {
+  LLVM::IntegerOverflowFlags llvmFlags{};
+  const std::pair<arith::IntegerOverflowFlags, LLVM::IntegerOverflowFlags>
+      flags[] = {
+          {arith::IntegerOverflowFlags::nsw, LLVM::IntegerOverflowFlags::nsw},
+          {arith::IntegerOverflowFlags::nuw, LLVM::IntegerOverflowFlags::nuw}};
+  for (auto [arithFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(arithFlags, arithFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+  return llvmFlags;
+}
+
+// Create an LLVM overflow attribute from a given arithmetic overflow attribute.
+LLVM::IntegerOverflowFlagsAttr mlir::arith::convertArithOveflowAttrToLLVM(
+    arith::IntegerOverflowFlagsAttr flagsAttr) {
+  arith::IntegerOverflowFlags arithFlags = flagsAttr.getValue();
+  return LLVM::IntegerOverflowFlagsAttr::get(
+      flagsAttr.getContext(), convertArithOveflowFlagsToLLVM(arithFlags));
 }

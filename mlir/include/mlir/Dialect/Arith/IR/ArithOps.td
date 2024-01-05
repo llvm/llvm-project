@@ -137,6 +137,22 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
   let results = (outs BoolLikeOfAnyRank:$result);
 }
 
+class Arith_IntArithmeticOpWithOverflowFlag<string mnemonic, list<Trait> traits = []> :
+    Arith_BinaryOp<mnemonic, traits #
+      [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>,
+      DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
+    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs,
+      DefaultValuedAttr<
+        Arith_IntegerOverflowAttr, "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags)>,
+    Results<(outs SignlessIntegerLike:$result)> {
+
+  let assemblyFormat = [{ $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
+                          attr-dict `:` type($result) }];
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
@@ -192,7 +208,7 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
+def Arith_AddIOp : Arith_IntArithmeticOpWithOverflowFlag<"addi", [Commutative]> {
   let summary = "integer addition operation";
   let description = [{
     Performs N-bit addition on the operands. The operands are interpreted as 
@@ -278,7 +294,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
+def Arith_SubIOp : Arith_IntArithmeticOpWithOverflowFlag<"subi"> {
   let summary = [{
     Integer subtraction operation.
   }];
@@ -302,7 +318,7 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 // MulIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
+def Arith_MulIOp : Arith_IntArithmeticOpWithOverflowFlag<"muli", [Commutative]> {
   let summary = [{
     Integer multiplication operation.
   }];
