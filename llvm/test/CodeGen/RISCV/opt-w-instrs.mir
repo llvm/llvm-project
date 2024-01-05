@@ -55,16 +55,15 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprnox0 = COPY $x10
     ; CHECK-NEXT: [[PseudoVFIRST_M_B1_:%[0-9]+]]:gpr = PseudoVFIRST_M_B1 [[COPY]], [[COPY1]], 0 /* e8 */
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY1]], [[PseudoVFIRST_M_B1_]]
-    ; CHECK-NEXT: $x10 = COPY [[ADD]]
-    ; CHECK-NEXT: $x11 = COPY [[PseudoVFIRST_M_B1_]]
+    ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoVFIRST_M_B1_]], 33
+    ; CHECK-NEXT: $x11 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET
      %0:vr = COPY $v8
      %1:gprnox0 = COPY $x10
+
      %2:gpr = PseudoVFIRST_M_B1 %0:vr, %1:gprnox0, 0
-     %3:gpr = ADD %1, %2
-     %4:gpr = ADDIW %2, 0
-     $x10 = COPY %3
+     %3:gpr = ADDIW %2, 0
+     %4:gpr = SRLI %3, 33
      $x11 = COPY %4
      PseudoRET
 ...
@@ -81,16 +80,15 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprnox0 = COPY $x10
     ; CHECK-NEXT: [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[COPY]], [[COPY1]], 0 /* e8 */
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY1]], [[PseudoVCPOP_M_B1_]]
-    ; CHECK-NEXT: $x10 = COPY [[ADD]]
-    ; CHECK-NEXT: $x11 = COPY [[PseudoVCPOP_M_B1_]]
+    ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoVCPOP_M_B1_]], 33
+    ; CHECK-NEXT: $x11 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET
      %0:vr = COPY $v8
      %1:gprnox0 = COPY $x10
+
      %2:gpr = PseudoVCPOP_M_B1 %0:vr, %1:gprnox0, 0
-     %3:gpr = ADD %1, %2
-     %4:gpr = ADDIW %2, 0
-     $x10 = COPY %3
+     %3:gpr = ADDIW %2, 0
+     %4:gpr = SRLI %3, 33
      $x11 = COPY %4
      PseudoRET
 ...
