@@ -241,7 +241,7 @@ collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
 
   auto IsNonISAExtFeature = [](const std::string &Feature) {
     assert(Feature.size() > 1 && (Feature[0] == '+' || Feature[0] == '-'));
-    std::string Ext = Feature.substr(1); // drop the +/-
+    StringRef Ext = StringRef(Feature).drop_front(); // drop the +/-
     return !llvm::RISCVISAInfo::isSupportedExtensionFeature(Ext);
   };
   llvm::copy_if(FeaturesNeedOverride, std::back_inserter(NonISAExtFeatureVec),
