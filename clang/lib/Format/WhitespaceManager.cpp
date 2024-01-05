@@ -1444,7 +1444,8 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       } else if (C.Tok->is(tok::comma)) {
         if (!Cells.empty())
           Cells.back().EndIndex = i;
-        if (C.Tok->getNextNonComment()->isNot(tok::r_brace)) // dangling comma
+        const FormatToken *Next = C.Tok->getNextNonComment();
+        if (Next && Next->isNot(tok::r_brace)) // dangling comma
           ++Cell;
       }
     } else if (Depth == 1) {
