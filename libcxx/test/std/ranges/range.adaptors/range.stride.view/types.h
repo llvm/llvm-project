@@ -28,37 +28,45 @@
 #include <type_traits>
 #include <utility>
 
-// Iterators
-
-template <class Derived>
-struct ForwardIterBase {
-  using iterator_concept = std::forward_iterator_tag;
-  using value_type       = int;
-  using difference_type  = std::intptr_t;
-
-  constexpr int operator*() const { return 5; }
-
-  constexpr Derived& operator++() { return static_cast<Derived&>(*this); }
-  constexpr Derived operator++(int) { return {}; }
-
-  friend constexpr bool operator==(const ForwardIterBase&, const ForwardIterBase&) { return true; }
-  friend constexpr bool operator==(const std::default_sentinel_t&, const ForwardIterBase&) { return true; }
-  friend constexpr bool operator==(const ForwardIterBase&, const std::default_sentinel_t&) { return true; }
-};
-
-template <class Derived>
+template <class Derived, typename Iter = int*, typename DifferenceType = std::intptr_t, bool Sized = false>
 struct InputIterBase {
   using iterator_concept = std::input_iterator_tag;
-  using value_type       = int;
-  using difference_type  = std::intptr_t;
+  using value_type       = typename std::iterator_traits<Iter>::value_type;
+  using difference_type  = typename std::iterator_traits<Iter>::difference_type;
 
-  constexpr int operator*() const { return 5; }
+  Iter value_{};
 
-  constexpr Derived& operator++() { return static_cast<Derived&>(*this); }
-  constexpr Derived operator++(int) { return {}; }
+  constexpr InputIterBase()                                      = default;
+  constexpr InputIterBase(const InputIterBase&)                  = default;
+  constexpr InputIterBase(InputIterBase&&)                       = default;
+  constexpr InputIterBase& operator=(const InputIterBase& other) = default;
+  constexpr InputIterBase& operator=(InputIterBase&& other)      = default;
+  constexpr explicit InputIterBase(Iter value) : value_(value) {}
 
-  friend constexpr bool operator==(const Derived&, const Derived&) { return true; }
+  constexpr value_type operator*() const { return *value_; }
+  constexpr Derived& operator++() {
+    value_++;
+    return static_cast<Derived&>(*this);
+  }
+  constexpr Derived operator++(int) {
+    auto nv = *this;
+    value_++;
+    return nv;
+  }
+  friend constexpr bool operator==(const Derived& left, const Derived& right) { return left.value_ == right.value_; }
+  friend constexpr difference_type operator-(const Derived& left, const Derived& right)
+    requires Sized
+  {
+    return left.value_ - right.value_;
+  }
 };
+
+struct UnsizedBasicRangeIterator : InputIterBase<UnsizedBasicRangeIterator> {};
+struct SizedInputIterator : InputIterBase<SizedInputIterator, int*, std::intptr_t, true> {
+  using InputIterBase::InputIterBase;
+};
+static_assert(std::input_iterator<SizedInputIterator>);
+static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
 
 // Don't move/hold the iterator itself, copy/hold the base
 // of that iterator and reconstruct the iterator on demand.
@@ -79,46 +87,12 @@ private:
   decltype(base(std::declval<Sentinel>())) sent_;
 };
 
-struct UnsizedBasicRangeIterator : ForwardIterBase<UnsizedBasicRangeIterator> {};
-
-struct SizedInputIterator {
-  using iterator_concept = std::input_iterator_tag;
-  using value_type       = int;
-  using difference_type  = std::intptr_t;
-
-  int* __v_ = nullptr;
-
-  constexpr SizedInputIterator() = default;
-  constexpr SizedInputIterator(int* v) { __v_ = v; }
-  constexpr SizedInputIterator(const SizedInputIterator& sii)        = default;
-  constexpr SizedInputIterator& operator=(const SizedInputIterator&) = default;
-  constexpr SizedInputIterator& operator=(SizedInputIterator&&)      = default;
-
-  constexpr int operator*() const { return *__v_; }
-  constexpr SizedInputIterator& operator++() {
-    __v_++;
-    return *this;
-  }
-  constexpr SizedInputIterator operator++(int) {
-    auto nv = __v_;
-    nv++;
-    return SizedInputIterator(nv);
-  }
-  friend constexpr bool operator==(const SizedInputIterator& left, const SizedInputIterator& right) {
-    return left.__v_ == right.__v_;
-  }
-  friend constexpr difference_type operator-(const SizedInputIterator& left, const SizedInputIterator& right) {
-    return left.__v_ - right.__v_;
-  }
-};
-static_assert(std::input_iterator<SizedInputIterator>);
-static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
-
 // Put IterMoveIterSwapTestRangeIterator in a namespace to test ADL of CPOs iter_swap and iter_move
 // (see iter_swap.pass.cpp and iter_move.pass.cpp).
 namespace adl {
-template <bool IsSwappable = true, bool IsNoExcept = true>
-struct IterMoveIterSwapTestRangeIterator : InputIterBase<IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept>> {
+template <typename T = int*, bool IsSwappable = true, bool IsNoExcept = true>
+struct IterMoveIterSwapTestRangeIterator {
+  T value_{};
   int* counter_{nullptr};
   constexpr IterMoveIterSwapTestRangeIterator()                                                          = default;
   constexpr IterMoveIterSwapTestRangeIterator(const IterMoveIterSwapTestRangeIterator&)                  = default;
@@ -126,50 +100,69 @@ struct IterMoveIterSwapTestRangeIterator : InputIterBase<IterMoveIterSwapTestRan
   constexpr IterMoveIterSwapTestRangeIterator& operator=(const IterMoveIterSwapTestRangeIterator& other) = default;
   constexpr IterMoveIterSwapTestRangeIterator& operator=(IterMoveIterSwapTestRangeIterator&& other)      = default;
 
-  constexpr explicit IterMoveIterSwapTestRangeIterator(int* counter) : counter_(counter) {}
+  constexpr explicit IterMoveIterSwapTestRangeIterator(T value, int* counter) : value_(value), counter_(counter) {}
 
-  friend constexpr void
-  iter_swap(const IterMoveIterSwapTestRangeIterator& t, const IterMoveIterSwapTestRangeIterator& u) noexcept
+  using iterator_concept = std::input_iterator_tag;
+  using value_type       = typename std::iterator_traits<T>::value_type;
+  using difference_type  = typename std::iterator_traits<T>::difference_type;
+
+  constexpr auto operator*() const { return *value_; }
+
+  constexpr IterMoveIterSwapTestRangeIterator& operator++() {
+    value_++;
+    return *this;
+  }
+  constexpr IterMoveIterSwapTestRangeIterator operator++(int) {
+    auto tmp = value_;
+    value_++;
+    return *this;
+  }
+
+  friend constexpr bool
+  operator==(const IterMoveIterSwapTestRangeIterator& left, const IterMoveIterSwapTestRangeIterator& right) {
+    return left.value_ == right.value_;
+  }
+
+  friend constexpr void iter_swap(IterMoveIterSwapTestRangeIterator t, IterMoveIterSwapTestRangeIterator u) noexcept
     requires IsSwappable && IsNoExcept
   {
     (*t.counter_)++;
     (*u.counter_)++;
+    std::swap(*t.value_, *u.value_);
   }
 
-  friend constexpr void
-  iter_swap(const IterMoveIterSwapTestRangeIterator& t, const IterMoveIterSwapTestRangeIterator& u)
+  friend constexpr void iter_swap(IterMoveIterSwapTestRangeIterator t, IterMoveIterSwapTestRangeIterator u)
     requires IsSwappable && (!IsNoExcept)
   {
     (*t.counter_)++;
     (*u.counter_)++;
+    std::swap(*t.value_, *u.value_);
   }
 
-  friend constexpr int iter_move(const IterMoveIterSwapTestRangeIterator& t)
+  friend constexpr auto iter_move(const IterMoveIterSwapTestRangeIterator& t)
     requires(!IsNoExcept)
   {
     (*t.counter_)++;
-    return 5;
+    return *t.value_;
   }
-  friend constexpr int iter_move(const IterMoveIterSwapTestRangeIterator& t) noexcept
+  friend constexpr auto iter_move(const IterMoveIterSwapTestRangeIterator& t) noexcept
     requires IsNoExcept
   {
     (*t.counter_)++;
-    return 5;
+    return *t.value_;
   }
-
-  constexpr int operator*() const { return 5; }
 };
 } // namespace adl
 
-template <bool IsSwappable = true, bool IsNoExcept = true>
+template <typename T = int*, bool IsSwappable = true, bool IsNoExcept = true>
 struct IterMoveIterSwapTestRange : std::ranges::view_base {
-  adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> begin_;
-  adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> end_;
-  constexpr IterMoveIterSwapTestRange(int* counter)
-      : begin_(adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept>(counter)),
-        end_(adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept>(counter)) {}
-  constexpr adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> begin() const { return begin_; }
-  constexpr adl::IterMoveIterSwapTestRangeIterator<IsSwappable, IsNoExcept> end() const { return end_; }
+  adl::IterMoveIterSwapTestRangeIterator<T, IsSwappable, IsNoExcept> begin_;
+  adl::IterMoveIterSwapTestRangeIterator<T, IsSwappable, IsNoExcept> end_;
+  constexpr IterMoveIterSwapTestRange(const T& begin, const T& end, int* counter)
+      : begin_(adl::IterMoveIterSwapTestRangeIterator<T, IsSwappable, IsNoExcept>(begin, counter)),
+        end_(adl::IterMoveIterSwapTestRangeIterator<T, IsSwappable, IsNoExcept>(end, counter)) {}
+  constexpr adl::IterMoveIterSwapTestRangeIterator<T, IsSwappable, IsNoExcept> begin() const { return begin_; }
+  constexpr adl::IterMoveIterSwapTestRangeIterator<T, IsSwappable, IsNoExcept> end() const { return end_; }
 };
 
 // Views
