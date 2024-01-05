@@ -313,7 +313,7 @@ TEST(ELFObjectFileTest, CheckOSAndTriple) {
     llvm::Triple TheTriple = ELFObj.makeTriple();
 
     // The AMDGPU architecture will be unknown on big-endian testers.
-    if (TheTriple.getOS() == Triple::UnknownOS)
+    if (TheTriple.getArch() == Triple::UnknownArch)
       continue;
 
     EXPECT_EQ(Triple, TheTriple.getTriple());
