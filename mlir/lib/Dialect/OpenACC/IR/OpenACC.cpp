@@ -1417,9 +1417,50 @@ unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;
-  numOptional += getAsync() ? 1 : 0;
+  numOptional += getAsync().size() ? 1 : 0;
   numOptional += getWaitOperands().size();
   return getOperand(numOptional + i);
+}
+
+bool acc::DataOp::hasAsyncOnly() {
+  return hasAsyncOnly(mlir::acc::DeviceType::None);
+}
+
+bool acc::DataOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getAsyncOnly()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Value DataOp::getAsyncValue() {
+  return getAsyncValue(mlir::acc::DeviceType::None);
+}
+
+mlir::Value DataOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
+  return getValueInDeviceTypeSegment(getAsyncDeviceType(), getAsync(),
+                                     deviceType);
+}
+
+bool DataOp::hasWaitOnly() { return hasWaitOnly(mlir::acc::DeviceType::None); }
+
+bool DataOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getWaitOnly()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Operation::operand_range DataOp::getWaitValues() {
+  return getWaitValues(mlir::acc::DeviceType::None);
+}
+
+mlir::Operation::operand_range
+DataOp::getWaitValues(mlir::acc::DeviceType deviceType) {
+  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
+                               getWaitOperandsSegments(), deviceType);
 }
 
 //===----------------------------------------------------------------------===//
