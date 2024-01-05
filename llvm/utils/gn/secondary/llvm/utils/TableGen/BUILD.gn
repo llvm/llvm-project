@@ -63,6 +63,7 @@ executable("llvm-tblgen") {
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
+    "MacroFusionPredicatorEmitter.cpp",
     "OptEmitter.cpp",
     "OptParserEmitter.cpp",
     "OptRSTEmitter.cpp",
