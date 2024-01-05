@@ -66,28 +66,19 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
       LLVM::DISubroutineTypeAttr::get(context, llvm::dwarf::DW_CC_normal, {});
 
   StringAttr funcNameAttr = llvmFunc.getNameAttr();
-  mlir::LLVM::DISubprogramAttr subprogramAttr;
   // Only definitions need a distinct identifier and a compilation unit.
-  if (!llvmFunc.isExternal()) {
-    auto id = DistinctAttr::create(UnitAttr::get(context));
-    subprogramAttr =
-        LLVM::DISubprogramAttr::get(context, id, compileUnitAttr, fileAttr,
-                                    funcNameAttr, funcNameAttr, fileAttr,
-                                    /*line=*/line,
-                                    /*scopeline=*/col,
-                                    LLVM::DISubprogramFlags::Definition |
-                                        LLVM::DISubprogramFlags::Optimized,
-                                    subroutineTypeAttr);
-  } else {
-    subprogramAttr = LLVM::DISubprogramAttr::get(
-        context, DistinctAttr(), LLVM::DICompileUnitAttr(), fileAttr,
-        funcNameAttr, funcNameAttr, fileAttr,
-        /*line=*/line,
-        /*scopeline=*/col,
-        LLVM::DISubprogramFlags::Definition |
-            LLVM::DISubprogramFlags::Optimized,
-        subroutineTypeAttr);
-  }
+  mlir::DistinctAttr id;
+  if (!llvmFunc.isExternal())
+    id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+  else
+    compileUnitAttr = {};
+  mlir::LLVM::DISubprogramAttr subprogramAttr = LLVM::DISubprogramAttr::get(
+      context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
+      fileAttr,
+      /*line=*/line,
+      /*scopeline=*/col,
+      LLVM::DISubprogramFlags::Definition | LLVM::DISubprogramFlags::Optimized,
+      subroutineTypeAttr);
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 

@@ -93,24 +93,20 @@ void AddDebugFoundationPass::runOnOperation() {
             context, llvm::dwarf::getCallingConvention("DW_CC_normal"),
             {bT, bT});
     mlir::LLVM::DIFileAttr funcFileAttr = getFileAttr(funcFilePath);
-    mlir::LLVM::DISubprogramAttr spAttr;
+
     // Only definitions need a distinct identifier and a compilation unit.
+    mlir::DistinctAttr id;
+    mlir::LLVM::DICompileUnitAttr compilationUnit;
     if (!funcOp.isExternal()) {
-      auto id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-      spAttr = mlir::LLVM::DISubprogramAttr::get(
-          context, id, cuAttr, fileAttr, funcName, funcName, funcFileAttr,
-          /*line=*/1,
-          /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
-          subTypeAttr);
-    } else {
-      // TODO: Fix the subprogram flags once their modeling has been fixed.
-      spAttr = mlir::LLVM::DISubprogramAttr::get(
-          context, mlir::DistinctAttr(), mlir::LLVM::DICompileUnitAttr(),
-          fileAttr, funcName, funcName, funcFileAttr,
-          /*line=*/1,
-          /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
-          subTypeAttr);
+      id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+      compilationUnit = cuAttr;
     }
+    mlir::LLVM::DISubprogramAttr spAttr = mlir::LLVM::DISubprogramAttr::get(
+        context, id, compilationUnit, fileAttr, funcName, funcName,
+        funcFileAttr,
+        /*line=*/1,
+        /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
+        subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
   });
 }
