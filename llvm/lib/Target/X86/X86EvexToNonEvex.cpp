@@ -157,8 +157,8 @@ static bool checkVEXInstPredicate(unsigned EvexOpc, const X86Subtarget &ST) {
 }
 
 // Do any custom cleanup needed to finalize the conversion.
-static bool performCustomAdjustments(MachineInstr &MI, unsigned NonEvexOpc) {
-  (void)NonEvexOpc;
+static bool performCustomAdjustments(MachineInstr &MI, unsigned VexOpc) {
+  (void)VexOpc;
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case X86::VALIGNDZ128rri:
