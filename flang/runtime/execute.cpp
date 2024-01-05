@@ -148,7 +148,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    // append "cmd.exe /c " to the beginning of command
+    // add "cmd.exe /c " to the beginning of command
     const char *prefix{"cmd.exe /c "};
     char *newCmdWin{(char *)AllocateMemoryOrCrash(
         terminator, std::strlen(prefix) + std::strlen(newCmd) + 1)};
@@ -197,7 +197,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
 #endif
   }
-  // Deallocate memory if EnsureNullTerminated dynamically allocate a memory
+  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
     FreeMemory((void *)newCmd);
   }
