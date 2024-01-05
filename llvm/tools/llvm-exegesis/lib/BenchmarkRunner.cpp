@@ -356,7 +356,11 @@ private:
       if (ChildExitCode == 0) {
         // The child exited succesfully, read counter values and return
         // success
-        CounterValues[0] = Counter->read();
+        auto CounterValueOrErr = Counter->readOrError();
+        if (!CounterValueOrErr)
+          return CounterValueOrErr.takeError();
+        CounterValues = std::move(*CounterValueOrErr);
+
         return Error::success();
       }
       // The child exited, but not successfully
