@@ -175,45 +175,34 @@ protected:
   // Function object to maintain state while adding codegen IR passes.
   class AddIRPass {
   public:
-    AddIRPass(ModulePassManager &MPM, bool DebugPM, bool Check = true)
-        : MPM(MPM) {
-      if (Check)
-        AddingFunctionPasses = false;
-    }
+    AddIRPass(ModulePassManager &MPM, bool DebugPM) : MPM(MPM) {}
     ~AddIRPass() {
-      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      if (!FPM.isEmpty())
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
     }
 
-    // Add Function Pass
-    template <typename PassT>
-    std::enable_if_t<is_detected<is_function_pass_t, PassT>::value>
-    operator()(PassT &&Pass) {
-      if (AddingFunctionPasses && !*AddingFunctionPasses)
-        AddingFunctionPasses = true;
-      FPM.addPass(std::forward<PassT>(Pass));
-    }
+    template <typename PassT> void operator()(PassT &&Pass) {
+      static_assert((is_detected<is_function_pass_t, PassT>::value ||
+                     is_detected<is_module_pass_t, PassT>::value) &&
+                    "Only module pass and function pass are supported.");
 
-    // Add Module Pass
-    template <typename PassT>
-    std::enable_if_t<is_detected<is_module_pass_t, PassT>::value &&
-                     !is_detected<is_function_pass_t, PassT>::value>
-    operator()(PassT &&Pass) {
-      assert((!AddingFunctionPasses || !*AddingFunctionPasses) &&
-             "could not add module pass after adding function pass");
+      // Add Function Pass
+      if constexpr (is_detected<is_function_pass_t, PassT>::value) {
+        FPM.addPass(std::forward<PassT>(Pass));
+        return;
+      }
+
+      // Add Module Pass
+      if (!FPM.isEmpty()) {
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        FPM = FunctionPassManager();
+      }
       MPM.addPass(std::forward<PassT>(Pass));
     }
 
   private:
     ModulePassManager &MPM;
     FunctionPassManager FPM;
-    // The codegen IR pipeline are mostly function passes with the exceptions of
-    // a few loop and module passes. `AddingFunctionPasses` make sures that
-    // we could only add module passes at the beginning of the pipeline. Once
-    // we begin adding function passes, we could no longer add module passes.
-    // This special-casing introduces less adaptor passes. If we have the need
-    // of adding module passes after function passes, we could change the
-    // implementation to accommodate that.
-    std::optional<bool> AddingFunctionPasses;
   };
 
   // Function object to maintain state while adding codegen machine passes.
@@ -627,8 +616,8 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
-    addPass(createFunctionToLoopPassAdaptor(
-        LoopStrengthReducePass(), /*UseMemorySSA*/ true, Opt.DebugPM));
+    addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
+                                            /*UseMemorySSA=*/true));
     // FIXME: use -stop-after so we could remove PrintLSR
     if (Opt.PrintLSR)
       addPass(PrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
@@ -647,9 +636,6 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
   addPass(GCLoweringPass());
-  // FIXME: `ShadowStackGCLoweringPass` now is a
-  // module pass, so it will trigger assertion.
-  // See comment of `AddingFunctionPasses`
   addPass(ShadowStackGCLoweringPass());
   addPass(LowerConstantIntrinsicsPass());
 
