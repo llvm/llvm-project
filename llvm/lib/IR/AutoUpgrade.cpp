@@ -621,6 +621,284 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   return false;
 }
 
+// Upgrade ARM (IsArm) or Aarch64 (!IsArm) intrinsic fns. Return true iff so.
+// IsArm: 'arm.*', !IsArm: 'aarch64.*'.
+static bool UpgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
+                                                 StringRef Name,
+                                                 Function *&NewFn) {
+  if (Name.starts_with("rbit")) {
+    // '(arm|aarch64).rbit'.
+    NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
+                                      F->arg_begin()->getType());
+    return true;
+  }
+
+  if (Name == "thread.pointer") {
+    // '(arm|aarch64).thread.pointer'.
+    NewFn =
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
+    return true;
+  }
+
+  bool Neon = Name.consume_front("neon.");
+  if (Neon) {
+    // '(arm|aarch64).neon.*'.
+    // Changed in 12.0: bfdot accept v4bf16 and v8bf16 instead of v8i8 and
+    // v16i8 respectively.
+    if (Name.consume_front("bfdot.")) {
+      // (arm|aarch64).neon.bfdot.*'.
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .Cases("v2f32.v8i8", "v4f32.v16i8",
+                                    IsArm ? Intrinsic::arm_neon_bfdot
+                                          : Intrinsic::aarch64_neon_bfdot)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
+        assert((OperandWidth == 64 || OperandWidth == 128) &&
+               "Unexpected operand width");
+        LLVMContext &Ctx = F->getParent()->getContext();
+        std::array<Type *, 2> Tys{
+            {F->getReturnType(),
+             FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)}};
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+        return true;
+      }
+      return false; // No other '(arm|aarch64).neon.bfdot.*'.
+    }
+
+    // Changed in 12.0: bfmmla, bfmlalb and bfmlalt are not polymorphic
+    // anymore and accept v8bf16 instead of v16i8.
+    if (Name.consume_front("bfm")) {
+      // (arm|aarch64).neon.bfm*'.
+      if (Name.consume_back(".v4f32.v16i8")) {
+        // (arm|aarch64).neon.bfm*.v4f32.v16i8'.
+        Intrinsic::ID ID =
+            StringSwitch<Intrinsic::ID>(Name)
+                .Case("mla", IsArm ? Intrinsic::arm_neon_bfmmla
+                                   : Intrinsic::aarch64_neon_bfmmla)
+                .Case("lalb", IsArm ? Intrinsic::arm_neon_bfmlalb
+                                    : Intrinsic::aarch64_neon_bfmlalb)
+                .Case("lalt", IsArm ? Intrinsic::arm_neon_bfmlalt
+                                    : Intrinsic::aarch64_neon_bfmlalt)
+                .Default(Intrinsic::not_intrinsic);
+        if (ID != Intrinsic::not_intrinsic) {
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        return false; // No other '(arm|aarch64).neon.bfm*.v16i8'.
+      }
+      return false; // No other '(arm|aarch64).neon.bfm*.
+    }
+    // Continue on to Aarch64 Neon or Arm Neon.
+  }
+  // Continue on to Arm or Aarch64.
+
+  if (IsArm) {
+    // 'arm.*'.
+    if (Neon) {
+      // 'arm.neon.*'.
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("vclz.", Intrinsic::ctlz)
+                             .StartsWith("vcnt.", Intrinsic::ctpop)
+                             .StartsWith("vqadds.", Intrinsic::sadd_sat)
+                             .StartsWith("vqaddu.", Intrinsic::uadd_sat)
+                             .StartsWith("vqsubs.", Intrinsic::ssub_sat)
+                             .StartsWith("vqsubu.", Intrinsic::usub_sat)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
+
+      if (Name.consume_front("vst")) {
+        // 'arm.neon.vst*'.
+        static const Regex vstRegex("^([1234]|[234]lane)\\.v[a-z0-9]*$");
+        SmallVector<StringRef, 2> Groups;
+        if (vstRegex.match(Name, &Groups)) {
+          static const Intrinsic::ID StoreInts[] = {
+              Intrinsic::arm_neon_vst1, Intrinsic::arm_neon_vst2,
+              Intrinsic::arm_neon_vst3, Intrinsic::arm_neon_vst4};
+
+          static const Intrinsic::ID StoreLaneInts[] = {
+              Intrinsic::arm_neon_vst2lane, Intrinsic::arm_neon_vst3lane,
+              Intrinsic::arm_neon_vst4lane};
+
+          auto fArgs = F->getFunctionType()->params();
+          Type *Tys[] = {fArgs[0], fArgs[1]};
+          if (Groups[1].size() == 1)
+            NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                              StoreInts[fArgs.size() - 3], Tys);
+          else
+            NewFn = Intrinsic::getDeclaration(
+                F->getParent(), StoreLaneInts[fArgs.size() - 5], Tys);
+          return true;
+        }
+        return false; // No other 'arm.neon.vst*'.
+      }
+
+      return false; // No other 'arm.neon.*'.
+    }
+
+    if (Name.consume_front("mve.")) {
+      // 'arm.mve.*'.
+      if (Name == "vctp64") {
+        if (cast<FixedVectorType>(F->getReturnType())->getNumElements() == 4) {
+          // A vctp64 returning a v4i1 is converted to return a v2i1. Rename
+          // the function and deal with it below in UpgradeIntrinsicCall.
+          rename(F);
+          return true;
+        }
+        return false; // Not 'arm.mve.vctp64'.
+      }
+
+      // These too are changed to accept a v2i1 instead of the old v4i1.
+      if (Name.consume_back(".v4i1")) {
+        // 'arm.mve.*.v4i1'.
+        if (Name.consume_back(".predicated.v2i64.v4i32"))
+          // 'arm.mve.*.predicated.v2i64.v4i32.v4i1'
+          return Name == "mull.int" || Name == "vqdmull";
+
+        if (Name.consume_back(".v2i64")) {
+          // 'arm.mve.*.v2i64.v4i1'
+          bool IsGather = Name.consume_front("vldr.gather.");
+          if (IsGather || Name.consume_front("vstr.scatter.")) {
+            if (Name.consume_front("base.")) {
+              // Optional 'wb.' prefix.
+              Name.consume_front("wb.");
+              // 'arm.mve.(vldr.gather|vstr.scatter).base.(wb.)?
+              // predicated.v2i64.v2i64.v4i1'.
+              return Name == "predicated.v2i64";
+            }
+
+            if (Name.consume_front("offset.predicated."))
+              return Name == (IsGather ? "v2i64.p0i64" : "p0i64.v2i64") ||
+                     Name == (IsGather ? "v2i64.p0" : "p0.v2i64");
+
+            // No other 'arm.mve.(vldr.gather|vstr.scatter).*.v2i64.v4i1'.
+            return false;
+          }
+
+          return false; // No other 'arm.mve.*.v2i64.v4i1'.
+        }
+        return false; // No other 'arm.mve.*.v4i1'.
+      }
+      return false; // No other 'arm.mve.*'.
+    }
+
+    if (Name.consume_front("cde.vcx")) {
+      // 'arm.cde.vcx*'.
+      if (Name.consume_back(".predicated.v2i64.v4i1"))
+        // 'arm.cde.vcx*.predicated.v2i64.v4i1'.
+        return Name == "1q" || Name == "1qa" || Name == "2q" || Name == "2qa" ||
+               Name == "3q" || Name == "3qa";
+
+      return false; // No other 'arm.cde.vcx*'.
+    }
+  } else {
+    // 'aarch64.*'.
+    if (Neon) {
+      // 'aarch64.neon.*'.
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("frintn", Intrinsic::roundeven)
+                             .StartsWith("rbit", Intrinsic::bitreverse)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
+
+      if (Name.starts_with("addp")) {
+        // 'aarch64.neon.addp*'.
+        if (F->arg_size() != 2)
+          return false; // Invalid IR.
+        VectorType *Ty = dyn_cast<VectorType>(F->getReturnType());
+        if (Ty && Ty->getElementType()->isFloatingPointTy()) {
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::aarch64_neon_faddp, Ty);
+          return true;
+        }
+      }
+      return false; // No other 'aarch64.neon.*'.
+    }
+    if (Name.consume_front("sve.")) {
+      // 'aarch64.sve.*'.
+      if (Name.consume_front("bf")) {
+        if (Name.consume_back(".lane")) {
+          // 'aarch64.sve.bf*.lane'.
+          Intrinsic::ID ID =
+              StringSwitch<Intrinsic::ID>(Name)
+                  .Case("dot", Intrinsic::aarch64_sve_bfdot_lane_v2)
+                  .Case("mlalb", Intrinsic::aarch64_sve_bfmlalb_lane_v2)
+                  .Case("mlalt", Intrinsic::aarch64_sve_bfmlalt_lane_v2)
+                  .Default(Intrinsic::not_intrinsic);
+          if (ID != Intrinsic::not_intrinsic) {
+            NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+            return true;
+          }
+          return false; // No other 'aarch64.sve.bf*.lane'.
+        }
+        return false; // No other 'aarch64.sve.bf*'.
+      }
+
+      if (Name.consume_front("ld")) {
+        // 'aarch64.sve.ld*'.
+        static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
+        if (LdRegex.match(Name)) {
+          Type *ScalarTy =
+              dyn_cast<VectorType>(F->getReturnType())->getElementType();
+          ElementCount EC = dyn_cast<VectorType>(F->arg_begin()->getType())
+                                ->getElementCount();
+          Type *Ty = VectorType::get(ScalarTy, EC);
+          static const Intrinsic::ID LoadIDs[] = {
+              Intrinsic::aarch64_sve_ld2_sret,
+              Intrinsic::aarch64_sve_ld3_sret,
+              Intrinsic::aarch64_sve_ld4_sret,
+          };
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            LoadIDs[Name[0] - '2'], Ty);
+          return true;
+        }
+        return false; // No other 'aarch64.sve.ld*'.
+      }
+
+      if (Name.consume_front("tuple.")) {
+        // 'aarch64.sve.tuple.*'.
+        if (Name.starts_with("get")) {
+          // 'aarch64.sve.tuple.get*'.
+          Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::vector_extract, Tys);
+          return true;
+        }
+
+        if (Name.starts_with("set")) {
+          // 'aarch64.sve.tuple.set*'.
+          auto Args = F->getFunctionType()->params();
+          Type *Tys[] = {Args[0], Args[2], Args[1]};
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::vector_insert, Tys);
+          return true;
+        }
+
+        static const Regex CreateTupleRegex("^create[234](.nxv[a-z0-9]+|$)");
+        if (CreateTupleRegex.match(Name)) {
+          // 'aarch64.sve.tuple.create*'.
+          auto Args = F->getFunctionType()->params();
+          Type *Tys[] = {F->getReturnType(), Args[1]};
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::vector_insert, Tys);
+          return true;
+        }
+        return false; // No other 'aarch64.sve.tuple.*'.
+      }
+      return false; // No other 'aarch64.sve.*'.
+    }
+  }
+  return false; // No other 'arm.*', 'aarch64.*'.
+}
+
 static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("abs."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -713,225 +991,12 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   switch (Name[0]) {
   default: break;
   case 'a': {
-    if (Name.starts_with("arm.rbit") || Name.starts_with("aarch64.rbit")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("aarch64.neon.frintn")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::roundeven,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("aarch64.neon.rbit")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name == "aarch64.sve.bfdot.lane") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::aarch64_sve_bfdot_lane_v2);
-      return true;
-    }
-    if (Name == "aarch64.sve.bfmlalb.lane") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::aarch64_sve_bfmlalb_lane_v2);
-      return true;
-    }
-    if (Name == "aarch64.sve.bfmlalt.lane") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::aarch64_sve_bfmlalt_lane_v2);
-      return true;
-    }
-    static const Regex LdRegex("^aarch64\\.sve\\.ld[234](.nxv[a-z0-9]+|$)");
-    if (LdRegex.match(Name)) {
-      Type *ScalarTy =
-          dyn_cast<VectorType>(F->getReturnType())->getElementType();
-      ElementCount EC =
-          dyn_cast<VectorType>(F->arg_begin()->getType())->getElementCount();
-      Type *Ty = VectorType::get(ScalarTy, EC);
-      Intrinsic::ID ID =
-          StringSwitch<Intrinsic::ID>(Name)
-              .StartsWith("aarch64.sve.ld2", Intrinsic::aarch64_sve_ld2_sret)
-              .StartsWith("aarch64.sve.ld3", Intrinsic::aarch64_sve_ld3_sret)
-              .StartsWith("aarch64.sve.ld4", Intrinsic::aarch64_sve_ld4_sret)
-              .Default(Intrinsic::not_intrinsic);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Ty);
-      return true;
-    }
-    if (Name.starts_with("aarch64.sve.tuple.get")) {
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_extract, Tys);
-      return true;
-    }
-    if (Name.starts_with("aarch64.sve.tuple.set")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[2], Args[1]};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_insert, Tys);
-      return true;
-    }
-    static const Regex CreateTupleRegex(
-        "^aarch64\\.sve\\.tuple\\.create[234](.nxv[a-z0-9]+|$)");
-    if (CreateTupleRegex.match(Name)) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {F->getReturnType(), Args[1]};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_insert, Tys);
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vclz")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vcnt")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    static const Regex vstRegex("^arm\\.neon\\.vst([1234]|[234]lane)\\.v[a-z0-9]*$");
-    if (vstRegex.match(Name)) {
-      static const Intrinsic::ID StoreInts[] = {Intrinsic::arm_neon_vst1,
-                                                Intrinsic::arm_neon_vst2,
-                                                Intrinsic::arm_neon_vst3,
-                                                Intrinsic::arm_neon_vst4};
-
-      static const Intrinsic::ID StoreLaneInts[] = {
-        Intrinsic::arm_neon_vst2lane, Intrinsic::arm_neon_vst3lane,
-        Intrinsic::arm_neon_vst4lane
-      };
-
-      auto fArgs = F->getFunctionType()->params();
-      Type *Tys[] = {fArgs[0], fArgs[1]};
-      if (!Name.contains("lane"))
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          StoreInts[fArgs.size() - 3], Tys);
-      else
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          StoreLaneInts[fArgs.size() - 5], Tys);
-      return true;
-    }
-    if (Name == "aarch64.thread.pointer" || Name == "arm.thread.pointer") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqadds.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::sadd_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqaddu.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::uadd_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqsubs.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ssub_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqsubu.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::usub_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("aarch64.neon.addp")) {
-      if (F->arg_size() != 2)
-        break; // Invalid IR.
-      VectorType *Ty = dyn_cast<VectorType>(F->getReturnType());
-      if (Ty && Ty->getElementType()->isFloatingPointTy()) {
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::aarch64_neon_faddp, Ty);
+    bool IsArm = Name.consume_front("arm.");
+    if (IsArm || Name.consume_front("aarch64.")) {
+      if (UpgradeArmOrAarch64IntrinsicFunction(IsArm, F, Name, NewFn))
         return true;
-      }
+      break;
     }
-
-    // Changed in 12.0: bfdot accept v4bf16 and v8bf16 instead of v8i8 and v16i8
-    // respectively
-    if ((Name.starts_with("arm.neon.bfdot.") ||
-         Name.starts_with("aarch64.neon.bfdot.")) &&
-        Name.ends_with("i8")) {
-      Intrinsic::ID IID =
-          StringSwitch<Intrinsic::ID>(Name)
-              .Cases("arm.neon.bfdot.v2f32.v8i8",
-                     "arm.neon.bfdot.v4f32.v16i8",
-                     Intrinsic::arm_neon_bfdot)
-              .Cases("aarch64.neon.bfdot.v2f32.v8i8",
-                     "aarch64.neon.bfdot.v4f32.v16i8",
-                     Intrinsic::aarch64_neon_bfdot)
-              .Default(Intrinsic::not_intrinsic);
-      if (IID == Intrinsic::not_intrinsic)
-        break;
-
-      size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
-      assert((OperandWidth == 64 || OperandWidth == 128) &&
-             "Unexpected operand width");
-      LLVMContext &Ctx = F->getParent()->getContext();
-      std::array<Type *, 2> Tys {{
-        F->getReturnType(),
-        FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)
-      }};
-      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
-      return true;
-    }
-
-    // Changed in 12.0: bfmmla, bfmlalb and bfmlalt are not polymorphic anymore
-    // and accept v8bf16 instead of v16i8
-    if ((Name.starts_with("arm.neon.bfm") ||
-         Name.starts_with("aarch64.neon.bfm")) &&
-        Name.ends_with(".v4f32.v16i8")) {
-      Intrinsic::ID IID =
-          StringSwitch<Intrinsic::ID>(Name)
-              .Case("arm.neon.bfmmla.v4f32.v16i8",
-                    Intrinsic::arm_neon_bfmmla)
-              .Case("arm.neon.bfmlalb.v4f32.v16i8",
-                    Intrinsic::arm_neon_bfmlalb)
-              .Case("arm.neon.bfmlalt.v4f32.v16i8",
-                    Intrinsic::arm_neon_bfmlalt)
-              .Case("aarch64.neon.bfmmla.v4f32.v16i8",
-                    Intrinsic::aarch64_neon_bfmmla)
-              .Case("aarch64.neon.bfmlalb.v4f32.v16i8",
-                    Intrinsic::aarch64_neon_bfmlalb)
-              .Case("aarch64.neon.bfmlalt.v4f32.v16i8",
-                    Intrinsic::aarch64_neon_bfmlalt)
-              .Default(Intrinsic::not_intrinsic);
-      if (IID == Intrinsic::not_intrinsic)
-        break;
-
-      std::array<Type *, 0> Tys;
-      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
-      return true;
-    }
-
-    if (Name == "arm.mve.vctp64" &&
-        cast<FixedVectorType>(F->getReturnType())->getNumElements() == 4) {
-      // A vctp64 returning a v4i1 is converted to return a v2i1. Rename the
-      // function and deal with it below in UpgradeIntrinsicCall.
-      rename(F);
-      return true;
-    }
-    // These too are changed to accept a v2i1 insteead of the old v4i1.
-    if (Name == "arm.mve.mull.int.predicated.v2i64.v4i32.v4i1" ||
-        Name == "arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
-        Name == "arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1" ||
-        Name ==
-            "arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
-        Name == "arm.mve.vldr.gather.offset.predicated.v2i64.p0.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1" ||
-        Name ==
-            "arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.offset.predicated.p0.v2i64.v2i64.v4i1" ||
-        Name == "arm.cde.vcx1q.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx1qa.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx2q.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx2qa.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx3q.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
-      return true;
 
     if (Name.consume_front("amdgcn.")) {
       if (Name == "alignbit") {
