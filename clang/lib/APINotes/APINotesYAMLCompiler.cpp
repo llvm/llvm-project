@@ -745,7 +745,7 @@ public:
     convertCommonEntity(M, MI, M.Selector);
 
     // Check if the selector ends with ':' to determine if it takes arguments.
-    bool takesArguments = M.Selector.endswith(":");
+    bool takesArguments = M.Selector.ends_with(":");
 
     // Split the selector into pieces.
     llvm::SmallVector<StringRef, 4> Args;

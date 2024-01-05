@@ -37,7 +37,7 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F), GWSResourcePSV(getTM(STI)),
+    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
       UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
@@ -349,8 +349,9 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
       MBB.addLiveIn(LaneVGPR);
       MBB.sortUniqueLiveIns();
     }
+    SpillPhysVGPRs.push_back(LaneVGPR);
   } else {
-    LaneVGPR = WWMReservedRegs.back();
+    LaneVGPR = SpillPhysVGPRs.back();
   }
 
   SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
@@ -728,7 +729,7 @@ bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
         for (const auto &CI : IA->ParseConstraints()) {
           for (StringRef Code : CI.Codes) {
             Code.consume_front("{");
-            if (Code.startswith("a"))
+            if (Code.starts_with("a"))
               return true;
           }
         }

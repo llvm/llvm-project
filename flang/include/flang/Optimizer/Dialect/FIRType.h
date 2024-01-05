@@ -118,8 +118,8 @@ inline bool isa_derived(mlir::Type t) { return t.isa<fir::RecordType>(); }
 /// Is `t` type(c_ptr) or type(c_funptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = t.dyn_cast_or_null<fir::RecordType>())
-    return recTy.getName().endswith("T__builtin_c_ptr") ||
-           recTy.getName().endswith("T__builtin_c_funptr");
+    return recTy.getName().ends_with("T__builtin_c_ptr") ||
+           recTy.getName().ends_with("T__builtin_c_funptr");
   return false;
 }
 
@@ -434,6 +434,12 @@ inline bool isBoxAddress(mlir::Type t) {
 /// Is `t` a fir.box or class address or value type?
 inline bool isBoxAddressOrValue(mlir::Type t) {
   return fir::unwrapRefType(t).isa<fir::BaseBoxType>();
+}
+
+/// Is this a fir.boxproc address type?
+inline bool isBoxProcAddressType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t && t.isa<fir::BoxProcType>();
 }
 
 /// Return a string representation of `ty`.

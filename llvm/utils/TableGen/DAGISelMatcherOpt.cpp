@@ -155,6 +155,30 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
     CheckType->setNext(Tail);
     return ContractNodes(MatcherPtr, CGP);
   }
+
+  // If we have a MoveParent followed by a MoveChild, we convert it to
+  // MoveSibling.
+  if (auto *MP = dyn_cast<MoveParentMatcher>(N)) {
+    if (auto *MC = dyn_cast<MoveChildMatcher>(MP->getNext())) {
+      auto *MS = new MoveSiblingMatcher(MC->getChildNo());
+      MS->setNext(MC->takeNext());
+      MatcherPtr.reset(MS);
+      return ContractNodes(MatcherPtr, CGP);
+    }
+    if (auto *RC = dyn_cast<RecordChildMatcher>(MP->getNext())) {
+      if (auto *MC = dyn_cast<MoveChildMatcher>(RC->getNext())) {
+        if (RC->getChildNo() == MC->getChildNo()) {
+          auto *MS = new MoveSiblingMatcher(MC->getChildNo());
+          auto *RM = new RecordMatcher(RC->getWhatFor(), RC->getResultNo());
+          // Insert the new node.
+          RM->setNext(MC->takeNext());
+          MS->setNext(RM);
+          MatcherPtr.reset(MS);
+          return ContractNodes(MatcherPtr, CGP);
+        }
+      }
+    }
+  }
 }
 
 /// FindNodeWithKind - Scan a series of matchers looking for a matcher with a

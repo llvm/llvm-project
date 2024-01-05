@@ -1738,6 +1738,8 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
+        if (Fortran::semantics::IsProcedure(sym))
+          TODO(loc, "procedure pointer component in structure constructor");
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);

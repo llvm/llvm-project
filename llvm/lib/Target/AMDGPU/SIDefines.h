@@ -213,6 +213,9 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_V2INT32,
   OPERAND_REG_INLINE_C_V2FP32,
 
+  // Operand for split barrier inline constant
+  OPERAND_INLINE_SPLIT_BARRIER_INT32,
+
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
@@ -1026,6 +1029,14 @@ enum Register_Flag : uint8_t {
 
 } // namespace AMDGPU
 
+namespace AMDGPU {
+namespace Barrier {
+enum Type { TRAP = -2, WORKGROUP = -1 };
+} // namespace Barrier
+} // namespace AMDGPU
+
+// clang-format off
+
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
 #define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
 #define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
@@ -1118,6 +1129,9 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_DX10_CLAMP(x)                                      (((x) & 0x1) << 21)
 #define   G_00B848_DX10_CLAMP(x)                                      (((x) >> 21) & 0x1)
 #define   C_00B848_DX10_CLAMP                                         0xFFDFFFFF
+#define   S_00B848_RR_WG_MODE(x)                                      (((x) & 0x1) << 21)
+#define   G_00B848_RR_WG_MODE(x)                                      (((x) >> 21) & 0x1)
+#define   C_00B848_RR_WG_MODE                                         0xFFDFFFFF
 #define   S_00B848_DEBUG_MODE(x)                                      (((x) & 0x1) << 22)
 #define   G_00B848_DEBUG_MODE(x)                                      (((x) >> 22) & 0x1)
 #define   C_00B848_DEBUG_MODE                                         0xFFBFFFFF
@@ -1133,7 +1147,6 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_FWD_PROGRESS(x)                                    (((x) & 0x1) << 31)
 #define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
 #define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
-
 
 // Helpers for setting FLOAT_MODE
 #define FP_ROUND_ROUND_TO_NEAREST 0
@@ -1176,6 +1189,9 @@ enum Register_Flag : uint8_t {
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8
+
+// clang-format on
+
 } // End namespace llvm
 
 #endif

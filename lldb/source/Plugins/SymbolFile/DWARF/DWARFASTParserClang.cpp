@@ -152,16 +152,16 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   // If this type comes from a Clang module, recursively look in the
   // DWARF section of the .pcm file in the module cache. Clang
   // generates DWO skeleton units as breadcrumbs to find them.
-  std::vector<CompilerContext> decl_context = die.GetDeclContext();
-  TypeMap pcm_types;
+  std::vector<lldb_private::CompilerContext> die_context = die.GetDeclContext();
+  TypeQuery query(die_context, TypeQueryOptions::e_module_search |
+                                   TypeQueryOptions::e_find_one);
+  TypeResults results;
 
   // The type in the Clang module must have the same language as the current CU.
-  LanguageSet languages;
-  languages.Insert(SymbolFileDWARF::GetLanguageFamily(*die.GetCU()));
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
-                                              searched_symbol_files, pcm_types);
-  if (pcm_types.Empty()) {
+  query.AddLanguage(SymbolFileDWARF::GetLanguageFamily(*die.GetCU()));
+  clang_module_sp->FindTypes(query, results);
+  TypeSP pcm_type_sp = results.GetTypeMap().FirstType();
+  if (!pcm_type_sp) {
     // Since this type is defined in one of the Clang modules imported
     // by this symbol file, search all of them. Instead of calling
     // sym_file->FindTypes(), which would return this again, go straight
@@ -170,24 +170,20 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
     // Well-formed clang modules never form cycles; guard against corrupted
     // ones by inserting the current file.
-    searched_symbol_files.insert(&sym_file);
+    results.AlreadySearched(&sym_file);
     sym_file.ForEachExternalModule(
-        *sc.comp_unit, searched_symbol_files, [&](Module &module) {
-          module.GetSymbolFile()->FindTypes(decl_context, languages,
-                                            searched_symbol_files, pcm_types);
-          return pcm_types.GetSize();
+        *sc.comp_unit, results.GetSearchedSymbolFiles(), [&](Module &module) {
+          module.FindTypes(query, results);
+          pcm_type_sp = results.GetTypeMap().FirstType();
+          return (bool)pcm_type_sp;
         });
   }
 
-  if (!pcm_types.GetSize())
+  if (!pcm_type_sp)
     return TypeSP();
 
   // We found a real definition for this type in the Clang module, so lets use
   // it and cache the fact that we found a complete type for this die.
-  TypeSP pcm_type_sp = pcm_types.GetTypeAtIndex(0);
-  if (!pcm_type_sp)
-    return TypeSP();
-
   lldb_private::CompilerType pcm_type = pcm_type_sp->GetForwardCompilerType();
   lldb_private::CompilerType type =
       GetClangASTImporter().CopyType(m_ast, pcm_type);
@@ -2154,6 +2150,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
   ClangASTImporter::LayoutInfo layout_info;
+  std::vector<DWARFDIE> contained_type_dies;
 
   if (die.HasChildren()) {
     const bool type_is_objc_object_or_interface =
@@ -2179,7 +2176,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
     DelayedPropertyList delayed_properties;
     ParseChildMembers(die, clang_type, bases, member_function_dies,
-                      delayed_properties, default_accessibility, layout_info);
+                      contained_type_dies, delayed_properties,
+                      default_accessibility, layout_info);
 
     // Now parse any methods if there were any...
     for (const DWARFDIE &die : member_function_dies)
@@ -2235,6 +2233,12 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (record_decl)
       GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
   }
+  // Now parse all contained types inside of the class. We make forward
+  // declarations to all classes, but we need the CXXRecordDecl to have decls
+  // for all contained types because we don't get asked for them via the
+  // external AST support.
+  for (const DWARFDIE &die : contained_type_dies)
+    dwarf->ResolveType(die);
 
   return (bool)clang_type;
 }
@@ -3114,6 +3118,7 @@ bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<DWARFDIE> &member_function_dies,
+    std::vector<DWARFDIE> &contained_type_dies,
     DelayedPropertyList &delayed_properties,
     const AccessType default_accessibility,
     ClangASTImporter::LayoutInfo &layout_info) {
@@ -3163,6 +3168,8 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     default:
+      if (llvm::dwarf::isType(tag))
+        contained_type_dies.push_back(die);
       break;
     }
   }

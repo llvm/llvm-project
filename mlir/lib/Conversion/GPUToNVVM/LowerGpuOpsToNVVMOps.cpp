@@ -72,13 +72,13 @@ convertReduxKind(gpu::AllReduceOperation mode) {
     return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::MINUI:
     return std::nullopt;
-  case gpu::AllReduceOperation::MINF:
+  case gpu::AllReduceOperation::MINNUMF:
     return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::MAXSI:
     return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::MAXUI:
     return std::nullopt;
-  case gpu::AllReduceOperation::MAXF:
+  case gpu::AllReduceOperation::MAXNUMF:
     return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::AND:
     return NVVM::ReduxKind::AND;

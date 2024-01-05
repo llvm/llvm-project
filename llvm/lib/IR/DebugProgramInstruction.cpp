@@ -203,6 +203,10 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   case DPValue::LocationType::Value:
     IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
     break;
+  case DPValue::LocationType::End:
+  case DPValue::LocationType::Any:
+    llvm_unreachable("Invalid LocationType");
+    break;
   }
 
   // Create the intrinsic from this DPValue's information, optionally insert

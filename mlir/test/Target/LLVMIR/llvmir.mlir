@@ -1911,6 +1911,17 @@ llvm.func @nontemporal_store_and_load() {
 
 // -----
 
+// Check that invariantLoad attribute is exported as metadata node.
+llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: !invariant.load ![[NODE:[0-9]+]]
+  %1 = llvm.load %ptr invariant : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
@@ -2302,6 +2313,20 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 }
 
 // CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
+
+// -----
+
+//
+// arm_streaming_compatible attribute.
+//
+
+// CHECK-LABEL: @streaming_compatible_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" }
 
 // -----
 

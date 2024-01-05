@@ -1339,7 +1339,7 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   auto Converted = convertIncludes(AST);
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||

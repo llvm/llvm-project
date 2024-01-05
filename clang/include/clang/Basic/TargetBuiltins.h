@@ -309,7 +309,7 @@ namespace clang {
     bool isTupleSet() const { return Flags & IsTupleSet; }
     bool isReadZA() const { return Flags & IsReadZA; }
     bool isWriteZA() const { return Flags & IsWriteZA; }
-
+    bool isReductionQV() const { return Flags & IsReductionQV; }
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }
   };

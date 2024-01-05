@@ -408,7 +408,7 @@ private:
       const TreePatternNode *DstChild, const TreePatternNode *Src);
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
-                                      DagInit *DefaultOps) const;
+                                      const DAGDefaultOperand &DefaultOp) const;
   Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
@@ -1681,11 +1681,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
 
-      const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[InstOpNo];
-      DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
-      if (auto Error = importDefaultOperandRenderers(InsertPt, M, DstMIBuilder,
-                                                     DefaultOps))
+      Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+      if (auto Error = importDefaultOperandRenderers(
+              InsertPt, M, DstMIBuilder, CGP.getDefaultOperand(OperandNode)))
         return std::move(Error);
+
       ++NumDefaultOps;
       continue;
     }
@@ -1710,22 +1710,16 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
 Error GlobalISelEmitter::importDefaultOperandRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    DagInit *DefaultOps) const {
-  for (const auto *DefaultOp : DefaultOps->getArgs()) {
-    std::optional<LLTCodeGen> OpTyOrNone;
+    const DAGDefaultOperand &DefaultOp) const {
+  for (const auto &Op : DefaultOp.DefaultOps) {
+    const auto *N = Op.get();
+    if (!N->isLeaf())
+      return failedImport("Could not add default op");
 
-    // Look through ValueType operators.
-    if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
-      if (const DefInit *DefaultDagOperator =
-              dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
-        if (DefaultDagOperator->getDef()->isSubClassOf("ValueType")) {
-          OpTyOrNone = MVTToLLT(getValueType(DefaultDagOperator->getDef()));
-          DefaultOp = DefaultDagOp->getArg(0);
-        }
-      }
-    }
+    const auto *DefaultOp = N->getLeafValue();
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
+      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N->getSimpleType(0));
       auto Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();

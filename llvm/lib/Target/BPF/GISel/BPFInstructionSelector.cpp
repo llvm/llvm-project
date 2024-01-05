@@ -76,6 +76,8 @@ BPFInstructionSelector::BPFInstructionSelector(const BPFTargetMachine &TM,
 }
 
 bool BPFInstructionSelector::select(MachineInstr &I) {
+  if (!isPreISelGenericOpcode(I.getOpcode()))
+    return true;
   if (selectImpl(I, *CoverageInfo))
     return true;
   return false;

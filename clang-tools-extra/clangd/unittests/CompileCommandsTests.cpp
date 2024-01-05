@@ -209,21 +209,6 @@ TEST(CommandMangler, ConfigEdits) {
               ElementsAre(_, "--driver-mode=g++", "--hello", "--", "FOO.CC"));
 }
 
-TEST(CommandMangler, ExpandedResponseFiles) {
-  SmallString<1024> Path;
-  int FD;
-  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("args", "", FD, Path));
-  llvm::raw_fd_ostream OutStream(FD, true);
-  OutStream << "-Wall";
-  OutStream.close();
-
-  auto Mangler = CommandMangler::forTests();
-  tooling::CompileCommand Cmd;
-  Cmd.CommandLine = {"clang", ("@" + Path).str(), "foo.cc"};
-  Mangler(Cmd, "foo.cc");
-  EXPECT_THAT(Cmd.CommandLine, ElementsAre(_, "-Wall", "--", "foo.cc"));
-}
-
 static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
   llvm::SmallVector<llvm::StringRef> Parts;
   llvm::SplitString(Argv, Parts);

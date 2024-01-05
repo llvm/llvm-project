@@ -8514,14 +8514,24 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return false;
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
+      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+
+      // Static lambda function call operators can't have captures. We already
+      // diagnosed this, so bail out here.
+      if (MD->isStatic()) {
+        assert(Info.CurrentCall->This == nullptr &&
+               "This should not be set for a static call operator");
+        return false;
+      }
+
       // Start with 'Result' referring to the complete closure object...
-      if (auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-          MD->isExplicitObjectMemberFunction()) {
+      if (MD->isExplicitObjectMemberFunction()) {
         APValue *RefValue =
             Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
         Result.setFrom(Info.Ctx, *RefValue);
       } else
         Result = *Info.CurrentCall->This;
+
       // ... then update it to refer to the field of the closure object
       // that represents the capture.
       if (!HandleLValueMember(Info, E, Result, FD))

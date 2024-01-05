@@ -2005,12 +2005,12 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
   if (D->isInvalidDecl())
     return false;
 
-  if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
+  if (const auto *DD = dyn_cast<DecompositionDecl>(D)) {
     // For a decomposition declaration, warn if none of the bindings are
     // referenced, instead of if the variable itself is referenced (which
     // it is, by the bindings' expressions).
     bool IsAllPlaceholders = true;
-    for (auto *BD : DD->bindings()) {
+    for (const auto *BD : DD->bindings()) {
       if (BD->isReferenced())
         return false;
       IsAllPlaceholders = IsAllPlaceholders && BD->isPlaceholderVar(LangOpts);
@@ -2054,7 +2054,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
 
     const Expr *Init = VD->getInit();
-    if (const auto *Cleanups = dyn_cast_or_null<ExprWithCleanups>(Init))
+    if (const auto *Cleanups = dyn_cast_if_present<ExprWithCleanups>(Init))
       Init = Cleanups->getSubExpr();
 
     const auto *Ty = VD->getType().getTypePtr();
@@ -2068,11 +2068,10 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
 
     // Warn for reference variables whose initializtion performs lifetime
     // extension.
-    if (const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(Init)) {
-      if (MTE->getExtendingDecl()) {
-        Ty = VD->getType().getNonReferenceType().getTypePtr();
-        Init = MTE->getSubExpr()->IgnoreImplicitAsWritten();
-      }
+    if (const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(Init);
+        MTE && MTE->getExtendingDecl()) {
+      Ty = VD->getType().getNonReferenceType().getTypePtr();
+      Init = MTE->getSubExpr()->IgnoreImplicitAsWritten();
     }
 
     // If we failed to complete the type for some reason, or if the type is
@@ -2089,15 +2088,14 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
       if (Tag->hasAttr<UnusedAttr>())
         return false;
 
-      if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Tag)) {
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(Tag)) {
         if (!RD->hasTrivialDestructor() && !RD->hasAttr<WarnUnusedAttr>())
           return false;
 
         if (Init) {
-          const CXXConstructExpr *Construct =
-            dyn_cast<CXXConstructExpr>(Init);
+          const auto *Construct = dyn_cast<CXXConstructExpr>(Init);
           if (Construct && !Construct->isElidable()) {
-            CXXConstructorDecl *CD = Construct->getConstructor();
+            const CXXConstructorDecl *CD = Construct->getConstructor();
             if (!CD->isTrivial() && !RD->hasAttr<WarnUnusedAttr>() &&
                 (VD->getInit()->isValueDependent() || !VD->evaluateValue()))
               return false;
@@ -2211,10 +2209,9 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
       return;
     // In C++, don't warn for record types that don't have WarnUnusedAttr, to
     // mimic gcc's behavior.
-    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Tag)) {
-      if (!RD->hasAttr<WarnUnusedAttr>())
-        return;
-    }
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Tag);
+        RD && !RD->hasAttr<WarnUnusedAttr>())
+      return;
   }
 
   // Don't warn about __block Objective-C pointer variables, as they might
@@ -9903,15 +9900,15 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Match up the template parameter lists with the scope specifier, then
     // determine whether we have a template or a template specialization.
     bool Invalid = false;
+    TemplateIdAnnotation *TemplateId =
+        D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
+            ? D.getName().TemplateId
+            : nullptr;
     TemplateParameterList *TemplateParams =
         MatchTemplateParametersToScopeSpecifier(
             D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
-            D.getCXXScopeSpec(),
-            D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
-                ? D.getName().TemplateId
-                : nullptr,
-            TemplateParamLists, isFriend, isMemberSpecialization,
-            Invalid);
+            D.getCXXScopeSpec(), TemplateId, TemplateParamLists, isFriend,
+            isMemberSpecialization, Invalid);
     if (TemplateParams) {
       // Check that we can declare a template here.
       if (CheckTemplateDeclScope(S, TemplateParams))
@@ -9923,6 +9920,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         // A destructor cannot be a template.
         if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
           Diag(NewFD->getLocation(), diag::err_destructor_template);
+          NewFD->setInvalidDecl();
+          // Function template with explicit template arguments.
+        } else if (TemplateId) {
+          Diag(D.getIdentifierLoc(), diag::err_function_template_partial_spec)
+              << SourceRange(TemplateId->LAngleLoc, TemplateId->RAngleLoc);
           NewFD->setInvalidDecl();
         }
 
@@ -9976,6 +9978,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << FixItHint::CreateRemoval(RemoveRange)
             << FixItHint::CreateInsertion(InsertLoc, "<>");
           Invalid = true;
+
+          // Recover by faking up an empty template argument list.
+          HasExplicitTemplateArgs = true;
+          TemplateArgs.setLAngleLoc(InsertLoc);
+          TemplateArgs.setRAngleLoc(InsertLoc);
         }
       }
     } else {
@@ -9989,6 +9996,33 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (TemplateParamLists.size() > 0)
         // For source fidelity, store all the template param lists.
         NewFD->setTemplateParameterListsInfo(Context, TemplateParamLists);
+
+      // "friend void foo<>(int);" is an implicit specialization decl.
+      if (isFriend && TemplateId)
+        isFunctionTemplateSpecialization = true;
+    }
+
+    // If this is a function template specialization and the unqualified-id of
+    // the declarator-id is a template-id, convert the template argument list
+    // into our AST format and check for unexpanded packs.
+    if (isFunctionTemplateSpecialization && TemplateId) {
+      HasExplicitTemplateArgs = true;
+
+      TemplateArgs.setLAngleLoc(TemplateId->LAngleLoc);
+      TemplateArgs.setRAngleLoc(TemplateId->RAngleLoc);
+      ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                         TemplateId->NumArgs);
+      translateTemplateArguments(TemplateArgsPtr, TemplateArgs);
+
+      // FIXME: Should we check for unexpanded packs if this was an (invalid)
+      // declaration of a function template partial specialization? Should we
+      // consider the unexpanded pack context to be a partial specialization?
+      for (const TemplateArgumentLoc &ArgLoc : TemplateArgs.arguments()) {
+        if (DiagnoseUnexpandedParameterPack(
+                ArgLoc, isFriend ? UPPC_FriendDeclaration
+                                 : UPPC_ExplicitSpecialization))
+          NewFD->setInvalidDecl();
+      }
     }
 
     if (Invalid) {
@@ -10440,46 +10474,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       Diag(D.getDeclSpec().getInlineSpecLoc(),
            diag::ext_operator_new_delete_declared_inline)
         << NewFD->getDeclName();
-
-    // If the declarator is a template-id, translate the parser's template
-    // argument list into our AST format.
-    if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
-      TemplateIdAnnotation *TemplateId = D.getName().TemplateId;
-      TemplateArgs.setLAngleLoc(TemplateId->LAngleLoc);
-      TemplateArgs.setRAngleLoc(TemplateId->RAngleLoc);
-      ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
-                                         TemplateId->NumArgs);
-      translateTemplateArguments(TemplateArgsPtr,
-                                 TemplateArgs);
-
-      HasExplicitTemplateArgs = true;
-
-      if (NewFD->isInvalidDecl()) {
-        HasExplicitTemplateArgs = false;
-      } else if (FunctionTemplate) {
-        // Function template with explicit template arguments.
-        Diag(D.getIdentifierLoc(), diag::err_function_template_partial_spec)
-          << SourceRange(TemplateId->LAngleLoc, TemplateId->RAngleLoc);
-
-        HasExplicitTemplateArgs = false;
-      } else if (isFriend) {
-        // "friend void foo<>(int);" is an implicit specialization decl.
-        isFunctionTemplateSpecialization = true;
-      } else {
-        assert(isFunctionTemplateSpecialization &&
-               "should have a 'template<>' for this decl");
-      }
-    } else if (isFriend && isFunctionTemplateSpecialization) {
-      // This combination is only possible in a recovery case;  the user
-      // wrote something like:
-      //   template <> friend void foo(int);
-      // which we're recovering from as if the user had written:
-      //   friend void foo<>(int);
-      // Go ahead and fake up a template id.
-      HasExplicitTemplateArgs = true;
-      TemplateArgs.setLAngleLoc(D.getIdentifierLoc());
-      TemplateArgs.setRAngleLoc(D.getIdentifierLoc());
-    }
 
     // We do not add HD attributes to specializations here because
     // they may have different constexpr-ness compared to their
@@ -12957,7 +12951,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     // FIXME: Initialization should not be taking a mutable list of inits.
     SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
-                                                       InitsCopy, PL);
+                                                       InitsCopy);
   }
 
   if (DirectInit) {
@@ -15800,7 +15794,7 @@ Decl *Sema::ActOnSkippedFunctionBody(Decl *Decl) {
 }
 
 Decl *Sema::ActOnFinishFunctionBody(Decl *D, Stmt *BodyArg) {
-  return ActOnFinishFunctionBody(D, BodyArg, false);
+  return ActOnFinishFunctionBody(D, BodyArg, /*IsInstantiation=*/false);
 }
 
 /// RAII object that pops an ExpressionEvaluationContext when exiting a function
@@ -15848,8 +15842,6 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
 }
 
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
-  if (!FD)
-    return;
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
@@ -15872,7 +15864,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().Coroutines) {
+  // If we skip function body, we can't tell if a function is a coroutine.
+  if (getLangOpts().Coroutines && FD && !FD->hasSkippedBody()) {
     if (FSI->isCoroutine())
       CheckCompletedCoroutineBody(FD, Body);
     else
@@ -16005,7 +15998,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
             return StartTok.consume_front("const") &&
                    (StartTok.empty() || isWhitespace(StartTok[0]) ||
-                    StartTok.startswith("/*") || StartTok.startswith("//"));
+                    StartTok.starts_with("/*") || StartTok.starts_with("//"));
           };
 
           auto findBeginLoc = [&]() {
@@ -16359,7 +16352,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
 
   // Extension in C99 (defaults to error). Legal in C89, but warn about it.
   unsigned diag_id;
-  if (II.getName().startswith("__builtin_"))
+  if (II.getName().starts_with("__builtin_"))
     diag_id = diag::warn_builtin_unknown;
   // OpenCL v2.0 s6.9.u - Implicit function declaration is not supported.
   else if (getLangOpts().C99)
@@ -19517,20 +19510,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarLBraceLoc(LBrac);
       CDecl->setIvarRBraceLoc(RBrac);
     }
-  }
-
-  // Check the "counted_by" attribute to ensure that the count field exists in
-  // the struct. Make sure we're performing this check on the outer-most
-  // record.  This is a C-only feature.
-  if (!getLangOpts().CPlusPlus && Record &&
-      !isa<RecordDecl>(Record->getParent())) {
-    auto Pred = [](const Decl *D) {
-      if (const auto *FD = dyn_cast_if_present<FieldDecl>(D))
-        return FD->hasAttr<CountedByAttr>();
-      return false;
-    };
-    if (const FieldDecl *FD = Record->findFieldIf(Pred))
-      CheckCountedByAttr(S, FD);
   }
 }
 

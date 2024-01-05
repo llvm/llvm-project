@@ -17,6 +17,7 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
@@ -69,6 +70,28 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
   for (unsigned row = 0; row < a.getNumRows(); row++)
     for (unsigned col = 0; col < a.getNumColumns(); col++)
       EXPECT_EQ(a(row, col), b(row, col));
+}
+
+// Check the coefficients (in order) of two quasipolynomials.
+// Note that this is not a true equality check.
+inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
+  EXPECT_EQ(a.getNumInputs(), b.getNumInputs());
+
+  SmallVector<Fraction> aCoeffs = a.getCoefficients(),
+                        bCoeffs = b.getCoefficients();
+  EXPECT_EQ(aCoeffs.size(), bCoeffs.size());
+  for (unsigned i = 0, e = aCoeffs.size(); i < e; i++)
+    EXPECT_EQ(aCoeffs[i], bCoeffs[i]);
+
+  std::vector<std::vector<SmallVector<Fraction>>> aAff = a.getAffine(),
+                                                  bAff = b.getAffine();
+  EXPECT_EQ(aAff.size(), bAff.size());
+  for (unsigned i = 0, e = aAff.size(); i < e; i++) {
+    EXPECT_EQ(aAff[i].size(), bAff[i].size());
+    for (unsigned j = 0, f = aAff[i].size(); j < f; j++)
+      for (unsigned k = 0, g = a.getNumInputs(); k <= g; k++)
+        EXPECT_EQ(aAff[i][j][k], bAff[i][j][k]);
+  }
 }
 
 /// lhs and rhs represent non-negative integers or positive infinity. The

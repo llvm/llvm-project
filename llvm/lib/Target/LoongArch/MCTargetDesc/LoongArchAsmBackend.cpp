@@ -177,6 +177,34 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
 }
 
+static inline std::pair<MCFixupKind, MCFixupKind>
+getRelocPairForSize(unsigned Size) {
+  switch (Size) {
+  default:
+    llvm_unreachable("unsupported fixup size");
+  case 6:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD6),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB6));
+  case 8:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD8),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB8));
+  case 16:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD16),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB16));
+  case 32:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD32),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB32));
+  case 64:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD64),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB64));
+  }
+}
+
 bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                        const MCSubtargetInfo *STI) const {
   // We mostly follow binutils' convention here: align to 4-byte boundary with a
@@ -188,6 +216,56 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   for (; Count >= 4; Count -= 4)
     OS.write("\0\0\x40\x03", 4);
 
+  return true;
+}
+
+bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
+                                                  const MCFragment &F,
+                                                  const MCFixup &Fixup,
+                                                  const MCValue &Target,
+                                                  uint64_t &FixedValue) const {
+  std::pair<MCFixupKind, MCFixupKind> FK;
+  uint64_t FixedValueA, FixedValueB;
+  const MCSection &SecA = Target.getSymA()->getSymbol().getSection();
+  const MCSection &SecB = Target.getSymB()->getSymbol().getSection();
+
+  // We need record relocation if SecA != SecB. Usually SecB is same as the
+  // section of Fixup, which will be record the relocation as PCRel. If SecB
+  // is not same as the section of Fixup, it will report error. Just return
+  // false and then this work can be finished by handleFixup.
+  if (&SecA != &SecB)
+    return false;
+
+  // In SecA == SecB case. If the linker relaxation is enabled, we need record
+  // the ADD, SUB relocations. Otherwise the FixedValue has already been
+  // calculated out in evaluateFixup, return true and avoid record relocations.
+  if (!STI.hasFeature(LoongArch::FeatureRelax))
+    return true;
+
+  switch (Fixup.getKind()) {
+  case llvm::FK_Data_1:
+    FK = getRelocPairForSize(8);
+    break;
+  case llvm::FK_Data_2:
+    FK = getRelocPairForSize(16);
+    break;
+  case llvm::FK_Data_4:
+    FK = getRelocPairForSize(32);
+    break;
+  case llvm::FK_Data_8:
+    FK = getRelocPairForSize(64);
+    break;
+  default:
+    llvm_unreachable("unsupported fixup size");
+  }
+  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSymB());
+  auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
+  auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
+  auto &Asm = Layout.getAssembler();
+  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  FixedValue = FixedValueA - FixedValueB;
   return true;
 }
 

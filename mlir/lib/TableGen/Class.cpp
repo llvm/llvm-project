@@ -18,7 +18,8 @@ using namespace mlir::tblgen;
 /// Returns space to be emitted after the given C++ `type`. return "" if the
 /// ends with '&' or '*', or is empty, else returns " ".
 static StringRef getSpaceAfterType(StringRef type) {
-  return (type.empty() || type.endswith("&") || type.endswith("*")) ? "" : " ";
+  return (type.empty() || type.ends_with("&") || type.ends_with("*")) ? ""
+                                                                      : " ";
 }
 
 //===----------------------------------------------------------------------===//

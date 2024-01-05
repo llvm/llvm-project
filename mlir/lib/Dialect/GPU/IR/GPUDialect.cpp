@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -492,7 +493,8 @@ static LogicalResult verifyReduceOpAndType(gpu::AllReduceOperation opName,
                                            Type resType) {
   using Kind = gpu::AllReduceOperation;
   if (llvm::is_contained(
-          {Kind::MINF, Kind::MAXF, Kind::MINIMUMF, Kind::MAXIMUMF}, opName)) {
+          {Kind::MINNUMF, Kind::MAXNUMF, Kind::MINIMUMF, Kind::MAXIMUMF},
+          opName)) {
     if (!isa<FloatType>(resType))
       return failure();
   }
@@ -587,8 +589,16 @@ static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
 //===----------------------------------------------------------------------===//
 
 LogicalResult gpu::SubgroupReduceOp::verify() {
+  Type elemType = getType();
+  if (auto vecTy = dyn_cast<VectorType>(elemType)) {
+    if (vecTy.isScalable())
+      return emitOpError() << "is not compatible with scalable vector types";
+
+    elemType = vecTy.getElementType();
+  }
+
   gpu::AllReduceOperation opName = getOp();
-  if (failed(verifyReduceOpAndType(opName, getType()))) {
+  if (failed(verifyReduceOpAndType(opName, elemType))) {
     return emitError() << '`' << gpu::stringifyAllReduceOperation(opName)
                        << "` reduction operation is not compatible with type "
                        << getType();
