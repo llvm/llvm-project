@@ -173,7 +173,7 @@ void redecl_preserve_za(void) {}
 void redecl_nopreserve_za(void);
 void redecl_nopreserve_za(void) __arm_preserves("za") {}
 
-void non_za_definition(void (*shared_za_fn_ptr)(void) __arm_inout("za")) {
+void non_za_definition(void (*shared_za_fn_ptr)(void) __arm_inout("za"), void (*preserves_za_fn_ptr)(void) __arm_preserves("za")) {
   sme_arm_new_za(); // OK
   // expected-error@+2 {{call to a shared ZA function requires the caller to have ZA state}}
   // expected-cpp-error@+1 {{call to a shared ZA function requires the caller to have ZA state}}
@@ -181,6 +181,9 @@ void non_za_definition(void (*shared_za_fn_ptr)(void) __arm_inout("za")) {
   // expected-error@+2 {{call to a shared ZA function requires the caller to have ZA state}}
   // expected-cpp-error@+1 {{call to a shared ZA function requires the caller to have ZA state}}
   shared_za_fn_ptr();
+  // expected-error@+2 {{call to a shared ZA function requires the caller to have ZA state}}
+  // expected-cpp-error@+1 {{call to a shared ZA function requires the caller to have ZA state}}
+  preserves_za_fn_ptr();
 }
 
 void shared_za_definition(void (*shared_za_fn_ptr)(void) __arm_inout("za")) __arm_inout("za") {

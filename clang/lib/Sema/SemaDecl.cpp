@@ -12186,11 +12186,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
-      FunctionType::ArmStateValue ZAState =
-          FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
-      UsesZA |= ZAState == FunctionType::ARM_In ||
-                ZAState == FunctionType::ARM_Out ||
-                ZAState == FunctionType::ARM_InOut;
+      UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
+                FunctionType::ARM_None;
     }
 
     if (UsesSM || UsesZA) {

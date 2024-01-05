@@ -3196,8 +3196,7 @@ static bool hasSMEZAState(const FunctionDecl *FD) {
   if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
     FunctionType::ArmStateValue State =
         FunctionType::getArmZAState(T->getAArch64SMEAttributes());
-    if (State == FunctionType::ARM_In || State == FunctionType::ARM_Out ||
-        State == FunctionType::ARM_InOut)
+    if (State != FunctionType::ARM_None)
       return true;
   }
   return false;
@@ -7529,22 +7528,17 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // any, then this is an error.
     FunctionType::ArmStateValue ArmZAState =
         FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
-    if (ArmZAState == FunctionType::ARM_In ||
-        ArmZAState == FunctionType::ARM_Out ||
-        ArmZAState == FunctionType::ARM_InOut) {
+    if (ArmZAState != FunctionType::ARM_None) {
       bool CallerHasZAState = false;
       if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
         auto *Attr = CallerFD->getAttr<ArmNewAttr>();
         if (Attr && Attr->isNewZA())
           CallerHasZAState = true;
         else if (const auto *FPT =
-                     CallerFD->getType()->getAs<FunctionProtoType>()) {
-          ArmZAState = FunctionType::getArmZAState(
-              FPT->getExtProtoInfo().AArch64SMEAttributes);
-          CallerHasZAState = ArmZAState == FunctionType::ARM_In ||
-                             ArmZAState == FunctionType::ARM_Out ||
-                             ArmZAState == FunctionType::ARM_InOut;
-        }
+                     CallerFD->getType()->getAs<FunctionProtoType>())
+          CallerHasZAState = FunctionType::getArmZAState(
+                                 FPT->getExtProtoInfo().AArch64SMEAttributes) !=
+                             FunctionType::ARM_None;
       }
 
       if (!CallerHasZAState)
