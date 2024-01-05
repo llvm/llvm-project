@@ -976,7 +976,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
         `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
-      | `wait` `(` custom<WaitOperands>($waitOperands,
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
             type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
@@ -1075,7 +1075,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       | `private` `(` custom<SymOperandList>(
             $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
         `)`
-      | `wait` `(` custom<WaitOperands>($waitOperands,
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
             type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
@@ -1196,8 +1196,9 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
             type($numWorkers), $numWorkersDeviceType) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
-      | `wait` `(` custom<WaitOperands>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
+      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
+            type($waitOperands), $waitOperandsDeviceType,
+            $waitOperandsSegments) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
     )

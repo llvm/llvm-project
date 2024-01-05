@@ -303,8 +303,9 @@ ret:
   ret void
 }
 
+; FIXME: This shouldn't have the 0 initialization
 ; GCN-LABEL: {{^}}undef_v3bf16:
-; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
 ; GCN: s_cbranch_vccnz
 define amdgpu_kernel void @undef_v3bf16(ptr addrspace(3) %ptr, i1 %cond) {

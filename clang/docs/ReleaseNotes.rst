@@ -574,6 +574,7 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
+- Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 
 
 Improvements to Clang's time-trace
@@ -741,9 +742,11 @@ Bug Fixes in This Version
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
 - Fix an issue where clang doesn't respect detault template arguments that
   are added in a later redeclaration for CTAD.
-  Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
+  Fixes (`#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
 - Fix an issue where CTAD fails for explicit type conversion.
-  Fixes (#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+  Fixes (`#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+- Fix crash when using C++ only tokens like ``::`` in C compiler clang.
+  Fixes (`#73559 <https://github.com/llvm/llvm-project/issues/73559>`_)
 
 
 Bug Fixes to Compiler Builtins
@@ -898,6 +901,11 @@ Bug Fixes to C++ Support
 
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
+
+- Fixed a crash caused by using return type requirement in a lambda. Fixes:
+  (`#63808 <https://github.com/llvm/llvm-project/issues/63808>`_)
+  (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
+  (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

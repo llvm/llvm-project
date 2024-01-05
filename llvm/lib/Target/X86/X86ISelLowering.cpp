@@ -41348,6 +41348,20 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return TLO.CombineTo(Op, Src);
     break;
   }
+  case X86ISD::VZEXT_LOAD: {
+    // If upper demanded elements are not demanded then simplify to a
+    // scalar_to_vector(load()).
+    MVT SVT = VT.getSimpleVT().getVectorElementType();
+    if (DemandedElts == 1 && Op.getValue(1).use_empty() && isTypeLegal(SVT)) {
+      SDLoc DL(Op);
+      auto *Mem = cast<MemSDNode>(Op);
+      SDValue Elt = TLO.DAG.getLoad(SVT, DL, Mem->getChain(), Mem->getBasePtr(),
+                                    Mem->getMemOperand());
+      SDValue Vec = TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Elt);
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Vec));
+    }
+    break;
+  }
   case X86ISD::VBROADCAST: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
