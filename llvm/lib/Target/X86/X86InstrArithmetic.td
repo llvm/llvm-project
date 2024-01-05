@@ -259,7 +259,7 @@ let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
   def IMUL64rm_EVEX : IMulOpRM_RF<Xi64, WriteIMul64Reg>, PL;
 }
 
-class IMulOpRI8<X86TypeInfo t, X86FoldableSchedWrite sched>
+class IMulOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpRI8<0x6B, "imul", binop_ndd_args, t, MRMSrcReg,
              (outs t.RegClass:$dst)> {
   let SchedRW = [sched];
@@ -276,7 +276,7 @@ class IMulOpRI_RF<X86TypeInfo t, X86FoldableSchedWrite sched>
              t.ImmNoSuOperator:$src2))]>, DefEFLAGS {
   let SchedRW = [sched];
 }
-class IMulOpMI8<X86TypeInfo t, X86FoldableSchedWrite sched>
+class IMulOpMI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpMI8<"imul", binop_ndd_args, t, MRMSrcMem, (outs t.RegClass:$dst)> {
   let Opcode = 0x6B;
   let SchedRW = [sched.Folded];
@@ -294,42 +294,42 @@ class IMulOpMI_RF<X86TypeInfo t, X86FoldableSchedWrite sched>
     DefEFLAGS {
   let SchedRW = [sched.Folded];
 }
-def IMUL16rri8 : IMulOpRI8<Xi16, WriteIMul16Imm>, DefEFLAGS, OpSize16;
-def IMUL32rri8 : IMulOpRI8<Xi32, WriteIMul32Imm>, DefEFLAGS, OpSize32;
-def IMUL64rri8 : IMulOpRI8<Xi64, WriteIMul64Imm>, DefEFLAGS;
+def IMUL16rri8 : IMulOpRI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, OpSize16;
+def IMUL32rri8 : IMulOpRI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, OpSize32;
+def IMUL64rri8 : IMulOpRI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS;
 def IMUL16rri  : IMulOpRI_RF<Xi16, WriteIMul16Imm>, OpSize16;
 def IMUL32rri  : IMulOpRI_RF<Xi32, WriteIMul32Imm>, OpSize32;
 def IMUL64rri32 : IMulOpRI_RF<Xi64, WriteIMul64Imm>;
-def IMUL16rmi8 : IMulOpMI8<Xi16, WriteIMul16Imm>, DefEFLAGS, OpSize16;
-def IMUL32rmi8 : IMulOpMI8<Xi32, WriteIMul32Imm>, DefEFLAGS, OpSize32;
-def IMUL64rmi8 : IMulOpMI8<Xi64, WriteIMul64Imm>, DefEFLAGS;
+def IMUL16rmi8 : IMulOpMI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, OpSize16;
+def IMUL32rmi8 : IMulOpMI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, OpSize32;
+def IMUL64rmi8 : IMulOpMI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS;
 def IMUL16rmi  : IMulOpMI_RF<Xi16, WriteIMul16Imm>, OpSize16;
 def IMUL32rmi  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, OpSize32;
 def IMUL64rmi32 : IMulOpMI_RF<Xi64, WriteIMul64Imm>;
 
 let Predicates = [In64BitMode] in {
-  def IMUL16rri8_NF : IMulOpRI8<Xi16, WriteIMul16Imm>, NF, PD;
-  def IMUL32rri8_NF : IMulOpRI8<Xi32, WriteIMul32Imm>, NF;
-  def IMUL64rri8_NF : IMulOpRI8<Xi64, WriteIMul64Imm>, NF;
+  def IMUL16rri8_NF : IMulOpRI8_R<Xi16, WriteIMul16Imm>, NF, PD;
+  def IMUL32rri8_NF : IMulOpRI8_R<Xi32, WriteIMul32Imm>, NF;
+  def IMUL64rri8_NF : IMulOpRI8_R<Xi64, WriteIMul64Imm>, NF;
   def IMUL16rri_NF  : IMulOpRI_R<Xi16, WriteIMul16Imm>, NF, PD;
   def IMUL32rri_NF  : IMulOpRI_R<Xi32, WriteIMul32Imm>, NF;
   def IMUL64rri32_NF : IMulOpRI_R<Xi64, WriteIMul64Imm>, NF;
-  def IMUL16rmi8_NF : IMulOpMI8<Xi16, WriteIMul16Imm>, NF, PD;
-  def IMUL32rmi8_NF : IMulOpMI8<Xi32, WriteIMul32Imm>, NF;
-  def IMUL64rmi8_NF : IMulOpMI8<Xi64, WriteIMul64Imm>, NF;
+  def IMUL16rmi8_NF : IMulOpMI8_R<Xi16, WriteIMul16Imm>, NF, PD;
+  def IMUL32rmi8_NF : IMulOpMI8_R<Xi32, WriteIMul32Imm>, NF;
+  def IMUL64rmi8_NF : IMulOpMI8_R<Xi64, WriteIMul64Imm>, NF;
   def IMUL16rmi_NF  : IMulOpMI_R<Xi16, WriteIMul16Imm>, NF, PD;
   def IMUL32rmi_NF  : IMulOpMI_R<Xi32, WriteIMul32Imm>, NF;
   def IMUL64rmi32_NF : IMulOpMI_R<Xi64, WriteIMul64Imm>, NF;
 
-  def IMUL16rri8_EVEX : IMulOpRI8<Xi16, WriteIMul16Imm>, DefEFLAGS, PL, PD;
-  def IMUL32rri8_EVEX : IMulOpRI8<Xi32, WriteIMul32Imm>, DefEFLAGS, PL;
-  def IMUL64rri8_EVEX : IMulOpRI8<Xi64, WriteIMul64Imm>, DefEFLAGS, PL;
+  def IMUL16rri8_EVEX : IMulOpRI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, PL, PD;
+  def IMUL32rri8_EVEX : IMulOpRI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, PL;
+  def IMUL64rri8_EVEX : IMulOpRI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS, PL;
   def IMUL16rri_EVEX  : IMulOpRI_RF<Xi16, WriteIMul16Imm>, PL, PD;
   def IMUL32rri_EVEX  : IMulOpRI_RF<Xi32, WriteIMul32Imm>, PL;
   def IMUL64rri32_EVEX : IMulOpRI_RF<Xi64, WriteIMul64Imm>, PL;
-  def IMUL16rmi8_EVEX : IMulOpMI8<Xi16, WriteIMul16Imm>, DefEFLAGS, PL, PD;
-  def IMUL32rmi8_EVEX : IMulOpMI8<Xi32, WriteIMul32Imm>, DefEFLAGS, PL;
-  def IMUL64rmi8_EVEX : IMulOpMI8<Xi64, WriteIMul64Imm>, DefEFLAGS, PL;
+  def IMUL16rmi8_EVEX : IMulOpMI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, PL, PD;
+  def IMUL32rmi8_EVEX : IMulOpMI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, PL;
+  def IMUL64rmi8_EVEX : IMulOpMI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS, PL;
   def IMUL16rmi_EVEX  : IMulOpMI_RF<Xi16, WriteIMul16Imm>, PL, PD;
   def IMUL32rmi_EVEX  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, PL;
   def IMUL64rmi32_EVEX : IMulOpMI_RF<Xi64, WriteIMul64Imm>, PL;
