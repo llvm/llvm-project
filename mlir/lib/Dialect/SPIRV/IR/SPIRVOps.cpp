@@ -976,19 +976,19 @@ LogicalResult spirv::FuncOp::verifyType() {
   if (fnType.getNumResults() > 1)
     return emitOpError("cannot have more than one result");
 
-  auto funcOp = dyn_cast<spirv::FuncOp>(getOperation());
-
   auto hasDecorationAttr = [&](spirv::Decoration decoration,
                                unsigned argIndex) {
-    for (auto argAttr :
-         cast<FunctionOpInterface>(*funcOp).getArgAttrs(argIndex)) {
+    auto func = llvm::cast<FunctionOpInterface>(getOperation());
+    for (auto argAttr : cast<FunctionOpInterface>(func).getArgAttrs(argIndex)) {
+      if (argAttr.getName() != spirv::DecorationAttr::name)
+        continue;
       if (auto decAttr = dyn_cast<spirv::DecorationAttr>(argAttr.getValue()))
         return decAttr.getValue() == decoration;
     }
     return false;
   };
 
-  for (unsigned i = 0, e = funcOp.getNumArguments(); i != e; ++i) {
+  for (unsigned i = 0, e = this->getNumArguments(); i != e; ++i) {
     Type param = fnType.getInputs()[i];
     auto inputPtrType = dyn_cast<spirv::PointerType>(param);
     if (!inputPtrType)
