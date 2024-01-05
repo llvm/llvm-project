@@ -31,7 +31,7 @@ def TruePredicate : Predicate<"true">;
 // to avoid overcomplicating the assembler and disassembler.
 //
 // HasEGPR is for the new entries and NoEGPR is for the entries before promotion,
-// so that the promoted instruction can be selected first to benefit RA.
+// so that the promoted variant can be selected first to benefit RA.
 def HasEGPR      : Predicate<"Subtarget->hasEGPR()">;
 def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 // APX extends some instructions with a new form that has an extra register
@@ -40,7 +40,7 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 // operands (including the original destination operand) become read-only source
 // operands.
 //
-// HasNDD is for the new NDD entries and NoNDD is fo the legacy 2-address variant,
+// HasNDD is for the new NDD entries and NoNDD is fo the legacy 2-address entries,
 // so that the NDD variant can be selected first to benefit RA.
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
