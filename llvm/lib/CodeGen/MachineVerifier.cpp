@@ -46,9 +46,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -3351,10 +3351,34 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
   bool IsEHa = MF->getMMI().getModule()->getModuleFlag("eh-asynch");
   while (true) {
     assert(LiveInts->isLiveInToMBB(LR, &*MFI));
+    auto IsSEHHandler = [](const MachineBasicBlock &Handler) -> bool {
+      if (!Handler.isMachineBlockAddressTaken())
+        return false;
+
+      for (const User *U : Handler.getBasicBlock()->users()) {
+        if (!isa<InvokeInst>(U))
+          continue;
+        const Function *Fn = cast<CallBase>(U)->getCalledFunction();
+        if (!Fn || !Fn->isIntrinsic())
+          continue;
+
+        switch (Fn->getIntrinsicID()) {
+        default:
+          continue;
+        case Intrinsic::seh_scope_begin:
+        case Intrinsic::seh_scope_end:
+        case Intrinsic::seh_try_begin:
+        case Intrinsic::seh_try_end:
+          return true;
+        }
+      }
+      return false;
+    };
+
     // TODO: we don't know how to track physregs into a landing pad. For async
     // EH, the virtual reg lives before scope begin, but we don't know seh scope
     // range of landing pad in Machine IR. Therefore don't check its liveness.
-    if (MFI->isEHPad() && (!Reg.isVirtual() || IsEHa)) {
+    if (MFI->isEHPad() && (!Reg.isVirtual() || (IsEHa && IsSEHHandler(*MFI)))) {
       if (&*MFI == EndMBB)
         break;
       ++MFI;
