@@ -30,11 +30,9 @@ namespace X86 {
 
 enum AsmComments {
   // For instr that was compressed from EVEX to VEX.
-  AC_EVEX_2_VEX = MachineInstr::TAsmComments
-  , // For instrs that was compressed from ND to non-ND.
-  AC_ND_2_NONND = AC_EVEX_2_VEX << 1
-  , // For instrs that was compressed from EVEX to Legacy.
-  AC_EVEX_2_LEGACY = AC_ND_2_NONND << 1
+  AC_EVEX_2_VEX = MachineInstr::TAsmComments,
+  // For instrs that was compressed from EVEX to Legacy.
+  AC_EVEX_2_LEGACY = AC_EVEX_2_VEX << 1
 };
 
 /// Return a pair of condition code for the given predicate and whether

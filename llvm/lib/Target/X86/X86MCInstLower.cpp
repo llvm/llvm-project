@@ -2060,8 +2060,6 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (TM.Options.MCOptions.ShowMCEncoding) {
     if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_VEX)
       OutStreamer->AddComment("EVEX TO VEX Compression ", false);
-    else if (MI->getAsmPrinterFlags() & X86::AC_ND_2_NONND)
-      OutStreamer->AddComment("ND TO non-ND Compression ", false);
     else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_LEGACY)
       OutStreamer->AddComment("EVEX TO LEGACY Compression ", false);
   }

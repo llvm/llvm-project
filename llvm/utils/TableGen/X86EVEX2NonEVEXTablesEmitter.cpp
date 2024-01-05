@@ -72,16 +72,15 @@ private:
 };
 
 void X86EVEX2NonEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
-                                          raw_ostream &OS) {
+                                              raw_ostream &OS) {
 
   StringRef TargetEnc;
   StringRef TableName;
   StringRef Size;
-  if (Table == EVEX2LegacyTable){
+  if (Table == EVEX2LegacyTable) {
     TargetEnc = "Legacy";
     TableName = "X86EvexToLegacy";
-  }
-  else {
+  } else {
     TargetEnc = "VEX";
     TableName = "X86EvexToVex";
     Size = (Table == EVEX2VEX128) ? "128" : "256";
@@ -155,8 +154,8 @@ public:
     RecognizableInstrBase EVEXRI(*EVEXInst);
     bool VEX_W = VEXRI.HasREX_W;
     bool EVEX_W = EVEXRI.HasREX_W;
-    bool VEX_WIG  = VEXRI.IgnoresW;
-    bool EVEX_WIG  = EVEXRI.IgnoresW;
+    bool VEX_WIG = VEXRI.IgnoresW;
+    bool EVEX_WIG = EVEXRI.IgnoresW;
     bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||
@@ -252,15 +251,15 @@ void X86EVEX2NonEVEXTablesEmitter::run(raw_ostream &OS) {
   }
 
   for (const CodeGenInstruction *EVEXInst : EVEXInsts) {
-    uint64_t Opcode = getValueFromBitsInit(EVEXInst->TheDef->
-                                           getValueAsBitsInit("Opcode"));
+    uint64_t Opcode =
+        getValueFromBitsInit(EVEXInst->TheDef->getValueAsBitsInit("Opcode"));
     // For each EVEX instruction look for a VEX match in the appropriate vector
     // (instructions with the same opcode) using function object IsMatch.
     // Allow EVEX2VEXOverride to explicitly specify a match.
     const CodeGenInstruction *VEXInst = nullptr;
     if (!EVEXInst->TheDef->isValueUnset("EVEX2VEXOverride")) {
       StringRef AltInstStr =
-        EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
+          EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
       Record *AltInstRec = Records.getDef(AltInstStr);
       assert(AltInstRec && "EVEX2VEXOverride instruction not found!");
       VEXInst = &Target.getInstruction(AltInstRec);

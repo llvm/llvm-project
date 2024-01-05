@@ -165,7 +165,7 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NonEvexOpc) {
   case X86::VALIGNDZ128rmi:
   case X86::VALIGNQZ128rri:
   case X86::VALIGNQZ128rmi: {
-    assert((NonEvexOpc == X86::VPALIGNRrri || NonEvexOpc == X86::VPALIGNRrmi) &&
+    assert((VexOpc == X86::VPALIGNRrri || VexOpc == X86::VPALIGNRrmi) &&
            "Unexpected new opcode!");
     unsigned Scale =
         (Opc == X86::VALIGNQZ128rri || Opc == X86::VALIGNQZ128rmi) ? 8 : 4;
@@ -181,8 +181,8 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NonEvexOpc) {
   case X86::VSHUFI32X4Z256rri:
   case X86::VSHUFI64X2Z256rmi:
   case X86::VSHUFI64X2Z256rri: {
-    assert((NonEvexOpc == X86::VPERM2F128rr || NonEvexOpc == X86::VPERM2I128rr ||
-            NonEvexOpc == X86::VPERM2F128rm || NonEvexOpc == X86::VPERM2I128rm) &&
+    assert((VexOpc == X86::VPERM2F128rr || VexOpc == X86::VPERM2I128rr ||
+            VexOpc == X86::VPERM2F128rm || VexOpc == X86::VPERM2I128rm) &&
            "Unexpected new opcode!");
     MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands() - 1);
     int64_t ImmVal = Imm.getImm();
