@@ -60,6 +60,7 @@ entry:
   %arrayidx10 = getelementptr inbounds [4 x float], ptr %quad, i64 0, i64 3, !dbg !58
   store float %add9, ptr %arrayidx10, align 4, !dbg !59, !DIAssignID !60
   call void @llvm.dbg.assign(metadata float %add9, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !60, metadata ptr %arrayidx10, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.value(metadata float %add9, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32)), !dbg !23
   %call11 = call float @_Z3extPf(ptr nonnull %arrayidx), !dbg !61
   ret void, !dbg !62
 }
@@ -69,6 +70,7 @@ declare !dbg !63 dso_local float @_Z3getv() local_unnamed_addr #2
 declare !dbg !66 dso_local float @_Z3extPf(ptr) local_unnamed_addr #2
 declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !1000}
