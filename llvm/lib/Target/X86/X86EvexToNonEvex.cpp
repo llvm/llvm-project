@@ -206,7 +206,7 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NonEvexOpc) {
   case X86::VRNDSCALESDZm_Int:
   case X86::VRNDSCALESSZr_Int:
   case X86::VRNDSCALESSZm_Int:
-    const MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
+    const MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands() - 1);
     int64_t ImmVal = Imm.getImm();
     // Ensure that only bits 3:0 of the immediate are used.
     if ((ImmVal & 0xf) != ImmVal)
@@ -273,7 +273,8 @@ static bool CompressEvexToVexImpl(MachineInstr &MI, const X86Subtarget &ST) {
 static bool CompressEVEX2LegacyImpl(MachineInstr &MI, const X86Subtarget &ST) {
   if (!ST.hasEGPR())
     return false;
-  ArrayRef<X86EvexToNonEvexCompressTableEntry> Table = X86EvexToLegacyCompressTable;
+  ArrayRef<X86EvexToNonEvexCompressTableEntry> Table =
+      X86EvexToLegacyCompressTable;
   unsigned EvexOpc = MI.getOpcode();
   const auto *I = llvm::lower_bound(Table, EvexOpc);
   if (I == Table.end() || I->EvexOpc != EvexOpc)
