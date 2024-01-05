@@ -1084,6 +1084,7 @@ const EnumEntry<unsigned> ElfOSABI[] = {
   {"AROS",         "AROS",                 ELF::ELFOSABI_AROS},
   {"FenixOS",      "FenixOS",              ELF::ELFOSABI_FENIXOS},
   {"CloudABI",     "CloudABI",             ELF::ELFOSABI_CLOUDABI},
+  {"CUDA",         "NVIDIA - CUDA",        ELF::ELFOSABI_CUDA},
   {"Standalone",   "Standalone App",       ELF::ELFOSABI_STANDALONE}
 };
 
@@ -1091,6 +1092,10 @@ const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
   {"AMDGPU_HSA",    "AMDGPU - HSA",    ELF::ELFOSABI_AMDGPU_HSA},
   {"AMDGPU_PAL",    "AMDGPU - PAL",    ELF::ELFOSABI_AMDGPU_PAL},
   {"AMDGPU_MESA3D", "AMDGPU - MESA3D", ELF::ELFOSABI_AMDGPU_MESA3D}
+};
+
+const EnumEntry<unsigned> NVPTXElfOSABI[] = {
+  {"NVIDIA_CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA},
 };
 
 const EnumEntry<unsigned> ARMElfOSABI[] = {
