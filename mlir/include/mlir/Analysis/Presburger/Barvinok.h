@@ -66,7 +66,7 @@ ConeV getDual(ConeH);
 // The returned cone is pointed at the origin.
 ConeH getDual(ConeV);
 
-} // namespace mlir::presburger::detail
+} // namespace detail
 } // namespace presburger
 } // namespace mlir
 
