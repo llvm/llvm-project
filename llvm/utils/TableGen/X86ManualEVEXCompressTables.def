@@ -2,9 +2,12 @@
 #define EVEXENTRY(EVEX, LEGACY)
 #endif
 // The following entries are added manually b/c:
-//  1.  The prefix is used specially, like RAOINT, prefix could be used to
+//  1.  The prefix is used specially, like movdir64b, prefix could be used to
 //      identify instrs.
 //  2.  Opcode could change when promote to map4, like sha instrs.
+EVEXENTRY(MOVDIR64B32_EVEX, MOVDIR64B32)
+EVEXENTRY(MOVDIR64B64_EVEX, MOVDIR64B64)
+
 EVEXENTRY(SHA1MSG1rm_EVEX, SHA1MSG1rm)
 EVEXENTRY(SHA1MSG1rr_EVEX, SHA1MSG1rr)
 EVEXENTRY(SHA1MSG2rm_EVEX, SHA1MSG2rm)

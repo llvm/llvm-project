@@ -203,10 +203,6 @@ public:
         RecLegacy->getValueAsBit("hasREX_W"))
       return false;
 
-    if (RecLegacy->getValueAsDef("AdSize")->getName() !=
-        RecEVEX->getValueAsDef("AdSize")->getName())
-      return false;
-
     if (RecLegacy->getValueAsDef("Form") != RecEVEX->getValueAsDef("Form"))
       return false;
 
