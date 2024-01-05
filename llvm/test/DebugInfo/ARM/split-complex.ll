@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=thumbv7-apple-unknown-macho -O0 -filetype=obj -o - %s \
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
-; RUN: llc -mtriple=thumbv7-apple-unknown-macho -O0 -filetype=obj -o - %s \
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=thumbv7-apple-unknown-macho -O0 -filetype=obj -o - %s \
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; generated from (-triple thumbv7-apple-unknown-macho -Os):
