@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfdump --debug-line --verify %t.o 2>&1 | FileCheck %s
+# RUN: llvm-dwarfdump -arch arm64 --debug-line --verify %t.o 2>&1 | FileCheck %s
 
 # CHECK-NOT: error: .debug_line[0x{{[0-9a-f]+}}][0] has invalid file index 1 (valid values are [1,0]):
 --- !mach-o
