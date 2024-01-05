@@ -2606,10 +2606,10 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
 
 static bool isTriviallyCopyableTypeImpl(const QualType &type,
                                         const ASTContext &Context,
-                                        bool copy_constructible) {
+                                        bool IsCopyConstructible) {
   if (type->isArrayType())
     return isTriviallyCopyableTypeImpl(Context.getBaseElementType(type),
-                                       Context, copy_constructible);
+                                       Context, IsCopyConstructible);
 
   if (type.hasNonTrivialObjCLifetime())
     return false;
@@ -2637,7 +2637,7 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (copy_constructible) {
+      if (IsCopyConstructible) {
         return ClassDecl->isTriviallyCopyConstructible();
       } else {
         return ClassDecl->isTriviallyCopyable();
@@ -2651,7 +2651,7 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 
 bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   return isTriviallyCopyableTypeImpl(*this, Context,
-                                     /*IsCopyConstructible=*/false);
+                                     /*IsCopyConstructible*/false);
 }
 
 bool QualType::isTriviallyCopyConstructibleType(
