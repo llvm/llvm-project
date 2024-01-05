@@ -321,27 +321,27 @@ struct scoped_test_env
   // allow tests to call this unguarded.
 #if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
     std::string create_socket(std::string file) {
-        std::string socket_file = sanitize_path(file);
+      std::string socket_file = sanitize_path(file);
 
-        ::sockaddr_un address;
-        address.sun_family = AF_UNIX;
+      ::sockaddr_un address;
+      address.sun_family = AF_UNIX;
 
-        // If file.size() is too big, try to create a file directly inside
-        // /tmp to make sure file path is short enough.
-        if (socket_file.size() <= sizeof(address.sun_path) && utils::exists("/tmp")) {
-          fs::path const tmp = "/tmp";
-          std::size_t i      = std::hash<std::string>()(std::to_string(std::time(nullptr)));
-          fs::path p         = tmp / ("libcxx-socket-" + file + "-" + std::to_string(i));
-          while (utils::exists(p.string())) {
-            p = tmp / ("libcxx-socket-" + file + "-" + std::to_string(++i));
-          }
-          socket_file = p.string();
+      // If file.size() is too big, try to create a file directly inside
+      // /tmp to make sure file path is short enough.
+      if (socket_file.size() <= sizeof(address.sun_path) && utils::exists("/tmp")) {
+        fs::path const tmp = "/tmp";
+        std::size_t i      = std::hash<std::string>()(std::to_string(std::time(nullptr)));
+        fs::path p         = tmp / ("libcxx-socket-" + file + "-" + std::to_string(i));
+        while (utils::exists(p.string())) {
+          p = tmp / ("libcxx-socket-" + file + "-" + std::to_string(++i));
         }
-        assert(socket_file.size() <= sizeof(address.sun_path));
-        ::strncpy(address.sun_path, socket_file.c_str(), sizeof(address.sun_path));
-        int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
-        assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
-        return socket_file;
+        socket_file = p.string();
+      }
+      assert(socket_file.size() <= sizeof(address.sun_path));
+      ::strncpy(address.sun_path, socket_file.c_str(), sizeof(address.sun_path));
+      int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+      assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
+      return socket_file;
     }
 #endif
 
