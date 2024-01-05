@@ -268,16 +268,6 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
     InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
     ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct) {
-  // The first check is a compile time constant, the second one a runtime check.
-  // If the first one succeeds we will use the specialized version.
-  if ((state::getKernelEnvironment().Configuration.MaxTeams >= 0 &&
-       state::getKernelEnvironment().Configuration.MaxTeams <= num_of_records &&
-       num_of_records == 1024) ||
-      (omp_get_num_teams() <= num_of_records))
-    return __kmpc_nvptx_teams_reduce_nowait_v3(
-        Loc, GlobalBuffer, num_of_records, reduce_data_size, reduce_data,
-        shflFct, cpyFct, lgcpyFct, lgredFct, glcpyFct, glredFct);
-
   // Terminate all threads in non-SPMD mode except for the master thread.
   uint32_t ThreadId = mapping::getThreadIdInBlock();
   if (mapping::isGenericMode()) {
