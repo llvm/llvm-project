@@ -1358,3 +1358,37 @@ define i1 @shl_nsw_by_bw_minus_1(i64 %x) {
   %t.1 = icmp slt i64 %x, 0
   ret i1 %t.1
 }
+
+; Shift returns poison in this case, just make sure we don't crash.
+define i1 @shl_nsw_by_bw(i64 %x) {
+; CHECK-LABEL: @shl_nsw_by_bw(
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 64
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+  %x.shl = shl nsw i64 %x, 64
+  %c.1 = icmp slt i64 %x.shl, 0
+  call void @llvm.assume(i1 %c.1)
+
+  %t.1 = icmp slt i64 %x, 0
+  ret i1 %t.1
+}
+
+; Shift returns poison in this case, just make sure we don't crash.
+define i1 @shl_nsw_by_bw_plus_1(i64 %x) {
+; CHECK-LABEL: @shl_nsw_by_bw_plus_1(
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 65
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+  %x.shl = shl nsw i64 %x, 65
+  %c.1 = icmp slt i64 %x.shl, 0
+  call void @llvm.assume(i1 %c.1)
+
+  %t.1 = icmp slt i64 %x, 0
+  ret i1 %t.1
+}
