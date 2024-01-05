@@ -30,9 +30,8 @@
 
 using namespace llvm;
 
-char BasicBlockSectionsProfileReaderWrapperPass::ID = 0;
-INITIALIZE_PASS(BasicBlockSectionsProfileReaderWrapperPass,
-                "bbsections-profile-reader",
+char BasicBlockSectionsProfileReader::ID = 0;
+INITIALIZE_PASS(BasicBlockSectionsProfileReader, "bbsections-profile-reader",
                 "Reads and parses a basic block sections profile.", false,
                 false)
 
@@ -396,11 +395,11 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
   }
 }
 
-bool BasicBlockSectionsProfileReaderWrapperPass::doInitialization(Module &M) {
-  if (!BBSPR.MBuf)
+bool BasicBlockSectionsProfileReader::doInitialization(Module &M) {
+  if (!MBuf)
     return false;
   // Get the function name to debug info filename mapping.
-  BBSPR.FunctionNameToDIFilename.clear();
+  FunctionNameToDIFilename.clear();
   for (const Function &F : M) {
     SmallString<128> DIFilename;
     if (F.isDeclaration())
@@ -412,46 +411,15 @@ bool BasicBlockSectionsProfileReaderWrapperPass::doInitialization(Module &M) {
         DIFilename = sys::path::remove_leading_dotslash(CU->getFilename());
     }
     [[maybe_unused]] bool inserted =
-        BBSPR.FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename)
-            .second;
+        FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename).second;
     assert(inserted);
   }
-  if (auto Err = BBSPR.ReadProfile())
+  if (auto Err = ReadProfile())
     report_fatal_error(std::move(Err));
   return false;
 }
 
-AnalysisKey BasicBlockSectionsProfileReaderAnalysis::Key;
-
-BasicBlockSectionsProfileReader
-BasicBlockSectionsProfileReaderAnalysis::run(Function &F,
-                                             FunctionAnalysisManager &AM) {
-  return BasicBlockSectionsProfileReader(TM->getBBSectionsFuncListBuf());
-}
-
-bool BasicBlockSectionsProfileReaderWrapperPass::isFunctionHot(
-    StringRef FuncName) const {
-  return BBSPR.isFunctionHot(FuncName);
-}
-
-std::pair<bool, SmallVector<BBClusterInfo>>
-BasicBlockSectionsProfileReaderWrapperPass::getClusterInfoForFunction(
-    StringRef FuncName) const {
-  return BBSPR.getClusterInfoForFunction(FuncName);
-}
-
-SmallVector<SmallVector<unsigned>>
-BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
-    StringRef FuncName) const {
-  return BBSPR.getClonePathsForFunction(FuncName);
-}
-
-BasicBlockSectionsProfileReader &
-BasicBlockSectionsProfileReaderWrapperPass::getBBSPR() {
-  return BBSPR;
-}
-
-ImmutablePass *llvm::createBasicBlockSectionsProfileReaderWrapperPass(
-    const MemoryBuffer *Buf) {
-  return new BasicBlockSectionsProfileReaderWrapperPass(Buf);
+ImmutablePass *
+llvm::createBasicBlockSectionsProfileReaderPass(const MemoryBuffer *Buf) {
+  return new BasicBlockSectionsProfileReader(Buf);
 }
