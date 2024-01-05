@@ -218,6 +218,19 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         return ::mlir::failure();
       }]
     >,
+    InterfaceMethod<[{
+        TODO
+      }],
+      /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
+      /*methodName=*/"yieldTiledValuesAndReplace",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                    "::mlir::ValueRange":$newInitOperands,
+                    "const ::mlir::YieldTiledValuesFn &":$yieldTiledValuesFn),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
   ];
 
   let extraClassDeclaration = [{
