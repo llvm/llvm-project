@@ -128,6 +128,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1300"},   {"gfx1300"}, GK_GFX1300, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     // clang-format on
 };
 
@@ -257,6 +258,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1210: return {12, 1, 0};
+  case GK_GFX1300: return {13, 0, 0};
   default:         return {0, 0, 0};
   }
   // clang-format on
@@ -275,6 +277,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1300:
     case GK_GFX1210:
       Features["ci-insts"] = true;
       Features["dot7-insts"] = true;
@@ -517,6 +520,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1300:
     case GK_GFX1210:
     case GK_GFX1201:
     case GK_GFX1200:
