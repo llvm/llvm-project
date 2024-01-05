@@ -2,29 +2,19 @@
 ; RUN: opt -S -passes='default<O3>' < %s | FileCheck %s
 
 define i8 @test_switch_with_sext_phi(i8 %code) {
-; CHECK-LABEL: define i8 @test_switch_with_sext_phi(
+; CHECK-LABEL: define noundef i8 @test_switch_with_sext_phi(
 ; CHECK-SAME: i8 [[CODE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CODE]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 105, label [[SW_EPILOG:%.*]]
-; CHECK-NEXT:      i32 73, label [[SW_BB1:%.*]]
-; CHECK-NEXT:      i32 108, label [[SW_BB2:%.*]]
-; CHECK-NEXT:      i32 76, label [[SW_BB3:%.*]]
-; CHECK-NEXT:      i32 63, label [[SW_BB4:%.*]]
+; CHECK-NEXT:    switch i8 [[CODE]], label [[SW_EPILOG:%.*]] [
+; CHECK-NEXT:      i8 76, label [[SW_BB3:%.*]]
+; CHECK-NEXT:      i8 108, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.bb3:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
-; CHECK:       sw.bb4:
-; CHECK-NEXT:    br label [[SW_EPILOG]]
-; CHECK:       sw.default:
-; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[PEP_CODE:%.*]] = phi i8 [ [[CODE]], [[SW_DEFAULT]] ], [ 63, [[SW_BB4]] ], [ 81, [[SW_BB3]] ], [ 113, [[SW_BB2]] ], [ 73, [[SW_BB1]] ], [ 105, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PEP_CODE:%.*]] = phi i8 [ 81, [[SW_BB3]] ], [ 113, [[SW_BB2]] ], [ [[CODE]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[PEP_CODE]]
 ;
 entry:

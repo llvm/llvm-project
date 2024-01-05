@@ -33,11 +33,10 @@ define i1 @test_switch_with_sext(i16 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: define i1 @test_switch_with_sext(
 ; CHECK-SAME: i16 [[A:%.*]], i1 [[B:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i16 [[A]] to i32
-; CHECK-NEXT:    switch i32 [[A_EXT]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 37, label [[SW_BB:%.*]]
-; CHECK-NEXT:      i32 38, label [[SW_BB]]
-; CHECK-NEXT:      i32 39, label [[SW_BB]]
+; CHECK-NEXT:    switch i16 [[A]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i16 37, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i16 38, label [[SW_BB]]
+; CHECK-NEXT:      i16 39, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 [[B]]
