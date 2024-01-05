@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def flat_ptr_ty : LLVMQualPointerType<0>;
 def global_ptr_ty : LLVMQualPointerType<1>;
-def local_ptr_ty : LLVMQualPointerType<3>;
 
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
@@ -2502,10 +2500,9 @@ def int_amdgcn_flat_atomic_fmax_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmin_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
-def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty, flat_ptr_ty>;
-def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty, global_ptr_ty>;
-
-def int_amdgcn_ds_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty, local_ptr_ty>;
+def int_amdgcn_flat_atomic_cond_sub_u32   : AMDGPUAtomicRtn<llvm_i32_ty>;
+def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty>;
+def int_amdgcn_ds_cond_sub_u32            : AMDGPUAtomicRtn<llvm_i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
