@@ -4909,6 +4909,48 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::GET_SHADERCYCLESHILO: {
+    assert(MF->getSubtarget<GCNSubtarget>().hasShaderCyclesHiLoRegisters());
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+    // The algorithm is:
+    //
+    // hi1 = getreg(SHADER_CYCLES_HI)
+    // lo1 = getreg(SHADER_CYCLES_LO)
+    // hi2 = getreg(SHADER_CYCLES_HI)
+    //
+    // If hi1 == hi2 then there was no overflow and the result is hi2:lo1.
+    // Otherwise there was overflow and the result is hi2:0. In both cases the
+    // result should represent the actual time at some point during the sequence
+    // of three getregs.
+    Register RegHi1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi1)
+        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
+                                           0, 32));
+    Register RegLo1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegLo1)
+        .addImm(
+            AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES, 0, 32));
+    Register RegHi2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi2)
+        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
+                                           0, 32));
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
+        .addReg(RegHi1)
+        .addReg(RegHi2);
+    Register RegLo = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), RegLo)
+        .addReg(RegLo1)
+        .addImm(0);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE))
+        .add(MI.getOperand(0))
+        .addReg(RegLo)
+        .addImm(AMDGPU::sub0)
+        .addReg(RegHi2)
+        .addImm(AMDGPU::sub1);
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::SI_INDIRECT_SRC_V1:
   case AMDGPU::SI_INDIRECT_SRC_V2:
   case AMDGPU::SI_INDIRECT_SRC_V4:
