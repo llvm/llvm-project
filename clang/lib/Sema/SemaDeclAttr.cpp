@@ -3370,28 +3370,14 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef CM;
   StringRef Str;
   SourceLocation LiteralLoc;
-  bool Ok = false;
   // Check that it is a string.
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
     return;
 
-  CM = Str;
-  if (S.getASTContext().getTargetInfo().getTriple().isLoongArch()) {
-    Ok = CM == "normal" || CM == "medium" || CM == "extreme";
-    CM = llvm::StringSwitch<StringRef>(CM)
-             .Case("normal", "small")
-             .Case("extreme", "large")
-             .Default(CM);
-  } else {
-    S.Diag(LiteralLoc, diag::err_attr_codemodel);
-    return;
-  }
-
-  // Check that the value is acceptable.
-  if (!Ok) {
+  llvm::CodeModel::Model CM;
+  if (!CodeModelAttr::ConvertStrToModel(Str, CM)) {
     S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
     return;
   }

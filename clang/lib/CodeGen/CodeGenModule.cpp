@@ -4842,15 +4842,8 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       GV->setSection(".cp.rodata");
 
     // Handle code model attribute
-    if (const auto *CMA = D->getAttr<CodeModelAttr>()) {
-      auto CM = llvm::StringSwitch<llvm::CodeModel::Model>(CMA->getModel())
-                    .Case("tiny", llvm::CodeModel::Tiny)
-                    .Case("kernel", llvm::CodeModel::Kernel)
-                    .Case("medium", llvm::CodeModel::Medium)
-                    .Case("large", llvm::CodeModel::Large)
-                    .Default(llvm::CodeModel::Small);
-      GV->setCodeModel(CM);
-    }
+    if (const auto *CMA = D->getAttr<CodeModelAttr>())
+      GV->setCodeModel(CMA->getModel());
 
     // Check if we a have a const declaration with an initializer, we may be
     // able to emit it as available_externally to expose it's value to the
