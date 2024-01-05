@@ -1593,67 +1593,89 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
              const Fortran::parser::AccClauseList &accClauseList,
              bool needEarlyReturnHandling = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-
-  mlir::Value workerNum;
-  mlir::Value vectorNum;
-  mlir::Value gangNum;
-  mlir::Value gangDim;
-  mlir::Value gangStatic;
   llvm::SmallVector<mlir::Value> tileOperands, privateOperands,
-      reductionOperands, cacheOperands;
+      reductionOperands, cacheOperands, vectorOperands, workerNumOperands,
+      gangOperands;
   llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
-  bool hasGang = false, hasVector = false, hasWorker = false;
+  llvm::SmallVector<int32_t> tileOperandsSegments, gangOperandsSegments;
+  llvm::SmallVector<int64_t> collapseValues;
+
+  llvm::SmallVector<mlir::Attribute> gangArgTypes;
+  llvm::SmallVector<mlir::Attribute> seqDeviceTypes, independentDeviceTypes,
+      autoDeviceTypes, vectorOperandsDeviceTypes, workerNumOperandsDeviceTypes,
+      vectorDeviceTypes, workerNumDeviceTypes, tileOperandsDeviceTypes,
+      collapseDeviceTypes, gangDeviceTypes, gangOperandsDeviceTypes;
+
+  // device_type attribute is set to `none` until a device_type clause is
+  // encountered.
+  auto crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None);
 
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *gangClause =
             std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
       if (gangClause->v) {
+        auto crtGangOperands = gangOperands.size();
         const Fortran::parser::AccGangArgList &x = *gangClause->v;
         for (const Fortran::parser::AccGangArg &gangArg : x.v) {
           if (const auto *num =
                   std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u)) {
-            gangNum = fir::getBase(converter.genExprValue(
-                *Fortran::semantics::GetExpr(num->v), stmtCtx));
+            gangOperands.push_back(fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(num->v), stmtCtx)));
+            gangArgTypes.push_back(mlir::acc::GangArgTypeAttr::get(
+                builder.getContext(), mlir::acc::GangArgType::Num));
           } else if (const auto *staticArg =
                          std::get_if<Fortran::parser::AccGangArg::Static>(
                              &gangArg.u)) {
             const Fortran::parser::AccSizeExpr &sizeExpr = staticArg->v;
             if (sizeExpr.v) {
-              gangStatic = fir::getBase(converter.genExprValue(
-                  *Fortran::semantics::GetExpr(*sizeExpr.v), stmtCtx));
+              gangOperands.push_back(fir::getBase(converter.genExprValue(
+                  *Fortran::semantics::GetExpr(*sizeExpr.v), stmtCtx)));
             } else {
               // * was passed as value and will be represented as a special
               // constant.
-              gangStatic = builder.createIntegerConstant(
-                  clauseLocation, builder.getIndexType(), starCst);
+              gangOperands.push_back(builder.createIntegerConstant(
+                  clauseLocation, builder.getIndexType(), starCst));
             }
+            gangArgTypes.push_back(mlir::acc::GangArgTypeAttr::get(
+                builder.getContext(), mlir::acc::GangArgType::Static));
           } else if (const auto *dim =
                          std::get_if<Fortran::parser::AccGangArg::Dim>(
                              &gangArg.u)) {
-            gangDim = fir::getBase(converter.genExprValue(
-                *Fortran::semantics::GetExpr(dim->v), stmtCtx));
+            gangOperands.push_back(fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(dim->v), stmtCtx)));
+            gangArgTypes.push_back(mlir::acc::GangArgTypeAttr::get(
+                builder.getContext(), mlir::acc::GangArgType::Dim));
           }
         }
+        gangOperandsSegments.push_back(gangOperands.size() - crtGangOperands);
+        gangOperandsDeviceTypes.push_back(crtDeviceTypeAttr);
+      } else {
+        gangDeviceTypes.push_back(crtDeviceTypeAttr);
       }
-      hasGang = true;
     } else if (const auto *workerClause =
                    std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
       if (workerClause->v) {
-        workerNum = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*workerClause->v), stmtCtx));
+        workerNumOperands.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(*workerClause->v), stmtCtx)));
+        workerNumOperandsDeviceTypes.push_back(crtDeviceTypeAttr);
+      } else {
+        workerNumDeviceTypes.push_back(crtDeviceTypeAttr);
       }
-      hasWorker = true;
     } else if (const auto *vectorClause =
                    std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
       if (vectorClause->v) {
-        vectorNum = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*vectorClause->v), stmtCtx));
+        vectorOperands.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(*vectorClause->v), stmtCtx)));
+        vectorOperandsDeviceTypes.push_back(crtDeviceTypeAttr);
+      } else {
+        vectorDeviceTypes.push_back(crtDeviceTypeAttr);
       }
-      hasVector = true;
     } else if (const auto *tileClause =
                    std::get_if<Fortran::parser::AccClause::Tile>(&clause.u)) {
       const Fortran::parser::AccTileExprList &accTileExprList = tileClause->v;
+      auto crtTileOperands = tileOperands.size();
       for (const auto &accTileExpr : accTileExprList.v) {
         const auto &expr =
             std::get<std::optional<Fortran::parser::ScalarIntConstantExpr>>(
@@ -1669,6 +1691,8 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
           tileOperands.push_back(tileStar);
         }
       }
+      tileOperandsDeviceTypes.push_back(crtDeviceTypeAttr);
+      tileOperandsSegments.push_back(tileOperands.size() - crtTileOperands);
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
@@ -1680,17 +1704,46 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                     reductionOperands, reductionRecipes);
+    } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+      seqDeviceTypes.push_back(crtDeviceTypeAttr);
+    } else if (std::get_if<Fortran::parser::AccClause::Independent>(
+                   &clause.u)) {
+      independentDeviceTypes.push_back(crtDeviceTypeAttr);
+    } else if (std::get_if<Fortran::parser::AccClause::Auto>(&clause.u)) {
+      autoDeviceTypes.push_back(crtDeviceTypeAttr);
+    } else if (const auto *deviceTypeClause =
+                   std::get_if<Fortran::parser::AccClause::DeviceType>(
+                       &clause.u)) {
+      const Fortran::parser::AccDeviceTypeExprList &deviceTypeExprList =
+          deviceTypeClause->v;
+      assert(deviceTypeExprList.v.size() == 1 &&
+             "expect only one device_type expr");
+      crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), getDeviceType(deviceTypeExprList.v.front().v));
+    } else if (const auto *collapseClause =
+                   std::get_if<Fortran::parser::AccClause::Collapse>(
+                       &clause.u)) {
+      const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
+      const auto &force = std::get<bool>(arg.t);
+      if (force)
+        TODO(clauseLocation, "OpenACC collapse force modifier");
+      const auto &intExpr =
+          std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
+      const auto *expr = Fortran::semantics::GetExpr(intExpr);
+      const std::optional<int64_t> collapseValue =
+          Fortran::evaluate::ToInt64(*expr);
+      assert(collapseValue && "expect integer value for the collapse clause");
+      collapseValues.push_back(*collapseValue);
+      collapseDeviceTypes.push_back(crtDeviceTypeAttr);
     }
   }
 
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
-  addOperand(operands, operandSegments, gangNum);
-  addOperand(operands, operandSegments, gangDim);
-  addOperand(operands, operandSegments, gangStatic);
-  addOperand(operands, operandSegments, workerNum);
-  addOperand(operands, operandSegments, vectorNum);
+  addOperands(operands, operandSegments, gangOperands);
+  addOperands(operands, operandSegments, workerNumOperands);
+  addOperands(operands, operandSegments, vectorOperands);
   addOperands(operands, operandSegments, tileOperands);
   addOperands(operands, operandSegments, cacheOperands);
   addOperands(operands, operandSegments, privateOperands);
@@ -1708,12 +1761,42 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
       builder, currentLocation, eval, operands, operandSegments,
       /*outerCombined=*/false, retTy, yieldValue);
 
-  if (hasGang)
-    loopOp.setHasGangAttr(builder.getUnitAttr());
-  if (hasWorker)
-    loopOp.setHasWorkerAttr(builder.getUnitAttr());
-  if (hasVector)
-    loopOp.setHasVectorAttr(builder.getUnitAttr());
+  if (!gangDeviceTypes.empty())
+    loopOp.setGangAttr(builder.getArrayAttr(gangDeviceTypes));
+  if (!gangArgTypes.empty())
+    loopOp.setGangOperandsArgTypeAttr(builder.getArrayAttr(gangArgTypes));
+  if (!gangOperandsSegments.empty())
+    loopOp.setGangOperandsSegmentsAttr(
+        builder.getDenseI32ArrayAttr(gangOperandsSegments));
+  if (!gangOperandsDeviceTypes.empty())
+    loopOp.setGangOperandsDeviceTypeAttr(
+        builder.getArrayAttr(gangOperandsDeviceTypes));
+
+  if (!workerNumDeviceTypes.empty())
+    loopOp.setWorkerAttr(builder.getArrayAttr(workerNumDeviceTypes));
+  if (!workerNumOperandsDeviceTypes.empty())
+    loopOp.setWorkerNumOperandsDeviceTypeAttr(
+        builder.getArrayAttr(workerNumOperandsDeviceTypes));
+
+  if (!vectorDeviceTypes.empty())
+    loopOp.setVectorAttr(builder.getArrayAttr(vectorDeviceTypes));
+  if (!vectorOperandsDeviceTypes.empty())
+    loopOp.setVectorOperandsDeviceTypeAttr(
+        builder.getArrayAttr(vectorOperandsDeviceTypes));
+
+  if (!tileOperandsDeviceTypes.empty())
+    loopOp.setTileOperandsDeviceTypeAttr(
+        builder.getArrayAttr(tileOperandsDeviceTypes));
+  if (!tileOperandsSegments.empty())
+    loopOp.setTileOperandsSegmentsAttr(
+        builder.getDenseI32ArrayAttr(tileOperandsSegments));
+
+  if (!seqDeviceTypes.empty())
+    loopOp.setSeqAttr(builder.getArrayAttr(seqDeviceTypes));
+  if (!independentDeviceTypes.empty())
+    loopOp.setIndependentAttr(builder.getArrayAttr(independentDeviceTypes));
+  if (!autoDeviceTypes.empty())
+    loopOp.setAuto_Attr(builder.getArrayAttr(autoDeviceTypes));
 
   if (!privatizations.empty())
     loopOp.setPrivatizationsAttr(
@@ -1723,33 +1806,11 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
     loopOp.setReductionRecipesAttr(
         mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
 
-  // Lower clauses mapped to attributes
-  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
-    mlir::Location clauseLocation = converter.genLocation(clause.source);
-    if (const auto *collapseClause =
-            std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
-      const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
-      const auto &force = std::get<bool>(arg.t);
-      if (force)
-        TODO(clauseLocation, "OpenACC collapse force modifier");
-      const auto &intExpr =
-          std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
-      const auto *expr = Fortran::semantics::GetExpr(intExpr);
-      const std::optional<int64_t> collapseValue =
-          Fortran::evaluate::ToInt64(*expr);
-      if (collapseValue) {
-        loopOp.setCollapseAttr(builder.getI64IntegerAttr(*collapseValue));
-      }
-    } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-      loopOp.setSeqAttr(builder.getUnitAttr());
-    } else if (std::get_if<Fortran::parser::AccClause::Independent>(
-                   &clause.u)) {
-      loopOp.setIndependentAttr(builder.getUnitAttr());
-    } else if (std::get_if<Fortran::parser::AccClause::Auto>(&clause.u)) {
-      loopOp->setAttr(mlir::acc::LoopOp::getAutoAttrStrName(),
-                      builder.getUnitAttr());
-    }
-  }
+  if (!collapseValues.empty())
+    loopOp.setCollapseAttr(builder.getI64ArrayAttr(collapseValues));
+  if (!collapseDeviceTypes.empty())
+    loopOp.setCollapseDeviceTypeAttr(builder.getArrayAttr(collapseDeviceTypes));
+
   return loopOp;
 }
 
