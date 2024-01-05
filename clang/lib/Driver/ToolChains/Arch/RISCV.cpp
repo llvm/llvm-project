@@ -42,10 +42,9 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
     return false;
   }
 
-  const auto ISAInfoFeatures = (*ISAInfo)->toFeatures(/*AddAllExtension=*/true,
-                                                      /*IgnoreUnknown=*/false);
-  Features.insert(Features.end(), ISAInfoFeatures.begin(),
-                  ISAInfoFeatures.end());
+  for (const std::string &Str : (*ISAInfo)->toFeatures(/*AddAllExtension=*/true,
+                                                       /*IgnoreUnknown=*/false))
+    Features.push_back(Args.MakeArgString(Str));
 
   if (EnableExperimentalExtensions)
     Features.push_back(Args.MakeArgString("+experimental"));
