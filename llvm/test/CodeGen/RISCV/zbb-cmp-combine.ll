@@ -315,4 +315,3 @@ define i1 @no_same_ops(i64 %c, i64 %a, i64 %b) {
   %res = or i1 %l0, %l1
   ret i1 %res
 }
-

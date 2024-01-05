@@ -15845,8 +15845,6 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
 }
 
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
-  if (!FD)
-    return;
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
@@ -15869,7 +15867,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().Coroutines) {
+  // If we skip function body, we can't tell if a function is a coroutine.
+  if (getLangOpts().Coroutines && FD && !FD->hasSkippedBody()) {
     if (FSI->isCoroutine())
       CheckCompletedCoroutineBody(FD, Body);
     else

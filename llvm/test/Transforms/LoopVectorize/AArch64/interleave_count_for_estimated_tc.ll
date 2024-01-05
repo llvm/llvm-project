@@ -5,9 +5,9 @@ target triple = "aarch64-linux-gnu"
 
 %pair = type { i8, i8 }
 
-; TODO: For a loop with a profile-guided estimated TC of 32, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 32, when the auto-vectorizer chooses VF 16, 
 ; it should conservatively choose IC 1 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 1)
 define void @loop_with_profile_tc_32(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -29,9 +29,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 33, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 33, when the auto-vectorizer chooses VF 16, 
 ; it should conservatively choose IC 1 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 1)
 define void @loop_with_profile_tc_33(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -53,9 +53,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 48, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 48, when the auto-vectorizer chooses VF 16, 
 ; it should conservatively choose IC 1 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 3)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 1)
 define void @loop_with_profile_tc_48(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -77,9 +77,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 63, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 63, when the auto-vectorizer chooses VF 16, 
 ; it should conservatively choose IC 1 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 3)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 1)
 define void @loop_with_profile_tc_63(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -101,9 +101,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 64, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 64, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 2 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
 define void @loop_with_profile_tc_64(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -125,9 +125,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 100, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 100, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 2 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 6)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
 define void @loop_with_profile_tc_100(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -149,9 +149,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 128, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 128, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 4 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 8)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_128(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -173,9 +173,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 129, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 129, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 4 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 8)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_129(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -197,9 +197,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 180, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 180, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 4 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 8)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_180(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -221,9 +221,9 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 193, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 193, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 4 so that the vector loop runs twice at least
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 8)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_193(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -245,7 +245,7 @@ for.end:
   ret void
 }
 
-; TODO: For a loop with a profile-guided estimated TC of 1000, when the auto-vectorizer chooses VF 16, 
+; For a loop with a profile-guided estimated TC of 1000, when the auto-vectorizer chooses VF 16, 
 ; the IC will be capped by the target-specific maximum interleave count
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 8)
 define void @loop_with_profile_tc_1000(ptr noalias %p, ptr noalias %q, i64 %n) {

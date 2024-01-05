@@ -134,8 +134,9 @@ module attributes {transform.with_named_sequence} {
           #linalg.iterator_type<parallel>,
           #linalg.iterator_type<reduction>]}
         in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-remark @below {{0}}
-    transform.test_print_number_of_associated_payload_ir_ops %no_match : !transform.any_op
+    %p = transform.num_associations %no_match : (!transform.any_op) -> !transform.param<i64>
+    // expected-remark @below {{0}}
+    transform.test_print_param %p : !transform.param<i64>
     transform.yield
   }
 }

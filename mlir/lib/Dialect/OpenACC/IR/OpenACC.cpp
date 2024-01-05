@@ -628,7 +628,7 @@ template <typename Op>
 static LogicalResult verifyDeviceTypeCountMatch(Op op, OperandRange operands,
                                                 ArrayAttr deviceTypes,
                                                 llvm::StringRef keyword) {
-  if (operands.size() > 0 && deviceTypes.getValue().size() != operands.size())
+  if (!operands.empty() && deviceTypes.getValue().size() != operands.size())
     return op.emitOpError() << keyword << " operands count must match "
                             << keyword << " device_type count";
   return success();

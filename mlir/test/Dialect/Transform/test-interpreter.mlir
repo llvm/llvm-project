@@ -575,8 +575,9 @@ transform.with_pdl_patterns {
     %0 = pdl_match @addi in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = pdl_match @addi in %arg1 : (!transform.any_op) -> !transform.any_op
     %2 = merge_handles deduplicate %0, %1 : !transform.any_op
+    %3 = num_associations %2 : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below {{1}}
-    test_print_number_of_associated_payload_ir_ops %2 : !transform.any_op
+    test_print_param %3 : !transform.param<i64>
   }
 }
 
@@ -676,11 +677,13 @@ module {
     ^bb0(%arg1: !transform.any_op):
       %0 = pdl_match @func in %arg1 : (!transform.any_op) -> !transform.any_op
       %1 = replicate num(%0) %arg1 : !transform.any_op, !transform.any_op
+      %p = num_associations %1 : (!transform.any_op) -> !transform.param<i64>
       // expected-remark @below {{2}}
-      test_print_number_of_associated_payload_ir_ops %1 : !transform.any_op
+      test_print_param %p : !transform.param<i64>
       %2 = replicate num(%0) %1 : !transform.any_op, !transform.any_op
+      %p2 = num_associations %2 : (!transform.any_op) -> !transform.param<i64>
       // expected-remark @below {{4}}
-      test_print_number_of_associated_payload_ir_ops %2 : !transform.any_op
+      test_print_param %p2 : !transform.param<i64>
     }
   }
 }
@@ -708,8 +711,9 @@ transform.with_pdl_patterns {
     %f = pdl_match @const in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.foreach %f : !transform.any_op {
     ^bb2(%arg2: !transform.any_op):
+      %p = transform.num_associations %arg2 : (!transform.any_op) -> !transform.param<i64>
       // expected-remark @below {{1}}
-      transform.test_print_number_of_associated_payload_ir_ops %arg2 : !transform.any_op
+      transform.test_print_param %p : !transform.param<i64>
       transform.test_print_remark_at_operand %arg2, "transform applied" : !transform.any_op
     }
   }
@@ -780,8 +784,9 @@ transform.with_pdl_patterns {
       transform.yield %g : !transform.any_op
     }
 
+    %p = transform.num_associations %results : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below {{3}}
-    transform.test_print_number_of_associated_payload_ir_ops %results : !transform.any_op
+    transform.test_print_param %p : !transform.param<i64>
     transform.test_print_remark_at_operand %results, "transform applied" : !transform.any_op
   }
 }
@@ -877,8 +882,9 @@ transform.sequence failures(propagate) {
 ^bb1(%fun: !transform.any_op):
   %muli = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
   %h:2 = split_handle %muli : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %p = transform.num_associations %h#0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#0 : !transform.any_op
+  transform.test_print_param %p : !transform.param<i64>
   %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{expected to contain 3 payload ops but it contains 2 payload ops}}
   %h_2:3 = split_handle %muli_2 : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
@@ -896,13 +902,15 @@ transform.sequence failures(suppress) {
 ^bb1(%fun: !transform.any_op):
   %muli = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
   %h:2 = split_handle %muli : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %p = transform.num_associations %h#0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#0 : !transform.any_op
+  transform.test_print_param %p : !transform.param<i64>
   %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
   // Silenceable failure and all handles are now empty.
   %h_2:3 = split_handle %muli_2 : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  %p2 = transform.num_associations %h_2#0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{0}}
-  transform.test_print_number_of_associated_payload_ir_ops %h_2#0 : !transform.any_op
+  transform.test_print_param %p2 : !transform.param<i64>
 }
 
 // -----
@@ -918,12 +926,15 @@ transform.sequence failures(propagate) {
   %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
   // No error, last result handle is empty.
   %h:3 = split_handle %muli_2 {fail_on_payload_too_small = false} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  %p = transform.num_associations %h#0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#0 : !transform.any_op
+  transform.test_print_param %p : !transform.param<i64>
+  %p2 = transform.num_associations %h#1 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#1 : !transform.any_op
+  transform.test_print_param %p2 : !transform.param<i64>
+  %p3 = transform.num_associations %h#2 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{0}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#2 : !transform.any_op
+  transform.test_print_param %p3 : !transform.param<i64>
 }
 
 // -----
@@ -940,10 +951,12 @@ transform.sequence failures(propagate) {
 ^bb1(%fun: !transform.any_op):
   %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!transform.any_op) -> !transform.any_op
   %h:2 = split_handle %muli_2 {overflow_result = 0} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %p = transform.num_associations %h#0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{3}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#0 : !transform.any_op
+  transform.test_print_param %p : !transform.param<i64>
+  %p2 = transform.num_associations %h#1 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  transform.test_print_number_of_associated_payload_ir_ops %h#1 : !transform.any_op
+  transform.test_print_param %p2 : !transform.param<i64>
 }
 
 // -----
@@ -1668,8 +1681,9 @@ transform.sequence failures(propagate) {
   // expected-remark @below {{2 iterations}}
   transform.test_tracked_rewrite %0 : (!transform.any_op) -> ()
   // One replacement op (test.drop_mapping) is dropped from the mapping.
+  %p = num_associations %0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below {{2}}
-  test_print_number_of_associated_payload_ir_ops %0 : !transform.any_op
+  test_print_param %p : !transform.param<i64>
 }
 
 // -----
@@ -1684,20 +1698,24 @@ module {
     %2 = transform.param.constant 1 -> !transform.param<i64>
     %3 = transform.param.constant 2 -> !transform.param<i64>
     %4 = transform.merge_handles %1, %2 { deduplicate } : !transform.param<i64>
+    %p = num_associations %4 : (!transform.param<i64>) -> !transform.param<i64>
     // expected-remark @below {{1}}
-    test_print_number_of_associated_payload_ir_params %4 : !transform.param<i64>
+    test_print_param %p : !transform.param<i64>
 
     %5 = transform.merge_handles %1, %1 { deduplicate } : !transform.param<i64>
+    %p2 = num_associations %5 : (!transform.param<i64>) -> !transform.param<i64>
     // expected-remark @below {{1}}
-    test_print_number_of_associated_payload_ir_params %5 : !transform.param<i64>
+    test_print_param %p2 : !transform.param<i64>
 
     %6 = transform.merge_handles %1, %3 { deduplicate } : !transform.param<i64>
+    %p3 = num_associations %6 : (!transform.param<i64>) -> !transform.param<i64>
     // expected-remark @below {{2}}
-    test_print_number_of_associated_payload_ir_params %6 : !transform.param<i64>
+    test_print_param %p3 : !transform.param<i64>
 
     %7 = transform.merge_handles %1, %1, %2, %3 : !transform.param<i64>
+    %p4 = num_associations %7 : (!transform.param<i64>) -> !transform.param<i64>
     // expected-remark @below {{4}}
-    test_print_number_of_associated_payload_ir_params %7 : !transform.param<i64>
+    test_print_param %p4 : !transform.param<i64>
   }
 }
 
@@ -1712,21 +1730,25 @@ transform.sequence failures(propagate) {
   %3 = test_produce_value_handle_to_result %1, 1 : (!transform.any_op) -> !transform.any_value
 
   %4 = transform.merge_handles %2, %2 { deduplicate } : !transform.any_value
+  %p = num_associations %4 : (!transform.any_value) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  test_print_number_of_associated_payload_ir_values %4 : !transform.any_value
+  test_print_param %p : !transform.param<i64>
 
   %5 = transform.merge_handles %2, %3 { deduplicate } : !transform.any_value
+  %p2 = num_associations %5 : (!transform.any_value) -> !transform.param<i64>
   // expected-remark @below {{2}}
-  test_print_number_of_associated_payload_ir_values %5 : !transform.any_value
+  test_print_param %p2 : !transform.param<i64>
 
   %6 = test_produce_value_handle_to_result %1, 0 : (!transform.any_op) -> !transform.any_value
   %7 = transform.merge_handles %2, %6 { deduplicate } : !transform.any_value
+  %p3 = num_associations %6 : (!transform.any_value) -> !transform.param<i64>
   // expected-remark @below {{1}}
-  test_print_number_of_associated_payload_ir_values %6 : !transform.any_value
+  test_print_param %p3 : !transform.param<i64>
 
   %8 = transform.merge_handles %2, %2, %3, %4 : !transform.any_value
+  %p4 = num_associations %8 : (!transform.any_value) -> !transform.param<i64>
   // expected-remark @below {{4}}
-  test_print_number_of_associated_payload_ir_values %8 : !transform.any_value
+  test_print_param %p4 : !transform.param<i64>
 }
 // -----
 
@@ -1820,31 +1842,37 @@ transform.sequence failures(propagate) {
 
   // There are 3 arith.constant ops.
   %all = transform.structured.match ops{["arith.constant"]} in %0 : (!transform.any_op) -> !transform.any_op
+  %p = num_associations %all : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{3}}
-  test_print_number_of_associated_payload_ir_ops %all : !transform.any_op
+  test_print_param %p : !transform.param<i64>
   // "deduplicate" has no effect because these are 3 different ops.
   %merged_before = transform.merge_handles deduplicate %all : !transform.any_op
+  %p2 = num_associations %merged_before : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{3}}
-  test_print_number_of_associated_payload_ir_ops %merged_before : !transform.any_op
+  test_print_param %p2 : !transform.param<i64>
 
   // Apply CSE.
   transform.apply_cse to %0 : !transform.any_op
 
   // The handle is still mapped to 3 arith.constant ops.
+  %p3 = num_associations %all : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{3}}
-  test_print_number_of_associated_payload_ir_ops %all : !transform.any_op
+  test_print_param %p3 : !transform.param<i64>
   // But they are all the same op.
   %merged_after = transform.merge_handles deduplicate %all : !transform.any_op
+  %p4 = num_associations %merged_after : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{1}}
-  test_print_number_of_associated_payload_ir_ops %merged_after : !transform.any_op
+  test_print_param %p4 : !transform.param<i64>
 
   // The other handles were also updated.
   test_print_remark_at_operand %elim_first, "eliminated 1" : !transform.any_op
+  %p5 = num_associations %elim_first : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{1}}
-  test_print_number_of_associated_payload_ir_ops %elim_first : !transform.any_op
+  test_print_param %p5 : !transform.param<i64>
   test_print_remark_at_operand %elim_second, "eliminated 2" : !transform.any_op
+  %p6 = num_associations %elim_second : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{1}}
-  test_print_number_of_associated_payload_ir_ops %elim_second : !transform.any_op
+  test_print_param %p6 : !transform.param<i64>
 }
 
 // -----
@@ -1907,14 +1935,16 @@ transform.sequence failures(propagate) {
   // Get immediate parent.
   %2 = transform.get_parent_op %0 : (!transform.any_op) -> !transform.any_op
   test_print_remark_at_operand %2, "direct parent" : !transform.any_op
+  %p = num_associations %2 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{2}}
-  test_print_number_of_associated_payload_ir_ops %2 : !transform.any_op
+  test_print_param %p : !transform.param<i64>
 
   // Deduplicate results.
   %3 = transform.structured.match ops{["test.qux"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %4 = transform.get_parent_op %3 {deduplicate} : (!transform.any_op) -> !transform.any_op
+  %p2 = num_associations %4 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{1}}
-  test_print_number_of_associated_payload_ir_ops %4 : !transform.any_op
+  test_print_param %p2 : !transform.param<i64>
 }
 
 
@@ -2029,8 +2059,9 @@ transform.sequence failures(propagate) {
   // Match all ops inside the function (including the function itself).
   %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
   %0 = transform.structured.match in %func_op : (!transform.any_op) -> !transform.any_op
+  %p = num_associations %0 : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{5}}
-  test_print_number_of_associated_payload_ir_ops %0 : !transform.any_op
+  test_print_param %p : !transform.param<i64>
 
   // Select "test.foo".
   %foo = transform.select "test.foo" in %0 : (!transform.any_op) -> !transform.any_op
@@ -2060,8 +2091,9 @@ transform.sequence failures(propagate) {
   %empty_op = transform.structured.match ops{["tensor.empty"]} in %func_op : (!transform.any_op) -> !transform.any_op
   transform.apply_dce to %func_op : !transform.any_op
 
+  %p = num_associations %empty_op : (!transform.any_op) -> !transform.param<i64>
   // expected-remark @below{{0}}
-  test_print_number_of_associated_payload_ir_ops %empty_op : !transform.any_op
+  test_print_param %p : !transform.param<i64>
 }
 
 

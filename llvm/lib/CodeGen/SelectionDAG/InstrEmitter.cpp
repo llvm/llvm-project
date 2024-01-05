@@ -495,7 +495,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     // EXTRACT_SUBREG is lowered as %dst = COPY %src:sub.  There are no
     // constraints on the %dst register, COPY can target all legal register
     // classes.
-    unsigned SubIdx = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned SubIdx = Node->getConstantOperandVal(1);
     const TargetRegisterClass *TRC =
       TLI->getRegClassFor(Node->getSimpleValueType(0), Node->isDivergent());
 
@@ -611,7 +611,7 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
   unsigned VReg = getVR(Node->getOperand(0), VRBaseMap);
 
   // Create the new VReg in the destination class and emit a copy.
-  unsigned DstRCIdx = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+  unsigned DstRCIdx = Node->getConstantOperandVal(1);
   const TargetRegisterClass *DstRC =
     TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx));
   Register NewVReg = MRI->createVirtualRegister(DstRC);
@@ -629,7 +629,7 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
 void InstrEmitter::EmitRegSequence(SDNode *Node,
                                   DenseMap<SDValue, Register> &VRBaseMap,
                                   bool IsClone, bool IsCloned) {
-  unsigned DstRCIdx = cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue();
+  unsigned DstRCIdx = Node->getConstantOperandVal(0);
   const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
   Register NewVReg = MRI->createVirtualRegister(TRI->getAllocatableClass(RC));
   const MCInstrDesc &II = TII->get(TargetOpcode::REG_SEQUENCE);
@@ -1309,8 +1309,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     // Add all of the operand registers to the instruction.
     for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-      unsigned Flags =
-        cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
+      unsigned Flags = Node->getConstantOperandVal(i);
       const InlineAsm::Flag F(Flags);
       const unsigned NumVals = F.getNumOperandRegisters();
 

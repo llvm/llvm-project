@@ -2506,53 +2506,95 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x3118;   // 1/2pi
 }
 
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi) {
-  assert(HasInv2Pi);
+std::optional<unsigned> getInlineEncodingV216(bool IsFloat, uint32_t Literal) {
+  // Unfortunately, the Instruction Set Architecture Reference Guide is
+  // misleading about how the inline operands work for (packed) 16-bit
+  // instructions. In a nutshell, the actual HW behavior is:
+  //
+  //  - integer encodings (-16 .. 64) are always produced as sign-extended
+  //    32-bit values
+  //  - float encodings are produced as:
+  //    - for F16 instructions: corresponding half-precision float values in
+  //      the LSBs, 0 in the MSBs
+  //    - for UI16 instructions: corresponding single-precision float value
+  int32_t Signed = static_cast<int32_t>(Literal);
+  if (Signed >= 0 && Signed <= 64)
+    return 128 + Signed;
 
-  if (isInt<16>(Literal) || isUInt<16>(Literal)) {
-    int16_t Trunc = static_cast<int16_t>(Literal);
-    return AMDGPU::isInlinableLiteral16(Trunc, HasInv2Pi);
+  if (Signed >= -16 && Signed <= -1)
+    return 192 + std::abs(Signed);
+
+  if (IsFloat) {
+    // clang-format off
+    switch (Literal) {
+    case 0x3800: return 240; // 0.5
+    case 0xB800: return 241; // -0.5
+    case 0x3C00: return 242; // 1.0
+    case 0xBC00: return 243; // -1.0
+    case 0x4000: return 244; // 2.0
+    case 0xC000: return 245; // -2.0
+    case 0x4400: return 246; // 4.0
+    case 0xC400: return 247; // -4.0
+    case 0x3118: return 248; // 1.0 / (2.0 * pi)
+    default: break;
+    }
+    // clang-format on
+  } else {
+    // clang-format off
+    switch (Literal) {
+    case 0x3F000000: return 240; // 0.5
+    case 0xBF000000: return 241; // -0.5
+    case 0x3F800000: return 242; // 1.0
+    case 0xBF800000: return 243; // -1.0
+    case 0x40000000: return 244; // 2.0
+    case 0xC0000000: return 245; // -2.0
+    case 0x40800000: return 246; // 4.0
+    case 0xC0800000: return 247; // -4.0
+    case 0x3E22F983: return 248; // 1.0 / (2.0 * pi)
+    default: break;
+    }
+    // clang-format on
   }
-  if (!(Literal & 0xffff))
-    return AMDGPU::isInlinableLiteral16(Literal >> 16, HasInv2Pi);
 
-  int16_t Lo16 = static_cast<int16_t>(Literal);
-  int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
-  return Lo16 == Hi16 && isInlinableLiteral16(Lo16, HasInv2Pi);
+  return {};
 }
 
-bool isInlinableIntLiteralV216(int32_t Literal) {
-  int16_t Lo16 = static_cast<int16_t>(Literal);
-  if (isInt<16>(Literal) || isUInt<16>(Literal))
-    return isInlinableIntLiteral(Lo16);
-
-  int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
-  if (!(Literal & 0xffff))
-    return isInlinableIntLiteral(Hi16);
-  return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
+// Encoding of the literal as an inline constant for a V_PK_*_IU16 instruction
+// or nullopt.
+std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal) {
+  return getInlineEncodingV216(false, Literal);
 }
 
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType) {
+// Encoding of the literal as an inline constant for a V_PK_*_F16 instruction
+// or nullopt.
+std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal) {
+  return getInlineEncodingV216(true, Literal);
+}
+
+// Whether the given literal can be inlined for a V_PK_* instruction.
+bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+    return getInlineEncodingV216(false, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-    return isInlinableLiteralV216(Literal, HasInv2Pi);
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
+    return getInlineEncodingV216(true, Literal).has_value();
   default:
-    return isInlinableIntLiteralV216(Literal);
+    llvm_unreachable("bad packed operand type");
   }
 }
 
-bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {
-  assert(HasInv2Pi);
+// Whether the given literal can be inlined for a V_PK_*_IU16 instruction.
+bool isInlinableLiteralV2I16(uint32_t Literal) {
+  return getInlineEncodingV2I16(Literal).has_value();
+}
 
-  int16_t Lo16 = static_cast<int16_t>(Literal);
-  if (isInt<16>(Literal) || isUInt<16>(Literal))
-    return true;
-
-  int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
-  if (!(Literal & 0xffff))
-    return true;
-  return Lo16 == Hi16;
+// Whether the given literal can be inlined for a V_PK_*_F16 instruction.
+bool isInlinableLiteralV2F16(uint32_t Literal) {
+  return getInlineEncodingV2F16(Literal).has_value();
 }
 
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {

@@ -27,9 +27,8 @@ namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <>
-struct FPBits<long double>
-    : public internal::FPBitsCommon<FPType::X86_Binary80> {
-  using UP = internal::FPBitsCommon<FPType::X86_Binary80>;
+struct FPBits<long double> : public internal::FPRep<FPType::X86_Binary80> {
+  using UP = internal::FPRep<FPType::X86_Binary80>;
   using StorageType = typename UP::StorageType;
   using UP::bits;
 
