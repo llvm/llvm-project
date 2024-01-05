@@ -42,6 +42,7 @@ FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
 #endif
 FUNCTION_PASS("callbrprepare", CallBrPreparePass, ())
 FUNCTION_PASS("cfguard", CFGuardPass, ())
+FUNCTION_PASS("codegenprepare", CodeGenPreparePass, (TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass, ())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass, (TM))
 FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass, (false))
@@ -131,7 +132,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
-DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
 DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
