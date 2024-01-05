@@ -293,7 +293,6 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
-    Io.mapRequired("num_repetitions", Obj.NumRepetitions);
     Io.mapRequired("measurements", Obj.Measurements);
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);
@@ -301,6 +300,13 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     MappingNormalization<NormalizedBinary, std::vector<uint8_t>> BinaryString(
         Io, Obj.AssembledSnippet);
     Io.mapOptional("assembled_snippet", BinaryString->Binary);
+    // Optionally map num_repetitions and min_instructions to the same
+    // value to preserve backwards compatibility.
+    // TODO(boomanaiden154): Move min_instructions to mapRequired and
+    // remove num_repetitions once num_repetitions is ready to be removed
+    // completely.
+    Io.mapOptional("num_repetitions", Obj.MinInstructions);
+    Io.mapOptional("min_instructions", Obj.MinInstructions);
   }
 };
 

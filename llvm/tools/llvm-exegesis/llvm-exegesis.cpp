@@ -148,9 +148,10 @@ static cl::opt<bool>
                          cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<unsigned>
-    NumRepetitions("num-repetitions",
-                   cl::desc("number of time to repeat the asm snippet"),
-                   cl::cat(BenchmarkOptions), cl::init(10000));
+    MinInstructions("min-instructions",
+                    cl::desc("The minimum number of instructions that should "
+                             "be included in the snippet"),
+                    cl::cat(BenchmarkOptions), cl::init(10000));
 
 static cl::opt<unsigned>
     LoopBodySize("loop-body-size",
@@ -406,7 +407,7 @@ static void runBenchmarkConfigurations(
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
       auto RC = ExitOnErr(Runner.getRunnableConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor));
+          Conf, MinInstructions, LoopBodySize, *Repetitor));
       std::optional<StringRef> DumpFile;
       if (DumpObjectToDisk.getNumOccurrences())
         DumpFile = DumpObjectToDisk;
@@ -557,9 +558,9 @@ void benchmarkMain() {
     }
   }
 
-  if (NumRepetitions == 0) {
+  if (MinInstructions == 0) {
     ExitOnErr.setBanner("llvm-exegesis: ");
-    ExitWithError("--num-repetitions must be greater than zero");
+    ExitWithError("--min-instructions must ee greater than zero");
   }
 
   // Write to standard output if file is not set.

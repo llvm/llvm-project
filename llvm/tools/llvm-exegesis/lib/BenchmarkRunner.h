@@ -62,7 +62,7 @@ public:
 
   Expected<RunnableConfiguration>
   getRunnableConfiguration(const BenchmarkCode &Configuration,
-                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           unsigned MinInstructions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
   std::pair<Error, Benchmark>
