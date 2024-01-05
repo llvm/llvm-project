@@ -306,4 +306,19 @@ TEST_F(SpecialCaseListTest, Version2) {
   EXPECT_TRUE(SCL->inSection("sect2", "fun", "bar"));
   EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
 }
+
+TEST_F(SpecialCaseListTest, OSSFuzz65423) {
+  // Regression test for:
+  // https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=65423
+  const uint8_t Data[38] = {0x23, 0x21, 0x73, 0x70, 0x65, 0x63, 0x69, 0x61,
+                            0x6c, 0x2d, 0x63, 0x61, 0x73, 0x65, 0x2d, 0x6c,
+                            0x69, 0x73, 0x74, 0x2d, 0x76, 0x31, 0x0a, 0x3a,
+                            0x29, 0x7b, 0x30, 0x7d, 0x28, 0x20, 0x20, 0x20,
+                            0x7c, 0x20, 0x29, 0x28, 0x5c, 0x31};
+  std::string Payload(reinterpret_cast<const char *>(Data), 38);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(Payload);
+  std::string Error;
+  SpecialCaseList::create(Buf.get(), Error);
+}
 }
