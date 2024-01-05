@@ -1353,8 +1353,7 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_CUDA: {
     if (EF.getHeader().e_ident[ELF::EI_CLASS] == ELF::ELFCLASS32)
       return Triple::nvptx;
-    else
-      return Triple::nvptx64;
+    return Triple::nvptx64;
   }
 
   case ELF::EM_BPF:
