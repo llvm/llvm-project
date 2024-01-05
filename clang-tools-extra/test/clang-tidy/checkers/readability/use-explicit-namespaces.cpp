@@ -42,6 +42,7 @@ foo::ClassTest AlreadyQualifiedOk() {
   foo::doSomething();
   foo::StructTest first;
   foo::ClassTest second;
+  second.ClassIntMember = 55;
   foo::EnumTest picked = foo::EnumValueThree;
   foo::TemplateClassTest<foo::ClassTest> data;
   foo::TemplateClassTest<
@@ -74,6 +75,7 @@ ClassTest InsideNamespaceFooOk() {
   doSomething();
   StructTest first;
   ClassTest second;
+  second.ClassIntMember = 55;
   EnumTest picked = EnumValueThree;
   TemplateClassTest<ClassTest> data;
   TemplateClassTest<TemplateClassTest<TemplateClassTest<ClassTest>>> dataNested;
@@ -114,6 +116,7 @@ ClassTest FixAllMissingFoo()
   ClassTest second;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: Missing namespace qualifiers foo::
   // CHECK-FIXES:  foo::
+  second.ClassIntMember = 55;
   EnumTest picked = EnumValueThree;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: Missing namespace qualifiers foo::
   // CHECK-FIXES:  foo::
@@ -202,3 +205,16 @@ ClassTest FixAllMissingFoo()
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: Missing namespace qualifiers foo::
   // CHECK-FIXES:  foo::
 }
+
+inline namespace TestInlineNamespace {
+class InlineNamespaceClassTest {
+public:
+  int ClassIntMember;
+  typedef int ClassTypeDefMember;
+};
+
+} // namespace TestInlineNamespace
+
+// inline namespaces should not be qualified because they are used for library
+// versioning details
+InlineNamespaceClassTest inlineNamespaceOk;
