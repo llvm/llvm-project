@@ -615,8 +615,7 @@ public:
                                 internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
                                BLOCK_SIZE) -
                               1;
-      const uint32_t len = static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
-      return len;
+      return len = static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
     }
     return 0;
 #else
@@ -659,18 +658,17 @@ template <> class FloatToString<long double> {
 
   template <size_t Bits>
   LIBC_INLINE static constexpr BlockInt grab_digits(cpp::UInt<Bits> &int_num) {
-    BlockInt cur_block = 0;
     auto wide_result = int_num.div_uint32_times_pow_2(1953125, 9);
     // the optional only comes into effect when dividing by 0, which will
     // never happen here. Thus, we just assert that it has value.
     LIBC_ASSERT(wide_result.has_value());
-    cur_block = static_cast<BlockInt>(wide_result.value());
-    return cur_block;
+    return static_cast<BlockInt>(wide_result.value());
   }
 
   LIBC_INLINE static constexpr void zero_leading_digits(
       cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> &int_num) {
-    // 64 is the width of the numbers used to internally represent the UInt
+    // WORD_SIZE is the width of the numbers used to internally represent the
+    // UInt
     for (size_t i = 0; i < EXTRA_INT_WIDTH / int_num.WORD_SIZE; ++i) {
       int_num[i + (FLOAT_AS_INT_WIDTH / int_num.WORD_SIZE)] = 0;
     }
@@ -681,9 +679,8 @@ template <> class FloatToString<long double> {
   // return the class to the starting state.
   LIBC_INLINE constexpr void init_convert() {
     // No calculation necessary for the 0 case.
-    if (mantissa == 0 && exponent == 0) {
+    if (mantissa == 0 && exponent == 0)
       return;
-    }
 
     if (exponent > 0) {
       // if the exponent is positive, then the number is fully above the decimal
@@ -699,8 +696,7 @@ template <> class FloatToString<long double> {
       int_block_index = 0;
 
       while (float_as_int > 0) {
-        BlockInt cur_block = grab_digits(float_as_int);
-        block_buffer[int_block_index] = cur_block;
+        block_buffer[int_block_index] = grab_digits(float_as_int);
         ++int_block_index;
       }
       block_buffer_valid = int_block_index;
@@ -722,8 +718,8 @@ template <> class FloatToString<long double> {
 
         size_t positive_int_block_index = 0;
         while (above_decimal_point > 0) {
-          BlockInt cur_block = grab_digits(above_decimal_point);
-          block_buffer[positive_int_block_index] = cur_block;
+          block_buffer[positive_int_block_index] =
+              grab_digits(above_decimal_point);
           ++positive_int_block_index;
         }
         block_buffer_valid = positive_int_block_index;
@@ -749,36 +745,31 @@ public:
   }
 
   LIBC_INLINE constexpr size_t get_positive_blocks() {
-    if (exponent >= -FRACTION_LEN) {
-      const uint32_t idx =
-          exponent < 0
-              ? 0
-              : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-      const uint32_t len =
-          internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
-      return len;
-    } else {
+    if (exponent < -FRACTION_LEN)
       return 0;
-    }
+
+    const uint32_t idx =
+        exponent < 0
+            ? 0
+            : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
+    return internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
   }
 
   LIBC_INLINE constexpr size_t zero_blocks_after_point() {
 #ifdef LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
     return MIN_BLOCK_2[-exponent / IDX_SIZE];
 #else
-    if (exponent < -FRACTION_LEN) {
-      const int pos_exp = -exponent - 1;
-      const uint32_t pos_idx =
-          static_cast<uint32_t>(pos_exp + (IDX_SIZE - 1)) / IDX_SIZE;
-      const int32_t pos_len = ((internal::ceil_log10_pow2(pos_idx * IDX_SIZE) -
-                                internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
-                               BLOCK_SIZE) -
-                              1;
-      const uint32_t len = static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
-      return len;
-    }
-    return 0;
+    if (exponent >= -FRACTION_LEN)
+      return 0;
 
+    const int pos_exp = -exponent - 1;
+    const uint32_t pos_idx =
+        static_cast<uint32_t>(pos_exp + (IDX_SIZE - 1)) / IDX_SIZE;
+    const int32_t pos_len = ((internal::ceil_log10_pow2(pos_idx * IDX_SIZE) -
+                              internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
+                             BLOCK_SIZE) -
+                            1;
+    return static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
 #endif
   }
 
@@ -792,20 +783,17 @@ public:
   }
 
   LIBC_INLINE constexpr BlockInt get_positive_block(int block_index) {
-    if (exponent < -FRACTION_LEN) {
+    if (exponent < -FRACTION_LEN)
       return 0;
-    }
-    if (block_index > static_cast<int>(block_buffer_valid) || block_index < 0) {
+    if (block_index > static_cast<int>(block_buffer_valid) || block_index < 0)
       return 0;
-    }
 
     return block_buffer[block_index];
   }
 
   LIBC_INLINE constexpr BlockInt get_negative_block(int negative_block_index) {
-    if (exponent >= 0) {
+    if (exponent >= 0)
       return 0;
-    }
 
     // negative_block_index starts at 0 with the first block after the decimal
     // point, and 1 with the second and so on. This converts to the same
@@ -834,18 +822,15 @@ public:
       --int_block_index;
     }
 
-    // We're currently on the requested block, return the current block.
-    BlockInt cur_block =
-        static_cast<BlockInt>(float_as_fixed >> FLOAT_AS_INT_WIDTH);
-    return cur_block;
+    // We're now on the requested block, return the current block.
+    return static_cast<BlockInt>(float_as_fixed >> FLOAT_AS_INT_WIDTH);
   }
 
   LIBC_INLINE constexpr BlockInt get_block(int block_index) {
-    if (block_index >= 0) {
+    if (block_index >= 0)
       return get_positive_block(block_index);
-    } else {
-      return get_negative_block(-1 - block_index);
-    }
+
+    return get_negative_block(-1 - block_index);
   }
 };
 
