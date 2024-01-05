@@ -2034,32 +2034,30 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     return ToDCOrErr.takeError();
   }
 
-  const auto *FromRD = dyn_cast<RecordDecl>(FromDC);
-  if (!FromRD)
-    return ChildErrors;
+  if (const auto *FromRD = dyn_cast<RecordDecl>(FromDC)) {
+    DeclContext *ToDC = *ToDCOrErr;
+    // Remove all declarations, which may be in wrong order in the
+    // lexical DeclContext and then add them in the proper order.
+    for (auto *D : FromRD->decls()) {
+      if (!MightNeedReordering(D))
+        continue;
 
-  DeclContext *ToDC = *ToDCOrErr;
-  // Remove all declarations, which may be in wrong order in the
-  // lexical DeclContext and then add them in the proper order.
-  for (auto *D : FromRD->decls()) {
-    if (!MightNeedReordering(D))
-      continue;
-
-    assert(D && "DC contains a null decl");
-    if (Decl *ToD = Importer.GetAlreadyImportedOrNull(D)) {
-      // Remove only the decls which we successfully imported.
-      assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
-      // Remove the decl from its wrong place in the linked list.
-      ToDC->removeDecl(ToD);
-      // Add the decl to the end of the linked list.
-      // This time it will be at the proper place because the enclosing for
-      // loop iterates in the original (good) order of the decls.
-      ToDC->addDeclInternal(ToD);
+      assert(D && "DC contains a null decl");
+      if (Decl *ToD = Importer.GetAlreadyImportedOrNull(D)) {
+        // Remove only the decls which we successfully imported.
+        assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
+        // Remove the decl from its wrong place in the linked list.
+        ToDC->removeDecl(ToD);
+        // Add the decl to the end of the linked list.
+        // This time it will be at the proper place because the enclosing for
+        // loop iterates in the original (good) order of the decls.
+        ToDC->addDeclInternal(ToD);
+      }
     }
   }
 
   // Import everything else.
-  for (auto *From : FromRD->decls()) {
+  for (auto *From : FromDC->decls()) {
     if (MightNeedReordering(From))
       continue;
 
