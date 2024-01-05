@@ -232,6 +232,11 @@ AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const UnsafeBufferUsageHandler *,
   return !Handler->isSafeBufferOptOut(Node.getBeginLoc());
 }
 
+AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
+              const UnsafeBufferUsageHandler *, Handler) {
+  return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
+}
+
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
   return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
 }
@@ -592,6 +597,43 @@ public:
   }
   // FIXME: pointer adding zero should be fine
   // FIXME: this gadge will need a fix-it
+};
+
+class SpanTwoParamConstructorGadget : public WarningGadget {
+  static constexpr const char *const SpanTwoParamConstructorTag =
+      "spanTwoParamConstructor";
+  const CXXConstructExpr *Ctor; // the span constructor expression
+
+public:
+  SpanTwoParamConstructorGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::SpanTwoParamConstructor),
+        Ctor(Result.Nodes.getNodeAs<CXXConstructExpr>(
+            SpanTwoParamConstructorTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::SpanTwoParamConstructor;
+  }
+
+  static Matcher matcher() {
+    auto HasTwoParamSpanCtorDecl = hasDeclaration(
+        cxxConstructorDecl(hasDeclContext(isInStdNamespace()), hasName("span"),
+                           parameterCountIs(2)));
+
+    return stmt(cxxConstructExpr(HasTwoParamSpanCtorDecl)
+                    .bind(SpanTwoParamConstructorTag));
+  }
+
+  const Stmt *getBaseStmt() const override { return Ctor; }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    // If the constructor call is of the form `std::span{var, n}`, `var` is
+    // considered an unsafe variable.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ctor->getArg(0))) {
+      if (isa<VarDecl>(DRE->getDecl()))
+        return {DRE};
+    }
+    return {};
+  }
 };
 
 /// A pointer initialization expression of the form:
@@ -1209,6 +1251,10 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
 #define WARNING_GADGET(x)                                                      \
           allOf(x ## Gadget::matcher().bind(#x),                               \
                 notInSafeBufferOptOut(&Handler)),
+#define WARNING_CONTAINER_GADGET(x)                                            \
+          allOf(x ## Gadget::matcher().bind(#x),                               \
+                notInSafeBufferOptOut(&Handler),                               \
+                unless(ignoreUnsafeBufferInContainer(&Handler))),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
             // Avoid a hanging comma.
             unless(stmt())
