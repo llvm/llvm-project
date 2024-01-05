@@ -6,6 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// https://github.com/llvm/llvm-project/pull/76232 breaks this libc++ test.
+// The fix would be to update this file. The issue is that the CI uses 2
+// versions of Clang-18
+// - An older nightly build as the main compiler
+// - A freshly bootstrap build
+// This means the test can't be used until the nightly build is updated.
+// TODO(mordante) Reenable clang-18.
+// UNSUPPORTED: clang-18
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // Test the mandates
