@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 class InlineSourceFilesTestCase(TestBase):
     @skipIf(compiler="gcc")
     @skipIf(compiler="clang", compiler_version=["<", "18.0"])
-    # dsymutil doesn't yet copy the sources
-    @expectedFailureDarwin(debug_info=["dsym"])
     def test(self):
         """Test DWARF inline source files."""
         self.build()
