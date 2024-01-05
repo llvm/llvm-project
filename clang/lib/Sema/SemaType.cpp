@@ -7897,7 +7897,7 @@ static bool handleArmStateAttribute(Sema &S,
     unsigned Shift;
     FunctionType::ArmStateValue ExistingState;
     if (StateName == "za") {
-      Shift = FunctionType::SME_PstateZAShift;
+      Shift = FunctionType::SME_ZAShift;
       ExistingState = FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
     } else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
@@ -7909,7 +7909,7 @@ static bool handleArmStateAttribute(Sema &S,
     // are all mutually exclusive for the same S, so check if there are
     // conflicting attributes.
     if (ExistingState != FunctionType::ARM_None && ExistingState != State) {
-      S.Diag(LiteralLoc, diag::err_conflicting_attributes_sme_state)
+      S.Diag(LiteralLoc, diag::err_conflicting_attributes_arm_state)
           << StateName;
       Attr.setInvalid();
       return true;

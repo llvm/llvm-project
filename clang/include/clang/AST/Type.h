@@ -4038,8 +4038,8 @@ public:
     SME_PStateSMCompatibleMask = 1 << 1,
 
     // Describes the value of the state using ArmStateValue.
-    SME_PstateZAShift = 2,
-    SME_PStateZAMask = 0b111 << SME_PstateZAShift,
+    SME_ZAShift = 2,
+    SME_ZAMask = 0b111 << SME_ZAShift,
 
     SME_AttributeMask = 0b111'111 // We only support maximum 6 bits because of
                                   // the bitmask in FunctionTypeExtraBitfields.
@@ -4054,7 +4054,7 @@ public:
   };
 
   static ArmStateValue getArmZAState(unsigned AttrBits) {
-    return (ArmStateValue)((AttrBits & SME_PStateZAMask) >> SME_PstateZAShift);
+    return (ArmStateValue)((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
   /// A simple holder for various uncommon bits which do not fit in

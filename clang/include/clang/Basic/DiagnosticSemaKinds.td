@@ -3700,7 +3700,7 @@ def err_sme_definition_using_sm_in_non_sme_target : Error<
   "function executed in streaming-SVE mode requires 'sme'">;
 def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
-def err_conflicting_attributes_sme_state : Error<
+def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
