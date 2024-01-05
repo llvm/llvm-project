@@ -2240,7 +2240,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   for (const DWARFDIE &die : contained_type_dies)
     dwarf->ResolveType(die);
 
-
   return (bool)clang_type;
 }
 

@@ -1,13 +1,11 @@
 namespace a {
-  namespace b {
-    namespace c {
-      static int d = 12;
-      enum Color {
-        Red, Green, Blue
-      };
-    }
-  }
-}
+namespace b {
+namespace c {
+static int d = 12;
+enum Color { Red, Green, Blue };
+} // namespace c
+} // namespace b
+} // namespace a
 
 struct A {
   int _a = 'a';
@@ -15,9 +13,7 @@ struct A {
     short _b = 'b';
     struct C {
       char _c = 'c';
-      enum EnumType : int {
-        Eleven = 11
-      };
+      enum EnumType : int { Eleven = 11 };
       static EnumType enum_static;
     };
   };
