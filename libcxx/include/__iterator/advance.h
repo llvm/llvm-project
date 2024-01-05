@@ -65,7 +65,7 @@ template < class _InputIter,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i, _Distance __orig_n) {
   typedef typename iterator_traits<_InputIter>::difference_type _Difference;
   _Difference __n = static_cast<_Difference>(std::__convert_to_integral(__orig_n));
-    // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
+  // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
   _LIBCPP_ASSERT_PEDANTIC(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
                           "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
   std::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
