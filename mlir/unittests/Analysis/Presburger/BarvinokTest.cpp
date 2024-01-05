@@ -5,6 +5,7 @@
 
 using namespace mlir;
 using namespace presburger;
+using namespace mlir::presburger::detail;
 
 // The following are 3 randomly generated vectors with 4
 // entries each and define a cone's H-representation

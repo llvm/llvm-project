@@ -10,11 +10,12 @@
 
 using namespace mlir;
 using namespace presburger;
+using namespace mlir::presburger::detail;
 
 // Assuming that the input cone is pointed at the origin,
 // converts it to its dual in V-representation.
 // Essentially we just remove the all-zeroes constant column.
-ConeV mlir::presburger::getDual(ConeH cone) {
+ConeV mlir::presburger::detail::getDual(ConeH cone) {
   unsigned numIneq = cone.getNumInequalities();
   unsigned numVar = cone.getNumCols() - 1;
   ConeV dual(numIneq, numVar, 0, 0);
@@ -39,7 +40,7 @@ ConeV mlir::presburger::getDual(ConeH cone) {
 // Converts a cone in V-representation to the H-representation
 // of its dual, pointed at the origin (not at the original vertex).
 // Essentially adds a column consisting only of zeroes to the end.
-ConeH mlir::presburger::getDual(ConeV cone) {
+ConeH mlir::presburger::detail::getDual(ConeV cone) {
   unsigned rows = cone.getNumRows();
   unsigned columns = cone.getNumColumns();
   ConeH dual = defineHRep(columns);
@@ -57,7 +58,7 @@ ConeH mlir::presburger::getDual(ConeV cone) {
 
 // Find the index of a cone in V-representation.
 // If there are more rays than variables, return 0.
-MPInt mlir::presburger::getIndex(ConeV cone) {
+MPInt mlir::presburger::detail::getIndex(ConeV cone) {
   if (cone.getNumRows() > cone.getNumColumns())
     return MPInt(0);
 
