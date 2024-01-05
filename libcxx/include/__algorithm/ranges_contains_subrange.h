@@ -50,7 +50,8 @@ struct __fn {
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) {
     auto __n2 = ranges::distance(__first2, __last2);
-    if (__n2  == 0) return true;
+    if (__n2 == 0)
+      return true;
 
     auto __ret = ranges::search(
         std::move(__first1), __last1, std::move(__first2), __last2, __pred, std::ref(__proj1), std::ref(__proj2));
@@ -63,15 +64,15 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static operator()(
-      _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static
+  operator()(_Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) {
     auto __n2 = 0;
     if constexpr (sized_range<_Range2>) {
       __n2 = ranges::size(__range2);
     } else {
       __n2 = std::distance(cbegin(__range2), cend(__range2));
     }
-    if (__n2  == 0)
+    if (__n2 == 0)
       return true;
 
     auto __ret = ranges::search(__range1, __range2, __pred, std::ref(__proj1), std::ref(__proj2));
