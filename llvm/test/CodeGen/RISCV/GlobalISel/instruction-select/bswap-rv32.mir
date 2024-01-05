@@ -2,6 +2,9 @@
 # RUN: llc -mtriple=riscv32 -mattr=+zbb -run-pass=instruction-select \
 # RUN:   -simplify-mir -verify-machineinstrs %s -o - \
 # RUN:   | FileCheck -check-prefix=RV32I %s
+# RUN: llc -mtriple=riscv32 -mattr=+zbkb -run-pass=instruction-select \
+# RUN:   -simplify-mir -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck -check-prefix=RV32I %s
 
 ---
 name:            bswap_s32

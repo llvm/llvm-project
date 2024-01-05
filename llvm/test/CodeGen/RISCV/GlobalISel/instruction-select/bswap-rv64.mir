@@ -2,6 +2,9 @@
 # RUN: llc -mtriple=riscv64 -mattr=+zbb -run-pass=instruction-select \
 # RUN:   -simplify-mir -verify-machineinstrs %s -o - \
 # RUN:   | FileCheck -check-prefix=RV64I %s
+# RUN: llc -mtriple=riscv64 -mattr=+zbkb -run-pass=instruction-select \
+# RUN:   -simplify-mir -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck -check-prefix=RV64I %s
 
 ---
 name:            bswap_s64
