@@ -1,5 +1,4 @@
-//===-- LoongArchCallLowering.cpp - Call lowering -------------------*- C++
-//-*-===//
+//===-- LoongArchCallLowering.cpp - Call lowering ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,9 +29,9 @@ bool LoongArchCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
   MachineInstrBuilder Ret = MIRBuilder.buildInstrNoInsert(LoongArch::PseudoRET);
 
-  if (Val != nullptr) {
+  if (Val != nullptr)
     return false;
-  }
+ 
   MIRBuilder.insertInstr(Ret);
   return true;
 }
