@@ -80,7 +80,7 @@ struct LibClangExtractAPIVisitor
     }
 
     ObjCInterfaceRecord *ObjCInterfaceRecord = API.addObjCInterface(
-        Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment, Declaration,
+        Name, USR, Loc, AvailabilityInfo(Decl), Linkage, Comment, Declaration,
         SubHeading, SuperClass, isInSystemHeader(Decl));
 
     // Record all methods (selectors). This doesn't include automatically

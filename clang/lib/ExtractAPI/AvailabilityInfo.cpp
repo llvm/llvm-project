@@ -7,50 +7,27 @@
 using namespace clang;
 using namespace extractapi;
 
-AvailabilitySet::AvailabilitySet(const Decl *Decl) {
+AvailabilityInfo::AvailabilityInfo(const Decl *Decl) {
   ASTContext &Context = Decl->getASTContext();
   StringRef PlatformName = Context.getTargetInfo().getPlatformName();
-  // Collect availability attributes from all redeclrations.
+
+  // Collect availability attributes from all redeclarations.
   for (const auto *RD : Decl->redecls()) {
-    if (const auto *A = RD->getAttr<UnavailableAttr>()) {
-      if (!A->isImplicit()) {
-        this->Availabilities.clear();
-        UnconditionallyUnavailable = true;
-      }
-    }
-
-    if (const auto *A = RD->getAttr<DeprecatedAttr>()) {
-      if (!A->isImplicit()) {
-        this->Availabilities.clear();
-        UnconditionallyDeprecated = true;
-      }
-    }
-
-    for (const auto *Attr : RD->specific_attrs<AvailabilityAttr>()) {
-      StringRef Domain = Attr->getPlatform()->getName();
-      if (Domain != PlatformName)
+    for (const auto *A : RD->specific_attrs<AvailabilityAttr>()) {
+      if (A->getPlatform()->getName() != PlatformName)
         continue;
-      auto *Availability =
-          llvm::find_if(Availabilities, [Domain](const AvailabilityInfo &Info) {
-            return Domain.equals(Info.Domain);
-          });
-      if (Availability != Availabilities.end()) {
-        // Get the highest introduced version for all redeclarations.
-        if (Availability->Introduced < Attr->getIntroduced())
-          Availability->Introduced = Attr->getIntroduced();
-
-        // Get the lowest deprecated version for all redeclarations.
-        if (Availability->Deprecated > Attr->getDeprecated())
-          Availability->Deprecated = Attr->getDeprecated();
-
-        // Get the lowest obsoleted version for all redeclarations.
-        if (Availability->Obsoleted > Attr->getObsoleted())
-          Availability->Obsoleted = Attr->getObsoleted();
-      } else {
-        Availabilities.emplace_back(Domain, Attr->getIntroduced(),
-                                    Attr->getDeprecated(), Attr->getObsoleted(),
-                                    Attr->getUnavailable());
-      }
+      *this =
+          AvailabilityInfo(A->getPlatform()->getName(), A->getIntroduced(),
+                           A->getDeprecated(), A->getObsoleted(), false, false);
+      break;
     }
+
+    if (const auto *A = RD->getAttr<UnavailableAttr>())
+      if (!A->isImplicit())
+        UnconditionallyUnavailable = true;
+
+    if (const auto *A = RD->getAttr<DeprecatedAttr>())
+      if (!A->isImplicit())
+        UnconditionallyDeprecated = true;
   }
 }
