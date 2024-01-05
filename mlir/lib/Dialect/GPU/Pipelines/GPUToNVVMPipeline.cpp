@@ -48,7 +48,6 @@ void buildCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToNVVMPipelineOptions &options) {
   pm.addPass(createConvertNVGPUToNVVMPass());
   pm.addPass(createGpuKernelOutliningPass());
-  pm.addPass(createConvertLinalgToLoopsPass());
   pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createConvertNVVMToLLVMPass());
@@ -121,7 +120,7 @@ void mlir::gpu::buildLowerToNVVMPassPipeline(
 void mlir::gpu::registerGPUToNVVMPipeline() {
   PassPipelineRegistration<GPUToNVVMPipelineOptions>(
       "gpu-lower-to-nvvm-pipeline",
-      "The default pipeline lowers main dialects (arith, linalg, memref, scf, "
+      "The default pipeline lowers main dialects (arith, memref, scf, "
       "vector, gpu, and nvgpu) to NVVM. It starts by lowering GPU code to the "
       "specified compilation target (default is fatbin) then lowers the host "
       "code.",
