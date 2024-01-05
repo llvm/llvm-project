@@ -20,7 +20,7 @@
 #ifndef TEST_SME
 #define ATTR
 #else
-#define ATTR __arm_streaming_compatible
+#define ATTR __arm_streaming
 #endif
 
 // CHECK-LABEL: @test_svpsel_lane_b8(
