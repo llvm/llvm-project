@@ -274,13 +274,13 @@ static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
 }
 
 static bool FrameIsInternal(const SymbolizedStack *frame) {
-  if (frame == 0)
+  if (!frame)
     return false;
   const char *file = frame->info.file;
   const char *module = frame->info.module;
-  if (file != 0 && (internal_strstr(file, "/compiler-rt/lib/")))
+  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
     return true;
-  if (module != 0 && (internal_strstr(module, "libclang_rt.")))
+  if (module && (internal_strstr(module, "libclang_rt.")))
     return true;
   return false;
 }
