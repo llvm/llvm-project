@@ -197,16 +197,12 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
 bool expectIdentifierOrKeyword(Parser &P) {
   Token Tok = P.getCurToken();
 
-  if (Tok.is(tok::identifier)) {
-    P.ConsumeToken();
+  if (Tok.is(tok::identifier))
     return false;
-  }
 
   if (!Tok.isAnnotation() && Tok.getIdentifierInfo() &&
-      Tok.getIdentifierInfo()->isKeyword(P.getLangOpts())) {
-    P.ConsumeToken();
+      Tok.getIdentifierInfo()->isKeyword(P.getLangOpts()))
     return false;
-  }
 
   P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
   return true;
@@ -351,6 +347,8 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
 
       if (expectIdentifierOrKeyword(P))
         break;
+
+      P.ConsumeToken();
 
       if (getOpenACCDefaultClauseKind(DefKindTok) ==
           OpenACCDefaultClauseKind::Invalid)
