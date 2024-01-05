@@ -1111,7 +1111,7 @@ def : Pat <
 multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
   // f16_to_fp patterns
   def : GCNPat <
-    (f32 (f16_to_fp i32:$src0)),
+    (f32 (any_f16_to_fp i32:$src0)),
     (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src0)
   >;
 
@@ -1164,6 +1164,13 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
   def : GCNPat <
     (f16 (uint_to_fp i32:$src)),
     (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_U32_e32 VSrc_b32:$src))
+  >;
+
+  // This is only used on targets without half support
+  // TODO: Introduce strict variant of AMDGPUfp_to_f16 and share custom lowering
+  def : GCNPat <
+    (i32 (strict_fp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+    (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
   >;
 }
 
@@ -1562,6 +1569,19 @@ def : BitConvert <f64, v2i32, VReg_64>;
 def : BitConvert <v2i32, f64, VReg_64>;
 def : BitConvert <v4i16, v4f16, VReg_64>;
 def : BitConvert <v4f16, v4i16, VReg_64>;
+def : BitConvert <v4bf16, v2i32, VReg_64>;
+def : BitConvert <v2i32, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, i64, VReg_64>;
+def : BitConvert <i64, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v4i16, VReg_64>;
+def : BitConvert <v4i16, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v4f16, VReg_64>;
+def : BitConvert <v4f16, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v2f32, VReg_64>;
+def : BitConvert <v2f32, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, f64, VReg_64>;
+def : BitConvert <f64, v4bf16, VReg_64>;
+
 
 // FIXME: Make SGPR
 def : BitConvert <v2i32, v4f16, VReg_64>;
