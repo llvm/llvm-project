@@ -1814,9 +1814,21 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignals[0]);
 
+//
+// For some reason, the kernel completion signal value gets turned to 0
+// when it should be 1. The code we are commenting out causes this signal
+// to be ignored below and the D2H copy process starts too soon.
+// In this fix, we are not resetting the signal value to 1.
+// We are just not ignoring the signal in the asyncMemCopy below.
+//
+// This fix does not solve the random SDMA problem. 
+// We need to understand how this InputSignal value which was a kernel
+// completion signal became 0. More testing is needed.
+//
     // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
+//  if (InputSignal && !InputSignal->load())
+//      fprintf(stderr , " Inputsignal value %ld for signal %p\n",InputSignal->load(),InputSignal);
+//      InputSignal = nullptr;
 
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
@@ -1825,6 +1837,7 @@ public:
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
     if (InputSignal) {
+// fprintf(stderr,"calling utils::asyncMemCopy with InputSignal %p val%ld\n",InputSignal,InputSignal->load());
       hsa_signal_t InputSignalRaw = InputSignal->get();
       if (auto Err = utils::asyncMemCopy(
               UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
@@ -2423,7 +2436,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_ForceSyncRegions("OMPX_FORCE_SYNC_REGIONS", 0),
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         OMPX_UseMultipleSdmaEngines(
-            "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
+          // setting default to true here appears to solve random sdma problem
+            "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", true),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
