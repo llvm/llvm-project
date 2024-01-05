@@ -81,6 +81,5 @@ TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
 TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
   VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
                          ElementCount::getScalable(4), true, "_ZGVsMxvv"};
-  /// TODO: test should avoid and not crash.
-  EXPECT_DEATH(run(IncorrectVD, IR), "");
+  EXPECT_TRUE(run(IncorrectVD, IR));
 }

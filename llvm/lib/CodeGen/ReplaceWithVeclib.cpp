@@ -108,15 +108,17 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // Compute the argument types of the corresponding scalar call and the scalar
   // function name. For calls, it additionally finds the function to replace
   // and checks that all vector operands match the previously found EC.
-  SmallVector<Type *, 8> ScalarArgTypes;
+  SmallVector<Type *, 8> ScalarArgTypes, OrigArgTypes;
   std::string ScalarName;
   Function *FuncToReplace = nullptr;
-  if (auto *CI = dyn_cast<CallInst>(&I)) {
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (CI) {
     FuncToReplace = CI->getCalledFunction();
     Intrinsic::ID IID = FuncToReplace->getIntrinsicID();
     assert(IID != Intrinsic::not_intrinsic && "Not an intrinsic");
     for (auto Arg : enumerate(CI->args())) {
       auto *ArgTy = Arg.value()->getType();
+      OrigArgTypes.push_back(ArgTy);
       if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
         ScalarArgTypes.push_back(ArgTy);
       } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
@@ -174,6 +176,24 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   Function *TLIFunc = getTLIFunction(I.getModule(), VectorFTy,
                                      VD->getVectorFnName(), FuncToReplace);
+
+  // For calls, bail out when their arguments do not match with the TLI mapping.
+  if (CI) {
+    int IdxNonPred = 0;
+    for (auto [OrigTy, VFParam] :
+         zip(OrigArgTypes, OptInfo->Shape.Parameters)) {
+      if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
+        continue;
+      ++IdxNonPred;
+      if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                          << ": Will not replace: wrong type at index: "
+                          << IdxNonPred << ": " << *OrigTy << "\n");
+        return false;
+      }
+    }
+  }
+
   replaceWithTLIFunction(I, *OptInfo, TLIFunc);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `" << ScalarName
                     << "` with call to `" << TLIFunc->getName() << "`.\n");
