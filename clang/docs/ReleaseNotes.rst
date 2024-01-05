@@ -692,6 +692,9 @@ Bug Fixes in This Version
   Fixes (`#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
 - Fix crash when using C++ only tokens like ``::`` in C compiler clang.
   Fixes (`#73559 <https://github.com/llvm/llvm-project/issues/73559>`_)
+- Clang now accepts recursive non-dependent calls to functions with deduced
+  return type.
+  Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
 
 
 Bug Fixes to Compiler Builtins
