@@ -470,7 +470,7 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
                                                   bool IgnoreUnknown) const {
   std::vector<std::string> Features;
   for (auto const &Ext : Exts) {
-    std::string ExtName = Ext.first;
+    StringRef ExtName = Ext.first;
 
     if (ExtName == "i") // i is not recognized in clang -cc1
       continue;
@@ -478,9 +478,9 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
       continue;
 
     if (isExperimentalExtension(ExtName)) {
-      Features.push_back("+experimental-" + ExtName);
+      Features.push_back("+experimental-" + std::string(ExtName));
     } else {
-      Features.push_back("+" + ExtName);
+      Features.push_back("+" + std::string(ExtName));
     }
   }
   if (AddAllExtensions) {
