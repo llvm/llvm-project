@@ -211,7 +211,9 @@ public:
     return std::make_unique<Action>(HeaderFilter, EditedFiles);
   }
 
-  const llvm::StringMap<std::string> &editedFiles() const { return EditedFiles; }
+  const llvm::StringMap<std::string> &editedFiles() const {
+    return EditedFiles;
+  }
 
 private:
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
@@ -278,7 +280,9 @@ int main(int argc, const char **argv) {
   ActionFactory Factory(HeaderFilter);
   auto ErrorCode = Tool.run(&Factory);
   if (Edit) {
-    for (const auto &[FileName, FinalCode] : Factory.editedFiles()) {
+    for (const auto & NameAndContent: Factory.editedFiles()) {
+      llvm::StringRef FileName = NameAndContent.first();
+      const std::string& FinalCode = NameAndContent.second;
       if (auto Err = llvm::writeToOutput(
               FileName, [&](llvm::raw_ostream &OS) -> llvm::Error {
                 OS << FinalCode;
