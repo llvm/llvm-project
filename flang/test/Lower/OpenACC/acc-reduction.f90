@@ -743,7 +743,7 @@ end subroutine
 ! FIR:         %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
 ! HLFIR:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
 ! CHECK:       acc.loop reduction(@reduction_add_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
-! CHECK: } attributes {collapse = 2 : i64}
+! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]}
 
 subroutine acc_reduction_add_int_array_3d(a, b)
   integer :: a(100, 10, 2), b(100, 10, 2)
@@ -765,7 +765,7 @@ end subroutine
 ! FIR:   %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
 ! HLFIR: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
 ! CHECK: acc.loop reduction(@reduction_add_section_ext100xext10xext2_ref_100x10x2xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
-! CHECK: } attributes {collapse = 3 : i64}
+! CHECK: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>]}
 
 subroutine acc_reduction_add_float(a, b)
   real :: a(100), b
@@ -938,7 +938,7 @@ end subroutine
 ! FIR:   %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10xf32>>) bounds(%3, %5) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
 ! HLFIR: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
 ! CHECK: acc.loop reduction(@reduction_min_section_ext100xext10_ref_100x10xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xf32>>)
-! CHECK: attributes {collapse = 2 : i64}
+! CHECK: attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]}
 
 subroutine acc_reduction_max_int(a, b)
   integer :: a(100)
