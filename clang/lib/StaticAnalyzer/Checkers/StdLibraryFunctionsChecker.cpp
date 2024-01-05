@@ -2516,12 +2516,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // char *getcwd(char *buf, size_t size);
-    // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
+            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(
-                ArgumentCondition(1, WithinRange, Range(0, SizeMax))));
+                ArgumentCondition(1, WithinRange, Range(1, SizeMax))));
 
     // int mkdir(const char *pathname, mode_t mode);
     addToFunctionSummaryMap(

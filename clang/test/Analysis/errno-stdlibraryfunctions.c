@@ -74,3 +74,14 @@ void errno_mkdtemp(char *template) {
     if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }
+
+void errno_getcwd(char *Buf, size_t sz) {
+  char *Path = getcwd(Buf, sz);
+  if (Path == NULL) {
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
+  } else {
+    clang_analyzer_eval(Path == Buf);     // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
