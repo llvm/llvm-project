@@ -110,6 +110,12 @@ protected:
   }
 
   void ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const;
+
+  /// Implementation of `GetFullyQualifiedType` to check a single entry,
+  /// shareable with derived classes.
+  bool
+  GetFullyQualifiedTypeImpl(const DWARFDeclContext &context, DWARFDIE die,
+                            llvm::function_ref<bool(DWARFDIE die)> callback);
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

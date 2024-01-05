@@ -119,10 +119,16 @@ void DWARFIndex::GetFullyQualifiedType(
     const DWARFDeclContext &context,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
   GetTypes(context, [&](DWARFDIE die) {
-    DWARFDeclContext dwarf_decl_ctx =
-        die.GetDIE()->GetDWARFDeclContext(die.GetCU());
-    if (dwarf_decl_ctx == context)
-      return callback(die);
-    return true;
+    return GetFullyQualifiedTypeImpl(context, die, callback);
   });
+}
+
+bool DWARFIndex::GetFullyQualifiedTypeImpl(
+    const DWARFDeclContext &context, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  DWARFDeclContext dwarf_decl_ctx =
+      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
+  if (dwarf_decl_ctx == context)
+    return callback(die);
+  return true;
 }
