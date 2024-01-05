@@ -477,12 +477,11 @@ bool LoongArchExpandPseudo::expandLargeAddressLoad(
     break;
   }
 
-  MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   Register ScratchReg = LoongArch::R20; // $t8
 
-  assert(MF->getSubtarget<LoongArchSubtarget>().is64Bit() &&
+  assert(MBB.getParent()->getSubtarget<LoongArchSubtarget>().is64Bit() &&
          "Large code model requires LA64");
 
   auto Part1 = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), DestReg);
