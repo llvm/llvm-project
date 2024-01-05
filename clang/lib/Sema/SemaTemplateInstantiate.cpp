@@ -35,7 +35,6 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1142,8 +1141,7 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
       // We're either substituting explicitly-specified template arguments,
       // deduced template arguments. SFINAE applies unless we are in a lambda
-      // expression, see [temp.deduct]p9.
-      [[fallthrough]];
+      // body, see [temp.deduct]p9.
     case CodeSynthesisContext::ConstraintSubstitution:
     case CodeSynthesisContext::RequirementInstantiation:
     case CodeSynthesisContext::RequirementParameterInstantiation:
@@ -1444,13 +1442,6 @@ namespace {
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
-
-      Sema::CodeSynthesisContext C;
-      C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;
-      C.PointOfInstantiation = E->getBeginLoc();
-      SemaRef.pushCodeSynthesisContext(C);
-      auto PopCtx =
-          llvm::make_scope_exit([this] { SemaRef.popCodeSynthesisContext(); });
 
       ExprResult Result = inherited::TransformLambdaExpr(E);
       if (Result.isInvalid())

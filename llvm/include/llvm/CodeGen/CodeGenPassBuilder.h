@@ -229,25 +229,27 @@ protected:
         C(&PassT::Key);
     }
 
-    template <typename PassT> void insertPass(AnalysisKey *ID, PassT Pass) {
+    template <typename PassT> void insertPass(MachinePassKey *ID, PassT Pass) {
       AfterCallbacks.emplace_back(
-          [this, ID, Pass = std::move(Pass)](AnalysisKey *PassID) {
+          [this, ID, Pass = std::move(Pass)](MachinePassKey *PassID) {
             if (PassID == ID)
               this->PM.addPass(std::move(Pass));
           });
     }
 
-    void disablePass(AnalysisKey *ID) {
+    void disablePass(MachinePassKey *ID) {
       BeforeCallbacks.emplace_back(
-          [ID](AnalysisKey *PassID) { return PassID != ID; });
+          [ID](MachinePassKey *PassID) { return PassID != ID; });
     }
 
     MachineFunctionPassManager releasePM() { return std::move(PM); }
 
   private:
     MachineFunctionPassManager &PM;
-    SmallVector<llvm::unique_function<bool(AnalysisKey *)>, 4> BeforeCallbacks;
-    SmallVector<llvm::unique_function<void(AnalysisKey *)>, 4> AfterCallbacks;
+    SmallVector<llvm::unique_function<bool(MachinePassKey *)>, 4>
+        BeforeCallbacks;
+    SmallVector<llvm::unique_function<void(MachinePassKey *)>, 4>
+        AfterCallbacks;
   };
 
   LLVMTargetMachine &TM;
