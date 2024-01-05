@@ -188,6 +188,36 @@ constexpr void test_iterators() {
     }
   }
 
+  { // subrange is the prefix
+    int a[]       = {3, 43, 5, 100, 433, 278, 6457, 900};
+    int p[]       = {3, 43, 5};
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
+    {
+      bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
+      assert(ret);
+    }
+    {
+      bool ret = std::ranges::contains_subrange(whole, subrange);
+      assert(ret);
+    }
+  }
+
+  { // subrange is the suffix
+    int a[]       = {3, 43, 5, 7, 68, 100, 433, 900};
+    int p[]       = {100, 433, 900};
+    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
+    {
+      bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
+      assert(ret);
+    }
+    {
+      bool ret = std::ranges::contains_subrange(whole, subrange);
+      assert(ret);
+    }
+  }
+
   { // subrange is subsequence
     int a[]       = {23, 1, 0, 54, 2};
     int p[]       = {1, 0, 2};
@@ -255,19 +285,6 @@ constexpr void test_iterators() {
           whole, subrange, {}, [](int i) { return i - 3; }, [](int i) { return i * -1; });
       assert(ret);
     }
-  }
-
-  { // check the nodiscard extension
-// use #pragma around to suppress error: ignoring return value of function
-// declared with 'nodiscard' attribute [-Werror,-Wunused-result]
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-result"
-    int a[]       = {1, 9, 0, 13, 25};
-    int p[]       = {1, 9, 0};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
-    std::ranges::contains_subrange(whole, subrange);
-#pragma clang diagnostic pop
   }
 }
 
