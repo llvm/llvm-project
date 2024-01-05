@@ -111,15 +111,15 @@ format::FormatStyle getStyle(llvm::StringRef Filename) {
 class Action : public clang::ASTFrontendAction {
 public:
   Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
-         llvm::StringMap<std::string> &FileEdits)
-      : HeaderFilter(HeaderFilter), EditFiles(FileEdits) {}
+         llvm::StringMap<std::string> &EditedFiles)
+      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {}
 
 private:
   RecordedAST AST;
   RecordedPP PP;
   PragmaIncludes PI;
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
-  llvm::StringMap<std::string>& EditFiles;
+  llvm::StringMap<std::string> &EditedFiles;
 
   bool BeginInvocation(CompilerInstance &CI) override {
     // We only perform include-cleaner analysis. So we disable diagnostics that
@@ -184,7 +184,7 @@ private:
     }
 
     if (!Results.Missing.empty() || !Results.Unused.empty())
-      EditFiles.try_emplace(Path, Final);
+      EditedFiles.try_emplace(Path, Final);
   }
 
   void writeHTML() {
@@ -208,15 +208,15 @@ public:
       : HeaderFilter(HeaderFilter) {}
 
   std::unique_ptr<clang::FrontendAction> create() override {
-    return std::make_unique<Action>(HeaderFilter, EditFiles);
+    return std::make_unique<Action>(HeaderFilter, EditedFiles);
   }
 
-  const llvm::StringMap<std::string> &getEditFiles() const { return EditFiles; }
+  const llvm::StringMap<std::string> &editedFiles() const { return EditedFiles; }
 
 private:
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
   // Map from file name to final code with the include edits applied.
-  llvm::StringMap<std::string> EditFiles;
+  llvm::StringMap<std::string> EditedFiles;
 };
 
 std::function<bool(llvm::StringRef)> headerFilter() {
@@ -278,7 +278,7 @@ int main(int argc, const char **argv) {
   ActionFactory Factory(HeaderFilter);
   auto ErrorCode = Tool.run(&Factory);
   if (Edit) {
-    for (const auto &[FileName, FinalCode] : Factory.getEditFiles()) {
+    for (const auto &[FileName, FinalCode] : Factory.editedFiles()) {
       if (auto Err = llvm::writeToOutput(
               FileName, [&](llvm::raw_ostream &OS) -> llvm::Error {
                 OS << FinalCode;
