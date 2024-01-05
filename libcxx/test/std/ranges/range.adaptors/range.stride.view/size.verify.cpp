@@ -11,7 +11,6 @@
 
 // constexpr auto size()
 
-#include <cassert>
 #include <ranges>
 
 #include "types.h"
@@ -43,6 +42,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
+  test();
   static_assert(test());
 
   return 0;
