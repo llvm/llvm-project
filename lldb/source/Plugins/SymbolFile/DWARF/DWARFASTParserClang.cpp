@@ -2150,6 +2150,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
   ClangASTImporter::LayoutInfo layout_info;
+  std::vector<DWARFDIE> contained_type_dies;
 
   if (die.HasChildren()) {
     const bool type_is_objc_object_or_interface =
@@ -2175,7 +2176,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
     DelayedPropertyList delayed_properties;
     ParseChildMembers(die, clang_type, bases, member_function_dies,
-                      delayed_properties, default_accessibility, layout_info);
+                      contained_type_dies, delayed_properties,
+                      default_accessibility, layout_info);
 
     // Now parse any methods if there were any...
     for (const DWARFDIE &die : member_function_dies)
@@ -2231,6 +2233,13 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (record_decl)
       GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
   }
+  // Now parse all contained types inside of the class. We make forward
+  // declarations to all classes, but we need the CXXRecordDecl to have decls
+  // for all contained types because we don't get asked for them via the
+  // external AST support.
+  for (const DWARFDIE &die : contained_type_dies)
+    dwarf->ResolveType(die);
+
 
   return (bool)clang_type;
 }
@@ -2260,7 +2269,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
 
   // Disable external storage for this type so we don't get anymore
   // clang::ExternalASTSource queries for this type.
-  m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
+  //m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
 
   if (!die)
     return false;
@@ -3106,10 +3115,39 @@ void DWARFASTParserClang::ParseSingleMember(
       std::make_pair(field_decl, field_bit_offset));
 }
 
+static bool IsTypeTag(dw_tag_t tag) {
+  switch (tag) {
+    case DW_TAG_typedef:
+    case DW_TAG_base_type:
+    case DW_TAG_pointer_type:
+    case DW_TAG_reference_type:
+    case DW_TAG_rvalue_reference_type:
+    case DW_TAG_const_type:
+    case DW_TAG_restrict_type:
+    case DW_TAG_volatile_type:
+    case DW_TAG_atomic_type:
+    case DW_TAG_unspecified_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
+    case DW_TAG_class_type:
+    case DW_TAG_enumeration_type:
+    case DW_TAG_inlined_subroutine:
+    case DW_TAG_subprogram:
+    case DW_TAG_subroutine_type:
+    case DW_TAG_array_type:
+    case DW_TAG_ptr_to_member_type:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}
+
 bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<DWARFDIE> &member_function_dies,
+    std::vector<DWARFDIE> &contained_type_dies,
     DelayedPropertyList &delayed_properties,
     const AccessType default_accessibility,
     ClangASTImporter::LayoutInfo &layout_info) {
@@ -3159,6 +3197,8 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     default:
+      if (IsTypeTag(tag))
+        contained_type_dies.push_back(die);
       break;
     }
   }
