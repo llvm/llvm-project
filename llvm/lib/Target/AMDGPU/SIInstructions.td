@@ -1548,6 +1548,19 @@ def : BitConvert <f64, v2i32, VReg_64>;
 def : BitConvert <v2i32, f64, VReg_64>;
 def : BitConvert <v4i16, v4f16, VReg_64>;
 def : BitConvert <v4f16, v4i16, VReg_64>;
+def : BitConvert <v4bf16, v2i32, VReg_64>;
+def : BitConvert <v2i32, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, i64, VReg_64>;
+def : BitConvert <i64, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v4i16, VReg_64>;
+def : BitConvert <v4i16, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v4f16, VReg_64>;
+def : BitConvert <v4f16, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, v2f32, VReg_64>;
+def : BitConvert <v2f32, v4bf16, VReg_64>;
+def : BitConvert <v4bf16, f64, VReg_64>;
+def : BitConvert <f64, v4bf16, VReg_64>;
+
 
 // FIXME: Make SGPR
 def : BitConvert <v2i32, v4f16, VReg_64>;
