@@ -2269,7 +2269,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
 
   // Disable external storage for this type so we don't get anymore
   // clang::ExternalASTSource queries for this type.
-  //m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
+  m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
 
   if (!die)
     return false;
@@ -3115,34 +3115,6 @@ void DWARFASTParserClang::ParseSingleMember(
       std::make_pair(field_decl, field_bit_offset));
 }
 
-static bool IsTypeTag(dw_tag_t tag) {
-  switch (tag) {
-    case DW_TAG_typedef:
-    case DW_TAG_base_type:
-    case DW_TAG_pointer_type:
-    case DW_TAG_reference_type:
-    case DW_TAG_rvalue_reference_type:
-    case DW_TAG_const_type:
-    case DW_TAG_restrict_type:
-    case DW_TAG_volatile_type:
-    case DW_TAG_atomic_type:
-    case DW_TAG_unspecified_type:
-    case DW_TAG_structure_type:
-    case DW_TAG_union_type:
-    case DW_TAG_class_type:
-    case DW_TAG_enumeration_type:
-    case DW_TAG_inlined_subroutine:
-    case DW_TAG_subprogram:
-    case DW_TAG_subroutine_type:
-    case DW_TAG_array_type:
-    case DW_TAG_ptr_to_member_type:
-      return true;
-    default:
-      break;
-  }
-  return false;
-}
-
 bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
@@ -3197,7 +3169,7 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     default:
-      if (IsTypeTag(tag))
+      if (llvm::dwarf::isType(tag))
         contained_type_dies.push_back(die);
       break;
     }
