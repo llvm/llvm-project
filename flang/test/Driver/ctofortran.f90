@@ -1,9 +1,19 @@
-! UNSUPPORTED: system-windows
+! MacOS needs -isysroot <osx_sysroot> with clang and flang to build binaries.
+! UNSUPPORTED: system-windows, system-darwin
 ! RUN: split-file %s %t
 ! RUN: chmod +x %t/runtest.sh
 ! RUN: %t/runtest.sh %t %flang $t/ffile.f90 $t/cfile.c
 
 !--- ffile.f90
+program fmain
+  interface
+    subroutine csub() bind(c)
+    end subroutine
+  end interface
+
+  call csub()
+end program fmain
+
 subroutine foo(a) bind(c)
   integer :: a(:)
   if (lbound(a, 1) .ne. 1) then
@@ -36,7 +46,7 @@ void foo(CFI_cdesc_t*);
 
 int a[10];
 
-int main() {
+void csub() {
   int i, res;
   static CFI_CDESC_T(1) r1;
   CFI_cdesc_t *desc = (CFI_cdesc_t*)&r1;
@@ -54,7 +64,7 @@ int main() {
   }
 
   foo(desc);
-  return 0;
+  return;
 }
 !--- runtest.sh
 #!/bin/bash

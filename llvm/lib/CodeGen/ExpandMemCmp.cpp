@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -23,6 +24,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -31,12 +33,13 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 namespace llvm {
 class TargetLowering;
 }
 
-#define DEBUG_TYPE "expandmemcmp"
+#define DEBUG_TYPE "expand-memcmp"
 
 STATISTIC(NumMemCmpCalls, "Number of memcmp calls");
 STATISTIC(NumMemCmpNotConstant, "Number of memcmp calls without constant size");
@@ -636,6 +639,9 @@ Value *MemCmpExpansion::getMemCmpEqZeroOneBlock() {
 
 /// A memcmp expansion that only has one block of load and compare can bypass
 /// the compare, branch, and phi IR that is required in the general case.
+/// This function also analyses users of memcmp, and if there is only one user
+/// from which we can conclude that only 2 out of 3 memcmp outcomes really
+/// matter, then it generates more efficient code with only one comparison.
 Value *MemCmpExpansion::getMemCmpOneBlock() {
   bool NeedsBSwap = DL.isLittleEndian() && Size != 1;
   Type *LoadSizeType = IntegerType::get(CI->getContext(), Size * 8);
@@ -656,6 +662,40 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
 
   const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType, MaxLoadType,
                                      /*Offset*/ 0);
+
+  // If a user of memcmp cares only about two outcomes, for example:
+  //    bool result = memcmp(a, b, NBYTES) > 0;
+  // We can generate more optimal code with a smaller number of operations
+  if (CI->hasOneUser()) {
+    auto *UI = cast<Instruction>(*CI->user_begin());
+    ICmpInst::Predicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
+    uint64_t Shift;
+    bool NeedsZExt = false;
+    // This is a special case because instead of checking if the result is less
+    // than zero:
+    //    bool result = memcmp(a, b, NBYTES) < 0;
+    // Compiler is clever enough to generate the following code:
+    //    bool result = memcmp(a, b, NBYTES) >> 31;
+    if (match(UI, m_LShr(m_Value(), m_ConstantInt(Shift))) &&
+        Shift == (CI->getType()->getIntegerBitWidth() - 1)) {
+      Pred = ICmpInst::ICMP_SLT;
+      NeedsZExt = true;
+    } else {
+      // In case of a successful match this call will set `Pred` variable
+      match(UI, m_ICmp(Pred, m_Specific(CI), m_Zero()));
+    }
+    // Generate new code and remove the original memcmp call and the user
+    if (ICmpInst::isSigned(Pred)) {
+      Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred),
+                                      Loads.Lhs, Loads.Rhs);
+      auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, UI->getType()) : Cmp;
+      UI->replaceAllUsesWith(Result);
+      UI->eraseFromParent();
+      CI->eraseFromParent();
+      return nullptr;
+    }
+  }
+
   // The result of memcmp is negative, zero, or positive, so produce that by
   // subtracting 2 extended compare bits: sub (ugt, ult).
   // If a target prefers to use selects to get -1/0/1, they should be able
@@ -670,7 +710,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
 }
 
 // This function expands the memcmp call into an inline expansion and returns
-// the memcmp result.
+// the memcmp result. Returns nullptr if the memcmp is already replaced.
 Value *MemCmpExpansion::getMemCmpExpansion() {
   // Create the basic block framework for a multi-block expansion.
   if (getNumBlocks() != 1) {
@@ -838,21 +878,33 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
 
   NumMemCmpInlined++;
 
-  Value *Res = Expansion.getMemCmpExpansion();
-
-  // Replace call with result of expansion and erase call.
-  CI->replaceAllUsesWith(Res);
-  CI->eraseFromParent();
+  if (Value *Res = Expansion.getMemCmpExpansion()) {
+    // Replace call with result of expansion and erase call.
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+  }
 
   return true;
 }
 
-class ExpandMemCmpPass : public FunctionPass {
+// Returns true if a change was made.
+static bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
+                       const TargetTransformInfo *TTI, const TargetLowering *TL,
+                       const DataLayout &DL, ProfileSummaryInfo *PSI,
+                       BlockFrequencyInfo *BFI, DomTreeUpdater *DTU);
+
+static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
+                                 const TargetTransformInfo *TTI,
+                                 const TargetLowering *TL,
+                                 ProfileSummaryInfo *PSI,
+                                 BlockFrequencyInfo *BFI, DominatorTree *DT);
+
+class ExpandMemCmpLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  ExpandMemCmpPass() : FunctionPass(ID) {
-    initializeExpandMemCmpPassPass(*PassRegistry::getPassRegistry());
+  ExpandMemCmpLegacyPass() : FunctionPass(ID) {
+    initializeExpandMemCmpLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override {
@@ -889,25 +941,13 @@ private:
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
     FunctionPass::getAnalysisUsage(AU);
   }
-
-  PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
-                            const TargetTransformInfo *TTI,
-                            const TargetLowering *TL, ProfileSummaryInfo *PSI,
-                            BlockFrequencyInfo *BFI, DominatorTree *DT);
-  // Returns true if a change was made.
-  bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                  const TargetTransformInfo *TTI, const TargetLowering *TL,
-                  const DataLayout &DL, ProfileSummaryInfo *PSI,
-                  BlockFrequencyInfo *BFI, DomTreeUpdater *DTU);
 };
 
-bool ExpandMemCmpPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                                  const TargetTransformInfo *TTI,
-                                  const TargetLowering *TL,
-                                  const DataLayout &DL, ProfileSummaryInfo *PSI,
-                                  BlockFrequencyInfo *BFI,
-                                  DomTreeUpdater *DTU) {
-  for (Instruction& I : BB) {
+bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
+                const TargetTransformInfo *TTI, const TargetLowering *TL,
+                const DataLayout &DL, ProfileSummaryInfo *PSI,
+                BlockFrequencyInfo *BFI, DomTreeUpdater *DTU) {
+  for (Instruction &I : BB) {
     CallInst *CI = dyn_cast<CallInst>(&I);
     if (!CI) {
       continue;
@@ -922,8 +962,7 @@ bool ExpandMemCmpPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
   return false;
 }
 
-PreservedAnalyses
-ExpandMemCmpPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
+PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
                           const TargetTransformInfo *TTI,
                           const TargetLowering *TL, ProfileSummaryInfo *PSI,
                           BlockFrequencyInfo *BFI, DominatorTree *DT) {
@@ -955,17 +994,32 @@ ExpandMemCmpPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
 
 } // namespace
 
-char ExpandMemCmpPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ExpandMemCmpPass, "expandmemcmp",
+PreservedAnalyses ExpandMemCmpPass::run(Function &F,
+                                        FunctionAnalysisManager &FAM) {
+  const auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+  const auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+  const auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  auto *PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
+                  .getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  BlockFrequencyInfo *BFI = (PSI && PSI->hasProfileSummary())
+                                ? &FAM.getResult<BlockFrequencyAnalysis>(F)
+                                : nullptr;
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+
+  return runImpl(F, &TLI, &TTI, TL, PSI, BFI, DT);
+}
+
+char ExpandMemCmpLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ExpandMemCmpLegacyPass, DEBUG_TYPE,
                       "Expand memcmp() to load/stores", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ExpandMemCmpPass, "expandmemcmp",
+INITIALIZE_PASS_END(ExpandMemCmpLegacyPass, DEBUG_TYPE,
                     "Expand memcmp() to load/stores", false, false)
 
-FunctionPass *llvm::createExpandMemCmpPass() {
-  return new ExpandMemCmpPass();
+FunctionPass *llvm::createExpandMemCmpLegacyPass() {
+  return new ExpandMemCmpLegacyPass();
 }

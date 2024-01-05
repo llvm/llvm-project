@@ -59,7 +59,7 @@ namespace std {
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifdef _WIN32
+#ifdef _LIBCPP_WIN32API
 _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -75,7 +75,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 _LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
 #  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-#endif // _WIN32
+#endif // _LIBCPP_WIN32API
 
 #if _LIBCPP_STD_VER >= 23
 
@@ -198,7 +198,11 @@ inline constexpr bool __use_unicode = true;
 #  endif
 
 _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal(FILE* __stream) {
-#  ifdef _WIN32
+  // The macro _LIBCPP_TESTING_PRINT_IS_TERMINAL is used to change
+  // the behavior in the test. This is not part of the public API.
+#  ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
+  return _LIBCPP_TESTING_PRINT_IS_TERMINAL(__stream);
+#  elif defined(_LIBCPP_WIN32API)
   return std::__is_windows_terminal(__stream);
 #  elif __has_include(<unistd.h>)
   return isatty(fileno(__stream));
@@ -271,7 +275,7 @@ __vprint_unicode_windows(FILE* __stream, string_view __fmt, format_args __args, 
   // the behavior in the test. This is not part of the public API.
 #      ifdef _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
   _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION(__stream, __view);
-#      elif defined(_WIN32)
+#      elif defined(_LIBCPP_WIN32API)
   std::__write_to_windows_console(__stream, __view);
 #      else
   std::__throw_runtime_error("No defintion of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION and "
@@ -309,7 +313,7 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
   // so there the call can be forwarded to the non_unicode API. On
   // Windows there is a different API. This API requires transcoding.
 
-#    ifndef _WIN32
+#    ifndef _LIBCPP_WIN32API
   __print::__vprint_unicode_posix(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
 #    elif !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
   __print::__vprint_unicode_windows(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));

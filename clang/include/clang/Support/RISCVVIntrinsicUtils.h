@@ -97,13 +97,14 @@ enum class TypeModifier : uint8_t {
   UnsignedInteger = 1 << 3,
   SignedInteger = 1 << 4,
   Float = 1 << 5,
+  BFloat = 1 << 6,
   // LMUL1 should be kind of VectorTypeModifier, but that might come with
   // Widening2XVector for widening reduction.
   // However that might require VectorTypeModifier become bitmask rather than
   // simple enum, so we decide keek LMUL1 in TypeModifier for code size
   // optimization of clang binary size.
-  LMUL1 = 1 << 6,
-  MaxOffset = 6,
+  LMUL1 = 1 << 7,
+  MaxOffset = 7,
   LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
 };
 
@@ -207,10 +208,11 @@ enum class BasicType : uint8_t {
   Int16 = 1 << 1,
   Int32 = 1 << 2,
   Int64 = 1 << 3,
-  Float16 = 1 << 4,
-  Float32 = 1 << 5,
-  Float64 = 1 << 6,
-  MaxOffset = 6,
+  BFloat16 = 1 << 4,
+  Float16 = 1 << 5,
+  Float32 = 1 << 6,
+  Float64 = 1 << 7,
+  MaxOffset = 7,
   LLVM_MARK_AS_BITMASK_ENUM(Float64),
 };
 
@@ -225,6 +227,7 @@ enum ScalarTypeKind : uint8_t {
   SignedInteger,
   UnsignedInteger,
   Float,
+  BFloat,
   Invalid,
   Undefined,
 };
@@ -300,6 +303,7 @@ public:
     return isVector() && ElementBitwidth == Width;
   }
   bool isFloat() const { return ScalarType == ScalarTypeKind::Float; }
+  bool isBFloat() const { return ScalarType == ScalarTypeKind::BFloat; }
   bool isSignedInteger() const {
     return ScalarType == ScalarTypeKind::SignedInteger;
   }
@@ -481,7 +485,7 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-enum RVVRequire : uint16_t {
+enum RVVRequire : uint32_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
   RVV_REQ_ZvfhminOrZvfh = 1 << 1,
@@ -499,8 +503,9 @@ enum RVVRequire : uint16_t {
   RVV_REQ_Zvknhb = 1 << 13,
   RVV_REQ_Zvksed = 1 << 14,
   RVV_REQ_Zvksh = 1 << 15,
+  RVV_REQ_Experimental = 1 << 16,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvksh)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Experimental)
 };
 
 // Raw RVV intrinsic info, used to expand later.
@@ -532,7 +537,7 @@ struct RVVIntrinsicRecord {
   uint8_t OverloadedSuffixSize;
 
   // Required target features for this intrinsic.
-  uint16_t RequiredExtensions;
+  uint32_t RequiredExtensions;
 
   // Supported type, mask of BasicType.
   uint8_t TypeRangeMask;

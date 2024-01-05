@@ -29,8 +29,8 @@ public:
   /// Creates a `T` (some subclass of `StorageLocation`), forwarding `args` to
   /// the constructor, and returns a reference to it.
   ///
-  /// The `DataflowAnalysisContext` takes ownership of the created object. The
-  /// object will be destroyed when the `DataflowAnalysisContext` is destroyed.
+  /// The `Arena` takes ownership of the created object. The object will be
+  /// destroyed when the `Arena` is destroyed.
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
   create(Args &&...args) {
@@ -45,8 +45,8 @@ public:
   /// Creates a `T` (some subclass of `Value`), forwarding `args` to the
   /// constructor, and returns a reference to it.
   ///
-  /// The `DataflowAnalysisContext` takes ownership of the created object. The
-  /// object will be destroyed when the `DataflowAnalysisContext` is destroyed.
+  /// The `Arena` takes ownership of the created object. The object will be
+  /// destroyed when the `Arena` is destroyed.
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<Value, T>::value, T &>
   create(Args &&...args) {

@@ -84,6 +84,11 @@ public:
   RegisterFlags(std::string id, unsigned size,
                 const std::vector<Field> &fields);
 
+  /// Replace all the fields with the new set of fields. All the assumptions
+  /// and checks apply as when you use the constructor. Intended to only be used
+  /// when runtime field detection is needed.
+  void SetFields(const std::vector<Field> &fields);
+
   // Reverse the order of the fields, keeping their values the same.
   // For example a field from bit 31 to 30 with value 0b10 will become bits
   // 1 to 0, with the same 0b10 value.

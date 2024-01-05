@@ -12,6 +12,7 @@
 
 #include "mlir/Transforms/Passes.h"
 
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
@@ -47,11 +48,12 @@ void LoopInvariantCodeMotion::runOnOperation() {
 }
 
 void LoopInvariantSubsetHoisting::runOnOperation() {
+  IRRewriter rewriter(getOperation()->getContext());
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first hoist from the inner loop, and place the ops in the outer
   // loop, which in turn can be further hoisted from.
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
-    (void)hoistLoopInvariantSubsets(loopLike);
+    (void)hoistLoopInvariantSubsets(rewriter, loopLike);
   });
 }
 

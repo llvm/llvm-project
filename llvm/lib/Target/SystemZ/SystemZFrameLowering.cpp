@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -443,7 +444,7 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
+  bool BackChain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (!usePackedStack(MF) || BackChain)
     // Create the incoming register save area.
@@ -628,7 +629,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm(StackSize);
     }
     else {
-      bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+      bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
       // If we need backchain, save current stack pointer.  R1 is free at
       // this point.
       if (StoreBackchain)
@@ -786,7 +787,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
       .addMemOperand(MMO);
   };
 
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
   if (StoreBackchain)
     BuildMI(*MBB, MBBI, DL, ZII->get(SystemZ::LGR))
       .addReg(SystemZ::R1D, RegState::Define).addReg(SystemZ::R15D);
@@ -861,8 +862,9 @@ StackOffset SystemZELFFrameLowering::getFrameIndexReference(
 unsigned SystemZELFFrameLowering::getRegSpillOffset(MachineFunction &MF,
                                                     Register Reg) const {
   bool IsVarArg = MF.getFunction().isVarArg();
-  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
-  bool SoftFloat = MF.getSubtarget<SystemZSubtarget>().hasSoftFloat();
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  bool BackChain = Subtarget.hasBackChain();
+  bool SoftFloat = Subtarget.hasSoftFloat();
   unsigned Offset = RegSpillOffsets[Reg];
   if (usePackedStack(MF) && !(IsVarArg && !SoftFloat)) {
     if (SystemZ::GR64BitRegClass.contains(Reg))
@@ -890,8 +892,9 @@ int SystemZELFFrameLowering::getOrCreateFramePointerSaveIndex(
 
 bool SystemZELFFrameLowering::usePackedStack(MachineFunction &MF) const {
   bool HasPackedStackAttr = MF.getFunction().hasFnAttribute("packed-stack");
-  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
-  bool SoftFloat = MF.getSubtarget<SystemZSubtarget>().hasSoftFloat();
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  bool BackChain = Subtarget.hasBackChain();
+  bool SoftFloat = Subtarget.hasSoftFloat();
   if (HasPackedStackAttr && BackChain && !SoftFloat)
     report_fatal_error("packed-stack + backchain + hard-float is unsupported.");
   bool CallConv = MF.getFunction().getCallingConv() != CallingConv::GHC;
@@ -946,7 +949,7 @@ static bool isXPLeafCandidate(const MachineFunction &MF) {
     return false;
 
   // If the backchain pointer should be stored, then it is not a XPLeaf routine.
-  if (MF.getFunction().hasFnAttribute("backchain"))
+  if (MF.getSubtarget<SystemZSubtarget>().hasBackChain())
     return false;
 
   // If function acquires its own stack frame, then it is not a XPLeaf routine.
@@ -989,8 +992,13 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   // If the function needs a frame pointer, or if the backchain pointer should
   // be stored, then save the stack pointer register R4.
-  if (hasFP(MF) || MF.getFunction().hasFnAttribute("backchain"))
+  if (hasFP(MF) || Subtarget.hasBackChain())
     CSI.push_back(CalleeSavedInfo(Regs.getStackPointerRegister()));
+
+  // If this function has an associated personality function then the
+  // environment register R5 must be saved in the DSA.
+  if (!MF.getLandingPads().empty())
+    CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;

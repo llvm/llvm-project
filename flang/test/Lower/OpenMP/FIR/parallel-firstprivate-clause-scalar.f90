@@ -1,7 +1,7 @@
 ! This test checks lowering of `FIRSTPRIVATE` clause for scalar types.
 
 ! REQUIRES: shell
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s --check-prefix=FIRDialect
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefix=FIRDialect
 
 !FIRDialect-DAG: func @_QPfirstprivate_complex(%[[ARG1:.*]]: !fir.ref<!fir.complex<4>>{{.*}}, %[[ARG2:.*]]: !fir.ref<!fir.complex<8>>{{.*}}) {
 !FIRDialect:   omp.parallel {

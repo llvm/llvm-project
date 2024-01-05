@@ -757,7 +757,7 @@ define i32  @zext_icmp_eq0_no_shift(ptr %ptr ) {
 ; CHECK-LABEL: @zext_icmp_eq0_no_shift(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 1
-; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %X = load i8, ptr %ptr,align 1, !range !{i8 0, i8 2} ; range [0, 2)
@@ -795,9 +795,8 @@ define i16 @zext_nneg_flag_drop(i8 %x, i16 %y) {
 
 define i32 @zext_nneg_redundant_and(i8 %a) {
 ; CHECK-LABEL: @zext_nneg_redundant_and(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[A_I32:%.*]] = zext nneg i8 [[A:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[A_I32]]
 ;
   %a.i32 = zext nneg i8 %a to i32
   %res = and i32 %a.i32, 127
@@ -818,9 +817,7 @@ define i32 @zext_nneg_redundant_and_neg(i8 %a) {
 
 define i64 @zext_nneg_signbit_extract(i32 %a) nounwind {
 ; CHECK-LABEL: @zext_nneg_signbit_extract(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[C:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    ret i64 [[C]]
+; CHECK-NEXT:    ret i64 0
 ;
   %b = zext nneg i32 %a to i64
   %c = lshr i64 %b, 31
@@ -831,7 +828,7 @@ define i64 @zext_nneg_demanded_constant(i8 %a) nounwind {
 ; CHECK-LABEL: @zext_nneg_demanded_constant(
 ; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A:%.*]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[B]]) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 254
+; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 126
 ; CHECK-NEXT:    ret i64 [[C]]
 ;
   %b = zext nneg i8 %a to i64

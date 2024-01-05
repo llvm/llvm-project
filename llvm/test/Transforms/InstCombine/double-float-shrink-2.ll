@@ -7,6 +7,7 @@
 ; RUN: opt < %s -passes=instcombine -S -mtriple "x86_64-pc-mingw32" | FileCheck %s --check-prefixes=CHECK,DOUBLE-8BYTE-ALIGN
 ; RUN: opt < %s -passes=instcombine -S -mtriple "sparc-sun-solaris" | FileCheck %s --check-prefixes=CHECK,DOUBLE-8BYTE-ALIGN
 ; RUN: opt < %s -passes=instcombine -S -mtriple "x86_64-pc-win32" -enable-debugify 2>&1 | FileCheck --check-prefix=DBG-VALID %s
+; RUN: opt < %s -passes=instcombine -S -mtriple "x86_64-pc-win32" -enable-debugify 2>&1 --try-experimental-debuginfo-iterators | FileCheck --check-prefix=DBG-VALID %s
 
 declare double @floor(double)
 declare double @ceil(double)

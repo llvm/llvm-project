@@ -6,6 +6,7 @@ from .._transform_enum_gen import *
 from .._transform_ops_gen import *
 from .._transform_ops_gen import _Dialect
 from ..._mlir_libs._mlirDialectsTransform import *
+from ..._mlir_libs._mlirDialectsTransform import AnyOpType, OperationType
 
 try:
     from ...ir import *
@@ -17,7 +18,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Union, NewType
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -52,28 +53,28 @@ class ApplyPatternsOp(ApplyPatternsOp):
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class GetParentOp(GetParentOp):
-  def __init__(
-      self,
-      result_type: Type,
-      target: Union[Operation, Value],
-      *,
-      isolated_from_above: bool = False,
-      op_name: Optional[str] = None,
-      deduplicate: bool = False,
-      nth_parent: int = 1,
-      loc=None,
-      ip=None,
-  ):
-    super().__init__(
-        result_type,
-        _get_op_result_or_value(target),
-        isolated_from_above=isolated_from_above,
-        op_name=op_name,
-        deduplicate=deduplicate,
-        nth_parent=nth_parent,
-        loc=loc,
-        ip=ip,
-    )
+    def __init__(
+        self,
+        result_type: Type,
+        target: Union[Operation, Value],
+        *,
+        isolated_from_above: bool = False,
+        op_name: Optional[str] = None,
+        deduplicate: bool = False,
+        nth_parent: int = 1,
+        loc=None,
+        ip=None,
+    ):
+        super().__init__(
+            result_type,
+            _get_op_result_or_value(target),
+            isolated_from_above=isolated_from_above,
+            op_name=op_name,
+            deduplicate=deduplicate,
+            nth_parent=nth_parent,
+            loc=loc,
+            ip=ip,
+        )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -166,6 +167,40 @@ class SequenceOp(SequenceOp):
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
+class NamedSequenceOp(NamedSequenceOp):
+    def __init__(
+        self,
+        sym_name,
+        input_types: Sequence[Type],
+        result_types: Sequence[Type],
+        sym_visibility=None,
+        arg_attrs=None,
+        res_attrs=None,
+    ):
+        function_type = FunctionType.get(input_types, result_types)
+        super().__init__(
+            sym_name=sym_name,
+            function_type=TypeAttr.get(function_type),
+            sym_visibility=sym_visibility,
+            arg_attrs=arg_attrs,
+            res_attrs=res_attrs,
+        )
+        self.regions[0].blocks.append(*input_types)
+
+    @property
+    def body(self) -> Block:
+        return self.regions[0].blocks[0]
+
+    @property
+    def bodyTarget(self) -> Value:
+        return self.body.arguments[0]
+
+    @property
+    def bodyExtraArgs(self) -> BlockArgumentList:
+        return self.body.arguments[1:]
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
 class YieldOp(YieldOp):
     def __init__(
         self,
@@ -177,3 +212,10 @@ class YieldOp(YieldOp):
         if operands is None:
             operands = []
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
+
+
+AnyOpTypeT = NewType("AnyOpType", AnyOpType)
+
+
+def any_op_t() -> AnyOpTypeT:
+    return AnyOpTypeT(AnyOpType.get())

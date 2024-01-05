@@ -14,7 +14,7 @@
 // Make sure that creating a sub-span with an incorrect number of elements triggers an assertion.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
+// UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
 
 #include <array>

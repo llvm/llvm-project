@@ -115,13 +115,14 @@ def DeclareTargetDeviceTypeAttr : EnumAttr<OpenMP_Dialect, DeclareTargetDeviceTy
   let assemblyFormat = "`(` $value `)`";
 }
 
-def CaptureClauseLink : I32EnumAttrCase<"to", 0>;
-def CaptureClauseTo   : I32EnumAttrCase<"link", 1>;
+def CaptureClauseTo : I32EnumAttrCase<"to", 0>;
+def CaptureClauseLink   : I32EnumAttrCase<"link", 1>;
+def CaptureClauseEnter   : I32EnumAttrCase<"enter", 2>;
 
 def DeclareTargetCaptureClause : I32EnumAttr<
     "DeclareTargetCaptureClause",
     "capture clause",
-    [CaptureClauseLink, CaptureClauseTo]> {
+    [CaptureClauseTo, CaptureClauseLink, CaptureClauseEnter]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::omp";
 }
@@ -1150,7 +1151,6 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
                        Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
-                       DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
   let results = (outs OpenMP_PointerLikeType:$omp_ptr);
 
@@ -1178,7 +1178,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
     =>
     ```mlir
-    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef) implicit(false)
+    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
       name(index)
     ```
 
@@ -1191,9 +1191,6 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
       objects (e.g. derived types or classes), indicates the bounds to be copied
       of the variable. When it's an array slice it is in rank order where rank 0
       is the inner-most dimension.
-    - `implicit`: indicates where the map item has been specified explicitly in a
-      map clause or captured implicitly by being used in a target region with no
-      map or other data mapping construct.
     - 'map_clauses': OpenMP map type for this map capture, for example: from, to and
       always. It's a bitfield composed of the OpenMP runtime flags stored in
       OpenMPOffloadMappingFlags.
@@ -1203,7 +1200,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type`)`
+    `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
     oilist(
         `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `map_clauses` `(` custom<MapClause>($map_type) `)`
@@ -1265,7 +1262,7 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
                        Optional<AnyInteger>:$device,
                        Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
                        Variadic<OpenMP_PointerLikeType>:$use_device_addr,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
@@ -1314,7 +1311,7 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1360,7 +1357,7 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1373,11 +1370,61 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
   let hasVerifier = 1;
 }
 
+//===---------------------------------------------------------------------===//
+// 2.14.6 target update data Construct
+//===---------------------------------------------------------------------===//
+
+def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
+                                                 [AttrSizedOperandSegments]>{
+  let  summary = "target update data construct";
+  let description = [{
+    The target update directive makes the corresponding list items in the device
+    data environment consistent with their original list items, according to the
+    specified motion clauses. The target update construct is a stand-alone
+    directive.
+
+    The optional $if_expr parameter specifies a boolean result of a
+    conditional check. If this value is 1 or is not provided then the target
+    region runs on a device, if it is 0 then the target region is executed
+    on the host device.
+
+    The optional $device parameter specifies the device number for the
+    target region.
+
+    The optional $nowait eliminates the implicit barrier so the parent
+    task can make progress even if the target task is not yet completed.
+
+    We use `MapInfoOp` to model the motion clauses and their modifiers. Even
+    though the spec differentiates between map-types & map-type-modifiers vs.
+    motion-clauses & motion-modifiers, the motion clauses and their modifiers are
+    a subset of map types and their modifiers. The subset relation is handled in
+    during verification to make sure the restrictions for target update are
+    respected.
+
+    TODO: depend clause
+  }];
+
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$device,
+                       UnitAttr:$nowait,
+                       Variadic<OpenMP_PointerLikeType>:$motion_operands);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `:` type($if_expr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `nowait` $nowait
+    | `motion_entries` `(` $motion_operands `:` type($motion_operands) `)`
+    ) attr-dict
+   }];
+
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
+def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
     The target construct includes a region of code which is to be executed
@@ -1403,7 +1450,7 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands);
+                       Variadic<AnyType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
@@ -1412,7 +1459,7 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
     | `device` `(` $device `:` type($device) `)`
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `nowait` $nowait
-    | `map_entries` `(` $map_operands `:` type($map_operands) `)`
+    | `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
     ) $region attr-dict
   }];
 

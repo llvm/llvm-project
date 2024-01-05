@@ -204,32 +204,32 @@
 							},
 							"initCommands": {
 								"type": "array",
-								"description": "Initialization commands executed upon debugger startup.",
+								"description": "Initialization commands executed upon debugger startup. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"preRunCommands": {
 								"type": "array",
-								"description": "Commands executed just before the program is launched.",
+								"description": "Commands executed just before the program is launched. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"postRunCommands": {
 								"type": "array",
-								"description": "Commands executed just as soon as the program is successfully launched when it's in a stopped state prior to any automatic continuation.",
+								"description": "Commands executed just as soon as the program is successfully launched when it's in a stopped state prior to any automatic continuation. If a command is prefixed with `?`, then its output is only emitted if it fails. Unlike `initCommands` or `launchCommands`, the `!` prefix is ignored.",
 								"default": []
 							},
 							"launchCommands": {
 								"type": "array",
-								"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail. Launch the process with \"process launch -s\" to make the process to at the entry point since lldb-dap will auto resume if necessary.",
+								"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail. Launch the process with \"process launch -s\" to make the process to at the entry point since lldb-dap will auto resume if necessary. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"stopCommands": {
 								"type": "array",
-								"description": "Commands executed each time the program stops.",
+								"description": "Commands executed each time the program stops. If a command is prefixed with `?`, then its output is only emitted if it fails. Unlike `initCommands` or `launchCommands`, the `!` prefix is ignored.",
 								"default": []
 							},
 							"exitCommands": {
 								"type": "array",
-								"description": "Commands executed at the end of debugging session.",
+								"description": "Commands executed at the end of debugging session. If a command is prefixed with `?`, then its output is only emitted if it fails. Unlike `initCommands` or `launchCommands`, the `!` prefix is ignored.",
 								"default": []
 							},
 							"runInTerminal": {
@@ -255,6 +255,16 @@
 								"type": "string",
 								"description": "The escape prefix to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If it's an empty string, then all expression in the Debug Console are treated as regular LLDB commands.",
 								"default": "`"
+							},
+							"customFrameFormat": {
+								"type": "string",
+								"description": "If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+								"default": ""
+							},
+							"customThreadFormat": {
+								"type": "string",
+								"description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+								"default": ""
 							}
 						}
 					},
@@ -299,32 +309,32 @@
 							},
 							"attachCommands": {
 								"type": "array",
-								"description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
+								"description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"initCommands": {
 								"type": "array",
-								"description": "Initialization commands executed upon debugger startup.",
+								"description": "Initialization commands executed upon debugger startup. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"preRunCommands": {
 								"type": "array",
-								"description": "Commands executed just before the program is attached to.",
+								"description": "Commands executed just before the program is attached to. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"postRunCommands": {
 								"type": "array",
-								"description": "Commands executed just as soon as the program is successfully attached when it's in a stopped state prior to any automatic continuation.",
+								"description": "Commands executed just as soon as the program is successfully attached when it's in a stopped state prior to any automatic continuation. Each command can be prefixed with `!` and/or `?` in no particular order. If `?` is provided, then the output of the command is only emitted if it fails, and if `!` is provided, the debug session terminates if the command fails, in which case the output of the command is emitted regardless.",
 								"default": []
 							},
 							"stopCommands": {
 								"type": "array",
-								"description": "Commands executed each time the program stops.",
+								"description": "Commands executed each time the program stops. If a command is prefixed with `?`, then its output is only emitted if it fails. Unlike `initCommands` or `attachCommands`, the `!` prefix is ignored.",
 								"default": []
 							},
 							"exitCommands": {
 								"type": "array",
-								"description": "Commands executed at the end of debugging session.",
+								"description": "Commands executed at the end of debugging session. If a command is prefixed with `?`, then its output is only emitted if it fails. Unlike `initCommands` or `attachCommands`, the `!` prefix is ignored.",
 								"default": []
 							},
 							"coreFile": {
@@ -349,6 +359,16 @@
 								"type": "string",
 								"description": "The escape prefix character to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If empty, then all expression in the Debug Console are treated as regular LLDB commands.",
 								"default": "`"
+							},
+							"customFrameFormat": {
+								"type": "string",
+								"description": "If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+								"default": ""
+							},
+							"customThreadFormat": {
+								"type": "string",
+								"description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+								"default": ""
 							}
 						}
 					}

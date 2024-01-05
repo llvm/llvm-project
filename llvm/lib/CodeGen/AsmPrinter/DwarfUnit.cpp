@@ -80,15 +80,16 @@ bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
 }
 
 DwarfUnit::DwarfUnit(dwarf::Tag UnitTag, const DICompileUnit *Node,
-                     AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU)
-    : DIEUnit(UnitTag), CUNode(Node), Asm(A), DD(DW), DU(DWU) {}
+                     AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU,
+                     unsigned UniqueID)
+    : DIEUnit(UnitTag), UniqueID(UniqueID), CUNode(Node), Asm(A), DD(DW),
+      DU(DWU) {}
 
 DwarfTypeUnit::DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A,
-                             DwarfDebug *DW, DwarfFile *DWU,
+                             DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID,
                              MCDwarfDwoLineTable *SplitLineTable)
-    : DwarfUnit(dwarf::DW_TAG_type_unit, CU.getCUNode(), A, DW, DWU), CU(CU),
-      SplitLineTable(SplitLineTable) {
-}
+    : DwarfUnit(dwarf::DW_TAG_type_unit, CU.getCUNode(), A, DW, DWU, UniqueID),
+      CU(CU), SplitLineTable(SplitLineTable) {}
 
 DwarfUnit::~DwarfUnit() {
   for (DIEBlock *B : DIEBlocks)
@@ -639,7 +640,8 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
       IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
     }
     unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
-    DD->addAccelType(*CUNode, Ty->getName(), TyDIE, Flags);
+    DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
+                     Flags);
 
     if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
         isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
@@ -1111,7 +1113,7 @@ DIE *DwarfUnit::getOrCreateNameSpace(const DINamespace *NS) {
     addString(NDie, dwarf::DW_AT_name, NS->getName());
   else
     Name = "(anonymous namespace)";
-  DD->addAccelNamespace(*CUNode, Name, NDie);
+  DD->addAccelNamespace(*this, CUNode->getNameTableKind(), Name, NDie);
   addGlobalName(Name, NDie, NS->getScope());
   if (NS->getExportSymbols())
     addFlag(NDie, dwarf::DW_AT_export_symbols);
@@ -1438,7 +1440,8 @@ DIE *DwarfUnit::getIndexTyDie() {
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
           dwarf::getArrayIndexTypeEncoding(
               (dwarf::SourceLanguage)getLanguage()));
-  DD->addAccelType(*CUNode, Name, *IndexTyDie, /*Flags*/ 0);
+  DD->addAccelType(*this, CUNode->getNameTableKind(), Name, *IndexTyDie,
+                   /*Flags*/ 0);
   return IndexTyDie;
 }
 
@@ -1777,6 +1780,10 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 }
 
 void DwarfTypeUnit::emitHeader(bool UseOffsets) {
+  if (!DD->useSplitDwarf()) {
+    LabelBegin = Asm->createTempSymbol("tu_begin");
+    Asm->OutStreamer->emitLabel(LabelBegin);
+  }
   DwarfUnit::emitCommonHeader(UseOffsets,
                               DD->useSplitDwarf() ? dwarf::DW_UT_split_type
                                                   : dwarf::DW_UT_type);

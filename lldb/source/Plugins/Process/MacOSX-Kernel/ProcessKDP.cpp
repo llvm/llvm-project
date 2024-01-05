@@ -27,7 +27,6 @@
 #include "lldb/Interpreter/OptionGroupString.h"
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -165,7 +164,7 @@ ProcessKDP::~ProcessKDP() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 Status ProcessKDP::DoWillLaunch(Module *module) {
@@ -278,8 +277,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
               FileSpecList search_paths =
                   Target::GetDefaultDebugFileSearchPaths();
               module_spec.GetSymbolFileSpec() =
-                  Symbols::LocateExecutableSymbolFile(module_spec,
-                                                      search_paths);
+                  PluginManager::LocateExecutableSymbolFile(module_spec,
+                                                            search_paths);
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
                     PluginManager::LocateExecutableObjectFile(module_spec);
@@ -292,8 +291,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
               if (!module_spec.GetSymbolFileSpec() ||
                   !module_spec.GetSymbolFileSpec()) {
                 Status symbl_error;
-                Symbols::DownloadObjectAndSymbolFile(module_spec, symbl_error,
-                                                     true);
+                PluginManager::DownloadObjectAndSymbolFile(module_spec,
+                                                           symbl_error, true);
               }
 
               if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
@@ -670,20 +669,6 @@ Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
     return error;
   }
   return DisableSoftwareBreakpoint(bp_site);
-}
-
-Status ProcessKDP::EnableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
-  error.SetErrorString(
-      "watchpoints are not supported in kdp remote debugging");
-  return error;
-}
-
-Status ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
-  error.SetErrorString(
-      "watchpoints are not supported in kdp remote debugging");
-  return error;
 }
 
 void ProcessKDP::Clear() { m_thread_list.Clear(); }

@@ -97,7 +97,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV32-NEXT:    srli a5, a5, 31
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a4
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
@@ -122,7 +122,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV64-NEXT:    srli a5, a5, 63
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a5
 ; RV64-NEXT:    vslide1down.vx v8, v8, a4
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
@@ -134,4 +134,50 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV64-NEXT:    ret
   %x = load <6 x i1>, ptr %p
   ret <6 x i1> %x
+}
+
+
+define <4 x i32> @exact_vlen_i32_m1(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i32_m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1re32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <4 x i32>, ptr %p
+  ret <4 x i32> %v
+}
+
+define <16 x i8> @exact_vlen_i8_m1(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i8_m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <16 x i8>, ptr %p
+  ret <16 x i8> %v
+}
+
+define <32 x i8> @exact_vlen_i8_m2(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i8_m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl2r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <32 x i8>, ptr %p
+  ret <32 x i8> %v
+}
+
+define <128 x i8> @exact_vlen_i8_m8(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i8_m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <128 x i8>, ptr %p
+  ret <128 x i8> %v
+}
+
+define <16 x i64> @exact_vlen_i64_m8(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i64_m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <16 x i64>, ptr %p
+  ret <16 x i64> %v
 }

@@ -45,8 +45,12 @@ We define two kinds of macros:
        e.g., ``LIBC_TARGET_ARCH_IS_ARM``.
      * ``compiler.h`` - Host compiler properties.
        e.g., ``LIBC_COMPILER_IS_CLANG``.
-     * ``cpu_features.h`` - Target cpu apu feature availability.
+     * ``cpu_features.h`` - Target cpu feature availability.
        e.g., ``LIBC_TARGET_CPU_HAS_AVX2``.
+     * ``float.h`` - Floating point type properties and availability.
+       e.g., ``LIBC_COMPILER_HAS_FLOAT128``.
+     * ``os.h`` - Target os properties.
+       e.g., ``LIBC_TARGET_OS_IS_LINUX``.
 
    * ``src/__support/macros/config.h`` - Important compiler and platform
      features. Such macros can be used to produce portable code by

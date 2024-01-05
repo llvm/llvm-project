@@ -377,7 +377,7 @@ void Value::setNameImpl(const Twine &NewName) {
 void Value::setName(const Twine &NewName) {
   setNameImpl(NewName);
   if (Function *F = dyn_cast<Function>(this))
-    F->recalculateIntrinsicID();
+    F->updateAfterNameChange();
 }
 
 void Value::takeName(Value *V) {
@@ -574,10 +574,16 @@ void Value::replaceUsesWithIf(Value *New,
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
   SmallVector<DbgVariableIntrinsic *> DbgUsers;
-  findDbgUsers(DbgUsers, V);
+  SmallVector<DPValue *> DPUsers;
+  findDbgUsers(DbgUsers, V, &DPUsers);
   for (auto *DVI : DbgUsers) {
     if (DVI->getParent() != BB)
       DVI->replaceVariableLocationOp(V, New);
+  }
+  for (auto *DPV : DPUsers) {
+    DPMarker *Marker = DPV->getMarker();
+    if (Marker->getParent() != BB)
+      DPV->replaceVariableLocationOp(V, New);
   }
 }
 
@@ -1009,7 +1015,7 @@ getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
 
     // Otherwise, we have a sequential type like an array or fixed-length
     // vector. Multiply the index by the ElementSize.
-    TypeSize Size = DL.getTypeAllocSize(GTI.getIndexedType());
+    TypeSize Size = GTI.getSequentialElementStride(DL);
     if (Size.isScalable())
       return std::nullopt;
     Offset += Size.getFixedValue() * OpC->getSExtValue();

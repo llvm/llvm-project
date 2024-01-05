@@ -25,7 +25,9 @@ namespace llvm {
 class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
+
 namespace RISCVISD {
+// clang-format off
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET_GLUE,
@@ -119,7 +121,7 @@ enum NodeType : unsigned {
   // inserter.
   FROUND,
 
-  FPCLASS,
+  FCLASS,
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
@@ -328,12 +330,9 @@ enum NodeType : unsigned {
   // operand is VL.
   SETCC_VL,
 
-  // Vector select with an additional VL operand. This operation is unmasked.
-  VSELECT_VL,
-  // Vector select with operand #2 (the value when the condition is false) tied
-  // to the destination and an additional VL operand. This operation is
-  // unmasked.
-  VP_MERGE_VL,
+  // General vmerge node with mask, true, false, passthru, and vl operands.
+  // Tail agnostic vselect can be implemented by setting passthru to undef.
+  VMERGE_VL,
 
   // Mask binary operators.
   VMAND_VL,
@@ -421,6 +420,7 @@ enum NodeType : unsigned {
   TH_SWD,
   TH_SDD,
 };
+// clang-format on
 } // namespace RISCVISD
 
 class RISCVTargetLowering : public TargetLowering {
@@ -525,7 +525,8 @@ public:
 
   InstructionCost getVRGatherVVCost(MVT VT) const;
   InstructionCost getVRGatherVICost(MVT VT) const;
-  InstructionCost getVSlideCost(MVT VT) const;
+  InstructionCost getVSlideVXCost(MVT VT) const;
+  InstructionCost getVSlideVICost(MVT VT) const;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -741,7 +742,13 @@ public:
     // The following equations have been reordered to prevent loss of precision
     // when calculating fractional LMUL.
     return ((VectorBits / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
-  };
+  }
+
+  // Return inclusive (low, high) bounds on the value of VLMAX for the
+  // given scalable container type given known bounds on VLEN.
+  static std::pair<unsigned, unsigned>
+  computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
+
   static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
@@ -767,8 +774,7 @@ public:
   bool isVScaleKnownToBeAPowerOfTwo() const override;
 
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
-                              ISD::MemIndexedMode &AM, bool &IsInc,
-                              SelectionDAG &DAG) const;
+                              ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
                                  ISD::MemIndexedMode &AM,
                                  SelectionDAG &DAG) const override;
@@ -901,6 +907,8 @@ private:
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
@@ -955,6 +963,14 @@ private:
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.
   unsigned combineRepeatedFPDivisors() const override;
+
+  SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                        SmallVectorImpl<SDNode *> &Created) const override;
+
+  bool shouldFoldSelectWithSingleBitTest(EVT VT,
+                                         const APInt &AndMask) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace RISCV {
@@ -974,6 +990,9 @@ bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                   CCState &State);
+
+ArrayRef<MCPhysReg> getArgGPRs();
+
 } // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {

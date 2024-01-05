@@ -18,6 +18,7 @@
 #ifndef LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINER_H
 #define LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINER_H
 
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -72,10 +73,11 @@ protected:
   TargetLibraryInfo &TLI;
   DominatorTree &DT;
   const DataLayout &DL;
-  const SimplifyQuery SQ;
+  SimplifyQuery SQ;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
+  DomConditionCache DC;
 
   // Optional analyses. When non-null, these can both be used to do better
   // combining and will be updated to reflect any changes.
@@ -98,7 +100,9 @@ public:
                const DataLayout &DL, LoopInfo *LI)
       : TTI(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
-        SQ(DL, &TLI, &DT, &AC), ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
+        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+           /*CanUseUndef*/ true, &DC),
+        ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
 
   virtual ~InstCombiner() = default;
 
@@ -233,49 +237,45 @@ public:
                                                 PatternMatch::m_Value()));
   }
 
+  /// Return nonnull value if V is free to invert under the condition of
+  /// WillInvertAllUses.
+  /// If Builder is nonnull, it will return a simplified ~V.
+  /// If Builder is null, it will return an arbitrary nonnull value (not
+  /// dereferenceable).
+  /// If the inversion will consume instructions, `DoesConsume` will be set to
+  /// true. Otherwise it will be false.
+  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                      BuilderTy *Builder, bool &DoesConsume,
+                                      unsigned Depth);
+
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder, bool &DoesConsume) {
+    DoesConsume = false;
+    return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
+                                 /*Depth*/ 0);
+  }
+
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder) {
+    bool Unused;
+    return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
+  }
+
   /// Return true if the specified value is free to invert (apply ~ to).
   /// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
   /// is true, work under the assumption that the caller intends to remove all
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
-  static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
-    // ~(~(X)) -> X.
-    if (match(V, m_Not(PatternMatch::m_Value())))
-      return true;
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses,
+                             bool &DoesConsume) {
+    return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
+                             DoesConsume) != nullptr;
+  }
 
-    // Constants can be considered to be not'ed values.
-    if (match(V, PatternMatch::m_AnyIntegralConstant()))
-      return true;
-
-    // Compares can be inverted if all of their uses are being modified to use
-    // the ~V.
-    if (isa<CmpInst>(V))
-      return WillInvertAllUses;
-
-    // If `V` is of the form `A + Constant` then `-1 - V` can be folded into
-    // `(-1 - Constant) - A` if we are willing to invert all of the uses.
-    if (match(V, m_Add(PatternMatch::m_Value(), PatternMatch::m_ImmConstant())))
-      return WillInvertAllUses;
-
-    // If `V` is of the form `Constant - A` then `-1 - V` can be folded into
-    // `A + (-1 - Constant)` if we are willing to invert all of the uses.
-    if (match(V, m_Sub(PatternMatch::m_ImmConstant(), PatternMatch::m_Value())))
-      return WillInvertAllUses;
-
-    // Selects with invertible operands are freely invertible
-    if (match(V,
-              m_Select(PatternMatch::m_Value(), m_Not(PatternMatch::m_Value()),
-                       m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    // Min/max may be in the form of intrinsics, so handle those identically
-    // to select patterns.
-    if (match(V, m_MaxOrMin(m_Not(PatternMatch::m_Value()),
-                            m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    return false;
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
+    bool Unused;
+    return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
 
   /// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
@@ -283,7 +283,7 @@ public:
   /// NOTE: for Instructions only!
   ///
   /// See also: isFreeToInvert()
-  static bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
+  bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
     // Look at every user of V.
     for (Use &U : V->uses()) {
       if (U.getUser() == IgnoredUser)
@@ -468,12 +468,12 @@ public:
 
   void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
                         const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
+    llvm::computeKnownBits(V, Known, Depth, SQ.getWithInstruction(CxtI));
   }
 
   KnownBits computeKnownBits(const Value *V, unsigned Depth,
                              const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
+    return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
@@ -484,7 +484,7 @@ public:
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
                          const Instruction *CxtI = nullptr) const {
-    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
+    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
   }
 
   unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,

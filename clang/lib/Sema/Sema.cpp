@@ -191,7 +191,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     : ExternalSource(nullptr), CurFPFeatures(pp.getLangOpts()),
       LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
       Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
-      CollectStats(false), CodeCompleter(CodeCompleter), CurContext(nullptr),
+      APINotes(SourceMgr, LangOpts), CollectStats(false),
+      CodeCompleter(CodeCompleter), CurContext(nullptr),
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
@@ -869,6 +870,7 @@ static void checkUndefinedButUsed(Sema &S) {
   // Collect all the still-undefined entities with internal linkage.
   SmallVector<std::pair<NamedDecl *, SourceLocation>, 16> Undefined;
   S.getUndefinedButUsed(Undefined);
+  S.UndefinedButUsed.clear();
   if (Undefined.empty()) return;
 
   for (const auto &Undef : Undefined) {
@@ -922,8 +924,6 @@ static void checkUndefinedButUsed(Sema &S) {
     if (UseLoc.isValid())
       S.Diag(UseLoc, diag::note_used_here);
   }
-
-  S.UndefinedButUsed.clear();
 }
 
 void Sema::LoadExternalWeakUndeclaredIdentifiers() {
@@ -1286,8 +1286,6 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (auto *FD = dyn_cast<FunctionDecl>(D)) {
         bool DefInPMF = false;
         if (auto *FDD = FD->getDefinition()) {
-          assert(FDD->getOwningModule() &&
-                 FDD->getOwningModule()->isModulePurview());
           DefInPMF = FDD->getOwningModule()->isPrivateModule();
           if (!DefInPMF)
             continue;
@@ -2078,15 +2076,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
-    if (TI.hasRISCVVTypes() && Ty->isRVVType())
+    if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType())
       checkRVVTypeSupport(Ty, Loc, D);
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures(
-          "sve", CallerFeatureMap))
+      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
+          !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
         Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
     }
   };

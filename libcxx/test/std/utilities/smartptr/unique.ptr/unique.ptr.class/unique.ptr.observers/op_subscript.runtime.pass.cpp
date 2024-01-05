@@ -15,7 +15,7 @@
 #include <memory>
 #include <cassert>
 
-// TODO: Move TEST_IS_CONSTANT_EVALUATED into it's own header
+// TODO: Move TEST_IS_CONSTANT_EVALUATED into its own header
 #include <type_traits>
 
 #include "test_macros.h"

@@ -85,10 +85,12 @@ SerializeToCubinPass::SerializeToCubinPass(StringRef triple, StringRef chip,
   // is initialized exactly once.
   llvm::call_once(initializeBackendOnce, []() {
     // Initialize LLVM NVPTX backend.
+#if LLVM_HAS_NVPTX_TARGET
     LLVMInitializeNVPTXTarget();
     LLVMInitializeNVPTXTargetInfo();
     LLVMInitializeNVPTXTargetMC();
     LLVMInitializeNVPTXAsmPrinter();
+#endif
   });
 
   maybeSetOption(this->triple, triple);

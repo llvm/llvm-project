@@ -503,8 +503,7 @@ define void @test_11() {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[_TMP24:%.*]] = icmp slt i16 poison, 0
-; CHECK-NEXT:    br i1 [[_TMP24]], label [[BB5:%.*]], label [[BB5]]
+; CHECK-NEXT:    br i1 poison, label [[BB5:%.*]], label [[BB5]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br i1 false, label [[BB1]], label [[BB7:%.*]]
 ; CHECK:       bb7:

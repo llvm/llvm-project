@@ -142,7 +142,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
 
   // If this is a Unix-style path, just use it as is. Don't try to canonicalize
   // it textually because one of the path components could be a symlink.
-  if (Dir.startswith("/") || Filename.startswith("/")) {
+  if (Dir.starts_with("/") || Filename.starts_with("/")) {
     if (llvm::sys::path::is_absolute(Filename, llvm::sys::path::Style::posix))
       return Filename;
     Filepath = std::string(Dir);
@@ -910,10 +910,10 @@ static std::string flattenCommandLine(ArrayRef<std::string> Args,
       i++; // Skip this argument and next one.
       continue;
     }
-    if (Arg.startswith("-object-file-name") || Arg == MainFilename)
+    if (Arg.starts_with("-object-file-name") || Arg == MainFilename)
       continue;
     // Skip fmessage-length for reproduciability.
-    if (Arg.startswith("-fmessage-length"))
+    if (Arg.starts_with("-fmessage-length"))
       continue;
     if (PrintedOneArg)
       OS << " ";
@@ -1396,6 +1396,12 @@ void CodeViewDebug::calculateRanges(
     // We can only handle a register or an offseted load of a register.
     if (Location->Register == 0 || Location->LoadChain.size() > 1)
       continue;
+
+    // Codeview can only express byte-aligned offsets, ensure that we have a
+    // byte-boundaried location.
+    if (Location->FragmentInfo)
+      if (Location->FragmentInfo->OffsetInBits % 8)
+        continue;
 
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
@@ -2583,7 +2589,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
 
     // Virtual function pointer member.
     if ((Member->getFlags() & DINode::FlagArtificial) &&
-        Member->getName().startswith("_vptr$")) {
+        Member->getName().starts_with("_vptr$")) {
       VFPtrRecord VFPR(getTypeIndex(Member->getBaseType()));
       ContinuationBuilder.writeMemberType(VFPR);
       MemberCount++;

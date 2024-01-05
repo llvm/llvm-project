@@ -8,21 +8,20 @@
 !HOST:  %[[READ_SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
 !HOST:  %[[READ_DECL:.*]]:2 = hlfir.declare %[[READ]](%[[READ_SHAPE]]) {uniq_name = "_QFread_write_sectionEsp_read"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !HOST:  %[[WRITE:.*]] = fir.address_of(@_QFread_write_sectionEsp_write) : !fir.ref<!fir.array<10xi32>>
-!HOST:  %[[C10:.*]] = arith.constant 10 : index
-!HOST:  %[[WRITE_SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
+!HOST:  %[[C10_0:.*]] = arith.constant 10 : index
+!HOST:  %[[WRITE_SHAPE:.*]] = fir.shape %[[C10_0]] : (index) -> !fir.shape<1>
 !HOST:  %[[WRITE_DECL:.*]]:2 = hlfir.declare %[[WRITE]](%[[WRITE_SHAPE]]) {uniq_name = "_QFread_write_sectionEsp_write"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-
 !HOST:  %[[C1:.*]] = arith.constant 1 : index
 !HOST:  %[[C2:.*]] = arith.constant 1 : index
 !HOST:  %[[C3:.*]] = arith.constant 4 : index
-!HOST:  %[[BOUNDS0:.*]] = omp.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
+!HOST:  %[[BOUNDS0:.*]] = omp.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
 !HOST:  %[[MAP0:.*]] = omp.map_info var_ptr(%[[READ_DECL]]#1 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
 !HOST:  %[[C4:.*]] = arith.constant 1 : index
 !HOST:  %[[C5:.*]] = arith.constant 1 : index
 !HOST:  %[[C6:.*]] = arith.constant 4 : index
-!HOST:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
+!HOST:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) extent(%[[C10_0]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
 !HOST:  %[[MAP1:.*]] = omp.map_info var_ptr(%[[WRITE_DECL]]#1 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
-!HOST:  omp.target   map_entries(%[[MAP0]], %[[MAP1]] : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>) {
+!HOST:  omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> %{{.*}}, {{.*}} -> {{.*}} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, !fir.ref<i32>) {
 
 subroutine read_write_section()
     integer :: sp_read(10) = (/1,2,3,4,5,6,7,8,9,10/)
@@ -44,13 +43,15 @@ module assumed_array_routines
 !HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMassumed_array_routinesFassumed_shape_arrayEarr_read_write"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 !HOST: %[[C0:.*]] = arith.constant 1 : index
 !HOST: %[[C1:.*]] = arith.constant 0 : index
-!HOST: %[[C2:.*]]:3 = fir.box_dims %[[ARG0_DECL]]#1, %[[C1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+!HOST: %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0_DECL]]#1, %[[C1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !HOST: %[[C3:.*]] = arith.constant 1 : index
 !HOST: %[[C4:.*]] = arith.constant 4 : index
-!HOST: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) stride(%[[C2]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
+!HOST: %[[C0_1:.*]] = arith.constant 0 : index
+!HOST: %[[DIMS1:.*]]:3 = fir.box_dims %[[ARG0_DECL]]#1, %[[C0_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+!HOST: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
 !HOST: %[[ADDROF:.*]] = fir.box_addr %[[ARG0_DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 !HOST: %[[MAP:.*]] = omp.map_info var_ptr(%[[ADDROF]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
-!HOST: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<?xi32>>) {
+!HOST: omp.target   map_entries(%[[MAP]] -> %{{.*}}, {{.*}} -> {{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
     subroutine assumed_shape_array(arr_read_write)
             integer, intent(inout) :: arr_read_write(:)
 
@@ -64,16 +65,17 @@ module assumed_array_routines
 
 !HOST-LABEL: func.func @_QMassumed_array_routinesPassumed_size_array(
 !HOST-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
-!HOST: %[[UNDEF:.*]] = fir.undefined index
-!HOST: %[[ARG0_SHAPE:.*]] = fir.shape %[[UNDEF]] : (index) -> !fir.shape<1>
+!HOST: %[[ARG0_SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 !HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[ARG0_SHAPE]]) {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEarr_read_write"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 !HOST: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEi"}
 !HOST: %[[C0:.*]] = arith.constant 1 : index
 !HOST: %[[C1:.*]] = arith.constant 1 : index
 !HOST: %[[C2:.*]] = arith.constant 4 : index
-!HOST: %[[BOUNDS:.*]]  = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) stride(%[[C0]] : index) start_idx(%[[C0]] : index)
+!HOST: %[[DIFF:.*]] = arith.subi %[[C2]], %[[C1]] : index
+!HOST: %[[EXT:.*]] = arith.addi %[[DIFF]], %[[C0]] : index
+!HOST: %[[BOUNDS:.*]]  = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) extent(%[[EXT]] : index) stride(%[[C0]] : index) start_idx(%[[C0]] : index)
 !HOST: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG0_DECL]]#1 : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
-!HOST: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<?xi32>>) {
+!HOST: omp.target map_entries(%[[MAP]] -> %{{.*}}, {{.*}} -> {{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
         subroutine assumed_size_array(arr_read_write)
             integer, intent(inout) :: arr_read_write(*)
 

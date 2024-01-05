@@ -12,6 +12,7 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <set>
@@ -1030,23 +1031,46 @@ public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
-      : Base{*this}, sf_{sf}, context_{context} {}
+      : Base{*this}, sf_{sf}, context_{context} {
+    if (!context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::StatementFunctionExtensions)) {
+      severity_ = parser::Severity::Error;
+    } else if (context_.languageFeatures().ShouldWarn(
+                   common::LanguageFeature::StatementFunctionExtensions)) {
+      severity_ = parser::Severity::Portability;
+    }
+  }
   using Base::operator();
 
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
-    return parser::Message{sf_.name(),
-        "Statement function '%s' should not contain an array constructor"_port_en_US,
-        sf_.name()};
+    if (severity_) {
+      auto msg{
+          "Statement function '%s' should not contain an array constructor"_port_en_US};
+      msg.set_severity(*severity_);
+      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+    } else {
+      return std::nullopt;
+    }
   }
   Result operator()(const StructureConstructor &) const {
-    return parser::Message{sf_.name(),
-        "Statement function '%s' should not contain a structure constructor"_port_en_US,
-        sf_.name()};
+    if (severity_) {
+      auto msg{
+          "Statement function '%s' should not contain a structure constructor"_port_en_US};
+      msg.set_severity(*severity_);
+      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+    } else {
+      return std::nullopt;
+    }
   }
   Result operator()(const TypeParamInquiry &) const {
-    return parser::Message{sf_.name(),
-        "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
-        sf_.name()};
+    if (severity_) {
+      auto msg{
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
+      msg.set_severity(*severity_);
+      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+    } else {
+      return std::nullopt;
+    }
   }
   Result operator()(const ProcedureDesignator &proc) const {
     if (const Symbol * symbol{proc.GetSymbol()}) {
@@ -1064,16 +1088,23 @@ public:
       if (auto chars{
               characteristics::Procedure::Characterize(proc, context_)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
-          return parser::Message(sf_.name(),
-              "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
-              sf_.name(), symbol->name());
+          if (severity_) {
+            auto msg{
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
+            msg.set_severity(*severity_);
+            return parser::Message{
+                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+          }
         }
       }
     }
     if (proc.Rank() > 0) {
-      return parser::Message(sf_.name(),
-          "Statement function '%s' should not reference a function that returns an array"_port_en_US,
-          sf_.name());
+      if (severity_) {
+        auto msg{
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
+        msg.set_severity(*severity_);
+        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      }
     }
     return std::nullopt;
   }
@@ -1083,9 +1114,12 @@ public:
         return result;
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
-        return parser::Message(sf_.name(),
-            "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
-            sf_.name());
+        if (severity_) {
+          auto msg{
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
+          msg.set_severity(*severity_);
+          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        }
       }
     }
     return std::nullopt;
@@ -1094,6 +1128,7 @@ public:
 private:
   const Symbol &sf_;
   FoldingContext &context_;
+  std::optional<parser::Severity> severity_;
 };
 
 std::optional<parser::Message> CheckStatementFunction(

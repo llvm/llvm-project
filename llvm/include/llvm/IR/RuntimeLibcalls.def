@@ -438,6 +438,8 @@ HANDLE_LIBCALL(UO_PPCF128, "__gcc_qunord")
 HANDLE_LIBCALL(MEMCPY, "memcpy")
 HANDLE_LIBCALL(MEMMOVE, "memmove")
 HANDLE_LIBCALL(MEMSET, "memset")
+// DSEPass can emit calloc if it finds a pair of malloc/memset
+HANDLE_LIBCALL(CALLOC, "calloc")
 HANDLE_LIBCALL(BZERO, nullptr)
 
 // Element-wise unordered-atomic memory of different sizes

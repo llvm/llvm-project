@@ -58,6 +58,8 @@ struct Variable;
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
+using TypeConstructionStack =
+    llvm::SmallVector<std::pair<const Fortran::lower::SymbolRef, mlir::Type>>;
 class StatementContext;
 
 using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
@@ -117,6 +119,10 @@ public:
   virtual void copyHostAssociateVar(
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+
+  /// For a given symbol, check if it is present in the inner-most
+  /// level of the symbol map.
+  virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
   /// region if \p collectSymbols is true. Likewise, collect the
@@ -227,6 +233,10 @@ public:
                    const Fortran::semantics::DerivedTypeSpec &typeSpec,
                    fir::RecordType type) = 0;
 
+  /// Get stack of derived type in construction. This is an internal entry point
+  /// for the type conversion utility to allow lowering recursive derived types.
+  virtual TypeConstructionStack &getTypeConstructionStack() = 0;
+
   //===--------------------------------------------------------------------===//
   // Locations
   //===--------------------------------------------------------------------===//
@@ -275,6 +285,10 @@ public:
   //===--------------------------------------------------------------------===//
   // Miscellaneous
   //===--------------------------------------------------------------------===//
+
+  /// Generate IR for Evaluation \p eval.
+  virtual void genEval(pft::Evaluation &eval,
+                       bool unstructuredContext = true) = 0;
 
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {

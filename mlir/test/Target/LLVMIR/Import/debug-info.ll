@@ -33,11 +33,11 @@ define i32 @instruction_loc(i32 %arg1) {
 ; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
 ; CHECK-DAG: #[[CALLEE:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
 ; CHECK-DAG: #[[FILE_LOC]] = loc(fused<#[[SP]]>[#[[RAW_FILE_LOC]]])
-; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
+; CHECK-DAG: #[[RAW_CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
+; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLEE_LOC]]])
 ; CHECK-DAG: #[[RAW_CALLER_LOC:.+]] = loc("debug-info.ll":2:2)
 ; CHECK-DAG: #[[CALLER_LOC:.+]] = loc(fused<#[[SP]]>[#[[RAW_CALLER_LOC]]])
-; CHECK-DAG: #[[RAW_CALLSITE_LOC:.+]] = loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
-; CHECK-DAG: #[[CALLSITE_LOC]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLSITE_LOC]]])
+; CHECK-DAG: #[[CALLSITE_LOC:.+]] = loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -257,8 +257,10 @@ source_filename = "debug-info.ll"
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @intrinsic(i64 %0, ptr %1) {
   ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
-  call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression()), !dbg !7
+  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] #llvm.di_expression<[DW_OP_deref, DW_OP_constu(3), DW_OP_plus, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
+  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] #llvm.di_expression<[DW_OP_deref, DW_OP_constu(3), DW_OP_plus, DW_OP_LLVM_fragment(3, 7)]> = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
+  call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)), !dbg !7
+  call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_convert, 4, DW_ATE_signed)), !dbg !7
   call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
   ; CHECK: llvm.intr.dbg.label #[[$LABEL]] loc(#[[LOC1:.+]])
   call void @llvm.dbg.label(metadata !10), !dbg !9

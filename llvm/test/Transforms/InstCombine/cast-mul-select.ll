@@ -2,6 +2,10 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; RUN: opt -passes=debugify,instcombine -S < %s | FileCheck %s -check-prefix DBGINFO
 
+; FIXME RemoveDIs project: instcombine instruction sinking, and the
+; corresponding debug-info updates that are required, are not yet implemented.
+; run: opt -passes=debugify,instcombine -S < %s --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DBGINFO
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32"
 
 define i32 @mul(i32 %x, i32 %y) {
@@ -119,7 +123,7 @@ define i32 @eval_zext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 5
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[R:%.*]] = zext i16 [[M]] to i32
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i16 [[M]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 ; DBGINFO-LABEL: @eval_zext_multi_use_in_one_inst(
@@ -129,7 +133,7 @@ define i32 @eval_zext_multi_use_in_one_inst(i32 %x) {
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[A]], metadata [[META66:![0-9]+]], metadata !DIExpression()), !dbg [[DBG70]]
 ; DBGINFO-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]], !dbg [[DBG71:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[M]], metadata [[META67:![0-9]+]], metadata !DIExpression()), !dbg [[DBG71]]
-; DBGINFO-NEXT:    [[R:%.*]] = zext i16 [[M]] to i32, !dbg [[DBG72:![0-9]+]]
+; DBGINFO-NEXT:    [[R:%.*]] = zext nneg i16 [[M]] to i32, !dbg [[DBG72:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[R]], metadata [[META68:![0-9]+]], metadata !DIExpression()), !dbg [[DBG72]]
 ; DBGINFO-NEXT:    ret i32 [[R]], !dbg [[DBG73:![0-9]+]]
 ;
@@ -145,7 +149,7 @@ define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 14
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[O:%.*]] = or i16 [[M]], -32768
+; CHECK-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768
 ; CHECK-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -156,7 +160,7 @@ define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[A]], metadata [[META77:![0-9]+]], metadata !DIExpression()), !dbg [[DBG82]]
 ; DBGINFO-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]], !dbg [[DBG83:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[M]], metadata [[META78:![0-9]+]], metadata !DIExpression()), !dbg [[DBG83]]
-; DBGINFO-NEXT:    [[O:%.*]] = or i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
+; DBGINFO-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[O]], metadata [[META79:![0-9]+]], metadata !DIExpression()), !dbg [[DBG84]]
 ; DBGINFO-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32, !dbg [[DBG85:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[R]], metadata [[META80:![0-9]+]], metadata !DIExpression()), !dbg [[DBG85]]
@@ -183,13 +187,13 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i8 0, i8 4
 ; CHECK-NEXT:    switch i3 [[V1:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i3 0, label [[FOR_END:%.*]]
-; CHECK-NEXT:    i3 -1, label [[FOR_END]]
+; CHECK-NEXT:      i3 0, label [[FOR_END:%.*]]
+; CHECK-NEXT:      i3 -1, label [[FOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    switch i3 [[V2:%.*]], label [[EXIT]] [
-; CHECK-NEXT:    i3 0, label [[FOR_END]]
-; CHECK-NEXT:    i3 -1, label [[FOR_END]]
+; CHECK-NEXT:      i3 0, label [[FOR_END]]
+; CHECK-NEXT:      i3 -1, label [[FOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ]
@@ -213,13 +217,13 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i8 0, i8 4, !dbg [[DBG97:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i8 [[SPEC_SELECT]], metadata [[META90:![0-9]+]], metadata !DIExpression()), !dbg [[DBG97]]
 ; DBGINFO-NEXT:    switch i3 [[V1:%.*]], label [[EXIT:%.*]] [
-; DBGINFO-NEXT:    i3 0, label [[FOR_END:%.*]]
-; DBGINFO-NEXT:    i3 -1, label [[FOR_END]]
+; DBGINFO-NEXT:      i3 0, label [[FOR_END:%.*]]
+; DBGINFO-NEXT:      i3 -1, label [[FOR_END]]
 ; DBGINFO-NEXT:    ], !dbg [[DBG98:![0-9]+]]
 ; DBGINFO:       for.body3:
 ; DBGINFO-NEXT:    switch i3 [[V2:%.*]], label [[EXIT]] [
-; DBGINFO-NEXT:    i3 0, label [[FOR_END]]
-; DBGINFO-NEXT:    i3 -1, label [[FOR_END]]
+; DBGINFO-NEXT:      i3 0, label [[FOR_END]]
+; DBGINFO-NEXT:      i3 -1, label [[FOR_END]]
 ; DBGINFO-NEXT:    ], !dbg [[DBG99:![0-9]+]]
 ; DBGINFO:       for.end:
 ; DBGINFO-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ], !dbg [[DBG100:![0-9]+]]

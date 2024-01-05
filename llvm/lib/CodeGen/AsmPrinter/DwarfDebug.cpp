@@ -311,8 +311,9 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
   if (AccelTables != AccelTableKind::Default)
     return AccelTables;
 
-  // Accelerator tables with type units are currently not supported.
-  if (GenerateTypeUnits)
+  // Generating DWARF5 acceleration table.
+  // Currently Split dwarf and non ELF format is not supported.
+  if (GenerateTypeUnits && (DwarfVersion < 5 || !TT.isOSBinFormatELF()))
     return AccelTableKind::None;
 
   // Accelerator tables get emitted if targetting DWARF v5 or LLDB.  DWARF v5
@@ -445,7 +446,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 DwarfDebug::~DwarfDebug() = default;
 
 static bool isObjCClass(StringRef Name) {
-  return Name.startswith("+") || Name.startswith("-");
+  return Name.starts_with("+") || Name.starts_with("-");
 }
 
 static bool hasObjCCategory(StringRef Name) {
@@ -472,36 +473,38 @@ static StringRef getObjCMethodName(StringRef In) {
 }
 
 // Add the various names to the Dwarf accelerator table names.
-void DwarfDebug::addSubprogramNames(const DICompileUnit &CU,
-                                    const DISubprogram *SP, DIE &Die) {
+void DwarfDebug::addSubprogramNames(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind,
+    const DISubprogram *SP, DIE &Die) {
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Apple &&
-      CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
+      NameTableKind != DICompileUnit::DebugNameTableKind::Apple &&
+      NameTableKind == DICompileUnit::DebugNameTableKind::None)
     return;
 
   if (!SP->isDefinition())
     return;
 
   if (SP->getName() != "")
-    addAccelName(CU, SP->getName(), Die);
+    addAccelName(Unit, NameTableKind, SP->getName(), Die);
 
   // If the linkage name is different than the name, go ahead and output that as
   // well into the name table. Only do that if we are going to actually emit
   // that name.
   if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
       (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
-    addAccelName(CU, SP->getLinkageName(), Die);
+    addAccelName(Unit, NameTableKind, SP->getLinkageName(), Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
   // too.
   if (isObjCClass(SP->getName())) {
     StringRef Class, Category;
     getObjCClassCategory(SP->getName(), Class, Category);
-    addAccelObjC(CU, Class, Die);
+    addAccelObjC(Unit, NameTableKind, Class, Die);
     if (Category != "")
-      addAccelObjC(CU, Category, Die);
+      addAccelObjC(Unit, NameTableKind, Category, Die);
     // Also add the base method name to the name table.
-    addAccelName(CU, getObjCMethodName(SP->getName()), Die);
+    addAccelName(Unit, NameTableKind, getObjCMethodName(SP->getName()), Die);
   }
 }
 
@@ -1211,13 +1214,12 @@ void DwarfDebug::beginModule(Module *M) {
         CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
     }
 
-    for (auto *Ty : CUNode->getEnumTypes()) {
-      assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
-             "Unexpected function-local entity in 'enums' CU field.");
+    for (auto *Ty : CUNode->getEnumTypes())
       CU.getOrCreateTypeDIE(cast<DIType>(Ty));
-    }
 
     for (auto *Ty : CUNode->getRetainedTypes()) {
+      // The retained types array by design contains pointers to
+      // MDNodes rather than DIRefs. Unique them here.
       if (DIType *RT = dyn_cast<DIType>(Ty))
         // There is no point in force-emitting a forward declaration.
         CU.getOrCreateTypeDIE(RT);
@@ -1415,13 +1417,9 @@ void DwarfDebug::endModule() {
              "Unexpected function-local entity in 'imports' CU field.");
       CU->getOrCreateImportedEntityDIE(IE);
     }
-
-    // Emit function-local entities.
     for (const auto *D : CU->getDeferredLocalDecls()) {
       if (auto *IE = dyn_cast<DIImportedEntity>(D))
         CU->getOrCreateImportedEntityDIE(IE);
-      else if (auto *Ty = dyn_cast<DIType>(D))
-        CU->getOrCreateTypeDIE(Ty);
       else
         llvm_unreachable("Unexpected local retained node!");
     }
@@ -1519,8 +1517,6 @@ static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
     S = L->getScope();
   else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
     S = IE->getScope();
-  else if (const auto *T = dyn_cast<DIType>(N))
-    S = T->getScope();
   else
     llvm_unreachable("Unexpected retained node!");
 
@@ -3452,6 +3448,7 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
+  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
@@ -3467,8 +3464,8 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
 
-  auto OwnedUnit = std::make_unique<DwarfTypeUnit>(CU, Asm, this, &InfoHolder,
-                                                    getDwoLineTable(CU));
+  auto OwnedUnit = std::make_unique<DwarfTypeUnit>(
+      CU, Asm, this, &InfoHolder, NumTypeUnitsCreated++, getDwoLineTable(CU));
   DwarfTypeUnit &NewTU = *OwnedUnit;
   DIE &UnitDie = NewTU.getUnitDie();
   TypeUnitsUnderConstruction.emplace_back(std::move(OwnedUnit), CTy);
@@ -3481,6 +3478,16 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   Ins.first->second = Signature;
 
   if (useSplitDwarf()) {
+    // Although multiple type units can have the same signature, they are not
+    // guranteed to be bit identical. When LLDB uses .debug_names it needs to
+    // know from which CU a type unit came from. These two attrbutes help it to
+    // figure that out.
+    if (getDwarfVersion() >= 5) {
+      if (!CompilationDir.empty())
+        NewTU.addString(UnitDie, dwarf::DW_AT_comp_dir, CompilationDir);
+      NewTU.addString(UnitDie, dwarf::DW_AT_dwo_name,
+                      Asm->TM.Options.MCOptions.SplitDwarfFile);
+    }
     MCSection *Section =
         getDwarfVersion() <= 4
             ? Asm->getObjFileLowering().getDwarfTypesDWOSection()
@@ -3510,7 +3517,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     // Types referencing entries in the address table cannot be placed in type
     // units.
     if (AddrPool.hasBeenUsed()) {
-
+      AccelTypeUnitsDebugNames.clear();
       // Remove all the types built while building this type.
       // This is pessimistic as some of these types might not be dependent on
       // the type that used an address.
@@ -3521,6 +3528,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // This is inefficient because all the dependent types will be rebuilt
       // from scratch, including building them in type units, discovering that
       // they depend on addresses, throwing them out and rebuilding them.
+      setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
       CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
       return;
     }
@@ -3530,9 +3538,20 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     for (auto &TU : TypeUnitsToAdd) {
       InfoHolder.computeSizeAndOffsetsForUnit(TU.first.get());
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
+      if (getDwarfVersion() >= 5 &&
+          getAccelTableKind() == AccelTableKind::Dwarf) {
+        if (useSplitDwarf())
+          AccelDebugNames.addTypeUnitSignature(*TU.first);
+        else
+          AccelDebugNames.addTypeUnitSymbol(*TU.first);
+      }
     }
+    AccelTypeUnitsDebugNames.convertDieToOffset();
+    AccelDebugNames.addTypeEntries(AccelTypeUnitsDebugNames);
+    AccelTypeUnitsDebugNames.clear();
   }
   CU.addDIETypeSignature(RefDie, Signature);
+  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
 }
 
 // Add the Name along with its companion DIE to the appropriate accelerator
@@ -3540,15 +3559,16 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 // AccelTableKind::Apple, we use the table we got as an argument). If
 // accelerator tables are disabled, this function does nothing.
 template <typename DataT>
-void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
-                                  AccelTable<DataT> &AppleAccel, StringRef Name,
-                                  const DIE &Die) {
+void DwarfDebug::addAccelNameImpl(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind,
+    AccelTable<DataT> &AppleAccel, StringRef Name, const DIE &Die) {
   if (getAccelTableKind() == AccelTableKind::None || Name.empty())
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Apple &&
-      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Default)
+      NameTableKind != DICompileUnit::DebugNameTableKind::Apple &&
+      NameTableKind != DICompileUnit::DebugNameTableKind::Default)
     return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
@@ -3559,8 +3579,10 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     AppleAccel.addName(Ref, Die);
     break;
   case AccelTableKind::Dwarf: {
-    DwarfCompileUnit *DCU = CUMap.lookup(&CU);
-    AccelDebugNames.addName(Ref, Die, *DCU);
+    DWARF5AccelTable &Current = getCurrentDWARF5AccelTable();
+    // The type unit can be discarded, so need to add references to final
+    // acceleration table once we know it's complete and we emit it.
+    Current.addName(Ref, Die, Unit.getUniqueID());
     break;
   }
   case AccelTableKind::Default:
@@ -3570,26 +3592,34 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
   }
 }
 
-void DwarfDebug::addAccelName(const DICompileUnit &CU, StringRef Name,
-                              const DIE &Die) {
-  addAccelNameImpl(CU, AccelNames, Name, Die);
+void DwarfDebug::addAccelName(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die) {
+  addAccelNameImpl(Unit, NameTableKind, AccelNames, Name, Die);
 }
 
-void DwarfDebug::addAccelObjC(const DICompileUnit &CU, StringRef Name,
-                              const DIE &Die) {
+void DwarfDebug::addAccelObjC(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die) {
   // ObjC names go only into the Apple accelerator tables.
   if (getAccelTableKind() == AccelTableKind::Apple)
-    addAccelNameImpl(CU, AccelObjC, Name, Die);
+    addAccelNameImpl(Unit, NameTableKind, AccelObjC, Name, Die);
 }
 
-void DwarfDebug::addAccelNamespace(const DICompileUnit &CU, StringRef Name,
-                                   const DIE &Die) {
-  addAccelNameImpl(CU, AccelNamespace, Name, Die);
+void DwarfDebug::addAccelNamespace(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die) {
+  addAccelNameImpl(Unit, NameTableKind, AccelNamespace, Name, Die);
 }
 
-void DwarfDebug::addAccelType(const DICompileUnit &CU, StringRef Name,
-                              const DIE &Die, char Flags) {
-  addAccelNameImpl(CU, AccelTypes, Name, Die);
+void DwarfDebug::addAccelType(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die, char Flags) {
+  addAccelNameImpl(Unit, NameTableKind, AccelTypes, Name, Die);
 }
 
 uint16_t DwarfDebug::getDwarfVersion() const {

@@ -46,6 +46,11 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+static cl::opt<std::string>
+    ITraceAggregation("itrace",
+                      cl::desc("Generate LBR info with perf itrace argument"),
+                      cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 FilterMemProfile("filter-mem-profile",
   cl::desc("if processing a memory profile, filter out stack or heap accesses "
@@ -163,16 +168,23 @@ void DataAggregator::start() {
 
   findPerfExecutable();
 
-  if (opts::BasicAggregation)
+  if (opts::BasicAggregation) {
     launchPerfProcess("events without LBR",
                       MainEventsPPI,
                       "script -F pid,event,ip",
                       /*Wait = */false);
-  else
+  } else if (!opts::ITraceAggregation.empty()) {
+    std::string ItracePerfScriptArgs = llvm::formatv(
+        "script -F pid,ip,brstack --itrace={0}", opts::ITraceAggregation);
+    launchPerfProcess("branch events with itrace", MainEventsPPI,
+                      ItracePerfScriptArgs.c_str(),
+                      /*Wait = */ false);
+  } else {
     launchPerfProcess("branch events",
                       MainEventsPPI,
                       "script -F pid,ip,brstack",
                       /*Wait = */false);
+  }
 
   // Note: we launch script for mem events regardless of the option, as the
   //       command fails fairly fast if mem events were not collected.
@@ -1903,7 +1915,7 @@ DataAggregator::parseMMapEvent() {
   //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) .*]: .* <file_name>
 
   StringRef FileName = Line.rsplit(FieldSeparator).second;
-  if (FileName.startswith("//") || FileName.startswith("[")) {
+  if (FileName.starts_with("//") || FileName.starts_with("[")) {
     consumeRestOfLine();
     return std::make_pair(StringRef(), ParsedInfo);
   }
@@ -2156,7 +2168,7 @@ DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
       continue;
     }
 
-    if (IDPair->second.startswith(FileBuildID)) {
+    if (IDPair->second.starts_with(FileBuildID)) {
       FileName = sys::path::filename(IDPair->first);
       break;
     }

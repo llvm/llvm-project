@@ -106,7 +106,7 @@ ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {
 
 Constant *ShadowStackGCLowering::GetFrameMap(Function &F) {
   // doInitialization creates the abstract type of this value.
-  Type *VoidPtr = Type::getInt8PtrTy(F.getContext());
+  Type *VoidPtr = PointerType::getUnqual(F.getContext());
 
   // Truncate the ShadowStackDescriptor if some metadata is null.
   unsigned NumMeta = 0;
@@ -115,7 +115,7 @@ Constant *ShadowStackGCLowering::GetFrameMap(Function &F) {
     Constant *C = cast<Constant>(Roots[I].first->getArgOperand(1));
     if (!C->isNullValue())
       NumMeta = I + 1;
-    Metadata.push_back(ConstantExpr::getBitCast(C, VoidPtr));
+    Metadata.push_back(C);
   }
   Metadata.resize(NumMeta);
 
@@ -173,7 +173,7 @@ Type *ShadowStackGCLowering::GetConcreteStackEntryType(Function &F) {
 bool ShadowStackGCLowering::doInitialization(Module &M) {
   bool Active = false;
   for (Function &F : M) {
-    if (F.hasGC() && F.getGC() == std::string("shadow-stack")) {
+    if (F.hasGC() && F.getGC() == "shadow-stack") {
       Active = true;
       break;
     }
@@ -292,8 +292,7 @@ void ShadowStackGCLowering::getAnalysisUsage(AnalysisUsage &AU) const {
 /// runOnFunction - Insert code to maintain the shadow stack.
 bool ShadowStackGCLowering::runOnFunction(Function &F) {
   // Quick exit for functions that do not use the shadow stack GC.
-  if (!F.hasGC() ||
-      F.getGC() != std::string("shadow-stack"))
+  if (!F.hasGC() || F.getGC() != "shadow-stack")
     return false;
 
   LLVMContext &Context = F.getContext();
@@ -326,7 +325,7 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
 
   // Initialize the map pointer and load the current head of the shadow stack.
   Instruction *CurrentHead =
-      AtEntry.CreateLoad(StackEntryTy->getPointerTo(), Head, "gc_currhead");
+      AtEntry.CreateLoad(AtEntry.getPtrTy(), Head, "gc_currhead");
   Instruction *EntryMapPtr = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
                                        StackEntry, 0, 1, "gc_frame.map");
   AtEntry.CreateStore(FrameMap, EntryMapPtr);
@@ -368,8 +367,8 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
     Instruction *EntryNextPtr2 =
         CreateGEP(Context, *AtExit, ConcreteStackEntryTy, StackEntry, 0, 0,
                   "gc_frame.next");
-    Value *SavedHead = AtExit->CreateLoad(StackEntryTy->getPointerTo(),
-                                          EntryNextPtr2, "gc_savedhead");
+    Value *SavedHead =
+        AtExit->CreateLoad(AtExit->getPtrTy(), EntryNextPtr2, "gc_savedhead");
     AtExit->CreateStore(SavedHead, Head);
   }
 

@@ -58,6 +58,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %27 = nvvm.read.ptx.sreg.cluster.ctarank : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank
   %28 = nvvm.read.ptx.sreg.cluster.nctarank : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock
+  %29 = nvvm.read.ptx.sreg.clock : i32
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
+  %30 = nvvm.read.ptx.sreg.clock64 : i64
   
   llvm.return %1 : i32
 }
@@ -349,6 +353,19 @@ llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
   nvvm.cp.async.commit.group
 // CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
   nvvm.cp.async.wait.group 0
+  llvm.return
+}
+
+// CHECK-LABEL: @cp_async_mbarrier_arrive
+llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.ptr) {
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr %{{.*}})
+  nvvm.cp.async.mbarrier.arrive %bar_gen : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr %{{.*}})
+  nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.shared(ptr addrspace(3) %{{.*}})
+  nvvm.cp.async.mbarrier.arrive.shared %bar_shared : !llvm.ptr<3>
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared(ptr addrspace(3) %{{.*}})
+  nvvm.cp.async.mbarrier.arrive.shared %bar_shared {noinc = true} : !llvm.ptr<3>
   llvm.return
 }
 

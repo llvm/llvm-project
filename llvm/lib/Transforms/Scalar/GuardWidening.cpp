@@ -45,7 +45,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -54,8 +53,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -599,35 +596,47 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
 }
 
 // Return Instruction before which we can insert freeze for the value V as close
-// to def as possible. If there is no place to add freeze, return nullptr.
-static Instruction *getFreezeInsertPt(Value *V, const DominatorTree &DT) {
+// to def as possible. If there is no place to add freeze, return empty.
+static std::optional<BasicBlock::iterator>
+getFreezeInsertPt(Value *V, const DominatorTree &DT) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
-    return &*DT.getRoot()->getFirstNonPHIOrDbgOrAlloca();
+    return DT.getRoot()->getFirstNonPHIOrDbgOrAlloca()->getIterator();
 
-  auto *Res = I->getInsertionPointAfterDef();
+  std::optional<BasicBlock::iterator> Res = I->getInsertionPointAfterDef();
   // If there is no place to add freeze - return nullptr.
-  if (!Res || !DT.dominates(I, Res))
-    return nullptr;
+  if (!Res || !DT.dominates(I, &**Res))
+    return std::nullopt;
+
+  Instruction *ResInst = &**Res;
 
   // If there is a User dominated by original I, then it should be dominated
   // by Freeze instruction as well.
   if (any_of(I->users(), [&](User *U) {
         Instruction *User = cast<Instruction>(U);
-        return Res != User && DT.dominates(I, User) && !DT.dominates(Res, User);
+        return ResInst != User && DT.dominates(I, User) &&
+               !DT.dominates(ResInst, User);
       }))
-    return nullptr;
+    return std::nullopt;
   return Res;
 }
 
 Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
   if (isGuaranteedNotToBePoison(Orig, nullptr, InsertPt, &DT))
     return Orig;
-  Instruction *InsertPtAtDef = getFreezeInsertPt(Orig, DT);
-  if (!InsertPtAtDef)
-    return new FreezeInst(Orig, "gw.freeze", InsertPt);
-  if (isa<Constant>(Orig) || isa<GlobalValue>(Orig))
-    return new FreezeInst(Orig, "gw.freeze", InsertPtAtDef);
+  std::optional<BasicBlock::iterator> InsertPtAtDef =
+      getFreezeInsertPt(Orig, DT);
+  if (!InsertPtAtDef) {
+    FreezeInst *FI = new FreezeInst(Orig, "gw.freeze");
+    FI->insertBefore(InsertPt);
+    return FI;
+  }
+  if (isa<Constant>(Orig) || isa<GlobalValue>(Orig)) {
+    BasicBlock::iterator InsertPt = *InsertPtAtDef;
+    FreezeInst *FI = new FreezeInst(Orig, "gw.freeze");
+    FI->insertBefore(*InsertPt->getParent(), InsertPt);
+    return FI;
+  }
 
   SmallSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
@@ -646,8 +655,10 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
     if (Visited.insert(Def).second) {
       if (isGuaranteedNotToBePoison(Def, nullptr, InsertPt, &DT))
         return true;
-      CacheOfFreezes[Def] = new FreezeInst(Def, Def->getName() + ".gw.fr",
-                                           getFreezeInsertPt(Def, DT));
+      BasicBlock::iterator InsertPt = *getFreezeInsertPt(Def, DT);
+      FreezeInst *FI = new FreezeInst(Def, Def->getName() + ".gw.fr");
+      FI->insertBefore(*InsertPt->getParent(), InsertPt);
+      CacheOfFreezes[Def] = FI;
     }
 
     if (CacheOfFreezes.count(Def))
@@ -688,8 +699,9 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
 
   Value *Result = Orig;
   for (Value *V : NeedFreeze) {
-    auto *FreezeInsertPt = getFreezeInsertPt(V, DT);
-    FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr", FreezeInsertPt);
+    BasicBlock::iterator FreezeInsertPt = *getFreezeInsertPt(V, DT);
+    FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr");
+    FI->insertBefore(*FreezeInsertPt->getParent(), FreezeInsertPt);
     ++FreezeAdded;
     if (V == Orig)
       Result = FI;
@@ -962,6 +974,15 @@ StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
 
 PreservedAnalyses GuardWideningPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
+  // Avoid requesting analyses if there are no guards or widenable conditions.
+  auto *GuardDecl = F.getParent()->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_guard));
+  bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
+  auto *WCDecl = F.getParent()->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  bool HasWidenableConditions = WCDecl && !WCDecl->use_empty();
+  if (!HasIntrinsicGuards && !HasWidenableConditions)
+    return PreservedAnalyses::all();
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
@@ -1003,110 +1024,4 @@ PreservedAnalyses GuardWideningPass::run(Loop &L, LoopAnalysisManager &AM,
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
-}
-
-namespace {
-struct GuardWideningLegacyPass : public FunctionPass {
-  static char ID;
-
-  GuardWideningLegacyPass() : FunctionPass(ID) {
-    initializeGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    std::unique_ptr<MemorySSAUpdater> MSSAU;
-    if (MSSAWP)
-      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
-    return GuardWideningImpl(DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
-                             DT.getRootNode(),
-                             [](BasicBlock *) { return true; })
-        .run();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-};
-
-/// Same as above, but restricted to a single loop at a time.  Can be
-/// scheduled with other loop passes w/o breaking out of LPM
-struct LoopGuardWideningLegacyPass : public LoopPass {
-  static char ID;
-
-  LoopGuardWideningLegacyPass() : LoopPass(ID) {
-    initializeLoopGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-        *L->getHeader()->getParent());
-    auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
-    auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
-    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    std::unique_ptr<MemorySSAUpdater> MSSAU;
-    if (MSSAWP)
-      MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
-
-    BasicBlock *RootBB = L->getLoopPredecessor();
-    if (!RootBB)
-      RootBB = L->getHeader();
-    auto BlockFilter = [&](BasicBlock *BB) {
-      return BB == RootBB || L->contains(BB);
-    };
-    return GuardWideningImpl(DT, PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
-                             DT.getNode(RootBB), BlockFilter)
-        .run();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    getLoopAnalysisUsage(AU);
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-};
-}
-
-char GuardWideningLegacyPass::ID = 0;
-char LoopGuardWideningLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(GuardWideningLegacyPass, "guard-widening", "Widen guards",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(GuardWideningLegacyPass, "guard-widening", "Widen guards",
-                    false, false)
-
-INITIALIZE_PASS_BEGIN(LoopGuardWideningLegacyPass, "loop-guard-widening",
-                      "Widen guards (within a single loop, as a loop pass)",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(LoopGuardWideningLegacyPass, "loop-guard-widening",
-                    "Widen guards (within a single loop, as a loop pass)",
-                    false, false)
-
-FunctionPass *llvm::createGuardWideningPass() {
-  return new GuardWideningLegacyPass();
-}
-
-Pass *llvm::createLoopGuardWideningPass() {
-  return new LoopGuardWideningLegacyPass();
 }

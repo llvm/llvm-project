@@ -177,9 +177,10 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
 
     SmallVector<RegionBranchTerminatorOpInterface> regionReturnOps;
     for (Block &block : region)
-      if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
-              block.getTerminator()))
-        regionReturnOps.push_back(terminator);
+      if (!block.empty())
+        if (auto terminator =
+                dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
+          regionReturnOps.push_back(terminator);
 
     // If there is no return-like terminator, the op itself should verify
     // type consistency.

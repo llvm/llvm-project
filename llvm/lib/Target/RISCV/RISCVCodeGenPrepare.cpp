@@ -28,8 +28,6 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-codegenprepare"
 #define PASS_NAME "RISC-V CodeGenPrepare"
 
-STATISTIC(NumZExtToSExt, "Number of SExt instructions converted to ZExt");
-
 namespace {
 
 class RISCVCodeGenPrepare : public FunctionPass,
@@ -52,48 +50,10 @@ public:
   }
 
   bool visitInstruction(Instruction &I) { return false; }
-  bool visitZExtInst(ZExtInst &I);
   bool visitAnd(BinaryOperator &BO);
 };
 
 } // end anonymous namespace
-
-bool RISCVCodeGenPrepare::visitZExtInst(ZExtInst &ZExt) {
-  if (!ST->is64Bit())
-    return false;
-
-  if (ZExt.hasNonNeg())
-    return false;
-
-  Value *Src = ZExt.getOperand(0);
-
-  // We only care about ZExt from i32 to i64.
-  if (!ZExt.getType()->isIntegerTy(64) || !Src->getType()->isIntegerTy(32))
-    return false;
-
-  // Look for an opportunity to infer nneg on a zext if we can determine that
-  // the sign bit of X is zero via a dominating condition. This often occurs
-  // with widened induction variables.
-  if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
-                              Constant::getNullValue(Src->getType()), &ZExt,
-                              *DL).value_or(false)) {
-    ZExt.setNonNeg(true);
-    ++NumZExtToSExt;
-    return true;
-  }
-
-  // Convert (zext (abs(i32 X, i1 1))) -> (zext nneg (abs(i32 X, i1 1))). If abs of
-  // INT_MIN is poison, the sign bit is zero.
-  // TODO: Move this to instcombine now that we have zext nneg in IR.
-  using namespace PatternMatch;
-  if (match(Src, m_Intrinsic<Intrinsic::abs>(m_Value(), m_One()))) {
-    ZExt.setNonNeg(true);
-    ++NumZExtToSExt;
-    return true;
-  }
-
-  return false;
-}
 
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
 // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill

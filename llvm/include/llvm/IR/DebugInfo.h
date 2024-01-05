@@ -34,18 +34,22 @@ namespace llvm {
 class DbgDeclareInst;
 class DbgValueInst;
 class DbgVariableIntrinsic;
+class DPValue;
 class Instruction;
 class Module;
 
 /// Finds dbg.declare intrinsics declaring local variables as living in the
 /// memory that 'V' points to.
-TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+void findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers, Value *V,
+                     SmallVectorImpl<DPValue *> *DPValues = nullptr);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
-void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
+void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
+                   Value *V, SmallVectorImpl<DPValue *> *DPValues = nullptr);
 
 /// Finds the debug info intrinsics describing a value.
-void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
+void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts,
+                  Value *V, SmallVectorImpl<DPValue *> *DPValues = nullptr);
 
 /// Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
@@ -99,10 +103,12 @@ public:
   /// Process a single instruction and collect debug info anchors.
   void processInstruction(const Module &M, const Instruction &I);
 
-  /// Process DbgVariableIntrinsic.
-  void processVariable(const Module &M, const DbgVariableIntrinsic &DVI);
+  /// Process a DILocalVariable.
+  void processVariable(const Module &M, const DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
+  // Process a DPValue, much like a DbgVariableIntrinsic.
+  void processDPValue(const Module &M, const DPValue &DPV);
 
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);
@@ -114,7 +120,6 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
-  void processLocalVariable(DILocalVariable *DV);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);

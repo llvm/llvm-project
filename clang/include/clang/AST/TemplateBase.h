@@ -103,18 +103,23 @@ private:
   /// The kind of template argument we're storing.
 
   struct DA {
+    LLVM_PREFERRED_TYPE(ArgKind)
     unsigned Kind : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
     void *QT;
     ValueDecl *D;
   };
   struct I {
+    LLVM_PREFERRED_TYPE(ArgKind)
     unsigned Kind : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
     // We store a decomposed APSInt with the data allocated by ASTContext if
     // BitWidth > 64. The memory may be shared between multiple
     // TemplateArgument instances.
     unsigned BitWidth : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsUnsigned : 1;
     union {
       /// Used to store the <= 64 bits integer value.
@@ -126,19 +131,25 @@ private:
     void *Type;
   };
   struct A {
+    LLVM_PREFERRED_TYPE(ArgKind)
     unsigned Kind : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
     unsigned NumArgs;
     const TemplateArgument *Args;
   };
   struct TA {
+    LLVM_PREFERRED_TYPE(ArgKind)
     unsigned Kind : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
     unsigned NumExpansions;
     void *Name;
   };
   struct TV {
+    LLVM_PREFERRED_TYPE(ArgKind)
     unsigned Kind : 31;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
     uintptr_t V;
   };

@@ -1,4 +1,4 @@
-if (OPENMP_STANDALONE_BUILD)
+if (NOT COMMAND append_if)
   # From HandleLLVMOptions.cmake
   function(append_if condition value)
     if (${condition})
@@ -18,6 +18,8 @@ if (OPENMP_ENABLE_WERROR)
   append_if(OPENMP_HAVE_WERROR_FLAG "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
+append_if(OPENMP_HAVE_COLOR_DIAGNOSTICS "-fcolor-diagnostics" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
 # Additional warnings that are not enabled by -Wall.
 append_if(OPENMP_HAVE_WCAST_QUAL_FLAG "-Wcast-qual" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WFORMAT_PEDANTIC_FLAG "-Wformat-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -35,3 +37,7 @@ append_if(OPENMP_HAVE_WENUM_CONSTEXPR_CONVERSION_FLAG "-Wno-enum-constexpr-conve
 append_if(OPENMP_HAVE_WEXTRA_FLAG "-Wno-extra" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WPEDANTIC_FLAG "-Wno-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WMAYBE_UNINITIALIZED_FLAG "-Wno-maybe-uninitialized" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+append_if(OPENMP_HAVE_NO_SEMANTIC_INTERPOSITION "-fno-semantic-interposition" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+append_if(OPENMP_HAVE_FUNCTION_SECTIONS "-ffunction-section" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+append_if(OPENMP_HAVE_DATA_SECTIONS "-fdata-sections" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

@@ -151,10 +151,7 @@ public:
     eScriptReturnTypeOpaqueObject
   };
 
-  ScriptInterpreter(
-      Debugger &debugger, lldb::ScriptLanguage script_lang,
-      lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up =
-          std::make_unique<ScriptedPlatformInterface>());
+  ScriptInterpreter(Debugger &debugger, lldb::ScriptLanguage script_lang);
 
   virtual StructuredData::DictionarySP GetInterpreterInfo();
 
@@ -559,19 +556,19 @@ public:
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
-    return std::make_unique<ScriptedProcessInterface>();
+    return {};
   }
 
   virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
-    return std::make_shared<ScriptedThreadInterface>();
+    return {};
   }
 
   virtual lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() {
-    return std::make_shared<OperatingSystemInterface>();
+    return {};
   }
 
-  ScriptedPlatformInterface &GetScriptedPlatformInterface() {
-    return *m_scripted_platform_interface_up;
+  virtual lldb::ScriptedPlatformInterfaceUP GetScriptedPlatformInterface() {
+    return {};
   }
 
   virtual StructuredData::ObjectSP
@@ -599,7 +596,6 @@ public:
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
-  lldb::ScriptedPlatformInterfaceUP m_scripted_platform_interface_up;
 };
 
 } // namespace lldb_private

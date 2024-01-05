@@ -1,13 +1,13 @@
 // DEFINE: %{entry_point} = test_load_store_zaq0
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
+// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
 // DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
@@ -37,11 +37,6 @@ func.func @vector_copy_i128(%src: memref<?x?xi128>, %dst: memref<?x?xi128>) {
 }
 
 func.func @test_load_store_zaq0() {
-  %init_a_str = llvm.mlir.addressof @init_tile_a : !llvm.ptr
-  %init_b_str = llvm.mlir.addressof @init_tile_b : !llvm.ptr
-  %final_a_str = llvm.mlir.addressof @final_tile_a : !llvm.ptr
-  %final_b_str = llvm.mlir.addressof @final_tile_b : !llvm.ptr
-
   %c0 = arith.constant 0 : index
   %min_elts_q = arith.constant 1 : index
   %bytes_per_128_bit = arith.constant 16 : index

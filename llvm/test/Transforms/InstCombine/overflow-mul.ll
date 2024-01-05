@@ -307,7 +307,7 @@ define i32 @extra_and_use_small_mask(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UMUL_VALUE]], 268435455
-; CHECK-NEXT:    [[AND:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
 ; CHECK-NEXT:    call void @use.i64(i64 [[AND]])
 ; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32

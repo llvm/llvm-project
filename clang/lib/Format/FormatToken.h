@@ -667,7 +667,7 @@ public:
   /// Returns whether \p Tok is ([{ or an opening < of a template or in
   /// protos.
   bool opensScope() const {
-    if (is(TT_TemplateString) && TokenText.endswith("${"))
+    if (is(TT_TemplateString) && TokenText.ends_with("${"))
       return true;
     if (is(TT_DictLiteral) && is(tok::less))
       return true;
@@ -677,7 +677,7 @@ public:
   /// Returns whether \p Tok is )]} or a closing > of a template or in
   /// protos.
   bool closesScope() const {
-    if (is(TT_TemplateString) && TokenText.startswith("}"))
+    if (is(TT_TemplateString) && TokenText.starts_with("}"))
       return true;
     if (is(TT_DictLiteral) && is(tok::greater))
       return true;
@@ -690,6 +690,10 @@ public:
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
                     TT_LeadingJavaAnnotation);
+  }
+
+  bool isPointerOrReference() const {
+    return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
   bool isUnaryOperator() const {
@@ -739,9 +743,9 @@ public:
     if (isNot(tok::string_literal))
       return false;
     StringRef Content = TokenText;
-    if (Content.startswith("\"") || Content.startswith("'"))
+    if (Content.starts_with("\"") || Content.starts_with("'"))
       Content = Content.drop_front(1);
-    if (Content.endswith("\"") || Content.endswith("'"))
+    if (Content.ends_with("\"") || Content.ends_with("'"))
       Content = Content.drop_back(1);
     Content = Content.trim();
     return Content.size() > 1 &&
@@ -1819,7 +1823,7 @@ private:
 };
 
 inline bool isLineComment(const FormatToken &FormatTok) {
-  return FormatTok.is(tok::comment) && !FormatTok.TokenText.startswith("/*");
+  return FormatTok.is(tok::comment) && !FormatTok.TokenText.starts_with("/*");
 }
 
 // Checks if \p FormatTok is a line comment that continues the line comment

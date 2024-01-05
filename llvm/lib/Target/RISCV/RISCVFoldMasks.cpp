@@ -17,6 +17,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
+#include "RISCVISelDAGToDAG.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -35,9 +36,7 @@ public:
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RISCVFoldMasks() : MachineFunctionPass(ID) {
-    initializeRISCVFoldMasksPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVFoldMasks() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
@@ -48,9 +47,10 @@ public:
   StringRef getPassName() const override { return "RISC-V Fold Masks"; }
 
 private:
+  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef);
   bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef);
 
-  bool isAllOnesMask(MachineInstr *MaskCopy);
+  bool isAllOnesMask(MachineInstr *MaskDef);
 };
 
 } // namespace
@@ -59,22 +59,21 @@ char RISCVFoldMasks::ID = 0;
 
 INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
 
-bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskCopy) {
-  if (!MaskCopy)
+bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
+  if (!MaskDef)
     return false;
-  assert(MaskCopy->isCopy() && MaskCopy->getOperand(0).getReg() == RISCV::V0);
-  Register SrcReg =
-      TRI->lookThruCopyLike(MaskCopy->getOperand(1).getReg(), MRI);
+  assert(MaskDef->isCopy() && MaskDef->getOperand(0).getReg() == RISCV::V0);
+  Register SrcReg = TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
   if (!SrcReg.isVirtual())
     return false;
-  MachineInstr *SrcDef = MRI->getVRegDef(SrcReg);
-  if (!SrcDef)
+  MaskDef = MRI->getVRegDef(SrcReg);
+  if (!MaskDef)
     return false;
 
   // TODO: Check that the VMSET is the expected bitwidth? The pseudo has
   // undefined behaviour if it's the wrong bitwidth, so we could choose to
   // assume that it's all-ones? Same applies to its VL.
-  switch (SrcDef->getOpcode()) {
+  switch (MaskDef->getOpcode()) {
   case RISCV::PseudoVMSET_M_B1:
   case RISCV::PseudoVMSET_M_B2:
   case RISCV::PseudoVMSET_M_B4:
@@ -98,7 +97,7 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
   unsigned NewOpc;
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected VMERGE_VVM_<LMUL> instruction.");
+    return false;
     CASE_VMERGE_TO_VMV(MF8)
     CASE_VMERGE_TO_VMV(MF4)
     CASE_VMERGE_TO_VMV(MF2)
@@ -133,6 +132,50 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
   return true;
 }
 
+bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
+                                       MachineInstr *MaskDef) {
+  const RISCV::RISCVMaskedPseudoInfo *I =
+      RISCV::getMaskedPseudoInfo(MI.getOpcode());
+  if (!I)
+    return false;
+
+  if (!isAllOnesMask(MaskDef))
+    return false;
+
+  // There are two classes of pseudos in the table - compares and
+  // everything else.  See the comment on RISCVMaskedPseudo for details.
+  const unsigned Opc = I->UnmaskedPseudo;
+  const MCInstrDesc &MCID = TII->get(Opc);
+  const bool HasPolicyOp = RISCVII::hasVecPolicyOp(MCID.TSFlags);
+  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
+#ifndef NDEBUG
+  const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
+  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
+             RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
+         "Masked and unmasked pseudos are inconsistent");
+  assert(HasPolicyOp == HasPassthru && "Unexpected pseudo structure");
+#endif
+  (void)HasPolicyOp;
+
+  MI.setDesc(MCID);
+
+  // TODO: Increment all MaskOpIdxs in tablegen by num of explicit defs?
+  unsigned MaskOpIdx = I->MaskOpIdx + MI.getNumExplicitDefs();
+  MI.removeOperand(MaskOpIdx);
+
+  // The unmasked pseudo will no longer be constrained to the vrnov0 reg class,
+  // so try and relax it to vr.
+  MRI->recomputeRegClass(MI.getOperand(0).getReg());
+  unsigned PassthruOpIdx = MI.getNumExplicitDefs();
+  if (HasPassthru) {
+    if (MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister)
+      MRI->recomputeRegClass(MI.getOperand(PassthruOpIdx).getReg());
+  } else
+    MI.removeOperand(PassthruOpIdx);
+
+  return true;
+}
+
 bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -159,9 +202,8 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     CurrentV0Def = nullptr;
     for (MachineInstr &MI : MBB) {
-      unsigned BaseOpc = RISCV::getRVVMCOpcode(MI.getOpcode());
-      if (BaseOpc == RISCV::VMERGE_VVM)
-        Changed |= convertVMergeToVMv(MI, CurrentV0Def);
+      Changed |= convertToUnmasked(MI, CurrentV0Def);
+      Changed |= convertVMergeToVMv(MI, CurrentV0Def);
 
       if (MI.definesRegister(RISCV::V0, TRI))
         CurrentV0Def = &MI;

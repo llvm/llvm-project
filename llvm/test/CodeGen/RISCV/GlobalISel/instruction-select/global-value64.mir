@@ -46,7 +46,7 @@ body:             |
     ; RV64-NOPIE-TAG-NEXT: PseudoRET implicit $x10
     ;
     ; RV64-SMALL-NOPIE-NOTAG-LABEL: name: global_addr
-    ; RV64-SMALL-NOPIE-NOTAG: [[LUI:%[0-9]+]]:gpr = LUI @x + 4
+    ; RV64-SMALL-NOPIE-NOTAG: [[LUI:%[0-9]+]]:gpr = LUI target-flags(riscv-hi) @x
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], target-flags(riscv-lo) @x
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: $x10 = COPY [[ADDI]]
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: PseudoRET implicit $x10
@@ -79,7 +79,7 @@ body:             |
     ; RV64-NOPIE-TAG-NEXT: PseudoRET implicit $x10
     ;
     ; RV64-SMALL-NOPIE-NOTAG-LABEL: name: extern_weak_global_addr
-    ; RV64-SMALL-NOPIE-NOTAG: [[LUI:%[0-9]+]]:gpr = LUI @y + 4
+    ; RV64-SMALL-NOPIE-NOTAG: [[LUI:%[0-9]+]]:gpr = LUI target-flags(riscv-hi) @y
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], target-flags(riscv-lo) @y
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: $x10 = COPY [[ADDI]]
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: PseudoRET implicit $x10
@@ -112,7 +112,7 @@ body:             |
     ; RV64-NOPIE-TAG-NEXT: PseudoRET implicit $x10
     ;
     ; RV64-SMALL-NOPIE-NOTAG-LABEL: name: local_global_addr
-    ; RV64-SMALL-NOPIE-NOTAG: [[LUI:%[0-9]+]]:gpr = LUI @z + 4
+    ; RV64-SMALL-NOPIE-NOTAG: [[LUI:%[0-9]+]]:gpr = LUI target-flags(riscv-hi) @z
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], target-flags(riscv-lo) @z
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: $x10 = COPY [[ADDI]]
     ; RV64-SMALL-NOPIE-NOTAG-NEXT: PseudoRET implicit $x10

@@ -183,7 +183,8 @@ static StructType *getResRetType(Type *OverloadTy, LLVMContext &Ctx) {
 }
 
 static StructType *getHandleType(LLVMContext &Ctx) {
-  return getOrCreateStructType("dx.types.Handle", Type::getInt8PtrTy(Ctx), Ctx);
+  return getOrCreateStructType("dx.types.Handle", PointerType::getUnqual(Ctx),
+                               Ctx);
 }
 
 static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {

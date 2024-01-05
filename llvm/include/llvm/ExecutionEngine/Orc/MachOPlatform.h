@@ -39,6 +39,23 @@ public:
   using MachOJITDylibDepInfoMap =
       std::vector<std::pair<ExecutorAddr, MachOJITDylibDepInfo>>;
 
+  // Used internally by MachOPlatform, but made public to enable serialization.
+  enum class MachOExecutorSymbolFlags : uint8_t {
+    None = 0,
+    Weak = 1U << 0,
+    Callable = 1U << 1,
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
+  };
+
+  /// Used by setupJITDylib to create MachO header MaterializationUnits for
+  /// JITDylibs.
+  using MachOHeaderMUBuilder =
+      unique_function<std::unique_ptr<MaterializationUnit>(MachOPlatform &MOP)>;
+
+  /// Simple MachO header graph builder.
+  static inline std::unique_ptr<MaterializationUnit>
+  buildSimpleMachOHeaderMU(MachOPlatform &MOP);
+
   /// Try to create a MachOPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
   ///
@@ -80,16 +97,22 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
+         MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
+
+  NonOwningSymbolStringPtr getMachOHeaderStartSymbol() const {
+    return NonOwningSymbolStringPtr(MachOHeaderStartSymbol);
+  }
 
   Error setupJITDylib(JITDylib &JD) override;
   Error teardownJITDylib(JITDylib &JD) override;
@@ -110,6 +133,9 @@ public:
   standardRuntimeUtilityAliases();
 
 private:
+  using SymbolTableVector = SmallVector<
+      std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>;
+
   // Data needed for bootstrap only.
   struct BootstrapInfo {
     std::mutex Mutex;
@@ -117,6 +143,7 @@ private:
     size_t ActiveGraphs = 0;
     shared::AllocActions DeferredAAs;
     ExecutorAddr MachOHeaderAddr;
+    SymbolTableVector SymTab;
   };
 
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
@@ -164,6 +191,12 @@ private:
       bool Finalized = false;
     };
 
+    struct SymbolTablePair {
+      jitlink::Symbol *OriginalSym = nullptr;
+      jitlink::Symbol *NameSym = nullptr;
+    };
+    using JITSymTabVector = SmallVector<SymbolTablePair>;
+
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
@@ -183,13 +216,19 @@ private:
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
     std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
-
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
                                          bool InBootstrapPhase);
 
     Error createObjCRuntimeObject(jitlink::LinkGraph &G);
     Error populateObjCRuntimeObject(jitlink::LinkGraph &G,
                                     MaterializationResponsibility &MR);
+
+    Error prepareSymbolTableRegistration(jitlink::LinkGraph &G,
+                                         JITSymTabVector &JITSymTabInfo);
+    Error addSymbolTableRegistration(jitlink::LinkGraph &G,
+                                     MaterializationResponsibility &MR,
+                                     JITSymTabVector &JITSymTabInfo,
+                                     bool InBootstrapPhase);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
@@ -208,13 +247,18 @@ private:
   using PushInitializersSendResultFn =
       unique_function<void(Expected<MachOJITDylibDepInfoMap>)>;
   using SendSymbolAddressFn = unique_function<void(Expected<ExecutorAddr>)>;
+  using PushSymbolsInSendResultFn = unique_function<void(Error)>;
 
   static bool supportedTarget(const Triple &TT);
+
+  static jitlink::Edge::Kind getPointerEdgeKind(jitlink::LinkGraph &G);
+
+  static MachOExecutorSymbolFlags flagsForSymbol(jitlink::Symbol &Sym);
 
   MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                 JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
-                Error &Err);
+                MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err);
 
   // Associate MachOPlatform JIT-side runtime support functions with handlers.
   Error associateRuntimeSupportFunctions();
@@ -229,9 +273,12 @@ private:
   void rt_pushInitializers(PushInitializersSendResultFn SendResult,
                            ExecutorAddr JDHeaderAddr);
 
-  // Handle requests for symbol addresses from the ORC runtime.
-  void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
-                       StringRef SymbolName);
+  // Request that that the given symbols be materialized. The bool element of
+  // each pair indicates whether the symbol must be initialized, or whether it
+  // is optional. If any required symbol is not found then the pushSymbols
+  // function will return an error.
+  void rt_pushSymbols(PushSymbolsInSendResultFn SendResult, ExecutorAddr Handle,
+                      const std::vector<std::pair<StringRef, bool>> &Symbols);
 
   // Call the ORC runtime to create a pthread key.
   Expected<uint64_t> createPThreadKey();
@@ -239,6 +286,7 @@ private:
   ExecutionSession &ES;
   JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
+  MachOHeaderMUBuilder BuildMachOHeaderMU;
 
   SymbolStringPtr MachOHeaderStartSymbol = ES.intern("___dso_handle");
 
@@ -260,6 +308,10 @@ private:
       ES.intern("___orc_rt_macho_register_jitdylib")};
   RuntimeFunction DeregisterJITDylib{
       ES.intern("___orc_rt_macho_deregister_jitdylib")};
+  RuntimeFunction RegisterObjectSymbolTable{
+      ES.intern("___orc_rt_macho_register_object_symbol_table")};
+  RuntimeFunction DeregisterObjectSymbolTable{
+      ES.intern("___orc_rt_macho_deregister_object_symbol_table")};
   RuntimeFunction RegisterObjectPlatformSections{
       ES.intern("___orc_rt_macho_register_object_platform_sections")};
   RuntimeFunction DeregisterObjectPlatformSections{
@@ -281,12 +333,49 @@ private:
   std::atomic<BootstrapInfo *> Bootstrap;
 };
 
-namespace shared {
+// Generates a MachO header.
+class SimpleMachOHeaderMU : public MaterializationUnit {
+public:
+  SimpleMachOHeaderMU(MachOPlatform &MOP, SymbolStringPtr HeaderStartSymbol);
+  StringRef getName() const override { return "MachOHeaderMU"; }
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override;
 
-using SPSNamedExecutorAddrRangeSequence =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>;
+protected:
+  virtual jitlink::Block &createHeaderBlock(JITDylib &JD, jitlink::LinkGraph &G,
+                                            jitlink::Section &HeaderSection);
 
-} // end namespace shared
+  MachOPlatform &MOP;
+
+private:
+  struct HeaderSymbol {
+    const char *Name;
+    uint64_t Offset;
+  };
+
+  static constexpr HeaderSymbol AdditionalHeaderSymbols[] = {
+      {"___mh_executable_header", 0}};
+
+  void addMachOHeader(JITDylib &JD, jitlink::LinkGraph &G,
+                      const SymbolStringPtr &InitializerSymbol);
+  static MaterializationUnit::Interface
+  createHeaderInterface(MachOPlatform &MOP,
+                        const SymbolStringPtr &HeaderStartSymbol);
+};
+
+/// Simple MachO header graph builder.
+inline std::unique_ptr<MaterializationUnit>
+MachOPlatform::buildSimpleMachOHeaderMU(MachOPlatform &MOP) {
+  return std::make_unique<SimpleMachOHeaderMU>(MOP, MOP.MachOHeaderStartSymbol);
+}
+
+struct MachOHeaderInfo {
+  size_t PageSize = 0;
+  uint32_t CPUType = 0;
+  uint32_t CPUSubType = 0;
+};
+MachOHeaderInfo getMachOHeaderInfoFromTriple(const Triple &TT);
+
 } // end namespace orc
 } // end namespace llvm
 

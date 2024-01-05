@@ -65,10 +65,10 @@ struct llvm::gsym::CUInfo {
   /// the first client that asks for a compile unit file index will end up
   /// doing the conversion, and subsequent clients will get the cached GSYM
   /// index.
-  uint32_t DWARFToGSYMFileIndex(GsymCreator &Gsym, uint32_t DwarfFileIdx) {
-    if (!LineTable)
-      return 0;
-    assert(DwarfFileIdx < FileCache.size());
+  std::optional<uint32_t> DWARFToGSYMFileIndex(GsymCreator &Gsym,
+                                               uint32_t DwarfFileIdx) {
+    if (!LineTable || DwarfFileIdx >= FileCache.size())
+      return std::nullopt;
     uint32_t &GsymFileIdx = FileCache[DwarfFileIdx];
     if (GsymFileIdx != UINT32_MAX)
       return GsymFileIdx;
@@ -156,7 +156,7 @@ getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
   // Some GCC optimizations create functions with names ending with .isra.<num>
   // or .part.<num> and those names are just DW_AT_name, not DW_AT_linkage_name
   // If it looks like it could be the case, don't add any prefix
-  if (ShortName.startswith("_Z") &&
+  if (ShortName.starts_with("_Z") &&
       (ShortName.contains(".isra.") || ShortName.contains(".part.")))
     return Gsym.insertString(ShortName, /* Copy */ false);
 
@@ -272,14 +272,24 @@ static void parseInlineInfo(GsymCreator &Gsym, raw_ostream *Log, CUInfo &CUI,
 
     if (auto NameIndex = getQualifiedNameIndex(Die, CUI.Language, Gsym))
       II.Name = *NameIndex;
-    II.CallFile = CUI.DWARFToGSYMFileIndex(
-        Gsym, dwarf::toUnsigned(Die.find(dwarf::DW_AT_call_file), 0));
-    II.CallLine = dwarf::toUnsigned(Die.find(dwarf::DW_AT_call_line), 0);
-    // parse all children and append to parent
-    for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, II,
-                      AllInlineRanges, WarnIfEmpty);
-    Parent.Children.emplace_back(std::move(II));
+    const uint64_t DwarfFileIdx = dwarf::toUnsigned(
+        Die.findRecursively(dwarf::DW_AT_call_file), UINT32_MAX);
+    std::optional<uint32_t> OptGSymFileIdx =
+        CUI.DWARFToGSYMFileIndex(Gsym, DwarfFileIdx);
+    if (OptGSymFileIdx) {
+      II.CallFile = OptGSymFileIdx.value();
+      II.CallLine = dwarf::toUnsigned(Die.find(dwarf::DW_AT_call_line), 0);
+      // parse all children and append to parent
+      for (DWARFDie ChildDie : Die.children())
+        parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, II,
+                        AllInlineRanges, WarnIfEmpty);
+      Parent.Children.emplace_back(std::move(II));
+    } else if (Log) {
+      *Log << "error: inlined function DIE at " << HEX32(Die.getOffset())
+           << " has an invalid file index " << DwarfFileIdx
+           << " in its DW_AT_call_file attribute, this inline entry and all "
+           << "children will be removed.\n";
+    }
     return;
   }
   if (Tag == dwarf::DW_TAG_subprogram || Tag == dwarf::DW_TAG_lexical_block) {
@@ -306,8 +316,20 @@ static void convertFunctionLineTable(raw_ostream *Log, CUInfo &CUI,
     // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
     std::string FilePath = Die.getDeclFile(
         DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
-    if (FilePath.empty())
+    if (FilePath.empty()) {
+      // If we had a DW_AT_decl_file, but got no file then we need to emit a
+      // warning.
+      if (Log) {
+        const uint64_t DwarfFileIdx = dwarf::toUnsigned(
+            Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
+        *Log << "error: function DIE at " << HEX32(Die.getOffset())
+             << " has an invalid file index " << DwarfFileIdx
+             << " in its DW_AT_decl_file attribute, unable to create a single "
+             << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
+             << "attributes.\n";
+      }
       return;
+    }
     if (auto Line =
             dwarf::toUnsigned(Die.findRecursively({dwarf::DW_AT_decl_line}))) {
       LineEntry LE(StartAddress, Gsym.insertFile(FilePath), *Line);
@@ -322,7 +344,20 @@ static void convertFunctionLineTable(raw_ostream *Log, CUInfo &CUI,
   for (uint32_t RowIndex : RowVector) {
     // Take file number and line/column from the row.
     const DWARFDebugLine::Row &Row = CUI.LineTable->Rows[RowIndex];
-    const uint32_t FileIdx = CUI.DWARFToGSYMFileIndex(Gsym, Row.File);
+    std::optional<uint32_t> OptFileIdx =
+        CUI.DWARFToGSYMFileIndex(Gsym, Row.File);
+    if (!OptFileIdx) {
+      if (Log) {
+        *Log << "error: function DIE at " << HEX32(Die.getOffset()) << " has "
+             << "a line entry with invalid DWARF file index, this entry will "
+             << "be removed:\n";
+        Row.dumpTableHeader(*Log, /*Indent=*/0);
+        Row.dump(*Log);
+        *Log << "\n";
+      }
+      continue;
+    }
+    const uint32_t FileIdx = OptFileIdx.value();
     uint64_t RowAddress = Row.Address.Address;
     // Watch out for a RowAddress that is in the middle of a line table entry
     // in the DWARF. If we pass an address in between two line table entries

@@ -34,6 +34,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 static ConstString g_this = ConstString("this");
+// Artificial coroutine-related variables emitted by clang.
+static ConstString g_promise = ConstString("__promise");
+static ConstString g_coro_frame = ConstString("__coro_frame");
 
 char CPPLanguageRuntime::ID = 0;
 
@@ -41,7 +44,7 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
-  return name == g_this;
+  return name == g_this || name == g_promise || name == g_coro_frame;
 }
 
 bool CPPLanguageRuntime::GetObjectDescription(Stream &str,
@@ -217,7 +220,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   llvm::StringRef vtable_name(symbol->GetName().GetStringRef());
   bool found_expected_start_string =
-      vtable_name.startswith("vtable for std::__1::__function::__func<");
+      vtable_name.starts_with("vtable for std::__1::__function::__func<");
 
   if (!found_expected_start_string)
     return optional_info;
@@ -274,7 +277,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   }
 
   // Case 4 or 5
-  if (symbol && !symbol->GetName().GetStringRef().startswith("vtable for") &&
+  if (symbol && !symbol->GetName().GetStringRef().starts_with("vtable for") &&
       !contains_lambda_identifier(first_template_parameter) && !has_invoke) {
     optional_info.callable_case =
         LibCppStdFunctionCallableCase::FreeOrMemberFunction;
@@ -309,7 +312,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     lldb::FunctionSP func_sp =
         vtable_cu->FindFunction([name_to_use](const FunctionSP &f) {
           auto name = f->GetName().GetStringRef();
-          if (name.startswith(name_to_use) && name.contains("operator"))
+          if (name.starts_with(name_to_use) && name.contains("operator"))
             return true;
 
           return false;
@@ -370,7 +373,7 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   // step into the wrapped callable.
   //
   bool found_expected_start_string =
-      function_name.startswith("std::__1::function<");
+      function_name.starts_with("std::__1::function<");
 
   if (!found_expected_start_string)
     return ret_plan_sp;

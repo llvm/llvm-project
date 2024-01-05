@@ -41,7 +41,7 @@ module {
     fir.store %arg0 to %1 : !fir.ref<!fir.complex<4>>
     %2 = fir.alloca !fir.char<1,10> {bindc_name = "r", uniq_name = "_QFtestEr"}
     %3 = fir.alloca !fir.complex<4> {bindc_name = "test", uniq_name = "_QFtestEtest"}
-    %4 = fir.address_of(@_QQcl.) : !fir.ref<!fir.char<1,0>>
+    %4 = fir.address_of(@_QQclX) : !fir.ref<!fir.char<1,0>>
     %5 = fir.convert %4 : (!fir.ref<!fir.char<1,0>>) -> !fir.ref<!fir.char<1,?>>
     %6 = fir.emboxchar %5, %c0 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
     %7 = fir.load %1 : !fir.ref<!fir.complex<4>>
@@ -59,7 +59,7 @@ module {
     return %15 : !fir.complex<4>
   }
   func.func private @_QPtest1(!fir.boxchar<1>, !fir.complex<4>) -> !fir.complex<4>
-  fir.global linkonce @_QQcl. constant : !fir.char<1,0> {
+  fir.global linkonce @_QQclX constant : !fir.char<1,0> {
     %0 = fir.string_lit ""(0) : !fir.char<1,0>
     fir.has_value %0 : !fir.char<1,0>
   }

@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"

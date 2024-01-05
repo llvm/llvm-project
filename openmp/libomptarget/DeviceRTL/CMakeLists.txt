@@ -301,7 +301,10 @@ endforeach()
 
 # Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)
-set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(omptarget.devicertl PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY "${LIBOMPTARGET_LLVM_LIBRARY_INTDIR}"
+  LINKER_LANGUAGE CXX
+)
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
 install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})

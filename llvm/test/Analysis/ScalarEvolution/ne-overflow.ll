@@ -15,7 +15,7 @@ define void @test(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-2 + %N) /u 2)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-2 + %N) /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -38,7 +38,7 @@ define void @test_preinc(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -131,7 +131,7 @@ define void @test_1024(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1024 + %N) /u 1024)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1024 + %N) /u 1024)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -154,7 +154,7 @@ define void @test_uneven_divide(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1431655765 * %N))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1431655765 * %N))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -253,7 +253,7 @@ define void @test_zext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:    {0,+,2}<nuw><%for.body> Added Flags: <nusw>
+; CHECK-NEXT:      {0,+,2}<nuw><%for.body> Added Flags: <nusw>
 ;
 entry:
   br label %for.body

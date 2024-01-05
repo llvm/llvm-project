@@ -1968,18 +1968,6 @@ Constant *ConstantExpr::getCast(unsigned oc, Constant *C, Type *Ty,
     llvm_unreachable("Invalid cast opcode");
   case Instruction::Trunc:
     return getTrunc(C, Ty, OnlyIfReduced);
-  case Instruction::FPTrunc:
-    return getFPTrunc(C, Ty, OnlyIfReduced);
-  case Instruction::FPExt:
-    return getFPExtend(C, Ty, OnlyIfReduced);
-  case Instruction::UIToFP:
-    return getUIToFP(C, Ty, OnlyIfReduced);
-  case Instruction::SIToFP:
-    return getSIToFP(C, Ty, OnlyIfReduced);
-  case Instruction::FPToUI:
-    return getFPToUI(C, Ty, OnlyIfReduced);
-  case Instruction::FPToSI:
-    return getFPToSI(C, Ty, OnlyIfReduced);
   case Instruction::PtrToInt:
     return getPtrToInt(C, Ty, OnlyIfReduced);
   case Instruction::IntToPtr:
@@ -2023,18 +2011,6 @@ Constant *ConstantExpr::getPointerBitCastOrAddrSpaceCast(Constant *S,
   return getBitCast(S, Ty);
 }
 
-Constant *ConstantExpr::getFPCast(Constant *C, Type *Ty) {
-  assert(C->getType()->isFPOrFPVectorTy() && Ty->isFPOrFPVectorTy() &&
-         "Invalid cast");
-  unsigned SrcBits = C->getType()->getScalarSizeInBits();
-  unsigned DstBits = Ty->getScalarSizeInBits();
-  if (SrcBits == DstBits)
-    return C; // Avoid a useless cast
-  Instruction::CastOps opcode =
-    (SrcBits > DstBits ? Instruction::FPTrunc : Instruction::FPExt);
-  return getCast(opcode, C, Ty);
-}
-
 Constant *ConstantExpr::getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced) {
 #ifndef NDEBUG
   bool fromVec = isa<VectorType>(C->getType());
@@ -2047,74 +2023,6 @@ Constant *ConstantExpr::getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced) {
          "SrcTy must be larger than DestTy for Trunc!");
 
   return getFoldedCast(Instruction::Trunc, C, Ty, OnlyIfReduced);
-}
-
-Constant *ConstantExpr::getFPTrunc(Constant *C, Type *Ty, bool OnlyIfReduced) {
-#ifndef NDEBUG
-  bool fromVec = isa<VectorType>(C->getType());
-  bool toVec = isa<VectorType>(Ty);
-#endif
-  assert((fromVec == toVec) && "Cannot convert from scalar to/from vector");
-  assert(C->getType()->isFPOrFPVectorTy() && Ty->isFPOrFPVectorTy() &&
-         C->getType()->getScalarSizeInBits() > Ty->getScalarSizeInBits()&&
-         "This is an illegal floating point truncation!");
-  return getFoldedCast(Instruction::FPTrunc, C, Ty, OnlyIfReduced);
-}
-
-Constant *ConstantExpr::getFPExtend(Constant *C, Type *Ty, bool OnlyIfReduced) {
-#ifndef NDEBUG
-  bool fromVec = isa<VectorType>(C->getType());
-  bool toVec = isa<VectorType>(Ty);
-#endif
-  assert((fromVec == toVec) && "Cannot convert from scalar to/from vector");
-  assert(C->getType()->isFPOrFPVectorTy() && Ty->isFPOrFPVectorTy() &&
-         C->getType()->getScalarSizeInBits() < Ty->getScalarSizeInBits()&&
-         "This is an illegal floating point extension!");
-  return getFoldedCast(Instruction::FPExt, C, Ty, OnlyIfReduced);
-}
-
-Constant *ConstantExpr::getUIToFP(Constant *C, Type *Ty, bool OnlyIfReduced) {
-#ifndef NDEBUG
-  bool fromVec = isa<VectorType>(C->getType());
-  bool toVec = isa<VectorType>(Ty);
-#endif
-  assert((fromVec == toVec) && "Cannot convert from scalar to/from vector");
-  assert(C->getType()->isIntOrIntVectorTy() && Ty->isFPOrFPVectorTy() &&
-         "This is an illegal uint to floating point cast!");
-  return getFoldedCast(Instruction::UIToFP, C, Ty, OnlyIfReduced);
-}
-
-Constant *ConstantExpr::getSIToFP(Constant *C, Type *Ty, bool OnlyIfReduced) {
-#ifndef NDEBUG
-  bool fromVec = isa<VectorType>(C->getType());
-  bool toVec = isa<VectorType>(Ty);
-#endif
-  assert((fromVec == toVec) && "Cannot convert from scalar to/from vector");
-  assert(C->getType()->isIntOrIntVectorTy() && Ty->isFPOrFPVectorTy() &&
-         "This is an illegal sint to floating point cast!");
-  return getFoldedCast(Instruction::SIToFP, C, Ty, OnlyIfReduced);
-}
-
-Constant *ConstantExpr::getFPToUI(Constant *C, Type *Ty, bool OnlyIfReduced) {
-#ifndef NDEBUG
-  bool fromVec = isa<VectorType>(C->getType());
-  bool toVec = isa<VectorType>(Ty);
-#endif
-  assert((fromVec == toVec) && "Cannot convert from scalar to/from vector");
-  assert(C->getType()->isFPOrFPVectorTy() && Ty->isIntOrIntVectorTy() &&
-         "This is an illegal floating point to uint cast!");
-  return getFoldedCast(Instruction::FPToUI, C, Ty, OnlyIfReduced);
-}
-
-Constant *ConstantExpr::getFPToSI(Constant *C, Type *Ty, bool OnlyIfReduced) {
-#ifndef NDEBUG
-  bool fromVec = isa<VectorType>(C->getType());
-  bool toVec = isa<VectorType>(Ty);
-#endif
-  assert((fromVec == toVec) && "Cannot convert from scalar to/from vector");
-  assert(C->getType()->isFPOrFPVectorTy() && Ty->isIntOrIntVectorTy() &&
-         "This is an illegal floating point to sint cast!");
-  return getFoldedCast(Instruction::FPToSI, C, Ty, OnlyIfReduced);
 }
 
 Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
@@ -2225,13 +2133,13 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::FRem:
   case Instruction::And:
   case Instruction::Or:
+  case Instruction::LShr:
+  case Instruction::AShr:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
   case Instruction::Xor:
     return true;
   default:
@@ -2252,13 +2160,13 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::FRem:
   case Instruction::And:
   case Instruction::Or:
+  case Instruction::LShr:
+  case Instruction::AShr:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
   case Instruction::Xor:
     return true;
   default:
@@ -2270,14 +2178,14 @@ bool ConstantExpr::isDesirableCastOp(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::ZExt:
   case Instruction::SExt:
-    return false;
-  case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::UIToFP:
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
+    return false;
+  case Instruction::Trunc:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2292,14 +2200,14 @@ bool ConstantExpr::isSupportedCastOp(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::ZExt:
   case Instruction::SExt:
-    return false;
-  case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::UIToFP:
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
+    return false;
+  case Instruction::Trunc:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2574,16 +2482,6 @@ Constant *ConstantExpr::getShl(Constant *C1, Constant *C2,
   return get(Instruction::Shl, C1, C2, Flags);
 }
 
-Constant *ConstantExpr::getLShr(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::LShr, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
-Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::AShr, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
 Constant *ConstantExpr::getExactLogBase2(Constant *C) {
   Type *Ty = C->getType();
   const APInt *IVal;
@@ -2656,6 +2554,32 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
     default:
       return nullptr;
   }
+}
+
+Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
+  switch (ID) {
+  case Intrinsic::umax:
+    return Constant::getNullValue(Ty);
+  case Intrinsic::umin:
+    return Constant::getAllOnesValue(Ty);
+  case Intrinsic::smax:
+    return Constant::getIntegerValue(
+        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+  case Intrinsic::smin:
+    return Constant::getIntegerValue(
+        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+  default:
+    return nullptr;
+  }
+}
+
+Constant *ConstantExpr::getIdentity(Instruction *I, Type *Ty,
+                                    bool AllowRHSConstant, bool NSZ) {
+  if (I->isBinaryOp())
+    return getBinOpIdentity(I->getOpcode(), Ty, AllowRHSConstant, NSZ);
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    return getIntrinsicIdentity(II->getIntrinsicID(), Ty);
+  return nullptr;
 }
 
 Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty) {

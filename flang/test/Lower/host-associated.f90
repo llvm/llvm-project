@@ -1,5 +1,5 @@
 ! Test internal procedure host association lowering.
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test non character intrinsic scalars
@@ -70,7 +70,7 @@ contains
     ! CHECK: %[[bb:.*]] = fir.load %[[b]] : !fir.llvm_ptr<!fir.ref<f32>>
     ! CHECK-DAG: %[[bd:.*]] = fir.load %[[bb]] : !fir.ref<f32>
     ! CHECK-DAG: %[[ad:.*]] = fir.load %[[aa]] : !fir.ref<f32>
-    ! CHECK: %{{.*}} = arith.cmpf ogt, %[[ad]], %[[bd]] : f32
+    ! CHECK: %{{.*}} = arith.cmpf ogt, %[[ad]], %[[bd]] {{.*}} : f32
     if (a > b) then
        b = b + 2.0
     end if
@@ -478,7 +478,7 @@ end subroutine test_proc_dummy_other
 ! CHECK-DAG:         %[[VAL_3:.*]] = arith.constant false
 ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 1 : index
 ! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant 32 : i8
-! CHECK-DAG:         %[[VAL_6:.*]] = arith.constant -1 : i32
+! CHECK-DAG:         %[[VAL_6:.*]] = arith.constant 6 : i32
 ! CHECK-DAG:         %[[VAL_8:.*]] = arith.constant 10 : i64
 ! CHECK-DAG:         %[[VAL_9:.*]] = arith.constant 40 : index
 ! CHECK-DAG:         %[[VAL_10:.*]] = arith.constant 0 : index
@@ -488,7 +488,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_1]] : (!fir.ref<tuple<!fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
 ! CHECK:         %[[VAL_16:.*]] = fir.emboxchar %[[VAL_12]], %[[VAL_0]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 ! CHECK:         fir.store %[[VAL_16]] to %[[VAL_14]] : !fir.ref<!fir.boxchar<1>>
-! CHECK:         %[[VAL_17:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,9>>
+! CHECK:         %[[VAL_17:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,9>>
 ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_2]] : (index) -> i64
 ! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
@@ -507,7 +507,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_29:.*]] = arith.subi %[[VAL_24]], %[[VAL_4]] : index
 ! CHECK:         br ^bb1(%[[VAL_28]], %[[VAL_29]] : index, index)
 ! CHECK:       ^bb3:
-! CHECK:         %[[VAL_30:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_30:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_32:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_6]], %[[VAL_31]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_33:.*]] = fir.address_of(@_QFtest_proc_dummy_charPgen_message) : (!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<!fir.boxchar<1>>>) -> !fir.boxchar<1>
@@ -573,7 +573,7 @@ end subroutine test_proc_dummy_other
 ! CHECK-DAG:     %[[VAL_6:.*]] = arith.constant 1 : index
 ! CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 32 : i8
 ! CHECK-DAG:     %[[VAL_8:.*]] = arith.constant 0 : index
-! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,12>>
+! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,12>>
 ! CHECK:         %[[VAL_11:.*]] = fir.extract_value %[[VAL_2]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
 ! CHECK:         %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:         %[[VAL_13:.*]] = fir.extract_value %[[VAL_2]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> i64

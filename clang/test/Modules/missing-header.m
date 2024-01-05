@@ -9,5 +9,5 @@
 // CHECK-NOT: missing_unavailable_headers
 
 @import missing_headers;
-// CHECK: module.map:15:27: error: header 'missing.h' not found
+// CHECK: module.modulemap:15:27: error: header 'missing.h' not found
 // CHECK: could not build module 'missing_headers'

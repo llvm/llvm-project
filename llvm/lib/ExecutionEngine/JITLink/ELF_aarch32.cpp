@@ -53,6 +53,10 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
     return aarch32::Thumb_MovwAbsNC;
   case ELF::R_ARM_THM_MOVT_ABS:
     return aarch32::Thumb_MovtAbs;
+  case ELF::R_ARM_THM_MOVW_PREL_NC:
+    return aarch32::Thumb_MovwPrelNC;
+  case ELF::R_ARM_THM_MOVT_PREL:
+    return aarch32::Thumb_MovtPrel;
   }
 
   return make_error<JITLinkError>(
@@ -83,6 +87,10 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_THM_MOVW_ABS_NC;
   case aarch32::Thumb_MovtAbs:
     return ELF::R_ARM_THM_MOVT_ABS;
+  case aarch32::Thumb_MovwPrelNC:
+    return ELF::R_ARM_THM_MOVW_PREL_NC;
+  case aarch32::Thumb_MovtPrel:
+    return ELF::R_ARM_THM_MOVT_PREL;
   }
 
   return make_error<JITLinkError>(formatv("Invalid aarch32 edge {0:d}: ",
@@ -165,14 +173,13 @@ private:
 
     auto FixupAddress = orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
-    Edge E(*Kind, Offset, *GraphSymbol, 0);
 
     Expected<int64_t> Addend =
-        aarch32::readAddend(*Base::G, BlockToFix, E, ArmCfg);
+        aarch32::readAddend(*Base::G, BlockToFix, Offset, *Kind, ArmCfg);
     if (!Addend)
       return Addend.takeError();
 
-    E.setAddend(*Addend);
+    Edge E(*Kind, Offset, *GraphSymbol, *Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
       printEdge(dbgs(), BlockToFix, E, getELFAArch32EdgeKindName(*Kind));

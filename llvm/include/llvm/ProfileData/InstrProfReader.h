@@ -123,9 +123,6 @@ public:
 
   virtual bool instrEntryBBEnabled() const = 0;
 
-  /// Return true if we must provide debug info to create PGO profiles.
-  virtual bool useDebugInfoCorrelate() const { return false; }
-
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
 
@@ -340,11 +337,7 @@ private:
   const uint8_t *ValueDataStart;
   uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
-
-  /// Total size of binary ids.
-  uint64_t BinaryIdsSize{0};
-  /// Start address of binary id length and data pairs.
-  const uint8_t *BinaryIdsStart;
+  std::vector<llvm::object::BuildID> BinaryIds;
 
   std::function<void(Error)> Warn;
 
@@ -381,12 +374,6 @@ public:
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
-
-  bool useDebugInfoCorrelate() const override {
-    return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
-  }
-
-  bool useCorrelate() const { return useDebugInfoCorrelate(); }
 
   bool hasSingleByteCoverage() const override {
     return (Version & VARIANT_MASK_BYTE_COVERAGE) != 0;

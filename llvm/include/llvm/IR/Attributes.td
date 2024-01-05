@@ -151,6 +151,9 @@ def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
 /// Function does not deallocate memory.
 def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
 
+/// Argument is dead if the call unwinds.
+def DeadOnUnwind : EnumAttr<"dead_on_unwind", [ParamAttr]>;
+
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", [FnAttr]>;
 
@@ -317,6 +320,9 @@ def MustProgress : EnumAttr<"mustprogress", [FnAttr]>;
 
 /// Function is a presplit coroutine.
 def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
+
+/// The coroutine would only be destroyed when it is complete.
+def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

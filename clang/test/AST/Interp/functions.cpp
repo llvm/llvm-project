@@ -267,6 +267,17 @@ namespace InvalidCall {
                    // ref-error {{must be initialized by a constant expression}} \
                    // ref-note {{in call to 'SS()'}}
 
+
+  /// This should not emit a diagnostic.
+  constexpr int f();
+  constexpr int a() {
+    return f();
+  }
+  constexpr int f() {
+    return 5;
+  }
+  static_assert(a() == 5, "");
+
 }
 
 namespace CallWithArgs {
@@ -370,4 +381,11 @@ namespace Variadic {
 
   constexpr int (*VFP)(...) = variadic_function2;
   static_assert(VFP() == 12, "");
+}
+
+namespace Packs {
+  template<typename...T>
+  constexpr int foo() { return sizeof...(T); }
+  static_assert(foo<int, char>() == 2, "");
+  static_assert(foo<>() == 0, "");
 }

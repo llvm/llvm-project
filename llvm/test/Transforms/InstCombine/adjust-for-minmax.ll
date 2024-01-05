@@ -414,7 +414,7 @@ define <2 x i64> @umax_zext_vec(<2 x i32> %a) {
 define i64 @umin_zext(i32 %a) {
 ; CHECK-LABEL: @umin_zext(
 ; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 2)
-; CHECK-NEXT:    [[MIN:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MIN]]
 ;
   %a_ext = zext i32 %a to i64
@@ -426,7 +426,7 @@ define i64 @umin_zext(i32 %a) {
 define <2 x i64> @umin_zext_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @umin_zext_vec(
 ; CHECK-NEXT:    [[NARROW:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 2, i32 2>)
-; CHECK-NEXT:    [[MIN:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
+; CHECK-NEXT:    [[MIN:%.*]] = zext nneg <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MIN]]
 ;
   %a_ext = zext <2 x i32> %a to <2 x i64>

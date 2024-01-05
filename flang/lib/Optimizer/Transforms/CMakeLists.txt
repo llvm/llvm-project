@@ -17,10 +17,10 @@ add_flang_library(FIRTransforms
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
-  OMPEarlyOutlining.cpp
   OMPFunctionFiltering.cpp
   OMPMarkDeclareTarget.cpp
   VScaleAttr.cpp
+  FunctionAttr.cpp
 
   DEPENDS
   FIRDialect

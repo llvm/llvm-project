@@ -75,6 +75,14 @@ enum IndirectCallPromotionType : char {
   ICP_ALL          /// Perform ICP on calls and jump tables.
 };
 
+/// Hash functions supported for BF/BB hashing.
+enum class HashFunction : char {
+  StdHash, /// std::hash, implementation is platform-dependent. Provided for
+           /// backwards compatibility.
+  XXH3,    /// llvm::xxh3_64bits, the default.
+  Default = XXH3,
+};
+
 /// Information on a single indirect call to a particular callee.
 struct IndirectCallProfile {
   MCSymbol *Symbol;
@@ -318,10 +326,6 @@ private:
 
   /// Execution halts whenever this function is entered.
   bool TrapsOnEntry{false};
-
-  /// True if the function had an indirect branch with a fixed internal
-  /// destination.
-  bool HasFixedIndirectBranch{false};
 
   /// True if the function is a fragment of another function. This means that
   /// this function could only be entered via its parent or one of its sibling
@@ -1240,6 +1244,8 @@ public:
       return SmallString<32>(CodeSectionName);
     if (Fragment == FragmentNum::cold())
       return SmallString<32>(ColdCodeSectionName);
+    if (BC.HasWarmSection && Fragment == FragmentNum::warm())
+      return SmallString<32>(BC.getWarmCodeSectionName());
     return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
   }
 
@@ -1445,7 +1451,8 @@ public:
 
   /// Rebuilds BBs layout, ignoring dead BBs. Returns the number of removed
   /// BBs and the removed number of bytes of code.
-  std::pair<unsigned, uint64_t> eraseInvalidBBs();
+  std::pair<unsigned, uint64_t>
+  eraseInvalidBBs(const MCCodeEmitter *Emitter = nullptr);
 
   /// Get the relative order between two basic blocks in the original
   /// layout.  The result is > 0 if B occurs before A and < 0 if B
@@ -2172,7 +2179,7 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-transaltion table after
+  /// Return true if this function needs an address-translation table after
   /// its code emission.
   bool requiresAddressTranslation() const;
 
@@ -2235,18 +2242,21 @@ public:
   ///
   /// If \p UseDFS is set, process basic blocks in DFS order. Otherwise, use
   /// the existing layout order.
+  /// \p HashFunction specifies which function is used for BF hashing.
   ///
   /// By default, instruction operands are ignored while calculating the hash.
   /// The caller can change this via passing \p OperandHashFunc function.
   /// The return result of this function will be mixed with internal hash.
   size_t computeHash(
-      bool UseDFS = false,
+      bool UseDFS = false, HashFunction HashFunction = HashFunction::Default,
       OperandHashFuncTy OperandHashFunc = [](const MCOperand &) {
         return std::string();
       }) const;
 
   /// Compute hash values for each block of the function.
-  void computeBlockHashes() const;
+  /// \p HashFunction specifies which function is used for BB hashing.
+  void
+  computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
   void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
 
@@ -2309,15 +2319,10 @@ public:
   /// removed.
   uint64_t translateInputToOutputAddress(uint64_t Address) const;
 
-  /// Take address ranges corresponding to the input binary and translate
-  /// them to address ranges in the output binary.
-  DebugAddressRangesVector translateInputToOutputRanges(
-      const DWARFAddressRangesVector &InputRanges) const;
-
-  /// Similar to translateInputToOutputRanges() but operates on location lists
-  /// and moves associated data to output location lists.
-  DebugLocationsVector
-  translateInputToOutputLocationList(const DebugLocationsVector &InputLL) const;
+  /// Translate a contiguous range of addresses in the input binary into a set
+  /// of ranges in the output binary.
+  DebugAddressRangesVector
+  translateInputToOutputRange(DebugAddressRange InRange) const;
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;

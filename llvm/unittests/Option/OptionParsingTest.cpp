@@ -9,6 +9,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "gtest/gtest.h"
 
@@ -50,6 +51,7 @@ enum OptionFlags {
 
 enum OptionVisibility {
   SubtoolVis = (1 << 2),
+  MultiLineVis = (1 << 3),
 };
 
 static constexpr OptTable::Info InfoTable[] = {
@@ -537,4 +539,24 @@ TYPED_TEST(OptTableTest, UnknownGroupedShortOptions) {
   EXPECT_EQ("-z", Unknown[1]);
   EXPECT_EQ("-u", Unknown[2]);
   EXPECT_EQ("-z", Unknown[3]);
+}
+
+TYPED_TEST(OptTableTest, PrintMultilineHelpText) {
+  TypeParam T;
+  std::string Help;
+  raw_string_ostream RSO(Help);
+  T.printHelp(RSO, "usage", "title", /*ShowHidden=*/false,
+              /*ShowAllAliases=*/false, Visibility(MultiLineVis));
+  EXPECT_STREQ(Help.c_str(), R"(OVERVIEW: title
+
+USAGE: usage
+
+OPTIONS:
+  -multiline-help-with-long-name
+                  This a help text that has
+                  multiple lines in it
+                  and a long name
+  -multiline-help This a help text that has
+                  multiple lines in it
+)");
 }

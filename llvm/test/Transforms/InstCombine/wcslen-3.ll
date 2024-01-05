@@ -125,7 +125,7 @@ define i64 @test_simplify11(i16 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
 ; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i16 9, [[AND]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = zext i16 [[NARROW]] to i64
+; CHECK-NEXT:    [[HELLO_L:%.*]] = zext nneg i16 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i16 %x, 7

@@ -150,15 +150,20 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
-# Checking Threading requirements
-find_package(Threads REQUIRED)
-if(WIN32)
-  if(NOT CMAKE_USE_WIN32_THREADS_INIT)
-    libomp_error_say("Need Win32 thread interface on Windows.")
-  endif()
-else()
-  if(NOT CMAKE_USE_PTHREADS_INIT)
-    libomp_error_say("Need pthread interface on Unix-like systems.")
+# Checking threading requirements. Note that compiling to WebAssembly threads
+# with either the Emscripten or wasi-threads flavor ends up using the pthreads
+# interface in a WebAssembly-compiled libc; CMake does not yet know how to
+# detect this.
+if (NOT WASM)
+  find_package(Threads REQUIRED)
+  if(WIN32)
+    if(NOT CMAKE_USE_WIN32_THREADS_INIT)
+      libomp_error_say("Need Win32 thread interface on Windows.")
+    endif()
+  else()
+    if(NOT CMAKE_USE_PTHREADS_INIT)
+      libomp_error_say("Need pthread interface on Unix-like systems.")
+    endif()
   endif()
 endif()
 

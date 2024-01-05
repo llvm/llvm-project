@@ -182,6 +182,20 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_arm_sve_streaming_attrs_gen",
+    tbl_outs = [(
+        "-gen-arm-sve-streaming-attrs",
+        "include/clang/Basic/arm_sve_streaming_attrs.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sve.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
     name = "basic_arm_sme_builtins_gen",
     tbl_outs = [(
         "-gen-arm-sme-builtins",
@@ -210,10 +224,38 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_arm_sme_builtins_za_state_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-builtin-za-state",
+        "include/clang/Basic/arm_sme_builtins_za_state.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
     name = "basic_arm_sme_sema_rangechecks_gen",
     tbl_outs = [(
         "-gen-arm-sme-sema-rangechecks",
         "include/clang/Basic/arm_sme_sema_rangechecks.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_streaming_attrs_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-streaming-attrs",
+        "include/clang/Basic/arm_sme_streaming_attrs.inc",
     )],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/arm_sme.td",
@@ -469,7 +511,7 @@ genrule(
         "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
+        "echo '#define CLANG_VERSION_STRING \"{vers}git\"' >> $@\n"
     ).format(
         major = LLVM_VERSION_MAJOR,
         minor = LLVM_VERSION_MINOR,
@@ -594,6 +636,7 @@ cc_library(
         ":sema_attr_gen",
         "//llvm:Core",
         "//llvm:FrontendDebug",
+        "//llvm:FrontendDriver",
         "//llvm:FrontendOpenMP",
         "//llvm:Instrumentation",
         "//llvm:MC",
@@ -1033,14 +1076,18 @@ cc_library(
     ],
     deps = [
         ":analysis",
+        ":apinotes",
         ":ast",
         ":basic",
         ":basic_arm_cde_aliases_gen",
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sme_builtins_gen",
+        ":basic_arm_sme_builtins_za_state_gen",
         ":basic_arm_sme_sema_rangechecks_gen",
+        ":basic_arm_sme_streaming_attrs_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
+        ":basic_arm_sve_streaming_attrs_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
@@ -1653,6 +1700,20 @@ gentbl(
 )
 
 gentbl(
+    name = "headers_arm_vector_type_gen",
+    tbl_outs = [(
+        "-gen-arm-vector-type",
+        "lib/Headers/arm_vector_types.h",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_neon.td",
+    td_srcs = [
+        "include/clang/Basic/arm_neon.td",
+        "include/clang/Basic/arm_neon_incl.td",
+    ],
+)
+
+gentbl(
     name = "headers_riscv_vector",
     tbl_outs = [(
         "-gen-riscv-vector-header",
@@ -1684,6 +1745,7 @@ builtin_headers = glob(
     "lib/Headers/arm_neon.h",
     "lib/Headers/arm_sve.h",
     "lib/Headers/arm_sme_draft_spec_subject_to_change.h",
+    "lib/Headers/arm_vector_types.h",
     "lib/Headers/arm_bf16.h",
     "lib/Headers/module.modulemap",
     "lib/Headers/riscv_vector.h",
@@ -1859,6 +1921,7 @@ cc_library(
         "//llvm:Coverage",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
+        "//llvm:FrontendDriver",
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenMP",
@@ -2327,6 +2390,7 @@ cc_binary(
     name = "clang-format",
     srcs = [
         "tools/clang-format/ClangFormat.cpp",
+        "lib/Format/MatchFilePath.h",
     ],
     stamp = 0,
     deps = [
@@ -2414,6 +2478,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IRReader",
         "//llvm:LTO",
         "//llvm:MC",
@@ -2469,6 +2534,8 @@ cc_binary(
         ":basic",
         ":frontend",
         ":interpreter",
+        ":lex",
+        ":sema",
         ":tooling",
         "//llvm:Core",
         "//llvm:LineEditor",

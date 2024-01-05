@@ -351,7 +351,7 @@ body:             |
   ; CHECK-NEXT:   CMP64rr [[NOT64r2]], [[COPY6]], implicit-def $eflags
   ; CHECK-NEXT:   undef [[MOV32ri2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32ri 0
   ; CHECK-NEXT:   [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[CMOV64rr]], [[MOV32ri2]], 4, implicit killed $eflags
-  ; CHECK-NEXT:   INLINEASM &"lock btsq $0,($1)", 1 /* sideeffect attdialect */, 4521993 /* reguse:GR64 */, [[MOV32ri2]], 4521993 /* reguse:GR64 */, undef %56:gr64, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
+  ; CHECK-NEXT:   INLINEASM &"lock btsq $0,($1)", 1 /* sideeffect attdialect */, 4784137 /* reguse:GR64 */, [[MOV32ri2]], 4784137 /* reguse:GR64 */, undef %56:gr64, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
   ; CHECK-NEXT:   LCMPXCHG32 undef %67:gr64, 1, $noreg, 0, $noreg, [[COPY5]], implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic (s32) on `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $rdi = COPY [[COPY4]]
@@ -471,7 +471,7 @@ body:             |
     %63:gr64 = NOT64r %63
     CMP64rr %63, %31, implicit-def $eflags
     %63:gr64 = CMOV64rr %63, %53, 4, implicit killed $eflags
-    INLINEASM &"lock btsq $0,($1)", 1 /* sideeffect attdialect */, 4521993 /* reguse:GR64 */, %53, 4521993 /* reguse:GR64 */, undef %56:gr64, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
+    INLINEASM &"lock btsq $0,($1)", 1 /* sideeffect attdialect */, 4784137 /* reguse:GR64 */, %53, 4784137 /* reguse:GR64 */, undef %56:gr64, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
     LCMPXCHG32 undef %67:gr64, 1, $noreg, 0, $noreg, %65, implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic (s32) on `ptr addrspace(1) undef`, addrspace 1)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rdi = COPY %64

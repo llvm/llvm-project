@@ -1862,7 +1862,7 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                          const Edge &E);
 
 /// Creates a new pointer block in the given section and returns an
-/// Anonymous symobl pointing to it.
+/// Anonymous symbol pointing to it.
 ///
 /// The pointer block will have the following default values:
 ///   alignment: PointerSize

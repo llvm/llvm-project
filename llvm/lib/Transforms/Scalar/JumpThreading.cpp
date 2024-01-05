@@ -102,11 +102,6 @@ static cl::opt<unsigned> PhiDuplicateThreshold(
     cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
     cl::Hidden);
 
-static cl::opt<bool> PrintLVIAfterJumpThreading(
-    "print-lvi-after-jump-threading",
-    cl::desc("Print the LazyValueInfo cache after JumpThreading"), cl::init(false),
-    cl::Hidden);
-
 static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
@@ -228,17 +223,15 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
     if (BP >= BranchProbability(50, 100))
       continue;
 
-    SmallVector<uint32_t, 2> Weights;
+    uint32_t Weights[2];
     if (PredBr->getSuccessor(0) == PredOutEdge.second) {
-      Weights.push_back(BP.getNumerator());
-      Weights.push_back(BP.getCompl().getNumerator());
+      Weights[0] = BP.getNumerator();
+      Weights[1] = BP.getCompl().getNumerator();
     } else {
-      Weights.push_back(BP.getCompl().getNumerator());
-      Weights.push_back(BP.getNumerator());
+      Weights[0] = BP.getCompl().getNumerator();
+      Weights[1] = BP.getNumerator();
     }
-    PredBr->setMetadata(LLVMContext::MD_prof,
-                        MDBuilder(PredBr->getParent()->getContext())
-                            .createBranchWeights(Weights));
+    setBranchWeights(*PredBr, Weights);
   }
 }
 
@@ -258,11 +251,6 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
               std::make_unique<DomTreeUpdater>(
                   &DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy),
               std::nullopt, std::nullopt);
-
-  if (PrintLVIAfterJumpThreading) {
-    dbgs() << "LVI for function '" << F.getName() << "':\n";
-    LVI.printLVI(F, getDomTreeUpdater()->getDomTree(), dbgs());
-  }
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -412,6 +400,10 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
   if (Cond->getParent() == KnownAtEndOfBB)
     Changed |= replaceNonLocalUsesWith(Cond, ToVal);
   for (Instruction &I : reverse(*KnownAtEndOfBB)) {
+    // Replace any debug-info record users of Cond with ToVal.
+    for (DPValue &DPV : I.getDbgValueRange())
+      DPV.replaceVariableLocationOp(Cond, ToVal, true);
+
     // Reached the Cond whose uses we are trying to replace, so there are no
     // more uses.
     if (&I == Cond)
@@ -1963,6 +1955,7 @@ void JumpThreadingPass::updateSSA(
   SSAUpdater SSAUpdate;
   SmallVector<Use *, 16> UsesToRename;
   SmallVector<DbgValueInst *, 4> DbgValues;
+  SmallVector<DPValue *, 4> DPValues;
 
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
@@ -1979,13 +1972,16 @@ void JumpThreadingPass::updateSSA(
     }
 
     // Find debug values outside of the block
-    findDbgValues(DbgValues, &I);
+    findDbgValues(DbgValues, &I, &DPValues);
     llvm::erase_if(DbgValues, [&](const DbgValueInst *DbgVal) {
       return DbgVal->getParent() == BB;
     });
+    llvm::erase_if(DPValues, [&](const DPValue *DPVal) {
+      return DPVal->getParent() == BB;
+    });
 
     // If there are no uses outside the block, we're done with this instruction.
-    if (UsesToRename.empty() && DbgValues.empty())
+    if (UsesToRename.empty() && DbgValues.empty() && DPValues.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
 
@@ -1998,9 +1994,11 @@ void JumpThreadingPass::updateSSA(
 
     while (!UsesToRename.empty())
       SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
-    if (!DbgValues.empty()) {
+    if (!DbgValues.empty() || !DPValues.empty()) {
       SSAUpdate.UpdateDebugValues(&I, DbgValues);
+      SSAUpdate.UpdateDebugValues(&I, DPValues);
       DbgValues.clear();
+      DPValues.clear();
     }
 
     LLVM_DEBUG(dbgs() << "\n");
@@ -2043,6 +2041,26 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     return true;
   };
 
+  // Duplicate implementation of the above dbg.value code, using DPValues
+  // instead.
+  auto RetargetDPValueIfPossible = [&](DPValue *DPV) {
+    SmallSet<std::pair<Value *, Value *>, 16> OperandsToRemap;
+    for (auto *Op : DPV->location_ops()) {
+      Instruction *OpInst = dyn_cast<Instruction>(Op);
+      if (!OpInst)
+        continue;
+
+      auto I = ValueMapping.find(OpInst);
+      if (I != ValueMapping.end())
+        OperandsToRemap.insert({OpInst, I->second});
+    }
+
+    for (auto &[OldOp, MappedOp] : OperandsToRemap)
+      DPV->replaceVariableLocationOp(OldOp, MappedOp);
+  };
+
+  BasicBlock *RangeBB = BI->getParent();
+
   // Clone the phi nodes of the source basic block into NewBB.  The resulting
   // phi nodes are trivial since NewBB only has one predecessor, but SSAUpdater
   // might need to rewrite the operand of the cloned phi.
@@ -2061,6 +2079,12 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
   identifyNoAliasScopesToClone(BI, BE, NoAliasScopes);
   cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
 
+  auto CloneAndRemapDbgInfo = [&](Instruction *NewInst, Instruction *From) {
+    auto DPVRange = NewInst->cloneDebugInfoFrom(From);
+    for (DPValue &DPV : DPVRange)
+      RetargetDPValueIfPossible(&DPV);
+  };
+
   // Clone the non-phi instructions of the source basic block into NewBB,
   // keeping track of the mapping and using it to remap operands in the cloned
   // instructions.
@@ -2070,6 +2094,8 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
     adaptNoAliasScopes(New, ClonedScopes, Context);
+
+    CloneAndRemapDbgInfo(New, &*BI);
 
     if (RetargetDbgValueIfPossible(New))
       continue;
@@ -2081,6 +2107,17 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
         if (I != ValueMapping.end())
           New->setOperand(i, I->second);
       }
+  }
+
+  // There may be DPValues on the terminator, clone directly from marker
+  // to marker as there isn't an instruction there.
+  if (BE != RangeBB->end() && BE->hasDbgValues()) {
+    // Dump them at the end.
+    DPMarker *Marker = RangeBB->getMarker(BE);
+    DPMarker *EndMarker = NewBB->createMarker(NewBB->end());
+    auto DPVRange = EndMarker->cloneDebugInfoFrom(Marker, std::nullopt);
+    for (DPValue &DPV : DPVRange)
+      RetargetDPValueIfPossible(&DPV);
   }
 
   return ValueMapping;
@@ -2574,9 +2611,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
       Weights.push_back(Prob.getNumerator());
 
     auto TI = BB->getTerminator();
-    TI->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(TI->getParent()->getContext()).createBranchWeights(Weights));
+    setBranchWeights(*TI, Weights);
   }
 }
 
@@ -2670,6 +2705,9 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
       if (!New->mayHaveSideEffects()) {
         New->eraseFromParent();
         New = nullptr;
+        // Clone debug-info on the elided instruction to the destination
+        // position.
+        OldPredBranch->cloneDebugInfoFrom(&*BI, std::nullopt, true);
       }
     } else {
       ValueMapping[&*BI] = New;
@@ -2677,6 +2715,8 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     if (New) {
       // Otherwise, insert the new instruction into the block.
       New->setName(BI->getName());
+      // Clone across any debug-info attached to the old instruction.
+      New->cloneDebugInfoFrom(&*BI);
       // Update Dominance from simplified New instruction operands.
       for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
         if (BasicBlock *SuccBB = dyn_cast<BasicBlock>(New->getOperand(i)))
@@ -3068,8 +3108,8 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
     if (!isa<PHINode>(&*BI))
       ToRemove.push_back(&*BI);
 
-  Instruction *InsertionPoint = &*BB->getFirstInsertionPt();
-  assert(InsertionPoint && "Empty block?");
+  BasicBlock::iterator InsertionPoint = BB->getFirstInsertionPt();
+  assert(InsertionPoint != BB->end() && "Empty block?");
   // Substitute with Phis & remove.
   for (auto *Inst : reverse(ToRemove)) {
     if (!Inst->use_empty()) {
@@ -3079,6 +3119,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
       NewPN->insertBefore(InsertionPoint);
       Inst->replaceAllUsesWith(NewPN);
     }
+    Inst->dropDbgValues();
     Inst->eraseFromParent();
   }
   return true;

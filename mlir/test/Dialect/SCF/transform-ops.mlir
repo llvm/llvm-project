@@ -77,6 +77,36 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @loop_peel_first_iter_op
+func.func @loop_peel_first_iter_op() {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[C41:.+]] = arith.constant 41
+  // CHECK: %[[C5:.+]] = arith.constant 5
+  // CHECK: %[[C5_0:.+]] = arith.constant 5
+  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C5_0]] step %[[C5]]
+  // CHECK:   arith.addi
+  // CHECK: scf.for %{{.+}} = %[[C5_0]] to %[[C41]] step %[[C5]]
+  // CHECK:   arith.addi
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 41 : index
+  %2 = arith.constant 5 : index
+  scf.for %i = %0 to %1 step %2 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %remainder = transform.loop.peel %1 {peel_front = true} : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @loop_pipeline_op(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -237,6 +267,36 @@ module attributes {transform.with_named_sequence} {
     } with type_converter {
       transform.apply_conversion_patterns.transform.test_type_converter
     } {  partial_conversion  } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @coalesce_i32_loops(
+
+// This test checks for loop coalescing success for non-index loop boundaries and step type
+func.func @coalesce_i32_loops() {
+  %0 = arith.constant 0 : i32
+  %1 = arith.constant 128 : i32
+  %2 = arith.constant 2 : i32
+  %3 = arith.constant 64 : i32
+  // CHECK-DAG: %[[C0_I32:.*]] = arith.constant 0 : i32
+  // CHECK-DAG: %[[C1_I32:.*]] = arith.constant 1 : i32
+  // CHECK: scf.for %[[ARG0:.*]] = %[[C0_I32]] to {{.*}} step %[[C1_I32]]  : i32
+  scf.for %i = %0 to %1 step %2 : i32 {
+    scf.for %j = %0 to %3 step %2 : i32 {
+      arith.addi %i, %j : i32
+    }
+  } {coalesce}
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
+    %2 = transform.loop.coalesce %1: (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
     transform.yield
   }
 }

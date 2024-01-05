@@ -610,7 +610,7 @@ private:
       //   foo<${1:class}>(${2:int p1}).
       //   We transform this pattern to '<$1>()$0' or '<$0>()'.
 
-      bool EmptyArgs = llvm::StringRef(*Snippet).endswith("()");
+      bool EmptyArgs = llvm::StringRef(*Snippet).ends_with("()");
       if (Snippet->front() == '<')
         return EmptyArgs ? "<$1>()$0" : "<$1>($0)";
       if (Snippet->front() == '(')
@@ -625,7 +625,7 @@ private:
 
       // Classes and template using aliases can only have template arguments,
       // e.g. Foo<${1:class}>.
-      if (llvm::StringRef(*Snippet).endswith("<>"))
+      if (llvm::StringRef(*Snippet).ends_with("<>"))
         return "<>"; // can happen with defaulted template arguments.
       return "<$0>";
     }
@@ -1491,6 +1491,46 @@ FuzzyFindRequest speculativeFuzzyFindRequestForCompletion(
   return CachedReq;
 }
 
+// This function is similar to Lexer::findNextToken(), but assumes
+// that the input SourceLocation is the completion point (which is
+// a case findNextToken() does not handle).
+std::optional<Token>
+findTokenAfterCompletionPoint(SourceLocation CompletionPoint,
+                              const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  SourceLocation Loc = CompletionPoint;
+  if (Loc.isMacroID()) {
+    if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
+      return std::nullopt;
+  }
+
+  // Advance to the next SourceLocation after the completion point.
+  // Lexer::findNextToken() would call MeasureTokenLength() here,
+  // which does not handle the completion point (and can't, because
+  // the Lexer instance it constructs internally doesn't have a
+  // Preprocessor and so doesn't know about the completion point).
+  Loc = Loc.getLocWithOffset(1);
+
+  // Break down the source location.
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+
+  // Try to load the file buffer.
+  bool InvalidTemp = false;
+  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return std::nullopt;
+
+  const char *TokenBegin = File.data() + LocInfo.second;
+
+  // Lex from the start of the given location.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+                 TokenBegin, File.end());
+  // Find the token.
+  Token Tok;
+  TheLexer.LexFromRawLexer(Tok);
+  return Tok;
+}
+
 // Runs Sema-based (AST) and Index-based completion, returns merged results.
 //
 // There are a few tricky considerations:
@@ -1589,7 +1629,7 @@ public:
       auto Style = getFormatStyleForFile(SemaCCInput.FileName,
                                          SemaCCInput.ParseInput.Contents,
                                          *SemaCCInput.ParseInput.TFS);
-      const auto NextToken = Lexer::findNextToken(
+      const auto NextToken = findTokenAfterCompletionPoint(
           Recorder->CCSema->getPreprocessor().getCodeCompletionLoc(),
           Recorder->CCSema->getSourceManager(), Recorder->CCSema->LangOpts);
       if (NextToken)
@@ -1708,7 +1748,7 @@ public:
         S.append("::"); // visibleNamespaces doesn't include trailing ::.
     if (HeuristicPrefix.Qualifier.empty())
       AllScopes = Opts.AllScopes;
-    else if (HeuristicPrefix.Qualifier.startswith("::")) {
+    else if (HeuristicPrefix.Qualifier.starts_with("::")) {
       Scopes.QueryScopes = {""};
       Scopes.UnresolvedQualifier =
           std::string(HeuristicPrefix.Qualifier.drop_front(2));
@@ -2090,7 +2130,7 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
   Result.Name = Content.slice(Rest.size(), Offset);
 
   // Consume qualifiers.
-  while (Rest.consume_back("::") && !Rest.endswith(":")) // reject ::::
+  while (Rest.consume_back("::") && !Rest.ends_with(":")) // reject ::::
     while (!Rest.empty() && isAsciiIdentifierContinue(Rest.back()))
       Rest = Rest.drop_back();
   Result.Qualifier =
@@ -2135,7 +2175,7 @@ CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
   Result.CompletionRange = CompletionRange;
   Result.Context = CodeCompletionContext::CCC_NaturalLanguage;
   for (llvm::StringRef Name : ParamNames) {
-    if (!Name.startswith(Prefix))
+    if (!Name.starts_with(Prefix))
       continue;
     CodeCompletion Item;
     Item.Name = Name.str() + "=*/";
@@ -2157,7 +2197,7 @@ maybeFunctionArgumentCommentStart(llvm::StringRef Content) {
   while (!Content.empty() && isAsciiIdentifierContinue(Content.back()))
     Content = Content.drop_back();
   Content = Content.rtrim();
-  if (Content.endswith("/*"))
+  if (Content.ends_with("/*"))
     return Content.size() - 2;
   return std::nullopt;
 }
@@ -2368,12 +2408,12 @@ bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
     Content = Content.substr(Pos + 1);
 
   // Complete after scope operators.
-  if (Content.endswith(".") || Content.endswith("->") ||
-      Content.endswith("::") || Content.endswith("/*"))
+  if (Content.ends_with(".") || Content.ends_with("->") ||
+      Content.ends_with("::") || Content.ends_with("/*"))
     return true;
   // Complete after `#include <` and #include `<foo/`.
-  if ((Content.endswith("<") || Content.endswith("\"") ||
-       Content.endswith("/")) &&
+  if ((Content.ends_with("<") || Content.ends_with("\"") ||
+       Content.ends_with("/")) &&
       isIncludeFile(Content))
     return true;
 

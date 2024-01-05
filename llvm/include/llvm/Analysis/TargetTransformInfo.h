@@ -560,6 +560,10 @@ public:
     // (set to UINT_MAX to disable). This does not apply in cases where the
     // loop is being fully unrolled.
     unsigned MaxCount;
+    /// Set the maximum upper bound of trip count. Allowing the MaxUpperBound
+    /// to be overrided by a target gives more flexiblity on certain cases.
+    /// By default, MaxUpperBound uses UnrollMaxUpperBound which value is 8.
+    unsigned MaxUpperBound;
     /// Set the maximum unrolling factor for full unrolling. Like MaxCount, but
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
@@ -717,6 +721,11 @@ public:
   /// implement their own isLSRCostLess and unset number of registers as major
   /// cost should return false, otherwise return true.
   bool isNumRegsMajorCostOfLSR() const;
+
+  /// Return true if LSR should attempts to replace a use of an otherwise dead
+  /// primary IV in the latch condition with another IV available in the loop.
+  /// When successful, makes the primary IV dead.
+  bool shouldFoldTerminatingConditionAfterLSR() const;
 
   /// \returns true if LSR should not optimize a chain that includes \p I.
   bool isProfitableLSRChainElement(Instruction *I) const;
@@ -997,6 +1006,16 @@ public:
   /// more beneficial constant hoisting is).
   InstructionCost getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
                                         const APInt &Imm, Type *Ty) const;
+
+  /// It can be advantageous to detach complex constants from their uses to make
+  /// their generation cheaper. This hook allows targets to report when such
+  /// transformations might negatively effect the code generation of the
+  /// underlying operation. The motivating example is divides whereby hoisting
+  /// constants prevents the code generator's ability to transform them into
+  /// combinations of simpler operations.
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const;
+
   /// @}
 
   /// \name Vector Target Information
@@ -1223,6 +1242,18 @@ public:
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) const;
+
+  /// Returns the cost estimation for alternating opcode pattern that can be
+  /// lowered to a single instruction on the target. In X86 this is for the
+  /// addsub instruction which corrsponds to a Shuffle + Fadd + FSub pattern in
+  /// IR. This function expects two opcodes: \p Opcode1 and \p Opcode2 being
+  /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
+  /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
+  /// \p VecTy is the vector type of the instruction to be generated.
+  InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
   /// The exact mask may be passed as Mask, or else the array will be empty.
@@ -1786,6 +1817,7 @@ public:
   virtual bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                              const TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
+  virtual bool shouldFoldTerminatingConditionAfterLSR() const = 0;
   virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
@@ -1867,6 +1899,8 @@ public:
   virtual InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TargetCostKind CostKind) = 0;
+  virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                             const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
@@ -1922,6 +1956,10 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       OperandValueInfo Opd1Info, OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
+  virtual InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const = 0;
 
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                          ArrayRef<int> Mask,
@@ -2239,6 +2277,9 @@ public:
   bool isNumRegsMajorCostOfLSR() override {
     return Impl.isNumRegsMajorCostOfLSR();
   }
+  bool shouldFoldTerminatingConditionAfterLSR() const override {
+    return Impl.shouldFoldTerminatingConditionAfterLSR();
+  }
   bool isProfitableLSRChainElement(Instruction *I) override {
     return Impl.isProfitableLSRChainElement(I);
   }
@@ -2367,11 +2408,11 @@ public:
                                                bool IsZeroCmp) const override {
     return Impl.enableMemCmpExpansion(OptSize, IsZeroCmp);
   }
-  bool enableInterleavedAccessVectorization() override {
-    return Impl.enableInterleavedAccessVectorization();
-  }
   bool enableSelectOptimize() override {
     return Impl.enableSelectOptimize();
+  }
+  bool enableInterleavedAccessVectorization() override {
+    return Impl.enableInterleavedAccessVectorization();
   }
   bool enableMaskedInterleavedAccessVectorization() override {
     return Impl.enableMaskedInterleavedAccessVectorization();
@@ -2420,6 +2461,10 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TargetCostKind CostKind) override {
     return Impl.getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
+  }
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const override {
+    return Impl.preferToKeepConstantsAttached(Inst, Fn);
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
@@ -2525,6 +2570,12 @@ public:
       const Instruction *CxtI = nullptr) override {
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Args, CxtI);
+  }
+  InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                                  unsigned Opcode1,
+                                  const SmallBitVector &OpcodeMask,
+                                  TTI::TargetCostKind CostKind) const override {
+    return Impl.getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
   }
 
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,

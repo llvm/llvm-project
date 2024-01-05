@@ -1,4 +1,4 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QMw0bPtest1(
 ! CHECK: %[[TWO:.*]] = arith.constant 2 : index

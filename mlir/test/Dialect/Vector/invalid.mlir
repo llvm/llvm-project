@@ -332,6 +332,28 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 
 // -----
 
+#map1 = affine_map<(d0, d1, d2) -> (d0, 0, 0)>
+func.func @main(%m:  memref<1xi32>, %2: vector<1x32xi1>) -> vector<1x32xi32> {
+  %0 = arith.constant 1 : index
+  %1 = arith.constant 1 : i32
+  // expected-error@+1 {{expected the same rank for the vector and the results of the permutation map}}
+  %3 = vector.transfer_read %m[%0], %1, %2 { permutation_map = #map1 } : memref<1xi32>, vector<1x32xi32>
+  return %3 : vector<1x32xi32>
+}
+
+// -----
+
+#map1 = affine_map<(d0, d1, d2) -> (d0, 0, 0)>
+func.func @test_vector.transfer_write(%m:  memref<1xi32>, %2: vector<1x32xi32>) -> vector<1x32xi32> {
+  %0 = arith.constant 1 : index
+  %1 = arith.constant 1 : i32
+  // expected-error@+1 {{expected the same rank for the vector and the results of the permutation map}}
+  %3 = vector.transfer_write %2, %m[%0], %1 { permutation_map = #map1 } : vector<1x32xi32>, memref<1xi32>
+  return %3 : vector<1x32xi32>
+}
+
+// -----
+
 func.func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
@@ -1711,4 +1733,28 @@ func.func @integer_vector_contract(%arg0: vector<16x32xsi8>, %arg1: vector<32x16
     iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>
   } %arg0, %arg1, %arg2 : vector<16x32xsi8>, vector<32x16xsi8> into vector<16x16xsi32>
   return %0: vector<16x16xsi32>
+}
+
+// -----
+
+func.func @invalid_outerproduct(%src : memref<?xf32>) {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
+  %1 = vector.load %src[%idx] : memref<?xf32>, vector<4xf32>
+
+  // expected-error @+1 {{expected either both or only #2 operand dim to be scalable}}
+  %op = vector.outerproduct %0, %1 : vector<[4]xf32>, vector<4xf32>
+
+  return
+}
+
+// -----
+
+func.func @invalid_outerproduct1(%src : memref<?xf32>) {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]x[4]xf32>
+  %1 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
+
+  // expected-error @+1 {{'vector.outerproduct' op expected 1-d vector for operand #1}}
+  %op = vector.outerproduct %0, %1 : vector<[4]x[4]xf32>, vector<[4]xf32>
 }

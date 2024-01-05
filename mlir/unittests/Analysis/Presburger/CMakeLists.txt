@@ -11,6 +11,7 @@ add_mlir_unittest(MLIRPresburgerTests
   PresburgerRelationTest.cpp
   PresburgerSpaceTest.cpp
   PWMAFunctionTest.cpp
+  QuasiPolynomialTest.cpp
   SimplexTest.cpp
   UtilsTest.cpp
 )

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // REQUIRES: long_tests
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
@@ -19,14 +19,14 @@
 // bool copy_file(const path& from, const path& to, copy_options options,
 //           error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <cstdio>
 #include <string>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 // This test is intended to test 'sendfile's 2gb limit for a single call, and

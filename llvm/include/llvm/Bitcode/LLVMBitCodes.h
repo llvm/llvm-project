@@ -210,7 +210,7 @@ enum GlobalValueSummarySymtabCodes {
   FS_PERMODULE = 1,
   // PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
   //                     numrefs x valueid,
-  //                     n x (valueid, hotness)]
+  //                     n x (valueid, hotness+tailcall)]
   FS_PERMODULE_PROFILE = 2,
   // PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
   FS_PERMODULE_GLOBALVAR_INIT_REFS = 3,
@@ -219,7 +219,7 @@ enum GlobalValueSummarySymtabCodes {
   FS_COMBINED = 4,
   // COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
   //                    numrefs x valueid,
-  //                    n x (valueid, hotness)]
+  //                    n x (valueid, hotness+tailcall)]
   FS_COMBINED_PROFILE = 5,
   // COMBINED_GLOBALVAR_INIT_REFS: [valueid, modid, flags, n x valueid]
   FS_COMBINED_GLOBALVAR_INIT_REFS = 6,
@@ -268,7 +268,7 @@ enum GlobalValueSummarySymtabCodes {
   // Per-module summary that also adds relative block frequency to callee info.
   // PERMODULE_RELBF: [valueid, flags, instcount, numrefs,
   //                   numrefs x valueid,
-  //                   n x (valueid, relblockfreq)]
+  //                   n x (valueid, relblockfreq+tailcall)]
   FS_PERMODULE_RELBF = 19,
   // Index-wide flags
   FS_FLAGS = 20,
@@ -512,6 +512,10 @@ enum PossiblyNonNegInstOptionalFlags { PNNI_NON_NEG = 0 };
 /// PossiblyExactOperator's SubclassOptionalData contents.
 enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 
+/// PossiblyDisjointInstOptionalFlags - Flags for serializing
+/// PossiblyDisjointInst's SubclassOptionalData contents.
+enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
   ORDERING_NOTATOMIC = 0,
@@ -718,6 +722,8 @@ enum AttributeKindCodes {
   ATTR_KIND_NOFPCLASS = 87,
   ATTR_KIND_OPTIMIZE_FOR_DEBUGGING = 88,
   ATTR_KIND_WRITABLE = 89,
+  ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE = 90,
+  ATTR_KIND_DEAD_ON_UNWIND = 91,
 };
 
 enum ComdatSelectionKindCodes {

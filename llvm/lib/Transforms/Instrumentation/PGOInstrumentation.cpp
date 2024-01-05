@@ -327,6 +327,7 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
 static cl::opt<bool>
@@ -381,7 +382,7 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
   if (PGOInstrumentEntry)
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
-  if (DebugInfoCorrelate)
+  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
     ProfileVersion |=
@@ -582,12 +583,12 @@ public:
     if (!IsCS) {
       NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
       NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
-      NumOfPGOBB += MST.BBInfos.size();
+      NumOfPGOBB += MST.bbInfoSize();
       ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
       NumOfCSPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
-      NumOfCSPGOBB += MST.BBInfos.size();
+      NumOfCSPGOBB += MST.bbInfoSize();
     }
 
     FuncName = getIRPGOFuncName(F);
@@ -597,7 +598,7 @@ public:
       renameComdatFunction();
     LLVM_DEBUG(dumpInfo("after CFGMST"));
 
-    for (auto &E : MST.AllEdges) {
+    for (const auto &E : MST.allEdges()) {
       if (E->Removed)
         continue;
       IsCS ? NumOfCSPGOEdge++ : NumOfPGOEdge++;
@@ -640,7 +641,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
     FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
                    (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                    //(uint64_t)ValueSites[IPVK_MemOPSize].size() << 40 |
-                   (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
+                   (uint64_t)MST.numEdges() << 32 | JC.getCRC();
   } else {
     // The higher 32 bits.
     auto updateJCH = [&JCH](uint64_t Num) {
@@ -654,7 +655,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
     if (BCI) {
       updateJCH(BCI->getInstrumentedBlocksHash());
     } else {
-      updateJCH((uint64_t)MST.AllEdges.size());
+      updateJCH((uint64_t)MST.numEdges());
     }
 
     // Hash format for context sensitive profile. Reserve 4 bits for other
@@ -669,7 +670,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
                     << " CRC = " << JC.getCRC()
                     << ", Selects = " << SIVisitor.getNumOfSelectInsts()
-                    << ", Edges = " << MST.AllEdges.size() << ", ICSites = "
+                    << ", Edges = " << MST.numEdges() << ", ICSites = "
                     << ValueSites[IPVK_IndirectCallTarget].size());
   if (!PGOOldCFGHashing) {
     LLVM_DEBUG(dbgs() << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
@@ -757,8 +758,8 @@ void FuncPGOInstrumentation<Edge, BBInfo>::getInstrumentBBs(
 
   // Use a worklist as we will update the vector during the iteration.
   std::vector<Edge *> EdgeList;
-  EdgeList.reserve(MST.AllEdges.size());
-  for (auto &E : MST.AllEdges)
+  EdgeList.reserve(MST.numEdges());
+  for (const auto &E : MST.allEdges())
     EdgeList.push_back(E.get());
 
   for (auto &E : EdgeList) {
@@ -875,8 +876,7 @@ static void instrumentOneFunc(
       F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry,
       PGOBlockCoverage);
 
-  Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
-  auto Name = ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy);
+  auto Name = FuncInfo.FuncNameVar;
   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                   FuncInfo.FunctionHash);
   if (PGOFunctionEntryCoverage) {
@@ -965,9 +965,8 @@ static void instrumentOneFunc(
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-          {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
-           Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
-           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
+          {FuncInfo.FuncNameVar, Builder.getInt64(FuncInfo.FunctionHash),
+           ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
     }
   } // IPVK_First <= Kind <= IPVK_Last
@@ -1165,12 +1164,12 @@ private:
 } // end anonymous namespace
 
 /// Set up InEdges/OutEdges for all BBs in the MST.
-static void
-setupBBInfoEdges(FuncPGOInstrumentation<PGOUseEdge, PGOUseBBInfo> &FuncInfo) {
+static void setupBBInfoEdges(
+    const FuncPGOInstrumentation<PGOUseEdge, PGOUseBBInfo> &FuncInfo) {
   // This is not required when there is block coverage inference.
   if (FuncInfo.BCI)
     return;
-  for (auto &E : FuncInfo.MST.AllEdges) {
+  for (const auto &E : FuncInfo.MST.allEdges()) {
     if (E->Removed)
       continue;
     const BasicBlock *SrcBB = E->SrcBB;
@@ -1226,7 +1225,7 @@ bool PGOUseFunc::setInstrumentedCounts(
   // Set the profile count the Instrumented edges. There are BBs that not in
   // MST but not instrumented. Need to set the edge count value so that we can
   // populate the profile counts later.
-  for (auto &E : FuncInfo.MST.AllEdges) {
+  for (const auto &E : FuncInfo.MST.allEdges()) {
     if (E->Removed || E->InMST)
       continue;
     const BasicBlock *SrcBB = E->SrcBB;
@@ -1439,12 +1438,11 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     // If A is uncovered, set weight=1.
     // This setup will allow BFI to give nonzero profile counts to only covered
     // blocks.
-    SmallVector<unsigned, 4> Weights;
+    SmallVector<uint32_t, 4> Weights;
     for (auto *Succ : successors(&BB))
       Weights.push_back((Coverage[Succ] || !Coverage[&BB]) ? 1 : 0);
     if (Weights.size() >= 2)
-      BB.getTerminator()->setMetadata(LLVMContext::MD_prof,
-                                      MDB.createBranchWeights(Weights));
+      llvm::setBranchWeights(*BB.getTerminator(), Weights);
   }
 
   unsigned NumCorruptCoverage = 0;
@@ -1650,12 +1648,10 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
-  Type *I8PtrTy = Builder.getInt8PtrTy();
   auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
-      {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-       Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
+      {FuncNameVar, Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
        Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
@@ -1787,6 +1783,8 @@ static bool skipPGOUse(const Function &F) {
 // Return true if we should not instrument this function
 static bool skipPGOGen(const Function &F) {
   if (skipPGOUse(F))
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::Naked))
     return true;
   if (F.hasFnAttribute(llvm::Attribute::NoProfile))
     return true;
@@ -2209,7 +2207,6 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
 
 void llvm::setProfMetadata(Module *M, Instruction *TI,
                            ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount) {
-  MDBuilder MDB(M->getContext());
   assert(MaxCount > 0 && "Bad max count");
   uint64_t Scale = calculateCountScale(MaxCount);
   SmallVector<unsigned, 4> Weights;
@@ -2223,7 +2220,7 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
-  TI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+  setBranchWeights(*TI, Weights);
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())

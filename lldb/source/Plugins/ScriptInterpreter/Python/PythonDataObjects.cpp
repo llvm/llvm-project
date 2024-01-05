@@ -663,6 +663,20 @@ bool PythonDictionary::Check(PyObject *py_obj) {
   return PyDict_Check(py_obj);
 }
 
+bool PythonDictionary::HasKey(const llvm::Twine &key) const {
+  if (!IsValid())
+    return false;
+
+  PythonString key_object(key.isSingleStringRef() ? key.getSingleStringRef()
+                                                  : key.str());
+
+  if (int res = PyDict_Contains(m_py_obj, key_object.get()) > 0)
+    return res;
+
+  PyErr_Print();
+  return false;
+}
+
 uint32_t PythonDictionary::GetSize() const {
   if (IsValid())
     return PyDict_Size(m_py_obj);

@@ -880,8 +880,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     return false;
 
   const DataLayout &DL = cpyLoad->getModule()->getDataLayout();
-  uint64_t srcSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType()) *
-                     srcArraySize->getZExtValue();
+  TypeSize SrcAllocaSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType());
+  // We can't optimize scalable types.
+  if (SrcAllocaSize.isScalable())
+    return false;
+  uint64_t srcSize = SrcAllocaSize * srcArraySize->getZExtValue();
 
   if (cpySize < srcSize)
     return false;
@@ -925,10 +928,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       return false;
   }
 
-  // Check that accessing the first srcSize bytes of dest will not cause a
-  // trap.  Otherwise the transform is invalid since it might cause a trap
-  // to occur earlier than it otherwise would.
-  if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
+  // Check that storing to the first srcSize bytes of dest will not cause a
+  // trap or data race.
+  bool ExplicitlyDereferenceableOnly;
+  if (!isWritableObject(getUnderlyingObject(cpyDest),
+                        ExplicitlyDereferenceableOnly) ||
+      !isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
                                           DL, C, AC, DT)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
@@ -1723,7 +1728,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
         if (auto *C = dyn_cast<CallInst>(MI)) {
           if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
-                                   TypeSize::Fixed(CopySize->getZExtValue()),
+                                   TypeSize::getFixed(CopySize->getZExtValue()),
                                    M->getDestAlign().valueOrOne(), BAA,
                                    [C]() -> CallInst * { return C; })) {
             LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
@@ -1769,7 +1774,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (Len == nullptr)
     return false;
   if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
-                            TypeSize::Fixed(Len->getZExtValue()), BAA)) {
+                            TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
     BBI = M->getNextNonDebugInstruction()->getIterator();
     eraseInstruction(M);
@@ -1832,7 +1837,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // The length of the memcpy must be larger or equal to the size of the byval.
   auto *C1 = dyn_cast<ConstantInt>(MDep->getLength());
   if (!C1 || !TypeSize::isKnownGE(
-                 TypeSize::Fixed(C1->getValue().getZExtValue()), ByValSize))
+                 TypeSize::getFixed(C1->getValue().getZExtValue()), ByValSize))
     return false;
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,

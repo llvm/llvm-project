@@ -350,7 +350,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
         isNegative = !isNegative;
       } else {
         auto sub1{fraction.SubtractSigned(one)};
-        if (sub1.overflow) {
+        if (sub1.overflow && expo > 1) {
           nearest = Fraction{0}.NOT();
           --expo;
         } else {

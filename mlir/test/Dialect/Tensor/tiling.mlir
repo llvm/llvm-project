@@ -374,8 +374,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK:               %[[IN_J:.*]] = affine.apply #[[MAP2]](%[[J]])[%[[TILE_1]]]
 // CHECK:               %[[IN_J_SZ:.*]] = affine.min #[[MAP3]](%[[OUT_J_SZ]], %[[J]])[%[[TILE_1]], %[[IN_D1]]]
 // CHECK:               %[[SUB_IN:.*]] = tensor.extract_slice %[[IN]][%[[IN_I]], %[[IN_J]]] [%[[IN_I_SZ]], %[[IN_J_SZ]]] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-// CHECK:               %[[OUT_D2:.+]] = tensor.dim %[[OUT]], %[[C2]]
-// CHECK:               %[[OUT_D3:.+]] = tensor.dim %[[OUT]], %[[C3]]
+// CHECK:               %[[OUT_D2:.+]] = tensor.dim %[[ITER1]], %[[C2]]
+// CHECK:               %[[OUT_D3:.+]] = tensor.dim %[[ITER1]], %[[C3]]
 // CHECK:               %[[SUB_OUT:.*]] = tensor.extract_slice %[[ITER1]][%[[I]], %[[J]], 0, 0] [%[[OUT_I_SZ]], %[[OUT_J_SZ]], %[[OUT_D2]], %[[OUT_D3]]] [1, 1, 1, 1] : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32>
 // CHECK:               %[[PACK:.*]] = tensor.pack
 // CHECK-SAME:            %[[SUB_IN]] padding_value(%[[PAD]] : f32) inner_dims_pos = [0, 1] inner_tiles = [%[[TILE_0]], %[[TILE_1]]]

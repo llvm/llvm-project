@@ -1145,7 +1145,7 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
 
   Mod = &M;
   Ctx = &M.getContext();
-  Int8Ptr = Type::getInt8PtrTy(*Ctx);
+  Int8Ptr = PointerType::getUnqual(*Ctx);
   OriginTy = IntegerType::get(*Ctx, OriginWidthBits);
   OriginPtrTy = PointerType::getUnqual(OriginTy);
   PrimitiveShadowTy = IntegerType::get(*Ctx, ShadowWidthBits);
@@ -1162,19 +1162,19 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
       FunctionType::get(IntegerType::get(*Ctx, 64), DFSanLoadLabelAndOriginArgs,
                         /*isVarArg=*/false);
   DFSanUnimplementedFnTy = FunctionType::get(
-      Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
+      Type::getVoidTy(*Ctx), PointerType::getUnqual(*Ctx), /*isVarArg=*/false);
   Type *DFSanWrapperExternWeakNullArgs[2] = {Int8Ptr, Int8Ptr};
   DFSanWrapperExternWeakNullFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanWrapperExternWeakNullArgs,
                         /*isVarArg=*/false);
   Type *DFSanSetLabelArgs[4] = {PrimitiveShadowTy, OriginTy,
-                                Type::getInt8PtrTy(*Ctx), IntptrTy};
+                                PointerType::getUnqual(*Ctx), IntptrTy};
   DFSanSetLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx),
                                         DFSanSetLabelArgs, /*isVarArg=*/false);
   DFSanNonzeroLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx), std::nullopt,
                                             /*isVarArg=*/false);
   DFSanVarargWrapperFnTy = FunctionType::get(
-      Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
+      Type::getVoidTy(*Ctx), PointerType::getUnqual(*Ctx), /*isVarArg=*/false);
   DFSanConditionalCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), PrimitiveShadowTy,
                         /*isVarArg=*/false);
@@ -1288,7 +1288,7 @@ void DataFlowSanitizer::buildExternWeakCheckIfNeeded(IRBuilder<> &IRB,
   // for a extern weak function, add a check here to help identify the issue.
   if (GlobalValue::isExternalWeakLinkage(F->getLinkage())) {
     std::vector<Value *> Args;
-    Args.push_back(IRB.CreatePointerCast(F, IRB.getInt8PtrTy()));
+    Args.push_back(F);
     Args.push_back(IRB.CreateGlobalStringPtr(F->getName()));
     IRB.CreateCall(DFSanWrapperExternWeakNullFn, Args);
   }
@@ -1575,7 +1575,7 @@ bool DataFlowSanitizer::runImpl(
       // below will take care of instrumenting it.
       Function *NewF =
           buildWrapperFunction(F, "", GA.getLinkage(), F->getFunctionType());
-      GA.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, GA.getType()));
+      GA.replaceAllUsesWith(NewF);
       NewF->takeName(&GA);
       GA.eraseFromParent();
       FnsToInstrument.push_back(NewF);
@@ -1622,9 +1622,6 @@ bool DataFlowSanitizer::runImpl(
           WrapperLinkage, FT);
       NewF->removeFnAttrs(ReadOnlyNoneAttrs);
 
-      Value *WrappedFnCst =
-          ConstantExpr::getBitCast(NewF, PointerType::getUnqual(FT));
-
       // Extern weak functions can sometimes be null at execution time.
       // Code will sometimes check if an extern weak function is null.
       // This could look something like:
@@ -1657,9 +1654,9 @@ bool DataFlowSanitizer::runImpl(
         }
         return true;
       };
-      F.replaceUsesWithIf(WrappedFnCst, IsNotCmpUse);
+      F.replaceUsesWithIf(NewF, IsNotCmpUse);
 
-      UnwrappedFnMap[WrappedFnCst] = &F;
+      UnwrappedFnMap[NewF] = &F;
       *FI = NewF;
 
       if (!F.isDeclaration()) {
@@ -2273,8 +2270,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
     IRBuilder<> IRB(Pos);
     CallInst *Call =
         IRB.CreateCall(DFS.DFSanLoadLabelAndOriginFn,
-                       {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                        ConstantInt::get(DFS.IntptrTy, Size)});
+                       {Addr, ConstantInt::get(DFS.IntptrTy, Size)});
     Call->addRetAttr(Attribute::ZExt);
     return {IRB.CreateTrunc(IRB.CreateLShr(Call, DFS.OriginWidthBits),
                             DFS.PrimitiveShadowTy),
@@ -2530,10 +2526,9 @@ void DFSanFunction::storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size,
   }
 
   if (shouldInstrumentWithCall()) {
-    IRB.CreateCall(DFS.DFSanMaybeStoreOriginFn,
-                   {CollapsedShadow,
-                    IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                    ConstantInt::get(DFS.IntptrTy, Size), Origin});
+    IRB.CreateCall(
+        DFS.DFSanMaybeStoreOriginFn,
+        {CollapsedShadow, Addr, ConstantInt::get(DFS.IntptrTy, Size), Origin});
   } else {
     Value *Cmp = convertToBool(CollapsedShadow, IRB, "_dfscmp");
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -2927,8 +2922,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   if (DFSF.DFS.shouldTrackOrigins()) {
     IRB.CreateCall(
         DFSF.DFS.DFSanMemOriginTransferFn,
-        {IRB.CreatePointerCast(I.getArgOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(I.getArgOperand(1), IRB.getInt8PtrTy()),
+        {I.getArgOperand(0), I.getArgOperand(1),
          IRB.CreateIntCast(I.getArgOperand(2), DFSF.DFS.IntptrTy, false)});
   }
 
@@ -3216,10 +3210,9 @@ void DFSanVisitor::visitLibAtomicLoad(CallBase &CB) {
   // TODO: Support ClCombinePointerLabelsOnLoad
   // TODO: Support ClEventCallbacks
 
-  NextIRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                     {NextIRB.CreatePointerCast(DstPtr, NextIRB.getInt8PtrTy()),
-                      NextIRB.CreatePointerCast(SrcPtr, NextIRB.getInt8PtrTy()),
-                      NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  NextIRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {DstPtr, SrcPtr, NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 Value *DFSanVisitor::makeAddReleaseOrderingTable(IRBuilder<> &IRB) {
@@ -3255,10 +3248,9 @@ void DFSanVisitor::visitLibAtomicStore(CallBase &CB) {
   // TODO: Support ClCombinePointerLabelsOnStore
   // TODO: Support ClEventCallbacks
 
-  IRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                 {IRB.CreatePointerCast(DstPtr, IRB.getInt8PtrTy()),
-                  IRB.CreatePointerCast(SrcPtr, IRB.getInt8PtrTy()),
-                  IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {DstPtr, SrcPtr, IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 void DFSanVisitor::visitLibAtomicExchange(CallBase &CB) {
@@ -3276,16 +3268,14 @@ void DFSanVisitor::visitLibAtomicExchange(CallBase &CB) {
   // the additional complexity to address this is not warrented.
 
   // Current Target to Dest
-  IRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                 {IRB.CreatePointerCast(DstPtr, IRB.getInt8PtrTy()),
-                  IRB.CreatePointerCast(TargetPtr, IRB.getInt8PtrTy()),
-                  IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {DstPtr, TargetPtr, IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 
   // Current Src to Target (overriding)
-  IRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                 {IRB.CreatePointerCast(TargetPtr, IRB.getInt8PtrTy()),
-                  IRB.CreatePointerCast(SrcPtr, IRB.getInt8PtrTy()),
-                  IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {TargetPtr, SrcPtr, IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 void DFSanVisitor::visitLibAtomicCompareExchange(CallBase &CB) {
@@ -3308,13 +3298,10 @@ void DFSanVisitor::visitLibAtomicCompareExchange(CallBase &CB) {
 
   // If original call returned true, copy Desired to Target.
   // If original call returned false, copy Target to Expected.
-  NextIRB.CreateCall(
-      DFSF.DFS.DFSanMemShadowOriginConditionalExchangeFn,
-      {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false),
-       NextIRB.CreatePointerCast(TargetPtr, NextIRB.getInt8PtrTy()),
-       NextIRB.CreatePointerCast(ExpectedPtr, NextIRB.getInt8PtrTy()),
-       NextIRB.CreatePointerCast(DesiredPtr, NextIRB.getInt8PtrTy()),
-       NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  NextIRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginConditionalExchangeFn,
+                     {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false),
+                      TargetPtr, ExpectedPtr, DesiredPtr,
+                      NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 void DFSanVisitor::visitCallBase(CallBase &CB) {

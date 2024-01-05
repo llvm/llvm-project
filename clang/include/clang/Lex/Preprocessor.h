@@ -751,13 +751,8 @@ private:
   std::unique_ptr<TokenLexer> CurTokenLexer;
 
   /// The kind of lexer we're currently working with.
-  enum CurLexerKind {
-    CLK_Lexer,
-    CLK_TokenLexer,
-    CLK_CachingLexer,
-    CLK_DependencyDirectivesLexer,
-    CLK_LexAfterModuleImport
-  } CurLexerKind = CLK_Lexer;
+  typedef bool (*LexerCallback)(Preprocessor &, Token &);
+  LexerCallback CurLexerCallback = &CLK_Lexer;
 
   /// If the current lexer is for a submodule that is being built, this
   /// is that submodule.
@@ -767,7 +762,7 @@ private:
   /// \#included, and macros currently being expanded from, not counting
   /// CurLexer/CurTokenLexer.
   struct IncludeStackInfo {
-    enum CurLexerKind           CurLexerKind;
+    LexerCallback               CurLexerCallback;
     Module                     *TheSubmodule;
     std::unique_ptr<Lexer>      TheLexer;
     PreprocessorLexer          *ThePPLexer;
@@ -776,12 +771,12 @@ private:
 
     // The following constructors are completely useless copies of the default
     // versions, only needed to pacify MSVC.
-    IncludeStackInfo(enum CurLexerKind CurLexerKind, Module *TheSubmodule,
+    IncludeStackInfo(LexerCallback CurLexerCallback, Module *TheSubmodule,
                      std::unique_ptr<Lexer> &&TheLexer,
                      PreprocessorLexer *ThePPLexer,
                      std::unique_ptr<TokenLexer> &&TheTokenLexer,
                      ConstSearchDirIterator TheDirLookup)
-        : CurLexerKind(std::move(CurLexerKind)),
+        : CurLexerCallback(std::move(CurLexerCallback)),
           TheSubmodule(std::move(TheSubmodule)), TheLexer(std::move(TheLexer)),
           ThePPLexer(std::move(ThePPLexer)),
           TheTokenLexer(std::move(TheTokenLexer)),
@@ -1901,7 +1896,7 @@ public:
   /// Determine whether it's possible for a future call to Lex to produce an
   /// annotation token created by a previous call to EnterAnnotationToken.
   bool mightHavePendingAnnotationTokens() {
-    return CurLexerKind != CLK_Lexer;
+    return CurLexerCallback != CLK_Lexer;
   }
 
   /// Update the current token to represent the provided
@@ -2430,8 +2425,9 @@ private:
   friend void TokenLexer::ExpandFunctionArguments();
 
   void PushIncludeMacroStack() {
-    assert(CurLexerKind != CLK_CachingLexer && "cannot push a caching lexer");
-    IncludeMacroStack.emplace_back(CurLexerKind, CurLexerSubmodule,
+    assert(CurLexerCallback != CLK_CachingLexer &&
+           "cannot push a caching lexer");
+    IncludeMacroStack.emplace_back(CurLexerCallback, CurLexerSubmodule,
                                    std::move(CurLexer), CurPPLexer,
                                    std::move(CurTokenLexer), CurDirLookup);
     CurPPLexer = nullptr;
@@ -2443,7 +2439,7 @@ private:
     CurTokenLexer = std::move(IncludeMacroStack.back().TheTokenLexer);
     CurDirLookup  = IncludeMacroStack.back().TheDirLookup;
     CurLexerSubmodule = IncludeMacroStack.back().TheSubmodule;
-    CurLexerKind = IncludeMacroStack.back().CurLexerKind;
+    CurLexerCallback = IncludeMacroStack.back().CurLexerCallback;
     IncludeMacroStack.pop_back();
   }
 
@@ -2899,6 +2895,26 @@ public:
   /// \return true iff this PP is currently in a "-Wunsafe-buffer-usage"
   ///          opt-out region
   bool isPPInSafeBufferOptOutRegion(SourceLocation &StartLoc);
+
+private:
+  /// Helper functions to forward lexing to the actual lexer. They all share the
+  /// same signature.
+  static bool CLK_Lexer(Preprocessor &P, Token &Result) {
+    return P.CurLexer->Lex(Result);
+  }
+  static bool CLK_TokenLexer(Preprocessor &P, Token &Result) {
+    return P.CurTokenLexer->Lex(Result);
+  }
+  static bool CLK_CachingLexer(Preprocessor &P, Token &Result) {
+    P.CachingLex(Result);
+    return true;
+  }
+  static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
+    return P.CurLexer->LexDependencyDirectiveToken(Result);
+  }
+  static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
+    return P.LexAfterModuleImport(Result);
+  }
 };
 
 /// Abstract base class that describes a handler that will receive

@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// REQUIRES: libcpp-hardening-mode={{safe|debug}}
+// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: availability-verbose_abort-missing
 
 // <mdspan>
@@ -29,15 +29,15 @@ int main(int, char**) {
   std::array<float, 10> data;
   // make sure we are not failing because of using index_type instead of size_type
   {
-    typename layout_wrapping_integral<4>::template mapping<std::dextents<char, 2>> map(
-      std::dextents<char, 2>(100, 2), not_extents_constructible_tag());
+    layout_wrapping_integral<4>::mapping<std::dextents<char, 2>> map(
+        std::dextents<char, 2>(100, 2), not_extents_constructible_tag());
     std::mdspan<float, std::dextents<char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
     assert(map.required_span_size() == char(8));
     assert((static_cast<unsigned char>(200) == mds.size()));
   }
   {
-    typename layout_wrapping_integral<4>::template mapping<std::dextents<char, 2>> map(
-      std::dextents<char, 2>(100, 3), not_extents_constructible_tag());
+    layout_wrapping_integral<4>::mapping<std::dextents<char, 2>> map(
+        std::dextents<char, 2>(100, 3), not_extents_constructible_tag());
     std::mdspan<float, std::dextents<char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
     // sanity check
     assert(map.required_span_size() == char(12));

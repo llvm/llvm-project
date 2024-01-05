@@ -179,9 +179,7 @@ public:
 
   bool isBuiltin() const { return F->getBuiltinID() != 0; }
 
-  /// Does this function need its arguments to be classified at runtime
-  /// rather than at bytecode-compile-time?
-  bool needsRuntimeArgPop(const ASTContext &Ctx) const;
+  bool isUnevaluatedBuiltin() const { return IsUnevaluatedBuiltin; }
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 
@@ -195,7 +193,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO);
+           bool HasRVO, bool UnevaluatedBuiltin);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -254,6 +252,7 @@ private:
   bool HasBody = false;
   bool Defined = false;
   bool Variadic = false;
+  bool IsUnevaluatedBuiltin = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

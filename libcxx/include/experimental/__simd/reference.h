@@ -11,6 +11,10 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 
 #include <__type_traits/is_assignable.h>
+#include <__type_traits/is_same.h>
+#include <__utility/forward.h>
+#include <cstddef>
+#include <experimental/__config>
 #include <experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)

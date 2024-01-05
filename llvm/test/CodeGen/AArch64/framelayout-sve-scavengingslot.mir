@@ -4,9 +4,9 @@
 name: LateScavengingSlot
 # CHECK-LABEL: name: LateScavengingSlot
 # CHECK: bb.0:
-# CHECK:      $sp = frame-setup ADDVL_XXI $sp, -1
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 8, 12
+# CHECK:      $sp = frame-setup SUBXri $sp, 8, 12
 # CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK:      STRXui killed $[[SCRATCH:x[0-9]+]], $sp, 0
 # CHECK-NEXT: $[[SCRATCH]] = ADDVL_XXI $fp, -1
 # CHECK-NEXT: STRXui $x0, killed $[[SCRATCH]], 0

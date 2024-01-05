@@ -86,9 +86,9 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") ||
-        StringRef(Lib).startswith("ucrt") ||
-        StringRef(Lib).startswith("crtdll"))
+    if (StringRef(Lib).starts_with("msvcr") ||
+        StringRef(Lib).starts_with("ucrt") ||
+        StringRef(Lib).starts_with("crtdll"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -249,7 +249,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
-    addFortranRuntimeLibs(TC, CmdArgs);
+    addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
 
   // TODO: Add profile stuff here

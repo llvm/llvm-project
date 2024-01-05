@@ -491,14 +491,13 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
                                            uint64_t exc_sub_sub_code) {
   // Try hardware watchpoint.
   if (target) {
+    // LWP_TODO: We need to find the WatchpointResource that matches
+    // the address, and evaluate its Watchpoints.
+
     // The exc_sub_code indicates the data break address.
     lldb::WatchpointSP wp_sp =
         target->GetWatchpointList().FindByAddress((lldb::addr_t)exc_sub_code);
     if (wp_sp && wp_sp->IsEnabled()) {
-      // Debugserver may piggyback the hardware index of the fired watchpoint
-      // in the exception data. Set the hardware index if that's the case.
-      if (exc_data_count >= 3)
-        wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
       return StopInfo::CreateStopReasonWithWatchpointID(thread, wp_sp->GetID());
     }
   }
@@ -511,10 +510,6 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
         process_sp->GetBreakpointSiteList().FindByAddress(
             (lldb::addr_t)exc_sub_code);
     if (bp_sp && bp_sp->IsEnabled()) {
-      // Debugserver may piggyback the hardware index of the fired breakpoint
-      // in the exception data. Set the hardware index if that's the case.
-      if (exc_data_count >= 3)
-        bp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
       return StopInfo::CreateStopReasonWithBreakpointSiteID(thread,
                                                             bp_sp->GetID());
     }
@@ -674,6 +669,9 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     case llvm::Triple::thumb:
       if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
       {
+        // LWP_TODO: We need to find the WatchpointResource that matches
+        // the address, and evaluate its Watchpoints.
+
         // It's a watchpoint, then, if the exc_sub_code indicates a
         // known/enabled data break address from our watchpoint list.
         lldb::WatchpointSP wp_sp;
@@ -681,11 +679,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           wp_sp = target->GetWatchpointList().FindByAddress(
               (lldb::addr_t)exc_sub_code);
         if (wp_sp && wp_sp->IsEnabled()) {
-          // Debugserver may piggyback the hardware index of the fired
-          // watchpoint in the exception data. Set the hardware index if
-          // that's the case.
-          if (exc_data_count >= 3)
-            wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
           return StopInfo::CreateStopReasonWithWatchpointID(thread,
                                                             wp_sp->GetID());
         } else {
@@ -755,6 +748,9 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       }
       if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
       {
+        // LWP_TODO: We need to find the WatchpointResource that matches
+        // the address, and evaluate its Watchpoints.
+
         // It's a watchpoint, then, if the exc_sub_code indicates a
         // known/enabled data break address from our watchpoint list.
         lldb::WatchpointSP wp_sp;
@@ -762,11 +758,6 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           wp_sp = target->GetWatchpointList().FindByAddress(
               (lldb::addr_t)exc_sub_code);
         if (wp_sp && wp_sp->IsEnabled()) {
-          // Debugserver may piggyback the hardware index of the fired
-          // watchpoint in the exception data. Set the hardware index if
-          // that's the case.
-          if (exc_data_count >= 3)
-            wp_sp->SetHardwareIndex((uint32_t)exc_sub_sub_code);
           return StopInfo::CreateStopReasonWithWatchpointID(thread,
                                                             wp_sp->GetID());
         }

@@ -26,7 +26,7 @@ target triple = "bpf"
 
 ; Function Attrs: nounwind
 define dso_local i32 @test(i32 %len, ptr %data) #0 {
-; CHECK-LABEL: define dso_local i32 @test(
+; CHECK-LABEL: define dso_local noundef i32 @test(
 ; CHECK-SAME: i32 [[LEN:%.*]], ptr nocapture readonly [[DATA:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = alloca [1 x i64], align 8
@@ -44,8 +44,8 @@ define dso_local i32 @test(i32 %len, ptr %data) #0 {
 ; CHECK-NEXT:    call void @foo(ptr nonnull @.str, i32 [[I_05]], ptr nonnull [[D]]) #[[ATTR3]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[D]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[INC]], [[LEN]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY]], label [[IF_END]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[IF_END]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
 ;

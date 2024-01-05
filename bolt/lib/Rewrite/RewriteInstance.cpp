@@ -538,7 +538,7 @@ Error RewriteInstance::discoverStorage() {
 
     if (!opts::HeatmapMode &&
         !(opts::AggregateOnly && BAT->enabledFor(InputFile)) &&
-        (SectionName.startswith(getOrgSecPrefix()) ||
+        (SectionName.starts_with(getOrgSecPrefix()) ||
          SectionName == getBOLTTextSectionName()))
       return createStringError(
           errc::function_not_supported,
@@ -623,7 +623,9 @@ void RewriteInstance::parseBuildID() {
 
   // Reading notes section (see Portable Formats Specification, Version 1.1,
   // pg 2-5, section "Note Section").
-  DataExtractor DE = DataExtractor(Buf, true, 8);
+  DataExtractor DE =
+      DataExtractor(Buf,
+                    /*IsLittleEndian=*/true, InputFile->getBytesInAddress());
   uint64_t Offset = 0;
   if (!DE.isValidOffset(Offset))
     return;
@@ -704,6 +706,10 @@ Error RewriteInstance::run() {
   adjustCommandLineOptions();
   discoverFileObjects();
 
+  if (opts::Instrument && !BC->IsStaticExecutable)
+    if (Error E = discoverRtFiniAddress())
+      return E;
+
   preprocessProfileData();
 
   // Skip disassembling if we have a translation table and we are running an
@@ -740,6 +746,9 @@ Error RewriteInstance::run() {
 
   updateMetadata();
 
+  if (opts::Instrument && !BC->IsStaticExecutable)
+    updateRtFiniReloc();
+
   if (opts::LinuxKernelMode) {
     errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
     return Error::success();
@@ -769,12 +778,12 @@ void RewriteInstance::discoverFileObjects() {
   std::unordered_map<SymbolRef, StringRef, SymbolRefHash> SymbolToFileName;
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     Expected<StringRef> NameOrError = Symbol.getName();
-    if (NameOrError && NameOrError->startswith("__asan_init")) {
+    if (NameOrError && NameOrError->starts_with("__asan_init")) {
       errs() << "BOLT-ERROR: input file was compiled or linked with sanitizer "
                 "support. Cannot optimize.\n";
       exit(1);
     }
-    if (NameOrError && NameOrError->startswith("__llvm_coverage_mapping")) {
+    if (NameOrError && NameOrError->starts_with("__llvm_coverage_mapping")) {
       errs() << "BOLT-ERROR: input file was compiled or linked with coverage "
                 "support. Cannot optimize.\n";
       exit(1);
@@ -929,9 +938,10 @@ void RewriteInstance::discoverFileObjects() {
     /// It is possible we are seeing a globalized local. LLVM might treat it as
     /// a local if it has a "private global" prefix, e.g. ".L". Thus we have to
     /// change the prefix to enforce global scope of the symbol.
-    std::string Name = SymName.startswith(BC->AsmInfo->getPrivateGlobalPrefix())
-                           ? "PG" + std::string(SymName)
-                           : std::string(SymName);
+    std::string Name =
+        SymName.starts_with(BC->AsmInfo->getPrivateGlobalPrefix())
+            ? "PG" + std::string(SymName)
+            : std::string(SymName);
 
     // Disambiguate all local symbols before adding to symbol table.
     // Since we don't know if we will see a global with the same name,
@@ -1280,6 +1290,77 @@ void RewriteInstance::discoverFileObjects() {
   registerFragments();
 }
 
+Error RewriteInstance::discoverRtFiniAddress() {
+  // Use DT_FINI if it's available.
+  if (BC->FiniAddress) {
+    BC->FiniFunctionAddress = BC->FiniAddress;
+    return Error::success();
+  }
+
+  if (!BC->FiniArrayAddress || !BC->FiniArraySize) {
+    return createStringError(
+        std::errc::not_supported,
+        "Instrumentation needs either DT_FINI or DT_FINI_ARRAY");
+  }
+
+  if (*BC->FiniArraySize < BC->AsmInfo->getCodePointerSize()) {
+    return createStringError(std::errc::not_supported,
+                             "Need at least 1 DT_FINI_ARRAY slot");
+  }
+
+  ErrorOr<BinarySection &> FiniArraySection =
+      BC->getSectionForAddress(*BC->FiniArrayAddress);
+  if (auto EC = FiniArraySection.getError())
+    return errorCodeToError(EC);
+
+  if (const Relocation *Reloc = FiniArraySection->getDynamicRelocationAt(0)) {
+    BC->FiniFunctionAddress = Reloc->Addend;
+    return Error::success();
+  }
+
+  if (const Relocation *Reloc = FiniArraySection->getRelocationAt(0)) {
+    BC->FiniFunctionAddress = Reloc->Value;
+    return Error::success();
+  }
+
+  return createStringError(std::errc::not_supported,
+                           "No relocation for first DT_FINI_ARRAY slot");
+}
+
+void RewriteInstance::updateRtFiniReloc() {
+  // Updating DT_FINI is handled by patchELFDynamic.
+  if (BC->FiniAddress)
+    return;
+
+  const RuntimeLibrary *RT = BC->getRuntimeLibrary();
+  if (!RT || !RT->getRuntimeFiniAddress())
+    return;
+
+  assert(BC->FiniArrayAddress && BC->FiniArraySize &&
+         "inconsistent .fini_array state");
+
+  ErrorOr<BinarySection &> FiniArraySection =
+      BC->getSectionForAddress(*BC->FiniArrayAddress);
+  assert(FiniArraySection && ".fini_array removed");
+
+  if (std::optional<Relocation> Reloc =
+          FiniArraySection->takeDynamicRelocationAt(0)) {
+    assert(Reloc->Addend == BC->FiniFunctionAddress &&
+           "inconsistent .fini_array dynamic relocation");
+    Reloc->Addend = RT->getRuntimeFiniAddress();
+    FiniArraySection->addDynamicRelocation(*Reloc);
+  }
+
+  // Update the static relocation by adding a pending relocation which will get
+  // patched when flushPendingRelocations is called in rewriteFile. Note that
+  // flushPendingRelocations will calculate the value to patch as
+  // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
+  // desired value.
+  FiniArraySection->addPendingRelocation(Relocation{
+      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
+      /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+}
+
 void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
@@ -1344,24 +1425,41 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   BinaryFunction *BF = BC->getBinaryFunctionAtAddress(EntryAddress);
   if (BF && BC->isAArch64()) {
-    // Handle IFUNC trampoline
+    // Handle IFUNC trampoline with symbol
     setPLTSymbol(BF, BF->getOneName());
     return;
   }
 
   const Relocation *Rel = BC->getDynamicRelocationAt(TargetAddress);
-  if (!Rel || !Rel->Symbol)
+  if (!Rel)
     return;
+
+  MCSymbol *Symbol = Rel->Symbol;
+  if (!Symbol) {
+    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+      return;
+
+    // IFUNC trampoline without symbol
+    BinaryFunction *TargetBF = BC->getBinaryFunctionAtAddress(Rel->Addend);
+    if (!TargetBF) {
+      errs()
+          << "BOLT-WARNING: Expected BF to be presented as IFUNC resolver at "
+          << Twine::utohexstr(Rel->Addend) << ", skipping\n";
+      return;
+    }
+
+    Symbol = TargetBF->getSymbol();
+  }
 
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
   assert(Section && "cannot get section for address");
   if (!BF)
-    BF = BC->createBinaryFunction(Rel->Symbol->getName().str() + "@PLT",
-                                  *Section, EntryAddress, 0, EntrySize,
+    BF = BC->createBinaryFunction(Symbol->getName().str() + "@PLT", *Section,
+                                  EntryAddress, 0, EntrySize,
                                   Section->getAlignment());
   else
-    BF->addAlternativeName(Rel->Symbol->getName().str() + "@PLT");
-  setPLTSymbol(BF, Rel->Symbol->getName());
+    BF->addAlternativeName(Symbol->getName().str() + "@PLT");
+  setPLTSymbol(BF, Symbol->getName());
 }
 
 void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
@@ -1689,13 +1787,6 @@ void RewriteInstance::relocateEHFrameSection() {
   check_error(std::move(E), "failed to patch EH frame");
 }
 
-ArrayRef<uint8_t> RewriteInstance::getLSDAData() {
-  return ArrayRef<uint8_t>(LSDASection->getData(),
-                           LSDASection->getContents().size());
-}
-
-uint64_t RewriteInstance::getLSDAAddress() { return LSDASection->getAddress(); }
-
 Error RewriteInstance::readSpecialSections() {
   NamedRegionTimer T("readSpecialSections", "read special sections",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
@@ -1734,7 +1825,6 @@ Error RewriteInstance::readSpecialSections() {
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(".rela.text");
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
-  LSDASection = BC->getUniqueSectionByName(".gcc_except_table");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
 
@@ -2122,6 +2212,19 @@ void RewriteInstance::processDynamicRelocations() {
   }
 
   // The rest of dynamic relocations - DT_RELA.
+  // The static executable might have .rela.dyn secion and not have PT_DYNAMIC
+  if (!DynamicRelocationsSize && BC->IsStaticExecutable) {
+    ErrorOr<BinarySection &> DynamicRelSectionOrErr =
+        BC->getUniqueSectionByName(getRelaDynSectionName());
+    if (DynamicRelSectionOrErr) {
+      DynamicRelocationsAddress = DynamicRelSectionOrErr->getAddress();
+      DynamicRelocationsSize = DynamicRelSectionOrErr->getSize();
+      const SectionRef &SectionRef = DynamicRelSectionOrErr->getSectionRef();
+      DynamicRelativeRelocationsCount = std::distance(
+          SectionRef.relocation_begin(), SectionRef.relocation_end());
+    }
+  }
+
   if (DynamicRelocationsSize > 0) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getSectionForAddress(*DynamicRelocationsAddress);
@@ -2621,8 +2724,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
               BD->nameStartsWith(SymbolName) ||
               BD->nameStartsWith("PG" + SymbolName) ||
               (BD->nameStartsWith("ANONYMOUS") &&
-               (BD->getSectionName().startswith(".plt") ||
-                BD->getSectionName().endswith(".plt")))) &&
+               (BD->getSectionName().starts_with(".plt") ||
+                BD->getSectionName().ends_with(".plt")))) &&
              "BOLT symbol names of all non-section relocations must match up "
              "with symbol names referenced in the relocation");
 
@@ -2638,7 +2741,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // in relocation sections can get through here too, from .plt.
       assert(
           (IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
-           BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
+           BC->getSectionNameForAddress(SymbolAddress)->starts_with(".plt")) &&
           "known symbols should not resolve to anonymous locals");
 
       if (IsSectionRelocation) {
@@ -2655,7 +2758,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           Name = SymbolName;
         } else {
           if (StringRef(SymbolName)
-                  .startswith(BC->AsmInfo->getPrivateGlobalPrefix()))
+                  .starts_with(BC->AsmInfo->getPrivateGlobalPrefix()))
             Name = NR.uniquify("PG" + SymbolName);
           else
             Name = NR.uniquify(SymbolName);
@@ -3092,8 +3195,14 @@ void RewriteInstance::disassembleFunctions() {
 
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
-        !BC->getFragmentsToSkip().count(&Function))
-      Function.parseLSDA(getLSDAData(), getLSDAAddress());
+        !BC->getFragmentsToSkip().count(&Function)) {
+      ErrorOr<BinarySection &> LSDASection =
+          BC->getSectionForAddress(Function.getLSDAAddress());
+      check_error(LSDASection.getError(), "failed to get LSDA section");
+      ArrayRef<uint8_t> LSDAData = ArrayRef<uint8_t>(
+          LSDASection->getData(), LSDASection->getContents().size());
+      Function.parseLSDA(LSDAData, LSDASection->getAddress());
+    }
   }
 }
 
@@ -3104,7 +3213,6 @@ void RewriteInstance::buildFunctionsCFG() {
   // Create annotation indices to allow lock-free execution
   BC->MIB->getOrCreateAnnotationIndex("JTIndexReg");
   BC->MIB->getOrCreateAnnotationIndex("NOP");
-  BC->MIB->getOrCreateAnnotationIndex("Size");
 
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId) {
@@ -3357,8 +3465,8 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
     //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
     // - if opts::HotFunctionsAtEnd is false, we want order
     //   ".text.cold", ".text.cold.1", ... ".text.cold.T-1", ".text.cold.T"
-    if (A->getName().startswith(BC->getColdCodeSectionName()) &&
-        B->getName().startswith(BC->getColdCodeSectionName())) {
+    if (A->getName().starts_with(BC->getColdCodeSectionName()) &&
+        B->getName().starts_with(BC->getColdCodeSectionName())) {
       if (A->getName().size() != B->getName().size())
         return (opts::HotFunctionsAtEnd)
                    ? (A->getName().size() > B->getName().size())
@@ -3373,11 +3481,21 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
     if (B->getName() == BC->getHotTextMoverSectionName())
       return false;
 
-    // Depending on the option, put main text at the beginning or at the end.
-    if (opts::HotFunctionsAtEnd)
-      return B->getName() == BC->getMainCodeSectionName();
-    else
-      return A->getName() == BC->getMainCodeSectionName();
+    // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
+    // order.
+    if (opts::HotFunctionsAtEnd) {
+      if (B->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (A->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (B->getName() == BC->getWarmCodeSectionName());
+    } else {
+      if (A->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (B->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (A->getName() == BC->getWarmCodeSectionName());
+    }
   };
 
   // Determine the order of sections.
@@ -3419,6 +3537,9 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
 
     // Allocate sections starting at a given Address.
     auto allocateAt = [&](uint64_t Address) {
+      const char *LastNonColdSectionName = BC->HasWarmSection
+                                               ? BC->getWarmCodeSectionName()
+                                               : BC->getMainCodeSectionName();
       for (BinarySection *Section : CodeSections) {
         Address = alignTo(Address, Section->getAlignment());
         Section->setOutputAddress(Address);
@@ -3427,13 +3548,13 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
         // Hugify: Additional huge page from right side due to
         // weird ASLR mapping addresses (4KB aligned)
         if (opts::Hugify && !BC->HasFixedLoadAddress &&
-            Section->getName() == BC->getMainCodeSectionName())
+            Section->getName() == LastNonColdSectionName)
           Address = alignTo(Address, Section->getAlignment());
       }
 
       // Make sure we allocate enough space for huge pages.
       ErrorOr<BinarySection &> TextSection =
-          BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+          BC->getUniqueSectionByName(LastNonColdSectionName);
       if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
         uint64_t HotTextEnd =
             TextSection->getOutputAddress() + TextSection->getOutputSize();
@@ -4291,6 +4412,21 @@ void RewriteInstance::updateELFSymbolTable(
     return NewIndex;
   };
 
+  // Get the extra symbol name of a split fragment; used in addExtraSymbols.
+  auto getSplitSymbolName = [&](const FunctionFragment &FF,
+                                const ELFSymTy &FunctionSymbol) {
+    SmallString<256> SymbolName;
+    if (BC->HasWarmSection)
+      SymbolName =
+          formatv("{0}.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+                  FF.getFragmentNum() == FragmentNum::warm() ? "warm" : "cold");
+    else
+      SymbolName = formatv("{0}.cold.{1}",
+                           cantFail(FunctionSymbol.getName(StringSection)),
+                           FF.getFragmentNum().get() - 1);
+    return SymbolName;
+  };
+
   // Add extra symbols for the function.
   //
   // Note that addExtraSymbols() could be called multiple times for the same
@@ -4318,9 +4454,8 @@ void RewriteInstance::updateELFSymbolTable(
            Function.getLayout().getSplitFragments()) {
         if (FF.getAddress()) {
           ELFSymTy NewColdSym = FunctionSymbol;
-          const SmallString<256> SymbolName = formatv(
-              "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-              FF.getFragmentNum().get() - 1);
+          const SmallString<256> SymbolName =
+              getSplitSymbolName(FF, FunctionSymbol);
           NewColdSym.st_name = AddToStrTab(SymbolName);
           NewColdSym.st_shndx =
               Function.getCodeSection(FF.getFragmentNum())->getIndex();
@@ -4467,7 +4602,7 @@ void RewriteInstance::updateELFSymbolTable(
               OutputAddress >= Function->getCodeSection()->getOutputAddress() &&
               OutputAddress < (Function->getCodeSection()->getOutputAddress() +
                                Function->getCodeSection()->getOutputSize()) &&
-              "Cannot locate fragment containg secondary entrypoint");
+              "Cannot locate fragment containing secondary entrypoint");
           FF = Function->getLayout().fragment_begin();
         }
 
@@ -5118,7 +5253,13 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
       }
       break;
     case ELF::DT_FINI:
-      BC->FiniFunctionAddress = Dyn.getPtr();
+      BC->FiniAddress = Dyn.getPtr();
+      break;
+    case ELF::DT_FINI_ARRAY:
+      BC->FiniArrayAddress = Dyn.getPtr();
+      break;
+    case ELF::DT_FINI_ARRAYSZ:
+      BC->FiniArraySize = Dyn.getPtr();
       break;
     case ELF::DT_RELA:
       DynamicRelocationsAddress = Dyn.getPtr();
@@ -5513,16 +5654,16 @@ bool RewriteInstance::willOverwriteSection(StringRef SectionName) {
 }
 
 bool RewriteInstance::isDebugSection(StringRef SectionName) {
-  if (SectionName.startswith(".debug_") || SectionName.startswith(".zdebug_") ||
-      SectionName == ".gdb_index" || SectionName == ".stab" ||
-      SectionName == ".stabstr")
+  if (SectionName.starts_with(".debug_") ||
+      SectionName.starts_with(".zdebug_") || SectionName == ".gdb_index" ||
+      SectionName == ".stab" || SectionName == ".stabstr")
     return true;
 
   return false;
 }
 
 bool RewriteInstance::isKSymtabSection(StringRef SectionName) {
-  if (SectionName.startswith("__ksymtab"))
+  if (SectionName.starts_with("__ksymtab"))
     return true;
 
   return false;

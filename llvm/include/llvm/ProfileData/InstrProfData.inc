@@ -81,9 +81,9 @@ INSTR_PROF_DATA(const IntPtrT, IntPtrTy, BitmapPtr, RelativeBitmapPtr)
  * function name hashes during the conversion from raw to merged profile
  * data.
  */
-INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
+INSTR_PROF_DATA(const IntPtrT, llvm::PointerType::getUnqual(Ctx), FunctionPointer, \
                 FunctionAddr)
-INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
+INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
@@ -116,7 +116,7 @@ INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Value, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
 INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Count, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
-INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::Type::getInt8PtrTy(Ctx), Next, \
+INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
                       ConstantInt::get(llvm::Type::GetInt8PtrTy(Ctx), 0))
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
@@ -160,7 +160,7 @@ INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #endif
 VALUE_PROF_FUNC_PARAM(uint64_t, TargetValue, Type::getInt64Ty(Ctx)) \
                       INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(void *, Data, Type::getInt8PtrTy(Ctx)) INSTR_PROF_COMMA
+VALUE_PROF_FUNC_PARAM(void *, Data, PointerType::getUnqual(Ctx)) INSTR_PROF_COMMA
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #undef VALUE_PROF_FUNC_PARAM
 #undef INSTR_PROF_COMMA
@@ -213,9 +213,9 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize, "last")
 #define INSTR_PROF_DATA_DEFINED
 #endif
 #ifdef COVMAP_V1
-COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
+COVMAP_FUNC_RECORD(const IntPtrT, llvm::PointerType::getUnqual(Ctx), \
                    NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
-                   llvm::Type::getInt8PtrTy(Ctx)))
+                   llvm::PointerType::getUnqual(Ctx)))
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                    NameValue.size()))
@@ -295,6 +295,12 @@ INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
 INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON), \
+                      INSTR_PROF_COVDATA_COFF, "__LLVM_COV,")
+INSTR_PROF_SECT_ENTRY(IPSK_covname, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON), \
+                      INSTR_PROF_COVNAME_COFF, "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -701,6 +707,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
+#define INSTR_PROF_COVDATA_COMMON __llvm_covdata
+#define INSTR_PROF_COVNAME_COMMON __llvm_covnames
 #define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
@@ -713,6 +721,11 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
 #define INSTR_PROF_COVFUN_COFF ".lcovfun$M"
+/* Since cov data and cov names sections are not allocated, we don't need to
+ * access them at runtime.
+ */
+#define INSTR_PROF_COVDATA_COFF ".lcovd"
+#define INSTR_PROF_COVNAME_COFF ".lcovn"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
 #ifdef _WIN32
@@ -729,6 +742,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COFF
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_COVFUN_COFF
+#define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_COVDATA_COFF
+#define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_COVNAME_COFF
 #define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
 #else
 /* Runtime section names and name strings.  */
@@ -744,6 +759,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON)
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON)
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON)
+#define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON)
+#define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON)
 /* Order file instrumentation. */
 #define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
   INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)

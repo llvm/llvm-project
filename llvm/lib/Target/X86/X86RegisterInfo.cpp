@@ -158,6 +158,10 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case X86::GR16RegClassID:
     case X86::GR32RegClassID:
     case X86::GR64RegClassID:
+    case X86::GR8_NOREX2RegClassID:
+    case X86::GR16_NOREX2RegClassID:
+    case X86::GR32_NOREX2RegClassID:
+    case X86::GR64_NOREX2RegClassID:
     case X86::RFP32RegClassID:
     case X86::RFP64RegClassID:
     case X86::RFP80RegClassID:
@@ -306,7 +310,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_AllRegs_AVX_SaveList;
     return CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
-    return CSR_64_RT_MostRegs_SaveList;
+    return IsWin64 ? CSR_Win64_RT_MostRegs_SaveList
+                   : CSR_64_RT_MostRegs_SaveList;
   case CallingConv::PreserveAll:
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_SaveList;
@@ -427,7 +432,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_AllRegs_AVX_RegMask;
     return CSR_64_AllRegs_RegMask;
   case CallingConv::PreserveMost:
-    return CSR_64_RT_MostRegs_RegMask;
+    return IsWin64 ? CSR_Win64_RT_MostRegs_RegMask : CSR_64_RT_MostRegs_RegMask;
   case CallingConv::PreserveAll:
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_RegMask;
@@ -611,6 +616,17 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
 
+  // Reserve the extended general purpose registers.
+  if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasEGPR())
+    Reserved.set(X86::R16, X86::R31WH + 1);
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    for (MCRegAliasIterator AI(X86::R14, this, true); AI.isValid(); ++AI)
+      Reserved.set(*AI);
+    for (MCRegAliasIterator AI(X86::R15, this, true); AI.isValid(); ++AI)
+      Reserved.set(*AI);
+  }
+
   assert(checkAllSuperRegsMarked(Reserved,
                                  {X86::SIL, X86::DIL, X86::BPL, X86::SPL,
                                   X86::SIH, X86::DIH, X86::BPH, X86::SPH}));
@@ -629,12 +645,21 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
   // APX registers (R16-R31)
   //
   // and try to return the minimum number of registers supported by the target.
-
   assert((X86::R15WH + 1 == X86 ::YMM0) && (X86::YMM15 + 1 == X86::K0) &&
-         (X86::K6_K7 + 1 == X86::TMMCFG) &&
-         (X86::TMM7 + 1 == X86::NUM_TARGET_REGS) &&
+         (X86::K6_K7 + 1 == X86::TMMCFG) && (X86::TMM7 + 1 == X86::R16) &&
+         (X86::R31WH + 1 == X86::NUM_TARGET_REGS) &&
          "Register number may be incorrect");
-  return X86::NUM_TARGET_REGS;
+
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.hasEGPR())
+    return X86::NUM_TARGET_REGS;
+  if (ST.hasAMXTILE())
+    return X86::TMM7 + 1;
+  if (ST.hasAVX512())
+    return X86::K6_K7 + 1;
+  if (ST.hasAVX())
+    return X86::YMM15 + 1;
+  return X86::R15WH + 1;
 }
 
 bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
@@ -1052,12 +1077,6 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
   unsigned ID = RC.getID();
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  if ((ID == X86::VK64RegClassID || ID == X86::VK64WMRegClassID) &&
-      Subtarget.hasAVX512() && !Subtarget.hasEVEX512())
-    report_fatal_error(
-        "64-bit mask registers are not supported without EVEX512");
-
   if (ID != X86::TILERegClassID)
     return BaseImplRetVal;
 

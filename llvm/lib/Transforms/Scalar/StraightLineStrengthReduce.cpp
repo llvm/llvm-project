@@ -547,7 +547,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     // indices except this current one.
     const SCEV *BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
     Value *ArrayIdx = GEP->getOperand(I);
-    uint64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
+    uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
     if (ArrayIdx->getType()->getIntegerBitWidth() <=
         DL->getIndexSizeInBits(GEP->getAddressSpace())) {
       // Skip factoring if ArrayIdx is wider than the index size, because
@@ -680,7 +680,7 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
     if (BumpWithUglyGEP) {
       // C = (char *)Basis + Bump
       unsigned AS = Basis.Ins->getType()->getPointerAddressSpace();
-      Type *CharTy = Type::getInt8PtrTy(Basis.Ins->getContext(), AS);
+      Type *CharTy = PointerType::get(Basis.Ins->getContext(), AS);
       Reduced = Builder.CreateBitCast(Basis.Ins, CharTy);
       Reduced =
           Builder.CreateGEP(Builder.getInt8Ty(), Reduced, Bump, "", InBounds);

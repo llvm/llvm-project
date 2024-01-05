@@ -14,6 +14,7 @@ class TestVTableValue(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     @skipUnlessPlatform(["linux", "macosx"])
     def test_vtable(self):
         self.build()
@@ -74,6 +75,7 @@ class TestVTableValue(TestBase):
         for (idx, vtable_entry) in enumerate(vtable.children):
             self.verify_vtable_entry(vtable_entry, vtable_addr, idx)
 
+    @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     @skipUnlessPlatform(["linux", "macosx"])
     def test_base_class_ptr(self):
         self.build()

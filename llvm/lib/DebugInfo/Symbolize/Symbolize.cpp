@@ -233,7 +233,8 @@ LLVMSymbolizer::symbolizeFrame(ArrayRef<uint8_t> BuildID,
 
 template <typename T>
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
+LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
+                                 uint64_t Offset) {
   auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
   if (!InfoOrErr)
     return InfoOrErr.takeError();
@@ -246,7 +247,7 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
   if (!Info)
     return Result;
 
-  for (object::SectionedAddress A : Info->findSymbol(Symbol)) {
+  for (object::SectionedAddress A : Info->findSymbol(Symbol, Offset)) {
     DILineInfo LineInfo = Info->symbolizeCode(
         A, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
         Opts.UseSymbolTable);
@@ -261,18 +262,21 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol) {
-  return findSymbolCommon(Obj, Symbol);
+LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(Obj, Symbol, Offset);
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(StringRef ModuleName, StringRef Symbol) {
-  return findSymbolCommon(ModuleName.str(), Symbol);
+LLVMSymbolizer::findSymbol(const std::string &ModuleName, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(ModuleName, Symbol, Offset);
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol) {
-  return findSymbolCommon(BuildID, Symbol);
+LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(BuildID, Symbol, Offset);
 }
 
 void LLVMSymbolizer::flush() {
@@ -717,7 +721,7 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 
   // Remove any ending '@' for vectorcall.
   bool IsVectorCall = false;
-  if (HasAtNumSuffix && SymbolName.endswith("@")) {
+  if (HasAtNumSuffix && SymbolName.ends_with("@")) {
     SymbolName = SymbolName.drop_back();
     IsVectorCall = true;
   }

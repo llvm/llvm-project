@@ -319,9 +319,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
     return true;
 
   // *** Do not break Hangul syllable sequences. ***
-  if (__prev == __property::__L &&
-      (__next == __property::__L || __next == __property::__V || __next == __property::__LV ||
-       __next == __property::__LVT)) // GB6
+  if (__prev == __property::__L && (__next == __property::__L || __next == __property::__V ||
+                                    __next == __property::__LV || __next == __property::__LVT)) // GB6
     return false;
 
   if ((__prev == __property::__LV || __prev == __property::__V) &&
@@ -402,9 +401,8 @@ public:
   };
 
   _LIBCPP_HIDE_FROM_ABI constexpr __cluster __consume() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __next_prop_ != __extended_grapheme_custer_property_boundary::__property::__eot,
-        "can't move beyond the end of input");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__next_prop_ != __extended_grapheme_custer_property_boundary::__property::__eot,
+                                 "can't move beyond the end of input");
 
     char32_t __code_point = __next_code_point_;
     if (!__code_point_view_.__at_end())

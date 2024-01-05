@@ -318,18 +318,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPEarlyOutliningPass
-    : Pass<"omp-early-target-outlining", "mlir::ModuleOp"> {
-  let summary = "Outlines all target ops into separate functions";
-  let description = [{
-    This pass outlines all omp.target operations into individual functions.
-    It is invoked in the front end after the initial FIR has been constructed.
-    This pass is only needed when compiling for the target device to prevent
-    the optimizer to perform transforms across target region boundaries.
-  }];
-  let constructor = "::fir::createOMPEarlyOutliningPass()";
-}
-
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
@@ -342,7 +330,8 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
                 "for the target device.";
   let constructor = "::fir::createOMPFunctionFilteringPass()";
   let dependentDialects = [
-    "mlir::func::FuncDialect"
+    "mlir::func::FuncDialect",
+    "fir::FIROpsDialect"
   ];
 }
 
@@ -358,6 +347,27 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "vector scale range">,
   ];
   let constructor = "::fir::createVScaleAttrPass()";
+}
+
+def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
+  let summary = "Pass that adds function attributes expected at LLVM IR level";
+  let description = [{ This feature introduces a general attribute aimed at
+     customizing function characteristics. 
+     Options include:
+     Add "frame-pointer" attribute to functions: Set an attribute for the frame 
+     pointer on functions, to avoid saving the frame pointer in a register in 
+     functions where it is unnecessary. This eliminates the need for
+     instructions to save, establish, and restore frame pointers, while also
+     freeing up an additional register in numerous functions. However, this
+     approach can make debugging unfeasible on certain machines.
+  }];
+  let options = [
+    Option<"framePointerKind", "frame-pointer",
+           "mlir::LLVM::framePointerKind::FramePointerKind", 
+           /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+           "frame pointer">,
+  ];
+  let constructor = "::fir::createFunctionAttrPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

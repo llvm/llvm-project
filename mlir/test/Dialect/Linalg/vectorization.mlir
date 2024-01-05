@@ -368,6 +368,34 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK: #[[MAP:.*]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK: func @test_masked_vectorize_linalg_transpose
+func.func @test_masked_vectorize_linalg_transpose(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK:      %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:      %[[D0:.*]] = tensor.dim %arg0, %[[C0]]
+  // CHECK:      %[[C1:.*]] = arith.constant 1 : index
+  // CHECK:      %[[D1:.*]] = tensor.dim %arg0, %[[C1]]
+  // CHECK:      %[[MASK0:.*]] = vector.create_mask %[[D0]], %[[D1]]
+  // CHECK:      %[[LOAD:.*]] = vector.mask %[[MASK0]] { vector.transfer_read %arg0{{.+}} }
+  // CHECK-SAME:   vector<2x4xi1> -> vector<2x4xf32>
+  // CHECK:      %[[MASK1:.*]] = vector.create_mask %[[D1]], %[[D0]]
+  // CHECK:      %[[WRITE:.*]] = vector.mask %[[MASK1]] { vector.transfer_write %[[LOAD]], %arg1{{.+}} permutation_map = #[[MAP]]{{.+}} }
+  // CHECK-SAME:   vector<4x2xi1> -> tensor<?x?xf32>
+  // CHECK:      return %[[WRITE]]
+  %0 = linalg.transpose ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?x?xf32>) permutation = [1, 0]
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.transpose"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @test_masked_vectorize_linalg_copy
 func.func @test_masked_vectorize_linalg_copy(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
   // CHECK: %[[c0:.*]] = arith.constant 0 : index

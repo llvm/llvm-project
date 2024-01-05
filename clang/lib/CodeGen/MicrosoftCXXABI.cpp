@@ -1524,7 +1524,7 @@ void MicrosoftCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
     auto *IsMostDerived = ImplicitParamDecl::Create(
         Context, /*DC=*/nullptr, CGF.CurGD.getDecl()->getLocation(),
         &Context.Idents.get("is_most_derived"), Context.IntTy,
-        ImplicitParamDecl::Other);
+        ImplicitParamKind::Other);
     // The 'most_derived' parameter goes second if the ctor is variadic and last
     // if it's not.  Dtors can't be variadic.
     const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
@@ -1537,7 +1537,7 @@ void MicrosoftCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
     auto *ShouldDelete = ImplicitParamDecl::Create(
         Context, /*DC=*/nullptr, CGF.CurGD.getDecl()->getLocation(),
         &Context.Idents.get("should_call_delete"), Context.IntTy,
-        ImplicitParamDecl::Other);
+        ImplicitParamKind::Other);
     Params.push_back(ShouldDelete);
     getStructorImplicitParamDecl(CGF) = ShouldDelete;
   }
@@ -1892,9 +1892,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
 
   llvm::Comdat *C = nullptr;
   if (!VFTableComesFromAnotherTU &&
-      (llvm::GlobalValue::isWeakForLinker(VFTableLinkage) ||
-       (llvm::GlobalValue::isLocalLinkage(VFTableLinkage) &&
-        VTableAliasIsRequred)))
+      llvm::GlobalValue::isWeakForLinker(VFTableLinkage))
     C = CGM.getModule().getOrInsertComdat(VFTableName.str());
 
   // Only insert a pointer into the VFTable for RTTI data if we are not
@@ -2268,7 +2266,6 @@ MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
   if (RA.isEmpty())
     return Ret.getPointer();
 
-  auto OrigTy = Ret.getType();
   Ret = Ret.withElementType(CGF.Int8Ty);
 
   llvm::Value *V = Ret.getPointer();
@@ -2285,8 +2282,7 @@ MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
   if (RA.NonVirtual)
     V = CGF.Builder.CreateConstInBoundsGEP1_32(CGF.Int8Ty, V, RA.NonVirtual);
 
-  // Cast back to the original type.
-  return CGF.Builder.CreateBitCast(V, OrigTy);
+  return V;
 }
 
 bool MicrosoftCXXABI::requiresArrayCookie(const CXXDeleteExpr *expr,
@@ -4094,7 +4090,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
       &getContext().Idents.get("src"),
       getContext().getLValueReferenceType(RecordTy,
                                           /*SpelledAsLValue=*/true),
-      ImplicitParamDecl::Other);
+      ImplicitParamKind::Other);
   if (IsCopy)
     FunctionArgs.push_back(&SrcParam);
 
@@ -4104,7 +4100,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   ImplicitParamDecl IsMostDerived(getContext(), /*DC=*/nullptr,
                                   SourceLocation(),
                                   &getContext().Idents.get("is_most_derived"),
-                                  getContext().IntTy, ImplicitParamDecl::Other);
+                                  getContext().IntTy, ImplicitParamKind::Other);
   // Only add the parameter to the list if the class has virtual bases.
   if (RD->getNumVBases() > 0)
     FunctionArgs.push_back(&IsMostDerived);

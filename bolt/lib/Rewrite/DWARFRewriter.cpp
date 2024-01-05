@@ -88,6 +88,96 @@ static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   }
 }
 
+using namespace bolt;
+
+/// Take a set of DWARF address ranges corresponding to the input binary and
+/// translate them to a set of address ranges in the output binary.
+static DebugAddressRangesVector
+translateInputToOutputRanges(const BinaryFunction &BF,
+                             const DWARFAddressRangesVector &InputRanges) {
+  DebugAddressRangesVector OutputRanges;
+
+  // If the function hasn't changed return the same ranges.
+  if (!BF.isEmitted()) {
+    OutputRanges.resize(InputRanges.size());
+    llvm::transform(InputRanges, OutputRanges.begin(),
+                    [](const DWARFAddressRange &Range) {
+                      return DebugAddressRange(Range.LowPC, Range.HighPC);
+                    });
+    return OutputRanges;
+  }
+
+  for (const DWARFAddressRange &Range : InputRanges)
+    llvm::append_range(OutputRanges, BF.translateInputToOutputRange(
+                                         {Range.LowPC, Range.HighPC}));
+
+  // Post-processing pass to sort and merge ranges.
+  llvm::sort(OutputRanges);
+  DebugAddressRangesVector MergedRanges;
+  uint64_t PrevHighPC = 0;
+  for (const DebugAddressRange &Range : OutputRanges) {
+    if (Range.LowPC <= PrevHighPC) {
+      MergedRanges.back().HighPC =
+          std::max(MergedRanges.back().HighPC, Range.HighPC);
+    } else {
+      MergedRanges.emplace_back(Range.LowPC, Range.HighPC);
+    }
+    PrevHighPC = MergedRanges.back().HighPC;
+  }
+
+  return MergedRanges;
+}
+
+/// Similar to translateInputToOutputRanges() but operates on location lists.
+static DebugLocationsVector
+translateInputToOutputLocationList(const BinaryFunction &BF,
+                                   const DebugLocationsVector &InputLL) {
+  DebugLocationsVector OutputLL;
+
+  // If the function hasn't changed - there's nothing to update.
+  if (!BF.isEmitted())
+    return InputLL;
+
+  for (const DebugLocationEntry &Entry : InputLL) {
+    DebugAddressRangesVector OutRanges =
+        BF.translateInputToOutputRange({Entry.LowPC, Entry.HighPC});
+    if (!OutRanges.empty() && !OutputLL.empty()) {
+      if (OutRanges.front().LowPC == OutputLL.back().HighPC &&
+          Entry.Expr == OutputLL.back().Expr) {
+        OutputLL.back().HighPC =
+            std::max(OutputLL.back().HighPC, OutRanges.front().HighPC);
+        OutRanges.erase(OutRanges.begin());
+      }
+    }
+    llvm::transform(OutRanges, std::back_inserter(OutputLL),
+                    [&Entry](const DebugAddressRange &R) {
+                      return DebugLocationEntry{R.LowPC, R.HighPC, Entry.Expr};
+                    });
+  }
+
+  // Sort and merge adjacent entries with identical locations.
+  llvm::stable_sort(
+      OutputLL, [](const DebugLocationEntry &A, const DebugLocationEntry &B) {
+        return A.LowPC < B.LowPC;
+      });
+  DebugLocationsVector MergedLL;
+  uint64_t PrevHighPC = 0;
+  const SmallVectorImpl<uint8_t> *PrevExpr = nullptr;
+  for (const DebugLocationEntry &Entry : OutputLL) {
+    if (Entry.LowPC <= PrevHighPC && *PrevExpr == Entry.Expr) {
+      MergedLL.back().HighPC = std::max(Entry.HighPC, MergedLL.back().HighPC);
+    } else {
+      const uint64_t Begin = std::max(Entry.LowPC, PrevHighPC);
+      const uint64_t End = std::max(Begin, Entry.HighPC);
+      MergedLL.emplace_back(DebugLocationEntry{Begin, End, Entry.Expr});
+    }
+    PrevHighPC = MergedLL.back().HighPC;
+    PrevExpr = &MergedLL.back().Expr;
+  }
+
+  return MergedLL;
+}
+
 namespace llvm {
 namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
@@ -350,6 +440,7 @@ getDWOName(llvm::DWARFUnit &CU,
   assert(!DWOName.empty() &&
          "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exists.");
   if (!opts::DwarfOutputPath.empty()) {
+    DWOName = std::string(sys::path::filename(DWOName));
     auto Iter = NameToIndexMap.find(DWOName);
     if (Iter == NameToIndexMap.end())
       Iter = NameToIndexMap.insert({DWOName, 0}).first;
@@ -390,7 +481,7 @@ emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
 
 static void emitDWOBuilder(const std::string &DWOName,
                            DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
-                           const DWARFUnit &SplitCU, DWARFUnit &CU,
+                           DWARFUnit &SplitCU, DWARFUnit &CU,
                            DWARFRewriter::DWPState &State,
                            DebugLocWriter &LocWriter) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
@@ -407,17 +498,15 @@ static void emitDWOBuilder(const std::string &DWOName,
   DWARFRewriter::UnitMetaVectorType TUMetaVector;
   DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
-    // TODO: Handle DWP as input. Right now it will iterate over all of CUs and
-    // TUs
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_info_section_units()) {
+      if (!CU->isTypeUnit())
+        continue;
       DWARFRewriter::UnitMeta MI =
           emitUnit(DWODIEBuilder, *Streamer, *CU.get());
-      if (CU->isTypeUnit())
-        TUMetaVector.emplace_back(MI);
-      else
-        CUMI = MI;
+      TUMetaVector.emplace_back(MI);
     }
+    CUMI = emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_compile_units())
@@ -465,7 +554,7 @@ void DWARFRewriter::addStringHelper(DIEBuilder &DIEBldr, DIE &Die,
                                     const DWARFUnit &Unit,
                                     DIEValue &DIEAttrInfo, StringRef Str) {
   uint32_t NewOffset = StrWriter->addString(Str);
-  if (Unit.getVersion() == 5) {
+  if (Unit.getVersion() >= 5) {
     StrOffstsWriter->updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
                                       NewOffset);
     return;
@@ -590,6 +679,8 @@ void DWARFRewriter::updateDebugInfo() {
     assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
 
     if (!opts::DwarfOutputPath.empty()) {
+      if (!sys::fs::exists(opts::DwarfOutputPath))
+        sys::fs::create_directory(opts::DwarfOutputPath);
       addStringHelper(DIEBldr, UnitDIE, Unit, CompDirAttrInfo,
                       opts::DwarfOutputPath.c_str());
     }
@@ -605,8 +696,6 @@ void DWARFRewriter::updateDebugInfo() {
     std::optional<DWARFUnit *> SplitCU;
     std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
-    StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
-                                Unit->getStringOffsetsTableContribution());
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
     DebugLocWriter *DebugLocWriter = createRangeLocList(*Unit);
@@ -616,7 +705,7 @@ void DWARFRewriter::updateDebugInfo() {
     // Skipping CUs that failed to load.
     if (SplitCU) {
       DIEBuilder DWODIEBuilder(&(*SplitCU)->getContext(), true);
-      DWODIEBuilder.buildBoth();
+      DWODIEBuilder.buildDWOUnit(**SplitCU);
       std::string DWOName = updateDWONameCompDir(
           *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
 
@@ -661,7 +750,7 @@ void DWARFRewriter::updateDebugInfo() {
   };
 
   DIEBuilder DIEBlder(BC.DwCtx.get());
-  DIEBlder.buildTypeUnits();
+  DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
       std::make_unique<raw_svector_ostream>(OutBuffer);
@@ -861,7 +950,7 @@ void DWARFRewriter::updateUnitDebugInfo(
               : nullptr;
       DebugAddressRangesVector OutputRanges;
       if (Function) {
-        OutputRanges = Function->translateInputToOutputRanges(*RangesOrError);
+        OutputRanges = translateInputToOutputRanges(*Function, *RangesOrError);
         LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
           dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
                  << Twine::utohexstr(Die->getOffset()) << " in CU at 0x"
@@ -872,8 +961,7 @@ void DWARFRewriter::updateUnitDebugInfo(
               std::move(OutputRanges), CachedRanges);
           OutputRanges.clear();
         } else if (OutputRanges.empty()) {
-          OutputRanges.push_back({RangesOrError.get().front().LowPC,
-                                  RangesOrError.get().front().HighPC});
+          OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
         }
       } else if (!RangesOrError) {
         consumeError(RangesOrError.takeError());
@@ -1022,7 +1110,7 @@ void DWARFRewriter::updateUnitDebugInfo(
             DebugLocationsVector OutputLL;
             if (const BinaryFunction *Function =
                     BC.getBinaryFunctionContainingAddress(Address)) {
-              OutputLL = Function->translateInputToOutputLocationList(InputLL);
+              OutputLL = translateInputToOutputLocationList(*Function, InputLL);
               LLVM_DEBUG(if (OutputLL.empty()) {
                 dbgs() << "BOLT-DEBUG: location list translated to an empty "
                           "one at 0x"
@@ -1306,7 +1394,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
     std::optional<DWARFFormValue> StmtList =
         Unit->getUnitDIE().find(dwarf::DW_AT_stmt_list);
     std::optional<uint64_t> Offset = dwarf::toSectionOffset(StmtList);
-    assert(Offset && "Was not able to retreive value of DW_AT_stmt_list.");
+    assert(Offset && "Was not able to retrieve value of DW_AT_stmt_list.");
     return *Offset;
   };
 
@@ -1635,7 +1723,7 @@ std::optional<StringRef> updateDebugData(
   case DWARFSectionKind::DW_SECT_LOCLISTS: {
     OutputBuffer = LocWriter.getBuffer();
     // Creating explicit StringRef here, otherwise
-    // with impicit conversion it will take null byte as end of
+    // with implicit conversion it will take null byte as end of
     // string.
     return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                      OutputBuffer->size());
@@ -1904,7 +1992,7 @@ void DWARFRewriter::writeDWOFiles(
            "No RangeListsWriter for DWO ID.");
     RangeListssWriter = RangeListsWritersByCU[DWOId].get();
 
-    // Handling .debug_rnglists.dwo seperatly. The original .o/.dwo might not
+    // Handling .debug_rnglists.dwo separately. The original .o/.dwo might not
     // have .debug_rnglists so won't be part of the loop below.
     if (!RangeListssWriter->empty()) {
       std::unique_ptr<DebugBufferVector> OutputData;

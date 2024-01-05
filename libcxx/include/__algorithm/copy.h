@@ -113,7 +113,7 @@ __copy(_InIter __first, _Sent __last, _OutIter __result) {
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   return std::__copy<_ClassicAlgPolicy>(__first, __last, __result).second;
 }

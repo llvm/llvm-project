@@ -43,9 +43,11 @@ define <4 x i64> @test_fullvec_out_of_bounds(<4 x i64> %arg) {
 ; CHECK-SAME: (<4 x i64> [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> <i64 undef, i64 poison, i64 poison, i64 poison>, i64 [[TMP0]], i64 1
-; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[ARG]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[ARG]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[ARG]], i64 3
+; CHECK-NEXT:    ret <4 x i64> poison
 ;
 entry:
   %stack = alloca [4 x i64], align 4, addrspace(5)
@@ -159,9 +161,9 @@ define void @alloca_load_store_ptr_mixed_ptrvec(<2 x ptr addrspace(3)> %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[ARG]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x ptr addrspace(3)>

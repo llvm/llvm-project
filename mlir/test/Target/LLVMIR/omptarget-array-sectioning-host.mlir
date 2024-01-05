@@ -1,10 +1,10 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // This test checks the offload sizes provided to the OpenMP kernel argument
-// structure are correct when lowering to LLVM-IR from MLIR with 3-D bounds 
-// provided for a 3-D array. One with full default size, and the other with 
-// a user specified OpenMP array sectioning. We expect the default sized 
-// array bounds to lower to the full size of the array and the sectioned 
+// structure are correct when lowering to LLVM-IR from MLIR with 3-D bounds
+// provided for a 3-D array. One with full default size, and the other with
+// a user specified OpenMP array sectioning. We expect the default sized
+// array bounds to lower to the full size of the array and the sectioned
 // array to be the size of 3*3*1*element-byte-size (36 bytes in this case).
 
 module attributes {omp.is_target_device = false} {
@@ -18,12 +18,13 @@ module attributes {omp.is_target_device = false} {
     %6 = omp.bounds   lower_bound(%2 : i64) upper_bound(%2 : i64) stride(%2 : i64) start_idx(%2 : i64)
     %7 = omp.map_info var_ptr(%0 : !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>)   map_clauses(tofrom) capture(ByRef) bounds(%5, %5, %6) -> !llvm.ptr {name = "inarray(1:3,1:3,2:2)"}
     %8 = omp.map_info var_ptr(%1 : !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>)   map_clauses(tofrom) capture(ByRef) bounds(%5, %5, %5) -> !llvm.ptr {name = "outarray(1:3,1:3,1:3)"}
-    omp.target   map_entries(%7, %8 : !llvm.ptr, !llvm.ptr) {
+    omp.target   map_entries(%7 -> %arg0, %8 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
       %9 = llvm.mlir.constant(0 : i64) : i64
       %10 = llvm.mlir.constant(1 : i64) : i64
-      %11 = llvm.getelementptr %0[0, %10, %9, %9] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>
+      %11 = llvm.getelementptr %arg0[0, %10, %9, %9] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>
       %12 = llvm.load %11 : !llvm.ptr -> i32
-      %13 = llvm.getelementptr %1[0, %10, %9, %9] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>
+      %13 = llvm.getelementptr %arg1[0, %10, %9, %9] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>
       llvm.store %12, %13 : i32, !llvm.ptr
       omp.terminator
     }

@@ -91,7 +91,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// previously returned by the call operation with the operands of the
   /// return.
   void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+                        MutableArrayRef<Value> valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 

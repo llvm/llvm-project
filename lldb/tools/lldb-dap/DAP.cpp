@@ -434,20 +434,54 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
   return ExpressionContext::Variable;
 }
 
-void DAP::RunLLDBCommands(llvm::StringRef prefix,
-                          const std::vector<std::string> &commands) {
-  SendOutput(OutputType::Console,
-             llvm::StringRef(::RunLLDBCommands(prefix, commands)));
+bool DAP::RunLLDBCommands(llvm::StringRef prefix,
+                          llvm::ArrayRef<std::string> commands) {
+  bool required_command_failed = false;
+  std::string output =
+      ::RunLLDBCommands(prefix, commands, required_command_failed);
+  SendOutput(OutputType::Console, output);
+  return !required_command_failed;
 }
 
-void DAP::RunInitCommands() {
-  RunLLDBCommands("Running initCommands:", init_commands);
+static llvm::Error createRunLLDBCommandsErrorMessage(llvm::StringRef category) {
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      llvm::formatv(
+          "Failed to run {0} commands. See the Debug Console for more details.",
+          category)
+          .str()
+          .c_str());
 }
 
-void DAP::RunPreRunCommands() {
-  RunLLDBCommands("Running preRunCommands:", pre_run_commands);
+llvm::Error
+DAP::RunAttachCommands(llvm::ArrayRef<std::string> attach_commands) {
+  if (!RunLLDBCommands("Running attachCommands:", attach_commands))
+    return createRunLLDBCommandsErrorMessage("attach");
+  return llvm::Error::success();
 }
 
+llvm::Error
+DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
+  if (!RunLLDBCommands("Running launchCommands:", launch_commands))
+    return createRunLLDBCommandsErrorMessage("launch");
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::RunInitCommands() {
+  if (!RunLLDBCommands("Running initCommands:", init_commands))
+    return createRunLLDBCommandsErrorMessage("initCommands");
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::RunPreRunCommands() {
+  if (!RunLLDBCommands("Running preRunCommands:", pre_run_commands))
+    return createRunLLDBCommandsErrorMessage("preRunCommands");
+  return llvm::Error::success();
+}
+
+void DAP::RunPostRunCommands() {
+  RunLLDBCommands("Running postRunCommands:", post_run_commands);
+}
 void DAP::RunStopCommands() {
   RunLLDBCommands("Running stopCommands:", stop_commands);
 }
@@ -822,6 +856,36 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   result.Printf("lldb-dap repl-mode %s set.\n", new_mode.data());
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
   return true;
+}
+
+void DAP::SetFrameFormat(llvm::StringRef format) {
+  if (format.empty())
+    return;
+  lldb::SBError error;
+  g_dap.frame_format = lldb::SBFormat(format.str().c_str(), error);
+  if (error.Fail()) {
+    g_dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv(
+            "The provided frame format '{0}' couldn't be parsed: {1}\n", format,
+            error.GetCString())
+            .str());
+  }
+}
+
+void DAP::SetThreadFormat(llvm::StringRef format) {
+  if (format.empty())
+    return;
+  lldb::SBError error;
+  g_dap.thread_format = lldb::SBFormat(format.str().c_str(), error);
+  if (error.Fail()) {
+    g_dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv(
+            "The provided thread format '{0}' couldn't be parsed: {1}\n",
+            format, error.GetCString())
+            .str());
+  }
 }
 
 } // namespace lldb_dap

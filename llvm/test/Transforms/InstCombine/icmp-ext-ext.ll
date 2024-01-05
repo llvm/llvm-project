@@ -130,6 +130,17 @@ define i1 @zext_sext_sgt(i8 %x, i8 %y) {
   ret i1 %c
 }
 
+define i1 @zext_nneg_sext_sgt(i8 %x, i8 %y) {
+; CHECK-LABEL: @zext_nneg_sext_sgt(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = zext nneg i8 %x to i32
+  %b = sext i8 %y to i32
+  %c = icmp sgt i32 %a, %b
+  ret i1 %c
+}
+
 define i1 @zext_sext_ugt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @zext_sext_ugt(
 ; CHECK-NEXT:    [[A:%.*]] = zext i8 [[X:%.*]] to i32
@@ -138,6 +149,18 @@ define i1 @zext_sext_ugt(i8 %x, i8 %y) {
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = zext i8 %x to i32
+  %b = sext i8 %y to i32
+  %c = icmp ugt i32 %a, %b
+  ret i1 %c
+}
+
+
+define i1 @zext_nneg_sext_ugt(i8 %x, i8 %y) {
+; CHECK-LABEL: @zext_nneg_sext_ugt(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = zext nneg i8 %x to i32
   %b = sext i8 %y to i32
   %c = icmp ugt i32 %a, %b
   ret i1 %c
@@ -156,6 +179,18 @@ define i1 @zext_sext_eq(i8 %x, i8 %y) {
   ret i1 %c
 }
 
+define i1 @zext_nneg_sext_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @zext_nneg_sext_eq(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = zext nneg i8 %x to i32
+  %b = sext i8 %y to i32
+  %c = icmp eq i32 %a, %b
+  ret i1 %c
+}
+
+
 define i1 @zext_sext_sle_op0_narrow(i8 %x, i16 %y) {
 ; CHECK-LABEL: @zext_sext_sle_op0_narrow(
 ; CHECK-NEXT:    [[A:%.*]] = zext i8 [[X:%.*]] to i32
@@ -164,6 +199,19 @@ define i1 @zext_sext_sle_op0_narrow(i8 %x, i16 %y) {
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = zext i8 %x to i32
+  %b = sext i16 %y to i32
+  %c = icmp sle i32 %a, %b
+  ret i1 %c
+}
+
+
+define i1 @zext_nneg_sext_sle_op0_narrow(i8 %x, i16 %y) {
+; CHECK-LABEL: @zext_nneg_sext_sle_op0_narrow(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i16 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = zext nneg i8 %x to i32
   %b = sext i16 %y to i32
   %c = icmp sle i32 %a, %b
   ret i1 %c
@@ -182,6 +230,18 @@ define i1 @zext_sext_ule_op0_wide(i9 %x, i8 %y) {
   ret i1 %c
 }
 
+define i1 @zext_nneg_sext_ule_op0_wide(i9 %x, i8 %y) {
+; CHECK-LABEL: @zext_nneg_sext_ule_op0_wide(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Y:%.*]] to i9
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i9 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = zext nneg i9 %x to i32
+  %b = sext i8 %y to i32
+  %c = icmp ule i32 %a, %b
+  ret i1 %c
+}
+
 define i1 @sext_zext_slt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sext_zext_slt(
 ; CHECK-NEXT:    [[A:%.*]] = sext i8 [[X:%.*]] to i32
@@ -191,6 +251,18 @@ define i1 @sext_zext_slt(i8 %x, i8 %y) {
 ;
   %a = sext i8 %x to i32
   %b = zext i8 %y to i32
+  %c = icmp slt i32 %a, %b
+  ret i1 %c
+}
+
+
+define i1 @sext_zext_nneg_slt(i8 %x, i8 %y) {
+; CHECK-LABEL: @sext_zext_nneg_slt(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = sext i8 %x to i32
+  %b = zext nneg i8 %y to i32
   %c = icmp slt i32 %a, %b
   ret i1 %c
 }
@@ -208,6 +280,17 @@ define i1 @sext_zext_ult(i8 %x, i8 %y) {
   ret i1 %c
 }
 
+define i1 @sext_zext_nneg_ult(i8 %x, i8 %y) {
+; CHECK-LABEL: @sext_zext_nneg_ult(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = sext i8 %x to i32
+  %b = zext nneg i8 %y to i32
+  %c = icmp ult i32 %a, %b
+  ret i1 %c
+}
+
 define <2 x i1> @sext_zext_ne(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sext_zext_ne(
 ; CHECK-NEXT:    [[A:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
@@ -217,6 +300,18 @@ define <2 x i1> @sext_zext_ne(<2 x i8> %x, <2 x i8> %y) {
 ;
   %a = sext <2 x i8> %x to <2 x i32>
   %b = zext <2 x i8> %y to <2 x i32>
+  %c = icmp ne <2 x i32> %a, %b
+  ret <2 x i1> %c
+}
+
+
+define <2 x i1> @sext_zext_nneg_ne(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @sext_zext_nneg_ne(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %a = sext <2 x i8> %x to <2 x i32>
+  %b = zext nneg <2 x i8> %y to <2 x i32>
   %c = icmp ne <2 x i32> %a, %b
   ret <2 x i1> %c
 }
@@ -234,6 +329,19 @@ define i1 @sext_zext_sge_op0_narrow(i5 %x, i8 %y) {
   ret i1 %c
 }
 
+
+define i1 @sext_zext_nneg_sge_op0_narrow(i5 %x, i8 %y) {
+; CHECK-LABEL: @sext_zext_nneg_sge_op0_narrow(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = sext i5 %x to i32
+  %b = zext nneg i8 %y to i32
+  %c = icmp sge i32 %a, %b
+  ret i1 %c
+}
+
 define i1 @sext_zext_uge_op0_wide(i16 %x, i8 %y) {
 ; CHECK-LABEL: @sext_zext_uge_op0_wide(
 ; CHECK-NEXT:    [[A:%.*]] = sext i16 [[X:%.*]] to i32
@@ -243,6 +351,19 @@ define i1 @sext_zext_uge_op0_wide(i16 %x, i8 %y) {
 ;
   %a = sext i16 %x to i32
   %b = zext i8 %y to i32
+  %c = icmp uge i32 %a, %b
+  ret i1 %c
+}
+
+
+define i1 @sext_zext_nneg_uge_op0_wide(i16 %x, i8 %y) {
+; CHECK-LABEL: @sext_zext_nneg_uge_op0_wide(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Y:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i16 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = sext i16 %x to i32
+  %b = zext nneg i8 %y to i32
   %c = icmp uge i32 %a, %b
   ret i1 %c
 }

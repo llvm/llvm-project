@@ -1,5 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
- 
+
+subroutine foo(b)
 use iso_c_binding
 integer :: x,y
 type(C_PTR) :: b
@@ -28,4 +29,30 @@ type(C_PTR) :: b
   y = y - 1
 !$omp end target
 
-end
+end subroutine foo
+
+subroutine bar(b1, b2, b3)
+  use iso_c_binding
+  integer :: y
+  type(c_ptr) :: c
+  type(c_ptr), allocatable :: b1
+  type(c_ptr), pointer :: b2
+  type(c_ptr), value :: b3
+
+  !WARNING: Variable 'c' in IS_DEVICE_PTR clause must be a dummy argument. This semantic check is deprecated from OpenMP 5.2 and later.
+  !$omp target is_device_ptr(c)
+    y = y + 1
+  !$omp end target
+  !WARNING: Variable 'b1' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute. This semantic check is deprecated from OpenMP 5.2 and later.
+  !$omp target is_device_ptr(b1)
+    y = y + 1
+  !$omp end target
+  !WARNING: Variable 'b2' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute. This semantic check is deprecated from OpenMP 5.2 and later.
+  !$omp target is_device_ptr(b2)
+    y = y + 1
+  !$omp end target
+  !WARNING: Variable 'b3' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute. This semantic check is deprecated from OpenMP 5.2 and later.
+  !$omp target is_device_ptr(b3)
+    y = y + 1
+  !$omp end target
+end subroutine bar

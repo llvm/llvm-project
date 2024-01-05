@@ -427,7 +427,8 @@ template <> constexpr TestCase<int> FullContainer_End_LongRange<bool> {
 template <class Container, class Iter, class Sent, class Validate>
 constexpr void test_sequence_insert_range(Validate validate) {
   using T = typename Container::value_type;
-  auto get_pos = [](auto& c, auto& test_case) { return std::ranges::next(c.begin(), test_case.index); };
+  using D      = typename Container::difference_type;
+  auto get_pos = [](auto& c, auto& test_case) { return std::ranges::next(c.begin(), static_cast<D>(test_case.index)); };
 
   auto test = [&](auto& test_case) {
     Container c(test_case.initial.begin(), test_case.initial.end());

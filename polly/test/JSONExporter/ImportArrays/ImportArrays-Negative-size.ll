@@ -43,17 +43,17 @@ for.body6:                                        ; preds = %for.body6, %for.con
   %0 = load double, ptr %arrayidx8, align 8
   %mul = fmul double %0, %beta
   store double %mul, ptr %arrayidx12, align 8
-  %indvars.iv.next = or i64 %indvars.iv, 1
+  %indvars.iv.next = or disjoint i64 %indvars.iv, 1
   %arrayidx8.1 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next
   %1 = load double, ptr %arrayidx8.1, align 8
   %mul.1 = fmul double %1, %beta
   store double %mul.1, ptr %arrayidx12, align 8
-  %indvars.iv.next.1 = or i64 %indvars.iv, 2
+  %indvars.iv.next.1 = or disjoint i64 %indvars.iv, 2
   %arrayidx8.2 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.1
   %2 = load double, ptr %arrayidx8.2, align 8
   %mul.2 = fmul double %2, %beta
   store double %mul.2, ptr %arrayidx12, align 8
-  %indvars.iv.next.2 = or i64 %indvars.iv, 3
+  %indvars.iv.next.2 = or disjoint i64 %indvars.iv, 3
   %arrayidx8.3 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.2
   %3 = load double, ptr %arrayidx8.3, align 8
   %mul.3 = fmul double %3, %beta

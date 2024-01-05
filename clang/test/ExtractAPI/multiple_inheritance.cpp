@@ -103,8 +103,8 @@ class FooBar : public Foo, public Bar{};
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 1
+          "character": 6,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -157,8 +157,8 @@ class FooBar : public Foo, public Bar{};
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 3
+          "character": 6,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -211,8 +211,8 @@ class FooBar : public Foo, public Bar{};
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 5
+          "character": 6,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -265,8 +265,8 @@ class FooBar : public Foo, public Bar{};
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 7
+          "character": 6,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
