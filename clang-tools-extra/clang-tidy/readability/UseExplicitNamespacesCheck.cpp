@@ -79,35 +79,39 @@ void UseExplicitNamespacesCheck::registerMatchers(
   Finder->addMatcher(typedefNameDecl().bind("TypedefNameDecl"), this);
 }
 
+inline bool
+findMatch(size_t &currentTargetIndex,
+          const std::vector<const DeclContext *> &targetContextVector,
+          const std::string &name) {
+  while (currentTargetIndex < targetContextVector.size()) {
+    auto currentContext = targetContextVector[currentTargetIndex];
+    ++currentTargetIndex;
+    if (auto currentNamespace = dyn_cast<NamespaceDecl>(currentContext)) {
+      if (currentNamespace->isAnonymousNamespace()) {
+        return false;
+      }
+      if (currentNamespace->getIdentifier()->getName().str() == name) {
+        return true;
+      }
+      if (!currentNamespace->isInline()) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  return false;
+};
+
 bool UseExplicitNamespacesCheck::matchesNamespaceLimits(
     const std::vector<const DeclContext *> &targetContextVector) {
   if (limitToPatternVector.empty()) {
     return true;
   }
   size_t currentTargetIndex = 0;
-  auto findMatch = [&currentTargetIndex,
-                    &targetContextVector](const std::string &name) -> bool {
-    while (currentTargetIndex < targetContextVector.size()) {
-      auto currentContext = targetContextVector[currentTargetIndex];
-      ++currentTargetIndex;
-      if (auto currentNamespace = dyn_cast<NamespaceDecl>(currentContext)) {
-        if (currentNamespace->isAnonymousNamespace()) {
-          return false;
-        }
-        if (currentNamespace->getIdentifier()->getName().str() == name) {
-          return true;
-        }
-        if (!currentNamespace->isInline()) {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    }
-    return false;
-  };
   for (size_t i = 0; i < limitToPatternVector.size(); ++i) {
-    if (!findMatch(limitToPatternVector[i])) {
+    if (!findMatch(currentTargetIndex, targetContextVector,
+                   limitToPatternVector[i])) {
       return false;
     }
   }
