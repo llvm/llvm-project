@@ -197,7 +197,7 @@ define double @external_use_with_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_with_fast_math(
 ; AUTO_VEC-NEXT:  entry:
 ; AUTO_VEC-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 16
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 16
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
@@ -264,7 +264,7 @@ define double @external_use_without_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:  entry:
 ; AUTO_VEC-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[SMAX]], 7
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[SMAX]], 8
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp slt i64 [[N]], 8
 ; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; AUTO_VEC:       entry.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[SMAX]], 9223372036854775800
