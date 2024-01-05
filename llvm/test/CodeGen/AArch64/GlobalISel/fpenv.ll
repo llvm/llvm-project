@@ -35,11 +35,8 @@ entry:
 define void @reset_fpenv_01() nounwind {
 ; CHECK-LABEL: reset_fpenv_01:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mov x0, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    bl fesetenv
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b fesetenv
 entry:
   call void @llvm.reset.fpenv()
   ret void
