@@ -311,7 +311,7 @@ TEST(ELFObjectFileTest, CheckOSAndTriple) {
     ASSERT_THAT_EXPECTED(ELFObjOrErr, Succeeded());
 
     auto &ELFObj = **ELFObjOrErr;
-    ASSERT_EQ(ELFObj.makeTriple().getTriple(), Triple);
+    EXPECT_EQ(Triple, ELFObj.makeTriple().getTriple());
   }
 }
 
