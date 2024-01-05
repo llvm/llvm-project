@@ -20,12 +20,6 @@ struct _arr {
   }
 };
 
-// TODO[seth] syntactically sort of valid but almost entirely unusuable
-// (it's an int *, not an int [3] )
-// constexpr int _[3] = {...}; would work, but that's not piecewise substitutable
-// maybe it's ok? I mean, not like we can do better really...
-constexpr auto _ = (int[3]){2, 3, 4};
-
 // output: '{{2, 3, 4}} == {0, 3, 4}'  (the `{{` breaks VerifyDiagnosticConsumer::ParseDirective)
 // expected-note@+1 {{evaluates to}}
 static_assert(_arr{2, 3, 4} == a0.b); // expected-error {{failed}}
@@ -87,7 +81,6 @@ struct V {
   };
 
 };
-// todo[seth] do I cause infinite evaluator recursion if I move this up into the function above?
 static_assert(V{1, 2, 3, 4} == V{1, 2, 3, 4});
 
 // '{{1, 2, 3, 4}} == {{1, 2, 0, 4}}'
