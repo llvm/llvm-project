@@ -49,6 +49,7 @@ Paper Status
    .. [#note-P2693R1] P2693R1: The formatter for ``std::thread::id`` is implemented.
       The formatter for ``stacktrace`` is not implemented, since ``stacktrace`` is
       not implemented yet.
+   .. [#note-P2400R1] P2400R1: ranges::shift_left and ranges::shift_right have not been implemented yet.
 
 .. _issues-status-cxx23:
 
