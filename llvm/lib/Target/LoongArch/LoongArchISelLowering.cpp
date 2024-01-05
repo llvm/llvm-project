@@ -3381,8 +3381,12 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
 
     // TODO: Add more target-dependent nodes later.
     NODE_NAME_CASE(CALL)
+    NODE_NAME_CASE(CALL_MEDIUM)
+    NODE_NAME_CASE(CALL_LARGE)
     NODE_NAME_CASE(RET)
     NODE_NAME_CASE(TAIL)
+    NODE_NAME_CASE(TAIL_MEDIUM)
+    NODE_NAME_CASE(TAIL_LARGE)
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
@@ -4240,15 +4244,31 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  unsigned Op;
+  switch (DAG.getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model");
+  case CodeModel::Small:
+    Op = IsTailCall ? LoongArchISD::TAIL : LoongArchISD::CALL;
+    break;
+  case CodeModel::Medium:
+    assert(Subtarget.is64Bit() && "Medium code model requires LA64");
+    Op = IsTailCall ? LoongArchISD::TAIL_MEDIUM : LoongArchISD::CALL_MEDIUM;
+    break;
+  case CodeModel::Large:
+    assert(Subtarget.is64Bit() && "Large code model requires LA64");
+    Op = IsTailCall ? LoongArchISD::TAIL_LARGE : LoongArchISD::CALL_LARGE;
+    break;
+  }
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(Op, DL, NodeTys, Ops);
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     return Ret;
   }
 
-  Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Op, DL, NodeTys, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);
 

@@ -3158,7 +3158,11 @@ static int order_main(int argc, const char *argv[]) {
   BalancedPartitioning BP(Config);
   BP.run(Nodes);
 
-  WithColor::note() << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
+        "linkage and this output does not take that into account. Some "
+        "post-processing may be required before passing to the linker via "
+        "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
         getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));
