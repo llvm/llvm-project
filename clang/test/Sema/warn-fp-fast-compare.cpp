@@ -48,101 +48,149 @@ bool
 int compareit(float a, float b) {
   volatile int i, j, k, l, m, n, o, p;
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if NO_INFS
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   i = a == INFINITY;
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if NO_INFS
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   j = INFINITY == a;
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_NANS
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   i = a == NAN;
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_NANS
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   j = NAN == a;
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if NO_INFS
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   j = INFINITY <= a;
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+  // expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if NO_INFS
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   j = INFINITY < a;
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_NANS
+  // expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   j = a > NAN;
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_NANS
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   j = a >= NAN;
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 k = std::isinf(a);
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   l = std::isnan(a);
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-//expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   o = std::isfinite(a);
 #if FAST
-// expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   m = __builtin_isinf(a);
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   n = __builtin_isnan(a);
 #if FAST
-//expected-warning@+5 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
 #if NO_INFS
-//expected-warning@+2 {{explicit comparison with infinity in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   p = __builtin_isfinite(a);
 
@@ -151,20 +199,46 @@ k = std::isinf(a);
   j = b < 1.1;
   j = a >= 1.1;
   j = b <= 1.1;
-  j = isunorderedf(a, NAN);
-  j = isunorderedf(a, INFINITY);
+  j = isunorderedf(a, b);
+
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+  j = isunorderedf(a, NAN);
+#if FAST
+// expected-warning@+5 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if NO_INFS
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+  j = isunorderedf(a, INFINITY);
+#if FAST
+// expected-warning@+11 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_NANS
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_NANS
+// expected-warning@+2 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
   i = std::isunordered(a, NAN);
 #if FAST
-// expected-warning@+5 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+11 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
+#endif
+#if FAST
+// expected-warning@+8 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{explicit comparison with NaN in fast floating point mode}}
+// expected-warning@+5 {{explicit comparison with NaN when the program is assumed to not use or produce NaN}}
+#endif
+#if NO_INFS
+// expected-warning@+2 {{explicit comparison with infinity when the program is assumed to not use or produce infinity}}
 #endif
   i = std::isunordered(a, INFINITY);
   return 0;

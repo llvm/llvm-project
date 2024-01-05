@@ -13893,8 +13893,9 @@ private:
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
-  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
-  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
+  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                                   unsigned BuiltinID);
   bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
