@@ -3263,17 +3263,19 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       MI.eraseFromParent();
       return;
     }
-    unsigned PtrBank =
-        getRegBankID(MI.getOperand(0).getReg(), MRI, AMDGPU::SGPRRegBankID);
+    Register PtrReg = MI.getOperand(0).getReg();
+    unsigned PtrBank = getRegBankID(PtrReg, MRI, AMDGPU::SGPRRegBankID);
     if (PtrBank == AMDGPU::VGPRRegBankID) {
       MI.eraseFromParent();
       return;
     }
-    // FIXME: There is currently no support for prefetch in global isel.
-    // There is no node equivalence and what's worse there is no MMO produced
-    // for a prefetch on global isel path.
-    // Prefetch does not affect execution so erase it for now.
-    MI.eraseFromParent();
+    unsigned AS = MRI.getType(PtrReg).getAddressSpace();
+    if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+        AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      MI.eraseFromParent();
+      return;
+    }
+    applyDefaultMapping(OpdMapper);
     return;
   }
   default:
@@ -4690,6 +4692,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
     case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
+    case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap:

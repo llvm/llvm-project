@@ -820,7 +820,6 @@ func.func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
   return
 }
 
-
 // -----
 
 // CHECK-LABEL: @test_identity
@@ -832,90 +831,6 @@ func.func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<
 
   // CHECK: return %[[ARG0]], %[[ARG1]]
   return %0, %1 : tensor<1xf32>, tensor<1xi32>
-}
-
-// -----
-
-// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
-// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK-LABEL: @test_transpose
-// CHECK-SAME: ([[ARG0:%.+]]: tensor<1x2x3xi32>)
-func.func @test_transpose(%arg0: tensor<1x2x3xi32>) -> () {
-  %0 = arith.constant dense<[1, 2, 0]> : tensor<3xi32>
-  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<2x3x1xi32>
-  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel"]} ins([[ARG0]] : tensor<1x2x3xi32>) outs([[OUT:%.+]] : tensor<2x3x1xi32>)
-  // CHECK: ^bb0([[ARG1:%.+]]: i32, [[ARG2:%.+]]: i32)
-  // CHECK:   linalg.yield [[ARG1]]
-  // CHECK: }
-  %1 = tosa.transpose %arg0, %0 : (tensor<1x2x3xi32>, tensor<3xi32>)  -> tensor<2x3x1xi32>
-  return
-}
-
-// -----
-
-// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1, d2, d3) -> (d2, d0, d3, d1)>
-// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-
-// CHECK-LABEL: @test_transpose_dyn
-// CHECK-SAME: (%[[ARG0:.+]]: tensor<1x?x3x4xi32>)
-func.func @test_transpose_dyn(%arg0: tensor<1x?x3x4xi32>) -> () {
-  %0 = arith.constant dense<[1, 3, 0, 2]> : tensor<4xi32>
-  // CHECK: %[[C1:.+]] = arith.constant 1
-  // CHECK: %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[C1]]
-  // CHECK: %[[INIT:.+]] = tensor.empty(%[[DIM]]) : tensor<?x4x1x3xi32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<1x?x3x4xi32>) outs([[OUT:%.+]] : tensor<?x4x1x3xi32>)
-  // CHECK: ^bb0([[ARG1:%.+]]: i32, [[ARG2:%.+]]: i32)
-  // CHECK:   linalg.yield [[ARG1]]
-  // CHECK: }
-  %1 = tosa.transpose %arg0, %0 : (tensor<1x?x3x4xi32>, tensor<4xi32>)  -> tensor<?x4x1x3xi32>
-  return
-}
-
-// -----
-
-// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1, d0)>
-// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0, d1)>
-
-// CHECK-LABEL: @test_transpose_dyn_multiple_2d
-// CHECK-SAME: (%[[ARG0:.+]]: tensor<?x?xf32>)
-func.func @test_transpose_dyn_multiple_2d(%arg0: tensor<?x?xf32>) -> () {
-  %0 = arith.constant dense<[1, 0]> : tensor<2xi32>
-  // CHECK-DAG: %[[C0:.+]] = arith.constant 0
-  // CHECK-DAG: %[[DIM0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
-  // CHECK-DAG: %[[C1:.+]] = arith.constant 1
-  // CHECK-DAG: %[[DIM1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
-  // CHECK: %[[INIT:.+]] = tensor.empty(%[[DIM1]], %[[DIM0]])
-  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x?xf32>) outs([[OUT:%.+]] : tensor<?x?xf32>)
-  // CHECK: ^bb0([[ARG1:%.+]]: f32, [[ARG2:%.+]]: f32)
-  // CHECK:   linalg.yield [[ARG1]]
-  // CHECK: }
-  %1 = tosa.transpose %arg0, %0 : (tensor<?x?xf32>, tensor<2xi32>)  -> tensor<?x?xf32>
-  return
-}
-
-// -----
-
-// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
-// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK-LABEL: @test_transpose_dyn_multiple_3d
-// CHECK-SAME: (%[[ARG0:.+]]: tensor<?x?x?xf32>)
-func.func @test_transpose_dyn_multiple_3d(%arg0: tensor<?x?x?xf32>) {
-  %0 = arith.constant dense<[2, 0, 1]> : tensor<3xi32>
-  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM0:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x?x?xf32>
-  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK-DAG: %[[DIM1:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<?x?x?xf32>
-  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-  // CHECK-DAG: %[[DIM2:.*]] = tensor.dim %[[ARG0]], %[[C2]] : tensor<?x?x?xf32>
-  // CHECK: %[[INIT:.*]] = tensor.empty(%[[DIM2]], %[[DIM0]], %[[DIM1]]) : tensor<?x?x?xf32>
-  // CHECK: %[[GENERIC:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x?x?xf32>) outs(%[[INIT]] : tensor<?x?x?xf32>) {
-  // CHECK: ^bb0(%[[IN0:.*]]: f32, %[[OUT0:.*]]: f32):
-  // CHECK:   linalg.yield %[[IN0]] : f32
-  // CHECK: } -> tensor<?x?x?xf32>
-  %1 = "tosa.transpose"(%arg0, %0) : (tensor<?x?x?xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
-  return
 }
 
 // -----

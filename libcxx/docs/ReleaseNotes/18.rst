@@ -170,6 +170,18 @@ ABI Affecting Changes
   to throw a different exception when attempting allocations that are too large
   (``std::bad_alloc`` vs ``std::length_error``).
 
+- The layout of some views inside ``std::ranges`` that use the ``movable-box`` exposition-only type as an implementation 
+  detail has changed in order to fix a bug which could result in overwriting user data following the ``movable-box``
+  <https://github.com/llvm/llvm-project/issues/70506>. 
+  This was caused by incorrect usage of the ``[[no_unique_address]]`` attribute inside the implementation of ``movable-box``. 
+  This only affects the layout of the following views: ``take_while_view``, ``filter_view``, ``single_view``, ``drop_while_view``, 
+  ``repeat_view``, ``transform_view``, ``chunk_by_view``. In order to avoid silent breakage, an ABI tag has been added to 
+  these views such that their mangled name will be different starting in this version of libc++. 
+  As a result, attempting to call a function that expects one of these views will fail to link until the code has been rebuilt 
+  against a matching version of libc++. In practice, we believe it is unusual for these views to appear at ABI boundaries so this 
+  should not be a major problem for most users. However it is probably worth auditing ranges-heavy code for ABI boundaries that 
+  would contain these views, or for types that contain these views as members and which are passed across ABI boundaries.
+
 Build System Changes
 --------------------
 

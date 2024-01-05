@@ -696,3 +696,11 @@ transform.sequence failures(propagate) {
     transform.named_sequence @foo()
   } : !transform.any_op
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected the type of the parameter attribute ('i64') to match the parameter type ('i32')}}
+  transform.num_associations %arg0 : (!transform.any_op) -> !transform.param<i32>
+}

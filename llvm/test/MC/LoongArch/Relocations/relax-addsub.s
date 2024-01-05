@@ -23,14 +23,6 @@
 # RELAX-NEXT:      0x14 R_LARCH_RELAX - 0x0
 # RELAX-NEXT:    }
 # RELAX-NEXT:    Section ({{.*}}) .rela.data {
-# RELAX-NEXT:      0xF R_LARCH_ADD8 .L3 0x0
-# RELAX-NEXT:      0xF R_LARCH_SUB8 .L2 0x0
-# RELAX-NEXT:      0x10 R_LARCH_ADD16 .L3 0x0
-# RELAX-NEXT:      0x10 R_LARCH_SUB16 .L2 0x0
-# RELAX-NEXT:      0x12 R_LARCH_ADD32 .L3 0x0
-# RELAX-NEXT:      0x12 R_LARCH_SUB32 .L2 0x0
-# RELAX-NEXT:      0x16 R_LARCH_ADD64 .L3 0x0
-# RELAX-NEXT:      0x16 R_LARCH_SUB64 .L2 0x0
 # RELAX-NEXT:      0x1E R_LARCH_ADD8 .L4 0x0
 # RELAX-NEXT:      0x1E R_LARCH_SUB8 .L3 0x0
 # RELAX-NEXT:      0x1F R_LARCH_ADD16 .L4 0x0
@@ -43,8 +35,8 @@
 # RELAX-NEXT:  ]
 
 # RELAX:      Hex dump of section '.data':
-# RELAX-NEXT: 0x00000000 04040004 00000004 00000000 00000000
-# RELAX-NEXT: 0x00000010 00000000 00000000 00000000 00000000
+# RELAX-NEXT: 0x00000000 04040004 00000004 00000000 0000000c
+# RELAX-NEXT: 0x00000010 0c000c00 00000c00 00000000 00000000
 # RELAX-NEXT: 0x00000020 00000000 00000000 00000000 00
 
 .text
@@ -63,13 +55,12 @@
 .short .L2 - .L1
 .word  .L2 - .L1
 .dword .L2 - .L1
-## With relaxation, emit relocs because of the .align making the diff variable.
-## TODO Handle alignment directive. Why they emit relocs now? They returns
-## without folding symbols offset in AttemptToFoldSymbolOffsetDifference().
+## TODO Handle alignment directive.
 .byte  .L3 - .L2
 .short .L3 - .L2
 .word  .L3 - .L2
 .dword .L3 - .L2
+## With relaxation, emit relocs because the la.pcrel makes the diff variable.
 .byte  .L4 - .L3
 .short .L4 - .L3
 .word  .L4 - .L3
