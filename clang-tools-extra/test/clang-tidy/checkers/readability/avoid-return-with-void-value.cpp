@@ -57,3 +57,13 @@ struct C {
 
 template <class T> 
 C<T> f11() { return {}; }
+
+using VOID = void;
+
+VOID f12();
+
+VOID f13() {
+    return f12();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES-LENIENT: :[[@LINE-2]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+}
