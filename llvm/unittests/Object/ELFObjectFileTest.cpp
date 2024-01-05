@@ -36,7 +36,8 @@ struct DataForTest {
 
   template <typename T>
   std::vector<uint8_t> makeElfData(uint8_t Class, uint8_t Encoding,
-                                   uint16_t Machine) {
+                                   uint16_t Machine, uint8_t OS,
+                                   uint16_t Flags) {
     T Ehdr{}; // Zero-initialise the header.
     Ehdr.e_ident[ELF::EI_MAG0] = 0x7f;
     Ehdr.e_ident[ELF::EI_MAG1] = 'E';
@@ -45,9 +46,11 @@ struct DataForTest {
     Ehdr.e_ident[ELF::EI_CLASS] = Class;
     Ehdr.e_ident[ELF::EI_DATA] = Encoding;
     Ehdr.e_ident[ELF::EI_VERSION] = 1;
+    Ehdr.e_ident[ELF::EI_OSABI] = OS;
     Ehdr.e_type = ELF::ET_REL;
     Ehdr.e_machine = Machine;
     Ehdr.e_version = 1;
+    Ehdr.e_flags = Flags;
     Ehdr.e_ehsize = sizeof(T);
 
     bool IsLittleEndian = Encoding == ELF::ELFDATA2LSB;
@@ -64,12 +67,13 @@ struct DataForTest {
     return Bytes;
   }
 
-  DataForTest(uint8_t Class, uint8_t Encoding, uint16_t Machine) {
+  DataForTest(uint8_t Class, uint8_t Encoding, uint16_t Machine,
+              uint8_t OS = ELF::ELFOSABI_NONE, uint16_t Flags = 0) {
     if (Class == ELF::ELFCLASS64)
-      Data = makeElfData<ELF::Elf64_Ehdr>(Class, Encoding, Machine);
+      Data = makeElfData<ELF::Elf64_Ehdr>(Class, Encoding, Machine, OS, Flags);
     else {
       assert(Class == ELF::ELFCLASS32);
-      Data = makeElfData<ELF::Elf32_Ehdr>(Class, Encoding, Machine);
+      Data = makeElfData<ELF::Elf32_Ehdr>(Class, Encoding, Machine, OS, Flags);
     }
   }
 };
@@ -285,6 +289,30 @@ TEST(ELFObjectFileTest, MachineTestForXtensa) {
                                       "elf64-unknown", "elf64-unknown"};
   for (auto [Idx, Data] : enumerate(generateData(ELF::EM_XTENSA)))
     checkFormatAndArch(Data, Formats[Idx], Triple::xtensa);
+}
+
+TEST(ELFObjectFileTest, CheckOSAndTriple) {
+  std::tuple<uint16_t, uint8_t, StringRef> Formats[] = {
+      {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgcn-amd-amdhsa"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_LINUX, "x86_64--linux"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_NETBSD, "x86_64--netbsd"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_HURD, "x86_64--hurd"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_SOLARIS, "x86_64--solaris"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_AIX, "x86_64--aix"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_FREEBSD, "x86_64--freebsd"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_OPENBSD, "x86_64--openbsd"},
+      {ELF::EM_CUDA, ELF::ELFOSABI_CUDA, "nvptx64-nvidia-cuda"}};
+  for (auto [Machine, OS, Triple] : Formats) {
+    const DataForTest D(ELF::ELFCLASS64, ELF::ELFDATA2LSB, Machine, OS,
+                        ELF::EF_AMDGPU_MACH_AMDGCN_LAST);
+    Expected<std::unique_ptr<ObjectFile>> ELFObjOrErr =
+        object::ObjectFile::createELFObjectFile(
+            MemoryBufferRef(toStringRef(D.Data), "dummyELF"));
+    ASSERT_THAT_EXPECTED(ELFObjOrErr, Succeeded());
+
+    auto &ELFObj = **ELFObjOrErr;
+    EXPECT_EQ(Triple, ELFObj.makeTriple().getTriple());
+  }
 }
 
 // ELF relative relocation type test.
@@ -1273,13 +1301,12 @@ Sections:
 )";
 
   auto ErroringMatcher = [](const Elf_Shdr &Sec) -> Expected<bool> {
-    if(Sec.sh_type == ELF::SHT_PROGBITS)
+    if (Sec.sh_type == ELF::SHT_PROGBITS)
       return createError("This was supposed to fail.");
     return false;
   };
 
-  DoCheckFails(OneTextSection, ErroringMatcher,
-               "This was supposed to fail.");
+  DoCheckFails(OneTextSection, ErroringMatcher, "This was supposed to fail.");
 
   StringRef MissingRelocatableContent = R"(
 Sections:
