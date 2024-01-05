@@ -695,14 +695,14 @@ def INVPCID32 : I<0x82, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
                   Requires<[Not64BitMode, HasINVPCID]>;
 def INVPCID64 : I<0x82, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                   "invpcid\t{$src2, $src1|$src1, $src2}", []>, T8, PD,
-                  Requires<[In64BitMode, HasINVPCID]>;
+                  Requires<[In64BitMode]>;
 
 def INVPCID64_EVEX : I<0xF2, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                        "invpcid\t{$src2, $src1|$src1, $src2}", []>,
-                     EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode, HasINVPCID]>;
+                     EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode]>;
 } // SchedRW
 
-let Predicates = [In64BitMode, HasINVPCID] in {
+let Predicates = [HasINVPCID, NoEGPR] in {
   // The instruction can only use a 64 bit register as the register argument
   // in 64 bit mode, while the intrinsic only accepts a 32 bit argument
   // corresponding to it.
@@ -710,6 +710,13 @@ let Predicates = [In64BitMode, HasINVPCID] in {
   // type),/ so it doesn't hurt us that one can't supply a 64 bit value here.
   def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
             (INVPCID64
+              (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
+              addr:$src2)>;
+}
+
+let Predicates = [HasINVPCID, HasEGPR] in {
+  def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
+            (INVPCID64_EVEX
               (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
               addr:$src2)>;
 }
