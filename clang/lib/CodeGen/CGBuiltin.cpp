@@ -10430,6 +10430,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
   }
 
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
+    // Create call to __arm_sme_state and store the results to the two pointers.
+    CallInst *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(StructType::get(CGM.Int64Ty, CGM.Int64Ty), {},
+                                false),
+        "__arm_sme_state"));
+    auto Attrs =
+        AttributeList()
+            .addFnAttribute(getLLVMContext(), "aarch64_pstate_sm_compatible")
+            .addFnAttribute(getLLVMContext(), "aarch64_pstate_za_preserved");
+    CI->setAttributes(Attrs);
+    CI->setCallingConv(
+        llvm::CallingConv::
+            AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2);
+    Builder.CreateStore(Builder.CreateExtractValue(CI, 0),
+                        EmitPointerWithAlignment(E->getArg(0)));
+    return Builder.CreateStore(Builder.CreateExtractValue(CI, 1),
+                               EmitPointerWithAlignment(E->getArg(1)));
+  }
+
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rbit) {
     assert((getContext().getTypeSize(E->getType()) == 32) &&
            "rbit of unusual size!");

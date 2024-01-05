@@ -492,7 +492,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
         unsigned Idx = cast<ConstantInt>(Op)->getZExtValue();
         TmpOffset += SL->getElementOffset(Idx);
       } else {
-        uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+        uint64_t S = GTI.getSequentialElementStride(DL);
         while (true) {
           if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
             // Constant-offset addressing.

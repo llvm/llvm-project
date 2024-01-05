@@ -850,7 +850,7 @@ class AMDGPUImageDimIntrinsicEval<AMDGPUDimProfile P_> {
 // All dimension-aware intrinsics are derived from this class.
 class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
                               list<IntrinsicProperty> props,
-                              list<SDNodeProperty> sdnodeprops> : DefaultAttrsIntrinsic<
+                              list<SDNodeProperty> sdnodeprops> : Intrinsic<
     P_.RetTypes,        // vdata(VGPR) -- for load/atomic-with-return
     !listconcat(
       !foreach(arg, P_.DataArgs, arg.Type),      // vdata(VGPR) -- for store/atomic
@@ -864,11 +864,12 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
                                                  //   gfx12+ imm: bits [0-2] = th, bits [3-4] = scope)
                                                  // TODO-GFX12: Update all other cachepolicy descriptions.
 
-     !listconcat(props,
+     !listconcat(props, [IntrNoCallback, IntrNoFree, IntrWillReturn],
           !if(P_.IsAtomic, [], [ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.DmaskArgIndex>>]),
           !if(P_.IsSample, [ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.UnormArgIndex>>], []),
           [ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.TexFailCtrlArgIndex>>,
-           ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.CachePolicyArgIndex>>]),
+           ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.CachePolicyArgIndex>>],
+          !if(P_.IsAtomic, [], [IntrNoSync])),
 
 
       "", sdnodeprops>,
@@ -2543,10 +2544,10 @@ def int_amdgcn_s_get_waveid_in_workgroup :
   Intrinsic<[llvm_i32_ty], [],
     [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-class AMDGPUAtomicRtn<LLVMType vt> : Intrinsic <
+class AMDGPUAtomicRtn<LLVMType vt, LLVMType pt = llvm_anyptr_ty> : Intrinsic <
   [vt],
-  [llvm_anyptr_ty,    // vaddr
-   vt],               // vdata(VGPR)
+  [pt,  // vaddr
+   vt], // vdata(VGPR)
   [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree], "",
   [SDNPMemOperand]>;
 

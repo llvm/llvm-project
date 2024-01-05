@@ -2508,7 +2508,7 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsTargetLowering::
 lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // check the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+  if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
         "return address can be determined only for current frame");
     return SDValue();
@@ -2529,7 +2529,7 @@ SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   // check the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+  if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
         "return address can be determined only for current frame");
     return SDValue();

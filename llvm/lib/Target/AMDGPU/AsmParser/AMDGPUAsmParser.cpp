@@ -1057,6 +1057,7 @@ public:
   }
 
   static void printImmTy(raw_ostream& OS, ImmTy Type) {
+    // clang-format off
     switch (Type) {
     case ImmTyNone: OS << "None"; break;
     case ImmTyGDS: OS << "GDS"; break;
@@ -1120,12 +1121,8 @@ public:
     case ImmTyEndpgm: OS << "Endpgm"; break;
     case ImmTyWaitVDST: OS << "WaitVDST"; break;
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
-    case ImmTyWaitVAVDst:
-      OS << "WaitVAVDst";
-      break;
-    case ImmTyWaitVMVSrc:
-      OS << "WaitVMVSrc";
-      break;
+    case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
+    case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
     case ImmTyGlobalSReg32:
       OS << "GlobalSReg32";
       break;
@@ -1133,6 +1130,7 @@ public:
       OS << "GlobalSReg64";
       break;
     }
+    // clang-format on
   }
 
   void print(raw_ostream &OS) const override {
@@ -1916,6 +1914,9 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return &APFloat::IEEEsingle();
@@ -1930,13 +1931,10 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
-  case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_KIMM16:
     return &APFloat::IEEEhalf();
@@ -2084,9 +2082,14 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
   // We allow fp literals with f16x2 operands assuming that the specified
   // literal goes into the lower half and the upper half is zero. We also
   // require that the literal may be losslessly converted to f16.
-  MVT ExpectedType = (type == MVT::v2f16)? MVT::f16 :
-                     (type == MVT::v2i16)? MVT::i16 :
-                     (type == MVT::v2f32)? MVT::f32 : type;
+  //
+  // For i16x2 operands, we assume that the specified literal is encoded as a
+  // single-precision float. This is pretty odd, but it matches SP3 and what
+  // happens in hardware.
+  MVT ExpectedType = (type == MVT::v2f16)   ? MVT::f16
+                     : (type == MVT::v2i16) ? MVT::f32
+                     : (type == MVT::v2f32) ? MVT::f32
+                                            : type;
 
   APFloat FPLiteral(APFloat::IEEEdouble(), APInt(64, Imm.Val));
   return canLosslesslyConvertToFPType(FPLiteral, ExpectedType);
@@ -3498,12 +3501,12 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16 ||
         OperandType == AMDGPU::OPERAND_REG_IMM_V2INT16)
-      return AMDGPU::isInlinableIntLiteralV216(Val);
+      return AMDGPU::isInlinableLiteralV2I16(Val);
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_V2FP16 ||
         OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
-      return AMDGPU::isInlinableLiteralV216(Val, hasInv2PiInlineImm());
+      return AMDGPU::isInlinableLiteralV2F16(Val);
 
     return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
   }

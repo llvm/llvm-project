@@ -16,6 +16,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -628,7 +629,7 @@ template <typename Op>
 static LogicalResult verifyDeviceTypeCountMatch(Op op, OperandRange operands,
                                                 ArrayAttr deviceTypes,
                                                 llvm::StringRef keyword) {
-  if (operands.size() > 0 && deviceTypes.getValue().size() != operands.size())
+  if (!operands.empty() && deviceTypes.getValue().size() != operands.size())
     return op.emitOpError() << keyword << " operands count must match "
                             << keyword << " device_type count";
   return success();
@@ -874,7 +875,7 @@ static void printNumGangs(mlir::OpAsmPrinter &p, mlir::Operation *op,
   }
 }
 
-static ParseResult parseWaitOperands(
+static ParseResult parseDeviceTypeOperandsWithSegment(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
     llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &deviceTypes,
@@ -886,6 +887,8 @@ static ParseResult parseWaitOperands(
     if (failed(parser.parseLBrace()))
       return failure();
 
+    int32_t crtOperandsSize = operands.size();
+
     if (failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(operands.emplace_back()) ||
@@ -895,7 +898,7 @@ static ParseResult parseWaitOperands(
             })))
       return failure();
 
-    seg.push_back(operands.size());
+    seg.push_back(operands.size() - crtOperandsSize);
 
     if (failed(parser.parseRBrace()))
       return failure();
@@ -918,11 +921,10 @@ static ParseResult parseWaitOperands(
   return success();
 }
 
-static void printWaitOperands(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                              mlir::OperandRange operands,
-                              mlir::TypeRange types,
-                              std::optional<mlir::ArrayAttr> deviceTypes,
-                              std::optional<mlir::DenseI32ArrayAttr> segments) {
+static void printDeviceTypeOperandsWithSegment(
+    mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::OperandRange operands,
+    mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
+    std::optional<mlir::DenseI32ArrayAttr> segments) {
   unsigned opIdx = 0;
   for (unsigned i = 0; i < deviceTypes->size(); ++i) {
     if (i != 0)
@@ -1208,16 +1210,19 @@ void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // LoopOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult
-parseGangValue(OpAsmParser &parser, llvm::StringRef keyword,
-               std::optional<OpAsmParser::UnresolvedOperand> &value,
-               Type &valueType, bool &needComa, bool &newValue) {
+static ParseResult parseGangValue(
+    OpAsmParser &parser, llvm::StringRef keyword,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
+    llvm::SmallVectorImpl<Type> &types,
+    llvm::SmallVector<GangArgTypeAttr> &attributes, GangArgTypeAttr gangArgType,
+    bool &needComa, bool &newValue) {
   if (succeeded(parser.parseOptionalKeyword(keyword))) {
     if (parser.parseEqual())
       return failure();
-    value = OpAsmParser::UnresolvedOperand{};
-    if (parser.parseOperand(*value) || parser.parseColonType(valueType))
+    if (parser.parseOperand(operands.emplace_back()) ||
+        parser.parseColonType(types.emplace_back()))
       return failure();
+    attributes.push_back(gangArgType);
     needComa = true;
     newValue = true;
   }
@@ -1225,19 +1230,27 @@ parseGangValue(OpAsmParser &parser, llvm::StringRef keyword,
 }
 
 static ParseResult parseGangClause(
-    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
-    Type &gangNumType, std::optional<OpAsmParser::UnresolvedOperand> &gangDim,
-    Type &gangDimType,
-    std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
-    Type &gangStaticType, UnitAttr &hasGang) {
-  hasGang = UnitAttr::get(parser.getBuilder().getContext());
-  gangNum = std::nullopt;
-  gangDim = std::nullopt;
-  gangStatic = std::nullopt;
+    OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &gangOperands,
+    llvm::SmallVectorImpl<Type> &gangOperandsType, mlir::ArrayAttr &gangArgType,
+    mlir::ArrayAttr &deviceType, mlir::DenseI32ArrayAttr &segments) {
+  llvm::SmallVector<GangArgTypeAttr> attributes;
+  llvm::SmallVector<DeviceTypeAttr> deviceTypeAttributes;
+  llvm::SmallVector<int32_t> seg;
   bool needComa = false;
 
-  // optional gang operands
-  if (succeeded(parser.parseOptionalLParen())) {
+  auto argNum = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
+                                                mlir::acc::GangArgType::Num);
+  auto argDim = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
+                                                mlir::acc::GangArgType::Dim);
+  auto argStatic = mlir::acc::GangArgTypeAttr::get(
+      parser.getContext(), mlir::acc::GangArgType::Static);
+
+  do {
+    if (failed(parser.parseLBrace()))
+      return failure();
+
+    int32_t crtOperandsSize = gangOperands.size();
     while (true) {
       bool newValue = false;
       bool needValue = false;
@@ -1248,15 +1261,17 @@ static ParseResult parseGangClause(
           break;
       }
 
-      if (failed(parseGangValue(parser, LoopOp::getGangNumKeyword(), gangNum,
-                                gangNumType, needComa, newValue)))
+      if (failed(parseGangValue(parser, LoopOp::getGangNumKeyword(),
+                                gangOperands, gangOperandsType, attributes,
+                                argNum, needComa, newValue)))
         return failure();
-      if (failed(parseGangValue(parser, LoopOp::getGangDimKeyword(), gangDim,
-                                gangDimType, needComa, newValue)))
+      if (failed(parseGangValue(parser, LoopOp::getGangDimKeyword(),
+                                gangOperands, gangOperandsType, attributes,
+                                argDim, needComa, newValue)))
         return failure();
       if (failed(parseGangValue(parser, LoopOp::getGangStaticKeyword(),
-                                gangStatic, gangStaticType, needComa,
-                                newValue)))
+                                gangOperands, gangOperandsType, attributes,
+                                argStatic, needComa, newValue)))
         return failure();
 
       if (!newValue && needValue) {
@@ -1269,86 +1284,168 @@ static ParseResult parseGangClause(
         break;
     }
 
-    if (!gangNum && !gangDim && !gangStatic) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "expect at least one of num, dim or static values");
+    if (gangOperands.empty())
+      return parser.emitError(
+          parser.getCurrentLocation(),
+          "expect at least one of num, dim or static values");
+
+    if (failed(parser.parseRBrace()))
       return failure();
+
+    if (succeeded(parser.parseOptionalLSquare())) {
+      if (parser.parseAttribute(deviceTypeAttributes.emplace_back()) ||
+          parser.parseRSquare())
+        return failure();
+    } else {
+      deviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+          parser.getContext(), mlir::acc::DeviceType::None));
     }
 
-    if (failed(parser.parseRParen()))
-      return failure();
-  }
+    seg.push_back(gangOperands.size() - crtOperandsSize);
+
+  } while (succeeded(parser.parseOptionalComma()));
+
+  llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
+                                               attributes.end());
+  gangArgType = ArrayAttr::get(parser.getContext(), arrayAttr);
+
+  llvm::SmallVector<mlir::Attribute> deviceTypeAttr(
+      deviceTypeAttributes.begin(), deviceTypeAttributes.end());
+  deviceType = ArrayAttr::get(parser.getContext(), deviceTypeAttr);
+  segments = DenseI32ArrayAttr::get(parser.getContext(), seg);
   return success();
 }
 
-void printGangClause(OpAsmPrinter &p, Operation *op, Value gangNum,
-                     Type gangNumType, Value gangDim, Type gangDimType,
-                     Value gangStatic, Type gangStaticType, UnitAttr hasGang) {
-  if (gangNum || gangStatic || gangDim) {
-    p << "(";
-    if (gangNum) {
-      p << LoopOp::getGangNumKeyword() << "=" << gangNum << " : "
-        << gangNumType;
-      if (gangStatic || gangDim)
+void printGangClause(OpAsmPrinter &p, Operation *op,
+                     mlir::OperandRange operands, mlir::TypeRange types,
+                     std::optional<mlir::ArrayAttr> gangArgTypes,
+                     std::optional<mlir::ArrayAttr> deviceTypes,
+                     std::optional<mlir::DenseI32ArrayAttr> segments) {
+  unsigned opIdx = 0;
+  for (unsigned i = 0; i < deviceTypes->size(); ++i) {
+    if (i != 0)
+      p << ", ";
+    p << "{";
+    for (int32_t j = 0; j < (*segments)[i]; ++j) {
+      if (j != 0)
         p << ", ";
+      auto gangArgTypeAttr =
+          mlir::dyn_cast<mlir::acc::GangArgTypeAttr>((*gangArgTypes)[opIdx]);
+      if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Num)
+        p << LoopOp::getGangNumKeyword();
+      else if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Dim)
+        p << LoopOp::getGangDimKeyword();
+      else if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Static)
+        p << LoopOp::getGangStaticKeyword();
+      p << "=" << operands[opIdx] << " : " << operands[opIdx].getType();
+      ++opIdx;
     }
-    if (gangDim) {
-      p << LoopOp::getGangDimKeyword() << "=" << gangDim << " : "
-        << gangDimType;
-      if (gangStatic)
-        p << ", ";
-    }
-    if (gangStatic)
-      p << LoopOp::getGangStaticKeyword() << "=" << gangStatic << " : "
-        << gangStaticType;
-    p << ")";
+
+    p << "}";
+    auto deviceTypeAttr =
+        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*deviceTypes)[i]);
+    if (deviceTypeAttr.getValue() != mlir::acc::DeviceType::None)
+      p << " [" << (*deviceTypes)[i] << "]";
   }
 }
 
-static ParseResult
-parseWorkerClause(OpAsmParser &parser,
-                  std::optional<OpAsmParser::UnresolvedOperand> &workerNum,
-                  Type &workerNumType, UnitAttr &hasWorker) {
-  hasWorker = UnitAttr::get(parser.getBuilder().getContext());
-  if (succeeded(parser.parseOptionalLParen())) {
-    workerNum = OpAsmParser::UnresolvedOperand{};
-    if (parser.parseOperand(*workerNum) ||
-        parser.parseColonType(workerNumType) || parser.parseRParen())
+bool hasDuplicateDeviceTypes(
+    std::optional<mlir::ArrayAttr> segments,
+    llvm::SmallSet<mlir::acc::DeviceType, 3> &deviceTypes) {
+  if (!segments)
+    return false;
+  for (auto attr : *segments) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    if (deviceTypes.contains(deviceTypeAttr.getValue()))
+      return true;
+    deviceTypes.insert(deviceTypeAttr.getValue());
+  }
+  return false;
+}
+
+/// Check for duplicates in the DeviceType array attribute.
+LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
+  llvm::SmallSet<mlir::acc::DeviceType, 3> crtDeviceTypes;
+  if (!deviceTypes)
+    return success();
+  for (auto attr : deviceTypes) {
+    auto deviceTypeAttr =
+        mlir::dyn_cast_or_null<mlir::acc::DeviceTypeAttr>(attr);
+    if (!deviceTypeAttr)
       return failure();
+    if (crtDeviceTypes.contains(deviceTypeAttr.getValue()))
+      return failure();
+    crtDeviceTypes.insert(deviceTypeAttr.getValue());
   }
   return success();
-}
-
-void printWorkerClause(OpAsmPrinter &p, Operation *op, Value workerNum,
-                       Type workerNumType, UnitAttr hasWorker) {
-  if (workerNum)
-    p << "(" << workerNum << " : " << workerNumType << ")";
-}
-
-static ParseResult
-parseVectorClause(OpAsmParser &parser,
-                  std::optional<OpAsmParser::UnresolvedOperand> &vectorLength,
-                  Type &vectorLengthType, UnitAttr &hasVector) {
-  hasVector = UnitAttr::get(parser.getBuilder().getContext());
-  if (succeeded(parser.parseOptionalLParen())) {
-    vectorLength = OpAsmParser::UnresolvedOperand{};
-    if (parser.parseOperand(*vectorLength) ||
-        parser.parseColonType(vectorLengthType) || parser.parseRParen())
-      return failure();
-  }
-  return success();
-}
-
-void printVectorClause(OpAsmPrinter &p, Operation *op, Value vectorLength,
-                       Type vectorLengthType, UnitAttr hasVector) {
-  if (vectorLength)
-    p << "(" << vectorLength << " : " << vectorLengthType << ")";
 }
 
 LogicalResult acc::LoopOp::verify() {
+  // Check collapse
+  if (getCollapseAttr() && !getCollapseDeviceTypeAttr())
+    return emitOpError() << "collapse device_type attr must be define when"
+                         << " collapse attr is present";
+
+  if (getCollapseAttr() && getCollapseDeviceTypeAttr() &&
+      getCollapseAttr().getValue().size() !=
+          getCollapseDeviceTypeAttr().getValue().size())
+    return emitOpError() << "collapse attribute count must match collapse"
+                         << " device_type count";
+  if (failed(checkDeviceTypes(getCollapseDeviceTypeAttr())))
+    return emitOpError()
+           << "duplicate device_type found in collapseDeviceType attribute";
+
+  // Check gang
+  if (!getGangOperands().empty()) {
+    if (!getGangOperandsArgType())
+      return emitOpError() << "gangOperandsArgType attribute must be defined"
+                           << " when gang operands are present";
+
+    if (getGangOperands().size() !=
+        getGangOperandsArgTypeAttr().getValue().size())
+      return emitOpError() << "gangOperandsArgType attribute count must match"
+                           << " gangOperands count";
+  }
+  if (getGangAttr() && failed(checkDeviceTypes(getGangAttr())))
+    return emitOpError() << "duplicate device_type found in gang attribute";
+
+  if (failed(verifyDeviceTypeAndSegmentCountMatch(
+          *this, getGangOperands(), getGangOperandsSegmentsAttr(),
+          getGangOperandsDeviceTypeAttr(), "gang")))
+    return failure();
+
+  // Check worker
+  if (failed(checkDeviceTypes(getWorkerAttr())))
+    return emitOpError() << "duplicate device_type found in worker attribute";
+  if (failed(checkDeviceTypes(getWorkerNumOperandsDeviceTypeAttr())))
+    return emitOpError() << "duplicate device_type found in "
+                            "workerNumOperandsDeviceType attribute";
+  if (failed(verifyDeviceTypeCountMatch(*this, getWorkerNumOperands(),
+                                        getWorkerNumOperandsDeviceTypeAttr(),
+                                        "worker")))
+    return failure();
+
+  // Check vector
+  if (failed(checkDeviceTypes(getVectorAttr())))
+    return emitOpError() << "duplicate device_type found in vector attribute";
+  if (failed(checkDeviceTypes(getVectorOperandsDeviceTypeAttr())))
+    return emitOpError() << "duplicate device_type found in "
+                            "vectorOperandsDeviceType attribute";
+  if (failed(verifyDeviceTypeCountMatch(*this, getVectorOperands(),
+                                        getVectorOperandsDeviceTypeAttr(),
+                                        "vector")))
+    return failure();
+
+  if (failed(verifyDeviceTypeAndSegmentCountMatch(
+          *this, getTileOperands(), getTileOperandsSegmentsAttr(),
+          getTileOperandsDeviceTypeAttr(), "tile")))
+    return failure();
+
   // auto, independent and seq attribute are mutually exclusive.
-  if ((getAuto_() && (getIndependent() || getSeq())) ||
-      (getIndependent() && getSeq())) {
+  llvm::SmallSet<mlir::acc::DeviceType, 3> deviceTypes;
+  if (hasDuplicateDeviceTypes(getAuto_(), deviceTypes) ||
+      hasDuplicateDeviceTypes(getIndependent(), deviceTypes) ||
+      hasDuplicateDeviceTypes(getSeq(), deviceTypes)) {
     return emitError() << "only one of \"" << acc::LoopOp::getAutoAttrStrName()
                        << "\", " << getIndependentAttrName() << ", "
                        << getSeqAttrName()
@@ -1356,8 +1453,24 @@ LogicalResult acc::LoopOp::verify() {
   }
 
   // Gang, worker and vector are incompatible with seq.
-  if (getSeq() && (getHasGang() || getHasWorker() || getHasVector()))
-    return emitError("gang, worker or vector cannot appear with the seq attr");
+  if (getSeqAttr()) {
+    for (auto attr : getSeqAttr()) {
+      auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+      if (hasVector(deviceTypeAttr.getValue()) ||
+          getVectorValue(deviceTypeAttr.getValue()) ||
+          hasWorker(deviceTypeAttr.getValue()) ||
+          getWorkerValue(deviceTypeAttr.getValue()) ||
+          hasGang(deviceTypeAttr.getValue()) ||
+          getGangValue(mlir::acc::GangArgType::Num,
+                       deviceTypeAttr.getValue()) ||
+          getGangValue(mlir::acc::GangArgType::Dim,
+                       deviceTypeAttr.getValue()) ||
+          getGangValue(mlir::acc::GangArgType::Static,
+                       deviceTypeAttr.getValue()))
+        return emitError()
+               << "gang, worker or vector cannot appear with the seq attr";
+    }
+  }
 
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getPrivateOperands(), "private",
@@ -1381,14 +1494,147 @@ unsigned LoopOp::getNumDataOperands() {
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getGangNum() ? 1 : 0;
-  numOptional += getGangDim() ? 1 : 0;
-  numOptional += getGangStatic() ? 1 : 0;
-  numOptional += getVectorLength() ? 1 : 0;
-  numOptional += getWorkerNum() ? 1 : 0;
+  unsigned numOptional = getGangOperands().size();
+  numOptional += getVectorOperands().size();
+  numOptional += getWorkerNumOperands().size();
   numOptional += getTileOperands().size();
   numOptional += getCacheOperands().size();
   return getOperand(numOptional + i);
+}
+
+bool LoopOp::hasAuto() { return hasAuto(mlir::acc::DeviceType::None); }
+
+bool LoopOp::hasAuto(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getAuto_()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+bool LoopOp::hasIndependent() {
+  return hasIndependent(mlir::acc::DeviceType::None);
+}
+
+bool LoopOp::hasIndependent(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getIndependent()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+bool LoopOp::hasSeq() { return hasSeq(mlir::acc::DeviceType::None); }
+
+bool LoopOp::hasSeq(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getSeq()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Value LoopOp::getVectorValue() {
+  return getVectorValue(mlir::acc::DeviceType::None);
+}
+
+mlir::Value LoopOp::getVectorValue(mlir::acc::DeviceType deviceType) {
+  return getValueInDeviceTypeSegment(getVectorOperandsDeviceType(),
+                                     getVectorOperands(), deviceType);
+}
+
+bool LoopOp::hasVector() { return hasVector(mlir::acc::DeviceType::None); }
+
+bool LoopOp::hasVector(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getVector()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Value LoopOp::getWorkerValue() {
+  return getWorkerValue(mlir::acc::DeviceType::None);
+}
+
+mlir::Value LoopOp::getWorkerValue(mlir::acc::DeviceType deviceType) {
+  return getValueInDeviceTypeSegment(getWorkerNumOperandsDeviceType(),
+                                     getWorkerNumOperands(), deviceType);
+}
+
+bool LoopOp::hasWorker() { return hasWorker(mlir::acc::DeviceType::None); }
+
+bool LoopOp::hasWorker(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getWorker()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Operation::operand_range LoopOp::getTileValues() {
+  return getTileValues(mlir::acc::DeviceType::None);
+}
+
+mlir::Operation::operand_range
+LoopOp::getTileValues(mlir::acc::DeviceType deviceType) {
+  return getValuesFromSegments(getTileOperandsDeviceType(), getTileOperands(),
+                               getTileOperandsSegments(), deviceType);
+}
+
+std::optional<int64_t> LoopOp::getCollapseValue() {
+  return getCollapseValue(mlir::acc::DeviceType::None);
+}
+
+std::optional<int64_t>
+LoopOp::getCollapseValue(mlir::acc::DeviceType deviceType) {
+  if (!getCollapseAttr())
+    return std::nullopt;
+  if (auto pos = findSegment(getCollapseDeviceTypeAttr(), deviceType)) {
+    auto intAttr =
+        mlir::dyn_cast<IntegerAttr>(getCollapseAttr().getValue()[*pos]);
+    return intAttr.getValue().getZExtValue();
+  }
+  return std::nullopt;
+}
+
+mlir::Value LoopOp::getGangValue(mlir::acc::GangArgType gangArgType) {
+  return getGangValue(gangArgType, mlir::acc::DeviceType::None);
+}
+
+mlir::Value LoopOp::getGangValue(mlir::acc::GangArgType gangArgType,
+                                 mlir::acc::DeviceType deviceType) {
+  if (getGangOperands().empty())
+    return {};
+  if (auto pos = findSegment(*getGangOperandsDeviceType(), deviceType)) {
+    int32_t nbOperandsBefore = 0;
+    for (unsigned i = 0; i < *pos; ++i)
+      nbOperandsBefore += (*getGangOperandsSegments())[i];
+    mlir::Operation::operand_range values =
+        getGangOperands()
+            .drop_front(nbOperandsBefore)
+            .take_front((*getGangOperandsSegments())[*pos]);
+
+    int32_t argTypeIdx = nbOperandsBefore;
+    for (auto value : values) {
+      auto gangArgTypeAttr = mlir::dyn_cast<mlir::acc::GangArgTypeAttr>(
+          (*getGangOperandsArgType())[argTypeIdx]);
+      if (gangArgTypeAttr.getValue() == gangArgType)
+        return value;
+      ++argTypeIdx;
+    }
+  }
+  return {};
+}
+
+bool LoopOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
+
+bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getGang()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1418,9 +1664,50 @@ unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;
-  numOptional += getAsync() ? 1 : 0;
+  numOptional += getAsync().size() ? 1 : 0;
   numOptional += getWaitOperands().size();
   return getOperand(numOptional + i);
+}
+
+bool acc::DataOp::hasAsyncOnly() {
+  return hasAsyncOnly(mlir::acc::DeviceType::None);
+}
+
+bool acc::DataOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getAsyncOnly()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Value DataOp::getAsyncValue() {
+  return getAsyncValue(mlir::acc::DeviceType::None);
+}
+
+mlir::Value DataOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
+  return getValueInDeviceTypeSegment(getAsyncDeviceType(), getAsync(),
+                                     deviceType);
+}
+
+bool DataOp::hasWaitOnly() { return hasWaitOnly(mlir::acc::DeviceType::None); }
+
+bool DataOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getWaitOnly()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+mlir::Operation::operand_range DataOp::getWaitValues() {
+  return getWaitValues(mlir::acc::DeviceType::None);
+}
+
+mlir::Operation::operand_range
+DataOp::getWaitValues(mlir::acc::DeviceType deviceType) {
+  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
+                               getWaitOperandsSegments(), deviceType);
 }
 
 //===----------------------------------------------------------------------===//

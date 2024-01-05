@@ -1734,6 +1734,8 @@ let SubtargetPredicate = isGFX10Plus in {
       let simm16 = 0;
       let fixed_imm = 1;
     }
+  def S_WAITCNT_DEPCTR :
+    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;
 
   let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
@@ -1748,11 +1750,6 @@ let SubtargetPredicate = isGFX10Plus in {
     SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_ttracedata_imm timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX10Plus
-
-let SubtargetPredicate = isGFX10GFX11 in {
-  def S_WAITCNT_DEPCTR :
-    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;
-} // End SubtargetPredicate = isGFX10GFX11
 
 let SubtargetPredicate = isGFX11Plus in {
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
@@ -1769,8 +1766,6 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
 } // End SubtargetPredicate = HasVGPRSingeUseHintInsts
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
-  def S_WAIT_ALU :
-    SOPP_Pseudo <"s_wait_alu" , (ins DepCtr:$simm16), "$simm16">;
   def S_WAIT_LOADCNT :
     SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_loadcnt timm:$simm16)]>;
@@ -2513,10 +2508,10 @@ defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
 defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
 defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
-defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11_gfx12<0x018>;
-defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11_gfx12<0x019>;
-defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11_gfx12<0x01a>;
-defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11_gfx12<0x01b>;
+defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11<0x018>;
+defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11<0x019>;
+defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11<0x01a>;
+defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11<0x01b>;
 
 //===----------------------------------------------------------------------===//
 // SOPK - GFX10.

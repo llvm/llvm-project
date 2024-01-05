@@ -3488,25 +3488,28 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_MAD_I64_I32:
     applyMappingMAD_64_32(B, OpdMapper);
     return;
-  case AMDGPU::G_PREFETCH:
+  case AMDGPU::G_PREFETCH: {
     if (!Subtarget.hasPrefetch()) {
       MI.eraseFromParent();
       return;
     }
     if (!Subtarget.hasVectorPrefetch()) {
-      unsigned PtrBank =
-          getRegBankID(MI.getOperand(0).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      Register PtrReg = MI.getOperand(0).getReg();
+      unsigned PtrBank = getRegBankID(PtrReg, MRI, AMDGPU::SGPRRegBankID);
       if (PtrBank == AMDGPU::VGPRRegBankID) {
         MI.eraseFromParent();
         return;
       }
+      unsigned AS = MRI.getType(PtrReg).getAddressSpace();
+      if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+          AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+        MI.eraseFromParent();
+        return;
+      }
     }
-    // FIXME: There is currently no support for prefetch in global isel.
-    // There is no node equivalence and what's worse there is no MMO produced
-    // for a prefetch on global isel path.
-    // Prefetch does not affect execution so erase it for now.
-    MI.eraseFromParent();
+    applyDefaultMapping(OpdMapper);
     return;
+    }
   default:
     break;
   }

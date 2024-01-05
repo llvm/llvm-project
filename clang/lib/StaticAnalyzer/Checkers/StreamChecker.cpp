@@ -239,6 +239,7 @@ public:
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
       {{{"fopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{{"fdopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
       {{{"freopen"}, 3},
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
       {{{"tmpfile"}, 0}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
