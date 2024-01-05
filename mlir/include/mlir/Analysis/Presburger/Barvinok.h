@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Functions relating to an implementation of Barvinok's algorithm.
+// Implementation of Barvinok's algorithm and related utility functions.
+// Currently a work in progress.
 // These include functions to manipulate cones (define a cone object, get its
 // dual, and find its index).
 //
