@@ -466,10 +466,6 @@ public:
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-
-  bool isGPRPF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
     if (auto *RE = dyn_cast<RISCVMCExpr>(Expr)) {
