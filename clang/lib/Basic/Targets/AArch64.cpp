@@ -225,6 +225,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   return true;
 }
 
@@ -1364,8 +1365,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
     StringRef Constraint, char Modifier, unsigned Size,
     std::string &SuggestedModifier) const {
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   switch (Constraint[0]) {
   default:

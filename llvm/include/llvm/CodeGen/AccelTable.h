@@ -270,16 +270,14 @@ public:
 #endif
 
   uint64_t getDieOffset() const {
-    assert(std::holds_alternative<uint64_t>(OffsetVal) &&
-           "Accessing DIE Offset before normalizing.");
+    assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     return std::get<uint64_t>(OffsetVal);
   }
   unsigned getDieTag() const { return DieTag; }
   unsigned getUnitID() const { return UnitID; }
   bool isTU() const { return IsTU; }
   void normalizeDIEToOffset() {
-    assert(std::holds_alternative<const DIE *>(OffsetVal) &&
-           "Accessing offset after normalizing.");
+    assert(!isNormalized() && "Accessing offset after normalizing.");
     OffsetVal = std::get<const DIE *>(OffsetVal)->getOffset();
   }
   bool isNormalized() const {
@@ -309,7 +307,7 @@ class DWARF5AccelTable : public AccelTable<DWARF5AccelTableData> {
 public:
   struct UnitIndexAndEncoding {
     unsigned Index;
-    DWARF5AccelTableData::AttributeEncoding Endoding;
+    DWARF5AccelTableData::AttributeEncoding Encoding;
   };
   /// Returns type units that were constructed.
   const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }

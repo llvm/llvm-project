@@ -854,6 +854,107 @@ define i1 @PR32949(i32 %X, i32 %Y, i32 %Z) {
   ret i1 %C
 }
 
+define i1 @test_sdiv_pos_slt(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_slt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp slt i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_sle(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_sle(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp sle i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_sgt(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_sgt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp sgt i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_sge(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_sge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp sge i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_ult(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_ult(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp ult i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_ule(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_ule(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp ule i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_ugt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp ugt i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_pos_uge(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_pos_uge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, 40
+  %divy = sdiv exact i32 %y, 40
+  %cmp = icmp uge i32 %divx, %divy
+  ret i1 %cmp
+}
+
+define i1 @test_sdiv_neg_slt(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sdiv_neg_slt(
+; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X:%.*]], -40
+; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y:%.*]], -40
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[DIVX]], [[DIVY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %divx = sdiv exact i32 %x, -40
+  %divy = sdiv exact i32 %y, -40
+  %cmp = icmp slt i32 %divx, %divy
+  ret i1 %cmp
+}
+
 ; PR8469
 define <2 x i1> @test49(<2 x i32> %i3) {
 ; CHECK-LABEL: @test49(
@@ -4980,4 +5081,60 @@ define i1 @disjoint_or_ugt_3(i8 %a, i8 %b) {
   %b1 = add nuw i8 %b, 1
   %icmp_ = icmp ugt i8 %a1, %b1
   ret i1 %icmp_
+}
+
+define i1 @deduce_nuw_flag_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @deduce_nuw_flag_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, 2
+  %add2 = add i8 %a, 1
+  %cmp = icmp eq i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @deduce_nuw_flag_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @deduce_nuw_flag_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, 2
+  %add2 = add i8 %a, 1
+  %cmp = icmp eq i8 %add2, %add1
+  ret i1 %cmp
+}
+
+define i1 @dont_deduce_nuw_flag_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @dont_deduce_nuw_flag_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, -2
+  %add2 = add i8 %a, -1
+  %cmp = icmp eq i8 %add1, %add2
+  ret i1 %cmp
+}
+
+define i1 @dont_deduce_nuw_flag_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @dont_deduce_nuw_flag_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add1 = add nuw i8 %b, -2
+  %add2 = add i8 %a, -1
+  %cmp = icmp eq i8 %add2, %add1
+  ret i1 %cmp
 }

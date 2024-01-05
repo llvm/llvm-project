@@ -1,6 +1,7 @@
 ; RUN: rm -rf %t
-; RUN: not llvm-readtapi -stubify %t/objc.dylib %t/flat_namespace.dylib %t/thread_local.dylib %t/fat.dylib --o tmp.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix OUT
-; RUN: not llvm-readtapi -stubify --o tmp.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix IN 
+; RUN: mkdir -p %t
+; RUN: not llvm-readtapi -stubify %t/objc.dylib %t/flat_namespace.dylib %t/thread_local.dylib %t/fat.dylib --o %t/tmp.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix OUT
+; RUN: not llvm-readtapi -stubify --o %t/tmp.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix IN
 
 ; OUT: error: cannot write multiple inputs into single output file
 ; IN: error: stubify requires at least one input file

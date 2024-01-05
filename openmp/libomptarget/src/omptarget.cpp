@@ -392,7 +392,6 @@ static int32_t getParentIndex(int64_t Type) {
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name) {
-  TIMESCOPE();
   DP("Call to %s for device %d requesting %zu bytes\n", Name, DeviceNum, Size);
 
   if (Size <= 0) {
@@ -419,7 +418,6 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                         const char *Name) {
-  TIMESCOPE();
   DP("Call to %s for device %d and address " DPxMOD "\n", Name, DeviceNum,
      DPxPTR(DevicePtr));
 
@@ -444,7 +442,6 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
 
 void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
                          const char *Name) {
-  TIMESCOPE();
   DP("Call to %s for device %d locking %zu bytes\n", Name, DeviceNum, Size);
 
   if (Size <= 0) {
@@ -471,7 +468,6 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
-  TIMESCOPE();
   DP("Call to %s for device %d unlocking\n", Name, DeviceNum);
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
@@ -531,14 +527,14 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
                     bool FromMapper) {
-  TIMESCOPE_WITH_IDENT(Loc);
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     // Ignore private variables and arrays - there is no mapping for them.
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
         (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
-
+    TIMESCOPE_WITH_DETAILS_AND_IDENT(
+        "HostToDev", "Size=" + std::to_string(ArgSizes[I]) + "B", Loc);
     if (ArgMappers && ArgMappers[I]) {
       // Instead of executing the regular path of targetDataBegin, call the
       // targetDataMapper variant which will call targetDataBegin again
@@ -913,7 +909,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         !TPR.Flags.IsHostPointer && DataSize != 0) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
          DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-
+      TIMESCOPE_WITH_DETAILS_AND_IDENT(
+          "DevToHost", "Size=" + std::to_string(DataSize) + "B", Loc);
       // Wait for any previous transfer if an event is present.
       if (void *Event = TPR.getEntry()->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
@@ -1403,7 +1400,6 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                              SmallVector<ptrdiff_t> &TgtOffsets,
                              PrivateArgumentManagerTy &PrivateArgumentManager,
                              AsyncInfoTy &AsyncInfo) {
-  TIMESCOPE_WITH_NAME_AND_IDENT("mappingBeforeTargetRegion", Loc);
 
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
@@ -1537,7 +1533,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                             map_var_info_t *ArgNames, void **ArgMappers,
                             PrivateArgumentManagerTy &PrivateArgumentManager,
                             AsyncInfoTy &AsyncInfo) {
-  TIMESCOPE_WITH_NAME_AND_IDENT("mappingAfterTargetRegion", Loc);
+
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
@@ -1639,7 +1635,12 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
-    TIMESCOPE_WITH_NAME_AND_IDENT("Initiate Kernel Launch", Loc);
+    TIMESCOPE_WITH_DETAILS_AND_IDENT(
+        "Kernel Target",
+        "NumArguments=" + std::to_string(KernelArgs.NumArgs) +
+            ";NumTeams=" + std::to_string(KernelArgs.NumTeams[0]) +
+            ";TripCount=" + std::to_string(KernelArgs.Tripcount),
+        Loc);
 
 #ifdef OMPT_SUPPORT
     assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&

@@ -998,13 +998,14 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   auto buildStaticFuncMap = [&StaticFuncMap,
                              SampleProfileHasFUnique](const StringRef Name) {
-    std::string Prefixes[] = {".cpp:", "cc:", ".c:", ".hpp:", ".h:"};
+    std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
-    for (auto &Prefix : Prefixes) {
-      PrefixPos = Name.find_insensitive(Prefix);
+    for (auto &FilePrefix : FilePrefixes) {
+      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
-      PrefixPos += Prefix.size();
+      PrefixPos += NamePrefix.size();
       break;
     }
 
@@ -1088,17 +1089,17 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   //
   // InstrProfile has two entries:
   //  foo
-  //  bar.cc:bar
+  //  bar.cc;bar
   //
   // After BuildMaxSampleMap, we should have the following in FlattenSampleMap:
   // {"foo", {1000, 5000}}
-  // {"bar.cc:bar", {11000, 30000}}
+  // {"bar.cc;bar", {11000, 30000}}
   //
   // foo's has an entry count of 1000, and max body count of 5000.
-  // bar.cc:bar has an entry count of 11000 (sum two callsites of 1000 and
+  // bar.cc;bar has an entry count of 11000 (sum two callsites of 1000 and
   // 10000), and max count of 30000 (from the callsite in line 8).
   //
-  // Note that goo's count will remain in bar.cc:bar() as it does not have an
+  // Note that goo's count will remain in bar.cc;bar() as it does not have an
   // entry in InstrProfile.
   llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
   auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
@@ -1651,10 +1652,10 @@ struct SampleOverlapStats {
 
 namespace {
 struct FuncSampleStats {
-  uint64_t SampleSum;
-  uint64_t MaxSample;
-  uint64_t HotBlockCount;
-  FuncSampleStats() : SampleSum(0), MaxSample(0), HotBlockCount(0) {}
+  uint64_t SampleSum = 0;
+  uint64_t MaxSample = 0;
+  uint64_t HotBlockCount = 0;
+  FuncSampleStats() = default;
   FuncSampleStats(uint64_t SampleSum, uint64_t MaxSample,
                   uint64_t HotBlockCount)
       : SampleSum(SampleSum), MaxSample(MaxSample),
@@ -2563,12 +2564,10 @@ static int overlap_main(int argc, const char *argv[]) {
 
 namespace {
 struct ValueSitesStats {
-  ValueSitesStats()
-      : TotalNumValueSites(0), TotalNumValueSitesWithValueProfile(0),
-        TotalNumValues(0) {}
-  uint64_t TotalNumValueSites;
-  uint64_t TotalNumValueSitesWithValueProfile;
-  uint64_t TotalNumValues;
+  ValueSitesStats() = default;
+  uint64_t TotalNumValueSites = 0;
+  uint64_t TotalNumValueSitesWithValueProfile = 0;
+  uint64_t TotalNumValues = 0;
   std::vector<unsigned> ValueSitesHistogram;
 };
 } // namespace
@@ -2867,13 +2866,12 @@ static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
 namespace {
 struct HotFuncInfo {
   std::string FuncName;
-  uint64_t TotalCount;
-  double TotalCountPercent;
-  uint64_t MaxCount;
-  uint64_t EntryCount;
+  uint64_t TotalCount = 0;
+  double TotalCountPercent = 0.0f;
+  uint64_t MaxCount = 0;
+  uint64_t EntryCount = 0;
 
-  HotFuncInfo()
-      : TotalCount(0), TotalCountPercent(0.0f), MaxCount(0), EntryCount(0) {}
+  HotFuncInfo() = default;
 
   HotFuncInfo(StringRef FN, uint64_t TS, double TSP, uint64_t MS, uint64_t ES)
       : FuncName(FN.begin(), FN.end()), TotalCount(TS), TotalCountPercent(TSP),
@@ -3160,7 +3158,11 @@ static int order_main(int argc, const char *argv[]) {
   BalancedPartitioning BP(Config);
   BP.run(Nodes);
 
-  WithColor::note() << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
+        "linkage and this output does not take that into account. Some "
+        "post-processing may be required before passing to the linker via "
+        "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
         getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));

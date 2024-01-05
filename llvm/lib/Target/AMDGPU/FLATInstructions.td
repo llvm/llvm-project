@@ -926,9 +926,11 @@ defm GLOBAL_LOAD_LDS_USHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_usho
 defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sshort">;
 defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dword">;
 
+let SubtargetPredicate = isGFX12Plus in {
+  defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : FLAT_Global_Atomic_Pseudo <"global_atomic_ordered_add_b64", VReg_64, i64>;
+} // End SubtargetPredicate = isGFX12Plus
+
 } // End is_flat_global = 1
-
-
 
 let SubtargetPredicate = HasFlatScratchInsts in {
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
@@ -1528,6 +1530,10 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_OR_X2", "atomic_load_or_global", i64
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP_X2", "atomic_swap_global", i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_global", i64, v2i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i64>;
+
+let OtherPredicates = [isGFX12Plus] in {
+  defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
+}
 
 let OtherPredicates = [isGFX10Plus] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
@@ -2654,6 +2660,7 @@ defm GLOBAL_ATOMIC_DEC_U64         : VGLOBAL_Real_Atomics_gfx12<0x04d, "GLOBAL_A
 defm GLOBAL_ATOMIC_MIN_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_ATOMIC_FMIN", "global_atomic_min_num_f32", true, "global_atomic_min_f32">;
 defm GLOBAL_ATOMIC_MAX_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056, "GLOBAL_ATOMIC_ADD_F32", "global_atomic_add_f32">;
+defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VGLOBAL_Real_Atomics_gfx12<0x073, "GLOBAL_ATOMIC_ORDERED_ADD_B64", "global_atomic_ordered_add_b64">;
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_U8               : VSCRATCH_Real_AllAddr_gfx12<0x10, "SCRATCH_LOAD_UBYTE", "scratch_load_u8", true>;

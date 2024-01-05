@@ -622,8 +622,16 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
+// AArch64 2023 Architecture Extensions (v9.5-A)
+
 def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
-  "Enable ARMv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
+    "Enable Armv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
+
+def FeaturePAuthLR : SubtargetFeature<"pauth-lr", "HasPAuthLR",
+    "true", "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
+
+def FeatureTLBIW : SubtargetFeature<"tlbiw", "HasTLBIW", "true",
+  "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -810,7 +818,7 @@ def SMEUnsupported : AArch64Unsupported {
                       SME2Unsupported.F);
 }
 
-let F = [HasPAuth] in
+let F = [HasPAuth, HasPAuthLR] in
 def PAUnsupported : AArch64Unsupported;
 
 include "AArch64SchedA53.td"
@@ -1397,7 +1405,7 @@ def ProcessorFeatures {
                                  FeatureSSBS];
   list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
-                                 FeatureFlagM, FeatureFP16FML, FeaturePAuth,
+                                 FeatureFlagM, FeaturePAuth,
                                  FeaturePerfMon, FeatureRCPC, FeatureSPE,
                                  FeatureSSBS];
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
