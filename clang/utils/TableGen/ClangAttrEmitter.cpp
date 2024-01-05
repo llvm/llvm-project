@@ -3547,18 +3547,42 @@ static void GenerateHasAttrSpellingStringSwitch(
   OS << "    .Default(0);\n";
 }
 
-// Emits the list of tokens for regular keyword attributes.
-void EmitClangAttrTokenKinds(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("A list of tokens generated from the attribute"
-                       " definitions",
-                       OS);
+// Emits list of regular keyword attributes with info about their arguments.
+void EmitClangRegularKeywordAttributeInfo(RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  emitSourceFileHeader(
+      "A list of regular keyword attributes generated from the attribute"
+      " definitions",
+      OS);
   // Assume for now that the same token is not used in multiple regular
   // keyword attributes.
   for (auto *R : Records.getAllDerivedDefinitions("Attr"))
-    for (const auto &S : GetFlattenedSpellings(*R))
-      if (isRegularKeywordAttribute(S))
-        OS << "KEYWORD_ATTRIBUTE("
-           << S.getSpellingRecord().getValueAsString("Name") << ")\n";
+    for (const auto &S : GetFlattenedSpellings(*R)) {
+      if (!isRegularKeywordAttribute(S))
+        continue;
+      std::vector<Record *> Args = R->getValueAsListOfDefs("Args");
+      bool HasArgs = false;
+      bool HasOptionalArgs = false;
+      for (const auto *Arg : Args) {
+        if (Arg->getValueAsBit("Fake"))
+          continue;
+        HasArgs = true;
+        if (Arg->getValueAsBit("Optional"))
+          HasOptionalArgs = true;
+        else
+          break;
+      }
+
+      OS << "KEYWORD_ATTRIBUTE("
+         << S.getSpellingRecord().getValueAsString("Name") << ", ";
+      if (HasOptionalArgs)
+        OS << "KeywordAttributeParseArgumentsKind::Optional";
+      else if (HasArgs)
+        OS << "KeywordAttributeParseArgumentsKind::Required";
+      else
+        OS << "KeywordAttributeParseArgumentsKind::None";
+      OS << ")\n";
+    }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
 }
 

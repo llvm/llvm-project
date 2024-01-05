@@ -255,6 +255,26 @@ protected:
     return SpellingIndex != SpellingNotCalculated;
   }
 };
+
+enum class KeywordAttributeParseArgumentsKind {
+  None,
+  Optional,
+  Required
+};
+
+inline KeywordAttributeParseArgumentsKind
+getKeywordAttributeParseArgumentsKind(tok::TokenKind Kind) {
+  switch (Kind) {
+  default:
+    return KeywordAttributeParseArgumentsKind::None;
+#define KEYWORD_ATTRIBUTE(NAME, HASARG)                                        \
+  case tok::kw_##NAME:                                                         \
+    return HASARG;
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
+#undef KEYWORD_ATTRIBUTE
+  }
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H

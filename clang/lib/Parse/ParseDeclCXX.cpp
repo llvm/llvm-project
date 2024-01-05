@@ -1890,10 +1890,14 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         if (!SkipUntil(tok::r_paren, StopAtSemi))
           break;
       } else if (Tok.isRegularKeywordAttribute()) {
+        auto ParseArgsKind =
+            getKeywordAttributeParseArgumentsKind(Tok.getKind());
         ConsumeToken();
-        BalancedDelimiterTracker T(*this, tok::l_paren);
-        if (!T.consumeOpen())
-          T.skipToEnd();
+        if (ParseArgsKind != KeywordAttributeParseArgumentsKind::None) {
+          BalancedDelimiterTracker T(*this, tok::l_paren);
+          if (!T.consumeOpen())
+            T.skipToEnd();
+        }
       } else {
         break;
       }
@@ -4543,13 +4547,18 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     SourceLocation Loc = Tok.getLocation();
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     ParsedAttr::Form Form = ParsedAttr::Form(Tok.getKind());
+    KeywordAttributeParseArgumentsKind ParseArgsKind =
+        getKeywordAttributeParseArgumentsKind(Tok.getKind());
     ConsumeToken();
-    if (Tok.is(tok::l_paren)) {
-      const LangOptions &LO = getLangOpts();
-      unsigned NumArgs = ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
-                                                  /*ScopeName*/ nullptr,
-                                                  /*ScopeLoc*/ Loc, Form);
-    } else
+    if (ParseArgsKind == KeywordAttributeParseArgumentsKind::Required &&
+        !Tok.is(tok::l_paren))
+      Diag(Tok.getLocation(), diag::err_expected_lparen_after) << AttrName;
+    if (ParseArgsKind != KeywordAttributeParseArgumentsKind::None &&
+        Tok.is(tok::l_paren))
+      ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
+                               /*ScopeName*/ nullptr,
+                               /*ScopeLoc*/ Loc, Form);
+    else
       Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
     return;
   }
@@ -4716,6 +4725,11 @@ SourceLocation Parser::SkipCXX11Attributes() {
       T.consumeOpen();
       T.skipToEnd();
       EndLoc = T.getCloseLocation();
+    } else if (Tok.isRegularKeywordAttribute() &&
+               getKeywordAttributeParseArgumentsKind(Tok.getKind()) ==
+                   KeywordAttributeParseArgumentsKind::None) {
+      EndLoc = Tok.getLocation();
+      ConsumeToken();
     } else {
       assert((Tok.is(tok::kw_alignas) || Tok.isRegularKeywordAttribute()) &&
              "not an attribute specifier");

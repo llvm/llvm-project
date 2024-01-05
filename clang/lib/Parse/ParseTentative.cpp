@@ -894,6 +894,10 @@ bool Parser::TrySkipAttributes() {
       // Note that explicitly checking for `[[` and `]]` allows to fail as
       // expected in the case of the Objective-C message send syntax.
       ConsumeBracket();
+    } else if (Tok.isRegularKeywordAttribute() &&
+               getKeywordAttributeParseArgumentsKind(Tok.getKind()) ==
+                   KeywordAttributeParseArgumentsKind::None) {
+      ConsumeToken();
     } else {
       ConsumeToken();
       if (Tok.isNot(tok::l_paren))
