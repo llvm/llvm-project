@@ -5,11 +5,10 @@ define i1 @test_switch_with_neg(i32 %a) {
 ; CHECK-LABEL: define i1 @test_switch_with_neg(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_NEG:%.*]] = sub i32 0, [[A]]
-; CHECK-NEXT:    switch i32 [[A_NEG]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 37, label [[SW_BB:%.*]]
-; CHECK-NEXT:      i32 38, label [[SW_BB]]
-; CHECK-NEXT:      i32 39, label [[SW_BB]]
+; CHECK-NEXT:    switch i32 [[A]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 -37, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 -38, label [[SW_BB]]
+; CHECK-NEXT:      i32 -39, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true
@@ -34,11 +33,10 @@ define i1 @test_switch_with_sub(i32 %a) {
 ; CHECK-LABEL: define i1 @test_switch_with_sub(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_NEG:%.*]] = sub i32 37, [[A]]
-; CHECK-NEXT:    switch i32 [[A_NEG]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 37, label [[SW_BB:%.*]]
-; CHECK-NEXT:      i32 38, label [[SW_BB]]
-; CHECK-NEXT:      i32 39, label [[SW_BB]]
+; CHECK-NEXT:    switch i32 [[A]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 -1, label [[SW_BB]]
+; CHECK-NEXT:      i32 -2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true

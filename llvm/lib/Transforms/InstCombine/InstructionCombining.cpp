@@ -3208,6 +3208,18 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     return replaceOperand(SI, 0, Op0);
   }
 
+  ConstantInt *SubLHS;
+  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
+    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
+    for (auto Case : SI.cases()) {
+      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
+      assert(isa<ConstantInt>(NewCase) &&
+             "Result of expression should be constant");
+      Case.setValue(cast<ConstantInt>(NewCase));
+    }
+    return replaceOperand(SI, 0, Op0);
+  }
+
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
