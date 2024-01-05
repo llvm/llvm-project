@@ -3113,6 +3113,7 @@ struct DIEVisitor {
                       ArrayRef<AbbrevContent> DIEContents);
   Error materializeAbbrevDIE(unsigned AbbrevIdx);
 
+  uint16_t DwarfVersion;
   SmallVector<AbbrevEntry> AbbrevEntryCache;
   ArrayRef<StringRef> AbbrevEntries;
   BinaryStreamReader DistinctReader;
@@ -3131,8 +3132,8 @@ Error DIEVisitor::visitDIEAttrs(BinaryStreamReader &DataReader,
                                 ArrayRef<AbbrevContent> DIEContents) {
   constexpr auto IsLittleEndian = true;
   constexpr auto AddrSize = 8;
-  constexpr auto FormParams =
-      dwarf::FormParams{4 /*Version*/, AddrSize, dwarf::DwarfFormat::DWARF32};
+  auto FormParams =
+      dwarf::FormParams{DwarfVersion, AddrSize, dwarf::DwarfFormat::DWARF32};
 
   for (auto Contents : DIEContents) {
     bool DataInDistinct = Contents.FormInDistinctData;
@@ -3242,8 +3243,8 @@ static std::optional<uint8_t> getNonULEBFormSize(dwarf::Form Form,
 
 Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
   constexpr auto AddrSize = 8;
-  constexpr auto FormParams =
-      dwarf::FormParams{4 /*Version*/, AddrSize, dwarf::DwarfFormat::DWARF32};
+  auto FormParams =
+      dwarf::FormParams{DwarfVersion, AddrSize, dwarf::DwarfFormat::DWARF32};
 
   AbbrevEntryReader AbbrevReader =
       getAbbrevEntryReader(AbbrevEntries, AbbrevIdx);
@@ -3422,7 +3423,8 @@ Error mccasformats::v1::visitDebugInfo(
   HeaderCallback(toStringRef(HeaderData));
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{{},
+  DIEVisitor Visitor{DwarfVersion,
+                     {},
                      TotAbbrevEntries,
                      DistinctReader,
                      UncompressedDistinctData,
