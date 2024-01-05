@@ -15,7 +15,13 @@
 namespace clang {
 using namespace ast_matchers;
 
-static bool canResolveToExprImpl(const Expr *Node, const Expr *Target) {
+// Check if result of Source expression could be a Target expression.
+// Checks:
+//  - Implicit Casts
+//  - Binary Operators
+//  - ConditionalOperator
+//  - BinaryConditionalOperator
+static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
 
   const auto IgnoreDerivedToBase = [](const Expr *E, auto Matcher) {
     if (Matcher(E))
@@ -48,38 +54,37 @@ static bool canResolveToExprImpl(const Expr *Node, const Expr *Target) {
   // is handled, too. The implicit cast happens outside of the conditional.
   // This is matched by `IgnoreDerivedToBase(canResolveToExpr(InnerMatcher))`
   // below.
-  const auto ConditionalOperatorM = [Target](const Expr *E, auto Matcher) {
+  const auto ConditionalOperatorM = [Target](const Expr *E) {
     if (const auto *OP = dyn_cast<ConditionalOperator>(E)) {
       if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canResolveToExprImpl(TE, Target))
+        if (canExprResolveTo(TE, Target))
           return true;
       if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canResolveToExprImpl(FE, Target))
+        if (canExprResolveTo(FE, Target))
           return true;
     }
     return false;
   };
 
-  const auto ElvisOperator = [Target](const Expr *E, auto Matcher) {
+  const auto ElvisOperator = [Target](const Expr *E) {
     if (const auto *OP = dyn_cast<BinaryConditionalOperator>(E)) {
       if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canResolveToExprImpl(TE, Target))
+        if (canExprResolveTo(TE, Target))
           return true;
       if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canResolveToExprImpl(FE, Target))
+        if (canExprResolveTo(FE, Target))
           return true;
     }
     return false;
   };
 
-  const auto *EP = Node->IgnoreParens();
-  return IgnoreDerivedToBase(EP,
+  const Expr *SourceExprP = Source->IgnoreParens();
+  return IgnoreDerivedToBase(SourceExprP,
                              [&](const Expr *E) {
-                               return E == Target ||
-                                      ConditionalOperatorM(E, Target) ||
-                                      ElvisOperator(E, Target);
+                               return E == Target || ConditionalOperatorM(E) ||
+                                      ElvisOperator(E);
                              }) ||
-         EvalCommaExpr(EP, [&](const Expr *E) {
+         EvalCommaExpr(SourceExprP, [&](const Expr *E) {
            return IgnoreDerivedToBase(
                E->IgnoreParens(), [&](const Expr *EE) { return EE == Target; });
          });
@@ -104,7 +109,7 @@ AST_MATCHER_P(Stmt, canResolveToExpr, const Stmt *, Inner) {
   auto *Target = dyn_cast<Expr>(Inner);
   if (!Target)
     return false;
-  return canResolveToExprImpl(Exp, Target);
+  return canExprResolveTo(Exp, Target);
 }
 
 // Similar to 'hasAnyArgument', but does not work because 'InitListExpr' does
