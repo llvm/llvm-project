@@ -40,12 +40,12 @@ Options
 
 .. option::  IgnoreMacros
 
-  The value ``false`` specifies that return statements expanded
-  from macros are not checked. The default value is ``true``.
+  The value `false` specifies that return statements expanded
+  from macros are not checked. The default value is `true`.
 
 .. option::  StrictMode
 
-  The value ``false`` specifies that a direct return statement shall
+  The value `false` specifies that a direct return statement shall
   be excluded from the analysis if it is the only statement not 
   contained in a block like ``if (cond) return g();``. The default
-  value is ``true``.
+  value is `true`.
