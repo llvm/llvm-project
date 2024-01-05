@@ -609,7 +609,8 @@ Bug Fixes in This Version
 - Clang will correctly evaluate ``noexcept`` expression for template functions
   of template classes. Fixes
   (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
-  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_)
+  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_,
+  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
