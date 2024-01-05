@@ -47,9 +47,15 @@ if(MLIR_INCLUDE_TESTS)
     )
   set(test_libs ${test_libs}
     MLIRTestPDLL
-    MLIRTestRewrite
     MLIRTestTransformDialect
     )
+
+  if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+    set(test_libs ${test_libs}
+      MLIRTestPDLL
+      MLIRTestRewrite
+      )
+  endif()
 endif()
 
 set(LIBS

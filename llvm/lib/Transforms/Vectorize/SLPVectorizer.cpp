@@ -11139,6 +11139,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
     case Instruction::ExtractElement: {
       Value *V = E->getSingleOperand(0);
+      if (const TreeEntry *TE = getTreeEntry(V))
+        V = TE->VectorizedValue;
       setInsertPointAfterBundle(E);
       V = FinalShuffle(V, E, VecTy, IsSigned);
       E->VectorizedValue = V;
@@ -11903,8 +11905,10 @@ Value *BoUpSLP::vectorizeTree(
         if (!Ex) {
           // "Reuse" the existing extract to improve final codegen.
           if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
-            Ex = Builder.CreateExtractElement(ES->getOperand(0),
-                                              ES->getOperand(1));
+            Value *V = ES->getVectorOperand();
+            if (const TreeEntry *ETE = getTreeEntry(V))
+              V = ETE->VectorizedValue;
+            Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }

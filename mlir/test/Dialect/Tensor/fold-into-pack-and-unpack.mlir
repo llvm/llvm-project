@@ -261,8 +261,8 @@ func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims(%arg0: tensor<56
 }
 //      CHECK: func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<56x?x?x64xf32>)
-//      CHECK:   %[[c1:.+]] = arith.constant 1 : index
-//      CHECK:   %[[c2:.+]] = arith.constant 2 : index
+//  CHECK-DAG:   %[[c1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[c2:.+]] = arith.constant 2 : index
 //      CHECK:   %[[dim:.+]] = tensor.dim %[[ARG0]], %[[c1]] : tensor<56x?x?x64xf32>
 //      CHECK:   %[[dim_0:.+]] = tensor.dim %[[ARG0]], %[[c2]] : tensor<56x?x?x64xf32>
 //      CHECK:   %[[INIT:.+]] = tensor.empty(%[[dim_0]], %[[dim]]) : tensor<?x?x56x2x32xf32>
@@ -295,8 +295,8 @@ func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_and_tile_dims(%arg0: 
 //      CHECK: module {
 //      CHECK:   func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_and_tile_dims(
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<56x?x?x128xf32>) 
-//      CHECK:     %[[c1:.+]] = arith.constant 1 : index
-//      CHECK:     %[[c2:.+]] = arith.constant 2 : index
+//  CHECK-DAG:     %[[c1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:     %[[c2:.+]] = arith.constant 2 : index
 //      CHECK:     %[[dim:.+]] = tensor.dim %[[ARG0]], %[[c1]] : tensor<56x?x?x128xf32>
 //      CHECK:     %[[dim_0:.+]] = tensor.dim %[[ARG0]], %[[c2]] : tensor<56x?x?x128xf32>
 //      CHECK:     %[[mapped_dim1:.+]] = affine.apply #[[map:.+]]()[%[[dim]]]
@@ -330,10 +330,10 @@ func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_s
 // CHECK-SAME:   %[[PACK_DEST:.+]]: tensor<?x?x?x?x?x?x?xf32>, %[[TRANSPOSE_DEST:.+]]: tensor<?x?x?x?x?x?x?xf32>,
 // CHECK-SAME:   %[[ARG1:.+]]: index, %[[ARG2:.+]]: index,
 // CHECK-SAME:   %[[ARG3:.+]]: index) 
-//      CHECK:     %[[c0:.+]] = arith.constant 0 : index
-//      CHECK:     %[[c1:.+]] = arith.constant 1 : index
-//      CHECK:     %[[c2:.+]] = arith.constant 2 : index
-//      CHECK:     %[[c3:.+]] = arith.constant 3 : index
+//  CHECK-DAG:     %[[c0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:     %[[c1:.+]] = arith.constant 1 : index
+//  CHECK-DAG:     %[[c2:.+]] = arith.constant 2 : index
+//  CHECK-DAG:     %[[c3:.+]] = arith.constant 3 : index
 //      CHECK:     %[[dim:.+]] = tensor.dim %[[ARG0]], %[[c0]] : tensor<?x?x?x?xf32>
 //      CHECK:     %[[dim_0:.+]] = tensor.dim %[[ARG0]], %[[c1]] : tensor<?x?x?x?xf32>
 //      CHECK:     %[[dim_1:.+]] = tensor.dim %[[ARG0]], %[[c2]] : tensor<?x?x?x?xf32>

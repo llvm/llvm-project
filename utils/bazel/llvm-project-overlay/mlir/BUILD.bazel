@@ -7629,10 +7629,10 @@ cc_library(
         ":Pass",
         ":Rewrite",
         ":RuntimeVerifiableOpInterface",
-        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":TransformsPassIncGen",
+        ":config",
         "//llvm:Support",
     ],
 )

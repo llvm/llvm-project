@@ -4114,6 +4114,9 @@ Code object V5 metadata is the same as
                                                        buffer that conforms to the requirements of the malloc/free
                                                        device library V1 version implementation.
 
+                                                     "hidden_dynamic_lds_size"
+                                                       Size of the dynamically allocated LDS memory is passed in the kernarg.
+
                                                      "hidden_private_base"
                                                        The high 32 bits of the flat addressing private aperture base.
                                                        Only used by GFX8 to allow conversion between private segment

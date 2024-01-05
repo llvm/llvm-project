@@ -7475,10 +7475,12 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
-  MVT IVT = VT.changeVectorElementTypeToInteger();
+  MVT IVT =
+      VT.changeVectorElementType(Subtarget.hasFP16() ? MVT::f16 : MVT::i16);
   SmallVector<SDValue, 16> NewOps;
   for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I)
-    NewOps.push_back(DAG.getBitcast(MVT::i16, Op.getOperand(I)));
+    NewOps.push_back(DAG.getBitcast(Subtarget.hasFP16() ? MVT::f16 : MVT::i16,
+                                    Op.getOperand(I)));
   SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
   return DAG.getBitcast(VT, Res);
 }
@@ -14369,6 +14371,13 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                   const APInt &Zeroable,
                                   const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
+  if (VT == MVT::v8bf16) {
+    V1 = DAG.getBitcast(MVT::v8i16, V1);
+    V2 = DAG.getBitcast(MVT::v8i16, V2);
+    return DAG.getBitcast(VT,
+                          DAG.getVectorShuffle(MVT::v8i16, DL, V1, V2, Mask));
+  }
+
   switch (VT.SimpleTy) {
   case MVT::v2i64:
     return lowerV2I64Shuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
@@ -17096,14 +17105,14 @@ static SDValue lower512BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG, /*SimpleOnly*/ false);
   }
 
-  if (VT == MVT::v32f16) {
+  if (VT == MVT::v32f16 || VT == MVT::v32bf16) {
     if (!Subtarget.hasBWI())
       return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG,
                                   /*SimpleOnly*/ false);
 
     V1 = DAG.getBitcast(MVT::v32i16, V1);
     V2 = DAG.getBitcast(MVT::v32i16, V2);
-    return DAG.getBitcast(MVT::v32f16,
+    return DAG.getBitcast(VT,
                           DAG.getVectorShuffle(MVT::v32i16, DL, V1, V2, Mask));
   }
 
@@ -21515,9 +21524,8 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
   RTLIB::Libcall LC =
       RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::bf16);
   SDValue Res =
-      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16,
-                     DAG.getBitcast(MVT::i32, Res));
+      makeLibCall(DAG, LC, MVT::f16, Op.getOperand(0), CallOptions, DL).first;
+  return DAG.getBitcast(MVT::i16, Res);
 }
 
 /// Depending on uarch and/or optimizing for size, we might prefer to use a
@@ -41348,6 +41356,20 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return TLO.CombineTo(Op, Src);
     break;
   }
+  case X86ISD::VZEXT_LOAD: {
+    // If upper demanded elements are not demanded then simplify to a
+    // scalar_to_vector(load()).
+    MVT SVT = VT.getSimpleVT().getVectorElementType();
+    if (DemandedElts == 1 && Op.getValue(1).use_empty() && isTypeLegal(SVT)) {
+      SDLoc DL(Op);
+      auto *Mem = cast<MemSDNode>(Op);
+      SDValue Elt = TLO.DAG.getLoad(SVT, DL, Mem->getChain(), Mem->getBasePtr(),
+                                    Mem->getMemOperand());
+      SDValue Vec = TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Elt);
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Vec));
+    }
+    break;
+  }
   case X86ISD::VBROADCAST: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
@@ -49959,18 +49981,17 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     SDValue Ptr = Ld->getBasePtr();
     SDValue Chain = Ld->getChain();
     for (SDNode *User : Chain->uses()) {
-      if (User != N &&
+      auto *UserLd = dyn_cast<MemSDNode>(User);
+      if (User != N && UserLd &&
           (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
            User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
            ISD::isNormalLoad(User)) &&
-          cast<MemSDNode>(User)->getChain() == Chain &&
-          !User->hasAnyUseOfValue(1) &&
+          UserLd->getChain() == Chain && !User->hasAnyUseOfValue(1) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
         if (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-            cast<MemSDNode>(User)->getBasePtr() == Ptr &&
-            cast<MemSDNode>(User)->getMemoryVT().getSizeInBits() ==
-                MemVT.getSizeInBits()) {
+            UserLd->getBasePtr() == Ptr &&
+            UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits()) {
           SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                              RegVT.getSizeInBits());
           Extract = DAG.getBitcast(RegVT, Extract);
@@ -49989,7 +50010,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         // See if we are loading a constant that matches in the lower
         // bits of a longer constant (but from a different constant pool ptr).
         EVT UserVT = User->getValueType(0);
-        SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
+        SDValue UserPtr = UserLd->getBasePtr();
         const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
         const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
         if (LdC && UserC && UserPtr != Ptr) {

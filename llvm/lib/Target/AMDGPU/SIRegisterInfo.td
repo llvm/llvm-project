@@ -1152,11 +1152,11 @@ class RegOrF32 <string RegisterClass, string OperandTypePrefix>
 
 class RegOrV2B16 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT16",
-                     !subst("_v2b16", "V2B16", NAME), "_Imm16">;
+                     !subst("_v2b16", "V2B16", NAME), "_ImmV2I16">;
 
 class RegOrV2F16 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP16",
-                     !subst("_v2f16", "V2F16", NAME), "_Imm16">;
+                     !subst("_v2f16", "V2F16", NAME), "_ImmV2F16">;
 
 class RegOrF64 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP64",
