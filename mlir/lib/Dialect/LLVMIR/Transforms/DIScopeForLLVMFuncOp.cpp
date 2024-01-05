@@ -113,8 +113,9 @@ struct DIScopeForLLVMFuncOp
     }
 
     // Create subprograms for each function with the same distinct compile unit.
-    for (auto func : module.getOps<LLVM::LLVMFuncOp>())
+    module.walk([&](LLVM::LLVMFuncOp func) {
       addScopeToFunction(func, compileUnitAttr);
+    });
   }
 };
 
