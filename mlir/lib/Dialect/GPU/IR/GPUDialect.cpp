@@ -661,8 +661,12 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands({gridSizeX, gridSizeY, gridSizeZ, getBlockSizeX,
                       getBlockSizeY, getBlockSizeZ});
-  if (clusterSizeX && clusterSizeY && clusterSizeZ)
-    result.addOperands({clusterSizeX, clusterSizeY, clusterSizeZ});
+  if (clusterSizeX)
+    result.addOperands(clusterSizeX);
+  if (clusterSizeY)
+    result.addOperands(clusterSizeY);
+  if (clusterSizeZ)
+    result.addOperands(clusterSizeZ);
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
 
@@ -684,11 +688,9 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   SmallVector<int32_t, 11> segmentSizes(11, 1);
   segmentSizes.front() = asyncDependencies.size();
   segmentSizes.back() = dynamicSharedMemorySize ? 1 : 0;
-  if (!clusterSizeX) {
-    segmentSizes[7] = 0;
-    segmentSizes[8] = 0;
-    segmentSizes[9] = 0;
-  }
+  segmentSizes[7] = clusterSizeX ? 1 : 0;
+  segmentSizes[8] = clusterSizeY ? 1 : 0;
+  segmentSizes[9] = clusterSizeZ ? 1 : 0;
   result.addAttribute(getOperandSegmentSizeAttr(),
                       builder.getDenseI32ArrayAttr(segmentSizes));
 }
