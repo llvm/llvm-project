@@ -136,7 +136,8 @@ pz_ptrty return_valid_preserves_za_fptr(pz_ptrty f) { return f; }
 // expected-cpp-error@+2 {{cannot initialize return object of type 'pz_ptrty' (aka 'void (*)() __arm_preserves("za")') with an lvalue of type 'n_ptrty' (aka 'void (*)()')}}
 // expected-error@+1 {{incompatible function pointer types returning 'n_ptrty' (aka 'void (*)(void)') from a function with result type 'pz_ptrty' (aka 'void (*)(void) __arm_preserves("za")')}}
 pz_ptrty return_invalid_fptr_preserves_za_normal(n_ptrty f) { return f; }
-// No diagnostics, the preserves_za hint should be dropped silently.
+// expected-cpp-error@+2 {{cannot initialize return object of type 'n_ptrty' (aka 'void (*)()') with an lvalue of type 'pz_ptrty' (aka 'void (*)() __arm_preserves("za")')}}
+// expected-error@+1 {{incompatible function pointer types returning 'pz_ptrty' (aka 'void (*)(void) __arm_preserves("za")') from a function with result type 'n_ptrty' (aka 'void (*)(void)')}}
 n_ptrty return_invalid_fptr_normal_preserves_za(pz_ptrty f) { return f; }
 
 // Test template instantiations
@@ -224,8 +225,10 @@ struct S_Drop_PreservesZA : S_PreservesZA {
 struct S_NoPreservesZA {
   virtual void memberfn(void);
 };
+
 struct S_AddPreservesZA : S_NoPreservesZA {
-// This is fine, the overridden function just adds more guarantees.
+// expected-cpp-error@+2 {{virtual function 'memberfn' has different attributes ('void () __arm_preserves("za")') than the function it overrides (which has 'void ()')}}
+// expected-cpp-note@-5 {{overridden virtual function is here}}
   void memberfn(void) __arm_preserves("za") override {}
 };
 

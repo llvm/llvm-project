@@ -286,18 +286,18 @@ int test_variadic_template() __arm_inout("za") {
 // CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_pstate_za_preserved" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_pstate_za_preserved" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_pstate_za_new" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[NORMAL_DEF]] = { mustprogress noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_ENABLED_CALL]] = { "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[SM_COMPATIBLE_CALL]] = { "aarch64_pstate_sm_compatible" }
 // CHECK: attributes #[[SM_BODY_CALL]] = { "aarch64_pstate_sm_body" }
 // CHECK: attributes #[[ZA_SHARED_CALL]] = { "aarch64_pstate_za_shared" }
-// CHECK: attributes #[[ZA_PRESERVED_CALL]] = { "aarch64_pstate_za_preserved" }
+// CHECK: attributes #[[ZA_PRESERVED_CALL]] = { "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" }
 // CHECK: attributes #[[NOUNWIND_CALL]] = { nounwind }
 // CHECK: attributes #[[NOUNWIND_SM_ENABLED_CALL]] = { nounwind "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[NOUNWIND_SM_COMPATIBLE_CALL]] = { nounwind "aarch64_pstate_sm_compatible" }
 // CHECK: attributes #[[NOUNWIND_ZA_SHARED_CALL]] = { nounwind "aarch64_pstate_za_shared" }
-// CHECK: attributes #[[NOUNWIND_ZA_PRESERVED_CALL]] = { nounwind "aarch64_pstate_za_preserved" }
+// CHECK: attributes #[[NOUNWIND_ZA_PRESERVED_CALL]] = { nounwind "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" }
 

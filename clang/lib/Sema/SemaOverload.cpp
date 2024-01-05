@@ -1784,27 +1784,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     Changed = true;
   }
 
-  // Drop the 'arm_preserves_za' if not present in the target type (we can do
-  // that because it is merely a hint).
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-    FunctionType::ArmStateValue FromState =
-        FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
-    if (FromState == FunctionType::ARM_Preserves) {
-      FunctionType::ArmStateValue ToState;
-      if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
-        ToState = FunctionType::getArmZAState(
-            ToFPT->getExtProtoInfo().AArch64SMEAttributes);
-      if (ToState == FunctionType::ARM_None) {
-        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAMask, false);
-        QualType QT = Context.getFunctionType(
-            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
-        FromFn = QT->getAs<FunctionType>();
-        Changed = true;
-      }
-    }
-  }
-
   // Drop 'noexcept' if not present in target type.
   if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
     const auto *ToFPT = cast<FunctionProtoType>(ToFn);
