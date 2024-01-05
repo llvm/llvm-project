@@ -52,8 +52,9 @@ struct __fn {
     auto __n2 = ranges::distance(__first2, __last2);
     if (__n2  == 0) return true;
 
-    auto ret = ranges::search(std::move(__first1), __last1, std::move(__first2), __last2, __pred, std::ref(__proj1), std::ref(__proj2));
-    return ret.empty() == false;
+    auto __ret = ranges::search(
+        std::move(__first1), __last1, std::move(__first2), __last2, __pred, std::ref(__proj1), std::ref(__proj2));
+    return __ret.empty() == false;
   }
 
   template <forward_range _Range1,
@@ -70,10 +71,11 @@ struct __fn {
     } else {
       __n2 = std::distance(cbegin(__range2), cend(__range2));
     }
-    if (__n2  == 0) return true;
+    if (__n2  == 0)
+      return true;
 
-    auto ret = ranges::search(__range1, __range2, __pred, std::ref(__proj1), std::ref(__proj2));
-    return ret.empty() == false;
+    auto __ret = ranges::search(__range1, __range2, __pred, std::ref(__proj1), std::ref(__proj2));
+    return __ret.empty() == false;
   }
 };
 } // namespace __contains_subrange

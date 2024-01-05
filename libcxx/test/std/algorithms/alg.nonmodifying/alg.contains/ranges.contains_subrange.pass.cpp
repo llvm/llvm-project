@@ -52,7 +52,8 @@ static_assert(!HasContainsSubrangeIt<int*, int*, int*, SentinelForNotWeaklyEqual
 
 template <class Range1, class Range2 = UncheckedRange<int*>>
 concept HasContainsSubrangeR = requires(Range1&& range1, Range2&& range2) {
-  std::ranges::contains_subrange(std::forward<Range1>(range1), std::forward<Range2>(range2)); };
+  std::ranges::contains_subrange(std::forward<Range1>(range1), std::forward<Range2>(range2));
+};
 
 static_assert(HasContainsSubrangeR<UncheckedRange<int*>>);
 static_assert(!HasContainsSubrangeR<ForwardRangeNotDerivedFrom>);
@@ -288,18 +289,11 @@ constexpr void test_iterators() {
     auto proj2    = [](int i) { return i * -1; };
     {
       bool ret = std::ranges::contains_subrange(
-          whole.begin(),
-          whole.end(),
-          subrange.begin(),
-          subrange.end(),
-          {},
-          proj1,
-          proj2);
+          whole.begin(), whole.end(), subrange.begin(), subrange.end(), {}, proj1, proj2);
       assert(ret);
     }
     {
-      bool ret = std::ranges::contains_subrange(
-          whole, subrange, {}, proj1, proj2);
+      bool ret = std::ranges::contains_subrange(whole, subrange, {}, proj1, proj2);
       assert(ret);
     }
   }
