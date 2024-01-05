@@ -14,8 +14,9 @@
 // 1. Barvinok, Alexander, and James E. Pommersheim. "An algorithmic theory of
 //    lattice points in polyhedra." New perspectives in algebraic combinatorics
 //    38 (1999): 91-147.
-// 2. Verdoolaege, Sven, et al. "Counting integer points in parametric polytopes
-//    using Barvinok's rational functions." Algorithmica 48 (2007): 37-66.
+// 2. Verdoolaege, Sven, et al. "Counting integer points in parametric
+//    polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+//    37-66.
 //
 //===----------------------------------------------------------------------===//
 
