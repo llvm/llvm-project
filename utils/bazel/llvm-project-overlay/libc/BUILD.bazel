@@ -1874,6 +1874,12 @@ libc_math_function(name = "llroundf")
 
 libc_math_function(name = "llroundl")
 
+libc_math_function(name = "nan")
+
+libc_math_function(name = "nanf")
+
+libc_math_function(name = "nanl")
+
 libc_math_function(name = "nearbyint")
 
 libc_math_function(name = "nearbyintf")
