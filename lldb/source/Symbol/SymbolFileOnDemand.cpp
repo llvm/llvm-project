@@ -115,7 +115,7 @@ bool SymbolFileOnDemand::ForEachExternalModule(
 }
 
 bool SymbolFileOnDemand::ParseSupportFiles(CompileUnit &comp_unit,
-                                           FileSpecList &support_files) {
+                                           SupportFileList &support_files) {
   LLDB_LOG(GetLog(),
            "[{0}] {1} is not skipped: explicitly allowed to support breakpoint",
            GetSymbolFileName(), __FUNCTION__);
