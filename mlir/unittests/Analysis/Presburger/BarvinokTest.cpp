@@ -6,10 +6,10 @@
 using namespace mlir;
 using namespace presburger;
 
-// We randomly generate 3 vectors with 4 entries each
-// and define a cone's H-representation using these
-// numbers. We check that the dual contains the same
-// numbers.
+// The following are 3 randomly generated vectors with 4
+// entries each and define a cone's H-representation
+// using these numbers. We check that the dual contains
+// the same numbers.
 // We do the same in the reverse case.
 TEST(BarvinokTest, getDual) {
   ConeH cone1 = defineHRep(4);
