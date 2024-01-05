@@ -131,6 +131,7 @@ public:
 #include <__mutex/mutex.h>
 #include <__mutex/tag_types.h>
 #include <__mutex/unique_lock.h>
+#include <__stop_token/stop_callback.h>
 #include <__stop_token/stop_token.h>
 #include <__utility/move.h>
 #include <version>
@@ -257,6 +258,7 @@ condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Pe
 
 template <class _Lock, class _Predicate>
 bool condition_variable_any::wait(_Lock& __lock, stop_token __stoken, _Predicate __pred) {
+  stop_callback __cb(__stoken, [this] { notify_all(); });
   while (!__stoken.stop_requested()) {
     if (__pred())
       return true;
@@ -268,6 +270,7 @@ bool condition_variable_any::wait(_Lock& __lock, stop_token __stoken, _Predicate
 template <class _Lock, class _Clock, class _Duration, class _Predicate>
 bool condition_variable_any::wait_until(
     _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred) {
+  stop_callback __cb(__stoken, [this] { notify_all(); });
   while (!__stoken.stop_requested()) {
     if (__pred())
       return true;

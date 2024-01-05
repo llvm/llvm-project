@@ -107,6 +107,28 @@ void test() {
     assert(lock.owns_lock());
   }
 
+  // #76807 Hangs in std::condition_variable_any when used with std::stop_token
+  {
+    class MyThread {
+    public:
+      MyThread() {
+        thread_ = support::make_test_jthread([this](std::stop_token st) {
+          while (!st.stop_requested()) {
+            std::unique_lock lock{m_};
+            cv_.wait(lock, st, [] { return false; });
+          }
+        });
+      }
+
+    private:
+      std::mutex m_;
+      std::condition_variable_any cv_;
+      std::jthread thread_;
+    };
+
+    [[maybe_unused]] MyThread my_thread;
+  }
+
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   // Throws: Any exception thrown by pred.
   {
