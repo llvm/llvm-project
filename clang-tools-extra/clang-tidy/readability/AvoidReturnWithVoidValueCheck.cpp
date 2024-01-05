@@ -15,6 +15,19 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+static constexpr auto IgnoreMacrosName = "IgnoreMacros";
+static constexpr auto IgnoreMacrosDefault = true;
+
+static constexpr auto StrictModeName = "StrictMode";
+static constexpr auto StrictModeDefault = true;
+
+AvoidReturnWithVoidValueCheck::AvoidReturnWithVoidValueCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(
+          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
+      StrictMode(Options.getLocalOrGlobal(StrictModeName, StrictModeDefault)) {}
+
 void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       returnStmt(
@@ -33,6 +46,12 @@ void AvoidReturnWithVoidValueCheck::check(
     return;
   diag(VoidReturn->getBeginLoc(), "return statement within a void function "
                                   "should not have a specified return value");
+}
+
+void AvoidReturnWithVoidValueCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, IgnoreMacrosName, IgnoreMacros);
+  Options.store(Opts, StrictModeName, StrictMode);
 }
 
 } // namespace clang::tidy::readability

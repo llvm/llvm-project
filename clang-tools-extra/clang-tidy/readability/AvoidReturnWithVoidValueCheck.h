@@ -11,12 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 
-static constexpr auto IgnoreMacrosName = "IgnoreMacros";
-static constexpr auto IgnoreMacrosDefault = true;
-
-static constexpr auto StrictModeName = "StrictMode";
-static constexpr auto StrictModeDefault = true;
-
 namespace clang::tidy::readability {
 
 /// Finds return statements with `void` values used within functions with `void`
@@ -26,12 +20,7 @@ namespace clang::tidy::readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-return-with-void-value.html
 class AvoidReturnWithVoidValueCheck : public ClangTidyCheck {
 public:
-  AvoidReturnWithVoidValueCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        IgnoreMacros(
-            Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
-        StrictMode(
-            Options.getLocalOrGlobal(StrictModeName, StrictModeDefault)) {}
+  AvoidReturnWithVoidValueCheck(StringRef Name, ClangTidyContext *Context);
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -43,10 +32,7 @@ private:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
-    Options.store(Opts, IgnoreMacrosName, IgnoreMacros);
-    Options.store(Opts, StrictModeName, StrictMode);
-  }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
   bool IgnoreMacros;
