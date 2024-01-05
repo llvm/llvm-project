@@ -1726,17 +1726,6 @@ static Expected<size_t> getSizeFromDwarfHeader(BinaryStreamReader &Reader) {
   return Word1;
 }
 
-// TODO: Remove
-Expected<size_t>
-mccasformats::v1::getSizeFromDwarfHeaderAndSkip(BinaryStreamReader &Reader) {
-  Expected<size_t> Size = getSizeFromDwarfHeader(Reader);
-  if (!Size)
-    return Size.takeError();
-  if (auto E = Reader.skip(*Size))
-    return std::move(E);
-  return Size;
-}
-
 /// Returns the Abbreviation Offset field of a Dwarf Compilation Unit (CU)
 /// contained in CUData, as well as the total number of bytes taken by the CU.
 /// Note: this is different from the length field of the Dwarf header, which
