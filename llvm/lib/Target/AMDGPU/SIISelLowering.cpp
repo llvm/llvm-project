@@ -151,16 +151,20 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (Subtarget->useRealTrue16Insts()) {
       addRegisterClass(MVT::i16, &AMDGPU::VGPR_16RegClass);
       addRegisterClass(MVT::f16, &AMDGPU::VGPR_16RegClass);
+      addRegisterClass(MVT::bf16, &AMDGPU::VGPR_16RegClass);
     } else {
       addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
       addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
+      addRegisterClass(MVT::bf16, &AMDGPU::SReg_32RegClass);
     }
 
     // Unless there are also VOP3P operations, not operations are really legal.
     addRegisterClass(MVT::v2i16, &AMDGPU::SReg_32RegClass);
     addRegisterClass(MVT::v2f16, &AMDGPU::SReg_32RegClass);
+    addRegisterClass(MVT::v2bf16, &AMDGPU::SReg_32RegClass);
     addRegisterClass(MVT::v4i16, &AMDGPU::SReg_64RegClass);
     addRegisterClass(MVT::v4f16, &AMDGPU::SReg_64RegClass);
+    addRegisterClass(MVT::v4bf16, &AMDGPU::SReg_64RegClass);
     addRegisterClass(MVT::v8i16, &AMDGPU::SGPR_128RegClass);
     addRegisterClass(MVT::v8f16, &AMDGPU::SGPR_128RegClass);
     addRegisterClass(MVT::v16i16, &AMDGPU::SGPR_256RegClass);
@@ -195,6 +199,41 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32,
                       MVT::i1,     MVT::v32i32},
                      Custom);
+
+  if (isTypeLegal(MVT::bf16)) {
+    for (unsigned Opc :
+         {ISD::FADD,     ISD::FSUB,       ISD::FMUL,    ISD::FDIV,
+          ISD::FREM,     ISD::FMA,        ISD::FMINNUM, ISD::FMAXNUM,
+          ISD::FMINIMUM, ISD::FMAXIMUM,   ISD::FSQRT,   ISD::FCBRT,
+          ISD::FSIN,     ISD::FCOS,       ISD::FPOW,    ISD::FPOWI,
+          ISD::FLDEXP,   ISD::FFREXP,     ISD::FLOG,    ISD::FLOG2,
+          ISD::FLOG10,   ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10,
+          ISD::FCEIL,    ISD::FTRUNC,     ISD::FRINT,   ISD::FNEARBYINT,
+          ISD::FROUND,   ISD::FROUNDEVEN, ISD::FFLOOR,  ISD::FCANONICALIZE,
+          ISD::SETCC}) {
+      // FIXME: The promoted to type shouldn't need to be explicit
+      setOperationAction(Opc, MVT::bf16, Promote);
+      AddPromotedToType(Opc, MVT::bf16, MVT::f32);
+    }
+
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
+
+    setOperationAction(ISD::SELECT, MVT::bf16, Promote);
+    AddPromotedToType(ISD::SELECT, MVT::bf16, MVT::i16);
+
+    // TODO: Could make these legal
+    setOperationAction(ISD::FABS, MVT::bf16, Expand);
+    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
+
+    // We only need to custom lower because we can't specify an action for bf16
+    // sources.
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Promote);
+    AddPromotedToType(ISD::BUILD_VECTOR, MVT::v2bf16, MVT::v2i16);
+  }
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
   setTruncStoreAction(MVT::v3i32, MVT::v3i16, Expand);
@@ -274,10 +313,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
        {MVT::v8i32,  MVT::v8f32,  MVT::v9i32,  MVT::v9f32,  MVT::v10i32,
         MVT::v10f32, MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
         MVT::v16i32, MVT::v16f32, MVT::v2i64,  MVT::v2f64,  MVT::v4i16,
-        MVT::v4f16,  MVT::v3i64,  MVT::v3f64,  MVT::v6i32,  MVT::v6f32,
-        MVT::v4i64,  MVT::v4f64,  MVT::v8i64,  MVT::v8f64,  MVT::v8i16,
-        MVT::v8f16,  MVT::v16i16, MVT::v16f16, MVT::v16i64, MVT::v16f64,
-        MVT::v32i32, MVT::v32f32, MVT::v32i16, MVT::v32f16}) {
+        MVT::v4f16,  MVT::v4bf16, MVT::v3i64,  MVT::v3f64,  MVT::v6i32,
+        MVT::v6f32,  MVT::v4i64,  MVT::v4f64,  MVT::v8i64,  MVT::v8f64,
+        MVT::v8i16,  MVT::v8f16,  MVT::v16i16, MVT::v16f16, MVT::v16i64,
+        MVT::v16f64, MVT::v32i32, MVT::v32f32, MVT::v32i16, MVT::v32f16}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -383,13 +422,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32},
                      Expand);
 
-  setOperationAction(ISD::BUILD_VECTOR, {MVT::v4f16, MVT::v4i16}, Custom);
+  setOperationAction(ISD::BUILD_VECTOR, {MVT::v4f16, MVT::v4i16, MVT::v4bf16},
+                     Custom);
 
   // Avoid stack access for these.
   // TODO: Generalize to more vector types.
   setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
-                     {MVT::v2i16, MVT::v2f16, MVT::v2i8, MVT::v4i8, MVT::v8i8,
-                      MVT::v4i16, MVT::v4f16},
+                     {MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::v2i8, MVT::v4i8,
+                      MVT::v8i8, MVT::v4i16, MVT::v4f16, MVT::v4bf16},
                      Custom);
 
   // Deal with vec3 vector operations when widened to vec4.
@@ -498,6 +538,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BF16_TO_FP, {MVT::i16, MVT::f32, MVT::f64}, Expand);
   setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f32, MVT::f64}, Expand);
 
+  // Custom lower these because we can't specify a rule based on an illegal
+  // source bf16.
+  setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, MVT::f32, Custom);
+  setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, MVT::f64, Custom);
+
   if (Subtarget->has16BitInsts()) {
     setOperationAction({ISD::Constant, ISD::SMIN, ISD::SMAX, ISD::UMIN,
                         ISD::UMAX, ISD::UADDSAT, ISD::USUBSAT},
@@ -524,9 +569,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::FP_TO_FP16, MVT::i16, MVT::i32);
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i16, Custom);
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
+
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i32, Custom);
 
     // F16 - Constant Actions.
     setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
+    setOperationAction(ISD::ConstantFP, MVT::bf16, Legal);
 
     // F16 - Load/Store Actions.
     setOperationAction(ISD::LOAD, MVT::f16, Promote);
@@ -534,16 +584,23 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::f16, MVT::i16);
 
+    // BF16 - Load/Store Actions.
+    setOperationAction(ISD::LOAD, MVT::bf16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::bf16, MVT::i16);
+    setOperationAction(ISD::STORE, MVT::bf16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::bf16, MVT::i16);
+
     // F16 - VOP1 Actions.
     setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND, ISD::FCOS,
                         ISD::FSIN, ISD::FROUND, ISD::FPTRUNC_ROUND},
                        MVT::f16, Custom);
 
-    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::bf16, Promote);
 
     // F16 - VOP2 Actions.
-    setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, MVT::f16, Expand);
+    setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, {MVT::f16, MVT::bf16},
+                       Expand);
     setOperationAction({ISD::FLDEXP, ISD::STRICT_FLDEXP}, MVT::f16, Custom);
     setOperationAction(ISD::FFREXP, MVT::f16, Custom);
     setOperationAction(ISD::FDIV, MVT::f16, Custom);
@@ -554,8 +611,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMAD, MVT::f16, Legal);
 
     for (MVT VT :
-         {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16, MVT::v8i16,
-          MVT::v8f16, MVT::v16i16, MVT::v16f16, MVT::v32i16, MVT::v32f16}) {
+         {MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::v4i16, MVT::v4f16,
+          MVT::v4bf16, MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::v16i16,
+          MVT::v16f16, MVT::v16bf16, MVT::v32i16, MVT::v32f16}) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
         switch (Op) {
         case ISD::LOAD:
@@ -587,7 +645,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // XXX - Do these do anything? Vector constants turn into build_vector.
     setOperationAction(ISD::Constant, {MVT::v2i16, MVT::v2f16}, Legal);
 
-    setOperationAction(ISD::UNDEF, {MVT::v2i16, MVT::v2f16}, Legal);
+    setOperationAction(ISD::UNDEF, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
+                       Legal);
 
     setOperationAction(ISD::STORE, MVT::v2i16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v2i16, MVT::i32);
@@ -610,11 +669,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::LOAD, MVT::v4i16, MVT::v2i32);
     setOperationAction(ISD::LOAD, MVT::v4f16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v4f16, MVT::v2i32);
+    setOperationAction(ISD::LOAD, MVT::v4bf16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v4bf16, MVT::v2i32);
 
     setOperationAction(ISD::STORE, MVT::v4i16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v4i16, MVT::v2i32);
     setOperationAction(ISD::STORE, MVT::v4f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v4f16, MVT::v2i32);
+    setOperationAction(ISD::STORE, MVT::v4bf16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v4bf16, MVT::v2i32);
 
     setOperationAction(ISD::LOAD, MVT::v8i16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v8i16, MVT::v4i32);
@@ -699,7 +762,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::FMAXNUM_IEEE, ISD::FCANONICALIZE},
                        MVT::v2f16, Legal);
 
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, {MVT::v2i16, MVT::v2f16},
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
                        Custom);
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
@@ -724,7 +787,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
 
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
-    setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16}, Custom);
+    setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16, MVT::v4bf16},
+                       Custom);
 
     if (Subtarget->hasPackedFP32Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
@@ -3902,6 +3966,26 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
+// Work around DAG legality rules only based on the result type.
+SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
+  bool IsStrict = Op.getOpcode() == ISD::STRICT_FP_EXTEND;
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
+  EVT SrcVT = Src.getValueType();
+
+  if (SrcVT.getScalarType() != MVT::bf16)
+    return Op;
+
+  SDLoc SL(Op);
+  SDValue BitCast =
+      DAG.getNode(ISD::BITCAST, SL, SrcVT.changeTypeToInteger(), Src);
+
+  EVT DstVT = Op.getValueType();
+  if (IsStrict)
+    llvm_unreachable("Need STRICT_BF16_TO_FP");
+
+  return DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -4825,6 +4909,48 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::GET_SHADERCYCLESHILO: {
+    assert(MF->getSubtarget<GCNSubtarget>().hasShaderCyclesHiLoRegisters());
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+    // The algorithm is:
+    //
+    // hi1 = getreg(SHADER_CYCLES_HI)
+    // lo1 = getreg(SHADER_CYCLES_LO)
+    // hi2 = getreg(SHADER_CYCLES_HI)
+    //
+    // If hi1 == hi2 then there was no overflow and the result is hi2:lo1.
+    // Otherwise there was overflow and the result is hi2:0. In both cases the
+    // result should represent the actual time at some point during the sequence
+    // of three getregs.
+    Register RegHi1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi1)
+        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
+                                           0, 32));
+    Register RegLo1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegLo1)
+        .addImm(
+            AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES, 0, 32));
+    Register RegHi2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_GETREG_B32), RegHi2)
+        .addImm(AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_SHADER_CYCLES_HI,
+                                           0, 32));
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
+        .addReg(RegHi1)
+        .addReg(RegHi2);
+    Register RegLo = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), RegLo)
+        .addReg(RegLo1)
+        .addImm(0);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE))
+        .add(MI.getOperand(0))
+        .addReg(RegLo)
+        .addImm(AMDGPU::sub0)
+        .addReg(RegHi2)
+        .addImm(AMDGPU::sub1);
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::SI_INDIRECT_SRC_V1:
   case AMDGPU::SI_INDIRECT_SRC_V2:
   case AMDGPU::SI_INDIRECT_SRC_V4:
@@ -5452,6 +5578,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::PREFETCH:
     return lowerPREFETCH(Op, DAG);
+  case ISD::FP_EXTEND:
+  case ISD::STRICT_FP_EXTEND:
+    return lowerFP_EXTEND(Op, DAG);
   }
   return SDValue();
 }
@@ -6639,7 +6768,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue BC = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue Elt = DAG.getNode(ISD::SRL, SL, IntVT, BC, ScaledIdx);
 
-  if (ResultVT == MVT::f16) {
+  if (ResultVT == MVT::f16 || ResultVT == MVT::bf16) {
     SDValue Result = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Elt);
     return DAG.getNode(ISD::BITCAST, SL, ResultVT, Result);
   }
@@ -6725,7 +6854,7 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+  if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
       VT == MVT::v8i16 || VT == MVT::v8f16) {
     EVT HalfVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
                                   VT.getVectorNumElements() / 2);
@@ -6791,7 +6920,7 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
-  assert(VT == MVT::v2f16 || VT == MVT::v2i16);
+  assert(VT == MVT::v2f16 || VT == MVT::v2i16 || VT == MVT::v2bf16);
   assert(!Subtarget->hasVOP3PInsts() && "this should be legal");
 
   SDValue Lo = Op.getOperand(0);
@@ -6890,6 +7019,7 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
         // Adjust alignment for that dynamic shared memory array.
         Function &F = DAG.getMachineFunction().getFunction();
         MFI->setDynLDSAlign(F, *cast<GlobalVariable>(GV));
+        MFI->setUsesDynamicLDS(true);
         return SDValue(
             DAG.getMachineNode(AMDGPU::GET_GROUPSTATICSIZE, DL, PtrVT), 0);
       }

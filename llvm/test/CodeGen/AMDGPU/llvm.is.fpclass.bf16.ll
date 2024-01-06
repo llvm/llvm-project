@@ -173,8 +173,7 @@ define i1 @snan_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: snan_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7fc0
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
@@ -186,8 +185,7 @@ define i1 @snan_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: snan_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fc0
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
@@ -199,8 +197,7 @@ define i1 @snan_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: snan_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e64 s4, 0x7f80, v0
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
@@ -210,7 +207,6 @@ define i1 @snan_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: snan_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e64 s0, 0x7f80, v0
@@ -234,8 +230,7 @@ define i1 @qnan_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: qnan_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7fbf
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -244,8 +239,7 @@ define i1 @qnan_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: qnan_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fbf
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -254,8 +248,7 @@ define i1 @qnan_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: qnan_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7fbf, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -263,7 +256,6 @@ define i1 @qnan_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: qnan_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7fbf, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -285,7 +277,6 @@ define i1 @posinf_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: posinf_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -295,22 +286,20 @@ define i1 @posinf_bf16(bfloat %x) nounwind {
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX9CHECK-NEXT:    v_cmp_eq_u16_sdwa s[4:5], v0, s4 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: posinf_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f80
-; GFX10CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: posinf_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -331,7 +320,6 @@ define i1 @neginf_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: neginf_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0xff80
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -341,22 +329,20 @@ define i1 @neginf_bf16(bfloat %x) nounwind {
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0xff80
-; GFX9CHECK-NEXT:    v_cmp_eq_u16_sdwa s[4:5], v0, s4 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: neginf_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0xffffff80
-; GFX10CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0xff80, v0
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: neginf_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0xff80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -382,7 +368,6 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: posnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -395,7 +380,6 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: posnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -408,7 +392,6 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: posnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -420,7 +403,6 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: posnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -450,7 +432,6 @@ define i1 @negnormal_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: negnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -463,7 +444,6 @@ define i1 @negnormal_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: negnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -476,7 +456,6 @@ define i1 @negnormal_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: negnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -488,7 +467,6 @@ define i1 @negnormal_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: negnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -515,8 +493,7 @@ define i1 @possubnormal_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: possubnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, -1
-; GFX8CHECK-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f
 ; GFX8CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -525,8 +502,7 @@ define i1 @possubnormal_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: possubnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_mov_b32_e32 v1, -1
-; GFX9CHECK-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f
 ; GFX9CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -535,7 +511,6 @@ define i1 @possubnormal_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: possubnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, -1
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -544,7 +519,6 @@ define i1 @possubnormal_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: possubnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, -1
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -570,7 +544,6 @@ define i1 @negsubnormal_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: negsubnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
@@ -583,7 +556,6 @@ define i1 @negsubnormal_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: negsubnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
@@ -596,7 +568,6 @@ define i1 @negsubnormal_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: negsubnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, -1
@@ -608,7 +579,6 @@ define i1 @negsubnormal_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: negsubnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, -1
@@ -632,7 +602,6 @@ define i1 @poszero_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: poszero_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -640,23 +609,20 @@ define i1 @poszero_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: poszero_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9CHECK-NEXT:    v_cmp_eq_u16_sdwa s[4:5], v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: poszero_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: poszero_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -677,7 +643,6 @@ define i1 @negzero_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: negzero_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -687,22 +652,20 @@ define i1 @negzero_bf16(bfloat %x) nounwind {
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x8000
-; GFX9CHECK-NEXT:    v_cmp_eq_u16_sdwa s[4:5], v0, s4 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: negzero_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX10CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x8000, v0
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: negzero_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x8000, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -723,7 +686,6 @@ define i1 @posfinite_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: posfinite_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -733,22 +695,20 @@ define i1 @posfinite_bf16(bfloat %x) nounwind {
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX9CHECK-NEXT:    v_cmp_lt_u16_sdwa s[4:5], v0, s4 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: posfinite_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f80
-; GFX10CHECK-NEXT:    v_cmp_lt_u16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f80, v0
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: posfinite_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -772,7 +732,6 @@ define i1 @negfinite_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: negfinite_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
@@ -784,7 +743,6 @@ define i1 @negfinite_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: negfinite_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
@@ -796,7 +754,6 @@ define i1 @negfinite_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: negfinite_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e64 s4, 0x7f80, v1
@@ -807,7 +764,6 @@ define i1 @negfinite_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: negfinite_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e64 s0, 0x7f80, v1
@@ -831,8 +787,7 @@ define i1 @isnan_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: isnan_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -841,8 +796,7 @@ define i1 @isnan_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: isnan_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -851,8 +805,7 @@ define i1 @isnan_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: isnan_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -860,7 +813,6 @@ define i1 @isnan_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: isnan_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -882,8 +834,7 @@ define i1 @not_isnan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_isnan_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -892,8 +843,7 @@ define i1 @not_isnan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_isnan_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -902,8 +852,7 @@ define i1 @not_isnan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_isnan_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -911,7 +860,6 @@ define i1 @not_isnan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_isnan_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1000,57 +948,52 @@ define <3 x i1> @isnan_v3bf16(<3 x bfloat> %x) nounwind {
 ; GFX8CHECK-LABEL: isnan_v3bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v3, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v2, 0x7fff, v1
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX8CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
+; GFX8CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 15
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v1
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v3
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v2
+; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9CHECK-LABEL: isnan_v3bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v3, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
+; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v3
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v1
+; GFX9CHECK-NEXT:    v_cmp_gt_i16_sdwa s[4:5], v3, s4 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v3
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: isnan_v3bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff, v0
+; GFX10CHECK-NEXT:    v_and_b32_e32 v2, 0x7fff7fff, v0
+; GFX10CHECK-NEXT:    v_mov_b32_e32 v3, 0x7f80
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v4, 0x7fff, v1
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v2, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v3
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v2
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10CHECK-NEXT:    v_cmp_gt_i16_sdwa s4, v2, v3 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v4
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: isnan_v3bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff, v1
-; GFX11CHECK-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
+; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v2
@@ -1084,18 +1027,17 @@ define <4 x i1> @isnan_v4bf16(<4 x bfloat> %x) nounwind {
 ; GFX8CHECK-LABEL: isnan_v4bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fff
+; GFX8CHECK-NEXT:    v_bfe_u32 v3, v1, 16, 15
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v4, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v3, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
+; GFX8CHECK-NEXT:    v_and_b32_e32 v2, 0x7fff7fff, v1
+; GFX8CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 15
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v1
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v4
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v2
+; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v3
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1103,56 +1045,49 @@ define <4 x i1> @isnan_v4bf16(<4 x bfloat> %x) nounwind {
 ; GFX9CHECK-LABEL: isnan_v4bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    s_movk_i32 s5, 0x7f80
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v4, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v3, v1, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s5, v0
+; GFX9CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v1
+; GFX9CHECK-NEXT:    s_movk_i32 s6, 0x7f80
+; GFX9CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s6, v1
+; GFX9CHECK-NEXT:    v_cmp_gt_i16_sdwa s[4:5], v1, s6 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s5, v1
+; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s6, v3
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_gt_i16_sdwa s[4:5], v3, s6 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s5, v4
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s5, v3
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[4:5]
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: isnan_v4bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff, v0
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_e32 v4, 0x7fff, v1
+; GFX10CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v0
+; GFX10CHECK-NEXT:    v_mov_b32_e32 v5, 0x7f80
+; GFX10CHECK-NEXT:    v_and_b32_e32 v4, 0x7fff7fff, v1
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v3
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v1, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_cmp_gt_i16_sdwa s4, v3, v5 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v4
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_gt_i16_sdwa s4, v4, v5 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v1
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v5
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: isnan_v4bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; GFX11CHECK-NEXT:    v_and_b32_e32 v3, 0x7fff, v3
+; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
-; GFX11CHECK-NEXT:    v_and_b32_e32 v4, 0x7fff, v2
+; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v1
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v4
+; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v3
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
   %1 = call <4 x i1> @llvm.is.fpclass.v4bf16(<4 x bfloat> %x, i32 3)  ; nan
@@ -1172,8 +1107,7 @@ define i1 @isnan_bf16_strictfp(bfloat %x) strictfp nounwind {
 ; GFX8CHECK-LABEL: isnan_bf16_strictfp:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1182,8 +1116,7 @@ define i1 @isnan_bf16_strictfp(bfloat %x) strictfp nounwind {
 ; GFX9CHECK-LABEL: isnan_bf16_strictfp:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1192,8 +1125,7 @@ define i1 @isnan_bf16_strictfp(bfloat %x) strictfp nounwind {
 ; GFX10CHECK-LABEL: isnan_bf16_strictfp:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1201,7 +1133,6 @@ define i1 @isnan_bf16_strictfp(bfloat %x) strictfp nounwind {
 ; GFX11CHECK-LABEL: isnan_bf16_strictfp:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1223,8 +1154,7 @@ define i1 @isinf_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: isinf_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1233,8 +1163,7 @@ define i1 @isinf_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: isinf_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1243,8 +1172,7 @@ define i1 @isinf_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: isinf_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1252,7 +1180,6 @@ define i1 @isinf_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: isinf_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1274,8 +1201,7 @@ define i1 @isfinite_bf16(bfloat %x) nounwind {
 ; GFX8CHECK-LABEL: isfinite_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1284,8 +1210,7 @@ define i1 @isfinite_bf16(bfloat %x) nounwind {
 ; GFX9CHECK-LABEL: isfinite_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1294,8 +1219,7 @@ define i1 @isfinite_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-LABEL: isfinite_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1303,7 +1227,6 @@ define i1 @isfinite_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-LABEL: isfinite_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1325,8 +1248,7 @@ define i1 @issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: issubnormal_or_zero_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f80
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1334,8 +1256,7 @@ define i1 @issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: issubnormal_or_zero_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1343,8 +1264,7 @@ define i1 @issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: issubnormal_or_zero_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f80
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1352,7 +1272,6 @@ define i1 @issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: issubnormal_or_zero_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1375,8 +1294,7 @@ define i1 @not_issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_issubnormal_or_zero_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f80
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX8CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1384,8 +1302,7 @@ define i1 @not_issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_issubnormal_or_zero_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX9CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1393,8 +1310,7 @@ define i1 @not_issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_issubnormal_or_zero_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f80
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1402,7 +1318,6 @@ define i1 @not_issubnormal_or_zero_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_issubnormal_or_zero_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1427,8 +1342,7 @@ define i1 @isnormal_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: isnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f00
 ; GFX8CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
@@ -1438,8 +1352,7 @@ define i1 @isnormal_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: isnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f00
 ; GFX9CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
@@ -1449,8 +1362,7 @@ define i1 @isnormal_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: isnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f00, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1459,7 +1371,6 @@ define i1 @isnormal_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: isnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f00, v0
@@ -1484,8 +1395,7 @@ define i1 @not_isnormal_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_isnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7eff
 ; GFX8CHECK-NEXT:    v_cmp_lt_u16_e32 vcc, s4, v0
@@ -1495,8 +1405,7 @@ define i1 @not_isnormal_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_isnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7eff
 ; GFX9CHECK-NEXT:    v_cmp_lt_u16_e32 vcc, s4, v0
@@ -1506,8 +1415,7 @@ define i1 @not_isnormal_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_isnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
 ; GFX10CHECK-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x7eff, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1516,7 +1424,6 @@ define i1 @not_isnormal_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_isnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
 ; GFX11CHECK-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x7eff, v0
@@ -1544,7 +1451,6 @@ define i1 @not_is_plus_normal_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_is_plus_normal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -1557,7 +1463,6 @@ define i1 @not_is_plus_normal_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_is_plus_normal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -1570,7 +1475,6 @@ define i1 @not_is_plus_normal_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_is_plus_normal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -1582,7 +1486,6 @@ define i1 @not_is_plus_normal_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_is_plus_normal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -1612,7 +1515,6 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_is_neg_normal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -1625,7 +1527,6 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_is_neg_normal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, 0xff80, v0
@@ -1638,7 +1539,6 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_is_neg_normal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -1650,7 +1550,6 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_is_neg_normal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
@@ -1676,8 +1575,7 @@ define i1 @issubnormal_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: issubnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f
 ; GFX8CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
@@ -1687,8 +1585,7 @@ define i1 @issubnormal_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: issubnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f
 ; GFX9CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
@@ -1698,8 +1595,7 @@ define i1 @issubnormal_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: issubnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, -1
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1708,7 +1604,6 @@ define i1 @issubnormal_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: issubnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, -1
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f, v0
@@ -1732,8 +1627,7 @@ define i1 @not_issubnormal_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_issubnormal_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7e
 ; GFX8CHECK-NEXT:    v_cmp_lt_u16_e32 vcc, s4, v0
@@ -1743,8 +1637,7 @@ define i1 @not_issubnormal_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_issubnormal_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v0, -1, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7e
 ; GFX9CHECK-NEXT:    v_cmp_lt_u16_e32 vcc, s4, v0
@@ -1754,8 +1647,7 @@ define i1 @not_issubnormal_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_issubnormal_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, -1
 ; GFX10CHECK-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x7e, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1764,7 +1656,6 @@ define i1 @not_issubnormal_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_issubnormal_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, -1
 ; GFX11CHECK-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x7e, v0
@@ -1786,8 +1677,7 @@ define i1 @iszero_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: iszero_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1795,8 +1685,7 @@ define i1 @iszero_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: iszero_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1804,8 +1693,7 @@ define i1 @iszero_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: iszero_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1813,7 +1701,6 @@ define i1 @iszero_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: iszero_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1834,8 +1721,7 @@ define i1 @not_iszero_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_iszero_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1843,8 +1729,7 @@ define i1 @not_iszero_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_iszero_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1852,8 +1737,7 @@ define i1 @not_iszero_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_iszero_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1861,7 +1745,6 @@ define i1 @not_iszero_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_iszero_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1883,7 +1766,6 @@ define i1 @ispositive_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: ispositive_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX8CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -1893,22 +1775,20 @@ define i1 @ispositive_bf16(bfloat %x) {
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f81
-; GFX9CHECK-NEXT:    v_cmp_lt_u16_sdwa s[4:5], v0, s4 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: ispositive_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f81
-; GFX10CHECK-NEXT:    v_cmp_lt_u16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f81, v0
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: ispositive_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f81, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1938,7 +1818,6 @@ define i1 @not_ispositive_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_ispositive_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s6, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
@@ -1955,7 +1834,6 @@ define i1 @not_ispositive_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_ispositive_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s6, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
@@ -1972,7 +1850,6 @@ define i1 @not_ispositive_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_ispositive_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s5, 0xff80, v0
@@ -1987,7 +1864,6 @@ define i1 @not_ispositive_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_ispositive_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s1, 0xff80, v0
@@ -2022,7 +1898,6 @@ define i1 @isnegative_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: isnegative_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
@@ -2037,7 +1912,6 @@ define i1 @isnegative_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: isnegative_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 0, v0
@@ -2052,7 +1926,6 @@ define i1 @isnegative_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: isnegative_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s5, 0xff80, v0
@@ -2065,7 +1938,6 @@ define i1 @isnegative_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: isnegative_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s1, 0xff80, v0
@@ -2095,7 +1967,6 @@ define i1 @not_isnegative_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_isnegative_bf16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX8CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
@@ -2108,7 +1979,6 @@ define i1 @not_isnegative_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_isnegative_bf16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX9CHECK-NEXT:    v_cmp_gt_u16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
@@ -2121,7 +1991,6 @@ define i1 @not_isnegative_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_isnegative_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f81, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e64 s4, 0x7f80, v1
@@ -2132,7 +2001,6 @@ define i1 @not_isnegative_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_isnegative_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f81, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e64 s0, 0x7f80, v1
@@ -2158,8 +2026,7 @@ define i1 @iszero_or_nan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: iszero_or_nan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2170,8 +2037,7 @@ define i1 @iszero_or_nan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: iszero_or_nan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2182,8 +2048,7 @@ define i1 @iszero_or_nan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: iszero_or_nan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_or_b32 s4, s4, vcc_lo
@@ -2193,7 +2058,6 @@ define i1 @iszero_or_nan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: iszero_or_nan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s0, 0, v0
@@ -2220,8 +2084,7 @@ define i1 @iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX8CHECK-LABEL: iszero_or_nan_f_daz:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2232,8 +2095,7 @@ define i1 @iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX9CHECK-LABEL: iszero_or_nan_f_daz:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2244,8 +2106,7 @@ define i1 @iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX10CHECK-LABEL: iszero_or_nan_f_daz:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_or_b32 s4, s4, vcc_lo
@@ -2255,7 +2116,6 @@ define i1 @iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX11CHECK-LABEL: iszero_or_nan_f_daz:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s0, 0, v0
@@ -2282,8 +2142,7 @@ define i1 @iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX8CHECK-LABEL: iszero_or_nan_f_maybe_daz:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2294,8 +2153,7 @@ define i1 @iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX9CHECK-LABEL: iszero_or_nan_f_maybe_daz:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2306,8 +2164,7 @@ define i1 @iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX10CHECK-LABEL: iszero_or_nan_f_maybe_daz:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_or_b32 s4, s4, vcc_lo
@@ -2317,7 +2174,6 @@ define i1 @iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX11CHECK-LABEL: iszero_or_nan_f_maybe_daz:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s0, 0, v0
@@ -2344,8 +2200,7 @@ define i1 @not_iszero_or_nan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_iszero_or_nan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v0
@@ -2356,8 +2211,7 @@ define i1 @not_iszero_or_nan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_iszero_or_nan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v0
@@ -2368,8 +2222,7 @@ define i1 @not_iszero_or_nan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_iszero_or_nan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX10CHECK-NEXT:    v_cmp_ne_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
@@ -2379,7 +2232,6 @@ define i1 @not_iszero_or_nan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_iszero_or_nan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX11CHECK-NEXT:    v_cmp_ne_u16_e64 s0, 0, v0
@@ -2406,8 +2258,7 @@ define i1 @not_iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX8CHECK-LABEL: not_iszero_or_nan_f_daz:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v0
@@ -2418,8 +2269,7 @@ define i1 @not_iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX9CHECK-LABEL: not_iszero_or_nan_f_daz:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v0
@@ -2430,8 +2280,7 @@ define i1 @not_iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX10CHECK-LABEL: not_iszero_or_nan_f_daz:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX10CHECK-NEXT:    v_cmp_ne_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
@@ -2441,7 +2290,6 @@ define i1 @not_iszero_or_nan_f_daz(bfloat %x) #0 {
 ; GFX11CHECK-LABEL: not_iszero_or_nan_f_daz:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX11CHECK-NEXT:    v_cmp_ne_u16_e64 s0, 0, v0
@@ -2468,8 +2316,7 @@ define i1 @not_iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX8CHECK-LABEL: not_iszero_or_nan_f_maybe_daz:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v0
@@ -2480,8 +2327,7 @@ define i1 @not_iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX9CHECK-LABEL: not_iszero_or_nan_f_maybe_daz:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f81
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_ne_u16_e64 s[4:5], 0, v0
@@ -2492,8 +2338,7 @@ define i1 @not_iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX10CHECK-LABEL: not_iszero_or_nan_f_maybe_daz:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX10CHECK-NEXT:    v_cmp_ne_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
@@ -2503,7 +2348,6 @@ define i1 @not_iszero_or_nan_f_maybe_daz(bfloat %x) #1 {
 ; GFX11CHECK-LABEL: not_iszero_or_nan_f_maybe_daz:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f81, v0
 ; GFX11CHECK-NEXT:    v_cmp_ne_u16_e64 s0, 0, v0
@@ -2530,8 +2374,7 @@ define i1 @iszero_or_qnan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: iszero_or_qnan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7fbf
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2542,8 +2385,7 @@ define i1 @iszero_or_qnan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: iszero_or_qnan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fbf
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
@@ -2554,8 +2396,7 @@ define i1 @iszero_or_qnan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: iszero_or_qnan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7fbf, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s4, 0, v0
 ; GFX10CHECK-NEXT:    s_or_b32 s4, s4, vcc_lo
@@ -2565,7 +2406,6 @@ define i1 @iszero_or_qnan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: iszero_or_qnan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7fbf, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s0, 0, v0
@@ -2595,8 +2435,7 @@ define i1 @iszero_or_snan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: iszero_or_snan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7fc0
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
@@ -2610,8 +2449,7 @@ define i1 @iszero_or_snan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: iszero_or_snan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fc0
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
@@ -2625,8 +2463,7 @@ define i1 @iszero_or_snan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: iszero_or_snan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e64 s4, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s5, 0, v0
@@ -2638,7 +2475,6 @@ define i1 @iszero_or_snan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: iszero_or_snan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e64 s0, 0x7f80, v0
@@ -2679,8 +2515,7 @@ define i1 @not_iszero_or_qnan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_iszero_or_qnan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7fc0
 ; GFX8CHECK-NEXT:    s_movk_i32 s8, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
@@ -2702,8 +2537,7 @@ define i1 @not_iszero_or_qnan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_iszero_or_qnan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fc0
 ; GFX9CHECK-NEXT:    s_movk_i32 s8, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
@@ -2725,8 +2559,7 @@ define i1 @not_iszero_or_qnan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_iszero_or_qnan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v0, -1
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e64 s4, 0x7f80, v0
@@ -2744,7 +2577,6 @@ define i1 @not_iszero_or_qnan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_iszero_or_qnan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v0, -1
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
@@ -2789,8 +2621,7 @@ define i1 @not_iszero_or_snan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_iszero_or_snan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_add_u16_e32 v1, -1, v0
@@ -2810,8 +2641,7 @@ define i1 @not_iszero_or_snan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_iszero_or_snan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_add_u16_e32 v1, -1, v0
@@ -2831,8 +2661,7 @@ define i1 @not_iszero_or_snan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_iszero_or_snan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v0, -1
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v2, v0, 0xff80
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
@@ -2848,7 +2677,6 @@ define i1 @not_iszero_or_snan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_iszero_or_snan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v0, -1
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v2, v0, 0xff80
@@ -2879,8 +2707,7 @@ define i1 @isinf_or_nan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: isinf_or_nan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f7f
 ; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -2889,8 +2716,7 @@ define i1 @isinf_or_nan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: isinf_or_nan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f7f
 ; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -2899,8 +2725,7 @@ define i1 @isinf_or_nan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: isinf_or_nan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f7f, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -2908,7 +2733,6 @@ define i1 @isinf_or_nan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: isinf_or_nan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f7f, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -2931,8 +2755,7 @@ define i1 @not_isinf_or_nan_bf16(bfloat %x) {
 ; GFX8CHECK-LABEL: not_isinf_or_nan_bf16:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -2941,8 +2764,7 @@ define i1 @not_isinf_or_nan_bf16(bfloat %x) {
 ; GFX9CHECK-LABEL: not_isinf_or_nan_bf16:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -2951,8 +2773,7 @@ define i1 @not_isinf_or_nan_bf16(bfloat %x) {
 ; GFX10CHECK-LABEL: not_isinf_or_nan_bf16:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -2960,7 +2781,6 @@ define i1 @not_isinf_or_nan_bf16(bfloat %x) {
 ; GFX11CHECK-LABEL: not_isinf_or_nan_bf16:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -2983,8 +2803,7 @@ define i1 @isfinite_or_nan_f(bfloat %x) {
 ; GFX8CHECK-LABEL: isfinite_or_nan_f:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -2993,8 +2812,7 @@ define i1 @isfinite_or_nan_f(bfloat %x) {
 ; GFX9CHECK-LABEL: isfinite_or_nan_f:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -3003,8 +2821,7 @@ define i1 @isfinite_or_nan_f(bfloat %x) {
 ; GFX10CHECK-LABEL: isfinite_or_nan_f:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -3012,7 +2829,6 @@ define i1 @isfinite_or_nan_f(bfloat %x) {
 ; GFX11CHECK-LABEL: isfinite_or_nan_f:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -3035,8 +2851,7 @@ define i1 @not_isfinite_or_nan_f(bfloat %x) {
 ; GFX8CHECK-LABEL: not_isfinite_or_nan_f:
 ; GFX8CHECK:       ; %bb.0: ; %entry
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX8CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -3045,8 +2860,7 @@ define i1 @not_isfinite_or_nan_f(bfloat %x) {
 ; GFX9CHECK-LABEL: not_isfinite_or_nan_f:
 ; GFX9CHECK:       ; %bb.0: ; %entry
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9CHECK-NEXT:    v_and_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
 ; GFX9CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -3055,8 +2869,7 @@ define i1 @not_isfinite_or_nan_f(bfloat %x) {
 ; GFX10CHECK-LABEL: not_isfinite_or_nan_f:
 ; GFX10CHECK:       ; %bb.0: ; %entry
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX10CHECK-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -3064,7 +2877,6 @@ define i1 @not_isfinite_or_nan_f(bfloat %x) {
 ; GFX11CHECK-LABEL: not_isfinite_or_nan_f:
 ; GFX11CHECK:       ; %bb.0: ; %entry
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -3090,4 +2902,3 @@ attributes #1 = { "denormal-fp-math"="ieee,dynamic" }
 ; GFX7SELDAG: {{.*}}
 ; GFX8SELDAG: {{.*}}
 ; GFX9SELDAG: {{.*}}
-; GFX7GLISEL: {{.*}}

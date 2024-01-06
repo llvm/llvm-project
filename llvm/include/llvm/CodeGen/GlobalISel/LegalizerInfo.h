@@ -224,6 +224,11 @@ struct TypePairAndMemDesc {
   }
 };
 
+/// True iff P is false.
+template <typename Predicate> Predicate predNot(Predicate P) {
+  return [=](const LegalityQuery &Query) { return !P(Query); };
+}
+
 /// True iff P0 and P1 are true.
 template<typename Predicate>
 Predicate all(Predicate P0, Predicate P1) {

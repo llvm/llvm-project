@@ -230,6 +230,12 @@ New checks
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
 
+- New :doc:`readability-avoid-return-with-void-value
+  <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
+
+  Finds return statements with ``void`` values used within functions with
+  ``void`` result types.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -393,6 +399,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
   false-positives when constructing the container with ``count`` copies of
   elements with value ``value``.
+
+- Improved :doc:`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
+  ``emplace`` cannot construct with aggregate initialization.
 
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore

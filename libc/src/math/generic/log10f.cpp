@@ -177,7 +177,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
       return x;
     }
     // Normalize denormal inputs.
-    xbits.set_val(xbits.get_val() * 0x1.0p23f);
+    xbits = FPBits(xbits.get_val() * 0x1.0p23f);
     m -= 23;
     x_u = xbits.uintval();
   }

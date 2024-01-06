@@ -1422,7 +1422,7 @@ define bfloat @lds_atomic_fadd_ret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; VI-NEXT:    s_cbranch_execnz .LBB10_1
 ; VI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    v_lshrrev_b32_sdwa v0, v0, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_lshrrev_b32_e32 v0, v0, v3
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: lds_atomic_fadd_ret_bf16:
@@ -1452,7 +1452,7 @@ define bfloat @lds_atomic_fadd_ret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; GFX9-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    v_lshrrev_b32_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: lds_atomic_fadd_ret_bf16:

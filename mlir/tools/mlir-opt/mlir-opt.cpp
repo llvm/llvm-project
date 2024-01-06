@@ -44,11 +44,12 @@ void registerSymbolTestPasses();
 void registerRegionTestPasses();
 void registerTestAffineDataCopyPass();
 void registerTestAffineReifyValueBoundsPass();
+void registerTestAffineLoopUnswitchingPass();
+void registerTestAffineWalk();
 void registerTestBytecodeRoundtripPasses();
 void registerTestDecomposeAffineOpPass();
-void registerTestAffineLoopUnswitchingPass();
-void registerTestGpuLoweringPasses();
 void registerTestFunc();
+void registerTestGpuLoweringPasses();
 void registerTestGpuMemoryPromotionPass();
 void registerTestLoopPermutationPass();
 void registerTestMatchers();
@@ -85,7 +86,6 @@ void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDiagnosticsPass();
-void registerTestDialectConversionPasses();
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestEmulateNarrowTypePass();
@@ -124,8 +124,6 @@ void registerTestNextAccessPass();
 void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
 void registerTestPadFusion();
-void registerTestPDLByteCodePass();
-void registerTestPDLLPasses();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
@@ -142,13 +140,18 @@ void registerTestWrittenToPass();
 void registerTestVectorLowerings();
 void registerTestVectorReductionToSPIRVDotProd();
 void registerTestNvgpuLowerings();
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+void registerTestDialectConversionPasses();
+void registerTestPDLByteCodePass();
+void registerTestPDLLPasses();
+#endif
 } // namespace test
 } // namespace mlir
 
 namespace test {
 void registerTestDialect(DialectRegistry &);
-void registerTestTransformDialectExtension(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
+void registerTestTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
@@ -165,12 +168,13 @@ void registerTestPasses() {
   registerSymbolTestPasses();
   registerRegionTestPasses();
   registerTestAffineDataCopyPass();
-  registerTestAffineReifyValueBoundsPass();
-  registerTestDecomposeAffineOpPass();
   registerTestAffineLoopUnswitchingPass();
-  registerTestGpuLoweringPasses();
+  registerTestAffineReifyValueBoundsPass();
+  registerTestAffineWalk();
   registerTestBytecodeRoundtripPasses();
+  registerTestDecomposeAffineOpPass();
   registerTestFunc();
+  registerTestGpuLoweringPasses();
   registerTestGpuMemoryPromotionPass();
   registerTestLoopPermutationPass();
   registerTestMatchers();
@@ -202,7 +206,6 @@ void registerTestPasses() {
   mlir::test::registerTestConstantFold();
   mlir::test::registerTestControlFlowSink();
   mlir::test::registerTestDiagnosticsPass();
-  mlir::test::registerTestDialectConversionPasses();
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
@@ -243,8 +246,6 @@ void registerTestPasses() {
   mlir::test::registerTestOneToNTypeConversionPass();
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestPadFusion();
-  mlir::test::registerTestPDLByteCodePass();
-  mlir::test::registerTestPDLLPasses();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();
   mlir::test::registerTestSCFWhileOpBuilderPass();
@@ -260,6 +261,11 @@ void registerTestPasses() {
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestNvgpuLowerings();
   mlir::test::registerTestWrittenToPass();
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+  mlir::test::registerTestDialectConversionPasses();
+  mlir::test::registerTestPDLByteCodePass();
+  mlir::test::registerTestPDLLPasses();
+#endif
 }
 #endif
 
