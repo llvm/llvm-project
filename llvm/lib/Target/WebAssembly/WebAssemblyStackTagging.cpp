@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "WebAssembly.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/StackSafetyAnalysis.h"
-#include "llvm/Analysis/PostDominators.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
-#include "llvm/IR/IntrinsicsWebAssembly.h"
 
 using namespace llvm;
 
@@ -34,9 +34,8 @@ struct WebAssemblyStackTagging : public FunctionPass {
   AAResults *AA = nullptr;
   WebAssemblyStackTagging() : FunctionPass(ID) {}
 
-  void untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
-                    uint64_t Size, Function* StoreTagDecl,
-                    Type* ArgOp0Type);
+  void untagAlloca(AllocaInst *AI, Instruction *InsertBefore, uint64_t Size,
+                   Function *StoreTagDecl, Type *ArgOp0Type);
 
   bool runOnFunction(Function &) override;
 
@@ -56,27 +55,33 @@ private:
 
 static const inline Align kTagGranuleSize = Align(16);
 
-}
+} // namespace
 
-void WebAssemblyStackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
-                                      uint64_t Size, Function* StoreTagDecl,
-                                      Type* ArgOp0Type) {
+void WebAssemblyStackTagging::untagAlloca(AllocaInst *AI,
+                                          Instruction *InsertBefore,
+                                          uint64_t Size, Function *StoreTagDecl,
+                                          Type *ArgOp0Type) {
 
   IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(StoreTagDecl, {AI,
-                              ConstantInt::get(ArgOp0Type, Size)});
+  IRB.CreateCall(StoreTagDecl, {AI, ConstantInt::get(ArgOp0Type, Size)});
 }
 
-bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
+bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
 
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
+#if 0
+// Unsure of the purpose of the SSI analysis in this context.
+// Please place it under further review.
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
+#endif
   memtag::StackInfoBuilder SIB(SSI);
-  for (Instruction &I : instructions(F))
+  for (Instruction &I : instructions(F)) {
+    ::llvm::errs() << I << '\n';
     SIB.visit(I);
+  }
   memtag::StackInfo &SInfo = SIB.get();
 
   std::unique_ptr<DominatorTree> DeleteDT;
@@ -115,10 +120,10 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
     AllocaInst *AI = Info.AI;
     IRBuilder<> IRB(Info.AI->getNextNode());
     Type *Int64Type = IRB.getInt64Ty();
-    Function *RandomStoreTagDecl =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_randomstoretag, {Int64Type});
-    Function *StoreTagDecl =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag, {Int64Type});
+    Function *RandomStoreTagDecl = Intrinsic::getDeclaration(
+        F->getParent(), Intrinsic::wasm_memory_randomstoretag, {Int64Type});
+    Function *StoreTagDecl = Intrinsic::getDeclaration(
+        F->getParent(), Intrinsic::wasm_memory_storetag, {Int64Type});
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
@@ -134,8 +139,8 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
-      Instruction *RandomStoreTagCall =
-        IRB.CreateCall(RandomStoreTagDecl, {Info.AI, ConstantInt::get(Int64Type, Size)});
+      Instruction *RandomStoreTagCall = IRB.CreateCall(
+          RandomStoreTagDecl, {Info.AI, ConstantInt::get(Int64Type, Size)});
       if (Info.AI->hasName())
         RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceAllUsesWith(RandomStoreTagCall);
@@ -150,11 +155,10 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
-    }
-    else {
+    } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      IRB.CreateCall(RandomStoreTagDecl, {AI,
-                                  ConstantInt::get(Int64Type, Size)});
+      IRB.CreateCall(RandomStoreTagDecl,
+                     {AI, ConstantInt::get(Int64Type, Size)});
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
       }
@@ -170,14 +174,14 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
 }
 
 char WebAssemblyStackTagging::ID = 0;
-INITIALIZE_PASS_BEGIN(WebAssemblyStackTagging, DEBUG_TYPE, "WebAssembly Stack Tagging",
-                      false, false)
+INITIALIZE_PASS_BEGIN(WebAssemblyStackTagging, DEBUG_TYPE,
+                      "WebAssembly Stack Tagging", false, false)
 #if 0
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 #endif
 INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
-INITIALIZE_PASS_END(WebAssemblyStackTagging, DEBUG_TYPE, "WebAssembly Stack Tagging",
-                    false, false)
+INITIALIZE_PASS_END(WebAssemblyStackTagging, DEBUG_TYPE,
+                    "WebAssembly Stack Tagging", false, false)
 
 FunctionPass *llvm::createWebAssemblyStackTaggingPass() {
   return new WebAssemblyStackTagging();
