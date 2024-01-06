@@ -6,6 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: no-rtti
+// UNSUPPORTED: no-exceptions
 
 // constexpr void value() const &;
 // Mandates: is_copy_constructible_v<E> is true.
