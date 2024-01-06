@@ -21,6 +21,15 @@ void error_fopen(void) {
   fclose(F);
 }
 
+void error_fdopen(int fd) {
+  FILE *F = fdopen(fd, "r");
+  if (!F)
+    return;
+  clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+  clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  fclose(F);
+}
+
 void error_freopen(void) {
   FILE *F = fopen("file", "r");
   if (!F)
@@ -146,8 +155,8 @@ void error_fgets(void) {
   fgets(Buf, sizeof(Buf), F);         // expected-warning {{Stream might be already closed}}
 }
 
-void error_fputc(void) {
-  FILE *F = tmpfile();
+void error_fputc(int fd) {
+  FILE *F = fdopen(fd, "w");
   if (!F)
     return;
   int Ret = fputc('X', F);

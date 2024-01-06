@@ -2282,9 +2282,14 @@ bool RISCVInstrInfo::shouldClusterMemOps(
     return false;
   }
 
-  // TODO: Use a more carefully chosen heuristic, e.g. only cluster if offsets
-  // indicate they likely share a cache line.
-  return ClusterSize <= 4;
+  unsigned CacheLineSize =
+      BaseOps1.front()->getParent()->getMF()->getSubtarget().getCacheLineSize();
+  // Assume a cache line size of 64 bytes if no size is set in RISCVSubtarget.
+  CacheLineSize = CacheLineSize ? CacheLineSize : 64;
+  // Cluster if the memory operations are on the same or a neighbouring cache
+  // line, but limit the maximum ClusterSize to avoid creating too much
+  // additional register pressure.
+  return ClusterSize <= 4 && std::abs(Offset1 - Offset2) < CacheLineSize;
 }
 
 // Set BaseReg (the base register operand), Offset (the byte offset being

@@ -23,7 +23,7 @@ QuasiPolynomial::QuasiPolynomial(
 #ifndef NDEBUG
   // For each term which involves at least one affine function,
   for (const std::vector<SmallVector<Fraction>> &term : affine) {
-    if (term.size() == 0)
+    if (term.empty())
       continue;
     // the number of elements in each affine function is
     // one more than the number of symbols.

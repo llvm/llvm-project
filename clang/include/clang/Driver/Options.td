@@ -1695,6 +1695,12 @@ defm coverage_mapping : BoolFOption<"coverage-mapping",
           "Generate coverage mapping to enable code coverage analysis">,
   NegFlag<SetFalse, [], [ClangOption], "Disable code coverage analysis">, BothFlags<
           [], [ClangOption, CLOption]>>;
+defm mcdc_coverage : BoolFOption<"coverage-mcdc",
+  CodeGenOpts<"MCDCCoverage">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable MC/DC criteria when generating code coverage">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable MC/DC coverage criteria">,
+          BothFlags<[], [ClangOption, CLOption]>>;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
