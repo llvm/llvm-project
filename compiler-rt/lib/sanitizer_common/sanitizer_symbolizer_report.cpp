@@ -28,6 +28,26 @@
 namespace __sanitizer {
 
 #if !SANITIZER_GO
+
+static bool FrameIsInternal(const SymbolizedStack *frame) {
+  if (!frame)
+    return true;
+  const char *file = frame->info.file;
+  const char *module = frame->info.module;
+  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
+    return true;
+  if (module && (internal_strstr(module, "libclang_rt.")))
+    return true;
+  return false;
+}
+
+SymbolizedStack *SkipInternalFrames(SymbolizedStack *frames) {
+  for (SymbolizedStack *f = frames; f; f = f->next)
+    if (!FrameIsInternal(f))
+      return f;
+  return nullptr;
+}
+
 void ReportErrorSummary(const char *error_type, const AddressInfo &info,
                         const char *alt_tool_name) {
   if (!common_flags()->print_summary) return;
