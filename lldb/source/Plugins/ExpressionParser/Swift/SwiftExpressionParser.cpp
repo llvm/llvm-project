@@ -1371,8 +1371,9 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
   bool enable_bare_slash_regex_literals =
       sc.target_sp->GetSwiftEnableBareSlashRegex();
-  invocation.getLangOptions().EnableBareSlashRegexLiterals =
-      enable_bare_slash_regex_literals;
+  if (enable_bare_slash_regex_literals) {
+    invocation.getLangOptions().enableFeature(swift::Feature::BareSlashRegexLiterals);
+  }
 
   auto should_use_prestable_abi = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
