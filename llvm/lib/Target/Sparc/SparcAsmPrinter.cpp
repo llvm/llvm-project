@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcTargetStreamer.h"
 #include "Sparc.h"
 #include "SparcInstrInfo.h"
@@ -109,6 +110,15 @@ static void EmitCall(MCStreamer &OutStreamer,
   CallInst.setOpcode(SP::CALL);
   CallInst.addOperand(Callee);
   OutStreamer.emitInstruction(CallInst, STI);
+}
+
+static void EmitRDPC(MCStreamer &OutStreamer, MCOperand &RD,
+                     const MCSubtargetInfo &STI) {
+  MCInst RDPCInst;
+  RDPCInst.setOpcode(SP::RDASR);
+  RDPCInst.addOperand(RD);
+  RDPCInst.addOperand(MCOperand::createReg(SP::ASR5));
+  OutStreamer.emitInstruction(RDPCInst, STI);
 }
 
 static void EmitSETHI(MCStreamer &OutStreamer,
@@ -234,8 +244,15 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   //   add <MO>, %o7, <MO>
 
   OutStreamer->emitLabel(StartLabel);
-  MCOperand Callee =  createPCXCallOP(EndLabel, OutContext);
-  EmitCall(*OutStreamer, Callee, STI);
+  if (!STI.getTargetTriple().isSPARC64() ||
+      STI.hasFeature(Sparc::TuneSlowRDPC)) {
+    MCOperand Callee = createPCXCallOP(EndLabel, OutContext);
+    EmitCall(*OutStreamer, Callee, STI);
+  } else {
+    // TODO make it possible to store PC in other registers
+    // so that leaf function optimization becomes possible.
+    EmitRDPC(*OutStreamer, RegO7, STI);
+  }
   OutStreamer->emitLabel(SethiLabel);
   MCOperand hiImm = createPCXRelExprOp(SparcMCExpr::VK_Sparc_PC22,
                                        GOTLabel, StartLabel, SethiLabel,
