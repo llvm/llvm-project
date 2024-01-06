@@ -448,7 +448,7 @@ multiclass vinsert_for_type<ValueType EltVT32, int Opcode128,
                                    X86VectorVTInfo< 2, EltVT64, VR128X>,
                                    X86VectorVTInfo< 4, EltVT64, VR256X>,
                                    null_frag, vinsert128_insert, sched>,
-                                   VEX_W1X, EVEX_V256;
+                                   EVEX_V256, REX_W;
 
   // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasDQI] in {
@@ -750,7 +750,7 @@ multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
                                  null_frag, vextract128_extract, SchedRR, SchedMR>,
-                                     VEX_W1X, EVEX_V256, EVEX_CD8<64, CD8VT2>;
+                                    EVEX_V256, EVEX_CD8<64, CD8VT2>, REX_W;
 
   // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasDQI] in {
@@ -1161,7 +1161,7 @@ multiclass avx512_fp_broadcast_ss<bits<8> opc, string OpcodeStr,
 defm VBROADCASTSS  : avx512_fp_broadcast_ss<0x18, "vbroadcastss",
                                        avx512vl_f32_info>;
 defm VBROADCASTSD  : avx512_fp_broadcast_sd<0x19, "vbroadcastsd",
-                                       avx512vl_f64_info>, VEX_W1X;
+                                       avx512vl_f64_info>, REX_W;
 
 multiclass avx512_int_broadcast_reg<bits<8> opc, SchedWrite SchedRR,
                                     X86VectorVTInfo _, SDPatternOperator OpNode,
@@ -1267,7 +1267,7 @@ defm VPBROADCASTW  : avx512_int_broadcast_rm_vl<0x79, "vpbroadcastw",
 defm VPBROADCASTD  : avx512_int_broadcast_rm_vl<0x58, "vpbroadcastd",
                                            avx512vl_i32_info, HasAVX512, 1>;
 defm VPBROADCASTQ  : avx512_int_broadcast_rm_vl<0x59, "vpbroadcastq",
-                                           avx512vl_i64_info, HasAVX512, 1>, VEX_W1X;
+                                           avx512vl_i64_info, HasAVX512, 1>, REX_W;
 
 multiclass avx512_subvec_broadcast_rm<bits<8> opc, string OpcodeStr,
                                       SDPatternOperator OpNode,
@@ -1460,11 +1460,11 @@ let Predicates = [HasBF16, HasVLX] in
 
 let Predicates = [HasVLX, HasDQI] in {
 defm VBROADCASTI64X2Z128 : avx512_subvec_broadcast_rm_dq<0x5a, "vbroadcasti64x2",
-                           X86SubVBroadcastld128, v4i64x_info, v2i64x_info>, VEX_W1X,
-                           EVEX_V256, EVEX_CD8<64, CD8VT2>;
+                           X86SubVBroadcastld128, v4i64x_info, v2i64x_info>,
+                           EVEX_V256, EVEX_CD8<64, CD8VT2>, REX_W;
 defm VBROADCASTF64X2Z128 : avx512_subvec_broadcast_rm_dq<0x1a, "vbroadcastf64x2",
-                           X86SubVBroadcastld128, v4f64x_info, v2f64x_info>, VEX_W1X,
-                           EVEX_V256, EVEX_CD8<64, CD8VT2>;
+                           X86SubVBroadcastld128, v4f64x_info, v2f64x_info>,
+                           EVEX_V256, EVEX_CD8<64, CD8VT2>, REX_W;
 
 // Patterns for selects of bitcasted operations.
 def : Pat<(vselect_mask VK4WM:$mask,
@@ -6396,7 +6396,7 @@ defm VPERMILPS : avx512_permil<"vpermilps", 0x04, 0x0C, avx512vl_f32_info,
                                avx512vl_i32_info>;
 let ExeDomain = SSEPackedDouble in
 defm VPERMILPD : avx512_permil<"vpermilpd", 0x05, 0x0D, avx512vl_f64_info,
-                               avx512vl_i64_info>, VEX_W1X;
+                               avx512vl_i64_info>, REX_W;
 
 //===----------------------------------------------------------------------===//
 // AVX-512 - VPSHUFD, VPSHUFLW, VPSHUFHW
