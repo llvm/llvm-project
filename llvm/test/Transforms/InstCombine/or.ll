@@ -2029,3 +2029,411 @@ define i32 @or_xor_and_commuted3(i32 %x, i32 %y, i32 %z) {
   %or1 = or i32 %xor, %yy
   ret i32 %or1
 }
+
+; test or disjoint which used for BitField Arithmetic.
+; Positive
+define i8 @src_2_bitfield_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_2_bitfield_op(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 24
+; CHECK-NEXT:    [[BF_LSHR1228:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1228]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    ret i8 [[BF_SET20]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1228 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1228, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  ret i8 %bf.set20
+}
+
+define i8 @src_2_bitfield_const(i8 %x) {
+; CHECK-LABEL: @src_2_bitfield_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR1228:%.*]] = add i8 [[X]], 8
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1228]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    ret i8 [[BF_SET20]]
+;
+entry:
+  %narrow = add i8 %x, 1
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1228 = add i8 %bf.lshr, 8
+  %bf.shl = and i8 %bf.lshr1228, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  ret i8 %bf.set20
+}
+
+define i8 @src_3_bitfield_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_3_bitfield_op(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 24
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_3_bitfield_const(i8 %x) {
+; CHECK-LABEL: @src_3_bitfield_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[X]], 8
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = add i8 [[TMP0]], 32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %x, 1
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, 8
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, 32
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+; test or disjoint which used for BitField Arithmetic.
+; Negative
+define i8 @src_bit_arithmetic_bitsize_1_low(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitsize_1_low(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 1
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 30
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 30
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 1
+  %bf.lshr = and i8 %x, 30
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 30
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_bitsize_1_mid(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitsize_1_mid(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 15
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 16
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 16
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 15
+  %bf.lshr = and i8 %x, 16
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 16
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_bitsize_1_high(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitsize_1_high(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 120
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 120
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -128
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 120
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 120
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -128
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -128
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_bitmask_low_over_mid(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitmask_low_over_mid(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 17
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 24
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 17
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_bitmask_mid_over_high(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitmask_mid_over_high(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 56
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 56
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 56
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 56
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_bitmask_mid_under_lower(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitmask_mid_under_lower(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 28
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 28
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_bitmask_high_under_mid(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_bit_arithmetic_bitmask_high_under_mid(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 24
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[BF_LSHR]], [[Y]]
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -16
+; CHECK-NEXT:    [[BF_LSHR2547:%.*]] = add i8 [[BF_LSHR22]], [[Y]]
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = and i8 [[BF_LSHR2547]], -16
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %y, %x
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, %y
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -16
+  %bf.lshr2547 = add i8 %bf.lshr22, %y
+  %bf.value30 = and i8 %bf.lshr2547, -16
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_addition_over_bitmask_low(i8 %x) {
+; CHECK-LABEL: @src_bit_arithmetic_addition_over_bitmask_low(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[X]], 8
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = add i8 [[TMP0]], 32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %x, 8
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, 8
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, 32
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_addition_over_bitmask_mid(i8 %x) {
+; CHECK-LABEL: @src_bit_arithmetic_addition_over_bitmask_mid(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_LSHR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = add i8 [[TMP0]], 32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %x, 1
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, 32
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, 32
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_addition_under_bitmask_mid(i8 %x) {
+; CHECK-LABEL: @src_bit_arithmetic_addition_under_bitmask_mid(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR:%.*]] = and i8 [[X]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_LSHR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_VALUE30:%.*]] = add i8 [[TMP0]], 32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_VALUE30]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %x, 1
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, 4
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, 32
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
+
+define i8 @src_bit_arithmetic_addition_under_bitmask_high(i8 %x) {
+; CHECK-LABEL: @src_bit_arithmetic_addition_under_bitmask_high(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i8 [[NARROW]], 7
+; CHECK-NEXT:    [[BF_LSHR1244:%.*]] = add i8 [[X]], 8
+; CHECK-NEXT:    [[BF_SHL:%.*]] = and i8 [[BF_LSHR1244]], 24
+; CHECK-NEXT:    [[BF_SET20:%.*]] = or disjoint i8 [[BF_VALUE]], [[BF_SHL]]
+; CHECK-NEXT:    [[BF_LSHR22:%.*]] = and i8 [[X]], -32
+; CHECK-NEXT:    [[BF_SET33:%.*]] = or disjoint i8 [[BF_SET20]], [[BF_LSHR22]]
+; CHECK-NEXT:    ret i8 [[BF_SET33]]
+;
+entry:
+  %narrow = add i8 %x, 1
+  %bf.value = and i8 %narrow, 7
+  %bf.lshr = and i8 %x, 24
+  %bf.lshr1244 = add i8 %bf.lshr, 8
+  %bf.shl = and i8 %bf.lshr1244, 24
+  %bf.set20 = or disjoint i8 %bf.value, %bf.shl
+  %bf.lshr22 = and i8 %x, -32
+  %bf.lshr2547 = add i8 %bf.lshr22, 16
+  %bf.value30 = and i8 %bf.lshr2547, -32
+  %bf.set33 = or disjoint i8 %bf.set20, %bf.value30
+  ret i8 %bf.set33
+}
