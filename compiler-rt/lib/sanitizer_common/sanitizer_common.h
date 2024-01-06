@@ -395,7 +395,7 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
 void ReportErrorSummary(const char *error_type, const StackTrace *trace,
                         const char *alt_tool_name = nullptr);
 // Skips frames which we consider internal and not usefull to the users.
-SymbolizedStack *SkipInternalFrames(SymbolizedStack *frames);
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames);
 
 void ReportMmapWriteExec(int prot, int mflags);
 
