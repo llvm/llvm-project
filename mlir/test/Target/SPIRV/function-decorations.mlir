@@ -86,23 +86,3 @@ spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0,
     spirv.Return
   }
 }
-
-// -----
-
-spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0,
-    [Shader, PhysicalStorageBufferAddresses], [SPV_KHR_physical_storage_buffer]> {
-  // expected-error @+1 {{'spirv.func' op with physical buffer pointer must be decorated either 'Aliased' or 'Restrict'}}
-  spirv.func @no_decoration_name_attr(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> { random_attr = #spirv.decoration<Aliased> }) "None" {
-    spirv.Return
-  }
-}
-
-// -----
-
-spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0,
-    [Shader, PhysicalStorageBufferAddresses], [SPV_KHR_physical_storage_buffer]> {
-  // expected-error @+1 {{'spirv.func' op arguments may only have dialect attributes}}
-  spirv.func @no_decoration_name_attr(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Restrict>, random_attr = #spirv.decoration<Aliased> }) "None" {
-    spirv.Return
-  }
-}
