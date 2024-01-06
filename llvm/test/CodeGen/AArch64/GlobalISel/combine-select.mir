@@ -544,3 +544,154 @@ body:             |
     %ext:_(s32) = G_ANYEXT %sel
     $w0 = COPY %ext(s32)
 ...
+---
+# select cond, and(x, y), and(z, y) --> and (select cond, x, z), y
+name:            select_cond_and_x_y_and_z_y_and_select_x_z_y
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_and_x_y_and_z_y_and_select_x_z_y
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %a:_(s8) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %b:_(s8) = G_TRUNC [[COPY2]](s64)
+    ; CHECK-NEXT: %d:_(s8) = G_TRUNC [[COPY3]](s64)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT %c(s1), %a, %d
+    ; CHECK-NEXT: %sel:_(s8) = G_AND [[SELECT]], %b
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %c:_(s1) = G_TRUNC %0
+    %a:_(s8) = G_TRUNC %1
+    %b:_(s8) = G_TRUNC %2
+    %d:_(s8) = G_TRUNC %3
+    %e:_(s8) = G_TRUNC %4
+    %and1:_(s8) = G_AND %a, %b
+    %and2:_(s8) = G_AND %d, %b
+    %sel:_(s8) = G_SELECT %c, %and1, %and2
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, xor(x, y), xor(x, z) --> xor x, select, x, z)
+name:            select_cond_xor_x_y_xor_x_z_xor_x__select_x_y
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_xor_x_y_xor_x_z_xor_x__select_x_y
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %a:_(s8) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %d:_(s8) = G_TRUNC [[COPY2]](s64)
+    ; CHECK-NEXT: %e:_(s8) = G_TRUNC [[COPY3]](s64)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT %c(s1), %e, %d
+    ; CHECK-NEXT: %sel:_(s8) = G_XOR %a, [[SELECT]]
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %c:_(s1) = G_TRUNC %0
+    %a:_(s8) = G_TRUNC %1
+    %b:_(s8) = G_TRUNC %2
+    %d:_(s8) = G_TRUNC %3
+    %e:_(s8) = G_TRUNC %4
+    %xor1:_(s8) = G_XOR %a, %e
+    %xor2:_(s8) = G_XOR %a, %d
+    %sel:_(s8) = G_SELECT %c, %xor1, %xor2
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# negative test select cond, and(x, y), or(z, a) --> failed
+name:            select_cond_and_x_y_or_z_a_failed
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_and_x_y_or_z_a_failed
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %a:_(s8) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %b:_(s8) = G_TRUNC [[COPY2]](s64)
+    ; CHECK-NEXT: %d:_(s8) = G_TRUNC [[COPY3]](s64)
+    ; CHECK-NEXT: %e:_(s8) = G_TRUNC [[COPY4]](s64)
+    ; CHECK-NEXT: %and1:_(s8) = G_AND %a, %b
+    ; CHECK-NEXT: %or2:_(s8) = G_OR %e, %d
+    ; CHECK-NEXT: %sel:_(s8) = G_SELECT %c(s1), %and1, %or2
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %c:_(s1) = G_TRUNC %0
+    %a:_(s8) = G_TRUNC %1
+    %b:_(s8) = G_TRUNC %2
+    %d:_(s8) = G_TRUNC %3
+    %e:_(s8) = G_TRUNC %4
+    %and1:_(s8) = G_AND %a, %b
+    %or2:_(s8) = G_OR %e, %d
+    %sel:_(s8) = G_SELECT %c, %and1, %or2
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# flags test select cond, xor(x, y), xor(x, z) --> xor x, select, cond, x, z)
+name:            flags_select_cond_xor_x_y_xor_x_z_xor_x__select_cond_x_y
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: flags_select_cond_xor_x_y_xor_x_z_xor_x__select_cond_x_y
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %a:_(s8) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %d:_(s8) = G_TRUNC [[COPY2]](s64)
+    ; CHECK-NEXT: %e:_(s8) = G_TRUNC [[COPY3]](s64)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = ninf exact G_SELECT %c(s1), %e, %d
+    ; CHECK-NEXT: %sel:_(s8) = ninf arcp exact G_XOR %a, [[SELECT]]
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %c:_(s1) = G_TRUNC %0
+    %a:_(s8) = G_TRUNC %1
+    %b:_(s8) = G_TRUNC %2
+    %d:_(s8) = G_TRUNC %3
+    %e:_(s8) = G_TRUNC %4
+    %xor1:_(s8) = nsz arcp nsw G_XOR %a, %e
+    %xor2:_(s8) = nnan arcp nuw G_XOR %a, %d
+    %sel:_(s8) = ninf exact G_SELECT %c, %xor1, %xor2
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
