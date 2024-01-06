@@ -832,11 +832,9 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
   auto CM = DAG.getTarget().getCodeModel();
   const GlobalValue *GV = N->getGlobal();
 
-  if (GV->isDSOLocal()) {
-    if (auto *G = dyn_cast<GlobalVariable>(GV)) {
-      if (auto GCM = G->getCodeModel())
-        CM = *GCM;
-    }
+  if (GV->isDSOLocal() && isa<GlobalVariable>(GV)) {
+    if (auto GCM = dyn_cast<GlobalVariable>(GV)->getCodeModel())
+      CM = *GCM;
   }
 
   return getAddr(N, DAG, CM, GV->isDSOLocal());
