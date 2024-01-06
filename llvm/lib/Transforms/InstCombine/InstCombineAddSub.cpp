@@ -1724,16 +1724,18 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                    {Builder.CreateOr(A, B)}));
 
   // Fold the log2_ceil idiom:
-  // zext(ctpop(A, true) >u/!= 1) + (ctlz(A) ^ (BW - 1)) --> BW - ctlz(A - 1)
-  // TODO: Add one-use checks?
+  // zext(ctpop(A) >u/!= 1) + (ctlz(A, true) ^ (BW - 1))
+  // -->
+  // BW - ctlz(A - 1, false)
   const APInt *XorC;
-  if (match(
-          &I,
-          m_c_Add(m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
-                                m_One())),
-                  m_ZExtOrSelf(m_Xor(m_TruncOrSelf(m_Intrinsic<Intrinsic::ctlz>(
-                                         m_Deferred(A), m_One())),
-                                     m_APInt(XorC))))) &&
+  if (match(&I,
+            m_c_Add(
+                m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
+                              m_One())),
+                m_OneUse(m_ZExtOrSelf(m_OneUse(m_Xor(
+                    m_OneUse(m_TruncOrSelf(m_OneUse(
+                        m_Intrinsic<Intrinsic::ctlz>(m_Deferred(A), m_One())))),
+                    m_APInt(XorC))))))) &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
       *XorC == A->getType()->getScalarSizeInBits() - 1) {
     Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));

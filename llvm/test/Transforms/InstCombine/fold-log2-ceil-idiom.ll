@@ -90,6 +90,26 @@ define i32 @log2_ceil_idiom_commuted(i32 %x) {
   ret i32 %ret
 }
 
+define i32 @log2_ceil_idiom_multiuse1(i32 %x) {
+; CHECK-LABEL: define i32 @log2_ceil_idiom_multiuse1(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    call void @use32(i32 [[CTPOP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[RET:%.*]] = sub nuw nsw i32 32, [[TMP2]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %xor = xor i32 %ctlz, 31
+  %ctpop = tail call i32 @llvm.ctpop.i32(i32 %x)
+  call void @use32(i32 %ctpop)
+  %cmp = icmp ugt i32 %ctpop, 1
+  %zext = zext i1 %cmp to i32
+  %ret = add i32 %xor, %zext
+  ret i32 %ret
+}
+
 ; Negative tests
 
 define i32 @log2_ceil_idiom_x_may_be_zero(i32 %x) {
@@ -213,6 +233,102 @@ define i32 @log2_ceil_idiom_not_a_power2_test2(i32 %x) {
   %ret = add i32 %xor, %zext
   ret i32 %ret
 }
+
+define i32 @log2_ceil_idiom_multiuse2(i32 %x) {
+; CHECK-LABEL: define i32 @log2_ceil_idiom_multiuse2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    call void @use32(i32 [[CTLZ]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  call void @use32(i32 %ctlz)
+  %xor = xor i32 %ctlz, 31
+  %ctpop = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ugt i32 %ctpop, 1
+  %zext = zext i1 %cmp to i32
+  %ret = add i32 %xor, %zext
+  ret i32 %ret
+}
+
+define i32 @log2_ceil_idiom_multiuse3(i32 %x) {
+; CHECK-LABEL: define i32 @log2_ceil_idiom_multiuse3(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
+; CHECK-NEXT:    call void @use32(i32 [[XOR]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[XOR]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %xor = xor i32 %ctlz, 31
+  call void @use32(i32 %xor)
+  %ctpop = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ugt i32 %ctpop, 1
+  %zext = zext i1 %cmp to i32
+  %ret = add i32 %xor, %zext
+  ret i32 %ret
+}
+
+define i5 @log2_ceil_idiom_trunc_multiuse4(i32 %x) {
+; CHECK-LABEL: define i5 @log2_ceil_idiom_trunc_multiuse4(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[CTLZ]] to i5
+; CHECK-NEXT:    call void @use5(i5 [[TRUNC]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i5 [[TRUNC]], -1
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i5
+; CHECK-NEXT:    [[RET:%.*]] = add i5 [[XOR]], [[ZEXT]]
+; CHECK-NEXT:    ret i5 [[RET]]
+;
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %trunc = trunc i32 %ctlz to i5
+  call void @use5(i5 %trunc)
+  %xor = xor i5 %trunc, 31
+  %ctpop = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ugt i32 %ctpop, 1
+  %zext = zext i1 %cmp to i5
+  %ret = add i5 %xor, %zext
+  ret i5 %ret
+}
+
+define i64 @log2_ceil_idiom_zext_multiuse5(i32 %x) {
+; CHECK-LABEL: define i64 @log2_ceil_idiom_zext_multiuse5(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CTLZ]], 31
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[XOR]] to i64
+; CHECK-NEXT:    call void @use64(i64 [[EXT]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i64 [[EXT]], [[ZEXT]]
+; CHECK-NEXT:    ret i64 [[RET]]
+;
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %xor = xor i32 %ctlz, 31
+  %ext = zext nneg i32 %xor to i64
+  call void @use64(i64 %ext)
+  %ctpop = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ugt i32 %ctpop, 1
+  %zext = zext i1 %cmp to i64
+  %ret = add i64 %ext, %zext
+  ret i64 %ret
+}
+
+declare void @use5(i5)
+declare void @use32(i32)
+declare void @use64(i64)
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i32 @llvm.ctpop.i32(i32)
