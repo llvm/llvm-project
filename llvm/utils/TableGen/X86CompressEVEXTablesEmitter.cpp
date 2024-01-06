@@ -17,11 +17,22 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <map>
+#include <set>
 
 using namespace llvm;
 using namespace X86Disassembler;
 
 namespace {
+
+const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualCompressEVEXTables.def"
+};
+const std::set<StringRef> NoCompressSet = {
+#define NOCOMP(INSN) #INSN,
+#include "X86ManualCompressEVEXTables.def"
+};
 
 class X86CompressEVEXTablesEmitter {
   RecordKeeper &Records;
@@ -84,34 +95,23 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
   return Value;
 }
 
-// Function object - Operator() returns true if the given VEX instruction
-// matches the EVEX instruction of this object.
 class IsMatch {
-  const CodeGenInstruction *EVEXInst;
+  const CodeGenInstruction *OldInst;
 
 public:
-  IsMatch(const CodeGenInstruction *EVEXInst) : EVEXInst(EVEXInst) {}
+  IsMatch(const CodeGenInstruction *OldInst) : OldInst(OldInst) {}
 
-  bool operator()(const CodeGenInstruction *VEXInst) {
-    RecognizableInstrBase VEXRI(*VEXInst);
-    RecognizableInstrBase EVEXRI(*EVEXInst);
-    bool VEX_W = VEXRI.HasREX_W;
-    bool EVEX_W = EVEXRI.HasREX_W;
-    bool VEX_WIG = VEXRI.IgnoresW;
-    bool EVEX_WIG = EVEXRI.IgnoresW;
-    bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
+  bool operator()(const CodeGenInstruction *NewInst) {
+    RecognizableInstrBase NewRI(*NewInst);
+    RecognizableInstrBase OldRI(*OldInst);
 
-    if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||
-        // VEX/EVEX fields
-        VEXRI.OpPrefix != EVEXRI.OpPrefix || VEXRI.OpMap != EVEXRI.OpMap ||
-        VEXRI.HasVEX_4V != EVEXRI.HasVEX_4V ||
-        VEXRI.HasVEX_L != EVEXRI.HasVEX_L ||
-        // Match is allowed if either is VEX_WIG, or they match, or EVEX
-        // is VEX_W1X and VEX is VEX_W0.
-        (!(VEX_WIG || (!EVEX_WIG && EVEX_W == VEX_W) ||
-           (EVEX_W1_VEX_W0 && EVEX_W && !VEX_W))) ||
-        // Instruction's format
-        VEXRI.Form != EVEXRI.Form)
+    // Return false if any of the following fields of does not match.
+    if (std::make_tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
+                        OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
+                        OldRI.Form) !=
+        std::make_tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
+                        NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W,
+                        NewRI.Form))
       return false;
 
     // This is needed for instructions with intrinsic version (_Int).
@@ -120,9 +120,9 @@ public:
     // Also for instructions that their EVEX version was upgraded to work with
     // k-registers. For example VPCMPEQBrm (xmm output register) and
     // VPCMPEQBZ128rm (k register output register).
-    for (unsigned i = 0, e = EVEXInst->Operands.size(); i < e; i++) {
-      Record *OpRec1 = EVEXInst->Operands[i].Rec;
-      Record *OpRec2 = VEXInst->Operands[i].Rec;
+    for (unsigned i = 0, e = OldInst->Operands.size(); i < e; i++) {
+      Record *OpRec1 = OldInst->Operands[i].Rec;
+      Record *OpRec2 = NewInst->Operands[i].Rec;
 
       if (OpRec1 == OpRec2)
         continue;
@@ -151,13 +151,14 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       Target.getInstructionsByEnumValue();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    const Record *Def = Inst->TheDef;
-    // Filter non-X86 instructions.
-    if (!Def->isSubClassOf("X86Inst"))
-      continue;
+    const Record *Rec = Inst->TheDef;
     // _REV instruction should not appear before encoding optimization
-    if (Def->getName().ends_with("_REV"))
+    if (!Rec->isSubClassOf("X86Inst") || Rec->getName().ends_with("_REV"))
       continue;
+
+    if (NoCompressSet.find(Rec->getName()) != NoCompressSet.end())
+      continue;
+
     RecognizableInstrBase RI(*Inst);
 
     // Add VEX encoded instructions to one of CompressedInsts vectors according
@@ -166,25 +167,24 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       CompressedInsts[RI.Opcode].push_back(Inst);
     // Add relevant EVEX encoded instructions to PreCompressionInsts
     else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_B &&
-             !RI.HasEVEX_L2 && !Def->getValueAsBit("notEVEX2VEXConvertible"))
+             !RI.HasEVEX_L2)
       PreCompressionInsts.push_back(Inst);
   }
 
-  for (const CodeGenInstruction *EVEXInst : PreCompressionInsts) {
+  for (const CodeGenInstruction *Inst : PreCompressionInsts) {
+    const Record *Rec = Inst->TheDef;
     uint64_t Opcode =
-        getValueFromBitsInit(EVEXInst->TheDef->getValueAsBitsInit("Opcode"));
-    // For each EVEX instruction look for a VEX match in the appropriate vector
-    // (instructions with the same opcode) using function object IsMatch.
-    // Allow EVEX2VEXOverride to explicitly specify a match.
+        getValueFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
     const CodeGenInstruction *VEXInst = nullptr;
-    if (!EVEXInst->TheDef->isValueUnset("EVEX2VEXOverride")) {
-      StringRef AltInstStr =
-          EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
-      Record *AltInstRec = Records.getDef(AltInstStr);
-      assert(AltInstRec && "EVEX2VEXOverride instruction not found!");
-      VEXInst = &Target.getInstruction(AltInstRec);
+    if (ManualMap.find(Rec->getName()) != ManualMap.end()) {
+      Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      VEXInst = &Target.getInstruction(NewRec);
     } else {
-      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(EVEXInst));
+      // For each EVEX instruction look for a VEX match in the appropriate
+      // vector (instructions with the same opcode) using function object
+      // IsMatch.
+      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
       if (Match != CompressedInsts[Opcode].end())
         VEXInst = *Match;
     }
@@ -193,10 +193,10 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       continue;
 
     // In case a match is found add new entry to the appropriate table
-    if (EVEXInst->TheDef->getValueAsBit("hasVEX_L"))
-      EVEX2VEX256.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,1}
+    if (Rec->getValueAsBit("hasVEX_L"))
+      EVEX2VEX256.push_back(std::make_pair(Inst, VEXInst)); // {0,1}
     else
-      EVEX2VEX128.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,0}
+      EVEX2VEX128.push_back(std::make_pair(Inst, VEXInst)); // {0,0}
   }
 
   // Print both tables
