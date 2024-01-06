@@ -7,10 +7,10 @@
 // RUN: %clang_cc1 -std=c++20 %t/use.cpp -fmodule-file=a0=%t/a0.pcm -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 %t/use.cpp -fprebuilt-module-path=%t -verify -fsyntax-only
 
-// RUN: %clang_cc1 -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I%t -fmodule-name=a0 -x objective-c++ -emit-module %t/module.modulemap -o %t/a0.pcm
-// RUN: %clang_cc1 -std=c++20 -x objective-c++ %t/use_obj.cpp -fmodule-file=%t/a0.pcm -verify -fsyntax-only
-// RUN: %clang_cc1 -std=c++20 -x objective-c++ %t/use_obj.cpp -fmodule-file=a0=%t/a0.pcm -verify -fsyntax-only
-// RUN: %clang_cc1 -std=c++20 -x objective-c++ %t/use_obj.cpp -fprebuilt-module-path=%t -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fmodules -fcxx-modules -fimplicit-module-maps -fmodules-cache-path=%t -I%t -fmodule-name=a0 -x objective-c++ -emit-module %t/module.modulemap -o %t/a0.pcm
+// RUN: %clang_cc1 -std=c++20 -x objective-c++ -fcxx-modules %t/use_obj.cpp -fmodule-file=%t/a0.pcm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -x objective-c++ -fcxx-modules %t/use_obj.cpp -fmodule-file=a0=%t/a0.pcm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -x objective-c++ -fcxx-modules %t/use_obj.cpp -fprebuilt-module-path=%t -verify -fsyntax-only
 
 //--- module.modulemap
 module a0 { header "a0.h" export * }
