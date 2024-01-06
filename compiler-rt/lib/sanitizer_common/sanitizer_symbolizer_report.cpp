@@ -41,8 +41,8 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
   return false;
 }
 
-SymbolizedStack *SkipInternalFrames(SymbolizedStack *frames) {
-  for (SymbolizedStack *f = frames; f; f = f->next)
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames) {
+  for (const SymbolizedStack *f = frames; f; f = f->next)
     if (!FrameIsInternal(f))
       return f;
   return nullptr;
