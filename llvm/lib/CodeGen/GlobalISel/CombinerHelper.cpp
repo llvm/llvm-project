@@ -6390,8 +6390,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (TrueValue.isZero() && FalseValue.isOne()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Inner, Cond);
+      auto Inner = B.buildNot(CondTy, Cond);
       B.buildZExtOrTrunc(Dest, Inner);
     };
     return true;
@@ -6401,8 +6400,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (TrueValue.isZero() && FalseValue.isAllOnes()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Inner, Cond);
+      auto Inner = B.buildNot(CondTy, Cond);
       B.buildSExtOrTrunc(Dest, Inner);
     };
     return true;
@@ -6412,8 +6410,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (TrueValue - 1 == FalseValue) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Inner, Cond);
+      auto Inner = B.buildZExtOrTrunc(TrueTy, Cond);
       B.buildAdd(Dest, Inner, False);
     };
     return true;
@@ -6423,8 +6420,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (TrueValue + 1 == FalseValue) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildSExtOrTrunc(Inner, Cond);
+      auto Inner = B.buildSExtOrTrunc(TrueTy, Cond);
       B.buildAdd(Dest, Inner, False);
     };
     return true;
@@ -6434,8 +6430,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (TrueValue.isPowerOf2() && FalseValue.isZero()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Inner, Cond);
+      auto Inner = B.buildZExtOrTrunc(TrueTy, Cond);
       // The shift amount must be scalar.
       LLT ShiftTy = TrueTy.isVector() ? TrueTy.getElementType() : TrueTy;
       auto ShAmtC = B.buildConstant(ShiftTy, TrueValue.exactLogBase2());
@@ -6447,8 +6442,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (TrueValue.isAllOnes()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildSExtOrTrunc(Inner, Cond);
+      auto Inner = B.buildSExtOrTrunc(TrueTy, Cond);
       B.buildOr(Dest, Inner, False, Flags);
     };
     return true;
@@ -6458,10 +6452,8 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (FalseValue.isAllOnes()) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Not = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Not, Cond);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildSExtOrTrunc(Inner, Not);
+      auto Not = B.buildNot(CondTy, Cond);
+      auto Inner = B.buildSExtOrTrunc(TrueTy, Not);
       B.buildOr(Dest, Inner, True, Flags);
     };
     return true;
@@ -6496,8 +6488,7 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   if ((Cond == True) || isOneOrOneSplat(True, /* AllowUndefs */ true)) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Ext = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Ext, Cond);
+      auto Ext = B.buildZExtOrTrunc(TrueTy, Cond);
       B.buildOr(DstReg, Ext, False, Flags);
     };
     return true;
@@ -6508,8 +6499,7 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   if ((Cond == False) || isZeroOrZeroSplat(False, /* AllowUndefs */ true)) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
-      Register Ext = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Ext, Cond);
+      auto Ext = B.buildZExtOrTrunc(TrueTy, Cond);
       B.buildAnd(DstReg, Ext, True);
     };
     return true;
@@ -6520,11 +6510,9 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       // First the not.
-      Register Inner = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Inner, Cond);
+      auto Inner = B.buildNot(CondTy, Cond);
       // Then an ext to match the destination register.
-      Register Ext = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Ext, Inner);
+      auto Ext = B.buildZExtOrTrunc(TrueTy, Inner);
       B.buildOr(DstReg, Ext, True, Flags);
     };
     return true;
@@ -6535,15 +6523,61 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       // First the not.
-      Register Inner = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Inner, Cond);
+      auto Inner = B.buildNot(CondTy, Cond);
       // Then an ext to match the destination register.
-      Register Ext = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Ext, Inner);
+      auto Ext = B.buildZExtOrTrunc(TrueTy, Inner);
       B.buildAnd(DstReg, Ext, False);
     };
     return true;
   }
+
+  return false;
+}
+
+bool CombinerHelper::tryFoldSelectOfBinOps(GSelect *Select,
+                                           BuildFnTy &MatchInfo) {
+  Register DstReg = Select->getReg(0);
+  Register Cond = Select->getCondReg();
+  Register False = Select->getFalseReg();
+  Register True = Select->getTrueReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  GBinOp *LHS = getOpcodeDef<GBinOp>(True, MRI);
+  GBinOp *RHS = getOpcodeDef<GBinOp>(False, MRI);
+
+  // We need two binops of the same kind on the true/false registers.
+  if (!LHS || !RHS || LHS->getOpcode() != RHS->getOpcode())
+    return false;
+
+  // Note that there are no constraints on CondTy.
+  unsigned Flags = (LHS->getFlags() & RHS->getFlags()) | Select->getFlags();
+  unsigned Opcode = LHS->getOpcode();
+
+  // Fold select(cond, binop(x, y), binop(z, y))
+  //  --> binop(select(cond, x, z), y)
+  if (LHS->getRHSReg() == RHS->getRHSReg()) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.setInstrAndDebugLoc(*Select);
+      auto Sel = B.buildSelect(DstTy, Cond, LHS->getLHSReg(), RHS->getLHSReg(),
+                               Select->getFlags());
+      B.buildInstr(Opcode, {DstReg}, {Sel, LHS->getRHSReg()}, Flags);
+    };
+    return true;
+  }
+
+  // Fold select(cond, binop(x, y), binop(x, z))
+  //  --> binop(x, select(cond, y, z))
+  if (LHS->getLHSReg() == RHS->getLHSReg()) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.setInstrAndDebugLoc(*Select);
+      auto Sel = B.buildSelect(DstTy, Cond, LHS->getRHSReg(), RHS->getRHSReg(),
+                               Select->getFlags());
+      B.buildInstr(Opcode, {DstReg}, {LHS->getLHSReg(), Sel}, Flags);
+    };
+    return true;
+  }
+
+  // FIXME: use isCommutable().
 
   return false;
 }
@@ -6555,6 +6589,9 @@ bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
     return true;
 
   if (tryFoldBoolSelectToLogic(Select, MatchInfo))
+    return true;
+
+  if (tryFoldSelectOfBinOps(Select, MatchInfo))
     return true;
 
   return false;
