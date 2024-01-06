@@ -1,10 +1,9 @@
-// RUN: %clang_cc1 %s -fsyntax-only -Wcast-function-type -verify
-// RUN: %clang_cc1 %s -fsyntax-only -Wcast-function-type-strict -verify
-// RUN: %clang_cc1 %s -fsyntax-only -Wextra -Wno-ignored-qualifiers -verify
+// RUN: %clang_cc1 %s -fsyntax-only -Wextra -verify
+
 
 int t(int array[static 12]);
 int u(int i);
-const int v(int i);
+const int v(int i); /* expected-warning {{'const' type qualifier on return type has no effec}} */
 int x(long);
 
 typedef int (f1)(long);
