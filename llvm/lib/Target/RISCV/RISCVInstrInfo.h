@@ -138,6 +138,7 @@ public:
                                bool) const override;
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;

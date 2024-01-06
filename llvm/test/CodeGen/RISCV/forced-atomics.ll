@@ -4346,8 +4346,8 @@ define i64 @cmpxchg64_monotonic(ptr %p) nounwind {
 ; RV32-NEXT:    li a4, 0
 ; RV32-NEXT:    li a5, 0
 ; RV32-NEXT:    call __atomic_compare_exchange_8@plt
-; RV32-NEXT:    lw a1, 4(sp)
 ; RV32-NEXT:    lw a0, 0(sp)
+; RV32-NEXT:    lw a1, 4(sp)
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -4406,8 +4406,8 @@ define i64 @cmpxchg64_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __atomic_compare_exchange_8@plt
-; RV32-NEXT:    lw a1, 4(sp)
 ; RV32-NEXT:    lw a0, 0(sp)
+; RV32-NEXT:    lw a1, 4(sp)
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -4639,8 +4639,8 @@ define i128 @cmpxchg128(ptr %p) nounwind {
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a3, 0
 ; RV64-NEXT:    call __atomic_compare_exchange_16@plt
-; RV64-NEXT:    ld a1, 8(sp)
 ; RV64-NEXT:    ld a0, 0(sp)
+; RV64-NEXT:    ld a1, 8(sp)
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
