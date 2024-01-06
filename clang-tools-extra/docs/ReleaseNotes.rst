@@ -119,7 +119,7 @@ Improvements to clang-tidy
 
 - Improved `--dump-config` to print check options in alphabetical order.
 
-- Improved :program:`clang-tidy-diff.py` script. 
+- Improved :program:`clang-tidy-diff.py` script.
     * Return exit code `1` if any :program:`clang-tidy` subprocess exits with
       a non-zero code or if exporting fixes fails.
 
@@ -486,6 +486,10 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
+
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check to support
+  in-class initializers.
 
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
