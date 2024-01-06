@@ -301,6 +301,10 @@ Changes in existing checks
   coroutine functions and increase issue detection for cases involving type
   aliases with references.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check to
+  address false positives in the capture list and body of lambdas.
+
 - Improved :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` check by
   extending the `IgnoreConversionFromTypes` option to include types without a
