@@ -273,22 +273,9 @@ static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
   return 0;
 }
 
-static bool FrameIsInternal(const SymbolizedStack *frame) {
-  if (!frame)
-    return true;
-  const char *file = frame->info.file;
-  const char *module = frame->info.module;
-  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
-    return true;
-  if (module && (internal_strstr(module, "libclang_rt.")))
-    return true;
-  return false;
-}
-
-static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
-  for (SymbolizedStack *f = frames; f; f = f->next)
-    if (!FrameIsInternal(f))
-      return f;
+static const SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
+  if (const SymbolizedStack *f = SkipInternalFrames(frames))
+    return f;
   return frames;  // Fallback to the top frame.
 }
 
@@ -363,7 +350,7 @@ void PrintReport(const ReportDesc *rep) {
     Printf("  And %d more similar thread leaks.\n\n", rep->count - 1);
 
   if (ReportStack *stack = ChooseSummaryStack(rep)) {
-    if (SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
+    if (const SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
       ReportErrorSummary(rep_typ_str, frame->info);
   }
 
