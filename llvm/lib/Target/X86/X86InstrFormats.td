@@ -279,10 +279,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
 
-  // Used to prevent an explicit EVEX2VEX override for this instruction.
-  string EVEX2VEXOverride = ?;
-
-  bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
   ExplicitOpPrefix explicitOpPrefix = NoExplicitOpPrefix;
   bits<2> explicitOpPrefixBits = explicitOpPrefix.Value;
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
