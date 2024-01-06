@@ -641,19 +641,17 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   if (wordIndex < operands.size()) {
     Operation *op = nullptr;
 
-    if ((op = getGlobalVariable(operands[wordIndex])))
-      initializer = SymbolRefAttr::get(
-          (cast<spirv::GlobalVariableOp>(op)).getOperation());
-    else if ((op = getSpecConstant(operands[wordIndex])))
-      initializer =
-          SymbolRefAttr::get((cast<spirv::SpecConstantOp>(op)).getOperation());
-    else if ((op = getSpecConstantComposite(operands[wordIndex])))
-      initializer = SymbolRefAttr::get(
-          (cast<spirv::SpecConstantCompositeOp>(op)).getOperation());
+    if (auto initOp = getGlobalVariable(operands[wordIndex]))
+      op = initOp;
+    else if (auto initOp = getSpecConstant(operands[wordIndex]))
+      op = initOp;
+    else if (auto initOp = getSpecConstantComposite(operands[wordIndex]))
+      op = initOp;
     else
       return emitError(unknownLoc, "unknown <id> ")
              << operands[wordIndex] << "used as initializer";
 
+    initializer = SymbolRefAttr::get(op);
     wordIndex++;
   }
   if (wordIndex != operands.size()) {
