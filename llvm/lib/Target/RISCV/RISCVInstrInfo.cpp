@@ -417,12 +417,13 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (RISCV::GPRPF64RegClass.contains(DstReg, SrcReg)) {
     // Emit an ADDI for both parts of GPRPF64.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
-            TRI->getSubReg(DstReg, RISCV::sub_32))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32), getKillRegState(KillSrc))
+            TRI->getSubReg(DstReg, RISCV::sub_gpr_even))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_even),
+                getKillRegState(KillSrc))
         .addImm(0);
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
-            TRI->getSubReg(DstReg, RISCV::sub_32_hi))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32_hi),
+            TRI->getSubReg(DstReg, RISCV::sub_gpr_odd))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd),
                 getKillRegState(KillSrc))
         .addImm(0);
     return;
@@ -446,9 +447,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              (STI.hasStdExtZfhmin() || STI.hasStdExtZfbfmin()) &&
              "Unexpected extensions");
       // Zfhmin/Zfbfmin doesn't have FSGNJ_H, replace FSGNJ_H with FSGNJ_S.
-      DstReg = TRI->getMatchingSuperReg(DstReg, RISCV::sub_16,
+      DstReg = TRI->getMatchingSuperReg(DstReg, RISCV::sub_fpr16,
                                         &RISCV::FPR32RegClass);
-      SrcReg = TRI->getMatchingSuperReg(SrcReg, RISCV::sub_16,
+      SrcReg = TRI->getMatchingSuperReg(SrcReg, RISCV::sub_fpr16,
                                         &RISCV::FPR32RegClass);
       Opc = RISCV::FSGNJ_S;
     }
