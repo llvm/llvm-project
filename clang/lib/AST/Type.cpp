@@ -2651,7 +2651,7 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 
 bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   return isTriviallyCopyableTypeImpl(*this, Context,
-                                     /*IsCopyConstructible*/ false);
+                                     /*IsCopyConstructible=*/false);
 }
 
 bool QualType::isTriviallyCopyConstructibleType(
