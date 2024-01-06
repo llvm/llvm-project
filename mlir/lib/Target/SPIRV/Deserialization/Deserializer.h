@@ -234,7 +234,9 @@ private:
   }
 
   /// Sets the argument's attributes with the given argument <id>.
-  LogicalResult setFunctionArgAttrs(uint32_t argID, SmallVector<Attribute> &argAttrs, size_t argIndex);
+  LogicalResult setFunctionArgAttrs(uint32_t argID,
+                                    SmallVector<Attribute> &argAttrs,
+                                    size_t argIndex);
 
   /// Gets the symbol name from the name of decoration.
   StringAttr getSymbolDecoration(StringRef decorationName) {
