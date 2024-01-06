@@ -273,22 +273,9 @@ static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
   return 0;
 }
 
-static bool FrameIsInternal(const SymbolizedStack *frame) {
-  if (!frame)
-    return true;
-  const char *file = frame->info.file;
-  const char *module = frame->info.module;
-  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
-    return true;
-  if (module && (internal_strstr(module, "libclang_rt.")))
-    return true;
-  return false;
-}
-
 static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
-  for (SymbolizedStack *f = frames; f; f = f->next)
-    if (!FrameIsInternal(f))
-      return f;
+  if (SymbolizedStack *f = SkipInternalFrames(frames))
+    return f;
   return frames;  // Fallback to the top frame.
 }
 
