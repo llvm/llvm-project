@@ -136,7 +136,17 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     const Record *Rec = Inst->TheDef;
     // _REV instruction should not appear before encoding optimization
-    if (!Rec->isSubClassOf("X86Inst") || Rec->getName().ends_with("_REV"))
+    if (!Rec->isSubClassOf("X86Inst") ||
+        Rec->getValueAsBit("isAsmParserOnly") ||
+        Rec->getName().ends_with("_REV"))
+      continue;
+
+    // Promoted legacy instruction is in EVEX space, and has REX2-encoding
+    // alternative. It's added due to HW design and never emitted by compiler.
+    if (byteFromBitsInit(Rec->getValueAsBitsInit("OpMapBits")) ==
+            X86Local::T_MAP4 &&
+        byteFromBitsInit(Rec->getValueAsBitsInit("explicitOpPrefixBits")) ==
+            X86Local::ExplicitEVEX)
       continue;
 
     if (NoCompressSet.find(Rec->getName()) != NoCompressSet.end())
