@@ -673,27 +673,3 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "VFNRCLIP_XU_F_QF">;
   defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "VFNRCLIP_X_F_QF">;
 }
-
-let Predicates = [HasVendorXSfcie] in {
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0, DecoderNamespace = "XSfcie" in {
-def SF_CFLUSH_D_L1 : RVInstI<0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1), "cflush.d.l1","$rs1">,
-                             Sched<[]> {
-  let rd = 0;
-  let imm12 = {0b1111,0b1100,0b0000};
-}
-
-def SF_CDISCARD_D_L1 : RVInstI<0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1), "cdiscard.d.l1","$rs1">,
-                               Sched<[]> {
-  let rd = 0;
-  let imm12 = {0b1111,0b1100,0b0010};
-}
-
-def SF_CEASE : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "cease","">,  Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = {0b0011,0b0000,0b0101};
-}
-}
-def : InstAlias<"cflush.d.l1", (SF_CFLUSH_D_L1 X0)>;
-def : InstAlias<"cdiscard.d.l1", (SF_CDISCARD_D_L1 X0)>;
-} // Predicates = [HasVendorXScie]

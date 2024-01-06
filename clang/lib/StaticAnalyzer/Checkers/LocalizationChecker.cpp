@@ -62,7 +62,8 @@ class NonLocalizedStringChecker
                      check::PostObjCMessage,
                      check::PostStmt<ObjCStringLiteral>> {
 
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Unlocalizable string",
+                   "Localizability Issue (Apple)"};
 
   // Methods that require a localized string
   mutable llvm::DenseMap<const IdentifierInfo *,
@@ -89,8 +90,6 @@ class NonLocalizedStringChecker
                                       Selector S) const;
 
 public:
-  NonLocalizedStringChecker();
-
   // When this parameter is set to true, the checker assumes all
   // methods that return NSStrings are unlocalized. Thus, more false
   // positives will be reported.
@@ -107,11 +106,6 @@ public:
 
 REGISTER_MAP_WITH_PROGRAMSTATE(LocalizedMemMap, const MemRegion *,
                                LocalizedState)
-
-NonLocalizedStringChecker::NonLocalizedStringChecker() {
-  BT.reset(new BugType(this, "Unlocalizable string",
-                       "Localizability Issue (Apple)"));
-}
 
 namespace {
 class NonLocalizedStringBRVisitor final : public BugReporterVisitor {
@@ -764,7 +758,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
 
   // Generate the bug report.
   auto R = std::make_unique<PathSensitiveBugReport>(
-      *BT, "User-facing text should use localized string macro", ErrNode);
+      BT, "User-facing text should use localized string macro", ErrNode);
   if (argumentNumber) {
     R->addRange(M.getArgExpr(argumentNumber - 1)->getSourceRange());
   } else {

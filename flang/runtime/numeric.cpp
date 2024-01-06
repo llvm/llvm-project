@@ -302,6 +302,7 @@ RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
 }
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Ceiling4_1)(
     CppTypeFor<TypeCategory::Real, 4> x) {
@@ -967,5 +968,7 @@ CppTypeFor<TypeCategory::Real, 16> RTDEF(FPow16k)(
   return FPowI(b, e);
 }
 #endif
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

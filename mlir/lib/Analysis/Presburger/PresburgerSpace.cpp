@@ -18,8 +18,9 @@ using namespace presburger;
 bool Identifier::isEqual(const Identifier &other) const {
   if (value == nullptr || other.value == nullptr)
     return false;
-  assert(value == other.value && idType == other.idType &&
-         "Values of Identifiers are equal but their types do not match.");
+  assert(value != other.value ||
+         (value == other.value && idType == other.idType &&
+          "Values of Identifiers are equal but their types do not match."));
   return value == other.value;
 }
 
@@ -291,6 +292,40 @@ void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
   numSymbols = newSymbolCount;
   // We do not need to change `identifiers` since the ordering of
   // `identifiers` remains same.
+}
+
+void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
+  assert(usingIds && other.usingIds &&
+         "Both spaces need to have identifers to merge & align");
+
+  // First merge & align identifiers into `other` from `this`.
+  unsigned kindBeginOffset = other.getVarKindOffset(VarKind::Symbol);
+  unsigned i = 0;
+  for (const Identifier *identifier =
+           identifiers.begin() + getVarKindOffset(VarKind::Symbol);
+       identifier != identifiers.begin() + getVarKindEnd(VarKind::Symbol);
+       identifier++) {
+    // If the identifier exists in `other`, then align it; otherwise insert it
+    // assuming it is a new identifier. Search in `other` starting at position
+    // `i` since the left of `i` is aligned.
+    auto *findEnd =
+        other.identifiers.begin() + other.getVarKindEnd(VarKind::Symbol);
+    auto *itr = std::find(other.identifiers.begin() + kindBeginOffset + i,
+                          findEnd, *identifier);
+    if (itr != findEnd) {
+      std::iter_swap(other.identifiers.begin() + kindBeginOffset + i, itr);
+    } else {
+      other.insertVar(VarKind::Symbol, i);
+      other.getId(VarKind::Symbol, i) = *identifier;
+    }
+    i++;
+  }
+
+  // Finally add identifiers that are in `other`, but not in `this` to `this`.
+  for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; i++) {
+    insertVar(VarKind::Symbol, i);
+    getId(VarKind::Symbol, i) = other.getId(VarKind::Symbol, i);
+  }
 }
 
 void PresburgerSpace::print(llvm::raw_ostream &os) const {

@@ -21,7 +21,6 @@
 #  include "sanitizer_common.h"
 #  include "sanitizer_file.h"
 #  include "sanitizer_flags.h"
-#  include "sanitizer_freebsd.h"
 #  include "sanitizer_getauxval.h"
 #  include "sanitizer_glibc_version.h"
 #  include "sanitizer_linux.h"
@@ -46,7 +45,6 @@
 #  endif
 
 #  if SANITIZER_FREEBSD
-#    include <osreldate.h>
 #    include <pthread_np.h>
 #    include <sys/auxv.h>
 #    include <sys/sysctl.h>
@@ -629,11 +627,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 
 #  if !SANITIZER_FREEBSD
 typedef ElfW(Phdr) Elf_Phdr;
-#  elif SANITIZER_WORDSIZE == 32 && __FreeBSD_version <= 902001  // v9.2
-#    define Elf_Phdr XElf32_Phdr
-#    define dl_phdr_info xdl_phdr_info
-#    define dl_iterate_phdr(c, b) xdl_iterate_phdr((c), (b))
-#  endif  // !SANITIZER_FREEBSD
+#  endif
 
 struct DlIteratePhdrData {
   InternalMmapVectorNoCtor<LoadedModule> *modules;

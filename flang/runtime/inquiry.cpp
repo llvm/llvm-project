@@ -19,7 +19,7 @@
 namespace Fortran::runtime {
 
 extern "C" {
-std::int64_t RTNAME(LboundDim)(
+std::int64_t RTDEF(LboundDim)(
     const Descriptor &array, int dim, const char *sourceFile, int line) {
   if (dim < 1 || dim > array.rank()) {
     Terminator terminator{sourceFile, line};
@@ -30,7 +30,7 @@ std::int64_t RTNAME(LboundDim)(
   return static_cast<std::int64_t>(dimension.LowerBound());
 }
 
-void RTNAME(Ubound)(Descriptor &result, const Descriptor &array, int kind,
+void RTDEF(Ubound)(Descriptor &result, const Descriptor &array, int kind,
     const char *sourceFile, int line) {
   SubscriptValue extent[1]{array.rank()};
   result.Establish(TypeCategory::Integer, kind, nullptr, 1, extent,
@@ -55,7 +55,7 @@ void RTNAME(Ubound)(Descriptor &result, const Descriptor &array, int kind,
   }
 }
 
-std::int64_t RTNAME(Size)(
+std::int64_t RTDEF(Size)(
     const Descriptor &array, const char *sourceFile, int line) {
   std::int64_t result{1};
   for (int i = 0; i < array.rank(); ++i) {
@@ -65,7 +65,7 @@ std::int64_t RTNAME(Size)(
   return result;
 }
 
-std::int64_t RTNAME(SizeDim)(
+std::int64_t RTDEF(SizeDim)(
     const Descriptor &array, int dim, const char *sourceFile, int line) {
   if (dim < 1 || dim > array.rank()) {
     Terminator terminator{sourceFile, line};
