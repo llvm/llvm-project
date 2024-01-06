@@ -283,6 +283,8 @@ struct SectionDescriptor {
 
   void emitString(dwarf::Form StringForm, const char *StringVal);
 
+  void emitBinaryData(llvm::StringRef Data);
+
   /// Emit specified inplace string value into the current section contents.
   void emitInplaceString(StringRef String) {
     OS << GlobalData.translateString(String);

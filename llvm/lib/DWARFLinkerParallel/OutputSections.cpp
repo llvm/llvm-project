@@ -227,6 +227,10 @@ void SectionDescriptor::emitIntVal(uint64_t Val, unsigned Size) {
   }
 }
 
+void SectionDescriptor::emitBinaryData(llvm::StringRef Data) {
+  OS.write(Data.data(), Data.size());
+}
+
 void SectionDescriptor::apply(uint64_t PatchOffset, dwarf::Form AttrForm,
                               uint64_t Val) {
   switch (AttrForm) {
