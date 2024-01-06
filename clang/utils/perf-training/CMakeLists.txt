@@ -15,7 +15,7 @@ if(LLVM_BUILD_INSTRUMENTED)
     )
 
   add_custom_target(clear-profraw
-    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} profraw
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/ profraw
     COMMENT "Clearing old profraw data")
 
   if(NOT LLVM_PROFDATA)
@@ -26,9 +26,9 @@ if(LLVM_BUILD_INSTRUMENTED)
     message(STATUS "To enable merging PGO data LLVM_PROFDATA has to point to llvm-profdata")
   else()
     add_custom_target(generate-profdata
-      COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR}
+      COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
       COMMENT "Merging profdata"
-      DEPENDS generate-profraw)
+      DEPENDS generate-profraw check-clang check-llvm)
   endif()
 endif()
 
