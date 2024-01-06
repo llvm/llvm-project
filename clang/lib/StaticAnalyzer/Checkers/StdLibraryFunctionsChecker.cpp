@@ -2519,12 +2519,17 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+                   ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(1, WithinRange, SingleValue(0))},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(
-                ArgumentCondition(1, WithinRange, Range(1, SizeMax))));
+                BufferSize(/*Buffer*/ ArgNo(0), /*BufSize*/ ArgNo(1)))
+            .ArgConstraint(
+                ArgumentCondition(1, WithinRange, Range(0, SizeMax))));
 
     // int mkdir(const char *pathname, mode_t mode);
     addToFunctionSummaryMap(

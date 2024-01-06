@@ -89,9 +89,3 @@ int test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {
   // expected-warning{{Division by zero}} \
   // expected-note{{Division by zero}}
 }
-
-char *test_getcwd_bufsize_zero(char *Buf) {
-  return getcwd(Buf, 0); // \
-  // expected-warning {{The 2nd argument to 'getcwd' is 0 but should be > 0}} \
-  // expected-note    {{The 2nd argument to 'getcwd' is 0 but should be > 0}}
-}
