@@ -383,20 +383,31 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   operands.push_back(static_cast<uint32_t>(varOp.storageClass()));
 
   // Encode initialization.
-  if (auto initializer = varOp.getInitializer()) {
-    auto initializerID = getVariableID(*initializer);
-    if (!initializerID) {
+  StringRef initAttrName = varOp.getInitializerAttrName().getValue();
+  if (std::optional<StringRef> initSymbolName = varOp.getInitializer()) {
+    uint32_t initializerID = 0;
+    auto initRef = varOp->getAttrOfType<FlatSymbolRefAttr>(initAttrName);
+    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
+        varOp->getParentOp(), initRef.getAttr());
+
+    // Check if initializer is GlobalVariable or SpecConstant* cases.
+    if (isa<spirv::GlobalVariableOp>(initOp))
+      initializerID = getVariableID(*initSymbolName);
+    else
+      initializerID = getSpecConstID(*initSymbolName);
+
+    if (!initializerID)
       return emitError(varOp.getLoc(),
                        "invalid usage of undefined variable as initializer");
-    }
+
     operands.push_back(initializerID);
-    elidedAttrs.push_back("initializer");
+    elidedAttrs.push_back(initAttrName);
   }
 
   if (failed(emitDebugLine(typesGlobalValues, varOp.getLoc())))
     return failure();
   encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpVariable, operands);
-  elidedAttrs.push_back("initializer");
+  elidedAttrs.push_back(initAttrName);
 
   // Encode decorations.
   for (auto attr : varOp->getAttrs()) {
