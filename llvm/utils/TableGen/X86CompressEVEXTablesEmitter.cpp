@@ -73,15 +73,14 @@ void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
   OS << "};\n\n";
 }
 
-// Return true if the 2 BitsInits are equal
-// Calculates the integer value residing BitsInit object
-static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
-  uint64_t Value = 0;
-  for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
-    if (BitInit *Bit = dyn_cast<BitInit>(B->getBit(i)))
-      Value |= uint64_t(Bit->getValue()) << i;
-    else
-      PrintFatalError("Invalid VectSize bit");
+static uint8_t byteFromBitsInit(const BitsInit *B) {
+  unsigned N = B->getNumBits();
+  assert(N <= 8 && "Field is too large for uint8_t!");
+
+  uint8_t Value = 0;
+  for (unsigned I = 0; I != N; ++I) {
+    BitInit *Bit = cast<BitInit>(B->getBit(I));
+    Value |= Bit->getValue() << I;
   }
   return Value;
 }
@@ -105,30 +104,23 @@ public:
                         NewRI.Form))
       return false;
 
-    // This is needed for instructions with intrinsic version (_Int).
-    // Where the only difference is the size of the operands.
-    // For example: VUCOMISDZrm and Int_VUCOMISDrm
-    // Also for instructions that their EVEX version was upgraded to work with
-    // k-registers. For example VPCMPEQBrm (xmm output register) and
-    // VPCMPEQBZ128rm (k register output register).
-    for (unsigned i = 0, e = OldInst->Operands.size(); i < e; i++) {
-      Record *OpRec1 = OldInst->Operands[i].Rec;
-      Record *OpRec2 = NewInst->Operands[i].Rec;
+    for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
+      Record *OldOpRec = OldInst->Operands[I].Rec;
+      Record *NewOpRec = NewInst->Operands[I].Rec;
 
-      if (OpRec1 == OpRec2)
+      if (OldOpRec == NewOpRec)
         continue;
 
-      if (isRegisterOperand(OpRec1) && isRegisterOperand(OpRec2)) {
-        if (getRegOperandSize(OpRec1) != getRegOperandSize(OpRec2))
+      if (isRegisterOperand(OldOpRec) && isRegisterOperand(NewOpRec)) {
+        if (getRegOperandSize(OldOpRec) != getRegOperandSize(NewOpRec))
           return false;
-      } else if (isMemoryOperand(OpRec1) && isMemoryOperand(OpRec2)) {
-        return false;
-      } else if (isImmediateOperand(OpRec1) && isImmediateOperand(OpRec2)) {
-        if (OpRec1->getValueAsDef("Type") != OpRec2->getValueAsDef("Type")) {
+      } else if (isMemoryOperand(OldOpRec) && isMemoryOperand(NewOpRec)) {
+        if (getMemOperandSize(OldOpRec) != getMemOperandSize(NewOpRec))
           return false;
-        }
-      } else
-        return false;
+      } else if (isImmediateOperand(OldOpRec) && isImmediateOperand(NewOpRec)) {
+        if (OldOpRec->getValueAsDef("Type") != NewOpRec->getValueAsDef("Type"))
+          return false;
+      }
     }
 
     return true;
@@ -164,8 +156,8 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
 
   for (const CodeGenInstruction *Inst : PreCompressionInsts) {
     const Record *Rec = Inst->TheDef;
-    uint64_t Opcode =
-        getValueFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
+    uint8_t Opcode =
+        byteFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
     const CodeGenInstruction *NewInst = nullptr;
     if (ManualMap.find(Rec->getName()) != ManualMap.end()) {
       Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
