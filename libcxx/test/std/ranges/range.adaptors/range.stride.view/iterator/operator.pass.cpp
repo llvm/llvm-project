@@ -160,8 +160,7 @@ static_assert(std::three_way_comparable<std::ranges::iterator_t<ThreeWayComparab
 static_assert(std::ranges::random_access_range<ThreeWayComparableView>);
 static_assert(is_three_way_comparable<ThreeWayComparableStrideViewIter>);
 
-using UnEqualableView =
-    ViewOverNonCopyableIterator<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>;
+using UnEqualableView               = ViewOverNonCopyableIterator<cpp20_input_iterator<int*>>;
 using UnEqualableViewStrideView     = std::ranges::stride_view<UnEqualableView>;
 using UnEqualableViewStrideViewIter = std::ranges::iterator_t<UnEqualableViewStrideView>;
 
