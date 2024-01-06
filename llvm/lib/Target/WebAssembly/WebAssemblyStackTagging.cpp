@@ -78,10 +78,8 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
 #endif
   memtag::StackInfoBuilder SIB(SSI);
-  for (Instruction &I : instructions(F)) {
-    ::llvm::errs() << I << '\n';
+  for (Instruction &I : instructions(F))
     SIB.visit(I);
-  }
   memtag::StackInfo &SInfo = SIB.get();
 
   std::unique_ptr<DominatorTree> DeleteDT;
