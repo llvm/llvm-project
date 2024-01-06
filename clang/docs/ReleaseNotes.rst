@@ -857,6 +857,11 @@ Bug Fixes to C++ Support
   (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
   (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
+- Fixed a regression where clang forgets how to substitute into constraints on template-template
+  parameters. Fixes: 
+  (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
+  (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
