@@ -696,8 +696,6 @@ Bug Fixes in This Version
 - Clang now accepts recursive non-dependent calls to functions with deduced
   return type.
   Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
-- Fix an issue that the object argument of ``static operator()`` and ``static operator[]`` is not evaluate.
-  Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
 
 
 Bug Fixes to Compiler Builtins
@@ -860,9 +858,13 @@ Bug Fixes to C++ Support
   (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
 - Fixed a regression where clang forgets how to substitute into constraints on template-template
-  parameters. Fixes: 
+  parameters. Fixes:
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
+- Fix an issue that the object argument of ``static operator()`` and ``static operator[]`` is not evaluate.
+  Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
