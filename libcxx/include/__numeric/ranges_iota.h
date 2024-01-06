@@ -29,7 +29,6 @@ namespace ranges {
 template <typename _Out, typename _Tp>
 using iota_result = ranges::out_value_result<_Out, _Tp>;
 
-namespace __ranges_iota {
 struct __iota_fn {
 private:
   // Private helper function
@@ -57,11 +56,8 @@ public:
     return __iota_impl(ranges::begin(__r), ranges::end(__r), std::move(__value));
   }
 };
-} // namespace __ranges_iota
 
-inline namespace __cpo {
-inline constexpr auto iota = __ranges_iota::__iota_fn{};
-} // namespace __cpo
+inline constexpr auto iota = __iota_fn{};
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23

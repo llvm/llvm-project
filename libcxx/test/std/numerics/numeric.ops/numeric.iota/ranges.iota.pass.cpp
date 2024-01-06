@@ -14,7 +14,6 @@
 #include <numeric>
 #include <algorithm>
 #include <array>
-#include <iostream> // TODO RM
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -106,46 +105,44 @@ struct DangerousCopyAssign {
   }
 };
 
-template <class T, class Iter, class Sent, std::size_t N>
-constexpr void test_result(std::array<T, N> input, T starting_value, std::array<T, N> const expected) {
+template <class Iter, class Sent, std::size_t N>
+constexpr void test_result(std::array<int, N> input, int starting_value, std::array<int, N> const expected) {
   { // (iterator, sentinel) overload
     auto in_begin = Iter(input.data());
     auto in_end   = Sent(Iter(input.data() + input.size()));
-    std::same_as<std::ranges::out_value_result<Iter, T>> decltype(auto) result =
+    std::same_as<std::ranges::out_value_result<Iter, int>> decltype(auto) result =
         std::ranges::iota(std::move(in_begin), std::move(in_end), starting_value);
     assert(result.out == in_end);
-    if constexpr (expected.size() > 0) {
-      assert(result.value == expected.back() + 1);
-    } else {
-      assert(result.value == starting_value);
-    }
+    assert(result.value == starting_value + static_cast<int>(N));
     assert(std::ranges::equal(input, expected));
   }
 
-  // The range overload adds the additional constraint that it must be an outputrange
-  // so skip this for the input iterators we test
-  if constexpr (!std::is_same_v<Iter, cpp17_input_iterator<T*>> &&
-                !std::is_same_v<Iter, cpp20_input_iterator<T*>>) { // (range) overload
-    auto in_begin = Iter(input.data());
-    auto in_end   = Sent(Iter(input.data() + input.size()));
-    auto range    = std::ranges::subrange(std::move(in_begin), std::move(in_end));
+  { // (range) overload
+    // inthe range overload adds the additional constraint that it must be an outputrange
+    // so skip this for the input iterators we test
+    if constexpr (!std::is_same_v<Iter, cpp17_input_iterator<int*>> &&
+                  !std::is_same_v<Iter, cpp20_input_iterator<int*>>) {
+      auto in_begin = Iter(input.data());
+      auto in_end   = Sent(Iter(input.data() + input.size()));
+      auto range    = std::ranges::subrange(std::move(in_begin), std::move(in_end));
 
-    std::same_as<std::ranges::out_value_result<Iter, T>> decltype(auto) result =
-        std::ranges::iota(range, starting_value);
-    assert(result.out == in_end);
-    assert(result.value == starting_value + N);
-    assert(std::ranges::equal(input, expected));
+      std::same_as<std::ranges::out_value_result<Iter, int>> decltype(auto) result =
+          std::ranges::iota(range, starting_value);
+      assert(result.out == in_end);
+      assert(result.value == starting_value + static_cast<int>(N));
+      assert(std::ranges::equal(input, expected));
+    }
   }
 }
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test_results() {
   // Empty
-  test_result<int, Iter, Sent, 0>({}, 0, {});
+  test_result<Iter, Sent, 0>({}, 0, {});
   // 1-element sequence
-  test_result<int, Iter, Sent, 1>({1}, 0, {0});
+  test_result<Iter, Sent, 1>({1}, 0, {0});
   // Longer sequence
-  test_result<int, Iter, Sent, 5>({1, 2, 3, 4, 5}, 0, {0, 1, 2, 3, 4});
+  test_result<Iter, Sent, 5>({1, 2, 3, 4, 5}, 0, {0, 1, 2, 3, 4});
 }
 
 constexpr void test_DangerousCopyAssign() {
