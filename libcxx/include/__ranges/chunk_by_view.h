@@ -67,8 +67,10 @@ class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG chunk_by_view
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> __find_next(iterator_t<_View> __current) {
     // Note: this duplicates a check in `optional` but provides a better error message.
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __pred_.__has_value(), "Trying to call __find_next() on a chunk_by_view that does not have a valid predicate.");
+    _LIBCPP_REDUNDANT_ASSERTION( //
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __pred_.__has_value(),
+            "Trying to call __find_next() on a chunk_by_view that does not have a valid predicate."));
     auto __reversed_pred = [this]<class _Tp, class _Up>(_Tp&& __x, _Up&& __y) -> bool {
       return !std::invoke(*__pred_, std::forward<_Tp>(__x), std::forward<_Up>(__y));
     };
@@ -82,8 +84,10 @@ class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG chunk_by_view
     // Attempting to decrement a begin iterator is a no-op (`__find_prev` would return the same argument given to it).
     _LIBCPP_ASSERT_PEDANTIC(__current != ranges::begin(__base_), "Trying to call __find_prev() on a begin iterator.");
     // Note: this duplicates a check in `optional` but provides a better error message.
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __pred_.__has_value(), "Trying to call __find_prev() on a chunk_by_view that does not have a valid predicate.");
+    _LIBCPP_REDUNDANT_ASSERTION( //
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __pred_.__has_value(),
+            "Trying to call __find_prev() on a chunk_by_view that does not have a valid predicate."));
 
     auto __first = ranges::begin(__base_);
     reverse_view __reversed{subrange{__first, __current}};
@@ -113,8 +117,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
     // Note: this duplicates a check in `optional` but provides a better error message.
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __pred_.__has_value(), "Trying to call begin() on a chunk_by_view that does not have a valid predicate.");
+    _LIBCPP_REDUNDANT_ASSERTION( //
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __pred_.__has_value(), "Trying to call begin() on a chunk_by_view that does not have a valid predicate."));
 
     auto __first = ranges::begin(__base_);
     if (!__cached_begin_.__has_value()) {

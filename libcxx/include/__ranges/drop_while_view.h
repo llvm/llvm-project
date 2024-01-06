@@ -67,10 +67,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     // Note: this duplicates a check in `optional` but provides a better error message.
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __pred_.__has_value(),
-        "drop_while_view needs to have a non-empty predicate before calling begin() -- did a previous "
-        "assignment to this drop_while_view fail?");
+    _LIBCPP_REDUNDANT_ASSERTION( //
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __pred_.__has_value(),
+            "drop_while_view needs to have a non-empty predicate before calling begin() -- did a previous "
+            "assignment to this drop_while_view fail?"));
     if constexpr (_UseCache) {
       if (!__cached_begin_.__has_value()) {
         __cached_begin_.__emplace(ranges::find_if_not(__base_, std::cref(*__pred_)));

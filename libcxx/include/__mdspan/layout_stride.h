@@ -284,8 +284,9 @@ public:
     // return a value exceeding required_span_size(), which is used to know how large an allocation one needs
     // Thus, this is a canonical point in multi-dimensional data structures to make invalid element access checks
     // However, mdspan does check this on its own, so for now we avoid double checking in hardened mode
-    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
-                                 "layout_stride::mapping: out of bounds indexing");
+    _LIBCPP_REDUNDANT_ASSERTION( //
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
+                                            "layout_stride::mapping: out of bounds indexing"));
     return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
       return ((static_cast<index_type>(__idx) * __strides_[_Pos]) + ... + index_type(0));
     }(make_index_sequence<sizeof...(_Indices)>());
