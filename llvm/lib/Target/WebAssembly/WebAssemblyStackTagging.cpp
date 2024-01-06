@@ -72,7 +72,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
 
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
-#if 0
+#if 1
 // Unsure of the purpose of the SSI analysis in this context.
 // Please place it under further review.
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
