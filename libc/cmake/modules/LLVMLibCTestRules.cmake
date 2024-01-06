@@ -498,6 +498,9 @@ function(add_integration_test test_name)
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
+      # __stack_chk_fail should always be included to allow building libc with
+      # stack protector.
+      libc.src.compiler.__stack_chk_fail
   )
   list(REMOVE_DUPLICATES fq_deps_list)
 
@@ -665,6 +668,9 @@ function(add_libc_hermetic_test test_name)
       libc.src.string.memmove
       libc.src.string.memset
       libc.src.__support.StringUtil.error_to_string
+      # __stack_chk_fail should always be included to allow building libc with
+      # stack protector.
+      libc.src.compiler.__stack_chk_fail
   )
 
   if(TARGET libc.src.time.clock)

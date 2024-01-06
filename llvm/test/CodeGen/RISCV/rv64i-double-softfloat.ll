@@ -55,4 +55,3 @@ entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.strict")
   ret i32 %conv
 }
-

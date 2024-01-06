@@ -3354,6 +3354,8 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   }
   if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I))
     Flags.setExact(ExactOp->isExact());
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    Flags.setDisjoint(DisjointOp->isDisjoint());
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
@@ -4112,7 +4114,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       unsigned IdxSize = DAG.getDataLayout().getIndexSizeInBits(AS);
       MVT IdxTy = MVT::getIntegerVT(IdxSize);
       TypeSize ElementSize =
-          DAG.getDataLayout().getTypeAllocSize(GTI.getIndexedType());
+          GTI.getSequentialElementStride(DAG.getDataLayout());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
       APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());

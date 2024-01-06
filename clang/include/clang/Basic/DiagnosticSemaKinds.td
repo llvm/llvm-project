@@ -3415,6 +3415,8 @@ def warn_objc_redundant_literal_use : Warning<
 def err_attr_tlsmodel_arg : Error<"tls_model must be \"global-dynamic\", "
   "\"local-dynamic\", \"initial-exec\" or \"local-exec\"">;
 
+def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this target">;
+
 def err_aix_attr_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 
 def err_tls_var_aligned_over_maximum : Error<
@@ -12064,7 +12066,7 @@ def warn_unsafe_buffer_variable : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;

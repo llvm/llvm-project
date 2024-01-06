@@ -174,6 +174,8 @@ const char kAsanAllocasUnpoison[] = "__asan_allocas_unpoison";
 
 const char kAMDGPUAddressSharedName[] = "llvm.amdgcn.is.shared";
 const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
+const char kAMDGPUBallotName[] = "llvm.amdgcn.ballot.i64";
+const char kAMDGPUUnreachableName[] = "llvm.amdgcn.unreachable";
 
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
@@ -699,6 +701,8 @@ struct AddressSanitizer {
                                        Instruction *InsertBefore, Value *Addr,
                                        uint32_t TypeStoreSize, bool IsWrite,
                                        Value *SizeArgument);
+  Instruction *genAMDGPUReportBlock(IRBuilder<> &IRB, Value *Cond,
+                                    bool Recover);
   void instrumentUnusualSizeOrAlignment(Instruction *I,
                                         Instruction *InsertBefore, Value *Addr,
                                         TypeSize TypeStoreSize, bool IsWrite,
@@ -1721,6 +1725,30 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
   return InsertBefore;
 }
 
+Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
+                                                    Value *Cond, bool Recover) {
+  Module &M = *IRB.GetInsertBlock()->getModule();
+  Value *ReportCond = Cond;
+  if (!Recover) {
+    auto Ballot = M.getOrInsertFunction(kAMDGPUBallotName, IRB.getInt64Ty(),
+                                        IRB.getInt1Ty());
+    ReportCond = IRB.CreateIsNotNull(IRB.CreateCall(Ballot, {Cond}));
+  }
+
+  auto *Trm =
+      SplitBlockAndInsertIfThen(ReportCond, &*IRB.GetInsertPoint(), false,
+                                MDBuilder(*C).createBranchWeights(1, 100000));
+  Trm->getParent()->setName("asan.report");
+
+  if (Recover)
+    return Trm;
+
+  Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
+  IRB.SetInsertPoint(Trm);
+  return IRB.CreateCall(
+      M.getOrInsertFunction(kAMDGPUUnreachableName, IRB.getVoidTy()), {});
+}
+
 void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
                                          Instruction *InsertBefore, Value *Addr,
                                          MaybeAlign Alignment,
@@ -1772,7 +1800,15 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   size_t Granularity = 1ULL << Mapping.Scale;
   Instruction *CrashTerm = nullptr;
 
-  if (ClAlwaysSlowPath || (TypeStoreSize < 8 * Granularity)) {
+  bool GenSlowPath = (ClAlwaysSlowPath || (TypeStoreSize < 8 * Granularity));
+
+  if (TargetTriple.isAMDGCN()) {
+    if (GenSlowPath) {
+      auto *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeStoreSize);
+      Cmp = IRB.CreateAnd(Cmp, Cmp2);
+    }
+    CrashTerm = genAMDGPUReportBlock(IRB, Cmp, Recover);
+  } else if (GenSlowPath) {
     // We use branch weights for the slow path check, to indicate that the slow
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -3629,10 +3665,14 @@ bool AddressSanitizer::isSafeAccess(ObjectSizeOffsetVisitor &ObjSizeVis,
     // TODO: We can use vscale_range to convert a scalable value to an
     // upper bound on the access size.
     return false;
-  SizeOffsetType SizeOffset = ObjSizeVis.compute(Addr);
-  if (!ObjSizeVis.bothKnown(SizeOffset)) return false;
-  uint64_t Size = SizeOffset.first.getZExtValue();
-  int64_t Offset = SizeOffset.second.getSExtValue();
+
+  SizeOffsetAPInt SizeOffset = ObjSizeVis.compute(Addr);
+  if (!SizeOffset.bothKnown())
+    return false;
+
+  uint64_t Size = SizeOffset.Size.getZExtValue();
+  int64_t Offset = SizeOffset.Offset.getSExtValue();
+
   // Three checks are required to ensure safety:
   // . Offset >= 0  (since the offset is given from the base ptr)
   // . Size >= Offset  (unsigned)

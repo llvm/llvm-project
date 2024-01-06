@@ -86,6 +86,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
@@ -452,9 +453,10 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
+  bool ShouldPopulateClassToPassNames = PIC && shouldPopulateClassToPassNames();
   if (TM)
-    TM->registerPassBuilderCallbacks(*this);
-  if (PIC && shouldPopulateClassToPassNames()) {
+    TM->registerPassBuilderCallbacks(*this, ShouldPopulateClassToPassNames);
+  if (ShouldPopulateClassToPassNames) {
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \

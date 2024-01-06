@@ -829,15 +829,20 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Type *ATy = TypeInfo.inferScalarType(A);
     if (TruncTy == ATy) {
       Trunc->replaceAllUsesWith(A);
-    } else if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
-      auto *VPC =
-          new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
-      VPC->insertBefore(&R);
-      Trunc->replaceAllUsesWith(VPC);
-    } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-      auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
-      VPC->insertBefore(&R);
-      Trunc->replaceAllUsesWith(VPC);
+    } else {
+      // Don't replace a scalarizing recipe with a widened cast.
+      if (isa<VPReplicateRecipe>(&R))
+        break;
+      if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+        auto *VPC =
+            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        VPC->insertBefore(&R);
+        Trunc->replaceAllUsesWith(VPC);
+      } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
+        auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
+        VPC->insertBefore(&R);
+        Trunc->replaceAllUsesWith(VPC);
+      }
     }
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still

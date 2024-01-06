@@ -1061,7 +1061,8 @@ public:
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     BranchOnCount,
-    BranchOnCond
+    BranchOnCond,
+    ComputeReductionResult,
   };
 
 private:
@@ -1349,6 +1350,36 @@ public:
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe to compute the pointers for widened memory accesses of IndexTy for
+/// all parts. If IsReverse is true, compute pointers for accessing the input in
+/// reverse order per part.
+class VPVectorPointerRecipe : public VPRecipeBase, public VPValue {
+  Type *IndexedTy;
+  bool IsReverse;
+
+public:
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsReverse,
+                        DebugLoc DL)
+      : VPRecipeBase(VPDef::VPVectorPointerSC, {Ptr}, DL), VPValue(this),
+        IndexedTy(IndexedTy), IsReverse(IsReverse) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  void execute(VPTransformState &State) override;
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3102,6 +3133,8 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return Rep->isUniform();
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
+  if (auto *VPI = dyn_cast<VPInstruction>(Def))
+    return VPI->getOpcode() == VPInstruction::ComputeReductionResult;
   return false;
 }
 } // end namespace vputils

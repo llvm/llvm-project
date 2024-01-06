@@ -315,6 +315,9 @@ end
 * When a file included via an `INCLUDE` line or `#include` directive
   has a continuation marker at the end of its last line in free form,
   Fortran line continuation works.
+* A `NAMELIST` input group may omit its trailing `/` character if
+  it is followed by another `NAMELIST` input group.
+* A `NAMELIST` input group may begin with either `&` or `$`.
 
 ### Extensions supported when enabled by options
 
@@ -645,6 +648,12 @@ end
   only in function references, but not an explicit `INTRINSIC` statement,
   its name is not brought into other scopes by a `USE` statement.
 
+* Should hexadecimal floating-point input editing apply any rounding?
+  F'2023 subclause 13.7.2.3.8 only discusses rounding in the context of
+  decimal-to-binary conversion; it would seem to not apply, and so
+  we don't round.  This seems to be how the Intel Fortran compilers
+  behave.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -654,3 +663,7 @@ end
   but every Fortran compiler allows the encoding to be changed on an
   open unit.
 
+* A `NAMELIST` input item that references a scalar element of a vector
+  or contiguous array can be used as the initial element of a storage
+  sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
+  "&GRP A(1:)=1. 2. 3./".
