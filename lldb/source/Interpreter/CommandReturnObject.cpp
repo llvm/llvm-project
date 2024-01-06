@@ -11,6 +11,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
+#include <regex>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -24,6 +26,12 @@ static llvm::raw_ostream &warning(Stream &strm) {
   return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Warning,
                          llvm::ColorMode::Enable)
          << "warning: ";
+}
+
+static llvm::raw_ostream &remark(Stream &strm) {
+  return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Remark,
+                         llvm::ColorMode::Enable)
+         << "remark: ";
 }
 
 static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
@@ -127,6 +135,144 @@ void CommandReturnObject::SetError(llvm::Error error) {
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't
 // append "\n" to the end of it.
+
+std::string
+CommandReturnObject::DetailStringForPromptCommand(size_t prompt_size,
+                                                  llvm::StringRef input) {
+
+  if (input.empty() || m_error_status.GetDetails().empty())
+    return "";
+
+  StreamString stream(true);
+
+  struct ExpressionNote {
+    std::string message;
+    DiagnosticSeverity type;
+    size_t column;
+  };
+  std::vector<ExpressionNote> notes;
+  const size_t not_found = std::string::npos;
+
+  // Start off with a sentinel value;
+  size_t expression_position = not_found;
+
+  auto note_builder =
+      [&](Status::Detail detail) -> std::optional<ExpressionNote> {
+    std::vector<std::string> detail_lines = detail.GetMessageLines();
+
+    // This function only knows how to parse messages with 3 lines.
+    if (detail_lines.size() != 3)
+      return {};
+
+    const DiagnosticSeverity type = detail.GetType();
+    const std::string message = detail_lines[0];
+    const std::string expression = detail_lines[1];
+    const std::string indicator_line = detail_lines[2];
+
+    // Set the position if this is the first time.
+    if (expression_position == not_found) {
+      expression_position = input.find(expression);
+
+      // Exit early if the expression isn't in the input string.
+      if (expression_position == not_found)
+        return {};
+    }
+    // Ensure this note's expression has the same position as the note before.
+    else if (input.find(expression) != expression_position)
+      return {};
+
+    // Ensure the 3rd line has an indicator (^) in it.
+    if (not_found == indicator_line.find("^"))
+      return {};
+
+    // The regular expression pattern that isolates the indicator column.
+    // - ^ matches the start of a line
+    // - (.*?) matches any character before the angle left angle bracket (<)
+    // - <(.*?)> matches any characters inside the left angle brackets (<...>)
+    // - :([[:digit:]]+): matches 1+ digits between the 1st and 2nd colons (:)
+    // - ([[:digit:]]+): matches 1+ digits between the 2nd and 3rd colons (:)
+    const std::regex rx{"^(.*?)<(.*?)>:([[:digit:]]+):([[:digit:]]+):"};
+    std::smatch match;
+
+    // Exit if the format doesn't match.
+    if (!std::regex_search(message, match, rx))
+      return {};
+
+    // std::string preamble(match[1]);
+    // std::string message_type(match[2]);
+    // std::string line_string(match[3]);
+    std::string column_string(match[4]);
+
+    unsigned long long column;
+    // Convert the column number string into an integer value.
+    if (llvm::StringRef(column_string).consumeInteger(10, column))
+      return {};
+
+    // Column values start at 1.
+    if (column <= 0)
+      return {};
+
+    ExpressionNote note;
+    note.message = message;
+    note.type = type;
+    note.column = column;
+    return note;
+  };
+
+  // Build a list of notes from the details.
+  for (Status::Detail &detail : m_error_status.GetDetails()) {
+    if (auto note_optional = note_builder(detail))
+      notes.push_back(note_optional.value());
+    else
+      return "";
+  }
+
+  // Print a line with caret indicator(s) below the lldb prompt + command.
+  const size_t padding = prompt_size + expression_position;
+  stream << std::string(padding, ' ');
+
+  size_t offset = 1;
+  for (ExpressionNote note : notes) {
+    stream << std::string(note.column - offset, ' ') << '^';
+    offset = note.column + 1;
+  }
+  stream << '\n';
+
+  // Work through each note in reverse order using the vector/stack.
+  while (!notes.empty()) {
+    // Get the information to print this note and remove it from the stack.
+    ExpressionNote this_note = notes.back();
+    notes.pop_back();
+
+    // Print all the lines for all the other messages first.
+    stream << std::string(padding, ' ');
+    size_t offset = 1;
+    for (ExpressionNote remaining_note : notes) {
+      stream << std::string(remaining_note.column - offset, ' ') << "│";
+      offset = remaining_note.column + 1;
+    }
+
+    // Print the line connecting the ^ with the error message.
+    stream << std::string(this_note.column - offset, ' ') << "╰─ ";
+
+    // Print a colorized string based on the message's severity type.
+    switch (this_note.type) {
+    case eDiagnosticSeverityError:
+      error(stream);
+      break;
+    case eDiagnosticSeverityWarning:
+      warning(stream);
+      break;
+    case eDiagnosticSeverityRemark:
+      remark(stream);
+      break;
+    }
+
+    // Finally, print the message and start a new line.
+    stream << this_note.message << '\n';
+  }
+  return stream.GetData();
+}
 
 void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
   SetStatus(eReturnStatusFailed);

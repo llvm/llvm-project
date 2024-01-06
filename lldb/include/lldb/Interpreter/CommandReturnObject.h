@@ -133,6 +133,9 @@ public:
 
   void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
 
+  std::string DetailStringForPromptCommand(size_t prompt_size,
+                                           llvm::StringRef input);
+
   void SetError(llvm::Error error);
 
   lldb::ReturnStatus GetStatus() const;
