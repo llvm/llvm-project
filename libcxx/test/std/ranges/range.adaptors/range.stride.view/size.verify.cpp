@@ -13,12 +13,19 @@
 
 #include <ranges>
 
+#include "__ranges/stride_view.h"
+#include "test_iterators.h"
 #include "types.h"
 
 // There is no size member function on a stride view over a view that
 // is *not* a sized range
-static_assert(!std::ranges::sized_range<UnsizedBasicView>);
-static_assert(!std::ranges::sized_range<std::ranges::stride_view<UnsizedBasicView>>);
+static_assert(!std::ranges::sized_range<BasicTestView<cpp17_input_iterator<int*>>>);
+static_assert(!std::ranges::sized_range<std::ranges::stride_view<BasicTestView<cpp17_input_iterator<int*>>>>);
+
+// There is a size member function on a stride view over a view that
+// *is* a sized range
+static_assert(std::ranges::sized_range<BasicTestView<int*, sentinel_wrapper<int*>, true>>);
+static_assert(std::ranges::sized_range<std::ranges::stride_view<BasicTestView<int*, sentinel_wrapper<int*>, true>>>);
 
 constexpr bool test() {
   {

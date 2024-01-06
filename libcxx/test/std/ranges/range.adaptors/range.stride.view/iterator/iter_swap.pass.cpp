@@ -38,9 +38,9 @@ constexpr bool test() {
     assert(b[0] == 5);
 
     std::ranges::iter_swap(svba, svbb);
-
     assert(iter_move_counter_one == 1);
     assert(iter_move_counter_two == 1);
+
     assert(a[0] == 5);
     assert(b[0] == 1);
   }
