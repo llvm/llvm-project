@@ -128,6 +128,7 @@ MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
 MODULE_PASS("scc-oz-module-inliner",
             buildInlinerPipeline(OptimizationLevel::Oz,
                                  ThinOrFullLTOPhase::None))
+MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
 MODULE_PASS("strip", StripSymbolsPass())
 MODULE_PASS("strip-dead-debug-info", StripDeadDebugInfoPass())
 MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
