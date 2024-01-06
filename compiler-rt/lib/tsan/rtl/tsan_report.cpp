@@ -273,8 +273,8 @@ static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
   return 0;
 }
 
-static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
-  if (SymbolizedStack *f = SkipInternalFrames(frames))
+static const SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
+  if (const SymbolizedStack *f = SkipInternalFrames(frames))
     return f;
   return frames;  // Fallback to the top frame.
 }
@@ -350,7 +350,7 @@ void PrintReport(const ReportDesc *rep) {
     Printf("  And %d more similar thread leaks.\n\n", rep->count - 1);
 
   if (ReportStack *stack = ChooseSummaryStack(rep)) {
-    if (SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
+    if (const SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
       ReportErrorSummary(rep_typ_str, frame->info);
   }
 
