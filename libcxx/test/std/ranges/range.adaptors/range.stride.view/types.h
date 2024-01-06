@@ -9,24 +9,12 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
-#include "__concepts/equality_comparable.h"
-#include "__concepts/movable.h"
-#include "__concepts/semiregular.h"
-#include "__iterator/concepts.h"
-#include "__iterator/default_sentinel.h"
-#include "__ranges/access.h"
-#include "__ranges/concepts.h"
-#include "__ranges/enable_borrowed_range.h"
-#include "__ranges/enable_view.h"
-#include "__ranges/size.h"
-#include "__ranges/stride_view.h"
-#include "test_iterators.h"
-#include "test_macros.h"
-#include "test_range.h"
 #include <iterator>
 #include <ranges>
 #include <type_traits>
-#include <utility>
+
+#include "test_iterators.h"
+#include "test_range.h"
 
 template <class Derived, typename Iter = int*, bool Sized = false>
 struct InputIterBase {
