@@ -351,7 +351,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND),
                                      Innermost->asArray(), Final);
-    // Populate placeholder template arguments for TemplateTemplateParmDecls. 
+    // Populate placeholder template arguments for TemplateTemplateParmDecls.
     // This is essential for the case e.g.
     //
     // template <class> concept Concept = false;
