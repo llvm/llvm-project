@@ -147,6 +147,11 @@ def ExternalGlobalVar : SubsetSubject<Var,
                                !S->isLocalExternDecl()}],
                              "external global variables">;
 
+def NonTLSGlobalVar : SubsetSubject<Var,
+                             [{S->hasGlobalStorage() &&
+                               S->getTLSKind() == 0}],
+                             "non-TLS global variables">;
+
 def InlineFunction : SubsetSubject<Function,
                              [{S->isInlineSpecified()}], "inline functions">;
 
@@ -438,6 +443,7 @@ def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
+def TargetLoongArch : TargetArch<["loongarch32", "loongarch64"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
@@ -2796,6 +2802,15 @@ def PragmaClangTextSection : InheritableAttr {
   let Args = [StringArgument<"Name">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [InternalOnly];
+}
+
+def CodeModel : InheritableAttr, TargetSpecificAttr<TargetLoongArch> {
+  let Spellings = [GCC<"model">];
+  let Args = [EnumArgument<"Model", "llvm::CodeModel::Model",
+              ["normal", "medium", "extreme"], ["Small", "Medium", "Large"],
+              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+  let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
+  let Documentation = [CodeModelDocs];
 }
 
 def Sentinel : InheritableAttr {
