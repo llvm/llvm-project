@@ -1308,9 +1308,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
                         ? DL.getIndexType(IndexedTy->getPointerTo())
                         : Builder.getInt32Ty();
     Value *Ptr = State.get(getOperand(0), VPIteration(0, 0));
-    bool InBounds = false;
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
-      InBounds = GEP->isInBounds();
+    bool InBounds = isInBounds();
     if (IsReverse) {
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
