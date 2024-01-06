@@ -47,9 +47,7 @@ class X86CompressEVEXTablesEmitter {
   typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
       Entry;
 
-  // Represent both compress tables
-  std::vector<Entry> EVEX2VEX128;
-  std::vector<Entry> EVEX2VEX256;
+  std::vector<Entry> Table;
 
 public:
   X86CompressEVEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
@@ -64,20 +62,13 @@ private:
 
 void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
                                               raw_ostream &OS) {
-  StringRef Size = (Table == EVEX2VEX128) ? "128" : "256";
 
-  OS << "// X86 EVEX encoded instructions that have a VEX " << Size
-     << " encoding\n"
-     << "// (table format: <EVEX opcode, VEX-" << Size << " opcode>).\n"
-     << "static const X86CompressEVEXTableEntry X86EvexToVex" << Size
-     << "CompressTable[] = {\n"
-     << "  // EVEX scalar with corresponding VEX.\n";
+  OS << "static const X86CompressEVEXTableEntry X86CompressEVEXTable[] = { \n";
 
   // Print all entries added to the table
-  for (const auto &Pair : Table) {
+  for (const auto &Pair : Table)
     OS << "  { X86::" << Pair.first->TheDef->getName()
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
-  }
 
   OS << "};\n\n";
 }
@@ -175,33 +166,27 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
     const Record *Rec = Inst->TheDef;
     uint64_t Opcode =
         getValueFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
-    const CodeGenInstruction *VEXInst = nullptr;
+    const CodeGenInstruction *NewInst = nullptr;
     if (ManualMap.find(Rec->getName()) != ManualMap.end()) {
       Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
-      VEXInst = &Target.getInstruction(NewRec);
+      NewInst = &Target.getInstruction(NewRec);
     } else {
-      // For each EVEX instruction look for a VEX match in the appropriate
+      // For each pre-compression instruction look for a match in the appropriate
       // vector (instructions with the same opcode) using function object
       // IsMatch.
       auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
       if (Match != CompressedInsts[Opcode].end())
-        VEXInst = *Match;
+        NewInst = *Match;
     }
 
-    if (!VEXInst)
+    if (!NewInst)
       continue;
 
-    // In case a match is found add new entry to the appropriate table
-    if (Rec->getValueAsBit("hasVEX_L"))
-      EVEX2VEX256.push_back(std::make_pair(Inst, VEXInst)); // {0,1}
-    else
-      EVEX2VEX128.push_back(std::make_pair(Inst, VEXInst)); // {0,0}
+    Table.push_back(std::make_pair(Inst, NewInst));
   }
 
-  // Print both tables
-  printTable(EVEX2VEX128, OS);
-  printTable(EVEX2VEX256, OS);
+  printTable(Table, OS);
 }
 } // namespace
 
