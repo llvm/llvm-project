@@ -17,11 +17,22 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <map>
+#include <set>
 
 using namespace llvm;
 using namespace X86Disassembler;
 
 namespace {
+
+const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualCompressEVEXTables.def"
+};
+const std::set<StringRef> NoCompressSet = {
+#define NOCOMP(INSN) #INSN,
+#include "X86ManualCompressEVEXTables.def"
+};
 
 class X86CompressEVEXTablesEmitter {
   RecordKeeper &Records;
@@ -151,13 +162,14 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       Target.getInstructionsByEnumValue();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    const Record *Def = Inst->TheDef;
-    // Filter non-X86 instructions.
-    if (!Def->isSubClassOf("X86Inst"))
-      continue;
+    const Record *Rec = Inst->TheDef;
     // _REV instruction should not appear before encoding optimization
-    if (Def->getName().ends_with("_REV"))
+    if (!Rec->isSubClassOf("X86Inst") || Rec->getName().ends_with("_REV"))
       continue;
+
+    if (NoCompressSet.find(Rec->getName()) != NoCompressSet.end())
+      continue;
+
     RecognizableInstrBase RI(*Inst);
 
     // Add VEX encoded instructions to one of CompressedInsts vectors according
@@ -166,25 +178,24 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       CompressedInsts[RI.Opcode].push_back(Inst);
     // Add relevant EVEX encoded instructions to PreCompressionInsts
     else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_B &&
-             !RI.HasEVEX_L2 && !Def->getValueAsBit("notEVEX2VEXConvertible"))
+             !RI.HasEVEX_L2)
       PreCompressionInsts.push_back(Inst);
   }
 
-  for (const CodeGenInstruction *EVEXInst : PreCompressionInsts) {
+  for (const CodeGenInstruction *Inst : PreCompressionInsts) {
+    const Record *Rec = Inst->TheDef;
     uint64_t Opcode =
-        getValueFromBitsInit(EVEXInst->TheDef->getValueAsBitsInit("Opcode"));
-    // For each EVEX instruction look for a VEX match in the appropriate vector
-    // (instructions with the same opcode) using function object IsMatch.
-    // Allow EVEX2VEXOverride to explicitly specify a match.
+        getValueFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
     const CodeGenInstruction *VEXInst = nullptr;
-    if (!EVEXInst->TheDef->isValueUnset("EVEX2VEXOverride")) {
-      StringRef AltInstStr =
-          EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
-      Record *AltInstRec = Records.getDef(AltInstStr);
-      assert(AltInstRec && "EVEX2VEXOverride instruction not found!");
-      VEXInst = &Target.getInstruction(AltInstRec);
+    if (ManualMap.find(Rec->getName()) != ManualMap.end()) {
+      Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      VEXInst = &Target.getInstruction(NewRec);
     } else {
-      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(EVEXInst));
+      // For each EVEX instruction look for a VEX match in the appropriate
+      // vector (instructions with the same opcode) using function object
+      // IsMatch.
+      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
       if (Match != CompressedInsts[Opcode].end())
         VEXInst = *Match;
     }
@@ -193,10 +204,10 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
       continue;
 
     // In case a match is found add new entry to the appropriate table
-    if (EVEXInst->TheDef->getValueAsBit("hasVEX_L"))
-      EVEX2VEX256.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,1}
+    if (Rec->getValueAsBit("hasVEX_L"))
+      EVEX2VEX256.push_back(std::make_pair(Inst, VEXInst)); // {0,1}
     else
-      EVEX2VEX128.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,0}
+      EVEX2VEX128.push_back(std::make_pair(Inst, VEXInst)); // {0,0}
   }
 
   // Print both tables

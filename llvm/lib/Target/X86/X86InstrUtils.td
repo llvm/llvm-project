@@ -66,9 +66,6 @@ class EVEX_CD8<int esize, CD8VForm form> {
 }
 class NoCD8 { bits<7> CD8_Scale = 0; }
 
-class EVEX2VEXOverride<string VEXInstrName> {
-  string EVEX2VEXOverride = VEXInstrName;
-}
 class AVX512BIi8Base : TB, PD {
   Domain ExeDomain = SSEPackedInt;
   ImmType ImmT = Imm8;
@@ -89,7 +86,6 @@ class AVX512PDIi8Base : TB, PD {
   Domain ExeDomain = SSEPackedDouble;
   ImmType ImmT = Imm8;
 }
-class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
 class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
 class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }
