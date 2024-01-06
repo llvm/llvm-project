@@ -3203,6 +3203,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     ImplArgs->GroupSizeY = 1;
     ImplArgs->GroupSizeZ = 1;
     ImplArgs->GridDims = 1;
+    ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
 
   // Push the kernel launch into the stream.
