@@ -1267,10 +1267,10 @@ def : Pat<(i64 (X86RecoverFrameAlloc mcsym:$dst)), (MOV64ri mcsym:$dst)>;
 // tls has some funny stuff here...
 // This corresponds to movabs $foo@tpoff, %rax
 def : Pat<(i64 (X86Wrapper tglobaltlsaddr :$dst)),
-          (MOV64ri32 tglobaltlsaddr :$dst)>;
+          (MOV64ri32 tglobaltlsaddr :$dst)>, Requires<[NearData]>;
 // This corresponds to add $foo@tpoff, %rax
 def : Pat<(add GR64:$src1, (X86Wrapper tglobaltlsaddr :$dst)),
-          (ADD64ri32 GR64:$src1, tglobaltlsaddr :$dst)>;
+          (ADD64ri32 GR64:$src1, tglobaltlsaddr :$dst)>, Requires<[NearData]>;
 
 
 // Direct PC relative function call for small code model. 32-bit displacement
