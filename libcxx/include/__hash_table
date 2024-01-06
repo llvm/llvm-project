@@ -915,7 +915,10 @@ public:
     return __bc != 0 ? (float)size() / __bc : 0.f;
   }
   _LIBCPP_HIDE_FROM_ABI void max_load_factor(float __mlf) _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__mlf > 0, "unordered container::max_load_factor(lf) called with lf <= 0");
+    // While passing a non-positive load factor is undefined behavior, in practice the result will be benign (the
+    // call will be equivalent to `max_load_factor(load_factor())`, which is also the case for passing a valid value
+    // less than the current `load_factor`).
+    _LIBCPP_ASSERT_PEDANTIC(__mlf > 0, "unordered container::max_load_factor(lf) called with lf <= 0");
     max_load_factor() = std::max(__mlf, load_factor());
   }
 
