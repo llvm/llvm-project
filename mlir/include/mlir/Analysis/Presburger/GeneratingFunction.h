@@ -84,7 +84,7 @@ public:
     std::vector<std::vector<Point>> sumDenominators = denominators;
     sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
                            gf.denominators.end());
-    return GeneratingFunction(0, sumSigns, sumNumerators, sumDenominators);
+    return GeneratingFunction(numParam, sumSigns, sumNumerators, sumDenominators);
   }
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
