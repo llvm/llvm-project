@@ -6725,10 +6725,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
         ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
-        SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
+        SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
-               cast<ConstantInt>(SizeOffsetPair.second)->isZero());
-        Size = SizeOffsetPair.first;
+               cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
+        Size = SizeOffsetPair.Size;
       }
 
       Instruction *IP =

@@ -3415,6 +3415,8 @@ def warn_objc_redundant_literal_use : Warning<
 def err_attr_tlsmodel_arg : Error<"tls_model must be \"global-dynamic\", "
   "\"local-dynamic\", \"initial-exec\" or \"local-exec\"">;
 
+def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this target">;
+
 def err_aix_attr_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 
 def err_tls_var_aligned_over_maximum : Error<

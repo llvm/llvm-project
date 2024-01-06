@@ -206,7 +206,7 @@
 ; CHECK-NEXT:       X86 LEA Fixup
 ; CHECK-NEXT:       X86 Fixup Inst Tuning
 ; CHECK-NEXT:       X86 Fixup Vector Constants
-; CHECK-NEXT:       Compressing EVEX instrs to VEX encoding when possible
+; CHECK-NEXT:       Compressing EVEX instrs when possible
 ; CHECK-NEXT:       X86 Discriminate Memory Operands
 ; CHECK-NEXT:       X86 Insert Cache Prefetches
 ; CHECK-NEXT:       X86 insert wait instruction
