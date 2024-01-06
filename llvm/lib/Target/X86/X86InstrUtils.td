@@ -43,8 +43,6 @@ class XOP { Encoding OpEnc = EncXOP; }
 class VEX { Encoding OpEnc = EncVEX; }
 class EVEX { Encoding OpEnc = EncEVEX; }
 class WIG  { bit IgnoresW = 1; }
-// Special version of REX_W that can be changed to VEX.W==0 for EVEX2VEX.
-class VEX_W1X  { bit hasREX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
 class VVVV { bit hasVEX_4V = 1; }
