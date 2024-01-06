@@ -95,34 +95,23 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
   return Value;
 }
 
-// Function object - Operator() returns true if the given VEX instruction
-// matches the EVEX instruction of this object.
 class IsMatch {
-  const CodeGenInstruction *EVEXInst;
+  const CodeGenInstruction *OldInst;
 
 public:
-  IsMatch(const CodeGenInstruction *EVEXInst) : EVEXInst(EVEXInst) {}
+  IsMatch(const CodeGenInstruction *OldInst) : OldInst(OldInst) {}
 
-  bool operator()(const CodeGenInstruction *VEXInst) {
-    RecognizableInstrBase VEXRI(*VEXInst);
-    RecognizableInstrBase EVEXRI(*EVEXInst);
-    bool VEX_W = VEXRI.HasREX_W;
-    bool EVEX_W = EVEXRI.HasREX_W;
-    bool VEX_WIG = VEXRI.IgnoresW;
-    bool EVEX_WIG = EVEXRI.IgnoresW;
-    bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
+  bool operator()(const CodeGenInstruction *NewInst) {
+    RecognizableInstrBase NewRI(*NewInst);
+    RecognizableInstrBase OldRI(*OldInst);
 
-    if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||
-        // VEX/EVEX fields
-        VEXRI.OpPrefix != EVEXRI.OpPrefix || VEXRI.OpMap != EVEXRI.OpMap ||
-        VEXRI.HasVEX_4V != EVEXRI.HasVEX_4V ||
-        VEXRI.HasVEX_L != EVEXRI.HasVEX_L ||
-        // Match is allowed if either is VEX_WIG, or they match, or EVEX
-        // is VEX_W1X and VEX is VEX_W0.
-        (!(VEX_WIG || (!EVEX_WIG && EVEX_W == VEX_W) ||
-           (EVEX_W1_VEX_W0 && EVEX_W && !VEX_W))) ||
-        // Instruction's format
-        VEXRI.Form != EVEXRI.Form)
+    // Return false if any of the following fields of does not match.
+    if (std::make_tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
+                        OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
+                        OldRI.Form) !=
+        std::make_tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
+                        NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W,
+                        NewRI.Form))
       return false;
 
     // This is needed for instructions with intrinsic version (_Int).
@@ -131,9 +120,9 @@ public:
     // Also for instructions that their EVEX version was upgraded to work with
     // k-registers. For example VPCMPEQBrm (xmm output register) and
     // VPCMPEQBZ128rm (k register output register).
-    for (unsigned i = 0, e = EVEXInst->Operands.size(); i < e; i++) {
-      Record *OpRec1 = EVEXInst->Operands[i].Rec;
-      Record *OpRec2 = VEXInst->Operands[i].Rec;
+    for (unsigned i = 0, e = OldInst->Operands.size(); i < e; i++) {
+      Record *OpRec1 = OldInst->Operands[i].Rec;
+      Record *OpRec2 = NewInst->Operands[i].Rec;
 
       if (OpRec1 == OpRec2)
         continue;
