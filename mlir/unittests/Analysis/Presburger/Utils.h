@@ -75,7 +75,8 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
 
 // Check the coefficients (in order) of two generating functions.
 // Note that this is not a true equality check.
-inline void EXPECT_EQ_REPR_GENERATINGFUNCTION(detail::GeneratingFunction a, detail::GeneratingFunction b) {
+inline void EXPECT_EQ_REPR_GENERATINGFUNCTION(detail::GeneratingFunction a,
+                                              detail::GeneratingFunction b) {
   EXPECT_EQ(a.getNumParams(), b.getNumParams());
 
   SmallVector<int> aSigns = a.getSigns();
@@ -106,7 +107,8 @@ inline void EXPECT_EQ_REPR_GENERATINGFUNCTION(detail::GeneratingFunction a, deta
 
 // Check the coefficients (in order) of two quasipolynomials.
 // Note that this is not a true equality check.
-inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
+inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a,
+                                           QuasiPolynomial b) {
   EXPECT_EQ(a.getNumInputs(), b.getNumInputs());
 
   SmallVector<Fraction> aCoeffs = a.getCoefficients(),
