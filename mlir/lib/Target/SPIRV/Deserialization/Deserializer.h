@@ -234,7 +234,7 @@ private:
   }
 
   /// Sets the argument's attributes with the given argument <id>.
-  void setArgAttrs(uint32_t argID);
+  LogicalResult setFunctionArgAttrs(uint32_t argID, SmallVector<Attribute> &argAttrs, size_t argIndex);
 
   /// Gets the symbol name from the name of decoration.
   StringAttr getSymbolDecoration(StringRef decorationName) {
@@ -613,9 +613,6 @@ private:
 
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
-
-  /// A list of argument attributes of function.
-  SmallVector<Attribute, 0> argAttrs;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

@@ -370,30 +370,44 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
   return success();
 }
 
-void spirv::Deserializer::setArgAttrs(uint32_t argID) {
+LogicalResult spirv::Deserializer::setFunctionArgAttrs(
+    uint32_t argID, SmallVector<Attribute> &argAttrs, size_t argIndex) {
   if (!decorations.contains(argID)) {
-    argAttrs.push_back(DictionaryAttr::get(context, {}));
-    return;
+    argAttrs[argIndex] = DictionaryAttr::get(context, {});
+    return success();
   }
 
-  // Replace a decoration as UnitAttr with DecorationAttr for the physical
-  // buffer pointer in the function parameter.
-  // e.g. `aliased` -> `spirv.decoration = #spirv.decoration<Aliased>`.
+  spirv::DecorationAttr foundDecorationAttr;
   for (NamedAttribute decAttr : decorations[argID]) {
     for (auto decoration :
          {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
           spirv::Decoration::AliasedPointer,
           spirv::Decoration::RestrictPointer}) {
-      if (decAttr.getName() ==
-          getSymbolDecoration(stringifyDecoration(decoration))) {
-        decorations[argID].erase(decAttr.getName());
-        decorations[argID].set(spirv::DecorationAttr::name,
-                               spirv::DecorationAttr::get(context, decoration));
-      }
+
+      if (decAttr.getName() !=
+          getSymbolDecoration(stringifyDecoration(decoration)))
+        continue;
+
+      if (foundDecorationAttr)
+        return emitError(
+            unknownLoc,
+            "duplicate decoration attributes for function argument");
+
+      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
+      break;
     }
   }
 
-  argAttrs.push_back(decorations[argID].getDictionary(context));
+  if (!foundDecorationAttr)
+    return emitError(unknownLoc,
+                     "decoration for a pointer to physical storage buffer is "
+                     "only supported in function argument");
+
+  argAttrs[argIndex] = DictionaryAttr::get(
+      context,
+      {NamedAttribute(StringAttr::get(context, spirv::DecorationAttr::name),
+                      foundDecorationAttr)});
+  return success();
 }
 
 LogicalResult
@@ -457,6 +471,9 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
     logger.indent();
   });
 
+  SmallVector<Attribute> argAttrs;
+  argAttrs.resize(functionType.getNumInputs());
+
   // Parse the op argument instructions
   if (functionType.getNumInputs()) {
     for (size_t i = 0, e = functionType.getNumInputs(); i != e; ++i) {
@@ -490,7 +507,10 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
         return emitError(unknownLoc, "duplicate definition of result <id> ")
                << operands[1];
       }
-      setArgAttrs(operands[1]);
+      if (failed(setFunctionArgAttrs(operands[1], argAttrs, i))) {
+        return failure();
+      }
+
       auto argValue = funcOp.getArgument(i);
       valueMap[operands[1]] = argValue;
     }
