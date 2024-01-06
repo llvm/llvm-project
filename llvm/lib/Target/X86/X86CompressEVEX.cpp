@@ -224,16 +224,7 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
-// For EVEX instructions that can be encoded using VEX encoding
-// replace them by the VEX encoding in order to reduce size.
-static bool CompressEvexToVexImpl(MachineInstr &MI, const X86Subtarget &ST) {
-  // VEX format.
-  // # of bytes: 0,2,3  1      1      0,1   0,1,2,4  0,1
-  //  [Prefixes] [VEX]  OPCODE ModR/M [SIB] [DISP]  [IMM]
-  //
-  // EVEX format.
-  //  # of bytes: 4    1      1      1      4       / 1         1
-  //  [Prefixes]  EVEX Opcode ModR/M [SIB] [Disp32] / [Disp8*N] [Immediate]
+static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   const MCInstrDesc &Desc = MI.getDesc();
 
   // Check for EVEX instructions only.
@@ -251,10 +242,7 @@ static bool CompressEvexToVexImpl(MachineInstr &MI, const X86Subtarget &ST) {
   if (Desc.TSFlags & X86II::EVEX_L2)
     return false;
 
-  // Use the VEX.L bit to select the 128 or 256-bit table.
-  ArrayRef<X86CompressEVEXTableEntry> Table =
-      (Desc.TSFlags & X86II::VEX_L) ? ArrayRef(X86EvexToVex256CompressTable)
-                                    : ArrayRef(X86EvexToVex128CompressTable);
+  ArrayRef<X86CompressEVEXTableEntry> Table = ArrayRef(X86CompressEVEXTable);
 
   unsigned Opc = MI.getOpcode();
   const auto *I = llvm::lower_bound(Table, Opc);
@@ -278,10 +266,8 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   // Make sure the tables are sorted.
   static std::atomic<bool> TableChecked(false);
   if (!TableChecked.load(std::memory_order_relaxed)) {
-    assert(llvm::is_sorted(X86EvexToVex128CompressTable) &&
-           "X86EvexToVex128CompressTable is not sorted!");
-    assert(llvm::is_sorted(X86EvexToVex256CompressTable) &&
-           "X86EvexToVex256CompressTable is not sorted!");
+    assert(llvm::is_sorted(X86CompressEVEXTable) &&
+           "X86CompressEVEXTable is not sorted!");
     TableChecked.store(true, std::memory_order_relaxed);
   }
 #endif
@@ -291,12 +277,10 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
-  /// Go over all basic blocks in function and replace
-  /// EVEX encoded instrs by VEX encoding when possible.
   for (MachineBasicBlock &MBB : MF) {
     // Traverse the basic block.
     for (MachineInstr &MI : MBB)
-      Changed |= CompressEvexToVexImpl(MI, ST);
+      Changed |= CompressEVEXImpl(MI, ST);
   }
 
   return Changed;
