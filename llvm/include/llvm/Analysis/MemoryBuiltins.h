@@ -198,8 +198,10 @@ public:
   SizeOffsetType() = default;
   SizeOffsetType(T Size, T Offset) : Size(Size), Offset(Offset) {}
 
-  bool anyKnown() const { return C::known(Size) || C::known(Offset); }
-  bool bothKnown() const { return C::known(Size) && C::known(Offset); }
+  bool knownSize() const { return C::known(Size); }
+  bool knownOffset() const { return C::known(Offset); }
+  bool anyKnown() const { return knownSize() || knownOffset(); }
+  bool bothKnown() const { return knownSize() && knownOffset(); }
 
   bool operator==(const SizeOffsetType<T, C> &RHS) const {
     return Size == RHS.Size && Offset == RHS.Offset;
@@ -218,9 +220,6 @@ class SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
 public:
   SizeOffsetAPInt() = default;
   SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
-
-  bool knownSize() const { return SizeOffsetAPInt::known(Size); }
-  bool knownOffset() const { return SizeOffsetAPInt::known(Offset); }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*
@@ -284,9 +283,6 @@ public:
   SizeOffsetValue() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
   SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
-
-  bool knownSize() const { return SizeOffsetValue::known(Size); }
-  bool knownOffset() const { return SizeOffsetValue::known(Offset); }
 };
 
 /// SizeOffsetWeakTrackingVH - Used by \p ObjectSizeOffsetEvaluator in a
@@ -302,9 +298,6 @@ public:
       : SizeOffsetType(Size, Offset) {}
   SizeOffsetWeakTrackingVH(const SizeOffsetValue &SOV)
       : SizeOffsetType(SOV.Size, SOV.Offset) {}
-
-  bool knownSize() const { return SizeOffsetWeakTrackingVH::known(Size); }
-  bool knownOffset() const { return SizeOffsetWeakTrackingVH::known(Offset); }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*.
