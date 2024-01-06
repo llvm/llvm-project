@@ -28,6 +28,9 @@ class PfmIssueCounter<string resource_name, string counter>
   string ResourceName = resource_name;
 }
 
+// Definition of a validation event. A validation event represents a specific
+// event that can be meaasured using performance counters that is interesting
+// in regard to the snippet state.
 class ValidationEvent <int event_number> {
   int EventNumber = event_number;
 }
@@ -37,7 +40,9 @@ def InstructionRetired  : ValidationEvent<1>;
 def DataTLBLoadMiss     : ValidationEvent<2>;
 def DataTLBStoreMiss    : ValidationEvent<3>;
 
-// Validation counters can be tied to a specific event
+// PfmValidationCounter provides a mapping between the events that are
+// are interesting in regards to the snippet execution environment and
+// a concrete performance counter name that can be looked up in libpfm.
 class PfmValidationCounter<ValidationEvent event_type, string counter>
     : PfmCounter<counter> {
   // The name of the event that the validation counter detects.
