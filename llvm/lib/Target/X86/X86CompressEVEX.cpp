@@ -11,7 +11,7 @@
 //
 // Possible compression:
 //   a. AVX512 instruction (EVEX) -> AVX instruction (VEX)
-//   b. Promoted instruction (EVEX) -> pre-promotion instruction (legacy)
+//   b. Promoted instruction (EVEX) -> pre-promotion instruction (legacy/VEX)
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //
@@ -272,7 +272,7 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX512())
+  if (!ST.hasAVX512() && !ST.hasEGPR())
     return false;
 
   bool Changed = false;
