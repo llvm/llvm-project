@@ -1457,7 +1457,11 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
         Cells.push_back(CellDescription{i, ++Cell, i + 1, false, nullptr});
         CellCounts.push_back(
             C.Tok->Previous->isNot(tok::comma) &&
-                    !MatchingParen->MatchingParen->Previous->is(tok::equal)
+                    // When dealing with C array designators. There is a
+                    // possibility of some nested array not having an `=`.
+                    // When this happens we make the cells non retangular,
+                    // avoiding an access out of bound later on.
+                    MatchingParen->MatchingParen->Previous->isNot(tok::equal)
                 ? Cell + 1
                 : Cell);
         // Go to the next non-comment and ensure there is a break in front
