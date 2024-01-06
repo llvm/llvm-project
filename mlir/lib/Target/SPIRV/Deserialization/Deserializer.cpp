@@ -371,7 +371,7 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
 }
 
 LogicalResult spirv::Deserializer::setFunctionArgAttrs(
-    uint32_t argID, SmallVector<Attribute> &argAttrs, size_t argIndex) {
+    uint32_t argID, SmallVectorImpl<Attribute> &argAttrs, size_t argIndex) {
   if (!decorations.contains(argID)) {
     argAttrs[argIndex] = DictionaryAttr::get(context, {});
     return success();
@@ -389,9 +389,10 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
         continue;
 
       if (foundDecorationAttr)
-        return emitError(
-            unknownLoc,
-            "duplicate decoration attributes for function argument");
+        return emitError(unknownLoc,
+                         "more than one Aliased/Restrict decorations for "
+                         "function argument with result <id> ")
+               << argID;
 
       foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
       break;
@@ -399,14 +400,13 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
   }
 
   if (!foundDecorationAttr)
-    return emitError(unknownLoc,
-                     "decoration for a pointer to physical storage buffer is "
-                     "only supported in function argument");
+    return emitError(unknownLoc, "unimplemented decoration support for "
+                                 "function argument with result <id> ")
+           << argID;
 
-  argAttrs[argIndex] = DictionaryAttr::get(
-      context,
-      {NamedAttribute(StringAttr::get(context, spirv::DecorationAttr::name),
-                      foundDecorationAttr)});
+  NamedAttribute attr(StringAttr::get(context, spirv::DecorationAttr::name),
+                      foundDecorationAttr);
+  argAttrs[argIndex] = DictionaryAttr::get(context, attr);
   return success();
 }
 

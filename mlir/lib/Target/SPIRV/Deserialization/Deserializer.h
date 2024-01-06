@@ -233,9 +233,11 @@ private:
     return globalVariableMap.lookup(id);
   }
 
-  /// Sets the argument's attributes with the given argument <id>.
+  /// Sets the function argument's attributes. |argID| is the function
+  /// argument's result <id>, and |argIndex| is its index in the function's
+  /// argument list.
   LogicalResult setFunctionArgAttrs(uint32_t argID,
-                                    SmallVector<Attribute> &argAttrs,
+                                    SmallVectorImpl<Attribute> &argAttrs,
                                     size_t argIndex);
 
   /// Gets the symbol name from the name of decoration.
