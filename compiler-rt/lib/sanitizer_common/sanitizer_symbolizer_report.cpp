@@ -41,8 +41,8 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
   return false;
 }
 
-SymbolizedStack *SkipInternalFrames(SymbolizedStack *frames) {
-  for (SymbolizedStack *f = frames; f; f = f->next)
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames) {
+  for (const SymbolizedStack *f = frames; f; f = f->next)
     if (!FrameIsInternal(f))
       return f;
   return nullptr;
@@ -102,9 +102,10 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
   // Currently, we include the first stack frame into the report summary.
   // Maybe sometimes we need to choose another frame (e.g. skip memcpy/etc).
   uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
-  SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
+  SymbolizedStackHolder symbolized_stack(
+      Symbolizer::GetOrInit()->SymbolizePC(pc));
+  const SymbolizedStack *frame = symbolized_stack.get();
   ReportErrorSummary(error_type, frame->info, alt_tool_name);
-  frame->ClearAll();
 #endif
 }
 
