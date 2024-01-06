@@ -1,11 +1,7 @@
 set(LLVM_TARGET_DEFINITIONS COFFOptions.td)
 tablegen(LLVM COFFOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(JITLinkCOFFTableGen)
 
-include_directories(${PROJECT_SOURCE_DIR}/lib/Target/ARM/)
-set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/ARM/ARM.td)
-tablegen(LLVM JITLinkAArch32.inc -gen-jitlink-aarch32-instr-info)
-
-add_public_tablegen_target(JITLinkTableGen)
 
 add_llvm_component_library(LLVMJITLink
   DWARFRecordSectionSplitter.cpp
@@ -53,7 +49,8 @@ add_llvm_component_library(LLVMJITLink
 
   DEPENDS
   intrinsics_gen
-  JITLinkTableGen
+  JITLinkCOFFTableGen
+  JITLinkAArch32TableGen
 
   LINK_COMPONENTS
   BinaryFormat

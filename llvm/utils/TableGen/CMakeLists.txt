@@ -5,6 +5,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   CodeGenIntrinsics.cpp
   DirectiveEmitter.cpp
   IntrinsicEmitter.cpp
+  JITLinkAArch32InstrInfo.cpp
   RISCVTargetDefEmitter.cpp
   SDNodeProperties.cpp
   VTEmitter.cpp
@@ -66,7 +67,6 @@ add_tablegen(llvm-tblgen LLVM
   InfoByHwMode.cpp
   InstrInfoEmitter.cpp
   InstrDocsEmitter.cpp
-  JITLinkAArch32InstrInfo.cpp
   OptEmitter.cpp
   OptParserEmitter.cpp
   OptRSTEmitter.cpp
@@ -90,10 +90,6 @@ add_tablegen(llvm-tblgen LLVM
   X86RecognizableInstr.cpp
   WebAssemblyDisassemblerEmitter.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
-
-  ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/JITLink
-
 
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen

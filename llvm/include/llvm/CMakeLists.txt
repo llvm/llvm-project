@@ -3,6 +3,7 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 
 add_subdirectory(CodeGen)
+add_subdirectory(ExecutionEngine)
 add_subdirectory(IR)
 add_subdirectory(Support)
 add_subdirectory(Frontend)

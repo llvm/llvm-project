@@ -11,8 +11,6 @@
 
 #include "gtest/gtest.h"
 
-#include "JITLinkAArch32.inc"
-
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::jitlink::aarch32;
@@ -76,7 +74,7 @@ TEST(AArch32_ELF, DynFixupInfos) {
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
     const auto *Info = FixupInfoBase::getDynFixupInfo(K);
     EXPECT_NE(Info, nullptr);
-    const auto *InfoArm = static_cast<const FixupInfoArm *>(Info);
+    const auto *InfoArm = static_cast<const FixupInfoArmBase *>(Info);
     EXPECT_NE(InfoArm->checkOpcode, nullptr);
     EXPECT_FALSE(InfoArm->checkOpcode(0x00000000));
   }
