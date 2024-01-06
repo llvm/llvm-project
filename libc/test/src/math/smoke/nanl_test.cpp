@@ -28,7 +28,7 @@ public:
     long double result = LIBC_NAMESPACE::nanl(input_str);
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(bits);
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
+    EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
   };
 };
 
@@ -67,6 +67,8 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
   run_test("123 ", expected);
 }
 
+#ifndef LIBC_HAVE_ADDRESS_SANITIZER
 TEST_F(LlvmLibcNanlTest, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }
+#endif // LIBC_HAVE_ADDRESS_SANITIZER

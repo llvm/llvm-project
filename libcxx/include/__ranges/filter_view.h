@@ -83,7 +83,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Pred const& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a filter_view that does not have a valid predicate.");
     if constexpr (_UseCache) {
       if (!__cached_begin_.__has_value()) {
