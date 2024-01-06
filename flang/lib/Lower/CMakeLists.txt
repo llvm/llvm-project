@@ -56,5 +56,7 @@ add_flang_library(FortranLower
   MLIRSCFToControlFlow
 
   LINK_COMPONENTS
+  FrontendOpenACC
+  FrontendOpenMP
   Support
 )
