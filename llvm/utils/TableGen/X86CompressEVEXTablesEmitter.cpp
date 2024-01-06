@@ -1,4 +1,4 @@
-//===- utils/TableGen/X86EVEX2VEXTablesEmitter.cpp - X86 backend-*- C++ -*-===//
+//==- utils/TableGen/X86CompressEVEXTablesEmitter.cpp - X86 backend-*- C++ -*-//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This tablegen backend is responsible for emitting the X86 backend EVEX2VEX
+/// This tablegen backend is responsible for emitting the X86 backend EVEX
 /// compression tables.
 ///
 //===----------------------------------------------------------------------===//
@@ -23,15 +23,15 @@ using namespace X86Disassembler;
 
 namespace {
 
-class X86EVEX2VEXTablesEmitter {
+class X86CompressEVEXTablesEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
 
-  // Hold all non-masked & non-broadcasted EVEX encoded instructions
-  std::vector<const CodeGenInstruction *> EVEXInsts;
-  // Hold all VEX encoded instructions. Divided into groups with same opcodes
+  // Hold all pontentially compressible EVEX instructions
+  std::vector<const CodeGenInstruction *> PreCompressionInsts;
+  // Hold all compressed instructions. Divided into groups with same opcodes
   // to make the search more efficient
-  std::map<uint64_t, std::vector<const CodeGenInstruction *>> VEXInsts;
+  std::map<uint64_t, std::vector<const CodeGenInstruction *>> CompressedInsts;
 
   typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
       Entry;
@@ -41,25 +41,24 @@ class X86EVEX2VEXTablesEmitter {
   std::vector<Entry> EVEX2VEX256;
 
 public:
-  X86EVEX2VEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86CompressEVEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
-  // run - Output X86 EVEX2VEX tables.
+  // run - Output X86 EVEX compression tables.
   void run(raw_ostream &OS);
 
 private:
-  // Prints the given table as a C++ array of type
-  // X86EvexToVexCompressTableEntry
+  // Prints the given table as a C++ array of type X86CompressEVEXTableEntry
   void printTable(const std::vector<Entry> &Table, raw_ostream &OS);
 };
 
-void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
-                                          raw_ostream &OS) {
+void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
+                                              raw_ostream &OS) {
   StringRef Size = (Table == EVEX2VEX128) ? "128" : "256";
 
   OS << "// X86 EVEX encoded instructions that have a VEX " << Size
      << " encoding\n"
      << "// (table format: <EVEX opcode, VEX-" << Size << " opcode>).\n"
-     << "static const X86EvexToVexCompressTableEntry X86EvexToVex" << Size
+     << "static const X86CompressEVEXTableEntry X86EvexToVex" << Size
      << "CompressTable[] = {\n"
      << "  // EVEX scalar with corresponding VEX.\n";
 
@@ -98,8 +97,8 @@ public:
     RecognizableInstrBase EVEXRI(*EVEXInst);
     bool VEX_W = VEXRI.HasREX_W;
     bool EVEX_W = EVEXRI.HasREX_W;
-    bool VEX_WIG  = VEXRI.IgnoresW;
-    bool EVEX_WIG  = EVEXRI.IgnoresW;
+    bool VEX_WIG = VEXRI.IgnoresW;
+    bool EVEX_WIG = EVEXRI.IgnoresW;
     bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||
@@ -145,8 +144,8 @@ public:
   }
 };
 
-void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
-  emitSourceFileHeader("X86 EVEX2VEX tables", OS);
+void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
+  emitSourceFileHeader("X86 EVEX compression tables", OS);
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
@@ -161,32 +160,32 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
       continue;
     RecognizableInstrBase RI(*Inst);
 
-    // Add VEX encoded instructions to one of VEXInsts vectors according to
-    // it's opcode.
+    // Add VEX encoded instructions to one of CompressedInsts vectors according
+    // to it's opcode.
     if (RI.Encoding == X86Local::VEX)
-      VEXInsts[RI.Opcode].push_back(Inst);
-    // Add relevant EVEX encoded instructions to EVEXInsts
+      CompressedInsts[RI.Opcode].push_back(Inst);
+    // Add relevant EVEX encoded instructions to PreCompressionInsts
     else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_B &&
              !RI.HasEVEX_L2 && !Def->getValueAsBit("notEVEX2VEXConvertible"))
-      EVEXInsts.push_back(Inst);
+      PreCompressionInsts.push_back(Inst);
   }
 
-  for (const CodeGenInstruction *EVEXInst : EVEXInsts) {
-    uint64_t Opcode = getValueFromBitsInit(EVEXInst->TheDef->
-                                           getValueAsBitsInit("Opcode"));
+  for (const CodeGenInstruction *EVEXInst : PreCompressionInsts) {
+    uint64_t Opcode =
+        getValueFromBitsInit(EVEXInst->TheDef->getValueAsBitsInit("Opcode"));
     // For each EVEX instruction look for a VEX match in the appropriate vector
     // (instructions with the same opcode) using function object IsMatch.
     // Allow EVEX2VEXOverride to explicitly specify a match.
     const CodeGenInstruction *VEXInst = nullptr;
     if (!EVEXInst->TheDef->isValueUnset("EVEX2VEXOverride")) {
       StringRef AltInstStr =
-        EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
+          EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
       Record *AltInstRec = Records.getDef(AltInstStr);
       assert(AltInstRec && "EVEX2VEXOverride instruction not found!");
       VEXInst = &Target.getInstruction(AltInstRec);
     } else {
-      auto Match = llvm::find_if(VEXInsts[Opcode], IsMatch(EVEXInst));
-      if (Match != VEXInsts[Opcode].end())
+      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(EVEXInst));
+      if (Match != CompressedInsts[Opcode].end())
         VEXInst = *Match;
     }
 
@@ -206,5 +205,5 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
 }
 } // namespace
 
-static TableGen::Emitter::OptClass<X86EVEX2VEXTablesEmitter>
-    X("gen-x86-EVEX2VEX-tables", "Generate X86 EVEX to VEX compress tables");
+static TableGen::Emitter::OptClass<X86CompressEVEXTablesEmitter>
+    X("gen-x86-compress-evex-tables", "Generate X86 EVEX compression tables");
