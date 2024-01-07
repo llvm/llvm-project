@@ -27,6 +27,21 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Tp>
+struct __is_cxx_atomic_impl : false_type {};
+
+template <class _Tp>
+struct __is_cxx_atomic_impl<__cxx_atomic_impl<_Tp> > : true_type {};
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI __enable_if_t<!__is_cxx_atomic_impl<__remove_cv_t<_Tp> >::value, _Tp>
+__cxx_atomic_load(_Tp* __ptr, memory_order __order) noexcept {
+  alignas(_Tp) unsigned char __mem[sizeof(_Tp)];
+  auto* __ret = reinterpret_cast<_Tp*>(__mem);
+  __atomic_load(__ptr, __ret, __to_gcc_order(__order));
+  return *__ret;
+}
+
 #ifndef _LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*);

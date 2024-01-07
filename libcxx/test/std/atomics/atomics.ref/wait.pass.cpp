@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: *
 
 // void wait(T, memory_order = memory_order::seq_cst) const noexcept;
 
