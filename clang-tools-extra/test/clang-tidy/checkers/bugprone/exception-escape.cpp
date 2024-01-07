@@ -591,7 +591,7 @@ void iter_swap(int&, int&) {
   throw 1;
 }
 
-void iter_move(int&, int&) {
+void iter_move(int&) {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'iter_move' which should not throw exceptions
   throw 1;
 }
