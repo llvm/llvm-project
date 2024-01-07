@@ -66,8 +66,8 @@ from ctypes import *
 
 import clang.enumerations
 
+import collections.abc
 import os
-import sys
 
 
 # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
@@ -110,15 +110,6 @@ def b(x):
     if isinstance(x, bytes):
         return x
     return x.encode("utf8")
-
-
-# Importing ABC-s directly from collections is deprecated since Python 3.7,
-# will stop working in Python 3.8.
-# See: https://docs.python.org/dev/whatsnew/3.7.html#id3
-if sys.version_info[:2] >= (3, 7):
-    from collections import abc as collections_abc
-else:
-    import collections as collections_abc
 
 
 # ctypes doesn't implicitly convert c_void_p to the appropriate wrapper
@@ -2331,7 +2322,7 @@ class Type(Structure):
         container is a Type instance.
         """
 
-        class ArgumentsIterator(collections_abc.Sequence):
+        class ArgumentsIterator(collections.abc.Sequence):
             def __init__(self, parent):
                 self.parent = parent
                 self.length = None
