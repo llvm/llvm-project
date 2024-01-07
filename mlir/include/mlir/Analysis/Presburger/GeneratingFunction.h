@@ -22,7 +22,7 @@ namespace presburger {
 namespace detail {
 
 // A parametric point is a vector, each of whose elements
-// is an affine function of n parameters. Each row
+// is an affine function of n parameters. Each column
 // in the matrix represents the affine function and
 // has n+1 elements.
 using ParamPoint = FracMatrix;
@@ -56,7 +56,7 @@ public:
       : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
 #ifndef NDEBUG
     for (const ParamPoint &term : numerators)
-      assert(term.getNumColumns() == numParam + 1 &&
+      assert(term.getNumRows() == numParam + 1 &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
 #endif // NDEBUG
