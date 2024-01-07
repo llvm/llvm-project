@@ -661,3 +661,10 @@ func.func @test_custom(%arg0: tensor<10xi32>) -> tensor<10xi32> {
   %0 = tosa.custom %arg0 {operator_name="custom_test", domain_name="tosa.mlir_test", implementation_attrs="" } : (tensor<10xi32>) -> (tensor<10xi32>)
   return %0 : tensor<10xi32>
 }
+
+// -----
+// CHECK-LABEL: test_dim
+func.func @test_dim(%arg0: tensor<10xi32>, %arg1: tensor<i32>) -> tensor<i32> {
+  %0 = tosa.dim %arg0, %arg1  : (tensor<10xi32>, tensor<i32>) -> (tensor<i32>)
+  return %0 : tensor<i32>
+}

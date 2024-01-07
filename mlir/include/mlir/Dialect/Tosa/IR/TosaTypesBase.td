@@ -52,7 +52,9 @@ def Tosa_SignedInt : AnyTypeOf<[Tosa_Int8,
                                 Tosa_Int16,
                                 Tosa_Int32,
                                 Tosa_Int48,
-                                Tosa_Int64]>;
+                                Tosa_Int64],
+                               "TOSA signed integer type",
+                               "::mlir::IntegerType">;
 
 def Tosa_Bool : I<1>;
 
@@ -60,10 +62,13 @@ def Tosa_Bool : I<1>;
 def Tosa_Int : AnyTypeOf<[Tosa_Bool,
                           Tosa_UInt8,
                           Tosa_UInt16,
-                          Tosa_SignedInt]>;
+                          Tosa_SignedInt],
+                         "TOSA integer type",
+                         "::mlir::IntegerType">;
 
-def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
-                   	        Tosa_Int64]>;
+def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32, Tosa_Int64],
+                               "TOSA 32/64 bit integer type",
+                               "::mlir::IntegerType">;
 
 //===----------------------------------------------------------------------===//
 // Quantized Integer Types.
@@ -77,19 +82,18 @@ def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
 // int8  : symmetric  per tensor/per channel, signed
 // int16 : symmetric  per tensor,             signed
 //===----------------------------------------------------------------------===//
-def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
-                                     Tosa_QuantizedType<"int4", [4, 0], 1>,
-                                     Tosa_QuantizedType<"int8", [8, 0], 1>,
-                                     Tosa_QuantizedType<"int16", [16, 0], 1>,
-                                     Tosa_QuantizedType<"int32", [32, 0], 1>]>;
+def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
+                                   Tosa_QuantizedType<"int4", [4, 0], 1>,
+                                   Tosa_QuantizedType<"int8", [8, 0], 1>,
+                                   Tosa_QuantizedType<"int16", [16, 0], 1>,
+                                   Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point types.
 //===----------------------------------------------------------------------===//
-def Tosa_Float : AnyTypeOf<[
-                            F32,
-			    F16,
-			    BF16]>;
+def Tosa_Float : AnyTypeOf<[F32,
+                            F16,
+                            BF16]>;
 
 //===----------------------------------------------------------------------===//
 // Multi-category types.

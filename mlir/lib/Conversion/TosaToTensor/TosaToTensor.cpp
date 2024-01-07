@@ -412,6 +412,32 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   }
 };
 
+struct DimConverter : public OpConversionPattern<tosa::DimOp> {
+  using OpConversionPattern<tosa::DimOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::DimOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto input = adaptor.getInput1();
+    auto axis = adaptor.getAxis();
+
+    auto axisScalar =
+        rewriter.create<tensor::ExtractOp>(loc, axis, ValueRange{});
+    auto axisScalarIndex = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getIndexType(), axisScalar);
+
+    auto dimSize = rewriter.create<tensor::DimOp>(loc, input, axisScalarIndex);
+    auto dimSizeAsInteger = rewriter.create<arith::IndexCastOp>(
+        loc, op.getType().getElementType(), dimSize);
+
+    rewriter.replaceOpWithNewOp<tensor::FromElementsOp>(
+        op, op.getType(), ValueRange{dimSizeAsInteger});
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
@@ -420,4 +446,5 @@ void mlir::tosa::populateTosaToTensorConversionPatterns(
       patterns->getContext());
 
   patterns->add<ReshapeConverterCollapseExpand>(patterns->getContext());
+  patterns->add<DimConverter>(patterns->getContext());
 }

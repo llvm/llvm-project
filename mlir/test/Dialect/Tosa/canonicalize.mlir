@@ -1,4 +1,4 @@
-// RUN: mlir-opt -canonicalize="test-convergence" %s | FileCheck %s
+// RUN: mlir-opt -canonicalize="test-convergence" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @argmax_nofold
 func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xi32> {
@@ -611,5 +611,25 @@ func.func nested @fold_tile_rank_zero() -> tensor<i32> {
   // CHECK-NOT: tosa.tile
   %0 = tensor.empty() : tensor<i32>
   %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<i32>) -> tensor<i32>
+  return %1 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold
+func.func nested @fold_tile_rank_zero() -> tensor<i32> {
+  // CHECK-NOT: tosa.tile
+  %0 = tensor.empty() : tensor<i32>
+  %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<i32>) -> tensor<i32>
+  return %1 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_dim_op
+func.func @fold_dim_op(%arg0: tensor<1x2x3xf32>) -> tensor<i32> {
+  // CHECK-NOT: tosa.dim
+  %axis = arith.constant dense<0> : tensor<i32>
+  %1 = tosa.dim %arg0, %axis  : (tensor<1x2x3xf32>, tensor<i32>) -> tensor<i32>
   return %1 : tensor<i32>
 }

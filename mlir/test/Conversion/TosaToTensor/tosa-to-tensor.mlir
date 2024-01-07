@@ -313,3 +313,20 @@ func.func @concat_non_axis_dyn_mixed(%arg0: tensor<?x1xf32>, %arg1: tensor<?x1xf
   %0 = "tosa.concat"(%arg0, %arg1, %arg2) <{axis = 1 : i32}> : (tensor<?x1xf32>, tensor<?x1xf32>, tensor<?x1xf32>) -> tensor<5x3xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @dim_op
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
+// CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
+func.func @dim_op(%arg0: tensor<?x1xf32>, %arg1: tensor<i32>) -> (tensor<i32>) {
+  // CHECK: %[[EXTRACTED:.+]] = tensor.extract %[[ARG1]][] : tensor<i32>
+  // CHECK: %[[AS_INDEX:.+]] = arith.index_cast %[[EXTRACTED]] : i32 to index
+  // CHECK: %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[AS_INDEX]] : tensor<?x1xf32>
+  // CHECK: %[[AS_INT:.+]] = arith.index_cast %[[DIM]] : index to i32
+  // CHECK: %[[RESULT:.+]] = tensor.from_elements %[[AS_INT]] : tensor<i32>
+  // CHECK: return %[[RESULT]] : tensor<i32>
+
+  %0 = tosa.dim %arg0, %arg1 : (tensor<?x1xf32>, tensor<i32>) -> tensor<i32>
+  return %0 : tensor<i32>
+}

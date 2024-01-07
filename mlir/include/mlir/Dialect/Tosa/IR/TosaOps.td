@@ -1253,7 +1253,7 @@ def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.8
+// TOSA Spec Section 2.9
 // Operator Class: Reduction Ops.
 //===----------------------------------------------------------------------===//
 
@@ -1464,7 +1464,7 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.9
+// TOSA Spec Section 2.10
 // Operator Class: Data Layout / Memory Reinterpretation.
 //===----------------------------------------------------------------------===//
 
@@ -1539,6 +1539,33 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
                   Tosa_ExplicitValuePadOpQuantInfoBuilder];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: dim
+//===----------------------------------------------------------------------===//
+def Tosa_DimOp : Tosa_InferShapedTypeOp<"dim"> {
+  let summary = "The size of the specified dimension.";
+
+  let description = [{
+    Returns a rank zero tensor whose value is the runtime size of the input tensor
+    along the dimension of the axis input.
+
+    ```mlir
+    %size = tosa.dim %input1, %axis : (tensor<?x?xf32>, tensor<i32>)  -> (tensor<i32>)
+    ```
+  }];
+
+  let arguments = (ins
+    Tosa_RankedTensor:$input1,
+    TensorRankOf<[Tosa_Int32], [0]>:$axis
+  );
+
+  let results = (outs
+    TensorRankOf<[Tosa_SignedInt], [0]>:$output
+  );
+
   let hasFolder = 1;
 }
 

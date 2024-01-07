@@ -36,6 +36,7 @@ public:
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addIllegalOp<tosa::ConcatOp>();
+    target.addIllegalOp<tosa::DimOp>();
     target.addIllegalOp<tosa::ReshapeOp>();
     target.addIllegalOp<tosa::SliceOp>();
     target.addIllegalOp<tosa::PadOp>();

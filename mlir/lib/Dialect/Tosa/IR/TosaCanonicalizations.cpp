@@ -836,6 +836,27 @@ OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
+  auto axis = adaptor.getAxis();
+  if (!axis)
+    return {};
+
+  auto axisIndex =
+      llvm::cast<DenseIntElementsAttr>(axis).getSplatValue<int32_t>();
+
+  auto inputType = getInput1().getType();
+
+  // Do not fold if the axis is out of bounds or the axis
+  // size is not known statically.
+  if (axisIndex < 0 || axisIndex >= inputType.getRank() ||
+      inputType.isDynamicDim(axisIndex))
+    return {};
+
+  auto elementType = getType().getElementType();
+  auto attr = IntegerAttr::get(elementType, inputType.getDimSize(axisIndex));
+  return DenseIntElementsAttr::get(getType(), {static_cast<Attribute>(attr)});
+}
+
 // Fold away cases where a tosa.resize operation returns a copy
 // of the input image.
 OpFoldResult ResizeOp::fold(FoldAdaptor adaptor) {
