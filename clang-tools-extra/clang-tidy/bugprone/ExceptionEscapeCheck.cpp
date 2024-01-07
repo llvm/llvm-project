@@ -28,6 +28,10 @@ AST_MATCHER(FunctionDecl, isExplicitThrow) {
          Node.getExceptionSpecSourceRange().isValid();
 }
 
+AST_MATCHER(FunctionDecl, hasAtLeastOneParameter) {
+  return Node.getNumParams() > 0;
+}
+
 } // namespace
 
 ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
@@ -64,7 +68,8 @@ void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
                 allOf(anyOf(cxxDestructorDecl(),
                             cxxConstructorDecl(isMoveConstructor()),
                             cxxMethodDecl(isMoveAssignmentOperator()), isMain(),
-                            hasAnyName("swap", "iter_swap", "iter_move")),
+                            allOf(hasAnyName("swap", "iter_swap", "iter_move"),
+                                  hasAtLeastOneParameter())),
                       unless(isExplicitThrow())),
                 isEnabled(FunctionsThatShouldNotThrow)))
           .bind("thrower"),
