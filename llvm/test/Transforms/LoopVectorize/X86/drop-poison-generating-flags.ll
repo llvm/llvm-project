@@ -566,6 +566,56 @@ exit:
   ret void
 }
 
+; %B.gep.0 and pointers based on it can preserve inbounds, as the inbounds
+; versionused unconditionally in the store in the latch.
+; FIXME: at the moment, inbounds is dropped from both the GEP feeding the vector load ans tore
+define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr readonly %C) #0 {
+; CHECK-LABEL: define void @Bgep_inbounds_unconditionally_due_to_store(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %C, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 20, i32 20, i32 20, i32 20>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr %B, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[WIDE_LOAD2]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x float> <float 3.300000e+01, float 3.300000e+01, float 3.300000e+01, float 3.300000e+01>, <4 x float> [[TMP6]]
+; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body
+
+entry:
+  br label %loop.body
+
+loop.body:
+  %iv1 = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %C.gep = getelementptr inbounds i32, ptr %C, i64 %iv1
+  %C.lv = load i32, ptr %C.gep, align 4
+  %cmp = icmp eq i32 %C.lv, 20
+  %B.gep.0 = getelementptr inbounds float, ptr %B, i64 %iv1
+  br i1 %cmp, label %loop.latch, label %else
+
+else:
+  %B.lv = load float, ptr %B.gep.0, align 4
+  %add = fadd float %B.lv, 2.0
+  br label %loop.latch
+
+loop.latch:
+  %add.sink = phi float [ %add, %else ], [ 33.0, %loop.body ]
+  store float %add.sink, ptr %B.gep.0, align 4
+  %iv.next = add nuw nsw i64 %iv1, 1
+  %exitcond.not = icmp eq i64 %iv.next, 10000
+  br i1 %exitcond.not, label %exit, label %loop.body
+
+exit:
+  ret void
+}
+
 attributes #0 = { noinline nounwind uwtable "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 
 !0 = !{}
