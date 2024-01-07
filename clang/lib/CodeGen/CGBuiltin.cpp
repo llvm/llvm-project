@@ -20412,92 +20412,92 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_memory_randomtag: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomtag);
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
-    return Builder.CreateCall(Callee, {Table, Ptr});
+    return Builder.CreateCall(Callee, {Index, Ptr});
   }
   case WebAssembly::BI__builtin_wasm_memory_copytag: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_copytag);
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr0 = EmitScalarExpr(E->getArg(1));
     Value *Ptr1 = EmitScalarExpr(E->getArg(2));
-    return Builder.CreateCall(Callee, {Table, Ptr0, Ptr1});
+    return Builder.CreateCall(Callee, {Index, Ptr0, Ptr1});
   }
   case WebAssembly::BI__builtin_wasm_memory_subtag: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_subtag, ConvertType(E->getType()));
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr0 = EmitScalarExpr(E->getArg(1));
     Value *Ptr1 = EmitScalarExpr(E->getArg(2));
-    return Builder.CreateCall(Callee, {Table, Ptr0, Ptr1});
+    return Builder.CreateCall(Callee, {Index, Ptr0, Ptr1});
   }
   case WebAssembly::BI__builtin_wasm_memory_loadtag: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_loadtag);
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
-    return Builder.CreateCall(Callee, {Table, Ptr});
+    return Builder.CreateCall(Callee, {Index, Ptr});
   }
   case WebAssembly::BI__builtin_wasm_memory_storetag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storetag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_storeztag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storeztag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_store1tag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_store1tag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_storez1tag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storez1tag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_randomstoretag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstoretag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_randomstoreztag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstoreztag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_randomstore1tag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstore1tag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_randomstorez1tag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstorez1tag, B16->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, B16});
+    return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
   case WebAssembly::BI__builtin_wasm_memory_addnexttag: {
-    Value *Table = EmitScalarExpr(E->getArg(0));
+    Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *PtrOffset = EmitScalarExpr(E->getArg(2));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_addnexttag, PtrOffset->getType());
-    return Builder.CreateCall(Callee, {Table, Ptr, PtrOffset});
+    return Builder.CreateCall(Callee, {Index, Ptr, PtrOffset});
   }
   default:
     return nullptr;
