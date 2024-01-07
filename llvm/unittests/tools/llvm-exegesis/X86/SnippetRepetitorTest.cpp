@@ -38,9 +38,11 @@ protected:
     MF = &createVoidVoidPtrMachineFunction("TestFn", Mod.get(), MMI.get());
   }
 
-  void TestCommon(Benchmark::RepetitionModeE RepetitionMode) {
+  void TestCommon(Benchmark::RepetitionModeE RepetitionMode,
+                  unsigned SnippetInstructions = 1) {
     const auto Repetitor = SnippetRepetitor::Create(RepetitionMode, State);
-    const std::vector<MCInst> Instructions = {MCInstBuilder(X86::NOOP)};
+    const std::vector<MCInst> Instructions(SnippetInstructions,
+                                           MCInstBuilder(X86::NOOP));
     FunctionFiller Sink(*MF, {X86::EAX});
     const auto Fill =
         Repetitor->Repeat(Instructions, kMinInstructions, kLoopBodySize, false);
@@ -72,6 +74,18 @@ TEST_F(X86SnippetRepetitorTest, Duplicate) {
   EXPECT_THAT(MF->getBlockNumbered(0)->instrs(),
               ElementsAre(HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
                           HasOpcode(X86::NOOP), HasOpcode(X86::RET64)));
+}
+
+TEST_F(X86SnippetRepetitorTest, DuplicateSnippetInstructionCount) {
+  TestCommon(Benchmark::Duplicate, 2);
+  // Duplicating a snippet of two instructions with the minimum number of
+  // instructions set to three duplicates the snippet twice for a total of
+  // four instructions.
+  ASSERT_EQ(MF->getNumBlockIDs(), 1u);
+  EXPECT_THAT(MF->getBlockNumbered(0)->instrs(),
+              ElementsAre(HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
+                          HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
+                          HasOpcode(X86::RET64)));
 }
 
 TEST_F(X86SnippetRepetitorTest, Loop) {

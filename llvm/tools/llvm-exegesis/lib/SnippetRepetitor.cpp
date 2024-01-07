@@ -31,7 +31,11 @@ public:
       if (!Instructions.empty()) {
         // Add the whole snippet at least once.
         Entry.addInstructions(Instructions);
-        for (unsigned I = Instructions.size(); I < MinInstructions; ++I) {
+        unsigned FullInstructionCount = MinInstructions;
+        if (FullInstructionCount % Instructions.size() != 0)
+          FullInstructionCount +=
+              Instructions.size() - (MinInstructions % Instructions.size());
+        for (unsigned I = Instructions.size(); I < FullInstructionCount; ++I) {
           Entry.addInstruction(Instructions[I % Instructions.size()]);
         }
       }
