@@ -484,6 +484,10 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    include <features.h> // for __NATIVE_ASCII_F
 #  endif
 
+#  ifdef __FreeBSD__
+#    include <osreldate.h> // for __FreeBSD_version
+#  endif
+
 #  ifndef __BYTE_ORDER__
 #    error                                                                                                             \
         "Your compiler doesn't seem to define __BYTE_ORDER__, which is required by libc++ to know the endianness of your target platform"
