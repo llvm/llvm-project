@@ -53,9 +53,9 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
 static bool insertionPointDominatesUses(const DominanceInfo &domInfo,
                                         Operation *insertionPoint,
                                         Operation *emptyTensorOp) {
-  return llvm::all_of(
-      emptyTensorOp->getUsers(),
-      [&](Operation *user) { return domInfo.dominates(insertionPoint, user); });
+  return llvm::all_of(emptyTensorOp->getUsers(), [&](Operation *user) {
+    return domInfo.dominates(insertionPoint, user);
+  });
 }
 
 /// Find a valid insertion point for a replacement of `emptyTensorOp`, assuming
