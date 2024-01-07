@@ -1439,6 +1439,11 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       std::swap(PredL, PredR);
     }
     if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
+      BuilderTy::FastMathFlagGuard Guard(Builder);
+      FastMathFlags FMF = LHS->getFastMathFlags();
+      FMF &= RHS->getFastMathFlags();
+      Builder.setFastMathFlags(FMF);
+
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
       return Builder.CreateFCmp(PredL, FAbs,
                                 ConstantFP::get(LHS0->getType(), *LHSC));

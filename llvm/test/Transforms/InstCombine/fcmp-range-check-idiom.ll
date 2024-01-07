@@ -277,3 +277,16 @@ define i1 @test_and_olt_wrong_pred2(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
+define i1 @test_and_olt_fmf_propagation(float %x) {
+; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ninf nsz olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %cmp1 = fcmp nsz nnan ninf olt float %x, 0x3C00000000000000
+  %cmp2 = fcmp nsz nnan ninf ogt float %x, 0xBC00000000000000
+  %cond = and i1 %cmp1, %cmp2
+  ret i1 %cond
+}
