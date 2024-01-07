@@ -155,8 +155,12 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      IRB.CreateCall(RandomStoreTagDecl,
+      Instruction *RandomStoreTagCall = IRB.CreateCall(RandomStoreTagDecl,
 		      {ConstantInt::get(Int32Type, 0), AI, ConstantInt::get(Int64Type, Size)});
+      if (Info.AI->hasName())
+        RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
+      Info.AI->replaceAllUsesWith(RandomStoreTagCall);
+      RandomStoreTagCall->setOperand(0, Info.AI);
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
       }
@@ -167,6 +171,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
+    // Fixup debug intrinsics to point to the new alloca.
+    for (auto *DVI : Info.DbgVariableIntrinsics)
+      DVI->replaceVariableLocationOp(OldAI, Info.AI);
   }
   return true;
 }
