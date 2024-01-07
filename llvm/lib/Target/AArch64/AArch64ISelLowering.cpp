@@ -16516,9 +16516,9 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
     if (Ext0.getOperand(0).getValueType().getVectorNumElements() !=
         VT.getVectorNumElements() * 2)
       return SDValue();
-    if ((Ext0.getConstantOperandVal(1) != 0 &&
+    if ((Ext0.getConstantOperandVal(1) != 0 ||
          Ext1.getConstantOperandVal(1) != VT.getVectorNumElements()) &&
-        (Ext1.getConstantOperandVal(1) != 0 &&
+        (Ext1.getConstantOperandVal(1) != 0 ||
          Ext0.getConstantOperandVal(1) != VT.getVectorNumElements()))
       return SDValue();
     unsigned Opcode = Op0.getOpcode() == ISD::ZERO_EXTEND ? AArch64ISD::UADDLP
