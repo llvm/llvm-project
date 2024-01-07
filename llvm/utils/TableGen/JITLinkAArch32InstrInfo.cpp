@@ -9,7 +9,6 @@
 // This Tablegen backend emits instruction encodings of AArch32 for JITLink.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
