@@ -1381,6 +1381,11 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   if (!UnavailablePred || !AvailableInfo.isValid())
     return;
 
+  // If we don't know the exact VTYPE, we can't copy the vsetvli to the exit of
+  // the unavailable pred.
+  if (AvailableInfo.hasSEWLMULRatioOnly())
+    return;
+
   // Critical edge - TODO: consider splitting?
   if (UnavailablePred->succ_size() != 1)
     return;
