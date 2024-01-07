@@ -105,7 +105,7 @@ defm MEMORY_RANDOMSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$flags, rc:$src,
                     "memory.randomstorez1tag\t$flags",
                     0xfc2b>;
 
-defm MEMORY_ADDNEXTTAG_A#B: I<(outs rc:$nexttaggedptr), (ins i32imm:$flags, rc:$taggedptr, ins rc:$offset),
+defm MEMORY_ADDNEXTTAG_A#B: I<(outs rc:$nexttaggedptr), (ins i32imm:$flags, rc:$taggedptr, rc:$offset),
                     (outs), (ins i32imm:$flags),
                     [(set rc:$nexttaggedptr,
                         (int_wasm_memory_addnexttag i32imm:$flags, rc:$taggedptr, rc:$offset))],
