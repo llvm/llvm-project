@@ -142,7 +142,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       if (Info.AI->hasName())
         RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceAllUsesWith(RandomStoreTagCall);
-      RandomStoreTagCall->setOperand(0, Info.AI);
+      RandomStoreTagCall->setOperand(1, Info.AI);
 
       auto TagEnd = [&](Instruction *Node) {
         untagAlloca(AI, Node, Size, StoreTagDecl, Int64Type);
@@ -160,7 +160,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       if (Info.AI->hasName())
         RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceAllUsesWith(RandomStoreTagCall);
-      RandomStoreTagCall->setOperand(0, Info.AI);
+      RandomStoreTagCall->setOperand(1, Info.AI);
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
       }
