@@ -33,6 +33,7 @@
 #include <cstdlib>
 #include <random>
 #include <string.h>
+#include <numeric>
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
