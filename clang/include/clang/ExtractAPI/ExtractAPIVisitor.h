@@ -29,6 +29,7 @@
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringRef.h"
+#include <algorithm>
 #include <type_traits>
 
 namespace clang {
@@ -123,6 +124,8 @@ public:
   const RawComment *fetchRawCommentForDecl(const Decl *Decl) const;
 
 protected:
+  DocComment FetchDocCommentFromDecl(const Decl *Decl);
+
   /// Collect API information for the enum constants and associate with the
   /// parent enum.
   void recordEnumConstants(EnumRecord *EnumRecord,
@@ -224,6 +227,19 @@ static void modifyRecords(const T &Records, const StringRef &Name) {
 }
 
 template <typename Derived>
+DocComment ExtractAPIVisitorBase<Derived>::FetchDocCommentFromDecl(const Decl *Decl) {
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl)) {
+    auto RawCommentVec = RawComment->getFormattedLines(
+        Context.getSourceManager(), Context.getDiagnostics());
+    std::copy(RawCommentVec.begin(), RawCommentVec.end(),
+              std::back_inserter(Comment));
+  }
+  return Comment;
+}
+
+template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
   // skip function parameters.
   if (isa<ParmVarDecl>(Decl))
@@ -252,11 +268,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the variable.
   DeclarationFragments Declaration =
@@ -322,11 +334,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments, sub-heading, and signature of the function.
   DeclarationFragments SubHeading =
@@ -368,11 +376,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the enum.
   DeclarationFragments Declaration =
@@ -484,11 +488,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitNamespaceDecl(
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the struct.
   DeclarationFragments Declaration =
@@ -516,11 +516,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the struct.
   DeclarationFragments Declaration =
@@ -550,11 +546,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
   DeclarationFragments Declaration =
       DeclarationFragmentsBuilder::getFragmentsForCXXClass(Decl);
   DeclarationFragments SubHeading =
@@ -606,11 +598,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXMethodDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
   auto Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
@@ -664,11 +652,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXConstructorDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments, sub-heading, and signature for the method.
   DeclarationFragments Declaration =
@@ -697,11 +681,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXDestructorDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments, sub-heading, and signature for the method.
   DeclarationFragments Declaration =
@@ -731,11 +711,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitConceptDecl(const ConceptDecl *Decl) {
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
   DeclarationFragments Declaration =
       DeclarationFragmentsBuilder::getFragmentsForConcept(Decl);
   DeclarationFragments SubHeading =
@@ -755,11 +731,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitClassTemplateSpecializationDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
   DeclarationFragments Declaration =
       DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
           Decl);
@@ -788,11 +760,7 @@ bool ExtractAPIVisitorBase<Derived>::
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
   DeclarationFragments Declaration = DeclarationFragmentsBuilder::
       getFragmentsForClassTemplatePartialSpecialization(Decl);
   DeclarationFragments SubHeading =
@@ -823,11 +791,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarTemplateDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the variable.
   DeclarationFragments Declaration;
@@ -868,11 +832,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarTemplateSpecializationDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the variable.
   DeclarationFragments Declaration =
@@ -899,11 +859,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarTemplatePartialSpecializationDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the variable.
   DeclarationFragments Declaration = DeclarationFragmentsBuilder::
@@ -931,11 +887,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionTemplateDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
@@ -963,11 +915,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCInterfaceDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the interface.
   DeclarationFragments Declaration =
@@ -1011,11 +959,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCProtocolDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the protocol.
   DeclarationFragments Declaration =
@@ -1069,11 +1013,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   StringRef Name = Decl->getName();
   StringRef USR = API.recordUSR(Decl);
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   QualType Type = Decl->getUnderlyingType();
   SymbolReference SymRef =
@@ -1098,11 +1038,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
   // Build declaration fragments and sub-heading for the category.
   DeclarationFragments Declaration =
       DeclarationFragmentsBuilder::getFragmentsForObjCCategory(Decl);
@@ -1148,11 +1084,7 @@ void ExtractAPIVisitorBase<Derived>::recordEnumConstants(
     StringRef USR = API.recordUSR(Constant);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Constant->getLocation());
-    DocComment Comment;
-    if (auto *RawComment =
-            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Constant))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    DocComment Comment = FetchDocCommentFromDecl(Constant);
 
     // Build declaration fragments and sub-heading for the enum constant.
     DeclarationFragments Declaration =
@@ -1177,11 +1109,7 @@ void ExtractAPIVisitorBase<Derived>::recordStructFields(
     StringRef USR = API.recordUSR(Field);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Field->getLocation());
-    DocComment Comment;
-    if (auto *RawComment =
-            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Field))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    DocComment Comment = FetchDocCommentFromDecl(Field);
 
     // Build declaration fragments and sub-heading for the struct field.
     DeclarationFragments Declaration =
@@ -1206,11 +1134,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFieldDecl(const FieldDecl *Decl) {
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments and sub-heading for the struct field.
   DeclarationFragments Declaration =
@@ -1235,11 +1159,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXConversionDecl(
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-  DocComment Comment;
-  if (auto *RawComment =
-          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
-    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                            Context.getDiagnostics());
+  DocComment Comment = FetchDocCommentFromDecl(Decl);
 
   // Build declaration fragments, sub-heading, and signature for the method.
   DeclarationFragments Declaration =
@@ -1281,11 +1201,7 @@ void ExtractAPIVisitorBase<Derived>::recordObjCMethods(
     StringRef USR = API.recordUSR(Method);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Method->getLocation());
-    DocComment Comment;
-    if (auto *RawComment =
-            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Method))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    DocComment Comment = FetchDocCommentFromDecl(Method);
 
     // Build declaration fragments, sub-heading, and signature for the method.
     DeclarationFragments Declaration =
@@ -1310,11 +1226,7 @@ void ExtractAPIVisitorBase<Derived>::recordObjCProperties(
     StringRef USR = API.recordUSR(Property);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Property->getLocation());
-    DocComment Comment;
-    if (auto *RawComment =
-            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Property))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    DocComment Comment = FetchDocCommentFromDecl(Property);
 
     // Build declaration fragments and sub-heading for the property.
     DeclarationFragments Declaration =
@@ -1355,11 +1267,7 @@ void ExtractAPIVisitorBase<Derived>::recordObjCInstanceVariables(
     StringRef USR = API.recordUSR(Ivar);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Ivar->getLocation());
-    DocComment Comment;
-    if (auto *RawComment =
-            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Ivar))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    DocComment Comment = FetchDocCommentFromDecl(Ivar);
 
     // Build declaration fragments and sub-heading for the instance variable.
     DeclarationFragments Declaration =

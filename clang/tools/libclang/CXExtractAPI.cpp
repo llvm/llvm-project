@@ -61,9 +61,12 @@ struct LibClangExtractAPIVisitor
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
     LinkageInfo Linkage = Decl->getLinkageAndVisibility();
     DocComment Comment;
-    if (auto *RawComment = fetchRawCommentForDecl(Interface))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    if (auto *RawComment = fetchRawCommentForDecl(Interface)) {
+      auto RawCommentVec = RawComment->getFormattedLines(
+          Context.getSourceManager(), Context.getDiagnostics());
+      std::copy(RawCommentVec.begin(), RawCommentVec.end(),
+                std::back_inserter(Comment));
+    }
 
     // Build declaration fragments and sub-heading by generating them for the
     // interface.

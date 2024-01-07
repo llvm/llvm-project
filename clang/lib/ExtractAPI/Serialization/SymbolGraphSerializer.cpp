@@ -14,6 +14,7 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Version.h"
+#include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -105,8 +106,7 @@ Object serializePlatform(const Triple &T) {
 }
 
 /// Serialize a source position.
-Object serializeSourcePosition(const PresumedLoc &Loc) {
-  assert(Loc.isValid() && "invalid source position");
+Object serializeSourcePosition(const RecordLocation &Loc) {
 
   Object SourcePosition;
   SourcePosition["line"] = Loc.getLine() - 1;
@@ -120,7 +120,7 @@ Object serializeSourcePosition(const PresumedLoc &Loc) {
 /// \param Loc The presumed location to serialize.
 /// \param IncludeFileURI If true, include the file path of \p Loc as a URI.
 /// Defaults to false.
-Object serializeSourceLocation(const PresumedLoc &Loc,
+Object serializeSourceLocation(const RecordLocation &Loc,
                                bool IncludeFileURI = false) {
   Object SourceLocation;
   serializeObject(SourceLocation, "position", serializeSourcePosition(Loc));
@@ -136,8 +136,8 @@ Object serializeSourceLocation(const PresumedLoc &Loc,
 }
 
 /// Serialize a source range with begin and end locations.
-Object serializeSourceRange(const PresumedLoc &BeginLoc,
-                            const PresumedLoc &EndLoc) {
+Object serializeSourceRange(const RecordLocation &BeginLoc,
+                            const RecordLocation &EndLoc) {
   Object SourceRange;
   serializeObject(SourceRange, "start", serializeSourcePosition(BeginLoc));
   serializeObject(SourceRange, "end", serializeSourcePosition(EndLoc));
