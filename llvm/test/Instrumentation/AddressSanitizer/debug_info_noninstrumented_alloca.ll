@@ -10,19 +10,19 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 define i32 @foo() sanitize_address {
 entry:
-  ; Won't be instrumented because of asan-skip-promotable-allocas.
+  ; Won't be instrumented because of asan-use-safety-analysis.
   %non_instrumented1 = alloca i32, align 4
 
   ; Regular alloca, will get instrumented (forced by the ptrtoint below).
   %instrumented = alloca i32, align 4
 
-  ; Won't be instrumented because of asan-skip-promotable-allocas.
+  ; Won't be instrumented because of asan-use-safety-analysis.
   %non_instrumented2 = alloca i32, align 4
 
   br label %bb0
 
 bb0:
-  ; Won't be instrumented because of asan-skip-promotable-allocas.
+  ; Won't be instrumented because of asan-use-safety-analysis.
   %non_instrumented3 = alloca i32, align 4
 
   %ptr = ptrtoint ptr %instrumented to i32
