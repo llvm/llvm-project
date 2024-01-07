@@ -577,6 +577,11 @@ public:
     convertVarKind(kind, varStart, varLimit, VarKind::Local);
   }
 
+  /// Merge and align symbol variables of `this` and `other` with respect to
+  /// identifiers. After this operation the symbol variables of both relations
+  /// have the same identifiers in the same order.
+  void mergeAndAlignSymbols(IntegerRelation &other);
+
   /// Adds additional local vars to the sets such that they both have the union
   /// of the local vars in each set, without changing the set of points that
   /// lie in `this` and `other`.
