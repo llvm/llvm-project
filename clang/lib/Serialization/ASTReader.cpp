@@ -1977,19 +1977,15 @@ ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
   return LocalID + I->second;
 }
 
-const FileEntry *HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
+OptionalFileEntryRefDegradesToFileEntryPtr
+HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   FileManager &FileMgr = Reader.getFileManager();
-  if (!Key.Imported) {
-    if (auto File = FileMgr.getFile(Key.Filename))
-      return *File;
-    return nullptr;
-  }
+  if (!Key.Imported)
+    return FileMgr.getOptionalFileRef(Key.Filename);
 
   std::string Resolved = std::string(Key.Filename);
   Reader.ResolveImportedPath(M, Resolved);
-  if (auto File = FileMgr.getFile(Resolved))
-    return *File;
-  return nullptr;
+  return FileMgr.getOptionalFileRef(Resolved);
 }
 
 unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
@@ -2045,13 +2041,6 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HeaderFileInfo HFI;
   unsigned Flags = *d++;
 
-  bool Included = (Flags >> 6) & 0x01;
-  if (Included)
-    if (const FileEntry *FE = getFile(key))
-      // Not using \c Preprocessor::markIncluded(), since that would attempt to
-      // deserialize this header file info again.
-      Reader.getPreprocessor().getIncludedFiles().insert(FE);
-
   // FIXME: Refactor with mergeHeaderFileInfo in HeaderSearch.cpp.
   HFI.isImport |= (Flags >> 5) & 0x01;
   HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
@@ -2067,6 +2056,27 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     HFI.Framework = HS->getUniqueFrameworkName(FrameworkName);
   }
 
+  OptionalFileEntryRefDegradesToFileEntryPtr FE = getFile(key);
+  Preprocessor &PP = Reader.getPreprocessor();
+  ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
+
+  unsigned IncludedCount =
+      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+  for (unsigned I = 0; I < IncludedCount; ++I) {
+    uint32_t LocalSMID =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+    if (!FE)
+      continue;
+
+    if (LocalSMID == 0) {
+      PP.markIncludedOnTopLevel(*FE);
+    } else {
+      SubmoduleID GlobalSMID = Reader.getGlobalSubmoduleID(M, LocalSMID);
+      Module *Mod = Reader.getSubmodule(GlobalSMID);
+      PP.markIncludedInModule(Mod, *FE);
+    }
+  }
+
   assert((End - d) % 4 == 0 &&
          "Wrong data length in HeaderFileInfo deserialization");
   while (d != End) {
@@ -2079,14 +2089,8 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     // implicit module import.
     SubmoduleID GlobalSMID = Reader.getGlobalSubmoduleID(M, LocalSMID);
     Module *Mod = Reader.getSubmodule(GlobalSMID);
-    FileManager &FileMgr = Reader.getFileManager();
-    ModuleMap &ModMap =
-        Reader.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-    std::string Filename = std::string(key.Filename);
-    if (key.Imported)
-      Reader.ResolveImportedPath(M, Filename);
-    if (auto FE = FileMgr.getOptionalFileRef(Filename)) {
+    if (FE) {
       // FIXME: NameAsWritten
       Module::Header H = {std::string(key.Filename), "", *FE};
       ModMap.addHeader(Mod, H, HeaderRole, /*Imported=*/true);

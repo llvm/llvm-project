@@ -977,6 +977,8 @@ private:
     /// The set of modules that are visible within the submodule.
     VisibleModuleSet VisibleModules;
 
+    /// The files that have been included.
+    IncludedFilesSet IncludedFiles;
     // FIXME: CounterValue?
     // FIXME: PragmaPushMacroInfo?
   };
@@ -989,8 +991,8 @@ private:
   /// in a submodule.
   SubmoduleState *CurSubmoduleState;
 
-  /// The files that have been included.
-  IncludedFilesSet IncludedFiles;
+  /// The files that have been included outside of (sub)modules.
+  IncludedFilesSet Includes;
 
   /// The set of top-level modules that affected preprocessing, but were not
   /// imported.
@@ -1479,19 +1481,40 @@ public:
   /// Mark the file as included.
   /// Returns true if this is the first time the file was included.
   bool markIncluded(FileEntryRef File) {
-    HeaderInfo.getFileInfo(File);
-    return IncludedFiles.insert(File).second;
+    bool AlreadyIncluded = alreadyIncluded(File);
+    CurSubmoduleState->IncludedFiles.insert(File);
+    if (!BuildingSubmoduleStack.empty())
+      BuildingSubmoduleStack.back().M->Includes.insert(File);
+    else if (Module *M = getCurrentModule())
+      M->Includes.insert(File);
+    else
+      Includes.insert(File);
+    return !AlreadyIncluded;
   }
 
   /// Return true if this header has already been included.
   bool alreadyIncluded(FileEntryRef File) const {
     HeaderInfo.getFileInfo(File);
-    return IncludedFiles.count(File);
+    if (CurSubmoduleState->IncludedFiles.contains(File))
+      return true;
+    // TODO: Do this more efficiently.
+    for (const auto &[Name, M] : HeaderInfo.getModuleMap().modules())
+      if (CurSubmoduleState->VisibleModules.isVisible(M))
+        if (M->Includes.contains(File))
+          return true;
+    return false;
   }
 
-  /// Get the set of included files.
-  IncludedFilesSet &getIncludedFiles() { return IncludedFiles; }
-  const IncludedFilesSet &getIncludedFiles() const { return IncludedFiles; }
+  void markIncludedOnTopLevel(const FileEntry *File) {
+    Includes.insert(File);
+    CurSubmoduleState->IncludedFiles.insert(File);
+  }
+
+  void markIncludedInModule(Module *M, const FileEntry *File) {
+    M->Includes.insert(File);
+  }
+
+  const IncludedFilesSet &getTopLevelIncludes() const { return Includes; }
 
   /// Return the name of the macro defined before \p Loc that has
   /// spelling \p Tokens.  If there are multiple macros with same spelling,

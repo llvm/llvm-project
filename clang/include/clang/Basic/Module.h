@@ -441,6 +441,8 @@ public:
   /// to import but didn't because they are not direct uses.
   llvm::SmallSetVector<const Module *, 2> UndeclaredUses;
 
+  llvm::DenseSet<const FileEntry *> Includes;
+
   /// A library or framework to link against when an entity from this
   /// module is used.
   struct LinkLibrary {
