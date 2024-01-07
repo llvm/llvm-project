@@ -176,7 +176,8 @@ extern "C" void rtdrand(void *g) {
   delete generator;
 }
 
-extern "C" void _mlir_ciface_shuffle(StridedMemRefType<uint64_t, 1> *m, void *g) {
+extern "C" void _mlir_ciface_shuffle(StridedMemRefType<uint64_t, 1> *m,
+                                     void *g) {
   std::mt19937 *generator = static_cast<std::mt19937 *>(g);
   uint64_t s = m->sizes[0];
   std::vector<uint64_t> arr(s);
