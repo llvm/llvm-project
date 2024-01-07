@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>
+#include <pthread.h>
 #include <string>
 #include <sys/select.h>
 #include <thread>
@@ -606,7 +607,7 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  // TODO ?
+  (void)pthread_setname_np(thread.native_handle(), name.c_str());
 }
 
 } // namespace fuzzer
