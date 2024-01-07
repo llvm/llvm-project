@@ -374,8 +374,7 @@ public:
                         RegRI.HasEVEX_L2, RegRI.HasEVEX_NF,
                         RegRec->getValueAsBit("hasEVEX_RC"),
                         RegRec->getValueAsBit("hasLockPrefix"),
-                        RegRec->getValueAsBit("hasNoTrackPrefix"),
-                        RegRec->getValueAsBit("EVEX_W1_VEX_W0")) !=
+                        RegRec->getValueAsBit("hasNoTrackPrefix")) !=
         std::make_tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix,
                         MemRI.OpMap, MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W,
                         MemRI.HasVEX_4V, MemRI.HasVEX_L, MemRI.IgnoresVEX_L,
@@ -383,8 +382,7 @@ public:
                         MemRI.HasEVEX_L2, MemRI.HasEVEX_NF,
                         MemRec->getValueAsBit("hasEVEX_RC"),
                         MemRec->getValueAsBit("hasLockPrefix"),
-                        MemRec->getValueAsBit("hasNoTrackPrefix"),
-                        MemRec->getValueAsBit("EVEX_W1_VEX_W0")))
+                        MemRec->getValueAsBit("hasNoTrackPrefix")))
       return false;
 
     // Make sure the sizes of the operands of both instructions suit each other.
