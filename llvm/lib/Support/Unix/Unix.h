@@ -1,4 +1,5 @@
-//===- llvm/Support/Unix/Unix.h - Common Unix Include File -------*- C++ -*-===//
+//===- llvm/Support/Unix/Unix.h - Common Unix Include File -------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,16 +38,16 @@
 #endif
 
 #ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>
+#include <sys/time.h>
 #endif
 #include <time.h>
 
 #ifdef HAVE_DLFCN_H
-# include <dlfcn.h>
+#include <dlfcn.h>
 #endif
 
 #ifdef HAVE_FCNTL_H
-# include <fcntl.h>
+#include <fcntl.h>
 #endif
 
 /// This function builds an error message into \p ErrMsg using the \p prefix
@@ -56,8 +57,8 @@
 ///
 /// If the error number can be converted to a string, it will be
 /// separated from prefix by ": ".
-static inline bool MakeErrMsg(
-  std::string* ErrMsg, const std::string& prefix, int errnum = -1) {
+static inline bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix,
+                              int errnum = -1) {
   if (!ErrMsg)
     return true;
   if (errnum == -1)
@@ -78,7 +79,9 @@ namespace sys {
 
 /// Convert a struct timeval to a duration. Note that timeval can be used both
 /// as a time point and a duration. Be sure to check what the input represents.
-inline std::chrono::microseconds toDuration(const struct timeval &TV) {
+
+template <typename timevaltype>
+inline std::chrono::microseconds toDuration(const timevaltype &TV) {
   return std::chrono::seconds(TV.tv_sec) +
          std::chrono::microseconds(TV.tv_usec);
 }

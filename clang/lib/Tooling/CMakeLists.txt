@@ -53,6 +53,14 @@ else()
     list(APPEND implicitDirs -I ${implicitDir})
   endforeach()
 
+  if(NOT DEFINED CLANG_AST_DUMP)
+    if(DEFINED LLVM_NATIVE_TOOL_DIR AND NOT LLVM_NATIVE_TOOL_DIR STREQUAL "")
+      set(CLANG_AST_DUMP ${LLVM_NATIVE_TOOL_DIR}/clang-ast-dump)
+    else()
+      set(CLANG_AST_DUMP $<TARGET_FILE:clang-ast-dump>)
+    endif()
+  endif()
+
   include(GetClangResourceDir)
   get_clang_resource_dir(resource_dir PREFIX ${LLVM_BINARY_DIR})
   add_custom_command(
@@ -60,7 +68,7 @@ else()
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
       DEPENDS clang-ast-dump clang-resource-headers
       COMMAND
-      $<TARGET_FILE:clang-ast-dump>
+      ${CLANG_AST_DUMP}
         # Skip this in debug mode because parsing AST.h is too slow
         --skip-processing=${skip_expensive_processing}
         -I ${resource_dir}/include
