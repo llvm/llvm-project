@@ -219,14 +219,21 @@ def Arith_AddIOp : Arith_IntArithmeticOpWithOverflowFlag<"addi", [Commutative]> 
 
     The `addi` operation takes two operands and returns one result, each of
     these is required to be the same type. This type may be an integer scalar type, 
-    a vector whose element type is integer, or a tensor of integers. It has no 
-    standard attributes.
+    a vector whose element type is integer, or a tensor of integers.
+
+    This op supports nuw/nsw flags which stands stand for "No Unsigned Wrap" and
+    "No Signed Wrap", respectively. If the nuw and/or nsw flags are present, the
+    result value is undefined if unsigned and/or signed overflow, respectively,
+    occurs.
 
     Example:
 
     ```mlir
     // Scalar addition.
     %a = arith.addi %b, %c : i64
+
+    // Scalar addition with overflow flags.
+    %a = arith.addi %b, %c overflow<nsw, nuw> : i64
 
     // SIMD vector element-wise addition, e.g. for Intel SSE.
     %f = arith.addi %g, %h : vector<4xi32>
@@ -299,16 +306,36 @@ def Arith_SubIOp : Arith_IntArithmeticOpWithOverflowFlag<"subi"> {
     Integer subtraction operation.
   }];
   let description = [{
-    Performs N-bit subtraction on the operands. The operands are interpreted as unsigned 
-    bitvectors. The result is represented by a bitvector containing the mathematical 
-    value of the subtraction modulo 2^n, where `n` is the bitwidth. Because `arith` 
-    integers use a two's complement representation, this operation is applicable on 
+    Performs N-bit subtraction on the operands. The operands are interpreted as unsigned
+    bitvectors. The result is represented by a bitvector containing the mathematical
+    value of the subtraction modulo 2^n, where `n` is the bitwidth. Because `arith`
+    integers use a two's complement representation, this operation is applicable on
     both signed and unsigned integer operands.
 
     The `subi` operation takes two operands and returns one result, each of
-    these is required to be the same type. This type may be an integer scalar type, 
-    a vector whose element type is integer, or a tensor of integers. It has no 
-    standard attributes.
+    these is required to be the same type. This type may be an integer scalar type,
+    a vector whose element type is integer, or a tensor of integers.
+
+    This op supports nuw/nsw flags which stands stand for "No Unsigned Wrap" and
+    "No Signed Wrap", respectively. If the nuw and/or nsw flags are present, the
+    result value is undefined if unsigned and/or signed overflow, respectively,
+    occurs.
+
+    Example:
+
+    ```mlir
+    // Scalar subtraction.
+    %a = arith.subi %b, %c : i64
+
+    // Scalar subtraction with overflow flags.
+    %a = arith.subi %b, %c overflow<nsw, nuw> : i64
+
+    // SIMD vector element-wise subtraction, e.g. for Intel SSE.
+    %f = arith.subi %g, %h : vector<4xi32>
+
+    // Tensor element-wise subtraction.
+    %x = arith.subi %y, %z : tensor<4x?xi8>
+    ```
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -323,16 +350,36 @@ def Arith_MulIOp : Arith_IntArithmeticOpWithOverflowFlag<"muli", [Commutative]> 
     Integer multiplication operation.
   }];
   let description = [{
-    Performs N-bit multiplication on the operands. The operands are interpreted as 
-    unsigned bitvectors. The result is represented by a bitvector containing the 
-    mathematical value of the multiplication modulo 2^n, where `n` is the bitwidth. 
-    Because `arith` integers use a two's complement representation, this operation is 
+    Performs N-bit multiplication on the operands. The operands are interpreted as
+    unsigned bitvectors. The result is represented by a bitvector containing the
+    mathematical value of the multiplication modulo 2^n, where `n` is the bitwidth.
+    Because `arith` integers use a two's complement representation, this operation is
     applicable on both signed and unsigned integer operands.
 
     The `muli` operation takes two operands and returns one result, each of
-    these is required to be the same type. This type may be an integer scalar type, 
-    a vector whose element type is integer, or a tensor of integers. It has no 
-    standard attributes.    
+    these is required to be the same type. This type may be an integer scalar type,
+    a vector whose element type is integer, or a tensor of integers.
+
+    This op supports nuw/nsw flags which stands stand for "No Unsigned Wrap" and
+    "No Signed Wrap", respectively. If the nuw and/or nsw flags are present, the
+    result value is undefined if unsigned and/or signed overflow, respectively,
+    occurs.
+
+    Example:
+
+    ```mlir
+    // Scalar multiplication.
+    %a = arith.muli %b, %c : i64
+
+    // Scalar multiplication with overflow flags.
+    %a = arith.muli %b, %c overflow<nsw, nuw> : i64
+
+    // SIMD vector element-wise multiplication, e.g. for Intel SSE.
+    %f = arith.muli %g, %h : vector<4xi32>
+
+    // Tensor element-wise multiplication.
+    %x = arith.muli %y, %z : tensor<4x?xi8>
+    ```
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;

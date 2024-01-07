@@ -63,16 +63,16 @@ private:
 
 // Attribute converter that populates a NamedAttrList by removing the overflow
 // attribute from the source operation attributes, and replacing it with an
-// equivalent LLVM fastmath attribute.
+// equivalent LLVM overflow attribute.
 template <typename SourceOp, typename TargetOp>
 class AttrConvertOverflowToLLVM {
 public:
   AttrConvertOverflowToLLVM(SourceOp srcOp) {
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
-    // Get the name of the arith fastmath attribute.
+    // Get the name of the arith overflow attribute.
     llvm::StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
-    // Remove the source fastmath attribute.
+    // Remove the source overflow attribute.
     auto arithAttr = dyn_cast_or_null<arith::IntegerOverflowFlagsAttr>(
         convertedAttr.erase(arithAttrName));
     if (arithAttr) {
