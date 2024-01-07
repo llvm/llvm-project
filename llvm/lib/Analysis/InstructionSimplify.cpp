@@ -5762,9 +5762,9 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       return ConstantFP::getZero(Op0->getType());
 
     // +normal number * (-)0.0 --> (-)0.0
-    if (isKnownNeverInfOrNaN(Op0, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
-        // TODO: Check SignBit from computeKnownFPClass when it's more complete.
-        SignBitMustBeZero(Op0, Q.DL, Q.TLI))
+    KnownFPClass Known = computeKnownFPClass(
+        Op0, FMF, Q.DL, fcInf | fcNan, /*Depth=*/0, Q.TLI, Q.AC, Q.CxtI, Q.DT);
+    if (Known.SignBit == false && Known.isKnownNever(fcInf | fcNan))
       return Op1;
   }
 
@@ -6217,7 +6217,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
-    if (SignBitMustBeZero(Op0, Q.DL, Q.TLI))
+    if (computeKnownFPSignBit(Op0, Q.DL, Q.TLI, /*Depth=*/0, Q.AC, Q.CxtI,
+                              Q.DT) == false)
       return Op0;
     break;
   case Intrinsic::bswap:
