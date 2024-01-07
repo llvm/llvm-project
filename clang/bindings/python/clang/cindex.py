@@ -120,16 +120,6 @@ if sys.version_info[:2] >= (3, 7):
 else:
     import collections as collections_abc
 
-# We only support PathLike objects on Python version with os.fspath present
-# to be consistent with the Python standard library. On older Python versions
-# we only support strings and we have dummy fspath to just pass them through.
-try:
-    fspath = os.fspath
-except AttributeError:
-
-    def fspath(x):
-        return x
-
 
 # ctypes doesn't implicitly convert c_void_p to the appropriate wrapper
 # object. This is a problem, because it means that from_parameter will see an
@@ -2991,13 +2981,13 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
                 contents = b(contents)
-                unsaved_array[i].name = b(fspath(name))
+                unsaved_array[i].name = b(os.fspath(name))
                 unsaved_array[i].contents = contents
                 unsaved_array[i].length = len(contents)
 
         ptr = conf.lib.clang_parseTranslationUnit(
             index,
-            fspath(filename) if filename is not None else None,
+            os.fspath(filename) if filename is not None else None,
             args_array,
             len(args),
             unsaved_array,
@@ -3028,7 +3018,7 @@ class TranslationUnit(ClangObject):
         if index is None:
             index = Index.create()
 
-        ptr = conf.lib.clang_createTranslationUnit(index, fspath(filename))
+        ptr = conf.lib.clang_createTranslationUnit(index, os.fspath(filename))
         if not ptr:
             raise TranslationUnitLoadError(filename)
 
@@ -3181,7 +3171,7 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
                 contents = b(contents)
-                unsaved_files_array[i].name = b(fspath(name))
+                unsaved_files_array[i].name = b(os.fspath(name))
                 unsaved_files_array[i].contents = contents
                 unsaved_files_array[i].length = len(contents)
         ptr = conf.lib.clang_reparseTranslationUnit(
@@ -3205,7 +3195,11 @@ class TranslationUnit(ClangObject):
         """
         options = conf.lib.clang_defaultSaveOptions(self)
         result = int(
-            conf.lib.clang_saveTranslationUnit(self, fspath(filename), options)
+            conf.lib.clang_saveTranslationUnit(
+                self,
+                os.fspath(filename),
+                options,
+            )
         )
         if result != 0:
             raise TranslationUnitSaveError(result, "Error saving TranslationUnit.")
@@ -3249,12 +3243,12 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
                 contents = b(contents)
-                unsaved_files_array[i].name = b(fspath(name))
+                unsaved_files_array[i].name = b(os.fspath(name))
                 unsaved_files_array[i].contents = contents
                 unsaved_files_array[i].length = len(contents)
         ptr = conf.lib.clang_codeCompleteAt(
             self,
-            fspath(path),
+            os.fspath(path),
             line,
             column,
             unsaved_files_array,
@@ -3288,7 +3282,9 @@ class File(ClangObject):
     @staticmethod
     def from_name(translation_unit, file_name):
         """Retrieve a file handle within the given translation unit."""
-        return File(conf.lib.clang_getFile(translation_unit, fspath(file_name)))
+        return File(
+            conf.lib.clang_getFile(translation_unit, os.fspath(file_name)),
+        )
 
     @property
     def name(self):
@@ -3448,7 +3444,7 @@ class CompilationDatabase(ClangObject):
         errorCode = c_uint()
         try:
             cdb = conf.lib.clang_CompilationDatabase_fromDirectory(
-                fspath(buildDir), byref(errorCode)
+                os.fspath(buildDir), byref(errorCode)
             )
         except CompilationDatabaseError as e:
             raise CompilationDatabaseError(
@@ -3462,7 +3458,7 @@ class CompilationDatabase(ClangObject):
         build filename. Returns None if filename is not found in the database.
         """
         return conf.lib.clang_CompilationDatabase_getCompileCommands(
-            self, fspath(filename)
+            self, os.fspath(filename)
         )
 
     def getAllCompileCommands(self):
@@ -3868,7 +3864,7 @@ class Config:
                 "any other functionalities in libclang."
             )
 
-        Config.library_path = fspath(path)
+        Config.library_path = os.fspath(path)
 
     @staticmethod
     def set_library_file(filename):
@@ -3879,7 +3875,7 @@ class Config:
                 "any other functionalities in libclang."
             )
 
-        Config.library_file = fspath(filename)
+        Config.library_file = os.fspath(filename)
 
     @staticmethod
     def set_compatibility_check(check_status):
