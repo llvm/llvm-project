@@ -100,12 +100,6 @@ public:
     return dom;
   }
 
-  /// Returns true if the given operation represents a loop by testing whether
-  /// it implements the `LoopLikeOpInterface` or the `RegionBranchOpInterface`.
-  /// In the case of a `RegionBranchOpInterface`, it checks all region-based
-  /// control-flow edges for cycles.
-  static bool isLoop(Operation *op);
-
   /// Constructs a new operation base using the given root operation.
   BufferPlacementTransformationBase(Operation *op);
 
