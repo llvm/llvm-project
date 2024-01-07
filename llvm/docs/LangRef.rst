@@ -12250,7 +12250,7 @@ This instruction requires several arguments:
    #. Arguments with the :ref:`inalloca <attr_inalloca>` or
       :ref:`preallocated <attr_preallocated>` attribute are forwarded in place.
    #. If the musttail call appears in a function with the ``"thunk"`` attribute
-      and the caller and callee both have varargs, than any unprototyped
+      and the caller and callee both have varargs, then any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
