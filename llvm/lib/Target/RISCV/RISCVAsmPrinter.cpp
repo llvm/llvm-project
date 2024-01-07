@@ -907,11 +907,11 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
         Reg = TRI->getSubReg(Reg, RISCV::sub_vrm1_0);
         assert(Reg && "Subregister does not exist");
       } else if (RISCV::FPR16RegClass.contains(Reg)) {
-        Reg = TRI->getMatchingSuperReg(Reg, RISCV::sub_fpr16,
-                                       &RISCV::FPR32RegClass);
+        Reg =
+            TRI->getMatchingSuperReg(Reg, RISCV::sub_16, &RISCV::FPR32RegClass);
         assert(Reg && "Subregister does not exist");
       } else if (RISCV::FPR64RegClass.contains(Reg)) {
-        Reg = TRI->getSubReg(Reg, RISCV::sub_fpr32);
+        Reg = TRI->getSubReg(Reg, RISCV::sub_32);
         assert(Reg && "Superregister does not exist");
       } else if (RISCV::VRN2M1RegClass.contains(Reg) ||
                  RISCV::VRN2M2RegClass.contains(Reg) ||
