@@ -21,6 +21,9 @@ typedef long long CMP_RESULT;
 #elif __AVR__
 // AVR uses a single byte for the return value.
 typedef char CMP_RESULT;
+#elif defined(__wasm64__)
+// GCC uses int as CMP_RESULT
+typedef int CMP_RESULT;
 #else
 // Otherwise the comparison functions return long.
 typedef long CMP_RESULT;
