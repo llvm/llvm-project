@@ -27,9 +27,10 @@ concept IterDifferable = requires(Iter& t) { t - t; };
 template <class Derived, std::input_iterator Iter = int*, bool IsSized = false>
   requires((!IsSized) || (IsSized && IterDifferable<Iter>))
 struct InputIterBase {
-  using iterator_concept = std::input_iterator_tag;
-  using value_type       = typename std::iterator_traits<Iter>::value_type;
-  using difference_type  = typename std::iterator_traits<Iter>::difference_type;
+  using iterator_concept  = std::input_iterator_tag;
+  using iterator_category = std::input_iterator_tag;
+  using value_type        = typename std::iterator_traits<Iter>::value_type;
+  using difference_type   = typename std::iterator_traits<Iter>::difference_type;
 
   Iter value_{};
 
