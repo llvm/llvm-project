@@ -82,6 +82,8 @@ path __canonical(path const& orig_p, error_code* ec) {
   path cwd;
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
+  if (orig_p.empty())
+    return err.report(capture_errno());
   path p = __do_absolute(orig_p, &cwd, ec);
 #if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_LIBCPP_WIN32API)
   std::unique_ptr<path::value_type, decltype(&::free)> hold(detail::realpath(p.c_str(), nullptr), &::free);
@@ -912,7 +914,7 @@ path __weakly_canonical(const path& p, error_code* ec) {
   ErrorHandler<path> err("weakly_canonical", ec, &p);
 
   if (p.empty())
-    return __canonical("", ec);
+    return __current_path(ec);
 
   path result;
   path tmp;
@@ -935,7 +937,7 @@ path __weakly_canonical(const path& p, error_code* ec) {
     --PP;
   }
   if (PP.State == PathParser::PS_BeforeBegin)
-    result = __canonical("", ec);
+    result = __current_path(ec);
   if (ec)
     ec->clear();
   if (DNEParts.empty())
