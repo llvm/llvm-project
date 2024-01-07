@@ -46,64 +46,64 @@ public:
   enum ArchType {
     UnknownArch,
 
-    arm,            // ARM (little endian): arm, armv.*, xscale
-    armeb,          // ARM (big endian): armeb
-    aarch64,        // AArch64 (little endian): aarch64
-    aarch64_be,     // AArch64 (big endian): aarch64_be
-    aarch64_32,     // AArch64 (little endian) ILP32: aarch64_32
-    arc,            // ARC: Synopsys ARC
-    avr,            // AVR: Atmel AVR microcontroller
-    bpfel,          // eBPF or extended BPF or 64-bit BPF (little endian)
-    bpfeb,          // eBPF or extended BPF or 64-bit BPF (big endian)
-    csky,           // CSKY: csky
-    dxil,           // DXIL 32-bit DirectX bytecode
-    hexagon,        // Hexagon: hexagon
-    loongarch32,    // LoongArch (32-bit): loongarch32
-    loongarch64,    // LoongArch (64-bit): loongarch64
-    m68k,           // M68k: Motorola 680x0 family
-    mips,           // MIPS: mips, mipsallegrex, mipsr6
-    mipsel,         // MIPSEL: mipsel, mipsallegrexe, mipsr6el
-    mips64,         // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
-    mips64el,       // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
-    msp430,         // MSP430: msp430
-    ppc,            // PPC: powerpc
-    ppcle,          // PPCLE: powerpc (little endian)
-    ppc64,          // PPC64: powerpc64, ppu
-    ppc64le,        // PPC64LE: powerpc64le
-    r600,           // R600: AMD GPUs HD2XXX - HD6XXX
-    amdgcn,         // AMDGCN: AMD GCN GPUs
-    riscv32,        // RISC-V (32-bit): riscv32
-    riscv64,        // RISC-V (64-bit): riscv64
-    sparc,          // Sparc: sparc
-    sparcv9,        // Sparcv9: Sparcv9
-    sparcel,        // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
-    systemz,        // SystemZ: s390x
-    tce,            // TCE (http://tce.cs.tut.fi/): tce
-    tcele,          // TCE little endian (http://tce.cs.tut.fi/): tcele
-    thumb,          // Thumb (little endian): thumb, thumbv.*
-    thumbeb,        // Thumb (big endian): thumbeb
-    x86,            // X86: i[3-9]86
-    x86_64,         // X86-64: amd64, x86_64
-    xcore,          // XCore: xcore
-    xtensa,         // Tensilica: Xtensa
-    nvptx,          // NVPTX: 32-bit
-    nvptx64,        // NVPTX: 64-bit
-    le32,           // le32: generic little-endian 32-bit CPU (PNaCl)
-    le64,           // le64: generic little-endian 64-bit CPU (PNaCl)
-    amdil,          // AMDIL
-    amdil64,        // AMDIL with 64-bit pointers
-    hsail,          // AMD HSAIL
-    hsail64,        // AMD HSAIL with 64-bit pointers
-    spir,           // SPIR: standard portable IR for OpenCL 32-bit version
-    spir64,         // SPIR: standard portable IR for OpenCL 64-bit version
-    spirv,          // SPIR-V with logical memory layout.
-    spirv32,        // SPIR-V with 32-bit pointers
-    spirv64,        // SPIR-V with 64-bit pointers
-    kalimba,        // Kalimba: generic kalimba
-    shave,          // SHAVE: Movidius vector VLIW processors
-    lanai,          // Lanai: Lanai 32-bit
-    wasm32,         // WebAssembly with 32-bit pointers
-    wasm64,         // WebAssembly with 64-bit pointers
+    arm,         // ARM (little endian): arm, armv.*, xscale
+    armeb,       // ARM (big endian): armeb
+    aarch64,     // AArch64 (little endian): aarch64
+    aarch64_be,  // AArch64 (big endian): aarch64_be
+    aarch64_32,  // AArch64 (little endian) ILP32: aarch64_32
+    arc,         // ARC: Synopsys ARC
+    avr,         // AVR: Atmel AVR microcontroller
+    bpfel,       // eBPF or extended BPF or 64-bit BPF (little endian)
+    bpfeb,       // eBPF or extended BPF or 64-bit BPF (big endian)
+    csky,        // CSKY: csky
+    dxil,        // DXIL 32-bit DirectX bytecode
+    hexagon,     // Hexagon: hexagon
+    loongarch32, // LoongArch (32-bit): loongarch32
+    loongarch64, // LoongArch (64-bit): loongarch64
+    m68k,        // M68k: Motorola 680x0 family
+    mips,        // MIPS: mips, mipsallegrex, mipsr6
+    mipsel,      // MIPSEL: mipsel, mipsallegrexe, mipsr6el
+    mips64,      // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
+    mips64el,    // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
+    msp430,      // MSP430: msp430
+    ppc,         // PPC: powerpc
+    ppcle,       // PPCLE: powerpc (little endian)
+    ppc64,       // PPC64: powerpc64, ppu
+    ppc64le,     // PPC64LE: powerpc64le
+    r600,        // R600: AMD GPUs HD2XXX - HD6XXX
+    amdgcn,      // AMDGCN: AMD GCN GPUs
+    riscv32,     // RISC-V (32-bit): riscv32
+    riscv64,     // RISC-V (64-bit): riscv64
+    sparc,       // Sparc: sparc
+    sparcv9,     // Sparcv9: Sparcv9
+    sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
+    systemz,     // SystemZ: s390x
+    tce,         // TCE (http://tce.cs.tut.fi/): tce
+    tcele,       // TCE little endian (http://tce.cs.tut.fi/): tcele
+    thumb,       // Thumb (little endian): thumb, thumbv.*
+    thumbeb,     // Thumb (big endian): thumbeb
+    x86,         // X86: i[3-9]86
+    x86_64,      // X86-64: amd64, x86_64
+    xcore,       // XCore: xcore
+    xtensa,      // Tensilica: Xtensa
+    nvptx,       // NVPTX: 32-bit
+    nvptx64,     // NVPTX: 64-bit
+    le32,        // le32: generic little-endian 32-bit CPU (PNaCl)
+    le64,        // le64: generic little-endian 64-bit CPU (PNaCl)
+    amdil,       // AMDIL
+    amdil64,     // AMDIL with 64-bit pointers
+    hsail,       // AMD HSAIL
+    hsail64,     // AMD HSAIL with 64-bit pointers
+    spir,        // SPIR: standard portable IR for OpenCL 32-bit version
+    spir64,      // SPIR: standard portable IR for OpenCL 64-bit version
+    spirv,       // SPIR-V with logical memory layout.
+    spirv32,     // SPIR-V with 32-bit pointers
+    spirv64,     // SPIR-V with 64-bit pointers
+    kalimba,     // Kalimba: generic kalimba
+    shave,       // SHAVE: Movidius vector VLIW processors
+    lanai,       // Lanai: Lanai 32-bit
+    wasm32,      // WebAssembly with 32-bit pointers
+    wasm64,      // WebAssembly with 64-bit pointers
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
@@ -193,7 +193,7 @@ public:
     IOS,
     KFreeBSD,
     Linux,
-    Lv2,        // PS3
+    Lv2, // PS3
     MacOSX,
     NetBSD,
     OpenBSD,
@@ -203,17 +203,17 @@ public:
     ZOS,
     Haiku,
     RTEMS,
-    NaCl,       // Native Client
+    NaCl, // Native Client
     AIX,
-    CUDA,       // NVIDIA CUDA
-    NVCL,       // NVIDIA OpenCL
-    AMDHSA,     // AMD HSA Runtime
+    CUDA,   // NVIDIA CUDA
+    NVCL,   // NVIDIA OpenCL
+    AMDHSA, // AMD HSA Runtime
     PS4,
     PS5,
     ELFIAMCU,
-    TvOS,       // Apple tvOS
-    WatchOS,    // Apple watchOS
-    DriverKit,  // Apple DriverKit
+    TvOS,      // Apple tvOS
+    WatchOS,   // Apple watchOS
+    DriverKit, // Apple DriverKit
     Mesa3D,
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
@@ -252,7 +252,7 @@ public:
     Cygnus,
     CoreCLR,
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
-    MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
+    MacABI,    // Mac Catalyst variant of Apple's iOS deployment target.
 
     // Shader Stages
     // The order of these values matters, and must be kept in sync with the
@@ -332,9 +332,7 @@ public:
            ObjectFormat == Other.ObjectFormat;
   }
 
-  bool operator!=(const Triple &Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
   /// @}
   /// @name Normalization
@@ -366,9 +364,7 @@ public:
   OSType getOS() const { return OS; }
 
   /// Does this triple have the optional environment (fourth) component?
-  bool hasEnvironment() const {
-    return getEnvironmentName() != "";
-  }
+  bool hasEnvironment() const { return getEnvironmentName() != ""; }
 
   /// Get the parsed environment type of this triple.
   EnvironmentType getEnvironment() const { return Environment; }
@@ -490,23 +486,15 @@ public:
   /// changes, i.e., if the two operating systems diverge or their version
   /// numbers get out of sync, that will need to be changed.
   /// watchOS has completely different version numbers so it is not included.
-  bool isiOS() const {
-    return getOS() == Triple::IOS || isTvOS();
-  }
+  bool isiOS() const { return getOS() == Triple::IOS || isTvOS(); }
 
   /// Is this an Apple tvOS triple.
-  bool isTvOS() const {
-    return getOS() == Triple::TvOS;
-  }
+  bool isTvOS() const { return getOS() == Triple::TvOS; }
 
   /// Is this an Apple watchOS triple.
-  bool isWatchOS() const {
-    return getOS() == Triple::WatchOS;
-  }
+  bool isWatchOS() const { return getOS() == Triple::WatchOS; }
 
-  bool isWatchABI() const {
-    return getSubArch() == Triple::ARMSubArch_v7k;
-  }
+  bool isWatchABI() const { return getSubArch() == Triple::ARMSubArch_v7k; }
 
   /// Is this an Apple DriverKit triple.
   bool isDriverKit() const { return getOS() == Triple::DriverKit; }
@@ -532,31 +520,19 @@ public:
                                            isMacCatalystEnvironment()));
   }
 
-  bool isOSNetBSD() const {
-    return getOS() == Triple::NetBSD;
-  }
+  bool isOSNetBSD() const { return getOS() == Triple::NetBSD; }
 
-  bool isOSOpenBSD() const {
-    return getOS() == Triple::OpenBSD;
-  }
+  bool isOSOpenBSD() const { return getOS() == Triple::OpenBSD; }
 
-  bool isOSFreeBSD() const {
-    return getOS() == Triple::FreeBSD;
-  }
+  bool isOSFreeBSD() const { return getOS() == Triple::FreeBSD; }
 
-  bool isOSFuchsia() const {
-    return getOS() == Triple::Fuchsia;
-  }
+  bool isOSFuchsia() const { return getOS() == Triple::Fuchsia; }
 
   bool isOSDragonFly() const { return getOS() == Triple::DragonFly; }
 
-  bool isOSSolaris() const {
-    return getOS() == Triple::Solaris;
-  }
+  bool isOSSolaris() const { return getOS() == Triple::Solaris; }
 
-  bool isOSIAMCU() const {
-    return getOS() == Triple::ELFIAMCU;
-  }
+  bool isOSIAMCU() const { return getOS() == Triple::ELFIAMCU; }
 
   bool isOSUnknown() const { return getOS() == Triple::UnknownOS; }
 
@@ -570,19 +546,13 @@ public:
   }
 
   /// Tests whether the OS is Haiku.
-  bool isOSHaiku() const {
-    return getOS() == Triple::Haiku;
-  }
+  bool isOSHaiku() const { return getOS() == Triple::Haiku; }
 
   /// Tests whether the OS is UEFI.
-  bool isUEFI() const {
-    return getOS() == Triple::UEFI;
-  }
+  bool isUEFI() const { return getOS() == Triple::UEFI; }
 
   /// Tests whether the OS is Windows.
-  bool isOSWindows() const {
-    return getOS() == Triple::Win32;
-  }
+  bool isOSWindows() const { return getOS() == Triple::Win32; }
 
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
@@ -629,34 +599,22 @@ public:
   }
 
   /// Tests whether the OS is NaCl (Native Client)
-  bool isOSNaCl() const {
-    return getOS() == Triple::NaCl;
-  }
+  bool isOSNaCl() const { return getOS() == Triple::NaCl; }
 
   /// Tests whether the OS is Linux.
-  bool isOSLinux() const {
-    return getOS() == Triple::Linux;
-  }
+  bool isOSLinux() const { return getOS() == Triple::Linux; }
 
   /// Tests whether the OS is kFreeBSD.
-  bool isOSKFreeBSD() const {
-    return getOS() == Triple::KFreeBSD;
-  }
+  bool isOSKFreeBSD() const { return getOS() == Triple::KFreeBSD; }
 
   /// Tests whether the OS is Hurd.
-  bool isOSHurd() const {
-    return getOS() == Triple::Hurd;
-  }
+  bool isOSHurd() const { return getOS() == Triple::Hurd; }
 
   /// Tests whether the OS is WASI.
-  bool isOSWASI() const {
-    return getOS() == Triple::WASI;
-  }
+  bool isOSWASI() const { return getOS() == Triple::WASI; }
 
   /// Tests whether the OS is Emscripten.
-  bool isOSEmscripten() const {
-    return getOS() == Triple::Emscripten;
-  }
+  bool isOSEmscripten() const { return getOS() == Triple::Emscripten; }
 
   /// Tests whether the OS uses glibc.
   bool isOSGlibc() const {
@@ -666,41 +624,27 @@ public:
   }
 
   /// Tests whether the OS is AIX.
-  bool isOSAIX() const {
-    return getOS() == Triple::AIX;
-  }
+  bool isOSAIX() const { return getOS() == Triple::AIX; }
 
-  bool isOSSerenity() const {
-    return getOS() == Triple::Serenity;
-  }
+  bool isOSSerenity() const { return getOS() == Triple::Serenity; }
 
   /// Tests whether the OS uses the ELF binary format.
-  bool isOSBinFormatELF() const {
-    return getObjectFormat() == Triple::ELF;
-  }
+  bool isOSBinFormatELF() const { return getObjectFormat() == Triple::ELF; }
 
   /// Tests whether the OS uses the COFF binary format.
-  bool isOSBinFormatCOFF() const {
-    return getObjectFormat() == Triple::COFF;
-  }
+  bool isOSBinFormatCOFF() const { return getObjectFormat() == Triple::COFF; }
 
   /// Tests whether the OS uses the GOFF binary format.
   bool isOSBinFormatGOFF() const { return getObjectFormat() == Triple::GOFF; }
 
   /// Tests whether the environment is MachO.
-  bool isOSBinFormatMachO() const {
-    return getObjectFormat() == Triple::MachO;
-  }
+  bool isOSBinFormatMachO() const { return getObjectFormat() == Triple::MachO; }
 
   /// Tests whether the OS uses the Wasm binary format.
-  bool isOSBinFormatWasm() const {
-    return getObjectFormat() == Triple::Wasm;
-  }
+  bool isOSBinFormatWasm() const { return getObjectFormat() == Triple::Wasm; }
 
   /// Tests whether the OS uses the XCOFF binary format.
-  bool isOSBinFormatXCOFF() const {
-    return getObjectFormat() == Triple::XCOFF;
-  }
+  bool isOSBinFormatXCOFF() const { return getObjectFormat() == Triple::XCOFF; }
 
   /// Tests whether the OS uses the DXContainer binary format.
   bool isOSBinFormatDXContainer() const {
@@ -709,16 +653,14 @@ public:
 
   /// Tests whether the target is the PS4 platform.
   bool isPS4() const {
-    return getArch() == Triple::x86_64 &&
-           getVendor() == Triple::SCEI &&
+    return getArch() == Triple::x86_64 && getVendor() == Triple::SCEI &&
            getOS() == Triple::PS4;
   }
 
   /// Tests whether the target is the PS5 platform.
   bool isPS5() const {
-    return getArch() == Triple::x86_64 &&
-      getVendor() == Triple::SCEI &&
-      getOS() == Triple::PS5;
+    return getArch() == Triple::x86_64 && getVendor() == Triple::SCEI &&
+           getOS() == Triple::PS5;
   }
 
   /// Tests whether the target is the PS4 or PS5 platform.
@@ -757,13 +699,9 @@ public:
   bool isOSLiteOS() const { return getOS() == Triple::LiteOS; }
 
   /// Tests whether the target is DXIL.
-  bool isDXIL() const {
-    return getArch() == Triple::dxil;
-  }
+  bool isDXIL() const { return getArch() == Triple::dxil; }
 
-  bool isShaderModelOS() const {
-    return getOS() == Triple::ShaderModel;
-  }
+  bool isShaderModelOS() const { return getOS() == Triple::ShaderModel; }
 
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
@@ -789,9 +727,7 @@ public:
   }
 
   /// Tests whether the target is SPIR-V Logical
-  bool isSPIRVLogical() const {
-    return getArch() == Triple::spirv;
-  }
+  bool isSPIRVLogical() const { return getArch() == Triple::spirv; }
 
   /// Tests whether the target is NVPTX (32- or 64-bit).
   bool isNVPTX() const {
@@ -902,9 +838,7 @@ public:
   }
 
   /// Tests whether the target is MIPS (little and big endian, 32- or 64-bit).
-  bool isMIPS() const {
-    return isMIPS32() || isMIPS64();
-  }
+  bool isMIPS() const { return isMIPS32() || isMIPS64(); }
 
   /// Tests whether the target is PowerPC (32- or 64-bit LE or BE).
   bool isPPC() const {
@@ -960,9 +894,7 @@ public:
   bool isSPARC() const { return isSPARC32() || isSPARC64(); }
 
   /// Tests whether the target is SystemZ.
-  bool isSystemZ() const {
-    return getArch() == Triple::systemz;
-  }
+  bool isSystemZ() const { return getArch() == Triple::systemz; }
 
   /// Tests whether the target is x86 (32- or 64-bit).
   bool isX86() const {
@@ -970,9 +902,7 @@ public:
   }
 
   /// Tests whether the target is VE
-  bool isVE() const {
-    return getArch() == Triple::ve;
-  }
+  bool isVE() const { return getArch() == Triple::ve; }
 
   /// Tests whether the target is wasm (32- and 64-bit).
   bool isWasm() const {
@@ -980,9 +910,7 @@ public:
   }
 
   // Tests whether the target is CSKY
-  bool isCSKY() const {
-    return getArch() == Triple::csky;
-  }
+  bool isCSKY() const { return getArch() == Triple::csky; }
 
   /// Tests whether the target is the Apple "arm64e" AArch64 subarch.
   bool isArm64e() const {
@@ -1012,7 +940,7 @@ public:
   /// Note: Android API level 29 (10) introduced ELF TLS.
   bool hasDefaultEmulatedTLS() const {
     return (isAndroid() && isAndroidVersionLT(29)) || isOSOpenBSD() ||
-           isWindowsCygwinEnvironment() || isOHOSFamily();
+           isOSCygMing() || isOHOSFamily();
   }
 
   /// Tests whether the target uses -data-sections as default.
@@ -1157,7 +1085,6 @@ public:
                                                const VersionTuple &Version);
 };
 
-} // End llvm namespace
-
+} // namespace llvm
 
 #endif

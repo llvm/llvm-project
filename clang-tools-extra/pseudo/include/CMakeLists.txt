@@ -3,10 +3,18 @@ set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx/cxx.bnf)
 
 setup_host_tool(clang-pseudo-gen CLANG_PSEUDO_GEN pseudo_gen pseudo_gen_target)
 
+if(NOT DEFINED CLANG_PSEUDO_GEN)
+   if(DEFINED LLVM_NATIVE_TOOL_DIR AND NOT LLVM_NATIVE_TOOL_DIR STREQUAL "")
+      set(CLANG_PSEUDO_GEN "${LLVM_NATIVE_TOOL_DIR}/clang_pseudo_gen")
+   else()
+      set(CLANG_PSEUDO_GEN "${pseudo_gen}")
+   endif()
+endif()
+
 # Generate inc files.
 set(cxx_symbols_inc ${CMAKE_CURRENT_BINARY_DIR}/CXXSymbols.inc)
 add_custom_command(OUTPUT ${cxx_symbols_inc}
-   COMMAND "${pseudo_gen}"
+   COMMAND "${CLANG_PSEUDO_GEN}"
      --grammar ${cxx_bnf}
      --emit-symbol-list
      -o ${cxx_symbols_inc}
@@ -16,7 +24,7 @@ add_custom_command(OUTPUT ${cxx_symbols_inc}
 
 set(cxx_bnf_inc ${CMAKE_CURRENT_BINARY_DIR}/CXXBNF.inc)
 add_custom_command(OUTPUT ${cxx_bnf_inc}
-   COMMAND "${pseudo_gen}"
+   COMMAND "${CLANG_PSEUDO_GEN}"
      --grammar ${cxx_bnf}
      --emit-grammar-content
      -o ${cxx_bnf_inc}
