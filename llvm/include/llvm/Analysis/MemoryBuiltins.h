@@ -214,7 +214,7 @@ public:
 /// SizeOffsetAPInt - Used by \p ObjectSizeOffsetVisitor, which works with
 /// \p APInts.
 class SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
-  friend class SizeOffsetType;
+  template <typename T, class C> friend class SizeOffsetType;
   static bool known(APInt V) { return V.getBitWidth() > 1; }
 
 public:
@@ -276,7 +276,7 @@ private:
 /// \p Values.
 class SizeOffsetWeakTrackingVH;
 class SizeOffsetValue : public SizeOffsetType<Value *, SizeOffsetValue> {
-  friend class SizeOffsetType;
+  template <typename T, class C> friend class SizeOffsetType;
   static bool known(Value *V) { return V != nullptr; }
 
 public:
@@ -289,7 +289,7 @@ public:
 /// \p DenseMap.
 class SizeOffsetWeakTrackingVH
     : public SizeOffsetType<WeakTrackingVH, SizeOffsetWeakTrackingVH> {
-  friend class SizeOffsetType;
+  template <typename T, class C> friend class SizeOffsetType;
   static bool known(WeakTrackingVH V) { return V.pointsToAliveValue(); }
 
 public:
