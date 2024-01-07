@@ -63,7 +63,7 @@ void WebAssemblyStackTagging::untagAlloca(AllocaInst *AI,
                                           Type *ArgOp0Type) {
 
   IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(StoreTagDecl, {AI, IRB.getInt32(0), ConstantInt::get(ArgOp0Type, Size)});
+  IRB.CreateCall(StoreTagDecl, {IRB.getInt32(0), AI, ConstantInt::get(ArgOp0Type, Size)});
 }
 
 bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
@@ -110,7 +110,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     DeleteLI = std::make_unique<LoopInfo>(*DT);
     LI = DeleteLI.get();
   }
-
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     TrackingVH<Instruction> OldAI = Info.AI;
@@ -120,9 +119,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     Type *Int32Type = IRB.getInt32Ty();
     Type *Int64Type = IRB.getInt64Ty();
     Function *RandomStoreTagDecl = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::wasm_memory_randomstoretag, {Int32Type, Int64Type});
+        F->getParent(), Intrinsic::wasm_memory_randomstoretag, {Int64Type});
     Function *StoreTagDecl = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::wasm_memory_storetag, {Int32Type, Int64Type});
+        F->getParent(), Intrinsic::wasm_memory_storetag, {Int64Type});
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
@@ -139,7 +138,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
       Instruction *RandomStoreTagCall = IRB.CreateCall(
-          RandomStoreTagDecl, {Info.AI, ConstantInt::get(Int32Type, 0), ConstantInt::get(Int64Type, Size)});
+          RandomStoreTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI, ConstantInt::get(Int64Type, Size)});
       if (Info.AI->hasName())
         RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceAllUsesWith(RandomStoreTagCall);
@@ -157,7 +156,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       IRB.CreateCall(RandomStoreTagDecl,
-                     {AI, ConstantInt::get(Int32Type, 0), ConstantInt::get(Int64Type, Size)});
+		      {ConstantInt::get(Int32Type, 0), AI, ConstantInt::get(Int64Type, Size)});
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
       }
