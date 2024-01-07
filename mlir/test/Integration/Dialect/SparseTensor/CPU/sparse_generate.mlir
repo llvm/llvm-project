@@ -18,17 +18,6 @@
 //--------------------------------------------------------------------------------------------------
 
 // RUN: %{compile} | %{run} | FileCheck %s
-//
-// Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
-// RUN: %{compile} | %{run} | FileCheck %s
-//
-// Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
-// RUN: %{compile} | %{run} | FileCheck %s
-//
-// Do the same run, but now with direct IR generation and VLA vectorization.
-// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 //
 // Integration test that generates a tensor with specified sparsity level.
@@ -45,8 +34,7 @@ module {
   func.func private @rtsrand(index) -> (!Generator)
   func.func private @rtrand(!Generator, index) -> (index)
   func.func private @rtdrand(!Generator) -> ()
-  func.func private @shuffle(index, !Generator) -> (!Array)
-  func.func private @shuffleFree(!Array) -> ()
+  func.func private @shuffle(memref<?xi64>, !Generator) -> () attributes { llvm.emit_c_interface }
 
   //
   // Main driver.
@@ -70,15 +58,14 @@ module {
     %zero_vec = linalg.fill ins(%f0 : f64) outs(%empty : tensor<?xf64>) -> tensor<?xf64>
 
     // Generate shuffled indices in the range of [0, %size).
+    %array = memref.alloc (%size) : memref<?xi64>
     %g = func.call @rtsrand(%c0) : (index) ->(!Generator)
-    %res = func.call @shuffle(%size, %g) : (index, !Generator) -> !Array
+    func.call @shuffle(%array, %g) : (memref<?xi64>, !Generator) -> ()
 
     // Iterate through the number of nse indices to insert values.
     %output = scf.for %iv = %c0 to %nse step %c1 iter_args(%iter = %zero_vec) -> tensor<?xf64> {
       // Fetch the index to insert value from shuffled index array.
-      %r = arith.index_cast %iv : index to i64
-      %arr = llvm.getelementptr %res[%r] : (!llvm.ptr, i64) -> !llvm.ptr, i64
-      %val = llvm.load %arr : !Array -> i64
+      %val = memref.load %array[%iv] : memref<?xi64>
       %idx = arith.index_cast %val : i64 to index
       // Generate a random number from 1 to 100.
       %ri0 = func.call @rtrand(%g, %c99) : (!Generator, index) -> (index)
@@ -100,7 +87,7 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %sv : tensor<?xf64, #SparseVector>
-    func.call @shuffleFree(%res) : (!Array) -> ()
+    memref.dealloc %array : memref<?xi64>
     func.call @rtdrand(%g) : (!Generator) -> ()
 
     return

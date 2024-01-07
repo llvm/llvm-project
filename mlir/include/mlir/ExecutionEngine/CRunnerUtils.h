@@ -482,14 +482,13 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT double rtclock();
 //===----------------------------------------------------------------------===//
 // Uses a seed to initialize a random generator and returns the generator.
 extern "C" MLIR_CRUNNERUTILS_EXPORT void *rtsrand(uint64_t s);
-// Returns a random number in the range of [0, m).
-extern "C" MLIR_CRUNNERUTILS_EXPORT uint64_t rtrand(void *, uint64_t m);
+// Uses a random number generator g and returns a random number in the range of [0, m).
+extern "C" MLIR_CRUNNERUTILS_EXPORT uint64_t rtrand(void *g, uint64_t m);
 // Deletes the random number generator.
-extern "C" MLIR_CRUNNERUTILS_EXPORT void rtdrand(void *);
-// Returns a pointer to an array of random numbers in the range of [0, s).
-extern "C" MLIR_CRUNNERUTILS_EXPORT void *shuffle(uint64_t s, void *g);
-// Deletes the array of random numbers.
-extern "C" MLIR_CRUNNERUTILS_EXPORT void shuffleFree(void *a);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void rtdrand(void *g);
+// Uses a random number generator g and std::shuffle to modify memref m in place.
+// m will be populated with unique and random numbers in the range of [0, size of m).
+extern "C" MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_shuffle(StridedMemRefType<uint64_t, 1> *m, void *g);
 
 //===----------------------------------------------------------------------===//
 // Runtime support library to allow the use of std::sort in MLIR program.
