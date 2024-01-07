@@ -297,7 +297,7 @@ public:
     return !(__x < __y);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=>(__iterator const& __x, __iterator const& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(__iterator const& __x, __iterator const& __y)
     requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
   {
     return __x.__current_ <=> __y.__current_;

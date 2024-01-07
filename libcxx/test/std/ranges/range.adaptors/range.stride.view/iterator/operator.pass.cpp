@@ -23,153 +23,182 @@
 // friend constexpr bool operator>=(__iterator const& __x, __iterator const& __y)
 // friend constexpr bool operator<=>(__iterator const& __x, __iterator const& __y)
 
+#include <functional>
 #include <iterator>
 #include <ranges>
 #include <type_traits>
+#include <utility>
 
 #include "../types.h"
+#include "__compare/three_way_comparable.h"
+#include "__concepts/equality_comparable.h"
+#include "__iterator/concepts.h"
 #include "__ranges/concepts.h"
 #include "__ranges/stride_view.h"
 #include "test_iterators.h"
 
 template <class T>
-concept is_plus_equalable = requires(T& t) { t += 1; };
+concept CanPlusEqual = std::is_same_v<T&, decltype(std::declval<T>() += 1)> && requires(T& t) { t += 1; };
 template <class T>
-concept is_minus_equalable = requires(T& t) { t -= 1; };
+concept CanMinusEqual = std::is_same_v<T&, decltype(std::declval<T>() -= 1)> && requires(T& t) { t -= 1; };
 
 template <class T>
-concept is_iterator_minusable = requires(T& t) { t - t; };
-template <class T>
-concept is_difference_plusable = requires(T& t) { t + 1; };
-template <class T>
-concept is_difference_minusable = requires(T& t) { t - 1; };
+concept CanMinus =
+    // Note: Do *not* use std::iterator_traits here because T may not have
+    // all the required pieces when it is not a forward_range.
+    std::is_same_v<typename T::difference_type, decltype(std::declval<T>() - std::declval<T>())> &&
+    requires(T& t) { t - t; };
 
 template <class T>
-concept is_relationally_comparable = requires(T& t) {
-  t < t;
-  t > t;
-  t <= t;
-  t >= t;
-};
+concept CanDifferencePlus = std::is_same_v<T, decltype(std::declval<T>() + 1)> && requires(T& t) { t + 1; };
+template <class T>
+concept CanDifferenceMinus = std::is_same_v<T, decltype(std::declval<T>() - 1)> && requires(T& t) { t - 1; };
 
 template <class T>
-concept is_relationally_equalable = requires(T& t) { t == t; };
+concept CanPostDecrement = std::is_same_v<T, decltype(std::declval<T>()--)> && requires(T& t) { t--; };
+template <class T>
+concept CanPreDecrement = std::is_same_v<T&, decltype(--std::declval<T>())> && requires(T& t) { --t; };
 
 template <class T>
-concept is_three_way_comparable = requires(T& t) { t <=> t; };
-
-template <class T>
-concept is_plus_plusable_post = requires(T& t) { t++; };
-template <class T>
-concept is_plus_plusable_pre = requires(T& t) { ++t; };
-template <class T>
-concept is_minus_minusable_post = requires(T& t) { t--; };
-template <class T>
-concept is_minus_minusable_pre = requires(T& t) { --t; };
-
-template <class T>
-concept is_indexable = requires(T& t) { t[5]; };
-
-template <class T>
-concept can_calculate_distance_between_non_sentinel = requires(T& t) { t - t; };
+concept CanSubscript = requires(T& t) { t[5]; };
 
 // What operators are valid for an iterator derived from a stride view
 // over an input view.
 using StrideViewOverInputViewIterator =
     std::ranges::iterator_t<std::ranges::stride_view<BasicTestView<cpp17_input_iterator<int*>>>>;
 
-static_assert(is_plus_plusable_post<StrideViewOverInputViewIterator>);
-static_assert(is_plus_plusable_pre<StrideViewOverInputViewIterator>);
-static_assert(!is_minus_minusable_post<StrideViewOverInputViewIterator>);
-static_assert(!is_minus_minusable_pre<StrideViewOverInputViewIterator>);
-static_assert(!is_plus_equalable<StrideViewOverInputViewIterator>);
-static_assert(!is_minus_equalable<StrideViewOverInputViewIterator>);
-static_assert(!is_iterator_minusable<StrideViewOverInputViewIterator>);
-static_assert(!is_difference_plusable<StrideViewOverInputViewIterator>);
-static_assert(!is_difference_minusable<StrideViewOverInputViewIterator>);
-static_assert(!is_relationally_comparable<StrideViewOverInputViewIterator>);
-static_assert(!is_indexable<StrideViewOverInputViewIterator>);
+static_assert(std::weakly_incrementable<StrideViewOverInputViewIterator>);
+
+static_assert(!CanPostDecrement<StrideViewOverInputViewIterator>);
+static_assert(!CanPreDecrement<StrideViewOverInputViewIterator>);
+static_assert(!CanPlusEqual<StrideViewOverInputViewIterator>);
+static_assert(!CanMinusEqual<StrideViewOverInputViewIterator>);
+static_assert(!CanMinus<StrideViewOverInputViewIterator>);
+static_assert(!CanDifferencePlus<StrideViewOverInputViewIterator>);
+static_assert(!CanDifferenceMinus<StrideViewOverInputViewIterator>);
+
+static_assert(!std::is_invocable_v<std::less<>, StrideViewOverInputViewIterator, StrideViewOverInputViewIterator>);
+static_assert(
+    !std::is_invocable_v<std::less_equal<>, StrideViewOverInputViewIterator, StrideViewOverInputViewIterator>);
+static_assert(!std::is_invocable_v<std::greater<>, StrideViewOverInputViewIterator, StrideViewOverInputViewIterator>);
+static_assert(
+    !std::is_invocable_v<std::greater_equal<>, StrideViewOverInputViewIterator, StrideViewOverInputViewIterator>);
+
+static_assert(!CanSubscript<StrideViewOverInputViewIterator>);
 
 // What operators are valid for an iterator derived from a stride view
 // over a forward view.
 using ForwardView                       = BasicTestView<forward_iterator<int*>>;
 using StrideViewOverForwardViewIterator = std::ranges::iterator_t<std::ranges::stride_view<ForwardView>>;
 
-static_assert(is_plus_plusable_post<StrideViewOverForwardViewIterator>);
-static_assert(is_plus_plusable_pre<StrideViewOverForwardViewIterator>);
-static_assert(!is_minus_minusable_post<StrideViewOverForwardViewIterator>);
-static_assert(!is_minus_minusable_pre<StrideViewOverForwardViewIterator>);
-static_assert(!is_plus_equalable<StrideViewOverForwardViewIterator>);
-static_assert(!is_minus_equalable<StrideViewOverForwardViewIterator>);
-static_assert(!is_iterator_minusable<StrideViewOverForwardViewIterator>);
-static_assert(!is_difference_plusable<StrideViewOverForwardViewIterator>);
-static_assert(!is_difference_minusable<StrideViewOverForwardViewIterator>);
-static_assert(!is_relationally_comparable<StrideViewOverForwardViewIterator>);
-static_assert(!is_indexable<StrideViewOverForwardViewIterator>);
+static_assert(std::weakly_incrementable<StrideViewOverForwardViewIterator>);
+
+static_assert(!CanPostDecrement<StrideViewOverForwardViewIterator>);
+static_assert(!CanPreDecrement<StrideViewOverForwardViewIterator>);
+static_assert(!CanPlusEqual<StrideViewOverForwardViewIterator>);
+static_assert(!CanMinusEqual<StrideViewOverForwardViewIterator>);
+static_assert(!CanMinus<StrideViewOverForwardViewIterator>);
+static_assert(!CanDifferencePlus<StrideViewOverForwardViewIterator>);
+static_assert(!CanDifferenceMinus<StrideViewOverForwardViewIterator>);
+
+static_assert(!std::is_invocable_v<std::less<>, StrideViewOverForwardViewIterator, StrideViewOverForwardViewIterator>);
+static_assert(
+    !std::is_invocable_v<std::less_equal<>, StrideViewOverForwardViewIterator, StrideViewOverForwardViewIterator>);
+static_assert(
+    !std::is_invocable_v<std::greater<>, StrideViewOverForwardViewIterator, StrideViewOverForwardViewIterator>);
+static_assert(
+    !std::is_invocable_v<std::greater_equal<>, StrideViewOverForwardViewIterator, StrideViewOverForwardViewIterator>);
+
+static_assert(!CanSubscript<StrideViewOverForwardViewIterator>);
 
 // What operators are valid for an iterator derived from a stride view
 // over a bidirectional view.
 using BidirectionalView                       = BasicTestView<bidirectional_iterator<int*>>;
 using StrideViewOverBidirectionalViewIterator = std::ranges::iterator_t<std::ranges::stride_view<BidirectionalView>>;
 
-static_assert(is_plus_plusable_post<StrideViewOverBidirectionalViewIterator>);
-static_assert(is_plus_plusable_pre<StrideViewOverBidirectionalViewIterator>);
-static_assert(is_minus_minusable_post<StrideViewOverBidirectionalViewIterator>);
-static_assert(is_minus_minusable_pre<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_plus_equalable<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_minus_equalable<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_iterator_minusable<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_difference_plusable<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_difference_minusable<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_relationally_comparable<StrideViewOverBidirectionalViewIterator>);
-static_assert(!is_indexable<StrideViewOverBidirectionalViewIterator>);
+static_assert(std::weakly_incrementable<StrideViewOverBidirectionalViewIterator>);
+
+static_assert(CanPostDecrement<StrideViewOverBidirectionalViewIterator>);
+static_assert(CanPreDecrement<StrideViewOverBidirectionalViewIterator>);
+static_assert(!CanPlusEqual<StrideViewOverBidirectionalViewIterator>);
+static_assert(!CanMinusEqual<StrideViewOverBidirectionalViewIterator>);
+static_assert(!CanMinus<StrideViewOverBidirectionalViewIterator>);
+static_assert(!CanDifferencePlus<StrideViewOverBidirectionalViewIterator>);
+static_assert(!CanDifferenceMinus<StrideViewOverBidirectionalViewIterator>);
+
+static_assert(!std::is_invocable_v<std::less<>,
+                                   StrideViewOverBidirectionalViewIterator,
+                                   StrideViewOverBidirectionalViewIterator>);
+static_assert(!std::is_invocable_v<std::less_equal<>,
+                                   StrideViewOverBidirectionalViewIterator,
+                                   StrideViewOverBidirectionalViewIterator>);
+static_assert(!std::is_invocable_v<std::greater<>,
+                                   StrideViewOverBidirectionalViewIterator,
+                                   StrideViewOverBidirectionalViewIterator>);
+static_assert(!std::is_invocable_v<std::greater_equal<>,
+                                   StrideViewOverBidirectionalViewIterator,
+                                   StrideViewOverBidirectionalViewIterator>);
+
+static_assert(!CanSubscript<StrideViewOverBidirectionalViewIterator>);
 
 // What operators are valid for an iterator derived from a stride view
 // over a random access view.
 using RandomAccessView                       = BasicTestView<random_access_iterator<int*>>;
 using StrideViewOverRandomAccessViewIterator = std::ranges::iterator_t<std::ranges::stride_view<RandomAccessView>>;
 
-static_assert(is_plus_plusable_post<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_plus_plusable_pre<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_minus_minusable_post<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_minus_minusable_pre<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_plus_equalable<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_minus_equalable<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_iterator_minusable<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_difference_plusable<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_difference_minusable<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_relationally_comparable<StrideViewOverRandomAccessViewIterator>);
-static_assert(is_indexable<StrideViewOverRandomAccessViewIterator>);
+static_assert(std::weakly_incrementable<StrideViewOverRandomAccessViewIterator>);
+
+static_assert(CanPostDecrement<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanPreDecrement<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanPlusEqual<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanMinusEqual<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanMinus<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanDifferencePlus<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanDifferenceMinus<StrideViewOverRandomAccessViewIterator>);
+
+static_assert(
+    std::is_invocable_v<std::less<>, StrideViewOverRandomAccessViewIterator, StrideViewOverRandomAccessViewIterator>);
+static_assert(std::is_invocable_v<std::less_equal<>,
+                                  StrideViewOverRandomAccessViewIterator,
+                                  StrideViewOverRandomAccessViewIterator>);
+static_assert(std::is_invocable_v<std::greater<>,
+                                  StrideViewOverRandomAccessViewIterator,
+                                  StrideViewOverRandomAccessViewIterator>);
+static_assert(std::is_invocable_v<std::greater_equal<>,
+                                  StrideViewOverRandomAccessViewIterator,
+                                  StrideViewOverRandomAccessViewIterator>);
+
+static_assert(CanSubscript<StrideViewOverRandomAccessViewIterator>);
 
 using EqualableView               = BasicTestView<cpp17_input_iterator<int*>>;
 using EqualableViewStrideView     = std::ranges::stride_view<EqualableView>;
 using EqualableViewStrideViewIter = std::ranges::iterator_t<EqualableViewStrideView>;
 
-static_assert(is_relationally_equalable<std::ranges::iterator_t<EqualableView>>);
-static_assert(is_relationally_equalable<EqualableViewStrideViewIter>);
+static_assert(std::equality_comparable<std::ranges::iterator_t<EqualableView>>);
+static_assert(std::equality_comparable<EqualableViewStrideViewIter>);
 
 static_assert(!std::three_way_comparable<std::ranges::iterator_t<EqualableView>>);
 static_assert(!std::ranges::random_access_range<EqualableView>);
-static_assert(!is_three_way_comparable<EqualableView>);
+static_assert(!std::three_way_comparable<EqualableView>);
 
-using ThreeWayComparableView           = BasicTestView<rvalue_iterator<int*>>;
+using ThreeWayComparableView           = BasicTestView<three_way_contiguous_iterator<int*>>;
 using ThreeWayComparableViewStrideView = std::ranges::stride_view<ThreeWayComparableView>;
 using ThreeWayComparableStrideViewIter = std::ranges::iterator_t<ThreeWayComparableViewStrideView>;
 
 static_assert(std::three_way_comparable<std::ranges::iterator_t<ThreeWayComparableView>>);
 static_assert(std::ranges::random_access_range<ThreeWayComparableView>);
-static_assert(is_three_way_comparable<ThreeWayComparableStrideViewIter>);
+static_assert(std::three_way_comparable<ThreeWayComparableStrideViewIter>);
 
 using UnEqualableView               = ViewOverNonCopyableIterator<cpp20_input_iterator<int*>>;
 using UnEqualableViewStrideView     = std::ranges::stride_view<UnEqualableView>;
 using UnEqualableViewStrideViewIter = std::ranges::iterator_t<UnEqualableViewStrideView>;
 
-static_assert(!is_relationally_equalable<std::ranges::iterator_t<UnEqualableView>>);
-static_assert(!is_relationally_equalable<UnEqualableViewStrideViewIter>);
+static_assert(!std::equality_comparable<std::ranges::iterator_t<UnEqualableView>>);
+static_assert(!std::equality_comparable<UnEqualableViewStrideViewIter>);
 
 static_assert(!std::three_way_comparable<std::ranges::iterator_t<UnEqualableView>>);
 static_assert(!std::ranges::random_access_range<UnEqualableView>);
-static_assert(!is_three_way_comparable<UnEqualableView>);
+static_assert(!std::three_way_comparable<UnEqualableView>);
 
 constexpr bool test_non_forward_operator_minus() {
   using Base = BasicTestView<SizedInputIterator, SizedInputIterator>;
@@ -179,16 +208,20 @@ constexpr bool test_non_forward_operator_minus() {
   // over a sized input view.
   using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
 
-  static_assert(is_plus_plusable_post<StrideViewIterator>);
-  static_assert(is_plus_plusable_pre<StrideViewIterator>);
-  static_assert(!is_minus_minusable_post<StrideViewIterator>);
-  static_assert(!is_minus_minusable_pre<StrideViewIterator>);
-  static_assert(!is_plus_equalable<StrideViewIterator>);
-  static_assert(!is_minus_equalable<StrideViewIterator>);
-  static_assert(!is_difference_plusable<StrideViewIterator>);
-  static_assert(!is_difference_minusable<StrideViewIterator>);
-  static_assert(!is_relationally_comparable<StrideViewIterator>);
-  static_assert(!is_indexable<StrideViewIterator>);
+  static_assert(std::weakly_incrementable<StrideViewIterator>);
+
+  static_assert(!CanPostDecrement<StrideViewIterator>);
+  static_assert(!CanPreDecrement<StrideViewIterator>);
+  static_assert(!CanPlusEqual<StrideViewIterator>);
+  static_assert(!CanMinusEqual<StrideViewIterator>);
+  static_assert(!CanDifferencePlus<StrideViewIterator>);
+  static_assert(!CanDifferenceMinus<StrideViewIterator>);
+
+  static_assert(!std::is_invocable_v<std::less<>, StrideViewIterator, StrideViewIterator>);
+  static_assert(!std::is_invocable_v<std::less_equal<>, StrideViewIterator, StrideViewIterator>);
+  static_assert(!std::is_invocable_v<std::greater<>, StrideViewIterator, StrideViewIterator>);
+  static_assert(!std::is_invocable_v<std::greater_equal<>, StrideViewIterator, StrideViewIterator>);
+  static_assert(!CanSubscript<StrideViewIterator>);
 
   auto rav_zero    = Base(SizedInputIterator(arr), SizedInputIterator(arr + 10));
   auto rav_one     = Base(SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
@@ -206,7 +239,7 @@ constexpr bool test_non_forward_operator_minus() {
   auto stride_ooff_five = ++stride_ooff_begin;
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
-  static_assert(can_calculate_distance_between_non_sentinel<decltype(stride_zoff_begin)>);
+  static_assert(CanMinus<decltype(stride_zoff_begin)>);
 
   assert(*stride_zoff_one == 1);
   assert(*stride_zoff_four == 4);
@@ -241,9 +274,9 @@ constexpr bool test_forward_operator_minus() {
   // over a sized forward view (even though it is actually much more than that!).
   using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
 
-  static_assert(is_plus_plusable_post<StrideViewIterator>);
-  static_assert(is_plus_plusable_pre<StrideViewIterator>);
-  static_assert(is_iterator_minusable<StrideViewIterator>);
+  static_assert(std::weakly_incrementable<StrideViewIterator>);
+
+  static_assert(CanMinus<StrideViewIterator>);
 
   auto rav_zero    = Base(arr, arr + 10);
   auto rav_one     = Base(arr + 1, arr + 10);
@@ -261,7 +294,7 @@ constexpr bool test_forward_operator_minus() {
   auto stride_ooff_five = ++stride_ooff_begin;
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
-  static_assert(can_calculate_distance_between_non_sentinel<decltype(stride_zoff_begin)>);
+  static_assert(CanMinus<decltype(stride_zoff_begin)>);
   static_assert(std::forward_iterator<std::ranges::iterator_t<Base>>);
 
   assert(*stride_zoff_one == 1);
