@@ -65,6 +65,13 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 }
 
 /// Compute the generating function for a unimodular cone.
+/// This consists of a single term of the form
+/// x^num / prod_j (1 - x^den_j)
+///
+/// den_j is defined as the set of generators of the cone.
+/// num is computed by expressing the vertex as a weighted
+/// sum of the generators, and then taking the floor of the
+/// coefficients.
 GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
     ParamPoint vertex, int sign, ConeH cone) {
   // `cone` is assumed to be unimodular.
@@ -76,8 +83,8 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   // Thus its ray matrix, U, is the inverse of the
   // transpose of its inequality matrix, `cone`.
   FracMatrix transp(numVar, numIneq);
-  for (unsigned i = 0; i < numVar; i++)
-    for (unsigned j = 0; j < numIneq; j++)
+  for (unsigned i = 0; i < numVar; ++i)
+    for (unsigned j = 0; j < numIneq; ++j)
       transp(j, i) = Fraction(cone.atIneq(i, j), 1);
 
   FracMatrix generators(numVar, numIneq);
@@ -88,7 +95,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   // the rows of the matrix U.
   std::vector<Point> denominator(numIneq);
   ArrayRef<Fraction> row;
-  for (unsigned i = 0; i < numVar; i++) {
+  for (unsigned i = 0; i < numVar; ++i) {
     row = generators.getRow(i);
     denominator[i] = Point(row);
   }
@@ -107,8 +114,8 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   unsigned numRows = vertex.getNumRows();
   ParamPoint numerator(numColumns, numRows);
   SmallVector<Fraction> ithCol(numRows);
-  for (unsigned i = 0; i < numColumns; i++) {
-    for (unsigned j = 0; j < numRows; j++)
+  for (unsigned i = 0; i < numColumns; ++i) {
+    for (unsigned j = 0; j < numRows; ++j)
       ithCol[j] = vertex(j, i);
     numerator.setRow(i, transp.preMultiplyWithRow(ithCol));
     numerator.negateRow(i);
