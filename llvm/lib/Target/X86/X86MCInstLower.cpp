@@ -959,7 +959,8 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
   bool EmptyInst = (Opcode == TargetOpcode::PATCHABLE_OP);
 
   MCInst MCI;
-  MCI.setOpcode(Opcode);
+  // Make sure below we don't encode pseudo tailcalls.
+  MCI.setOpcode(convertTailJumpOpcode(Opcode));
   for (auto &MO : drop_begin(MI.operands(), 2))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       MCI.addOperand(*MaybeOperand);
@@ -994,8 +995,11 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
       (void)NopSize;
     }
   }
-  if (!EmptyInst)
+  if (!EmptyInst) {
+    if (Opcode != convertTailJumpOpcode(Opcode))
+      OutStreamer->AddComment("TAILCALL");
     OutStreamer->emitInstruction(MCI, getSubtargetInfo());
+  }
 }
 
 // Lower a stackmap of the form:

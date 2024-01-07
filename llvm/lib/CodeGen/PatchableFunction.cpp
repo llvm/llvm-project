@@ -87,6 +87,9 @@ bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MO : FirstActualI->operands())
     MIB.add(MO);
 
+  if (FirstActualI->shouldUpdateCallSiteInfo())
+    MF.eraseCallSiteInfo(&*FirstActualI);
+
   FirstActualI->eraseFromParent();
   MF.ensureAlignment(Align(16));
   return true;
