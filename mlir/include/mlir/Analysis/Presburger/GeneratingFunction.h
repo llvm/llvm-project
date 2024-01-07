@@ -22,7 +22,7 @@ namespace presburger {
 namespace detail {
 
 // A parametric point is a vector, each of whose elements
-// is an affine function of n parameters. Each row
+// is an affine function of n parameters. Each column
 // in the matrix represents the affine function and
 // has n+1 elements.
 using ParamPoint = FracMatrix;
