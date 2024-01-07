@@ -413,7 +413,8 @@ Changes in existing checks
 - Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature and better handling of condition
-  noexcept expressions, eliminating false-positives.
+  noexcept expressions, eliminating false-positives. ``iter_swap`` function name
+  is checked by default.
 
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
