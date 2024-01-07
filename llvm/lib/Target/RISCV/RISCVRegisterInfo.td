@@ -28,21 +28,21 @@ class RISCVReg16<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let AltNames = alt;
 }
 
-def sub_fpr16 : SubRegIndex<16>;
+def sub_16 : SubRegIndex<16>;
 class RISCVReg32<RISCVReg16 subreg>
   : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
                         subreg.AltNames> {
-  let SubRegIndices = [sub_fpr16];
+  let SubRegIndices = [sub_16];
 }
 
 // Because RISCVReg64 register have AsmName and AltNames that alias with their
 // 16/32-bit sub-register, RISCVAsmParser will need to coerce a register number
 // from a RISCVReg16/RISCVReg32 to the equivalent RISCVReg64 when appropriate.
-def sub_fpr32 : SubRegIndex<32>;
+def sub_32 : SubRegIndex<32>;
 class RISCVReg64<RISCVReg32 subreg>
   : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
                         subreg.AltNames> {
-  let SubRegIndices = [sub_fpr32];
+  let SubRegIndices = [sub_32];
 }
 
 let FallbackRegAltNameIndex = NoRegAltName in
@@ -63,8 +63,7 @@ def sub_vrm1_5 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_1>;
 def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
-def sub_gpr_even : SubRegIndex<32>;
-def sub_gpr_odd  : SubRegIndex<32>;
+def sub_32_hi  : SubRegIndex<32, 32>;
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -550,7 +549,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X0_PD : RISCVRegWithSubRegs<0, X0.AsmName,
                                      [X0, DUMMY_REG_PAIR_WITH_X0],
                                      X0.AltNames> {
-    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
+    let SubRegIndices = [sub_32, sub_32_hi];
     let CoveredBySubRegs = 1;
   }
   foreach I = 1-15 in {
@@ -560,7 +559,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
     def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
                                           [Reg, RegP1],
                                           Reg.AltNames> {
-      let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
+      let SubRegIndices = [sub_32, sub_32_hi];
       let CoveredBySubRegs = 1;
     }
   }
