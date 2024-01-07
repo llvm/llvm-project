@@ -32,7 +32,7 @@
   ; CHECK-NEXT:    addi a0, a0, 241
   ; CHECK-NEXT:    vs1r.v v25, (a0) # Unknown-size Folded Spill
   ; CHECK-NEXT:    ld a0, 8(sp)
-  ; CHECK-NEXT:    call spillslot@plt
+  ; CHECK-NEXT:    call spillslot
   ; CHECK-NEXT:    addi sp, s0, -2048
   ; CHECK-NEXT:    addi sp, sp, -256
   ; CHECK-NEXT:    addi sp, sp, 272
