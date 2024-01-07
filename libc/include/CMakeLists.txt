@@ -189,10 +189,10 @@ if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in")
     signal
     DEF_FILE signal.h.def
     PARAMS
-    platform_signal=${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in
+      platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
     GEN_HDR signal.h
     DATA_FILES
-      ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in
+      ../config/${LIBC_TARGET_OS}/signal.h.in
     DEPENDS
       .llvm-libc-macros.signal_macros
       .llvm-libc-types.sig_atomic_t
