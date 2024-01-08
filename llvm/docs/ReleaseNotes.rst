@@ -246,6 +246,9 @@ Changes to the C API
   the fast-math flags of an instruction, as well as ``LLVMCanValueUseFastMathFlags``
   for checking if an instruction can use such flags
 
+* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
+  functions for accessing the values in a blockaddress constant
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

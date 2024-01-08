@@ -387,6 +387,22 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstVector(Elts.data(), EltCount);
   }
 
+  if (LLVMIsABlockAddress(Cst)) {
+    check_value_kind(Cst, LLVMBlockAddressValueKind);
+    LLVMValueRef SrcFunc = LLVMGetBlockAddressFunction(Cst);
+    LLVMBasicBlockRef SrcBB = LLVMGetBlockAddressBasicBlock(Cst);
+
+    LLVMValueRef DstFunc = clone_constant(SrcFunc, M);
+
+    LLVMBasicBlockRef DstBB =
+        find_bb_in_func(DstFunc, LLVMGetBasicBlockName(SrcBB));
+    if (DstBB == nullptr)
+      report_fatal_error(
+          "Could not find basic block with expected name for blockaddress");
+
+    return LLVMBlockAddress(DstFunc, DstBB);
+  }
+
   // At this point, if it's not a constant expression, it's a kind of constant
   // which is not supported
   if (!LLVMIsAConstantExpr(Cst))
