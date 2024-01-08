@@ -1450,7 +1450,7 @@ DynamicSection<ELFT>::computeContents() {
     if (config->zPacPlt)
       addInt(DT_AARCH64_PAC_PLT, 0);
 
-    if (config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (hasMemtag()) {
       addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
