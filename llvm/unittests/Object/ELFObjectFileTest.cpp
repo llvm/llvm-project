@@ -897,6 +897,34 @@ Sections:
 
   DoCheck(MissingBrProb, "unable to decode LEB128 at offset 0x00000017: "
                          "malformed uleb128, extends past end");
+
+  // Check that we fail when pgo data exists but the feature bits are disabled.
+  SmallString<128> ZeroFeatureButWithAnalyses(CommonYamlString);
+  ZeroFeatureButWithAnalyses += R"(
+        Version: 2
+        Feature: 0x00
+        BBEntries:
+          - ID:            1
+            AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x6
+          - ID:            2
+            AddressOffset: 0x1
+            Size:          0x1
+            Metadata:      0x2
+      - Address: 0x11111
+        Version: 2
+        Feature: 0x00
+        BBEntries: []
+    PGOAnalyses:
+      - PGOBBEntries:
+         - BBFreq:        1000
+         - BBFreq:        1000
+      - PGOBBEntries: []
+)";
+
+  DoCheck(ZeroFeatureButWithAnalyses,
+          "unsupported SHT_LLVM_BB_ADDR_MAP version: 232");
 }
 
 // Test for the ELFObjectFile::readBBAddrMap API with PGOAnalysisMap.
