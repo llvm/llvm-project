@@ -4,7 +4,7 @@
 // CHECK: llvm.return loc(#loc
 // CHECK: loc(#loc[[LOC:[0-9]+]])
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
-// CHECK: #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "func_no_debug", linkageName = "func_no_debug", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_no_debug", linkageName = "func_no_debug", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
 module {
   llvm.func @func_no_debug() {
@@ -14,12 +14,22 @@ module {
 
 // -----
 
+// Test that the declarations subprogram is not made distinct.
+// CHECK-LABEL: llvm.func @func_decl_no_debug()
+// CHECK: #di_subprogram = #llvm.di_subprogram<
+// CHECK-NOT: id = distinct
+module {
+  llvm.func @func_decl_no_debug() loc(unknown)
+} loc(unknown)
+
+// -----
+
 // Test that existing debug info is not overwritten.
 // CHECK-LABEL: llvm.func @func_with_debug()
 // CHECK: llvm.return loc(#loc
 // CHECK: loc(#loc[[LOC:[0-9]+]])
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
-// CHECK: #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
 module {
   llvm.func @func_with_debug() {
@@ -31,7 +41,7 @@ module {
 #loc = loc("foo":0:0)
 #loc1 = loc(unknown)
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
-#di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+#di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 #loc2 = loc(fused<#di_subprogram>[#loc1])
 
 // -----
@@ -44,8 +54,8 @@ module {
 // CHECK-DAG: #[[DI_FILE_MODULE:.+]] = #llvm.di_file<"bar.mlir" in "baz">
 // CHECK-DAG: #[[DI_FILE_FUNC:.+]] = #llvm.di_file<"file.mlir" in ""> 
 // CHECK-DAG: #loc[[FUNCFILELOC:[0-9]+]] = loc("file.mlir":9:8)
-// CHECK-DAG: #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[DI_FILE_MODULE]], producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
-// CHECK-DAG: #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 8, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK-DAG: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C, file = #[[DI_FILE_MODULE]], producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
+// CHECK-DAG: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 8, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK-DAG: #loc[[MODULELOC]] = loc(fused<#di_compile_unit>[#loc])
 // CHECK-DAG: #loc[[FUNCLOC]] = loc(fused<#di_subprogram>[#loc[[FUNCFILELOC]]
 module {
