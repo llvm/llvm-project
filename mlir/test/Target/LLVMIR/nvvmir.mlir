@@ -58,6 +58,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %27 = nvvm.read.ptx.sreg.cluster.ctarank : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank
   %28 = nvvm.read.ptx.sreg.cluster.nctarank : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock
+  %29 = nvvm.read.ptx.sreg.clock : i32
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
+  %30 = nvvm.read.ptx.sreg.clock64 : i64
   
   llvm.return %1 : i32
 }

@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
@@ -229,25 +230,27 @@ protected:
         C(&PassT::Key);
     }
 
-    template <typename PassT> void insertPass(AnalysisKey *ID, PassT Pass) {
+    template <typename PassT> void insertPass(MachinePassKey *ID, PassT Pass) {
       AfterCallbacks.emplace_back(
-          [this, ID, Pass = std::move(Pass)](AnalysisKey *PassID) {
+          [this, ID, Pass = std::move(Pass)](MachinePassKey *PassID) {
             if (PassID == ID)
               this->PM.addPass(std::move(Pass));
           });
     }
 
-    void disablePass(AnalysisKey *ID) {
+    void disablePass(MachinePassKey *ID) {
       BeforeCallbacks.emplace_back(
-          [ID](AnalysisKey *PassID) { return PassID != ID; });
+          [ID](MachinePassKey *PassID) { return PassID != ID; });
     }
 
     MachineFunctionPassManager releasePM() { return std::move(PM); }
 
   private:
     MachineFunctionPassManager &PM;
-    SmallVector<llvm::unique_function<bool(AnalysisKey *)>, 4> BeforeCallbacks;
-    SmallVector<llvm::unique_function<void(AnalysisKey *)>, 4> AfterCallbacks;
+    SmallVector<llvm::unique_function<bool(MachinePassKey *)>, 4>
+        BeforeCallbacks;
+    SmallVector<llvm::unique_function<void(MachinePassKey *)>, 4>
+        AfterCallbacks;
   };
 
   LLVMTargetMachine &TM;
@@ -640,6 +643,9 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
   addPass(GCLoweringPass());
+  // FIXME: `ShadowStackGCLoweringPass` now is a
+  // module pass, so it will trigger assertion.
+  // See comment of `AddingFunctionPasses`
   addPass(ShadowStackGCLoweringPass());
   addPass(LowerConstantIntrinsicsPass());
 

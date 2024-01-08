@@ -1296,6 +1296,12 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
     if (!F->hasExactDefinition())
       return;
 
+    // MemorySanitizer assumes that the definition and declaration of a
+    // function will be consistent. A function with sanitize_memory attribute
+    // should be skipped from inference.
+    if (F->hasFnAttribute(Attribute::SanitizeMemory))
+      continue;
+
     if (F->getReturnType()->isVoidTy())
       continue;
 

@@ -76,7 +76,6 @@ void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that simplify `tensor.pack` and
 /// `tensor.unpack` operations.
-/// TODO: Add a pattern to convert tensor.unpack op to tensor.collapse_shape op.
 void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`

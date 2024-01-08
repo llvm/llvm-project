@@ -580,6 +580,12 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '*':
         case '\n': // for stream access
           return std::nullopt;
+        case '&':
+        case '$':
+          if (edit.IsNamelist()) {
+            return std::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return std::nullopt;

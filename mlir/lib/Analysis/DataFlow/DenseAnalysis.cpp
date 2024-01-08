@@ -283,16 +283,22 @@ void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
     AbstractDenseLattice *before) {
   // Find the callee.
   Operation *callee = call.resolveCallable(&symbolTable);
-  auto callable = dyn_cast_or_null<CallableOpInterface>(callee);
-  if (!callable)
-    return setToExitState(before);
 
+  auto callable = dyn_cast_or_null<CallableOpInterface>(callee);
   // No region means the callee is only declared in this module.
-  Region *region = callable.getCallableRegion();
-  if (!region || region->empty() || !getSolverConfig().isInterprocedural()) {
+  // If that is the case or if the solver is not interprocedural,
+  // let the hook handle it.
+  if (!getSolverConfig().isInterprocedural() ||
+      (callable && (!callable.getCallableRegion() ||
+                    callable.getCallableRegion()->empty()))) {
     return visitCallControlFlowTransfer(
         call, CallControlFlowAction::ExternalCallee, after, before);
   }
+
+  if (!callable)
+    return setToExitState(before);
+
+  Region *region = callable.getCallableRegion();
 
   // Call-level control flow specifies the data flow here.
   //

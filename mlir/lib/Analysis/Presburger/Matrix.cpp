@@ -645,5 +645,4 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
-  return;
 }
