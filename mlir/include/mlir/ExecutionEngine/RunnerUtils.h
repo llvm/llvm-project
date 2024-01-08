@@ -217,14 +217,14 @@ void printMemRefShape(UnrankedMemRefType<T> &m) {
 template <typename T>
 void printMemRef(const DynamicMemRefType<T> &m) {
   printMemRefMetaData(std::cout, m);
-  std::cout << " data = " << std::endl;
+  std::cout << " data = \n";
   if (m.rank == 0)
     std::cout << "[";
   MemRefDataPrinter<T>::print(std::cout, m.data, m.rank, m.rank, m.offset,
                               m.sizes, m.strides);
   if (m.rank == 0)
     std::cout << "]";
-  std::cout << std::endl;
+  std::cout << '\n';
 }
 
 template <typename T, int N>
