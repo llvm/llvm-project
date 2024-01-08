@@ -1343,6 +1343,111 @@ CursorKind.OMP_TARGET_SIMD_DIRECTIVE = CursorKind(270)
 # OpenMP teams distribute directive.
 CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(271)
 
+# OpenMP teams distribute simd directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE = CursorKind(272)
+
+# OpenMP teams distribute parallel for simd directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(273)
+
+# OpenMP teams distribute parallel for directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE = CursorKind(274)
+
+# OpenMP target teams directive.
+CursorKind.OMP_TARGET_TEAMS_DIRECTIVE = CursorKind(275)
+
+# OpenMP target teams distribute directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(276)
+
+# OpenMP target teams distribute parallel for directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE = CursorKind(277)
+
+# OpenMP target teams distribute parallel for simd directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(278)
+
+# OpenMP target teams distribute simd directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE = CursorKind(279)
+
+# C++2a std::bit_cast expression.
+CursorKind.BUILTIN_BIT_CAST_EXPR = CursorKind(280)
+
+# OpenMP master taskloop directive.
+CursorKind.OMP_MASTER_TASK_LOOP_DIRECTIVE = CursorKind(281)
+
+# OpenMP parallel master taskloop directive.
+CursorKind.OMP_PARALLEL_MASTER_TASK_LOOP_DIRECTIVE = CursorKind(282)
+
+# OpenMP master taskloop simd directive.
+CursorKind.OMP_MASTER_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(283)
+
+# OpenMP parallel master taskloop simd directive.
+CursorKind.OMP_PARALLEL_MASTER_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(284)
+
+# OpenMP parallel master directive.
+CursorKind.OMP_PARALLEL_MASTER_DIRECTIVE = CursorKind(285)
+
+# OpenMP depobj directive.
+CursorKind.OMP_DEPOBJ_DIRECTIVE = CursorKind(286)
+
+# OpenMP scan directive.
+CursorKind.OMP_SCAN_DIRECTIVE = CursorKind(287)
+
+# OpenMP tile directive.
+CursorKind.OMP_TILE_DIRECTIVE = CursorKind(288)
+
+# OpenMP canonical loop.
+CursorKind.OMP_CANONICAL_LOOP = CursorKind(289)
+
+# OpenMP interop directive.
+CursorKind.OMP_INTEROP_DIRECTIVE = CursorKind(290)
+
+# OpenMP dispatch directive.
+CursorKind.OMP_DISPATCH_DIRECTIVE = CursorKind(291)
+
+# OpenMP masked directive.
+CursorKind.OMP_MASKED_DIRECTIVE = CursorKind(292)
+
+# OpenMP unroll directive.
+CursorKind.OMP_UNROLL_DIRECTIVE = CursorKind(293)
+
+# OpenMP metadirective directive.
+CursorKind.OMP_META_DIRECTIVE = CursorKind(294)
+
+# OpenMP loop directive.
+CursorKind.OMP_GENERIC_LOOP_DIRECTIVE = CursorKind(295)
+
+# OpenMP teams loop directive.
+CursorKind.OMP_TEAMS_GENERIC_LOOP_DIRECTIVE = CursorKind(296)
+
+# OpenMP target teams loop directive.
+CursorKind.OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE = CursorKind(297)
+
+# OpenMP parallel loop directive.
+CursorKind.OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE = CursorKind(298)
+
+# OpenMP target parallel loop directive.
+CursorKind.OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE = CursorKind(299)
+
+# OpenMP parallel masked directive.
+CursorKind.OMP_PARALLEL_MASKED_DIRECTIVE = CursorKind(300)
+
+# OpenMP masked taskloop directive.
+CursorKind.OMP_MASKED_TASK_LOOP_DIRECTIVE = CursorKind(301)
+
+# OpenMP masked taskloop simd directive.
+CursorKind.OMP_MASKED_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(302)
+
+# OpenMP parallel masked taskloop directive.
+CursorKind.OMP_PARALLEL_MASKED_TASK_LOOP_DIRECTIVE = CursorKind(303)
+
+# OpenMP parallel masked taskloop simd directive.
+CursorKind.OMP_PARALLEL_MASKED_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(304)
+
+# OpenMP error directive.
+CursorKind.OMP_ERROR_DIRECTIVE = CursorKind(305)
+
+# OpenMP scope directive.
+CursorKind.OMP_SCOPE_DIRECTIVE = CursorKind(306)
+
 ###
 # Other Kinds
 

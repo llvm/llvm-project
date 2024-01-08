@@ -64,6 +64,7 @@ class TestCursorKind(unittest.TestCase):
                 CursorKind.INCLUSION_DIRECTIVE,
                 CursorKind.PREPROCESSING_DIRECTIVE,
                 CursorKind.OVERLOAD_CANDIDATE,
+                CursorKind.OMP_SCOPE_DIRECTIVE,
             ):
                 self.assertEqual(len(group), 0)
             else:
