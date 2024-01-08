@@ -1300,7 +1300,7 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
 
   let OtherPredicates = ps.OtherPredicates;
 }
- 
+
 class VOP2_DPP8_Gen<bits<6> op, VOP2_Pseudo ps, GFXGen Gen,
                     VOPProfile p = ps.Pfl> :
     VOP2_DPP8<op, ps, p> {
