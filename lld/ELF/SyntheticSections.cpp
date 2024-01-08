@@ -1456,7 +1456,8 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
       if (mainPart->memtagGlobalDescriptors->isNeeded()) {
         addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagGlobalDescriptors);
-        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ, mainPart->memtagGlobalDescriptors->getSize());
+        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ,
+               mainPart->memtagGlobalDescriptors->getSize());
       }
     }
   }
@@ -3919,8 +3920,9 @@ static size_t computeOrWriteULEB128(uint64_t v, uint8_t *buf, size_t offset) {
 // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
 constexpr uint64_t kMemtagStepSizeBits = 3;
 constexpr uint64_t kMemtagGranuleSize = 16;
-static size_t createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
-                                      uint8_t *buf = nullptr) {
+static size_t
+createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
+                              uint8_t *buf = nullptr) {
   size_t sectionSize = 0;
   uint64_t lastGlobalEnd = 0;
 

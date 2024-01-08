@@ -405,7 +405,8 @@ template <class ELFT> void elf::createSyntheticSections() {
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
       if (canHaveMemtagGlobals()) {
-        part.memtagGlobalDescriptors = std::make_unique<MemtagGlobalDescriptors>();
+        part.memtagGlobalDescriptors =
+            std::make_unique<MemtagGlobalDescriptors>();
         add(*part.memtagGlobalDescriptors);
       }
     }
