@@ -166,13 +166,16 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
 
   for (const CodeGenInstruction *Inst : PreCompressionInsts) {
     const Record *Rec = Inst->TheDef;
-    uint8_t Opcode =
-        byteFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
+    uint8_t Opcode = byteFromBitsInit(Rec->getValueAsBitsInit("Opcode"));
+    StringRef Name = Rec->getName();
     const CodeGenInstruction *NewInst = nullptr;
-    if (ManualMap.find(Rec->getName()) != ManualMap.end()) {
+    if (ManualMap.find(Name) != ManualMap.end()) {
       Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       NewInst = &Target.getInstruction(NewRec);
+    } else if (Name.ends_with("_EVEX")) {
+      if (auto *NewRec = Records.getDef(Name.drop_back(5)))
+        NewInst = &Target.getInstruction(NewRec);
     } else {
       // For each pre-compression instruction look for a match in the appropriate
       // vector (instructions with the same opcode) using function object
