@@ -1432,10 +1432,9 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   if (TC.getTriple().isAndroid()) {
     llvm::Triple Triple = TC.getTriple();
-    unsigned TripleVersion = Triple.getEnvironmentVersion().getMajor();
     StringRef TripleVersionName = Triple.getEnvironmentVersionString();
 
-    if (TripleVersion == 0 && TripleVersionName != "") {
+    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
       Diags.Report(diag::err_android_version_invalid)
           << TripleVersionName << TC.getTripleString();
       ContainsError = true;
