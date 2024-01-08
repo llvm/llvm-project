@@ -1270,7 +1270,7 @@ inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
   return DisjointOr_match<LHS, RHS, true>(L, R);
 }
 
-/// Match either "and" or "or disjoint".
+/// Match either "add" or "or disjoint".
 template <typename LHS, typename RHS>
 inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
                         DisjointOr_match<LHS, RHS>>

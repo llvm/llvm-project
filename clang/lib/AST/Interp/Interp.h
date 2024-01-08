@@ -1813,9 +1813,6 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckArray(S, OpPC, Ptr))
-    return false;
-
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
 
@@ -1842,9 +1839,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!CheckArray(S, OpPC, Ptr))
-    return false;
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;

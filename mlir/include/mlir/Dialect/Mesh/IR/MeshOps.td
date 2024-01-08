@@ -196,12 +196,12 @@ def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
     ```
   }];
   let arguments = (ins
-    Builtin_RankedTensor:$src,
+    AnyRankedTensor:$src,
     MeshSharding:$shard,
     UnitAttr:$annotate_for_users
   );
   let results = (outs
-    Builtin_RankedTensor:$result
+    AnyRankedTensor:$result
   );
   let assemblyFormat = [{
     $src `to` $shard (`annotate_for_users` $annotate_for_users^)? attr-dict `:`

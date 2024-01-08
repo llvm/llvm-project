@@ -108,7 +108,10 @@ enum Fixups {
   // 20-bit fixup corresponding to %gd_hi20(foo) for instruction lu12i.w.
   fixup_loongarch_tls_gd_hi20,
   // Generate an R_LARCH_RELAX which indicates the linker may relax here.
-  fixup_loongarch_relax = FirstLiteralRelocationKind + ELF::R_LARCH_RELAX
+  fixup_loongarch_relax = FirstLiteralRelocationKind + ELF::R_LARCH_RELAX,
+  // 36-bit fixup corresponding to %call36(foo) for a pair instructions:
+  // pcaddu18i+jirl.
+  fixup_loongarch_call36 = FirstLiteralRelocationKind + ELF::R_LARCH_CALL36,
 };
 } // end namespace LoongArch
 } // end namespace llvm

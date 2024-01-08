@@ -762,12 +762,13 @@ static SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty,
 
 template <class NodeTy>
 SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                         CodeModel::Model M,
                                          bool IsLocal) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
 
-  switch (DAG.getTarget().getCodeModel()) {
+  switch (M) {
   default:
     report_fatal_error("Unsupported code model");
 
@@ -808,24 +809,35 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
 
 SDValue LoongArchTargetLowering::lowerBlockAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  return getAddr(cast<BlockAddressSDNode>(Op), DAG);
+  return getAddr(cast<BlockAddressSDNode>(Op), DAG,
+                 DAG.getTarget().getCodeModel());
 }
 
 SDValue LoongArchTargetLowering::lowerJumpTable(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  return getAddr(cast<JumpTableSDNode>(Op), DAG);
+  return getAddr(cast<JumpTableSDNode>(Op), DAG,
+                 DAG.getTarget().getCodeModel());
 }
 
 SDValue LoongArchTargetLowering::lowerConstantPool(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  return getAddr(cast<ConstantPoolSDNode>(Op), DAG);
+  return getAddr(cast<ConstantPoolSDNode>(Op), DAG,
+                 DAG.getTarget().getCodeModel());
 }
 
 SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
                                                     SelectionDAG &DAG) const {
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
-  return getAddr(N, DAG, N->getGlobal()->isDSOLocal());
+  auto CM = DAG.getTarget().getCodeModel();
+  const GlobalValue *GV = N->getGlobal();
+
+  if (GV->isDSOLocal() && isa<GlobalVariable>(GV)) {
+    if (auto GCM = dyn_cast<GlobalVariable>(GV)->getCodeModel())
+      CM = *GCM;
+  }
+
+  return getAddr(N, DAG, CM, GV->isDSOLocal());
 }
 
 SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
@@ -3381,8 +3393,12 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
 
     // TODO: Add more target-dependent nodes later.
     NODE_NAME_CASE(CALL)
+    NODE_NAME_CASE(CALL_MEDIUM)
+    NODE_NAME_CASE(CALL_LARGE)
     NODE_NAME_CASE(RET)
     NODE_NAME_CASE(TAIL)
+    NODE_NAME_CASE(TAIL_MEDIUM)
+    NODE_NAME_CASE(TAIL_LARGE)
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
@@ -4240,15 +4256,31 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  unsigned Op;
+  switch (DAG.getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model");
+  case CodeModel::Small:
+    Op = IsTailCall ? LoongArchISD::TAIL : LoongArchISD::CALL;
+    break;
+  case CodeModel::Medium:
+    assert(Subtarget.is64Bit() && "Medium code model requires LA64");
+    Op = IsTailCall ? LoongArchISD::TAIL_MEDIUM : LoongArchISD::CALL_MEDIUM;
+    break;
+  case CodeModel::Large:
+    assert(Subtarget.is64Bit() && "Large code model requires LA64");
+    Op = IsTailCall ? LoongArchISD::TAIL_LARGE : LoongArchISD::CALL_LARGE;
+    break;
+  }
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(Op, DL, NodeTys, Ops);
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     return Ret;
   }
 
-  Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
+  Chain = DAG.getNode(Op, DL, NodeTys, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);
 

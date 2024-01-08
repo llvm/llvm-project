@@ -57,6 +57,15 @@ global variable or function should be in after translation.
   let Heading = "section, __declspec(allocate)";
 }
 
+def CodeModelDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``model`` attribute allows overriding the translation unit's
+code model (specified by ``-mcmodel``) for a specific global variable.
+  }];
+  let Heading = "model";
+}
+
 def UsedDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -7671,9 +7680,12 @@ The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
 to a coroutine return type (`CRT`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
-All parameters of a function are considered to be lifetime bound. See `documentation`_
-of ``[[clang::lifetimebound]]`` for more details.
-if the function returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
+All parameters of a function are considered to be lifetime bound if the function returns a
+coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
+This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
+with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
+See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
+
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
 
@@ -7703,7 +7715,7 @@ Both coroutines and coroutine wrappers are part of this analysis.
   };
 
   Task<int> coro(const int& a) { co_return a + 1; }
-  Task<int> [[clang::coro_wrapper]] coro_wrapper(const int& a, const int& b) {
+  [[clang::coro_wrapper]] Task<int> coro_wrapper(const int& a, const int& b) {
     return a > b ? coro(a) : coro(b);
   }
   Task<int> temporary_reference() {
@@ -7716,6 +7728,21 @@ Both coroutines and coroutine wrappers are part of this analysis.
   }
   [[clang::coro_wrapper]] Task<int> stack_reference(int a) {
     return coro(a); // warning: returning address of stack variable `a`.
+  }
+
+This analysis can be disabled for all calls to a particular function by annotating the function
+with function attribute ``[[clang::coro_disable_lifetimebound]]``.
+For example, this could be useful for coroutine wrappers which accept reference parameters
+but do not pass them to the underlying coroutine or pass them by value.
+
+.. code-block:: c++
+
+  Task<int> coro(int a) { co_return a + 1; }
+  [[clang::coro_wrapper, clang::coro_disable_lifetimebound]] Task<int> coro_wrapper(const int& a) {
+    return coro(a + 1);
+  }
+  void use() {
+    auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
   }
 
 .. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
