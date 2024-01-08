@@ -872,11 +872,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
-  /// Returns true if current plugin architecture is an APU
-  /// and unified_shared_memory was not requested by the program.
-  bool useAutoZeroCopy();
-  virtual bool useAutoZeroCopyImpl() { return false; }
-
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
