@@ -146,7 +146,7 @@ inline ArmConfig getArmConfigForCPUArch(ARMBuildAttrs::CPUArch CPUArch) {
   default:
     DEBUG_WITH_TYPE("jitlink", {
       dbgs() << "  Warning: ARM config not defined for CPU architecture "
-             << getCPUArchName(CPUArch);
+             << getCPUArchName(CPUArch) << " (" << CPUArch << ")\n";
     });
     break;
   }
