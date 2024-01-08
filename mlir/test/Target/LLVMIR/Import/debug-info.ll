@@ -197,7 +197,7 @@ define void @composite_type() !dbg !3 {
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None>
+; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None>
 ; Verify an empty subroutine types list is supported.
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
@@ -589,3 +589,28 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DICompositeType(tag: DW_TAG_array_type, size: 42, baseType: !6)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5)
 !7 = !DILocation(line: 0, scope: !3)
+
+; // -----
+
+; Verifies that import compile units respect the distinctness of the input.
+; CHECK-LABEL: @distinct_cu_func0
+define void @distinct_cu_func0() !dbg !4 {
+  ret void
+}
+
+define void @distinct_cu_func1() !dbg !5 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!0, !1}
+!llvm.module.flags = !{!3}
+
+; CHECK-COUNT-2: #llvm.di_compile_unit<id = distinct[{{[0-9]+}}]<>
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang")
+!1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang")
+!2 = !DIFile(filename: "other.cpp", directory: "/")
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !0)
+!5 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1)
+!6 = !DIFile(filename: "file.hpp", directory: "/")
