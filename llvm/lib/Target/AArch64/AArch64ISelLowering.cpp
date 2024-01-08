@@ -1648,11 +1648,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLDEXP, MVT::f16, Custom);
   }
 
-  if (Subtarget->hasSVE2orSME()) {
-    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64})
-      setOperationAction(ISD::ROTL, VT, Custom);
-  }
-
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
   IsStrictFPEnabled = true;
@@ -2650,7 +2645,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::MSRR)
     MAKE_CASE(AArch64ISD::RSHRNB_I)
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
-    MAKE_CASE(AArch64ISD::XAR_I)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -3745,30 +3739,6 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
     Overflow = Value.getValue(1);
   }
   return std::make_pair(Value, Overflow);
-}
-
-SDValue AArch64TargetLowering::LowerROTL(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  assert(VT.isScalableVector() && "Expected a scalable vector.");
-  assert(Subtarget->hasSVE2orSME() && "Custom lowering only for SVE2.");
-
-  // rotr (xor(x, y), imm) -> xar1 (x, y, imm)
-  SDValue Xor = Op.getOperand(0);
-  SDValue RotlValue = Op.getOperand(1);
-
-  if (Xor.getOpcode() != ISD::XOR || RotlValue.getOpcode() != ISD::SPLAT_VECTOR)
-    return SDValue();
-  if (!isa<ConstantSDNode>(RotlValue.getOperand(0).getNode()))
-    return SDValue();
-
-  uint64_t RotrAmt =
-      (VT.getScalarSizeInBits() - RotlValue->getConstantOperandVal(0)) %
-      VT.getScalarSizeInBits();
-
-  SDLoc DL(Op);
-  SDValue Ops[] = {Xor.getOperand(0), Xor.getOperand(1),
-                   DAG.getTargetConstant(RotrAmt, DL, MVT::i32)};
-  return DAG.getNode(AArch64ISD::XAR_I, DL, VT, Ops);
 }
 
 SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
@@ -6444,8 +6414,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFunnelShift(Op, DAG);
   case ISD::FLDEXP:
     return LowerFLDEXP(Op, DAG);
-  case ISD::ROTL:
-    return LowerROTL(Op, DAG);
   }
 }
 

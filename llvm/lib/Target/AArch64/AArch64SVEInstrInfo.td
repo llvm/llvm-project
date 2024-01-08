@@ -454,15 +454,6 @@ def AArch64eor3 : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_eor3 node:$op1, node:$op2, node:$op3),
                             (xor node:$op1, (xor node:$op2, node:$op3))]>;
 
-def SDT_AArch64xar_Imm : SDTypeProfile<1, 3, [
-  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisInt<3>,
-  SDTCisSameAs<0,1>, SDTCisSameAs<1,2>]>;
-def AArch64xar_node : SDNode<"AArch64ISD::XAR_I",  SDT_AArch64xar_Imm>;
-def AArch64xar : PatFrags<(ops node:$op1, node:$op2, node:$op3),
-                           [(int_aarch64_sve_xar node:$op1, node:$op2, node:$op3),
-                            (AArch64xar_node node:$op1, node:$op2, node:$op3)]>;
-
-
 def AArch64fmla_m1 : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(int_aarch64_sve_fmla node:$pg, node:$za, node:$zn, node:$zm),
                                (vselect node:$pg, (AArch64fadd_p_contract (SVEAllActive), node:$za, (AArch64fmul_p_oneuse (SVEAllActive), node:$zn, node:$zm)), node:$za),
@@ -3730,7 +3721,7 @@ let Predicates = [HasSVE2orSME] in {
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
-  defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", AArch64xar>;
+  defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", int_aarch64_sve_xar>;
 
   // SVE2 extract vector (immediate offset, constructive)
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
