@@ -788,5 +788,5 @@ def warn_android_unversioned_fallback : Warning<
   InGroup<DiagGroup<"android-unversioned-fallback">>;
 
 def err_android_version_invalid : Error<
-  "Version %0 in triple %1-%2-%3-%4 is invalid.">;
+  "Version %0 in triple %1 is invalid.">;
 }
