@@ -249,7 +249,7 @@ define void @bar() {
 
 ; CHECK-DAG: #[[TYPE:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
 ; CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"source.c" in "/path/to/file">
-; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C99, file = #[[FILE]], isOptimized = false, emissionKind = None>
+; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C99, file = #[[FILE]], isOptimized = false, emissionKind = None>
 ; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition>
 ; CHECK-DAG: #[[GVAR0:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "foo", linkageName = "foo", file = #[[FILE]], line = 7, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "bar", linkageName = "bar", file = #[[FILE]], line = 8, type = #[[TYPE]], isLocalToUnit = true>

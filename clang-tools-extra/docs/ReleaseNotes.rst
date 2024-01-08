@@ -230,6 +230,12 @@ New checks
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
 
+- New :doc:`readability-avoid-return-with-void-value
+  <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
+
+  Finds return statements with ``void`` values used within functions with
+  ``void`` result types.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -294,6 +300,10 @@ Changes in existing checks
   check to ignore false positives related to matching parameters of non
   coroutine functions and increase issue detection for cases involving type
   aliases with references.
+
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check to
+  address false positives in the capture list and body of lambdas.
 
 - Improved :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` check by

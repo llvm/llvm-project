@@ -41,9 +41,8 @@ What's New in Libc++ 18.0.0?
 
 Implemented Papers
 ------------------
-- P2093R14 Formatted output
-- P2539R4  Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
-
+- P2093R14 - Formatted output
+- P2539R4  - Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``

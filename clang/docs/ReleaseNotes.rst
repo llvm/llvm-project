@@ -609,7 +609,8 @@ Bug Fixes in This Version
 - Clang will correctly evaluate ``noexcept`` expression for template functions
   of template classes. Fixes
   (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
-  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_)
+  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_,
+  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
@@ -692,6 +693,9 @@ Bug Fixes in This Version
   Fixes (`#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
 - Fix crash when using C++ only tokens like ``::`` in C compiler clang.
   Fixes (`#73559 <https://github.com/llvm/llvm-project/issues/73559>`_)
+- Clang now accepts recursive non-dependent calls to functions with deduced
+  return type.
+  Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
 
 
 Bug Fixes to Compiler Builtins
@@ -720,7 +724,8 @@ Bug Fixes to C++ Support
 
 - Clang emits an error on substitution failure within lambda body inside a
   requires-expression. This fixes:
-  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_).
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_) and
+  (`#71684 <https://github.com/llvm/llvm-project/issues/71684>`_).
 
 - Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
   (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
@@ -852,6 +857,11 @@ Bug Fixes to C++ Support
   (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
   (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
+- Fixed a regression where clang forgets how to substitute into constraints on template-template
+  parameters. Fixes:
+  (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
+  (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -922,6 +932,7 @@ X86 Support
   * Support intrinsic of ``_uwrmsr``.
 - Support ISA of ``AVX10.1``.
 - ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
+- Added ABI handling for ``__float128`` to match with GCC.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
