@@ -342,6 +342,7 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
                                        /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
+    "DistinctAttr":$id,
     LLVM_DILanguageParameter:$sourceLanguage,
     "DIFileAttr":$file,
     OptionalParameter<"StringAttr">:$producer,
