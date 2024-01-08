@@ -701,13 +701,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .maxScalar(0, S32);
     }
 
-    getActionDefinitionsBuilder(G_MUL)
-      .legalFor({S32, S16, V2S16})
-      .clampMaxNumElementsStrict(0, S16, 2)
-      .scalarize(0)
-      .minScalar(0, S16)
-      .widenScalarToNextMultipleOf(0, 32)
-      .custom();
+    if (ST.hasScalarSMulU64()) {
+      getActionDefinitionsBuilder(G_MUL)
+          .legalFor({S64, S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .custom();
+    } else {
+      getActionDefinitionsBuilder(G_MUL)
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .custom();
+    }
     assert(ST.hasMad64_32());
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
