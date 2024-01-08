@@ -6865,7 +6865,7 @@ def ArmInDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
 The ``__arm_in`` keyword applies to prototyped function types and specifies
-that the function shares state S with its caller.  For ``__arm_in``, the
+that the function shares a given state S with its caller.  For ``__arm_in``, the
 function takes the state S as input and returns with the state S unchanged.
 
 The attribute takes string arguments to instruct the compiler which state
@@ -6882,8 +6882,8 @@ def ArmOutDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
 The ``__arm_out`` keyword applies to prototyped function types and specifies
-that the function shares state S with its caller.  For ``__arm_out``, the
-function ignores the incoming state for S and returns new state for S.
+that the function shares a given state S with its caller.  For ``__arm_out``,
+the function ignores the incoming state for S and returns new state for S.
 
 The attribute takes string arguments to instruct the compiler which state
 is shared.  The supported states for S are:
@@ -6899,8 +6899,8 @@ def ArmInOutDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
 The ``__arm_inout`` keyword applies to prototyped function types and specifies
-that the function shares state S with its caller.  For ``__arm_inout``, the
-function takes the state S as input and returns new state for S.
+that the function shares a given state S with its caller.  For ``__arm_inout``,
+the function takes the state S as input and returns new state for S.
 
 The attribute takes string arguments to instruct the compiler which state
 is shared.  The supported states for S are:
@@ -6916,8 +6916,8 @@ def ArmPreservesDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
 The ``__arm_preserves`` keyword applies to prototyped function types and
-specifies that the function does not read the incoming state S and returns with
-the state S unchanged.
+specifies that the function does not read a given state S and returns
+with state S unchanged.
 
 The attribute takes string arguments to instruct the compiler which state
 is shared.  The supported states for S are:
