@@ -3877,13 +3877,20 @@ def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
 // Wrapper around llvm.amdgcn.s.buffer.load. This is mostly needed as
 // a workaround for the intrinsic being defined as readnone, but
 // really needs a memory operand.
-def G_AMDGPU_S_BUFFER_LOAD : AMDGPUGenericInstruction {
+
+class SBufferLoadInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$rsrc, type2:$offset, untyped_imm_0:$cachepolicy);
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
 }
+
+def G_AMDGPU_S_BUFFER_LOAD : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_SBYTE : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
 
 def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
