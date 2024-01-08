@@ -340,3 +340,9 @@ void DeviceTy::dumpOffloadEntries() {
     fprintf(stderr, "  %11s: %s\n", Kind, It.second->getNameAsCStr());
   }
 }
+
+bool DeviceTy::useAutoZeroCopy() {
+  if (RTL->use_auto_zero_copy)
+    return RTL->use_auto_zero_copy(RTLDeviceID);
+  return false;
+}
