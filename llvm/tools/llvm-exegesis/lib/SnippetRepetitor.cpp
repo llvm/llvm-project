@@ -10,6 +10,7 @@
 #include "Target.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 namespace llvm {
@@ -74,9 +75,10 @@ public:
       auto Loop = Filler.addBasicBlock();
       auto Exit = Filler.addBasicBlock();
 
-      // Align the loop machine basic block to a sixteen byte boundary
-      // so that instruction fetch on modern x86 platforms works optimally.
-      Loop.MBB->setAlignment(Align(16));
+      // Align the loop machine basic block to a target-specific boundary
+      // to promote optimal instruction fetch/predecoding conditions.
+      Loop.MBB->setAlignment(
+          Filler.MF.getSubtarget().getTargetLowering()->getPrefLoopAlignment());
 
       const unsigned LoopUnrollFactor =
           LoopBodySize <= Instructions.size()
