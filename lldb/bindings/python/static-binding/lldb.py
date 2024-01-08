@@ -133,6 +133,8 @@ LLDB_WATCH_TYPE_WRITE = _lldb.LLDB_WATCH_TYPE_WRITE
 
 LLDB_WATCH_TYPE_MODIFY = _lldb.LLDB_WATCH_TYPE_MODIFY
 
+LLDB_INVALID_SITE_ID = _lldb.LLDB_INVALID_SITE_ID
+
 LLDB_REGNUM_GENERIC_PC = _lldb.LLDB_REGNUM_GENERIC_PC
 
 LLDB_REGNUM_GENERIC_SP = _lldb.LLDB_REGNUM_GENERIC_SP
@@ -192,6 +194,8 @@ LLDB_INVALID_COLUMN_NUMBER = _lldb.LLDB_INVALID_COLUMN_NUMBER
 LLDB_INVALID_QUEUE_ID = _lldb.LLDB_INVALID_QUEUE_ID
 
 LLDB_INVALID_CPU_ID = _lldb.LLDB_INVALID_CPU_ID
+
+LLDB_INVALID_WATCHPOINT_RESOURCE_ID = _lldb.LLDB_INVALID_WATCHPOINT_RESOURCE_ID
 
 LLDB_ARCH_DEFAULT = _lldb.LLDB_ARCH_DEFAULT
 
@@ -551,6 +555,10 @@ eValueTypeConstResult = _lldb.eValueTypeConstResult
 
 eValueTypeVariableThreadLocal = _lldb.eValueTypeVariableThreadLocal
 
+eValueTypeVTable = _lldb.eValueTypeVTable
+
+eValueTypeVTableEntry = _lldb.eValueTypeVTableEntry
+
 eInputReaderGranularityInvalid = _lldb.eInputReaderGranularityInvalid
 
 eInputReaderGranularityByte = _lldb.eInputReaderGranularityByte
@@ -770,6 +778,8 @@ eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = _lldb.eInstrumentationRu
 eInstrumentationRuntimeTypeMainThreadChecker = _lldb.eInstrumentationRuntimeTypeMainThreadChecker
 
 eInstrumentationRuntimeTypeSwiftRuntimeReporting = _lldb.eInstrumentationRuntimeTypeSwiftRuntimeReporting
+
+eInstrumentationRuntimeTypeLibsanitizersAsan = _lldb.eInstrumentationRuntimeTypeLibsanitizersAsan
 
 eNumInstrumentationRuntimeTypes = _lldb.eNumInstrumentationRuntimeTypes
 
@@ -1184,6 +1194,8 @@ eSectionTypeDWARFDebugLocListsDwo = _lldb.eSectionTypeDWARFDebugLocListsDwo
 eSectionTypeDWARFDebugTuIndex = _lldb.eSectionTypeDWARFDebugTuIndex
 
 eSectionTypeCTF = _lldb.eSectionTypeCTF
+
+eSectionTypeLLDBTypeSummaries = _lldb.eSectionTypeLLDBTypeSummaries
 
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 
@@ -14888,6 +14900,10 @@ class SBValue(object):
             It returns an SBWatchpoint, which may be invalid.
         """
         return _lldb.SBValue_WatchPointee(self, resolve_location, read, write, error)
+
+    def GetVTable(self):
+        r"""GetVTable(SBValue self) -> SBValue"""
+        return _lldb.SBValue_GetVTable(self)
 
     def __repr__(self):
         r"""__repr__(SBValue self) -> std::string"""
