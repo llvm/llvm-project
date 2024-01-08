@@ -4159,6 +4159,12 @@ private:
                successor == eval.controlSuccessor)
         // Exit from a degenerate, empty construct block.
         genBranch(eval.parentConstruct->constructExit->block);
+      else if (successor->block)
+        // Catch case with omp collapse(n) when dealing with an end-do statement
+        // which has been collapsed into an outer loop and unstructured control
+        // flow is used. Create a fall through branch to the successor (the
+        // outer loop). This is not known to affect other cases.
+        genBranch(successor->block);
     }
   }
 
