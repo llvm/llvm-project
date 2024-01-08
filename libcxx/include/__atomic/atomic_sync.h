@@ -12,6 +12,7 @@
 #include <__atomic/contention_t.h>
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
+#include <__atomic/to_gcc_order.h>
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
@@ -19,6 +20,8 @@
 #include <__thread/poll_with_backoff.h>
 #include <__thread/support.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/remove_cv.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,8 +38,8 @@ struct __is_cxx_atomic_impl<__cxx_atomic_impl<_Tp> > : true_type {};
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI __enable_if_t<!__is_cxx_atomic_impl<__remove_cv_t<_Tp> >::value, _Tp>
-__cxx_atomic_load(_Tp* __ptr, memory_order __order) noexcept {
-  alignas(_Tp) unsigned char __mem[sizeof(_Tp)];
+__cxx_atomic_load(_Tp* __ptr, memory_order __order) _NOEXCEPT {
+  _ALIGNAS_TYPE(_Tp) unsigned char __mem[sizeof(_Tp)];
   auto* __ret = reinterpret_cast<_Tp*>(__mem);
   __atomic_load(__ptr, __ret, __to_gcc_order(__order));
   return *__ret;
