@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMFrontendDriver
   CodeGenOptions.cpp
+  RISCV.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend/Driver
