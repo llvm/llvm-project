@@ -15,10 +15,8 @@ define void @signed_iv_step_1(i64 %end) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[IV]], [[END]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i64 [[IV]], -10
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -141,10 +139,8 @@ define void @signed_iv_step_4_start_4(i64 %count) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[IV]], [[END]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i64 [[IV]], 4
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -226,10 +222,8 @@ define void @signed_iv_step_minus1(i64 %end) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[IV]], [[END]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sle i64 [[IV]], 10
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
