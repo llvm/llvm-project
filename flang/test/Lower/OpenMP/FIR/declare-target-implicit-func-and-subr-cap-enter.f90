@@ -3,8 +3,6 @@
 !RUN: bbc -emit-fir -fopenmp %s -o - | FileCheck %s
 !RUN: bbc -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
-!XFAIL: system-windows
-
 ! CHECK-LABEL: func.func @_QPimplicitly_captured_twice
 ! CHECK-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>{{.*}}}
 function implicitly_captured_twice() result(k)
