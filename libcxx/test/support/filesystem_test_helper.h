@@ -325,11 +325,15 @@ struct scoped_test_env
       ::sockaddr_un address;
       address.sun_family = AF_UNIX;
 
-      // If file.size() is too big, try to create a file directly inside
-      // /tmp to make sure file path is short enough.
+// If file.size() is too big, try to create a file directly inside
+// /tmp to make sure file path is short enough.
+// Android platform warns about tmpnam, since the problem does not appear
+// on Android, let's not apply it for Android.
+#  if !defined(__ANDROID__)
       if (file.size() <= sizeof(address.sun_path)) {
         file = std::tmpnam(nullptr);
       }
+#  endif
       assert(file.size() <= sizeof(address.sun_path));
       ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
       int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
