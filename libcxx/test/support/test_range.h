@@ -9,9 +9,9 @@
 #ifndef LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 #define LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 
+#include <concepts>
 #include <iterator>
 #include <ranges>
-#include <__concepts/same_as.h>
 
 #include "test_iterators.h"
 
