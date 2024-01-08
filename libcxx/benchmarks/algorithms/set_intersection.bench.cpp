@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <forward_list>
 #include <iterator>
 #include <set>
 #include <vector>
@@ -31,57 +30,26 @@ struct SetContainer {
   static constexpr const char* Name = "Set";
 };
 
-struct ForwardListContainer {
-  template <typename... Args>
-  using type = std::forward_list<Args...>;
-
-  static constexpr const char* Name = "ForwardList";
-};
-
-using AllContainerTypes = std::tuple<VectorContainer, SetContainer, ForwardListContainer>;
+using AllContainerTypes = std::tuple<VectorContainer, SetContainer>;
 
 // set_intersection performance may depend on where matching values lie
 enum class OverlapPosition {
   None,
   Front,
-  Back,
+  // performance-wise, matches at the back are identical to ones at the front
   Interlaced,
 };
 
-struct AllOverlapPositions : EnumValuesAsTuple<AllOverlapPositions, OverlapPosition, 4> {
-  static constexpr const char* Names[] = {"None", "Front", "Back", "Interlaced"};
+struct AllOverlapPositions : EnumValuesAsTuple<AllOverlapPositions, OverlapPosition, 3> {
+  static constexpr const char* Names[] = {"None", "Front", "Interlaced"};
 };
 
 // functor that moves elements from an iterator range into a new Container instance
 template <typename Container>
-struct MoveInto {};
-
-template <typename T>
-struct MoveInto<std::vector<T>> {
+struct MoveInto {
   template <class It>
-  [[nodiscard]] static std::vector<T> operator()(It first, It last) {
-    std::vector<T> out;
-    std::move(first, last, std::back_inserter(out));
-    return out;
-  }
-};
-
-template <typename T>
-struct MoveInto<std::forward_list<T>> {
-  template <class It>
-  [[nodiscard]] static std::forward_list<T> operator()(It first, It last) {
-    std::forward_list<T> out;
-    std::move(first, last, std::front_inserter(out));
-    out.reverse();
-    return out;
-  }
-};
-
-template <typename T>
-struct MoveInto<std::set<T>> {
-  template <class It>
-  [[nodiscard]] static std::set<T> operator()(It first, It last) {
-    std::set<T> out;
+  [[nodiscard]] static Container operator()(It first, It last) {
+    Container out;
     std::move(first, last, std::inserter(out, out.begin()));
     return out;
   }
@@ -137,7 +105,7 @@ template <class Container>
 std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size2, OverlapPosition pos) {
   using ValueType = typename Container::value_type;
   const MoveInto<Container> move_into;
-  const auto src_size = pos == OverlapPosition::None ? size1 + size2 : std::max(size1, size2);
+  const auto src_size        = pos == OverlapPosition::None ? size1 + size2 : std::max(size1, size2);
   std::vector<ValueType> src = getVectorOfRandom<ValueType>(src_size);
 
   if (pos == OverlapPosition::None) {
@@ -159,10 +127,6 @@ std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size
   case OverlapPosition::Front:
     return std::make_pair(move_into(src.begin(), src.begin() + size1), move_into(copy.begin(), copy.begin() + size2));
 
-  case OverlapPosition::Back:
-    return std::make_pair(move_into(src.begin() + (src.size() - size1), src.end()),
-                          move_into(copy.begin() + (copy.size() - size2), copy.end()));
-
   case OverlapPosition::Interlaced:
     const auto stride1 = size1 < size2 ? size2 / size1 : 1;
     const auto stride2 = size2 < size1 ? size1 / size2 : 1;
@@ -181,6 +145,11 @@ struct SetIntersection {
 
   SetIntersection(size_t size1, size_t size2) : size1_(size1), size2_(size2) {}
 
+  bool skip() const noexcept {
+    // let's save some time and skip simmetrical runs
+    return size1_ <= size2_;
+  }
+
   void run(benchmark::State& state) const {
     state.PauseTiming();
     auto input = genCacheUnfriendlyData<ContainerType>(size1_, size2_, Overlap());
@@ -192,12 +161,13 @@ struct SetIntersection {
       return std::less<Value<ValueType>>{}(lhs, rhs);
     };
 
-    const auto BATCH_SIZE = std::max(size_t{16}, (2 * TestSetElements) / (size1_ + size2_));
+    const auto BATCH_SIZE = std::max(size_t{512}, (2 * TestSetElements) / (size1_ + size2_));
     state.ResumeTiming();
 
     for (const auto& _ : state) {
       while (state.KeepRunningBatch(BATCH_SIZE)) {
         for (unsigned i = 0; i < BATCH_SIZE; ++i) {
+          cmp                  = 0;
           const auto& [c1, c2] = input;
           auto res = std::set_intersection(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin(), tracking_less);
           benchmark::DoNotOptimize(res);
@@ -219,6 +189,18 @@ int main(int argc, char** argv) { /**/
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
     return 1;
+  const std::vector<size_t> Quantities = {
+      1 << 0,
+      1 << 4,
+      1 << 8,
+      1 << 14,
+// Running each benchmark in parallel consumes too much memory with MSAN
+// and can lead to the test process being killed.
+#if !TEST_HAS_FEATURE(memory_sanitizer)
+      1 << 18
+#endif
+  };
+
   makeCartesianProductBenchmark<SetIntersection, AllValueTypes, AllContainerTypes, AllOverlapPositions>(
       Quantities, Quantities);
   benchmark::RunSpecifiedBenchmarks();
