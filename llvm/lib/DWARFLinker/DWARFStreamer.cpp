@@ -859,10 +859,8 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
   for (auto Include : P.IncludeDirectories)
     emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool);
 
-  bool InlineSources = any_of(P.FileNames, [](auto &File) {
-    auto s = dwarf::toString(File.Source);
-    return s && !**s;
-  });
+  bool HasChecksums = P.ContentTypes.HasMD5;
+  bool HasInlineSources = P.ContentTypes.HasSource;
 
   if (P.FileNames.empty()) {
     // file_name_entry_format_count (ubyte).
@@ -870,7 +868,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
     LineSectionSize += 1;
   } else {
     // file_name_entry_format_count (ubyte).
-    MS->emitInt8(2 + (InlineSources ? 1 : 0));
+    MS->emitInt8(2 + (HasChecksums ? 1 : 0) + (HasInlineSources ? 1 : 0));
     LineSectionSize += 1;
 
     // file_name_entry_format (sequence of ULEB128 pairs).
@@ -880,7 +878,13 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
 
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data1);
-    if (InlineSources) {
+
+    if (HasChecksums) {
+      LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
+      LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data16);
+    }
+
+    if (HasInlineSources) {
       LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_LLVM_source);
       LineSectionSize += MS->emitULEB128IntValue(StrForm);
     }
@@ -894,7 +898,13 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
     emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
     MS->emitInt8(File.DirIdx);
     LineSectionSize += 1;
-    if (InlineSources)
+    if (HasChecksums) {
+      MS->emitBinaryData(
+          StringRef(reinterpret_cast<const char *>(File.Checksum.data()),
+                    File.Checksum.size()));
+      LineSectionSize += File.Checksum.size();
+    }
+    if (HasInlineSources)
       emitLineTableString(P, File.Source, DebugStrPool, DebugLineStrPool);
   }
 }

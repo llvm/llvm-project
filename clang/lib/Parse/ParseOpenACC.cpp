@@ -80,6 +80,10 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   if (Tok.is(tok::kw_default))
     return OpenACCClauseKind::Default;
 
+  // if is also a keyword, make sure we parse it correctly.
+  if (Tok.is(tok::kw_if))
+    return OpenACCClauseKind::If;
+
   if (!Tok.is(tok::identifier))
     return OpenACCClauseKind::Invalid;
 
@@ -88,6 +92,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("default", OpenACCClauseKind::Default)
       .Case("finalize", OpenACCClauseKind::Finalize)
+      .Case("if", OpenACCClauseKind::If)
       .Case("if_present", OpenACCClauseKind::IfPresent)
       .Case("independent", OpenACCClauseKind::Independent)
       .Case("nohost", OpenACCClauseKind::NoHost)
@@ -324,7 +329,7 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
 }
 
 bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
-  return Kind == OpenACCClauseKind::Default;
+  return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If;
 }
 
 bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
@@ -356,6 +361,19 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
 
       break;
     }
+    case OpenACCClauseKind::If: {
+      // FIXME: It isn't clear if the spec saying 'condition' means the same as
+      // it does in an if/while/etc (See ParseCXXCondition), however as it was
+      // written with Fortran/C in mind, we're going to assume it just means an
+      // 'expression evaluating to boolean'.
+      ExprResult CondExpr =
+          P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
+      // An invalid expression can be just about anything, so just give up on
+      // this clause list.
+      if (CondExpr.isInvalid())
+        return true;
+      break;
+    }
     default:
       llvm_unreachable("Not a required parens type?");
     }
@@ -372,8 +390,10 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
 // However, they all are named with a single-identifier (or auto/default!)
 // token, followed in some cases by either braces or parens.
 bool ParseOpenACCClause(Parser &P) {
-  if (!P.getCurToken().isOneOf(tok::identifier, tok::kw_auto, tok::kw_default))
-    return P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
+  // A number of clause names are actually keywords, so accept a keyword that
+  // can be converted to a name.
+  if (expectIdentifierOrKeyword(P))
+    return true;
 
   OpenACCClauseKind Kind = getOpenACCClauseKind(P.getCurToken());
 

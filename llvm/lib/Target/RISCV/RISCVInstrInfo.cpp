@@ -2365,7 +2365,6 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace RISCVII;
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_CALL, "riscv-call"},
-      {MO_PLT, "riscv-plt"},
       {MO_LO, "riscv-lo"},
       {MO_HI, "riscv-hi"},
       {MO_PCREL_LO, "riscv-pcrel-lo"},
