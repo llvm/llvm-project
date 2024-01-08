@@ -21,14 +21,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Target/TargetMachine.h"
-
 using namespace llvm;
 
 namespace llvm {
@@ -75,13 +72,25 @@ template <> struct DenseMapInfo<UniqueBBID> {
   }
 };
 
-class BasicBlockSectionsProfileReader {
+class BasicBlockSectionsProfileReader : public ImmutablePass {
 public:
-  friend class BasicBlockSectionsProfileReaderWrapperPass;
-  BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
-      : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#'){};
+  static char ID;
 
-  BasicBlockSectionsProfileReader(){};
+  BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
+      : ImmutablePass(ID), MBuf(Buf),
+        LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#') {
+    initializeBasicBlockSectionsProfileReaderPass(
+        *PassRegistry::getPassRegistry());
+  };
+
+  BasicBlockSectionsProfileReader() : ImmutablePass(ID) {
+    initializeBasicBlockSectionsProfileReaderPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override {
+    return "Basic Block Sections Profile Reader";
+  }
 
   // Returns true if basic block sections profile exist for function \p
   // FuncName.
@@ -99,6 +108,10 @@ public:
   // Returns the path clonings for the given function.
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
+
+  // Initializes the FunctionNameToDIFilename map for the current module and
+  // then reads the profile for the matching functions.
+  bool doInitialization(Module &M) override;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -157,61 +170,7 @@ private:
 // sections profile. \p Buf is a memory buffer that contains the list of
 // functions and basic block ids to selectively enable basic block sections.
 ImmutablePass *
-createBasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf);
-
-/// Analysis pass providing the \c BasicBlockSectionsProfileReader.
-///
-/// Note that this pass's result cannot be invalidated, it is immutable for the
-/// life of the module.
-class BasicBlockSectionsProfileReaderAnalysis
-    : public AnalysisInfoMixin<BasicBlockSectionsProfileReaderAnalysis> {
-
-public:
-  static AnalysisKey Key;
-  typedef BasicBlockSectionsProfileReader Result;
-  BasicBlockSectionsProfileReaderAnalysis(const TargetMachine *TM) : TM(TM) {}
-
-  Result run(Function &F, FunctionAnalysisManager &AM);
-
-private:
-  const TargetMachine *TM;
-};
-
-class BasicBlockSectionsProfileReaderWrapperPass : public ImmutablePass {
-public:
-  static char ID;
-  BasicBlockSectionsProfileReader BBSPR;
-
-  BasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf)
-      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader(Buf)) {
-    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  };
-
-  BasicBlockSectionsProfileReaderWrapperPass()
-      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader()) {
-    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override {
-    return "Basic Block Sections Profile Reader";
-  }
-
-  bool isFunctionHot(StringRef FuncName) const;
-
-  std::pair<bool, SmallVector<BBClusterInfo>>
-  getClusterInfoForFunction(StringRef FuncName) const;
-
-  SmallVector<SmallVector<unsigned>>
-  getClonePathsForFunction(StringRef FuncName) const;
-
-  // Initializes the FunctionNameToDIFilename map for the current module and
-  // then reads the profile for the matching functions.
-  bool doInitialization(Module &M) override;
-
-  BasicBlockSectionsProfileReader &getBBSPR();
-};
+createBasicBlockSectionsProfileReaderPass(const MemoryBuffer *Buf);
 
 } // namespace llvm
 #endif // LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H

@@ -28,6 +28,26 @@
 namespace __sanitizer {
 
 #if !SANITIZER_GO
+
+static bool FrameIsInternal(const SymbolizedStack *frame) {
+  if (!frame)
+    return true;
+  const char *file = frame->info.file;
+  const char *module = frame->info.module;
+  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
+    return true;
+  if (module && (internal_strstr(module, "libclang_rt.")))
+    return true;
+  return false;
+}
+
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames) {
+  for (const SymbolizedStack *f = frames; f; f = f->next)
+    if (!FrameIsInternal(f))
+      return f;
+  return nullptr;
+}
+
 void ReportErrorSummary(const char *error_type, const AddressInfo &info,
                         const char *alt_tool_name) {
   if (!common_flags()->print_summary) return;
@@ -82,9 +102,10 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
   // Currently, we include the first stack frame into the report summary.
   // Maybe sometimes we need to choose another frame (e.g. skip memcpy/etc).
   uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
-  SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
+  SymbolizedStackHolder symbolized_stack(
+      Symbolizer::GetOrInit()->SymbolizePC(pc));
+  const SymbolizedStack *frame = symbolized_stack.get();
   ReportErrorSummary(error_type, frame->info, alt_tool_name);
-  frame->ClearAll();
 #endif
 }
 

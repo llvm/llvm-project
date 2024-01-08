@@ -76,12 +76,17 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   if (Tok.is(tok::kw_auto))
     return OpenACCClauseKind::Auto;
 
+  // default is a keyword, so make sure we parse it correctly.
+  if (Tok.is(tok::kw_default))
+    return OpenACCClauseKind::Default;
+
   if (!Tok.is(tok::identifier))
     return OpenACCClauseKind::Invalid;
 
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
       .Case("auto", OpenACCClauseKind::Auto)
+      .Case("default", OpenACCClauseKind::Default)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("if_present", OpenACCClauseKind::IfPresent)
       .Case("independent", OpenACCClauseKind::Independent)
@@ -104,6 +109,17 @@ OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
       .Case("update", OpenACCAtomicKind::Update)
       .Case("capture", OpenACCAtomicKind::Capture)
       .Default(OpenACCAtomicKind::Invalid);
+}
+
+OpenACCDefaultClauseKind getOpenACCDefaultClauseKind(Token Tok) {
+  if (!Tok.is(tok::identifier))
+    return OpenACCDefaultClauseKind::Invalid;
+
+  return llvm::StringSwitch<OpenACCDefaultClauseKind>(
+             Tok.getIdentifierInfo()->getName())
+      .Case("none", OpenACCDefaultClauseKind::None)
+      .Case("present", OpenACCDefaultClauseKind::Present)
+      .Default(OpenACCDefaultClauseKind::Invalid);
 }
 
 enum class OpenACCSpecialTokenKind {
@@ -174,6 +190,22 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
     return false;
   }
   llvm_unreachable("Unknown 'Kind' Passed");
+}
+
+/// Used for cases where we expect an identifier-like token, but don't want to
+/// give awkward error messages in cases where it is accidentially a keyword.
+bool expectIdentifierOrKeyword(Parser &P) {
+  Token Tok = P.getCurToken();
+
+  if (Tok.is(tok::identifier))
+    return false;
+
+  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() &&
+      Tok.getIdentifierInfo()->isKeyword(P.getLangOpts()))
+    return false;
+
+  P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
+  return true;
 }
 
 OpenACCDirectiveKind
@@ -291,13 +323,56 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   return DirKind;
 }
 
+bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
+  return Kind == OpenACCClauseKind::Default;
+}
+
+bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
+  BalancedDelimiterTracker Parens(P, tok::l_paren,
+                                  tok::annot_pragma_openacc_end);
+
+  if (ClauseHasRequiredParens(Kind)) {
+    if (Parens.expectAndConsume()) {
+      // We are missing a paren, so assume that the person just forgot the
+      // parameter.  Return 'false' so we try to continue on and parse the next
+      // clause.
+      P.SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openacc_end,
+                  Parser::StopBeforeMatch);
+      return false;
+    }
+
+    switch (Kind) {
+    case OpenACCClauseKind::Default: {
+      Token DefKindTok = P.getCurToken();
+
+      if (expectIdentifierOrKeyword(P))
+        break;
+
+      P.ConsumeToken();
+
+      if (getOpenACCDefaultClauseKind(DefKindTok) ==
+          OpenACCDefaultClauseKind::Invalid)
+        P.Diag(DefKindTok, diag::err_acc_invalid_default_clause_kind);
+
+      break;
+    }
+    default:
+      llvm_unreachable("Not a required parens type?");
+    }
+
+    return Parens.consumeClose();
+  }
+  // FIXME: Handle optional parens
+  return false;
+}
+
 // The OpenACC Clause List is a comma or space-delimited list of clauses (see
 // the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
 // really have its owner grammar and each individual one has its own definition.
-// However, they all are named with a single-identifier (or auto!) token,
-// followed in some cases by either braces or parens.
+// However, they all are named with a single-identifier (or auto/default!)
+// token, followed in some cases by either braces or parens.
 bool ParseOpenACCClause(Parser &P) {
-  if (!P.getCurToken().isOneOf(tok::identifier, tok::kw_auto))
+  if (!P.getCurToken().isOneOf(tok::identifier, tok::kw_auto, tok::kw_default))
     return P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
 
   OpenACCClauseKind Kind = getOpenACCClauseKind(P.getCurToken());
@@ -309,8 +384,7 @@ bool ParseOpenACCClause(Parser &P) {
   // Consume the clause name.
   P.ConsumeToken();
 
-  // FIXME: For future clauses, we need to handle parens/etc below.
-  return false;
+  return ParseOpenACCClauseParams(P, Kind);
 }
 
 // Skip until we see the end of pragma token, but don't consume it. This is us

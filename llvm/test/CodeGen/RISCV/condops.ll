@@ -3092,7 +3092,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV32I-NEXT:  .LBB56_1: # %bb2
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:    call bar
 ; RV32I-NEXT:    sll s1, s1, s0
 ; RV32I-NEXT:    bnez a0, .LBB56_1
 ; RV32I-NEXT:  # %bb.2: # %bb7
@@ -3115,7 +3115,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV64I-NEXT:  .LBB56_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call bar@plt
+; RV64I-NEXT:    call bar
 ; RV64I-NEXT:    sllw s1, s1, s0
 ; RV64I-NEXT:    bnez a0, .LBB56_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
@@ -3137,7 +3137,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV64XVENTANACONDOPS-NEXT:  .LBB56_1: # %bb2
 ; RV64XVENTANACONDOPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64XVENTANACONDOPS-NEXT:    mv a0, s1
-; RV64XVENTANACONDOPS-NEXT:    call bar@plt
+; RV64XVENTANACONDOPS-NEXT:    call bar
 ; RV64XVENTANACONDOPS-NEXT:    sllw s1, s1, s0
 ; RV64XVENTANACONDOPS-NEXT:    bnez a0, .LBB56_1
 ; RV64XVENTANACONDOPS-NEXT:  # %bb.2: # %bb7
@@ -3160,7 +3160,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV64XTHEADCONDMOV-NEXT:  .LBB56_1: # %bb2
 ; RV64XTHEADCONDMOV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64XTHEADCONDMOV-NEXT:    sext.w a0, s1
-; RV64XTHEADCONDMOV-NEXT:    call bar@plt
+; RV64XTHEADCONDMOV-NEXT:    call bar
 ; RV64XTHEADCONDMOV-NEXT:    sllw s1, s1, s0
 ; RV64XTHEADCONDMOV-NEXT:    bnez a0, .LBB56_1
 ; RV64XTHEADCONDMOV-NEXT:  # %bb.2: # %bb7
@@ -3182,7 +3182,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV32ZICOND-NEXT:  .LBB56_1: # %bb2
 ; RV32ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32ZICOND-NEXT:    mv a0, s1
-; RV32ZICOND-NEXT:    call bar@plt
+; RV32ZICOND-NEXT:    call bar
 ; RV32ZICOND-NEXT:    sll s1, s1, s0
 ; RV32ZICOND-NEXT:    bnez a0, .LBB56_1
 ; RV32ZICOND-NEXT:  # %bb.2: # %bb7
@@ -3204,7 +3204,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV64ZICOND-NEXT:  .LBB56_1: # %bb2
 ; RV64ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64ZICOND-NEXT:    mv a0, s1
-; RV64ZICOND-NEXT:    call bar@plt
+; RV64ZICOND-NEXT:    call bar
 ; RV64ZICOND-NEXT:    sllw s1, s1, s0
 ; RV64ZICOND-NEXT:    bnez a0, .LBB56_1
 ; RV64ZICOND-NEXT:  # %bb.2: # %bb7
@@ -3243,7 +3243,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV32I-NEXT:  .LBB57_1: # %bb2
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:    call bar
 ; RV32I-NEXT:    sll s1, s1, s0
 ; RV32I-NEXT:    bnez a0, .LBB57_1
 ; RV32I-NEXT:  # %bb.2: # %bb7
@@ -3266,7 +3266,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV64I-NEXT:  .LBB57_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call bar@plt
+; RV64I-NEXT:    call bar
 ; RV64I-NEXT:    sllw s1, s1, s0
 ; RV64I-NEXT:    bnez a0, .LBB57_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
@@ -3288,7 +3288,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV64XVENTANACONDOPS-NEXT:  .LBB57_1: # %bb2
 ; RV64XVENTANACONDOPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64XVENTANACONDOPS-NEXT:    mv a0, s1
-; RV64XVENTANACONDOPS-NEXT:    call bar@plt
+; RV64XVENTANACONDOPS-NEXT:    call bar
 ; RV64XVENTANACONDOPS-NEXT:    sllw s1, s1, s0
 ; RV64XVENTANACONDOPS-NEXT:    bnez a0, .LBB57_1
 ; RV64XVENTANACONDOPS-NEXT:  # %bb.2: # %bb7
@@ -3311,7 +3311,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV64XTHEADCONDMOV-NEXT:  .LBB57_1: # %bb2
 ; RV64XTHEADCONDMOV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64XTHEADCONDMOV-NEXT:    sext.w a0, s1
-; RV64XTHEADCONDMOV-NEXT:    call bar@plt
+; RV64XTHEADCONDMOV-NEXT:    call bar
 ; RV64XTHEADCONDMOV-NEXT:    sllw s1, s1, s0
 ; RV64XTHEADCONDMOV-NEXT:    bnez a0, .LBB57_1
 ; RV64XTHEADCONDMOV-NEXT:  # %bb.2: # %bb7
@@ -3333,7 +3333,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV32ZICOND-NEXT:  .LBB57_1: # %bb2
 ; RV32ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32ZICOND-NEXT:    mv a0, s1
-; RV32ZICOND-NEXT:    call bar@plt
+; RV32ZICOND-NEXT:    call bar
 ; RV32ZICOND-NEXT:    sll s1, s1, s0
 ; RV32ZICOND-NEXT:    bnez a0, .LBB57_1
 ; RV32ZICOND-NEXT:  # %bb.2: # %bb7
@@ -3355,7 +3355,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV64ZICOND-NEXT:  .LBB57_1: # %bb2
 ; RV64ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64ZICOND-NEXT:    mv a0, s1
-; RV64ZICOND-NEXT:    call bar@plt
+; RV64ZICOND-NEXT:    call bar
 ; RV64ZICOND-NEXT:    sllw s1, s1, s0
 ; RV64ZICOND-NEXT:    bnez a0, .LBB57_1
 ; RV64ZICOND-NEXT:  # %bb.2: # %bb7
@@ -3505,7 +3505,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32I-NEXT:    beqz a1, .LBB60_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call bat@plt
+; RV32I-NEXT:    call bat
 ; RV32I-NEXT:  .LBB60_4:
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -3526,7 +3526,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64I-NEXT:    beqz a1, .LBB60_4
 ; RV64I-NEXT:  # %bb.3:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call bat@plt
+; RV64I-NEXT:    call bat
 ; RV64I-NEXT:  .LBB60_4:
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -3545,7 +3545,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64XVENTANACONDOPS-NEXT:    beqz a1, .LBB60_2
 ; RV64XVENTANACONDOPS-NEXT:  # %bb.1:
 ; RV64XVENTANACONDOPS-NEXT:    mv a0, s0
-; RV64XVENTANACONDOPS-NEXT:    call bat@plt
+; RV64XVENTANACONDOPS-NEXT:    call bat
 ; RV64XVENTANACONDOPS-NEXT:  .LBB60_2:
 ; RV64XVENTANACONDOPS-NEXT:    mv a0, s0
 ; RV64XVENTANACONDOPS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -3563,7 +3563,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64XTHEADCONDMOV-NEXT:    beqz a1, .LBB60_2
 ; RV64XTHEADCONDMOV-NEXT:  # %bb.1:
 ; RV64XTHEADCONDMOV-NEXT:    mv a0, s0
-; RV64XTHEADCONDMOV-NEXT:    call bat@plt
+; RV64XTHEADCONDMOV-NEXT:    call bat
 ; RV64XTHEADCONDMOV-NEXT:  .LBB60_2:
 ; RV64XTHEADCONDMOV-NEXT:    mv a0, s0
 ; RV64XTHEADCONDMOV-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -3582,7 +3582,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32ZICOND-NEXT:    beqz a1, .LBB60_2
 ; RV32ZICOND-NEXT:  # %bb.1:
 ; RV32ZICOND-NEXT:    mv a0, s0
-; RV32ZICOND-NEXT:    call bat@plt
+; RV32ZICOND-NEXT:    call bat
 ; RV32ZICOND-NEXT:  .LBB60_2:
 ; RV32ZICOND-NEXT:    mv a0, s0
 ; RV32ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -3601,7 +3601,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64ZICOND-NEXT:    beqz a1, .LBB60_2
 ; RV64ZICOND-NEXT:  # %bb.1:
 ; RV64ZICOND-NEXT:    mv a0, s0
-; RV64ZICOND-NEXT:    call bat@plt
+; RV64ZICOND-NEXT:    call bat
 ; RV64ZICOND-NEXT:  .LBB60_2:
 ; RV64ZICOND-NEXT:    mv a0, s0
 ; RV64ZICOND-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
