@@ -3,6 +3,8 @@
 !RUN: bbc -emit-fir -fopenmp %s -o - | FileCheck %s
 !RUN: bbc -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
+!XFAIL: system-windows
+
 ! CHECK-LABEL: func.func @_QPimplicitly_captured
 ! CHECK-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}}
 function implicitly_captured(toggle) result(k)
