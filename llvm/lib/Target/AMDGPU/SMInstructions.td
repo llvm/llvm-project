@@ -1060,10 +1060,6 @@ def : GCNPat <
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
 
-def SIMM24bitPtr : ImmLeaf <iPTR,
-  [{return isInt<24>(Imm);}]
->;
-
 def i32imm_zero : TImmLeaf <i32, [{
   return Imm == 0;
 }]>;
