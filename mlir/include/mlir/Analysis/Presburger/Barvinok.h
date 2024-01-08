@@ -79,7 +79,7 @@ ConeV getDual(ConeH cone);
 ConeH getDual(ConeV cone);
 
 /// Compute the generating function for a unimodular cone.
-/// It assert-fails if the input cone is not unimodular.
+/// The input cone must be unimodular; it assert-fails otherwise.
 GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
                                                     ConeH cone);
 

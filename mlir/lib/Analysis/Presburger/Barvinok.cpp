@@ -74,7 +74,7 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 /// coefficients.
 GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
     ParamPoint vertex, int sign, ConeH cone) {
-  // `cone` is assumed to be unimodular.
+  // `cone` must be unimodular.
   assert(getIndex(getDual(cone)) == 1 && "input cone is not unimodular!");
 
   unsigned numVar = cone.getNumVars();
@@ -88,11 +88,11 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
       transp(j, i) = Fraction(cone.atIneq(i, j), 1);
 
   FracMatrix generators(numVar, numIneq);
-  transp.determinant(&generators); // This is the U-matrix.
+  transp.determinant(/*inverse=*/&generators); // This is the U-matrix.
 
-  // The denominators of the generating function
-  // are given by the generators of the cone, i.e.,
-  // the rows of the matrix U.
+  // The powers in the denominator of the generating
+  // function are given by the generators of the cone,
+  // i.e., the rows of the matrix U.
   std::vector<Point> denominator(numIneq);
   ArrayRef<Fraction> row;
   for (unsigned i = 0; i < numVar; ++i) {
@@ -100,13 +100,14 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
     denominator[i] = Point(row);
   }
 
-  // The vertex is v : [d, n+1].
-  // We need to find affine functions of parameters λi(p)
-  // such that v = Σ λi(p)*ui.
-  // The λi are given by the columns of Λ = v^T @ U^{-1} = v^T @ transp.
-  // Then the numerator will be Σ -floor(-λi(p))*u_i.
-  // Thus we store the numerator as the affine function -Λ,
-  // since the generators are already stored in the denominator.
+  // The vertex is v : d x (n+1)
+  // We need to find affine functions of parameters λ_i(p)
+  // such that v = Σ λ_i(p)*u_i.
+  // The λi are given by the columns of Λ = v^T U^{-1} = v^T transp.
+  // Then the exponent in the numerator will be
+  // Σ -floor(-λ_i(p))*u_i.
+  // Thus we store the (exponent of the) numerator as the affine function -Λ,
+  // since the generators are already stored as the exponent of the denominator.
   // Note that the outer -1 will have to be accounted for, as it is not stored.
   // See end for an example.
 
