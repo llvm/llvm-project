@@ -517,6 +517,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
+    OptionalParameter<"DistinctAttr">:$id,
     OptionalParameter<"DICompileUnitAttr">:$compileUnit,
     "DIScopeAttr":$scope,
     OptionalParameter<"StringAttr">:$name,
@@ -529,13 +530,13 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
-      "DICompileUnitAttr":$compileUnit, "DIScopeAttr":$scope, "StringRef":$name,
-      "StringRef":$linkageName, "DIFileAttr":$file, "unsigned":$line,
-      "unsigned":$scopeLine, "DISubprogramFlags":$subprogramFlags,
-      "DISubroutineTypeAttr":$type
+      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+      "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
+      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
     ), [{
       MLIRContext *ctx = file.getContext();
-      return $_get(ctx, compileUnit, scope, StringAttr::get(ctx, name),
+      return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
                    StringAttr::get(ctx, linkageName), file, line,
                    scopeLine, subprogramFlags, type);
     }]>
