@@ -1848,8 +1848,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         OMPX_UseMultipleSdmaEngines(
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
-        AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
-        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
+        HSAXnackEnv("HSA_XNACK", false), AMDGPUStreamManager(*this, Agent),
+        AMDGPUEventManager(*this), AMDGPUSignalManager(*this), Agent(Agent),
+        HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
 
@@ -1938,6 +1939,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Initialize signal pool.
     if (auto Err = AMDGPUSignalManager.init(OMPX_InitialNumSignals))
+      return Err;
+
+    // detect if device is an APU.
+    if (auto Err = checkIfAPU())
       return Err;
 
     return Plugin::success();
@@ -2631,6 +2636,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Returns true if auto zero-copy the best configuration for the current
+  /// arch.
+  bool useAutoZeroCopyImpl() override {
+    // XNACK can be enabled with with kernel boot parameter or with
+    // environment variable.
+    return (IsAPU && (HSAXnackEnv || utils::isXnackEnabledViaKernelParam()));
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = StackSize;
@@ -2728,6 +2741,30 @@ private:
     return Err;
   }
 
+  /// Detect if current architecture is an APU.
+  Error checkIfAPU() {
+    std::string StrGfxName(ComputeUnitKind);
+    std::transform(std::begin(StrGfxName), std::end(StrGfxName),
+                   std::begin(StrGfxName),
+                   [](char c) { return std::tolower(c); });
+    if (StrGfxName == "gfx940") {
+      IsAPU = true;
+      return Plugin::success();
+    }
+    if (StrGfxName == "gfx942") {
+      // can be MI300A or MI300X
+      uint32_t ChipID = 0;
+      if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
+        return Err;
+
+      if (!(ChipID & 0x1)) {
+        IsAPU = true;
+        return Plugin::success();
+      }
+    }
+    return Plugin::success();
+  }
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
@@ -2764,6 +2801,9 @@ private:
   /// Use ROCm 5.7 interface for multiple SDMA engines
   BoolEnvar OMPX_UseMultipleSdmaEngines;
 
+  /// Value of HSA_XNACK environment variable.
+  BoolEnvar HSAXnackEnv;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -2794,6 +2834,9 @@ private:
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
   uint64_t StackSize = 16 * 1024 /* 16 KB */;
+
+  /// Is the plugin associated with an APU?
+  bool IsAPU{false};
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
