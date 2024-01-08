@@ -1569,7 +1569,7 @@ let SchedRW = [WriteStore], Defs = [EFLAGS] in {
   def ENQCMD64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                  "enqcmd\t{$src, $dst|$dst, $src}",
                  [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
-                 T8, XD, AdSize64, Requires<[HasENQCMD, In64BitMode]>;
+                 T8, XD, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
 
   def ENQCMDS16 : I<0xF8, MRMSrcMem, (outs), (ins GR16:$dst, i512mem_GR16:$src),
                  "enqcmds\t{$src, $dst|$dst, $src}",
@@ -1582,7 +1582,27 @@ let SchedRW = [WriteStore], Defs = [EFLAGS] in {
   def ENQCMDS64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                  "enqcmds\t{$src, $dst|$dst, $src}",
                  [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
-                 T8, XS, AdSize64, Requires<[HasENQCMD, In64BitMode]>;
+                 T8, XS, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
+
+let Predicates = [HasENQCMD, HasEGPR, In64BitMode] in {
+  def ENQCMD32_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                        "enqcmd\t{$src, $dst|$dst, $src}",
+                        [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
+                      EVEX, NoCD8, T_MAP4, XD, AdSize32;
+  def ENQCMD64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                        "enqcmd\t{$src, $dst|$dst, $src}",
+                        [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
+                      EVEX, NoCD8, T_MAP4, XD, AdSize64;
+
+  def ENQCMDS32_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                         "enqcmds\t{$src, $dst|$dst, $src}",
+                         [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
+                       EVEX, NoCD8, T_MAP4, XS, AdSize32;
+  def ENQCMDS64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                         "enqcmds\t{$src, $dst|$dst, $src}",
+                         [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
+                       EVEX, NoCD8, T_MAP4, XS, AdSize64;
+}
 }
 
 //===----------------------------------------------------------------------===//
