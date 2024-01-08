@@ -95,11 +95,11 @@ void test() {
   }
 
   //PRINT: #pragma omp target teams
-  //PRINT: #pragma omp simd
+  //PRINT: #pragma omp distribute
   //DUMP: OMPTargetTeamsDirective
   //DUMP: CapturedStmt
   //DUMP: ForStmt
-  //DUMP: OMPSimdDirective
+  //DUMP: OMPDistributeDirective
   #pragma omp target teams
   for (int i=0; i<1000; ++i) {
     #pragma omp loop
