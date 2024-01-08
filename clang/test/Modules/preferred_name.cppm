@@ -32,6 +32,8 @@ inline foo_templ<char> bar()
 module;
 #include "foo.h"
 export module A;
+export using ::foo_templ;
+export using ::bar;
 
 //--- Use.cppm
 // expected-no-diagnostics

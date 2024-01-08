@@ -70,6 +70,9 @@ export module a;
 export using ::a;
 export using ::a_view;
 
+// Otherwise the operator== would be discarded.
+using ::operator==;
+
 //--- b.cpp
 // expected-no-diagnostics
 import a;

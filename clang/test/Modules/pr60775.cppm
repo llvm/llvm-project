@@ -32,6 +32,10 @@ void a() {
 	}
 }
 
+export namespace std {
+    using std::initializer_list;
+}
+
 //--- b.cpp
 // expected-no-diagnostics
 import a;

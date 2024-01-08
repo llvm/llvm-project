@@ -467,6 +467,22 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// Mark ModuleDiscardable Decl D and its file scope top level declaration D
+  /// as reachable. This is a no-op if D is not ModuleDiscardable. We'll mark
+  /// the file scope top level declaration D as reachable too. Otherwise, it is
+  /// problematic if some parts of a decl is discarded in some TU and these
+  /// parts are not discarded in other TUs. This is an ODR violation. So if a
+  /// sub-decl is reachable, the top level decl and all of its children should
+  /// be reachable too.
+  void MarkDeclReachable(const Decl *D);
+  /// A helper to IsDeclModuleDiscardable. There are special declarations which
+  /// may not be referenced directly. But they can't be discarded if their
+  /// correspond decls are reachable. e.g., the deduction guides decls.
+  bool IsSpecialDeclNotDiscardable(Decl *D);
+  /// Callbacks to mark special decls as reachable once their corresponding
+  /// decls become reachable.
+  llvm::DenseMap<Decl *, llvm::SmallVector<Decl *, 8>> ReachableMarkerCallbacks;
+
   /// Collects input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
@@ -791,6 +807,14 @@ public:
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
   }
+
+  /// Whether or not D is module discardable. Besides the case that D is marked
+  /// not module discardable explicitly, `IsDeclModuleDiscardable` will return
+  /// false if:
+  /// - The file scope top level declaration of D is not module discardable.
+  /// - D is a deduction guide for another template declaration TD and TD is not
+  /// module discardable.
+  bool IsDeclModuleDiscardable(const Decl *D);
 
 private:
   // ASTDeserializationListener implementation

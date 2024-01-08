@@ -19,6 +19,9 @@ module;
 
 #include "C.h"
 export module B;
+export namespace foo {
+  using foo::bar;
+}
 
 //--- C.h
 namespace foo {
@@ -33,6 +36,9 @@ namespace foo {
 module;
 #include "E.h"
 export module D;
+export namespace foo {
+  using foo::bar;
+}
 
 //--- D-part.cppm
 export module D:part;

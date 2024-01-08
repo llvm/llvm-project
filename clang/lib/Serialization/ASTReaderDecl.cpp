@@ -656,6 +656,9 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     case Decl::ModuleOwnershipKind::ReachableWhenImported:
     case Decl::ModuleOwnershipKind::ModulePrivate:
       break;
+
+    case Decl::ModuleOwnershipKind::ModuleDiscardable:
+      llvm_unreachable("We should never read module discardable decls");
     }
 
     D->setModuleOwnershipKind(ModuleOwnership);

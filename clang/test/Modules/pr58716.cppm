@@ -14,6 +14,8 @@ module;
 #include "fail.h"
 export module mymodule;
 
+export using ::this_fails;
+
 // CHECK: @.str = {{.*}}"{}\00"
 // CHECK: store{{.*}}ptr @.str
 

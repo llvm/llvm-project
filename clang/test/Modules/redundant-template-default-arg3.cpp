@@ -88,6 +88,15 @@ int v9;
 module;
 #include "foo.h"
 export module foo;
+export using ::v;
+export using ::v2;
+export using ::v3;
+export using ::v4;
+export using ::v5;
+export using ::v6;
+export using ::v7;
+export using ::v8;
+export using ::v9;
 
 //--- use.cpp
 import foo;

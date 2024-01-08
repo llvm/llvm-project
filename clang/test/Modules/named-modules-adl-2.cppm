@@ -31,6 +31,8 @@ void b() {
 	a(s());
 }
 
+export using ::operator+;
+
 //--- c.cppm
 // expected-no-diagnostics
 export module c;

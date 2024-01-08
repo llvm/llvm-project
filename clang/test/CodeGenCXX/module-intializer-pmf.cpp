@@ -20,6 +20,8 @@ export struct InMod {
 
 export InMod IM;
 
+export using ::G;
+
 module :private;
 
 struct InPMF {
@@ -29,11 +31,11 @@ struct InPMF {
 InPMF P;
 
 // CHECK: define internal void @__cxx_global_var_init
-// CHECK: call {{.*}} @_ZN4GlobC1Ev
-// CHECK: define internal void @__cxx_global_var_init
 // CHECK: call {{.*}} @_ZNW6HasPMF5InPMFC1Ev
 // CHECK: define internal void @__cxx_global_var_init
 // CHECK: call {{.*}} @_ZNW6HasPMF5InModC1Ev
+// CHECK: define internal void @__cxx_global_var_init
+// CHECK: call {{.*}} @_ZN4GlobC1Ev
 // CHECK: define void @_ZGIW6HasPMF
 // CHECK: store i8 1, ptr @_ZGIW6HasPMF__in_chrg
 // CHECK: call void @__cxx_global_var_init

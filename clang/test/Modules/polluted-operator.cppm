@@ -44,6 +44,10 @@ module;
 #include "foo.h"
 #include "bar.h"
 export module a;
+export namespace std {
+  using std::variant;
+  using std::_Traits;
+}
 
 //--- b.cppm
 module;
@@ -51,7 +55,10 @@ module;
 export module b;
 import a;
 
+export namespace std {
+  using std::variant;
+  using std::_Traits;
+}
+
 // expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
 // expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
-// expected-error@* {{from module 'a.<global>' is not present in definition of 'variant<_Types...>' provided earlier}}
-// expected-note@* {{declaration of 'swap' does not match}}
