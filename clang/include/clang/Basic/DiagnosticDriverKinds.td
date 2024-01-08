@@ -787,6 +787,6 @@ def warn_android_unversioned_fallback : Warning<
   " for the target version or lower instead.">,
   InGroup<DiagGroup<"android-unversioned-fallback">>;
 
-def err_android_version_invalid : Error<
-  "Version %0 in triple %1 is invalid.">;
+def err_drv_triple_version_invalid : Error<
+  "version '%0' in target triple '%1' is invalid">;
 }

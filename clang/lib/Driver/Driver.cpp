@@ -1435,7 +1435,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     StringRef TripleVersionName = Triple.getEnvironmentVersionString();
 
     if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
-      Diags.Report(diag::err_android_version_invalid)
+      Diags.Report(diag::err_drv_triple_version_invalid)
           << TripleVersionName << TC.getTripleString();
       ContainsError = true;
     }
