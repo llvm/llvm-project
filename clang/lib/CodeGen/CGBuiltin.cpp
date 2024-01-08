@@ -940,13 +940,17 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
   Value *CountedByInst = EmitCountedByFieldExpr(Base, FAMDecl, CountedByFD);
   if (!CountedByInst)
-    return nullptr;
+    return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
   llvm::Type *CountedByTy = CountedByInst->getType();
 
   // Build a load of the index and subtract it from the count.
   Value *IdxInst = nullptr;
   if (Idx) {
+    if (Idx->HasSideEffects(getContext()))
+      // We can't have side-effects.
+      return getDefaultBuiltinObjectSizeResult(Type, ResType);
+
     bool IdxSigned = Idx->getType()->isSignedIntegerType();
     IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
     IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
@@ -954,8 +958,8 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
     // We go ahead with the calculation here. If the index turns out to be
     // negative, we'll catch it at the end.
-    CountedByInst =
-        Builder.CreateSub(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
+    CountedByInst = Builder.CreateSub(CountedByInst, IdxInst);
+    IsSigned = true;
   }
 
   // Calculate how large the flexible array member is in bytes.
