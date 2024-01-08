@@ -252,8 +252,12 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   if (!performCustomAdjustments(MI, I->NewOpc))
     return false;
 
-  MI.setDesc(ST.getInstrInfo()->get(I->NewOpc));
-  MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+  const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(I->NewOpc);
+  MI.setDesc(NewDesc);
+  uint64_t Encoding = NewDesc.TSFlags & X86II::EncodingMask;
+  auto AsmComment =
+      (Encoding == X86II::VEX) ? X86::AC_EVEX_2_VEX : X86::AC_EVEX_2_LEGACY;
+  MI.setAsmPrinterFlag(AsmComment);
   return true;
 }
 
