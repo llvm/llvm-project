@@ -24,9 +24,10 @@ def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
 // Multiply two integer attributes and create a new one with the result.
 def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
-// TODO: Canonicalizations currently doesn't take in account integer overflow
-// flags and always reset it to default (wraparound) which is safe but can
-// inhibit later optimizations.
+// TODO: Canonicalizations currently doesn't take into account integer overflow
+// flags and always reset them to default (wraparound) which is safe but can
+// inhibit later optimizations. Individual patterns must be reviewed for
+// better handling of overflow flags.
 def DefOverflow : NativeCodeCall<"getDefOverflowFlags($_builder)">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
