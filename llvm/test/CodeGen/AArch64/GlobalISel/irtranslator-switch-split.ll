@@ -12,42 +12,76 @@ declare i32 @logg(...)
 define i32 @scanfile(i32 %call148) {
   ; CHECK-TRANSLATOR-LABEL: name: scanfile
   ; CHECK-TRANSLATOR: bb.0.entry:
-  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
   ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $lr
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
   ; CHECK-TRANSLATOR-NEXT:   early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
   ; CHECK-TRANSLATOR-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-TRANSLATOR-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -8
   ; CHECK-TRANSLATOR-NEXT:   frame-setup CFI_INSTRUCTION offset $w29, -16
-  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = SUBSWri renamable $w0, 0, 0, implicit-def $nzcv
-  ; CHECK-TRANSLATOR-NEXT:   Bcc 12, %bb.4, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   $w8 = ORRWrs $wzr, $w0, 0
+  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = SUBSWri killed $w0, 0, 0, implicit-def $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   $w0 = ORRWrs $wzr, $wzr, 0
+  ; CHECK-TRANSLATOR-NEXT:   Bcc 12, %bb.5, implicit killed $nzcv
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
   ; CHECK-TRANSLATOR-NEXT: bb.1.entry:
-  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.4(0x55555556), %bb.2(0x2aaaaaaa)
-  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.9(0x55555555), %bb.2(0x2aaaaaab)
+  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $w8
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
-  ; CHECK-TRANSLATOR-NEXT:   CBZW renamable $w0, %bb.4
+  ; CHECK-TRANSLATOR-NEXT:   CBZW renamable $w8, %bb.9
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
   ; CHECK-TRANSLATOR-NEXT: bb.2.entry:
-  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.5(0x00000000), %bb.3(0x80000000)
-  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.10(0x00000000), %bb.3(0x80000000)
+  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $w8
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
-  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = ADDSWri renamable $w0, 2, 0, implicit-def $nzcv
-  ; CHECK-TRANSLATOR-NEXT:   Bcc 0, %bb.5, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = ADDSWri renamable $w8, 2, 0, implicit-def $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   Bcc 0, %bb.10, implicit $nzcv
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
   ; CHECK-TRANSLATOR-NEXT: bb.3.entry:
-  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.5(0x00000000), %bb.4(0x80000000)
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.10(0x00000000), %bb.4(0x80000000)
+  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $w8
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = ADDSWri killed renamable $w8, 1, 0, implicit-def $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   Bcc 0, %bb.10, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT: bb.4.common.ret1:
   ; CHECK-TRANSLATOR-NEXT:   liveins: $w0
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
-  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = ADDSWri killed renamable $w0, 1, 0, implicit-def $nzcv
-  ; CHECK-TRANSLATOR-NEXT:   Bcc 0, %bb.5, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+  ; CHECK-TRANSLATOR-NEXT:   RET undef $lr, implicit killed $w0
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
-  ; CHECK-TRANSLATOR-NEXT: bb.4.common.ret:
+  ; CHECK-TRANSLATOR-NEXT: bb.5.entry:
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.9(0x24924925), %bb.6(0x5b6db6db)
+  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $w8
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = SUBSWri renamable $w8, 1, 0, implicit-def $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   Bcc 0, %bb.9, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT: bb.6.entry:
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.8(0x33333333), %bb.7(0x4ccccccd)
+  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $w8
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = SUBSWri renamable $w8, 2, 0, implicit-def $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   Bcc 0, %bb.8, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT: bb.7.entry:
+  ; CHECK-TRANSLATOR-NEXT:   successors: %bb.8(0x55555555), %bb.4(0x2aaaaaab)
+  ; CHECK-TRANSLATOR-NEXT:   liveins: $w0, $w8
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT:   dead $wzr = SUBSWri killed renamable $w8, 3, 0, implicit-def $nzcv
+  ; CHECK-TRANSLATOR-NEXT:   Bcc 1, %bb.4, implicit $nzcv
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT: bb.8.sw.bb300:
+  ; CHECK-TRANSLATOR-NEXT:   BL @logg, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+  ; CHECK-TRANSLATOR-NEXT:   early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+  ; CHECK-TRANSLATOR-NEXT:   RET undef $lr, implicit killed $w0
+  ; CHECK-TRANSLATOR-NEXT: {{  $}}
+  ; CHECK-TRANSLATOR-NEXT: bb.9.sw.bb178:
   ; CHECK-TRANSLATOR-NEXT:   $w0 = ORRWrs $wzr, $wzr, 0
   ; CHECK-TRANSLATOR-NEXT:   early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
   ; CHECK-TRANSLATOR-NEXT:   RET undef $lr, implicit killed $w0
   ; CHECK-TRANSLATOR-NEXT: {{  $}}
-  ; CHECK-TRANSLATOR-NEXT: bb.5.sw.bb150:
+  ; CHECK-TRANSLATOR-NEXT: bb.10.sw.bb150:
   ; CHECK-TRANSLATOR-NEXT:   BL @logg, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
   ; CHECK-TRANSLATOR-NEXT:   BRK 1
 entry:
@@ -56,6 +90,8 @@ entry:
     i32 -2, label %sw.bb150
     i32 0, label %sw.bb152
     i32 1, label %sw.bb178
+    i32 2, label %sw.bb200
+    i32 3, label %sw.bb300
   ]
 
 sw.bb:                                            ; preds = %entry
@@ -65,6 +101,14 @@ sw.bb:                                            ; preds = %entry
 sw.bb150:                                         ; preds = %entry
   %call151 = call i32 (...) @logg()
   unreachable
+
+sw.bb200:
+  %res = call i32 (...) @logg()
+  ret i32 %res
+
+sw.bb300:
+  %res2 = call i32 (...) @logg()
+  ret i32 %res2
 
 common.ret:                                       ; preds = %sw.bb178, %sw.bb152, %entry
   ret i32 0
