@@ -1844,8 +1844,8 @@ void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
     mapping(IO &IO,
             ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("ID", E.ID);
-  IO.mapRequired("BrProb", E.BrProb);
+  IO.mapOptional("ID", E.ID);
+  IO.mapOptional("BrProb", E.BrProb);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,

@@ -1391,86 +1391,92 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::BBAddrMapSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  if (!Section.Entries) {
-    if (Section.PGOAnalyses)
-      WithColor::warning()
-          << "PGOAnalyses should not exist in SHT_LLVM_BB_ADDR_MAP when "
-             "Entries does not exist";
-    return;
-  }
+  if (!Section.Entries && Section.PGOAnalyses)
+    WithColor::warning()
+        << "PGOAnalyses should not exist in SHT_LLVM_BB_ADDR_MAP when Entries "
+           "does not exist\n";
+  if (Section.Entries && Section.PGOAnalyses &&
+      Section.Entries->size() != Section.PGOAnalyses->size())
+    WithColor::warning() << "PGOAnalyses should be the same length as Entries "
+                            "in SHT_LLVM_BB_ADDR_MAP\n";
 
-  const std::vector<ELFYAML::PGOAnalysisMapEntry> *PGOAnalyses = nullptr;
-  if (Section.PGOAnalyses) {
-    if (Section.Entries->size() != Section.PGOAnalyses->size())
-      WithColor::warning() << "PGOAnalyses must be the same length as Entries "
-                              "in SHT_LLVM_BB_ADDR_MAP";
-    else
-      PGOAnalyses = &Section.PGOAnalyses.value();
-  }
+  std::vector<ELFYAML::BBAddrMapEntry> EmptyBB;
+  std::vector<ELFYAML::PGOAnalysisMapEntry> EmptyPGO;
+  for (const auto &[Entry, PGOEntry] :
+       zip_longest(Section.Entries ? *Section.Entries : EmptyBB,
+                   Section.PGOAnalyses ? *Section.PGOAnalyses : EmptyPGO)) {
+    if (Entry) {
+      const auto &E = *Entry;
+      // Write version and feature values.
+      if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
+        if (E.Version > 2)
+          WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
+                               << static_cast<int>(E.Version)
+                               << "; encoding using the most recent version\n";
+        CBA.write(E.Version);
+        CBA.write(E.Feature);
+        SHeader.sh_size += 2;
+      }
 
-  for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
-    // Write version and feature values.
-    if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 2)
-        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
-                             << static_cast<int>(E.Version)
-                             << "; encoding using the most recent version";
-      CBA.write(E.Version);
-      CBA.write(E.Feature);
-      SHeader.sh_size += 2;
-    }
+      if (Section.PGOAnalyses) {
+        if (E.Version < 2)
+          WithColor::warning()
+              << "unsupported SHT_LLVM_BB_ADDR_MAP version when using PGO: "
+              << static_cast<int>(E.Version) << "; must use version >= 2\n";
+      }
 
-    if (Section.PGOAnalyses) {
-      if (E.Version < 2)
-        WithColor::warning()
-            << "unsupported SHT_LLVM_BB_ADDR_MAP version when using PGO: "
-            << static_cast<int>(E.Version) << "; must use version >= 2";
-    }
-
-    // Write the address of the function.
-    CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
-    // Write number of BBEntries (number of basic blocks in the function). This
-    // is overridden by the 'NumBlocks' YAML field when specified.
-    uint64_t NumBlocks =
-        E.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
-    SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
-    // Write all BBEntries.
-    if (E.BBEntries) {
-      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
-        if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
-          SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
-                           CBA.writeULEB128(BBE.Size) +
-                           CBA.writeULEB128(BBE.Metadata);
+      // Write the address of the function.
+      CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
+      // Write number of BBEntries (number of basic blocks in the function).
+      // This is overridden by the 'NumBlocks' YAML field when specified.
+      uint64_t NumBlocks =
+          E.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
+      SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
+      // Write all BBEntries.
+      if (E.BBEntries) {
+        for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
+          if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
+            SHeader.sh_size += CBA.writeULEB128(BBE.ID);
+          SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
+                             CBA.writeULEB128(BBE.Size) +
+                             CBA.writeULEB128(BBE.Metadata);
+        }
       }
     }
 
-    if (!PGOAnalyses)
-      continue;
-    const ELFYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
+    if (PGOEntry) {
+      const auto &PE = *PGOEntry;
+      if (PE.FuncEntryCount)
+        SHeader.sh_size += CBA.writeULEB128(*PE.FuncEntryCount);
 
-    if (PGOEntry.FuncEntryCount)
-      SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
+      if (PE.PGOBBEntries) {
+        const auto &PGOBBEntries = *PE.PGOBBEntries;
+        if (!Entry || !Entry->BBEntries ||
+            Entry->BBEntries->size() != PGOBBEntries.size()) {
+          auto &Errs = WithColor::warning()
+                       << "PBOBBEntries should be the same length as BBEntries "
+                          "in SHT_LLVM_BB_ADDR_MAP.\n";
+          if (Entry) {
+            Errs << "Mismatch on function with address: 0x";
+            Errs.write_hex(Entry->Address) << "\n";
+          } else {
+            Errs << "No functions exist to match\n";
+          }
+        }
 
-    if (!PGOEntry.PGOBBEntries)
-      continue;
-
-    const auto &PGOBBEntries = PGOEntry.PGOBBEntries.value();
-    if (!E.BBEntries || E.BBEntries->size() != PGOBBEntries.size()) {
-      WithColor::warning() << "PBOBBEntries must be the same length as "
-                              "BBEntries in SHT_LLVM_BB_ADDR_MAP.\n"
-                           << "Mismatch on function with address: "
-                           << E.Address;
-      continue;
-    }
-
-    for (const auto &PGOBBE : PGOBBEntries) {
-      if (PGOBBE.BBFreq)
-        SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
-      if (PGOBBE.Successors) {
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb] : *PGOBBE.Successors)
-          SHeader.sh_size += CBA.writeULEB128(ID) + CBA.writeULEB128(BrProb);
+        for (const auto &PGOBBE : PGOBBEntries) {
+          if (PGOBBE.BBFreq)
+            SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
+          if (PGOBBE.Successors) {
+            SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
+            for (const auto &[ID, BrProb] : *PGOBBE.Successors) {
+              if (ID)
+                SHeader.sh_size += CBA.writeULEB128(*ID);
+              if (BrProb)
+                SHeader.sh_size += CBA.writeULEB128(*BrProb);
+            }
+          }
+        }
       }
     }
   }

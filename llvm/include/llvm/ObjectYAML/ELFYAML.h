@@ -173,8 +173,8 @@ struct BBAddrMapEntry {
 struct PGOAnalysisMapEntry {
   struct PGOBBEntry {
     struct SuccessorEntry {
-      uint32_t ID;
-      llvm::yaml::Hex32 BrProb;
+      std::optional<uint32_t> ID;
+      std::optional<llvm::yaml::Hex32> BrProb;
     };
     std::optional<uint64_t> BBFreq;
     std::optional<std::vector<SuccessorEntry>> Successors;

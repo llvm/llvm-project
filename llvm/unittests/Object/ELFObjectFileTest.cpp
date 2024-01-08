@@ -865,6 +865,72 @@ Sections:
   DoCheck(MissingBBFreq, "unable to decode LEB128 at offset 0x0000000f: "
                          "malformed uleb128, extends past end");
 
+  // Check that we fail when sucessors are not provided.
+  SmallString<128> MissingSuccessorEntry(CommonYamlString);
+  MissingSuccessorEntry += R"(
+        Version: 2
+        Feature: 0x04
+        BBEntries:
+          - ID:            1
+            AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x6
+          - ID:            2
+            AddressOffset: 0x1
+            Size:          0x1
+            Metadata:      0x2
+          - ID:            3
+            AddressOffset: 0x2
+            Size:          0x1
+            Metadata:      0x2
+    PGOAnalyses:
+      - PGOBBEntries:
+         - Successors:
+            - ID:          2
+              BrProb:      0x80000000
+            - ID:          3
+              BrProb:      0x80000000
+         - Successors: []
+)";
+
+  DoCheck(MissingSuccessorEntry,
+          "unable to decode LEB128 at offset 0x00000025: malformed uleb128, "
+          "extends past end");
+
+  // Check that we fail when branch probability is enabled but not provided.
+  SmallString<128> MissingSuccessorEntryId(CommonYamlString);
+  MissingSuccessorEntryId += R"(
+        Version: 2
+        Feature: 0x04
+        BBEntries:
+          - ID:            1
+            AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x6
+          - ID:            2
+            AddressOffset: 0x1
+            Size:          0x1
+            Metadata:      0x2
+          - ID:            3
+            AddressOffset: 0x2
+            Size:          0x1
+            Metadata:      0x2
+    PGOAnalyses:
+      - PGOBBEntries:
+         - Successors:
+            - ID:          2
+              BrProb:      0x80000000
+            - ID:          3
+              BrProb:      0x80000000
+         - Successors:
+            - BrProb:      0xF0000000
+         - Successors: []
+)";
+
+  DoCheck(MissingSuccessorEntryId,
+          "unable to decode LEB128 at offset 0x0000002b: malformed uleb128, "
+          "extends past end");
+
   // Check that we fail when branch probability is enabled but not provided.
   SmallString<128> MissingBrProb(CommonYamlString);
   MissingBrProb += R"(
@@ -889,14 +955,15 @@ Sections:
             - ID:          2
               BrProb:      0x80000000
             - ID:          3
-              BrProb:      0x80000000
          - Successors:
             - ID:          3
               BrProb:      0xF0000000
+         - Successors: []
 )";
 
-  DoCheck(MissingBrProb, "unable to decode LEB128 at offset 0x00000017: "
-                         "malformed uleb128, extends past end");
+  DoCheck(MissingBrProb,
+          "unable to decode LEB128 at offset 0x00000027: malformed uleb128, "
+          "extends past end");
 
   // Check that we fail when pgo data exists but the feature bits are disabled.
   SmallString<128> ZeroFeatureButWithAnalyses(CommonYamlString);
