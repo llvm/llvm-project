@@ -1472,8 +1472,6 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLAny)
       return false;
 
-    // We don't bother to handle the equally zero case here as it's largely
-    // uninteresting.
     if (Used.VLZeroness) {
       if (isVLPreservingConfig(PrevMI))
         return false;
@@ -1482,42 +1480,16 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
         return false;
     }
 
-    // Taken from MachineDominatorTree::dominates
-    auto Dominates = [](const MachineInstr &A, const MachineInstr &B) {
-      assert(A.getParent() == B.getParent());
-      // Loop through the basic block until we find A or B.
-      MachineBasicBlock::const_iterator I = A.getParent()->begin();
-      for (; I != A && I != B; ++I)
-        /*empty*/;
-      return I == A;
-    };
-
-    // Given A and B are in the same block and A comes before (dominates) B,
-    // return whether or not Reg is defined between A and B.
-    auto IsDefinedBetween = [&MRI, &Dominates](const Register Reg,
-                                               const MachineInstr &A,
-                                               const MachineInstr &B) {
-      assert(Dominates(A, B));
-      for (const auto &Def : MRI.def_instructions(Reg)) {
-        if (Def.getParent() != A.getParent())
-          continue;
-        // If B defines Reg, assume it early clobbers for now.
-        if (&Def == &B)
-          return true;
-        if (Dominates(Def, A) && !Dominates(Def, B))
-          return true;
-      }
-
-      // Reg isn't defined between PrevMI and MI.
-      return false;
-    };
-
     auto &AVL = MI.getOperand(1);
     auto &PrevAVL = PrevMI.getOperand(1);
+    assert(MRI.isSSA());
+
+    // If the AVL is a register, we need to make sure MI's AVL dominates PrevMI.
+    // For now just check that PrevMI uses the same virtual register.
     if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
-      bool AreSameAVL = PrevAVL.isReg() && AVL.getReg() == PrevAVL.getReg() &&
-                        !IsDefinedBetween(AVL.getReg(), PrevMI, MI);
-      if (!AreSameAVL)
+      if (AVL.getReg().isPhysical())
+        return false;
+      if (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg())
         return false;
     }
   }
