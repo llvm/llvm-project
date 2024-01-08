@@ -227,13 +227,9 @@ DiagnosedSilenceableFailure transform::LoopContinuousPeelOp::applyToOne(
     transform::TransformState &state) {
   scf::ForOp loop, result;
   loop = dyn_cast<scf::ForOp>(target);
-  bool convertSingleIterLoopsToIf = false;
-
-  if (getConvertSingleIterLoopsToIf())
-    convertSingleIterLoopsToIf = true;
 
   LogicalResult status = scf::continuousPeelForLoopAndSimplifyBounds(
-      rewriter, loop, result, convertSingleIterLoopsToIf);
+      rewriter, loop, result, getConvertSingleIterLoopsToIf());
   if (failed(status)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError() << "failed to perform continuous peeling";

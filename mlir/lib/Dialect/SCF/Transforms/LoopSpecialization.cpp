@@ -145,7 +145,7 @@ static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
   IRMapping mapping;
   mapping.map(forOp.getInductionVar(), forOp.getLowerBound());
   for (auto [arg, operand] :
-       llvm::zip(forOp.getRegionIterArgs(), forOp.getInitsMutable())) {
+       llvm::zip_equal(forOp.getRegionIterArgs(), forOp.getInitsMutable())) {
     mapping.map(arg, operand.get());
   }
   b.setInsertionPoint(forOp);
@@ -208,7 +208,9 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
     b.setInsertionPoint(currentLoop);
     auto constStepOp =
         b.create<arith::ConstantIndexOp>(currentLoop.getLoc(), loopStep);
-    currentLoop.getStepMutable().assign(constStepOp);
+    b.updateRootInPlace(currentLoop, [&]() {
+      currentLoop.getStepMutable().assign(constStepOp);
+    });
     b.setInsertionPoint(currentLoop);
     Value splitBound = b.createOrFold<affine::AffineApplyOp>(
         currentLoop.getLoc(), splitMap,

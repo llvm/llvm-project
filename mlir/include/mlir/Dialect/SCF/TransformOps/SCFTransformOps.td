@@ -161,7 +161,7 @@ def LoopContinuousPeelOp : Op<Transform_Dialect, "loop.loop_continuous_peel",
      TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
     Transforms the loop into a chain of loops, with step sizes that are
-    powers of two and decrease exponetially across subsequent loops.
+    powers of two and decrease exponentially across subsequent loops.
     The transform is similar to loop.peel in the effect that it creates a loop
     with a step (that is power of 2) to divide the range evenly, with the
     difference that the remaining iterations are spread across similar loops

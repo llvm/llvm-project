@@ -106,14 +106,14 @@ LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
 ///   (loop body)
 /// }
 /// %newUb2 = %ub - (%ub mod %c4)
-/// scf.for %iv2 = %newUb to %newUb2 {
+/// scf.for %iv2 = %newUb to %newUb2 step %c4 {
 ///   (loop body)
 /// }
 /// %newUb3 = %ub - (%ub mod %c2)
-/// scf.for %iv2 = %newUb2 to %newUb3 {
+/// scf.for %iv2 = %newUb2 to %newUb3 step %c2 {
 ///   (loop body)
 /// }
-/// scf.for %iv2 = %newUb3 to %ub {
+/// scf.for %iv2 = %newUb3 to %ub step %c1 {
 ///   (loop body)
 /// }
 /// ```
