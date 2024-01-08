@@ -25,17 +25,14 @@
 #endif
 
 #include "platform_support.h"
-#include "test_macros.h"
 #include "types.h"
 
 #if TEST_STD_VER >= 26
 
-#  include "check_assertion.h"
-
 inline bool is_handle_valid(NativeHandleT handle) {
 #  if defined(_WIN32)
   BY_HANDLE_FILE_INFORMATION fileInformation;
-  return GetFileInformationByHandle(handle, &fileInformation));
+  return GetFileInformationByHandle(handle, &fileInformation);
 #  elif __has_include(<unistd.h>) // POSIX
   return fcntl(handle, F_GETFL) != -1 || errno != EBADF;
 #  else
@@ -73,16 +70,6 @@ inline void test_native_handle() {
     assert(!is_handle_valid(const_handle));
     static_assert(noexcept(std::as_const(f).native_handle()));
   }
-}
-
-template <typename StreamT>
-inline void test_native_handle_assertion() {
-  StreamT f;
-
-  // non-const
-  TEST_LIBCPP_ASSERT_FAILURE(f.native_handle(), "File must be opened");
-  // const
-  TEST_LIBCPP_ASSERT_FAILURE(std::as_const(f).native_handle(), "File must be opened");
 }
 
 template <typename StreamT>

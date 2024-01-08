@@ -26708,6 +26708,8 @@ TEST_F(FormatTest, PPBranchesInBracedInit) {
 
 TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
+  verifyFormat("std::cout << \"foo\\n\"\n"
+               "          << \"bar\";");
 }
 
 TEST_F(FormatTest, BreakAdjacentStringLiterals) {

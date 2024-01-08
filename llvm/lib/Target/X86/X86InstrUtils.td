@@ -43,8 +43,6 @@ class XOP { Encoding OpEnc = EncXOP; }
 class VEX { Encoding OpEnc = EncVEX; }
 class EVEX { Encoding OpEnc = EncEVEX; }
 class WIG  { bit IgnoresW = 1; }
-// Special version of REX_W that can be changed to VEX.W==0 for EVEX2VEX.
-class VEX_W1X  { bit hasREX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
 class VVVV { bit hasVEX_4V = 1; }
@@ -66,9 +64,6 @@ class EVEX_CD8<int esize, CD8VForm form> {
 }
 class NoCD8 { bits<7> CD8_Scale = 0; }
 
-class EVEX2VEXOverride<string VEXInstrName> {
-  string EVEX2VEXOverride = VEXInstrName;
-}
 class AVX512BIi8Base : TB, PD {
   Domain ExeDomain = SSEPackedInt;
   ImmType ImmT = Imm8;
@@ -89,7 +84,6 @@ class AVX512PDIi8Base : TB, PD {
   Domain ExeDomain = SSEPackedDouble;
   ImmType ImmT = Imm8;
 }
-class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
 class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
 class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }

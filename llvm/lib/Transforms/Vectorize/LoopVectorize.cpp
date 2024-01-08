@@ -8077,8 +8077,11 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
   if (Consecutive) {
-    auto *VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
-                                                Reverse, I->getDebugLoc());
+    auto *GEP = dyn_cast<GetElementPtrInst>(
+        Ptr->getUnderlyingValue()->stripPointerCasts());
+    auto *VectorPtr = new VPVectorPointerRecipe(
+        Ptr, getLoadStoreType(I), Reverse, GEP ? GEP->isInBounds() : false,
+        I->getDebugLoc());
     Builder.getInsertBlock()->appendRecipe(VectorPtr);
     Ptr = VectorPtr;
   }

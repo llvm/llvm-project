@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'A', Atomic
-// Instructions extension as well as the experimental 'Zacas' (Atomic
-// Compare-and-Swap) extension.
+// Instructions extension.
 //
 //===----------------------------------------------------------------------===//
 
@@ -95,15 +94,6 @@ defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">,
 defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 } // Predicates = [HasStdExtA, IsRV64]
-
-let Predicates = [HasStdExtZacas] in {
-defm AMOCAS_W : AMO_rr_aq_rl<0b00101, 0b010, "amocas.w">;
-defm AMOCAS_D : AMO_rr_aq_rl<0b00101, 0b011, "amocas.d">;
-} // Predicates = [HasStdExtZacas]
-
-let Predicates = [HasStdExtZacas, IsRV64] in {
-defm AMOCAS_Q : AMO_rr_aq_rl<0b00101, 0b100, "amocas.q">;
-} // Predicates = [HasStdExtZacas, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
