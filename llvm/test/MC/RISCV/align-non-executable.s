@@ -1,6 +1,6 @@
-## Check the data diff (separated by aligment directives) directives which in
-## a section which has instructions but is not executable should generate relocs
-## because it can not be calculated out in AttemptToFoldSymbolOffsetDifference.
+## A label difference separated by an alignment directive, when the
+## referenced symbols are in a non-executable section with instructions,
+## should generate ADD/SUB relocations.
 ## https://github.com/llvm/llvm-project/pull/76552
 
 # RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+relax %s \
