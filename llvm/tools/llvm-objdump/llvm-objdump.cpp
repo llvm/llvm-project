@@ -1320,10 +1320,6 @@ static void collectBBAddrMapLabels(
   if (Iter == AddrToBBAddrMap.end())
     return;
   auto PGOIter = AddrToPGOAnalysisMap.find(StartAddress);
-  if (!AddrToPGOAnalysisMap.empty() && PGOIter == AddrToPGOAnalysisMap.end())
-    reportWarning("Expected BBAddrMap and PGOAnalysisMap to have information "
-                  "on the same basic blocks",
-                  FileName);
 
   for (size_t I = 0; I < Iter->second.getBBEntries().size(); ++I) {
     const BBAddrMap::BBEntry &BBEntry = Iter->second.getBBEntries()[I];
@@ -1334,9 +1330,7 @@ static void collectBBAddrMapLabels(
     std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
     std::string PGOString;
 
-    if (!AddrToPGOAnalysisMap.empty() &&
-        PGOIter != AddrToPGOAnalysisMap.end() &&
-        PGOIter->second.FeatEnable.anyEnabled())
+    if (PGOIter != AddrToPGOAnalysisMap.end())
       constructPGOLabelString(PGOString, PGOIter->second, I);
 
     Labels[BBAddress].push_back({LabelString, PGOString});
@@ -1708,13 +1702,12 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
         return;
       }
-      for (size_t I = 0; I < (*BBAddrMapsOrErr).size(); ++I) {
-        uint64_t BBAddrMapAddr = (*BBAddrMapsOrErr)[I].Addr;
-        AddrToBBAddrMap.emplace(BBAddrMapAddr,
-                                std::move((*BBAddrMapsOrErr)[I]));
-        if (PGOAnalyses.size() > 0)
-          AddrToPGOAnalysisMap.emplace(BBAddrMapAddr,
-                                       std::move(PGOAnalyses[I]));
+      for (const auto &[FunctionBBAddrMap, FunctionPGOAnalysis] :
+           zip_equal(*BBAddrMapsOrErr, PGOAnalyses)) {
+        AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr, FunctionBBAddrMap);
+        if (FunctionPGOAnalysis.FeatEnable.anyEnabled())
+          AddrToPGOAnalysisMap.emplace(FunctionBBAddrMap.Addr,
+                                       FunctionPGOAnalysis);
       }
     }
   };
