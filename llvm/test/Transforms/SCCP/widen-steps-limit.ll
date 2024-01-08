@@ -29,19 +29,7 @@ define void @test() {
 ; CHECK-NEXT:    [[RETVAL_SROA_3_0_I:%.*]] = phi i32 [ 0, [[IF_THEN6]] ], [ 1, [[COND_FALSE_I]] ], [ 1, [[FOR_BODY_PREHEADER_I_I]] ]
 ; CHECK-NEXT:    br i1 [[CMP19_I_NOT]], label [[IF_END_I_I]], label [[DO_BODY_I_I:%.*]]
 ; CHECK:       do.body.i.i:
-; CHECK-NEXT:    [[RESULT_SROA_7_0_I_I:%.*]] = phi i32 [ [[RESULT_SROA_7_1_I_I:%.*]], [[DO_COND_I_I:%.*]] ], [ [[RETVAL_SROA_3_0_I]], [[EXIT]] ]
-; CHECK-NEXT:    switch i32 [[RESULT_SROA_7_0_I_I]], label [[DO_COND_I_I]] [
-; CHECK-NEXT:      i32 2, label [[SW_BB_I_I:%.*]]
-; CHECK-NEXT:      i32 1, label [[IF_END_I_I]]
-; CHECK-NEXT:      i32 0, label [[IF_END_I_I]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.bb.i.i:
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @geti32()
-; CHECK-NEXT:    br label [[DO_COND_I_I]]
-; CHECK:       do.cond.i.i:
-; CHECK-NEXT:    [[RESULT_SROA_7_1_I_I]] = phi i32 [ [[RESULT_SROA_7_0_I_I]], [[DO_BODY_I_I]] ], [ [[TMP3]], [[SW_BB_I_I]] ]
-; CHECK-NEXT:    [[CMP22_I_I:%.*]] = tail call i1 @geti1()
-; CHECK-NEXT:    br i1 [[CMP22_I_I]], label [[DO_BODY_I_I]], label [[IF_END_I_I]]
+; CHECK-NEXT:    br label [[IF_END_I_I]]
 ; CHECK:       if.end.i.i:
 ; CHECK-NEXT:    ret void
 ;
