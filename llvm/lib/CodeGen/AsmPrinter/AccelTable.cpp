@@ -342,8 +342,8 @@ void AppleAccelTableWriter::emitData() const {
       Asm->emitDwarfStringOffset(Hash->Name);
       Asm->OutStreamer->AddComment("Num DIEs");
       Asm->emitInt32(Hash->Values.size());
-      for (const auto *V : Hash->Values)
-        static_cast<const AppleAccelTableData *>(V)->emit(Asm);
+      for (const auto *V : Hash->getValues<const AppleAccelTableData *>())
+        V->emit(Asm);
       PrevHash = Hash->HashValue;
     }
     // Emit the final end marker for the bucket.
@@ -415,11 +415,10 @@ static uint32_t constructAbbreviationTag(
 void Dwarf5AccelTableWriter::populateAbbrevsMap() {
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
-      for (auto *Value : Hash->Values) {
+      for (auto *Value : Hash->getValues<DWARF5AccelTableData *>()) {
         std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
-            getIndexForEntry(*static_cast<const DWARF5AccelTableData *>(Value));
-        unsigned Tag =
-            static_cast<const DWARF5AccelTableData *>(Value)->getDieTag();
+            getIndexForEntry(*Value);
+        unsigned Tag = Value->getDieTag();
         uint32_t AbbrvTag = constructAbbreviationTag(Tag, EntryRet);
         if (Abbreviations.count(AbbrvTag) == 0) {
           SmallVector<DWARF5AccelTableData::AttributeEncoding, 2> UA;
