@@ -1413,7 +1413,7 @@ instCombineSVEAllOrNoActive(InstCombiner &IC, IntrinsicInst &II,
                             Intrinsic::ID IID) {
   if (match(II.getOperand(0), m_ZeroInt())) {
     //  llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
-    //  inactive for sv[func]_m or sv[func]_z
+    //  inactive for sv[func]_m
     return IC.replaceInstUsesWith(II, II.getOperand(1));
   }
   return instCombineSVEAllActive(II, IID);
@@ -1539,10 +1539,6 @@ static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
   auto *OpPredicate = II.getOperand(0);
   auto *OpMultiplicand = II.getOperand(1);
   auto *OpMultiplier = II.getOperand(2);
-
-  if (II.getIntrinsicID() != IID)
-    if (auto II_U = instCombineSVEAllOrNoActive(IC, II, IID))
-      return II_U;
 
   // Return true if a given instruction is a unit splat value, false otherwise.
   auto IsUnitSplat = [](auto *I) {
@@ -1927,6 +1923,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fmls:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmls_u);
   case Intrinsic::aarch64_sve_fmul:
+    if (auto II_U =
+            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmul_u))
+      return II_U;
+    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmulx:
@@ -1950,6 +1950,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_mls:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mls_u);
   case Intrinsic::aarch64_sve_mul:
+    if (auto II_U =
+            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mul_u))
+      return II_U;
+    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_mul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_sabd:
