@@ -2669,6 +2669,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
             /*Braced=*/false);
         CalledSignatureHelp = true;
       }
+      InitScope.pop();
       Actions.ActOnInitializerError(ThisDecl);
       SkipUntil(tok::r_paren, StopAtSemi);
     } else {
