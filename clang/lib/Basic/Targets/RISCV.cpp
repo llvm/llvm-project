@@ -237,22 +237,15 @@ ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
 
 static std::vector<std::string>
 collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
-  auto ParseResult =
-      llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesNeedOverride);
-
-  if (!ParseResult) {
-    consumeError(ParseResult.takeError());
-    return std::vector<std::string>();
-  }
-
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-
   std::vector<std::string> NonISAExtFeatureVec;
 
+  auto IsNonISAExtFeature = [](const std::string &Feature) {
+    assert(Feature.size() > 1 && (Feature[0] == '+' || Feature[0] == '-'));
+    StringRef Ext = StringRef(Feature).drop_front(); // drop the +/-
+    return !llvm::RISCVISAInfo::isSupportedExtensionFeature(Ext);
+  };
   llvm::copy_if(FeaturesNeedOverride, std::back_inserter(NonISAExtFeatureVec),
-                [&](const std::string &Feat) {
-                  return !llvm::is_contained(ImpliedFeatures, Feat);
-                });
+                IsNonISAExtFeature);
 
   return NonISAExtFeatureVec;
 }
@@ -350,6 +343,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("riscv64", Is64Bit)
                     .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
+                    .Case("experimental", HasExperimental)
                     .Default(std::nullopt);
   if (Result)
     return *Result;
@@ -382,6 +376,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
   FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
 
+  if (llvm::is_contained(Features, "+experimental"))
+    HasExperimental = true;
+
   return true;
 }
 
@@ -412,8 +409,7 @@ static void handleFullArchString(StringRef FullArchStr,
   Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
-  if (!RII) {
-    consumeError(RII.takeError());
+  if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
     Features.push_back("+" + FullArchStr.str());
   } else {

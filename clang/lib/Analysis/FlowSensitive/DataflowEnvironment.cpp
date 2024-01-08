@@ -1034,7 +1034,7 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
   if (ImplicitObject == nullptr)
     return nullptr;
   if (ImplicitObject->getType()->isPointerType()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*ImplicitObject)))
+    if (auto *Val = Env.get<PointerValue>(*ImplicitObject))
       return &cast<RecordStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
@@ -1048,11 +1048,11 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   if (Base == nullptr)
     return nullptr;
   if (ME.isArrow()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Base)))
+    if (auto *Val = Env.get<PointerValue>(*Base))
       return &cast<RecordStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Base));
+  return Env.get<RecordStorageLocation>(*Base);
 }
 
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
@@ -1077,7 +1077,7 @@ RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
   assert(Expr.getType()->isRecordType());
 
   if (Expr.isPRValue()) {
-    if (auto *ExistingVal = cast_or_null<RecordValue>(Env.getValue(Expr))) {
+    if (auto *ExistingVal = Env.get<RecordValue>(Expr)) {
       auto &NewVal = Env.create<RecordValue>(ExistingVal->getLoc());
       Env.setValue(Expr, NewVal);
       Env.setValue(NewVal.getLoc(), NewVal);
@@ -1089,8 +1089,7 @@ RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
     return NewVal;
   }
 
-  if (auto *Loc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(Expr))) {
+  if (auto *Loc = Env.get<RecordStorageLocation>(Expr)) {
     auto &NewVal = Env.create<RecordValue>(*Loc);
     Env.setValue(*Loc, NewVal);
     return NewVal;

@@ -8263,8 +8263,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
 
     DebugLoc DL;
     MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc), Reg);
-    for (unsigned i = 0, e = AddrOps.size(); i != e; ++i)
-      MIB.add(AddrOps[i]);
+    for (const MachineOperand &AddrOp : AddrOps)
+      MIB.add(AddrOp);
     MIB.setMemRefs(MMOs);
     NewMIs.push_back(MIB);
 
@@ -8341,8 +8341,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
     unsigned Opc = getStoreRegOpcode(Reg, DstRC, isAligned, Subtarget);
     DebugLoc DL;
     MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc));
-    for (unsigned i = 0, e = AddrOps.size(); i != e; ++i)
-      MIB.add(AddrOps[i]);
+    for (const MachineOperand &AddrOp : AddrOps)
+      MIB.add(AddrOp);
     MIB.addReg(Reg, RegState::Kill);
     MIB.setMemRefs(MMOs);
     NewMIs.push_back(MIB);

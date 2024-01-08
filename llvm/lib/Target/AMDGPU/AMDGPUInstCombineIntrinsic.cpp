@@ -1241,6 +1241,10 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     ConstantInt *DMask = cast<ConstantInt>(Args[DMaskIdx]);
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
 
+    // dmask 0 has special semantics, do not simplify.
+    if (DMaskVal == 0)
+      return nullptr;
+
     // Mask off values that are undefined because the dmask doesn't cover them
     DemandedElts &= (1 << llvm::popcount(DMaskVal)) - 1;
 
@@ -1261,7 +1265,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   unsigned NewNumElts = DemandedElts.popcount();
   if (!NewNumElts)
-    return UndefValue::get(IIVTy);
+    return PoisonValue::get(IIVTy);
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
     if (DMaskIdx >= 0)
@@ -1299,7 +1303,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   if (IsLoad) {
     if (NewNumElts == 1) {
-      return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
+      return IC.Builder.CreateInsertElement(PoisonValue::get(IIVTy), NewCall,
                                             DemandedElts.countr_zero());
     }
 

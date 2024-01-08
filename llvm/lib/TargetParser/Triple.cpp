@@ -1208,8 +1208,7 @@ static VersionTuple parseVersionFromName(StringRef Name) {
 VersionTuple Triple::getEnvironmentVersion() const {
   StringRef EnvironmentName = getEnvironmentName();
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
-  if (EnvironmentName.starts_with(EnvironmentTypeName))
-    EnvironmentName = EnvironmentName.substr(EnvironmentTypeName.size());
+  EnvironmentName.consume_front(EnvironmentTypeName);
 
   return parseVersionFromName(EnvironmentName);
 }

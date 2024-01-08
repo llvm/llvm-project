@@ -54,6 +54,16 @@ void check_note_freopen(void) {
 // expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
 // expected-note@-2 {{Opened stream never closed. Potential resource leak}}
 
+void check_note_fdopen(int fd) {
+  FILE *F = fdopen(fd, "r"); // expected-note {{Stream opened here}}
+  if (!F)
+    // expected-note@-1 {{'F' is non-null}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+}
+// expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
+// expected-note@-2 {{Opened stream never closed. Potential resource leak}}
+
 void check_note_leak_2(int c) {
   FILE *F1 = fopen("foo1.c", "r"); // expected-note {{Stream opened here}}
   // stdargs-note@-1 {{'fopen' is successful}}

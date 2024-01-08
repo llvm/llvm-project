@@ -58,6 +58,8 @@ struct Variable;
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
+using TypeConstructionStack =
+    llvm::SmallVector<std::pair<const Fortran::lower::SymbolRef, mlir::Type>>;
 class StatementContext;
 
 using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
@@ -230,6 +232,10 @@ public:
   registerTypeInfo(mlir::Location loc, SymbolRef typeInfoSym,
                    const Fortran::semantics::DerivedTypeSpec &typeSpec,
                    fir::RecordType type) = 0;
+
+  /// Get stack of derived type in construction. This is an internal entry point
+  /// for the type conversion utility to allow lowering recursive derived types.
+  virtual TypeConstructionStack &getTypeConstructionStack() = 0;
 
   //===--------------------------------------------------------------------===//
   // Locations

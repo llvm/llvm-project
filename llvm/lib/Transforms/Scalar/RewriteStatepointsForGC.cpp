@@ -2057,7 +2057,7 @@ static void relocationViaAlloca(
   for (const auto &Info : Records)
     for (auto RematerializedValuePair : Info.RematerializedValues) {
       Value *OriginalValue = RematerializedValuePair.second;
-      if (AllocaMap.count(OriginalValue) != 0)
+      if (AllocaMap.contains(OriginalValue))
         continue;
 
       emitAllocaFor(OriginalValue);

@@ -193,7 +193,7 @@ LIBC_INLINE T hypot(T x, T y) {
       sticky_bits = sticky_bits || ((sum & 0x3U) != 0);
       sum >>= 2;
       ++out_exp;
-      if (out_exp >= FPBits_t::MAX_EXPONENT) {
+      if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
         if (int round_mode = quick_get_round();
             round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
           return T(FPBits_t::inf());
@@ -251,7 +251,7 @@ LIBC_INLINE T hypot(T x, T y) {
   if (y_new >= (ONE >> 1)) {
     y_new -= ONE >> 1;
     ++out_exp;
-    if (out_exp >= FPBits_t::MAX_EXPONENT) {
+    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
       if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
         return T(FPBits_t::inf());
       return T(FPBits_t(FPBits_t::MAX_NORMAL));

@@ -109,6 +109,12 @@ LogicalResult transform::detail::parseTransformModuleFromFile(
   sourceMgr.AddNewSourceBuffer(std::move(memoryBuffer), llvm::SMLoc());
   transformModule =
       OwningOpRef<ModuleOp>(parseSourceFile<ModuleOp>(sourceMgr, context));
+  if (!transformModule) {
+    // Failed to parse the transform module.
+    // Don't need to emit an error here as the parsing should have already done
+    // that.
+    return failure();
+  }
   return mlir::verify(*transformModule);
 }
 

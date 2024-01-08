@@ -12683,7 +12683,7 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       break;
     }
     case OMPC_fail: {
-      if (AtomicKind != OMPC_compare) {
+      if (!EncounteredAtomicKinds.contains(OMPC_compare)) {
         Diag(C->getBeginLoc(), diag::err_omp_atomic_fail_no_compare)
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         return StmtError();

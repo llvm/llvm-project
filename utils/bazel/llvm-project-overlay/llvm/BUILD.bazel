@@ -964,19 +964,45 @@ cc_library(
 
 cc_library(
     name = "TextAPI",
-    srcs = glob([
-        "lib/TextAPI/**/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/TextAPI/**/*.h",
-        "include/llvm/TextAPI/**/*.def",
-        "lib/TextAPI/**/*.h",
-    ]),
+    srcs = glob(
+        [
+            "lib/TextAPI/**/*.cpp",
+        ],
+        exclude = ["lib/TextAPI/BinaryReader/**"],
+    ),
+    hdrs = glob(
+        [
+            "include/llvm/TextAPI/**/*.h",
+            "include/llvm/TextAPI/**/*.def",
+            "lib/TextAPI/**/*.h",
+        ],
+        exclude = [
+            "lib/TextAPI/BinaryReader/**",
+            "include/llvm/TextAPI/DylibReader.h",
+        ],
+    ),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "TextAPIBinaryReader",
+    srcs = glob([
+        "lib/TextAPI/BinaryReader/**/*.cpp",
+    ]),
+    hdrs = ["include/llvm/TextAPI/DylibReader.h"] + glob(
+        ["lib/TextAPI/BinaryReader/**/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Object",
+        ":Support",
+        ":TargetParser",
+        ":TextAPI",
     ],
 )
 
@@ -2161,7 +2187,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
+            ("-gen-x86-compress-evex-tables", "lib/Target/X86/X86GenCompressEVEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],
@@ -2693,6 +2719,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
+        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -5199,11 +5226,13 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":Option",
         ":ReadTAPIOptsTableGen",
         ":Support",
         ":TextAPI",
+        ":TextAPIBinaryReader",
     ],
 )
 

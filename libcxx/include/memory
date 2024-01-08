@@ -629,7 +629,7 @@ public:
     T& operator*() const noexcept;
     T* operator->() const noexcept;
     long use_count() const noexcept;
-    bool unique() const noexcept;
+    bool unique() const noexcept;  // deprected in C++17, removed in C++20
     explicit operator bool() const noexcept;
     template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;

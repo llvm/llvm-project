@@ -50,7 +50,7 @@ LIBC_INLINE double atan_eval(double x) {
 
   FPB bs(x);
   bool sign = bs.get_sign();
-  auto x_abs = bs.uintval() & FPB::EXP_MANT_MASK;
+  auto x_abs = bs.abs().uintval();
 
   if (x_abs <= umin) {
     double pe = LIBC_NAMESPACE::fputil::polyeval(

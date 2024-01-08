@@ -204,6 +204,60 @@ static void testNoSkipErasureCallbacks(Operation *op) {
   cloned->erase();
 }
 
+/// Invoke region/block walks on regions/blocks.
+static void testBlockAndRegionWalkers(Operation *op) {
+  auto blockPure = [](Block *block) {
+    llvm::outs() << "Visiting ";
+    printBlock(block);
+    llvm::outs() << "\n";
+  };
+  auto regionPure = [](Region *region) {
+    llvm::outs() << "Visiting ";
+    printRegion(region);
+    llvm::outs() << "\n";
+  };
+
+  llvm::outs() << "Invoke block pre-order visits on blocks\n";
+  op->walk([&](Operation *op) {
+    if (!op->hasAttr("walk_blocks"))
+      return;
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region.getBlocks()) {
+        block.walk<WalkOrder::PreOrder>(blockPure);
+      }
+    }
+  });
+
+  llvm::outs() << "Invoke block post-order visits on blocks\n";
+  op->walk([&](Operation *op) {
+    if (!op->hasAttr("walk_blocks"))
+      return;
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region.getBlocks()) {
+        block.walk<WalkOrder::PostOrder>(blockPure);
+      }
+    }
+  });
+
+  llvm::outs() << "Invoke region pre-order visits on region\n";
+  op->walk([&](Operation *op) {
+    if (!op->hasAttr("walk_regions"))
+      return;
+    for (Region &region : op->getRegions()) {
+      region.walk<WalkOrder::PreOrder>(regionPure);
+    }
+  });
+
+  llvm::outs() << "Invoke region post-order visits on region\n";
+  op->walk([&](Operation *op) {
+    if (!op->hasAttr("walk_regions"))
+      return;
+    for (Region &region : op->getRegions()) {
+      region.walk<WalkOrder::PostOrder>(regionPure);
+    }
+  });
+}
+
 namespace {
 /// This pass exercises the different configurations of the IR visitors.
 struct TestIRVisitorsPass
@@ -215,6 +269,7 @@ struct TestIRVisitorsPass
   void runOnOperation() override {
     Operation *op = getOperation();
     testPureCallbacks(op);
+    testBlockAndRegionWalkers(op);
     testSkipErasureCallbacks(op);
     testNoSkipErasureCallbacks(op);
   }

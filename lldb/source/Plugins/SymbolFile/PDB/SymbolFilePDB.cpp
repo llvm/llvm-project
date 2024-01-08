@@ -365,7 +365,7 @@ bool SymbolFilePDB::ParseDebugMacros(CompileUnit &comp_unit) {
 }
 
 bool SymbolFilePDB::ParseSupportFiles(
-    CompileUnit &comp_unit, lldb_private::FileSpecList &support_files) {
+    CompileUnit &comp_unit, lldb_private::SupportFileList &support_files) {
 
   // In theory this is unnecessary work for us, because all of this information
   // is easily (and quickly) accessible from DebugInfoPDB, so caching it a

@@ -176,6 +176,7 @@ protected:
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
+  bool HasShaderCyclesHiLoRegisters = false;
   bool HasVOP3Literal = false;
   bool HasNoDataDepHazard = false;
   bool FlatAddressSpace = false;
@@ -682,6 +683,8 @@ public:
 
   bool hasScalarAddSub64() const { return getGeneration() >= GFX12; }
 
+  bool hasScalarSMulU64() const { return getGeneration() >= GFX12; }
+
   bool hasUnpackedD16VMem() const {
     return HasUnpackedD16VMem;
   }
@@ -817,6 +820,10 @@ public:
 
   bool hasShaderCyclesRegister() const {
     return HasShaderCyclesRegister;
+  }
+
+  bool hasShaderCyclesHiLoRegisters() const {
+    return HasShaderCyclesHiLoRegisters;
   }
 
   bool hasVOP3Literal() const {
@@ -1096,7 +1103,7 @@ public:
   bool hasDstSelForwardingHazard() const { return GFX940Insts; }
 
   // Cannot use op_sel with v_dot instructions.
-  bool hasDOTOpSelHazard() const { return GFX940Insts; }
+  bool hasDOTOpSelHazard() const { return GFX940Insts || GFX11Insts; }
 
   // Does not have HW interlocs for VALU writing and then reading SGPRs.
   bool hasVDecCoExecHazard() const {

@@ -33,7 +33,7 @@
 
 ; Verify that the optimizer run
 ; RUN: llvm-lto -thinlto-action=optimize %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=OPTIMIZED
-; OPTIMIZED: define i32 @main()
+; OPTIMIZED: define noundef i32 @main()
 
 ; Verify that the codegen run
 ; RUN: llvm-lto -thinlto-action=codegen %t2.bc -o - | llvm-nm -o - | FileCheck %s --check-prefix=CODEGEN

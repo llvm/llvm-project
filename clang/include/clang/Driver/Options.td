@@ -773,6 +773,8 @@ def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
   HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
   "Clang will use the GCC installation with the largest version">;
+def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
+  HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
   Group<Preprocessor_Group>,
     HelpText<"Include comments from within macros in preprocessed output">,
@@ -1695,6 +1697,12 @@ defm coverage_mapping : BoolFOption<"coverage-mapping",
           "Generate coverage mapping to enable code coverage analysis">,
   NegFlag<SetFalse, [], [ClangOption], "Disable code coverage analysis">, BothFlags<
           [], [ClangOption, CLOption]>>;
+defm mcdc_coverage : BoolFOption<"coverage-mcdc",
+  CodeGenOpts<"MCDCCoverage">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable MC/DC criteria when generating code coverage">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable MC/DC coverage criteria">,
+          BothFlags<[], [ClangOption, CLOption]>>;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
@@ -5308,7 +5316,8 @@ def rewrite_objc : Flag<["-"], "rewrite-objc">, Flags<[NoXarchOption]>,
 def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
   Flags<[NoXarchOption]>,
   HelpText<"Rewrite Legacy Objective-C source to C++">;
-def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>;
+def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -6999,6 +7008,8 @@ def msign_return_address_key_EQ : Joined<["-"], "msign-return-address-key=">,
     Values<"a_key,b_key">;
 def mbranch_target_enforce : Flag<["-"], "mbranch-target-enforce">,
   MarshallingInfoFlag<LangOpts<"BranchTargetEnforcement">>;
+def mbranch_protection_pauth_lr : Flag<["-"], "mbranch-protection-pauth-lr">,
+  MarshallingInfoFlag<LangOpts<"BranchProtectionPAuthLR">>;
 def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">,
   MarshallingInfoNegativeFlag<LangOpts<"DllExportInlines">>;
 def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,

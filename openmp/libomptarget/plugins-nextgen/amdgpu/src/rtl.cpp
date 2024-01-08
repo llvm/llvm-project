@@ -23,6 +23,7 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Utils.h"
+#include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
@@ -41,6 +42,18 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
+    !defined(__ORDER_BIG_ENDIAN__)
+#error "Missing preprocessor definitions for endianness detection."
+#endif
+
+// The HSA headers require these definitions.
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define LITTLEENDIAN_CPU
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BIGENDIAN_CPU
+#endif
 
 #if defined(__has_include)
 #if __has_include("hsa/hsa.h")
@@ -1245,7 +1258,7 @@ public:
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
       return Err;
-    for (auto Signal : OutputSignals) {
+    for (auto *Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
@@ -1311,7 +1324,7 @@ public:
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
       return Err;
-    for (auto Signal : OutputSignals) {
+    for (auto *Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
@@ -2111,6 +2124,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
     case TARGET_ALLOC_DEVICE:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
     case TARGET_ALLOC_HOST:
@@ -3015,7 +3029,15 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool> isELFCompatible(StringRef Image) const override {
+    // Get the associated architecture and flags from the ELF.
+    auto ElfOrErr =
+        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
+                                  /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+    std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
+
     for (hsa_agent_t Agent : KernelAgents) {
       std::string Target;
       auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
@@ -3038,7 +3060,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (Err)
         return std::move(Err);
 
-      if (!utils::isImageCompatibleWithEnv(Info, Target))
+      if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
+                                           ElfOrErr->getPlatformFlags(),
+                                           Target))
         return false;
     }
     return true;
@@ -3191,6 +3215,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     ImplArgs->GroupSizeY = 1;
     ImplArgs->GroupSizeZ = 1;
     ImplArgs->GridDims = 1;
+    ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
 
   // Push the kernel launch into the stream.
@@ -3304,6 +3329,7 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
   case TARGET_ALLOC_HOST:

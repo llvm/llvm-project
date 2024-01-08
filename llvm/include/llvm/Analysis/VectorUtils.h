@@ -195,6 +195,16 @@ static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
 /// the presence of the attribute (see InjectTLIMappings).
 void getVectorVariantNames(const CallInst &CI,
                            SmallVectorImpl<std::string> &VariantMappings);
+
+/// Constructs a FunctionType by applying vector function information to the
+/// type of a matching scalar function.
+/// \param Info gets the vectorization factor (VF) and the VFParamKind of the
+/// parameters.
+/// \param ScalarFTy gets the Type information of parameters, as it is not
+/// stored in \p Info.
+/// \returns a pointer to a newly created vector FunctionType
+FunctionType *createFunctionType(const VFInfo &Info,
+                                 const FunctionType *ScalarFTy);
 } // end namespace VFABI
 
 /// The Vector Function Database.

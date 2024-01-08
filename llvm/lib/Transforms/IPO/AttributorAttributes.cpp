@@ -291,42 +291,15 @@ static const Value *getPointerOperand(const Instruction *I,
 }
 
 /// Helper function to create a pointer based on \p Ptr, and advanced by \p
-/// Offset bytes. To aid later analysis the method tries to build
-/// getelement pointer instructions that traverse the natural type of \p Ptr if
-/// possible. If that fails, the remaining offset is adjusted byte-wise, hence
-/// through a cast to i8*.
-///
-/// TODO: This could probably live somewhere more prominantly if it doesn't
-///       already exist.
-static Value *constructPointer(Type *PtrElemTy, Value *Ptr, int64_t Offset,
-                               IRBuilder<NoFolder> &IRB, const DataLayout &DL) {
-  assert(Offset >= 0 && "Negative offset not supported yet!");
+/// Offset bytes.
+static Value *constructPointer(Value *Ptr, int64_t Offset,
+                               IRBuilder<NoFolder> &IRB) {
   LLVM_DEBUG(dbgs() << "Construct pointer: " << *Ptr << " + " << Offset
                     << "-bytes\n");
 
-  if (Offset) {
-    Type *Ty = PtrElemTy;
-    APInt IntOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-    SmallVector<APInt> IntIndices = DL.getGEPIndicesForOffset(Ty, IntOffset);
-
-    SmallVector<Value *, 4> ValIndices;
-    std::string GEPName = Ptr->getName().str();
-    for (const APInt &Index : IntIndices) {
-      ValIndices.push_back(IRB.getInt(Index));
-      GEPName += "." + std::to_string(Index.getZExtValue());
-    }
-
-    // Create a GEP for the indices collected above.
-    Ptr = IRB.CreateGEP(PtrElemTy, Ptr, ValIndices, GEPName);
-
-    // If an offset is left we use byte-wise adjustment.
-    if (IntOffset != 0) {
-      Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(IntOffset),
-                          GEPName + ".b" + Twine(IntOffset.getZExtValue()));
-    }
-  }
-
-  LLVM_DEBUG(dbgs() << "Constructed pointer: " << *Ptr << "\n");
+  if (Offset)
+    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt64(Offset),
+                        Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -6752,10 +6725,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
         ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
-        SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
+        SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
-               cast<ConstantInt>(SizeOffsetPair.second)->isZero());
-        Size = SizeOffsetPair.first;
+               cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
+        Size = SizeOffsetPair.Size;
       }
 
       Instruction *IP =
@@ -7487,16 +7460,15 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(
-            PrivType, &Base, PrivStructLayout->getElementOffset(u), IRB, DL);
+        Value *Ptr =
+            constructPointer(&Base, PrivStructLayout->getElementOffset(u), IRB);
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
       Type *PointeeTy = PrivArrayType->getElementType();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr =
-            constructPointer(PrivType, &Base, u * PointeeTySize, IRB, DL);
+        Value *Ptr = constructPointer(&Base, u * PointeeTySize, IRB);
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else {
@@ -7521,8 +7493,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
       for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
         Type *PointeeTy = PrivStructType->getElementType(u);
-        Value *Ptr = constructPointer(
-            PrivType, Base, PrivStructLayout->getElementOffset(u), IRB, DL);
+        Value *Ptr =
+            constructPointer(Base, PrivStructLayout->getElementOffset(u), IRB);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
@@ -7531,8 +7503,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       Type *PointeeTy = PrivArrayType->getElementType();
       uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr =
-            constructPointer(PrivType, Base, u * PointeeTySize, IRB, DL);
+        Value *Ptr = constructPointer(Base, u * PointeeTySize, IRB);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);

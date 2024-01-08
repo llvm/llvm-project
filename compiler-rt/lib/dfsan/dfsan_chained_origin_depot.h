@@ -21,6 +21,9 @@ namespace __dfsan {
 
 ChainedOriginDepot* GetChainedOriginDepot();
 
+void ChainedOriginDepotLockBeforeFork();
+void ChainedOriginDepotUnlockAfterFork(bool fork_child);
+
 }  // namespace __dfsan
 
 #endif  // DFSAN_CHAINED_ORIGIN_DEPOT_H

@@ -137,6 +137,8 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 0, 4))>;
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
+def GPRX1 : GPRRegisterClass<(add X1)>;
+def GPRX5 : GPRRegisterClass<(add X5)>;
 
 def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
 
@@ -164,6 +166,8 @@ def SP : GPRRegisterClass<(add X2)>;
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))>;
+
+def GPRX1X5 :  GPRRegisterClass<(add X1, X5)>;
 
 // Floating point registers
 let RegAltNameIndices = [ABIRegAltName] in {
@@ -483,7 +487,7 @@ defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
 defvar VM1VTs = [vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
                  vbfloat16m1_t, vfloat16m1_t, vfloat32m1_t,
                  vfloat64m1_t, vint8mf2_t, vint8mf4_t, vint8mf8_t,
-	               vint16mf2_t, vint16mf4_t, vint32mf2_t,
+                 vint16mf2_t, vint16mf4_t, vint32mf2_t,
                  vfloat16mf4_t, vfloat16mf2_t, vbfloat16mf4_t,
                  vbfloat16mf2_t, vfloat32mf2_t];
 
@@ -591,3 +595,6 @@ foreach m = LMULList in {
 // Special registers
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
+
+// Shadow Stack register
+def SSP    : RISCVReg<0, "ssp">;
