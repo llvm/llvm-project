@@ -9380,15 +9380,15 @@ let Predicates = [HasLSE128] in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasRCPC3] in {
-  //                                             size   opc    opc2
-  def STILPWpre:  BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-8]!", "$Rn = $wback">;
-  def STILPXpre:  BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-16]!", "$Rn = $wback">;
-  def STILPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0001, (outs), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
-  def STILPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0001, (outs), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
-  def LDIAPPWpre: BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0000, (outs GPR64sp:$wback, GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #8", "$Rn = $wback">;
-  def LDIAPPXpre: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
-  def LDIAPPW:    BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
-  def LDIAPPX:    BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+  //                                              size   opc    opc2
+  def STILPWpre:   BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-8]!", "$Rn = $wback">;
+  def STILPXpre:   BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-16]!", "$Rn = $wback">;
+  def STILPW:      BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0001, (outs), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def STILPX:      BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0001, (outs), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPWpost: BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0000, (outs GPR64sp:$wback, GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #8", "$Rn = $wback">;
+  def LDIAPPXpost: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
+  def LDIAPPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
   def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
   def : Pat<(AArch64stilp GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
@@ -9397,11 +9397,11 @@ let Predicates = [HasRCPC3] in {
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPX GPR64: $Rt, GPR64: $Rt2, GPR64sp:$Rn)>;
 
-  //                                        size   opc
-  def STLRWpre:  BaseLRCPC3IntegerLoadStore<0b10, 0b10, (outs GPR64sp:$wback),            (ins GPR32:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-4]!", "$Rn = $wback">;
-  def STLRXpre:  BaseLRCPC3IntegerLoadStore<0b11, 0b10, (outs GPR64sp:$wback),            (ins GPR64:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-8]!", "$Rn = $wback">;
-  def LDAPRWpre: BaseLRCPC3IntegerLoadStore<0b10, 0b11, (outs GPR64sp:$wback, GPR32:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #4",   "$Rn = $wback">;
-  def LDAPRXpre: BaseLRCPC3IntegerLoadStore<0b11, 0b11, (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #8",   "$Rn = $wback">;
+  //                                         size   opc
+  def STLRWpre:   BaseLRCPC3IntegerLoadStore<0b10, 0b10, (outs GPR64sp:$wback),            (ins GPR32:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-4]!", "$Rn = $wback">;
+  def STLRXpre:   BaseLRCPC3IntegerLoadStore<0b11, 0b10, (outs GPR64sp:$wback),            (ins GPR64:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-8]!", "$Rn = $wback">;
+  def LDAPRWpost: BaseLRCPC3IntegerLoadStore<0b10, 0b11, (outs GPR64sp:$wback, GPR32:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #4",   "$Rn = $wback">;
+  def LDAPRXpost: BaseLRCPC3IntegerLoadStore<0b11, 0b11, (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #8",   "$Rn = $wback">;
 }
 
 let Predicates = [HasRCPC3, HasNEON] in {
