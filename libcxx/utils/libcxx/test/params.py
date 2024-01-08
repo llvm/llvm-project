@@ -87,13 +87,17 @@ def getStdFlag(cfg, std):
         return "-std=" + fallbacks[std]
     return None
 
+
 def getSpeedOptimizationFlag(cfg):
     if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
         return "-O3"
     elif _isMSVC(cfg):
         return "/O2"
     else:
-        raise RuntimeError("Can't figure out what compiler is used in the configuration")
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
 
 def getSizeOptimizationFlag(cfg):
     if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
@@ -101,7 +105,10 @@ def getSizeOptimizationFlag(cfg):
     elif _isMSVC(cfg):
         return "/O1"
     else:
-        raise RuntimeError("Can't figure out what compiler is used in the configuration")
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
 
 # fmt: off
 DEFAULT_PARAMETERS = [
