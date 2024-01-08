@@ -69,8 +69,8 @@ public:
   const char *GetQualifiedName() const;
 
   /// Returns a vector of string, one string per entry in the fully qualified
-  /// name. For example, for the name `A::B::C`, this methods returns `{"A",
-  /// "B", "C"}`
+  /// name. For example, for the DeclContext `A::B::C`, this methods returns
+  /// `{"C", "B", "A"}`
   llvm::SmallVector<llvm::StringRef> GetQualifiedNameAsVector() const;
 
   // Same as GetQualifiedName, but the life time of the returned string will
