@@ -163,6 +163,10 @@ DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
 }
 
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
+  // Only definitions require a distinct identifier.
+  mlir::DistinctAttr id;
+  if (node->isDistinct())
+    id = DistinctAttr::create(UnitAttr::get(context));
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is a cyclic dependency.
@@ -172,7 +176,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
-  return DISubprogramAttr::get(context, translate(node->getUnit()), scope,
+  return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
