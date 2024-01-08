@@ -300,7 +300,7 @@ define float @test_add_rn_f(float %a, float %b) #0 {
 }
 ; CHECK-LABEL: @test_add_rn_f_ftz
 define float @test_add_rn_f_ftz(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.f
+; CHECK: call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
   %ret = call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
   ret float %ret
 }
@@ -319,7 +319,7 @@ define float @test_mul_rn_f(float %a, float %b) #0 {
 }
 ; CHECK-LABEL: @test_mul_rn_f_ftz
 define float @test_mul_rn_f_ftz(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.mul.rn.f
+; CHECK: call float @llvm.nvvm.mul.rn.ftz.f(float %a, float %b)
   %ret = call float @llvm.nvvm.mul.rn.ftz.f(float %a, float %b)
   ret float %ret
 }
@@ -338,7 +338,7 @@ define float @test_div_rn_f(float %a, float %b) #0 {
 }
 ; CHECK-LABEL: @test_div_rn_f_ftz
 define float @test_div_rn_f_ftz(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.div.rn.f
+; CHECK: call float @llvm.nvvm.div.rn.ftz.f(float %a, float %b)
   %ret = call float @llvm.nvvm.div.rn.ftz.f(float %a, float %b)
   ret float %ret
 }
@@ -347,13 +347,13 @@ define float @test_div_rn_f_ftz(float %a, float %b) #0 {
 
 ; CHECK-LABEL: @test_rcp_rn_f
 define float @test_rcp_rn_f(float %a) #0 {
-; CEHCK: call float @llvm.nvvm.rcp.rn.f
+; CHECK: call float @llvm.nvvm.rcp.rn.f
   %ret = call float @llvm.nvvm.rcp.rn.f(float %a)
   ret float %ret
 }
 ; CHECK-LABEL: @test_rcp_rn_f_ftz
 define float @test_rcp_rn_f_ftz(float %a) #0 {
-; CHECK: call float @llvm.nvvm.rcp.rn.f
+; CHECK: call float @llvm.nvvm.rcp.rn.ftz.f(float %a)
   %ret = call float @llvm.nvvm.rcp.rn.ftz.f(float %a)
   ret float %ret
 }
@@ -379,7 +379,7 @@ define float @test_sqrt_rn_f(float %a) #0 {
 }
 ; CHECK-LABEL: @test_sqrt_rn_f_ftz
 define float @test_sqrt_rn_f_ftz(float %a) #0 {
-; CHECK: call float @llvm.nvvm.sqrt.rn.f
+; CHECK: call float @llvm.nvvm.sqrt.rn.ftz.f(float %a)
   %ret = call float @llvm.nvvm.sqrt.rn.ftz.f(float %a)
   ret float %ret
 }
