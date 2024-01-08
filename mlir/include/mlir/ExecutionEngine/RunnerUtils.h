@@ -224,7 +224,7 @@ void printMemRef(const DynamicMemRefType<T> &m) {
                               m.sizes, m.strides);
   if (m.rank == 0)
     std::cout << "]";
-  std::cout << '\n';
+  std::cout << '\n' << std::flush;
 }
 
 template <typename T, int N>
