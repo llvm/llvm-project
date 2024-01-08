@@ -1561,8 +1561,6 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
-bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
-
 Error GenericPluginTy::init() {
   auto NumDevicesOrErr = initImpl();
   if (!NumDevicesOrErr)
@@ -2075,14 +2073,6 @@ int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
-  // Automatic zero-copy only applies to programs that did
-  // not request unified_shared_memory and are deployed on an
-  // APU with XNACK enabled.
-  if (Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    return false;
-  return Plugin::get().getDevice(DeviceId).useAutoZeroCopy();
-}
 #ifdef __cplusplus
 }
 #endif
