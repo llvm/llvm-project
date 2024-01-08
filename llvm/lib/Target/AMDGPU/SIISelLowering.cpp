@@ -835,6 +835,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
+  if (Subtarget->hasScalarSMulU64())
+    setOperationAction(ISD::MUL, MVT::i64, Custom);
+
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
@@ -5566,7 +5569,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL:
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::MUL:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -5580,6 +5582,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
     return splitBinaryVectorOp(Op, DAG);
+  case ISD::MUL:
+    return lowerMUL(Op, DAG);
   case ISD::SMULO:
   case ISD::UMULO:
     return lowerXMULO(Op, DAG);
@@ -6233,6 +6237,66 @@ SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return DAG.getNode(ISD::FLDEXP, DL, VT, Op.getOperand(0), TruncExp);
+}
+
+// Custom lowering for vector multiplications and s_mul_u64.
+SDValue SITargetLowering::lowerMUL(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+
+  // Split vector operands.
+  if (VT.isVector())
+    return splitBinaryVectorOp(Op, DAG);
+
+  assert(VT == MVT::i64 && "The following code is a special for s_mul_u64");
+
+  // There are four ways to lower s_mul_u64:
+  //
+  // 1. If all the operands are uniform, then we lower it as it is.
+  //
+  // 2. If the operands are divergent, then we have to split s_mul_u64 in 32-bit
+  //    multiplications because there is not a vector equivalent of s_mul_u64.
+  //
+  // 3. If the cost model decides that it is more efficient to use vector
+  //    registers, then we have to split s_mul_u64 in 32-bit multiplications.
+  //    This happens in splitScalarSMULU64() in SIInstrInfo.cpp .
+  //
+  // 4. If the cost model decides to use vector registers and both of the
+  //    operands are zero-extended/sign-extended from 32-bits, then we split the
+  //    s_mul_u64 in two 32-bit multiplications. The problem is that it is not
+  //    possible to check if the operands are zero-extended or sign-extended in
+  //    SIInstrInfo.cpp. For this reason, here, we replace s_mul_u64 with
+  //    s_mul_u64_u32_pseudo if both operands are zero-extended and we replace
+  //    s_mul_u64 with s_mul_i64_i32_pseudo if both operands are sign-extended.
+  //    If the cost model decides that we have to use vector registers, then
+  //    splitScalarSMulPseudo() (in SIInstrInfo.cpp) split s_mul_u64_u32/
+  //    s_mul_i64_i32_pseudo in two vector multiplications. If the cost model
+  //    decides that we should use scalar registers, then s_mul_u64_u32_pseudo/
+  //    s_mul_i64_i32_pseudo is lowered as s_mul_u64 in expandPostRAPseudo() in
+  //    SIInstrInfo.cpp .
+
+  if (Op->isDivergent())
+    return SDValue();
+
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  // If all the operands are zero-enteted to 32-bits, then we replace s_mul_u64
+  // with s_mul_u64_u32_pseudo. If all the operands are sign-extended to
+  // 32-bits, then we replace s_mul_u64 with s_mul_i64_i32_pseudo.
+  KnownBits Op0KnownBits = DAG.computeKnownBits(Op0);
+  unsigned Op0LeadingZeros = Op0KnownBits.countMinLeadingZeros();
+  KnownBits Op1KnownBits = DAG.computeKnownBits(Op1);
+  unsigned Op1LeadingZeros = Op1KnownBits.countMinLeadingZeros();
+  SDLoc SL(Op);
+  if (Op0LeadingZeros >= 32 && Op1LeadingZeros >= 32)
+    return SDValue(
+        DAG.getMachineNode(AMDGPU::S_MUL_U64_U32_PSEUDO, SL, VT, Op0, Op1), 0);
+  unsigned Op0SignBits = DAG.ComputeNumSignBits(Op0);
+  unsigned Op1SignBits = DAG.ComputeNumSignBits(Op1);
+  if (Op0SignBits >= 33 && Op1SignBits >= 33)
+    return SDValue(
+        DAG.getMachineNode(AMDGPU::S_MUL_I64_I32_PSEUDO, SL, VT, Op0, Op1), 0);
+  // If all the operands are uniform, then we lower s_mul_u64 as it is.
+  return Op;
 }
 
 SDValue SITargetLowering::lowerXMULO(SDValue Op, SelectionDAG &DAG) const {
