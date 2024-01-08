@@ -53,7 +53,7 @@ dialects including but not limited to `hlfir`, `fir`, `llvm`, `cir`.
 	expected properties.
 * The dialect must allow dataflow to be modeled accurately and
 performantly using MLIR's existing facilities.
-	Appropriate dataflow modeling is important for analyses and IR
+	- Appropriate dataflow modeling is important for analyses and IR
 	reasoning - even something as simple as walking the uses. Therefore
 	operations, like data operations, are expected to generate results
 	which can be used in modeling behavior. For example, consider an
@@ -62,7 +62,7 @@ performantly using MLIR's existing facilities.
 	in host memory.
 * Be friendly to MLIR optimization passes by implementing common
 interfaces.
-	Interfaces, such as `MemoryEffects`, are the key way MLIR
+	- Interfaces, such as `MemoryEffects`, are the key way MLIR
 	transformations and analyses are designed to interact with the IR.
 	In order for the operations in the `acc` dialect to be optimizable
 	(either directly or even indirectly by not blocking optimizations
@@ -445,7 +445,5 @@ operations are intended to be optimized in the following ways:
 * Be able to eliminate redundant operations such as when an `acc.copyin`
 dominates another.
 * Be able to hoist/sink such operations out of loops.
-
-## Operations
 
 [include "Dialects/OpenACCDialect.md"]

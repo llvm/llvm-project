@@ -7,6 +7,7 @@
 // =============================================================================
 //
 // Defines MLIR OpenACC dialect.
+// See [`OpenACC Dialect Documentation`](Dialects/OpenACC.md) for more details.
 //
 //===----------------------------------------------------------------------===//
 
