@@ -36,7 +36,7 @@ public:
   void Clear() {
     m_pc = LLDB_INVALID_ADDRESS;
     m_cfa = LLDB_INVALID_ADDRESS;
-    m_cfa_on_stack = true;
+    m_cfa_on_stack = eLazyBoolCalculate;
     m_symbol_scope = nullptr;
   }
 
@@ -57,15 +57,18 @@ public:
     return *this;
   }
 
-  bool IsCFAOnStack() const { return m_cfa_on_stack; }
+  /// Check if the CFA is on the stack, or elsewhere in the process, such as on
+  /// the heap.
+  bool IsCFAOnStack(Process &process) const;
+
+  /// Determine if the first StackID is "younger" than the second.
+  static bool IsYounger(const StackID &lhs, const StackID &rhs,
+                        Process &process);
 
 protected:
   friend class StackFrame;
 
-  explicit StackID(lldb::addr_t pc, lldb::addr_t cfa, lldb::ThreadSP thread_sp)
-      : m_pc(pc), m_cfa(cfa), m_cfa_on_stack(IsStackAddress(cfa, thread_sp)) {}
-
-  bool IsStackAddress(lldb::addr_t addr, lldb::ThreadSP thread_sp) const;
+  explicit StackID(lldb::addr_t pc, lldb::addr_t cfa) : m_pc(pc), m_cfa(cfa) {}
 
   void SetPC(lldb::addr_t pc) { m_pc = pc; }
 
@@ -84,7 +87,7 @@ protected:
                             // below)
   // True if the CFA is an address on the stack, false if it's an address
   // elsewhere (ie heap).
-  bool m_cfa_on_stack = true;
+  mutable LazyBool m_cfa_on_stack = eLazyBoolCalculate;
   SymbolContextScope *m_symbol_scope =
       nullptr; // If nullptr, there is no block or symbol for this frame.
                // If not nullptr, this will either be the scope for the
@@ -97,9 +100,6 @@ protected:
 
 bool operator==(const StackID &lhs, const StackID &rhs);
 bool operator!=(const StackID &lhs, const StackID &rhs);
-
-// frame_id_1 < frame_id_2 means "frame_id_1 is YOUNGER than frame_id_2"
-bool operator<(const StackID &lhs, const StackID &rhs);
 
 } // namespace lldb_private
 

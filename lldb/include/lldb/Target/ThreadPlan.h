@@ -555,6 +555,28 @@ protected:
 
   bool IsUsuallyUnexplainedStopReason(lldb::StopReason);
 
+  /// Determine if the first StackID is younger than the second.
+  ///
+  /// A callee is considered younger than its caller, and is also younger than
+  /// all ancestor frames leading up to the caller. Consider this stack:
+  ///
+  ///   +------------------+
+  ///   |        Fa        |
+  ///   +------------------+
+  ///   |        Fb        |
+  ///   +------------------+
+  ///   |        ...       |
+  ///   +------------------+
+  ///   |        Fy        |
+  ///   +------------------+
+  ///   |        Fz        |
+  ///   +------------------+
+  ///
+  /// In this case Fz is younger than each of Fy, ..., Fb, and Fa. Fy is not
+  /// younger than Fz, but is younger than all frames above it in the stack,
+  /// including Fa and Fb.
+  bool IsYounger(const StackID &lhs, const StackID &rhs) const;
+
   Status m_status;
   Process &m_process;
   lldb::tid_t m_tid;
