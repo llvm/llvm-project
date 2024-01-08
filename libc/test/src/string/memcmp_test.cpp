@@ -41,7 +41,7 @@ TEST(LlvmLibcMemcmpTest, Issue77080) {
   // https://github.com/llvm/llvm-project/issues/77080
   constexpr char lhs[35] = "1.069cd68bbe76eb2143a3284d27ebe220";
   constexpr char rhs[35] = "1.0500185b5d966a544e2d0fa40701b0f3";
-  EXPECT_GT(LIBC_NAMESPACE::memcmp(lhs, rhs, 34), 0);
+  ASSERT_GE(LIBC_NAMESPACE::memcmp(lhs, rhs, 34), 1);
 }
 
 // Adapt CheckMemcmp signature to memcmp.
