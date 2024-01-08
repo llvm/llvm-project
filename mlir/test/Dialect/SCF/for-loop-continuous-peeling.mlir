@@ -14,11 +14,11 @@ func.func @foo(%ub: index) -> index {
 
 // CHECK: #[[MAP:.*]] = affine_map<()[s0, s1, s2] -> (s1 - s1 mod s2)>
 // CHECK: func.func @foo(%[[UB:.*]]: index) -> index {
-// CHECK: %[[STEP8:.*]] = arith.constant 8 : index
-// CHECK: %[[STEP4:.*]] = arith.constant 4 : index
-// CHECK: %[[STEP2:.*]] = arith.constant 2 : index
 // CHECK: %[[STEP1:.*]] = arith.constant 1 : index
+// CHECK: %[[STEP2:.*]] = arith.constant 2 : index
+// CHECK: %[[STEP4:.*]] = arith.constant 4 : index
 // CHECK: %[[LB:.*]] = arith.constant 0 : index
+// CHECK: %[[STEP8:.*]] = arith.constant 8 : index
 // CHECK: %[[I0:.*]] = affine.apply #[[MAP]]()[%[[LB]], %[[UB]], %[[STEP8]]]
 // CHECK: %[[I1:.*]] = scf.for %{{.*}} = %[[LB]] to %[[I0]] step %[[STEP8]] iter_args(%[[ALB:.*]] = %[[LB]]) -> (index) {
 // CHECK: %[[SUM:.*]] = index.add %[[ALB]], %[[STEP8]]
