@@ -7,7 +7,9 @@ Up until now, we were applying transform dialect scripts under the assumption
 that specific payload operations are identified by the caller when the transform
 dialect interpreter is invoked. This may be seen as contrary to the idea of
 driving transformations from a dialect since the transformation targets must be
-identified by the caller in C++. It also adds practical overhead due to
+identified through mechanisms external to the transform dialect interpreter, for
+example, when invoking the interpreter programmatically in C++ or through pass
+arguments as seen in previous chapters. It also adds practical overhead due to
 increased interaction with the interpreter in C++, and cognitive overhead of
 manipulating two interfaces at once. To remedy this, Transform dialect proposes
 a subset of operations for _matching_ payload operations that need to be
@@ -24,8 +26,9 @@ directly within the transform dialect.
 
 ## Simple match
 
-Let us reconsider the “fully connected layer” example from Chapter 1, reproduced
-below for convenience.
+Let us reconsider the “fully connected layer” example from [Chapter
+1](Ch1.md#chaining-transformations-with-handles), reproduced below for
+convenience.
 
 
 ```mlir
@@ -123,12 +126,12 @@ module @transforms attributes { transform.with_named_sequence } {
 
 This script can be executed using the non-test interpreter pass running on the
 root operation of the translation unit without additional flags: `mlir-opt
---transform-interpreter`. It will emit corresponding remarks at elementwise and
-matmul operations. In debug builds, the infrastructure provides a convenient
-method to understand the matching process by passing
-`-debug-only=transform-matcher` to `mlir-opt` or a derived tool. It will print
-the silenceable failure messages produced by the match operations into the debug
-stream, for example:
+--transform-interpreter`. It will emit corresponding remarks at
+`linalg.elemwise_binary` and `linalg.matmul` operations. In debug builds, the
+infrastructure provides a convenient method to understand the matching process
+by passing `-debug-only=transform-matcher` to `mlir-opt` or a derived tool. It
+will print the silenceable failure messages produced by the match operations
+into the debug stream, for example:
 
 
 ```
