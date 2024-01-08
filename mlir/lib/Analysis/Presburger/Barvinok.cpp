@@ -83,10 +83,10 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 
   // Thus its ray matrix, U, is the inverse of the
   // transpose of its inequality matrix, `cone`.
-  FracMatrix transp(numVar, numIneq);
-  for (auto i : llvm::seq<int>(0, numVar))
-    for (auto j : llvm::seq<int>(0, numIneq))
-      transp(j, i) = Fraction(cone.atIneq(i, j), 1);
+  // The last column of the inequality matrix is null,
+  // so we remove it to obtain a square matrix.
+  FracMatrix transp = FracMatrix(cone.getInequalities()).transpose();
+  transp.removeRow(numVar);
 
   FracMatrix generators(numVar, numIneq);
   transp.determinant(/*inverse=*/&generators); // This is the U-matrix.

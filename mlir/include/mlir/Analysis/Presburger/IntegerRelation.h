@@ -221,6 +221,8 @@ public:
     return getInt64Vec(inequalities.getRow(idx));
   }
 
+  inline IntMatrix getInequalities() const { return inequalities; }
+
   /// Get the number of vars of the specified kind.
   unsigned getNumVarKind(VarKind kind) const {
     return space.getNumVarKind(kind);
