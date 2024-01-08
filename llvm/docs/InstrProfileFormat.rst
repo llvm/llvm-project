@@ -256,7 +256,7 @@ are stored contiguously and in an order that is consistent with instrumentation 
 .. _calculation-of-counter-offset:
 
 As mentioned above, the recorded counter offset is relative to the profile metadata.
-So how are function counters associated with the profiled function?
+So how are function counters located in the raw profile data?
 
 Basically, the profile reader iterates profile metadata (from the `profile metadata`_
 section) and makes use of the recorded relative distances, as illustrated below.
@@ -298,7 +298,9 @@ In the graph,
 
 * The profile header records `CounterDelta` with the value as `start(__llvm_prf_cnts) - start(__llvm_prf_data)`.
   We will call it `CounterDeltaInitVal` below for convenience.
-* For each profile data record, `CounterPtrN` is recorded as `start(Counter) - start(ProfileData)`.
+* For each profile data record `ProileDataN`, `CounterPtr` is recorded as `start(CounterN) - start(ProfileDataN)`,
+  where `ProfileDataN` is the N-th entry in `__llvm_prf_data`, and `CounterN` is
+  the corresponding profile counters.
 
 Each time the reader advances to the next data record, it `updates`_ `CounterDelta`
 to minus the size of one `ProfileData`.
