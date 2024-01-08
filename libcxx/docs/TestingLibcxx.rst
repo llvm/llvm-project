@@ -351,8 +351,8 @@ Test Filenames`_ when determining the names for new test files.
      - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Checks whether the C++ code in the file compiles successfully. In general, prefer `compile` tests over `verify` tests, 
-       subject to the specific recommendations, below, for when to write `verify` tests.
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+       subject to the specific recommendations, below, for when to write ``verify`` tests.
    * - ``FOO.compile.pass.mm``
      - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
    * - ``FOO.compile.fail.cpp``
@@ -360,8 +360,8 @@ Test Filenames`_ when determining the names for new test files.
 
    * - ``FOO.verify.cpp``
      - Compiles with clang-verify. This type of test is automatically marked as UNSUPPORTED if the compiler does not support clang-verify.
-       For additional information about how to write `verify` tests, see the `Internals Manual <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_.
-       Prefer `verify` tests over `compile` tests to test that compilation fails for a particular reason. For example, use a `verify` test
+       For additional information about how to write ``verify`` tests, see the `Internals Manual <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_.
+       Prefer `verify` tests over ``compile`` tests to test that compilation fails for a particular reason. For example, use a ``verify`` test
        to ensure that
 
        * an expected ``static_assert`` is triggered;
