@@ -97,7 +97,9 @@ for.end:
 ; and generate the runtime check to guard the vectorized loop.
 
 ; CHECK-LABEL: s172
-; CHECK-DAG: icmp ne i32 %xb, 1
+; CHECK: vector.scevcheck:
+; CHECK:   [[CHECK:%.*]] = icmp ne i32 %xb, 1
+; CHECK:   br i1 [[CHECK]], label %scalar.ph, label %vector.ph
 ; CHECK: vector.body
 
 @b = global [32000 x float] zeroinitializer, align 64
