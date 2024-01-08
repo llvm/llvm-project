@@ -255,18 +255,19 @@ char *GetProcSelfMaps();
 void InitializeInterceptors();
 
 void MsanAllocatorInit();
-void MsanDeallocate(StackTrace *stack, void *ptr);
+void MsanDeallocate(BufferedStackTrace *stack, void *ptr);
 
-void *msan_malloc(uptr size, StackTrace *stack);
-void *msan_calloc(uptr nmemb, uptr size, StackTrace *stack);
-void *msan_realloc(void *ptr, uptr size, StackTrace *stack);
-void *msan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack);
-void *msan_valloc(uptr size, StackTrace *stack);
-void *msan_pvalloc(uptr size, StackTrace *stack);
-void *msan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack);
-void *msan_memalign(uptr alignment, uptr size, StackTrace *stack);
+void *msan_malloc(uptr size, BufferedStackTrace *stack);
+void *msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
+void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack);
+void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
+                        BufferedStackTrace *stack);
+void *msan_valloc(uptr size, BufferedStackTrace *stack);
+void *msan_pvalloc(uptr size, BufferedStackTrace *stack);
+void *msan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack);
+void *msan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack);
 int msan_posix_memalign(void **memptr, uptr alignment, uptr size,
-                        StackTrace *stack);
+                        BufferedStackTrace *stack);
 
 void InstallTrapHandler();
 void InstallAtExitHandler();
