@@ -15,10 +15,6 @@
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //
-// Compression a, b and c always reduce code size (some exception)
-// fourth type of compression can help hardware decode although the instruction
-// length remains unchanged.
-//
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
 //

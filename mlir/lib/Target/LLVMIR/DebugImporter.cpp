@@ -50,10 +50,11 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
-  return DICompileUnitAttr::get(context, node->getSourceLanguage(),
-                                translate(node->getFile()),
-                                getStringAttrOrNull(node->getRawProducer()),
-                                node->isOptimized(), emissionKind.value());
+  return DICompileUnitAttr::get(
+      context, DistinctAttr::create(UnitAttr::get(context)),
+      node->getSourceLanguage(), translate(node->getFile()),
+      getStringAttrOrNull(node->getRawProducer()), node->isOptimized(),
+      emissionKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
