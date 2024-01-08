@@ -1385,14 +1385,16 @@ Improvements
 ^^^^^^^^^^^^
 
 - Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
-  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp``,
-  ``getcwd`` and ``errno`` behavior.
+  functions like ``send``, ``recv``, ``readlink``, ``fgetc``, ``fgets``,
+  ``fputc``, ``fputs``, ``fflush``, ``mkdtemp``,``getcwd`` and
+  ``errno`` behavior.
   (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
   `#77040 <https://github.com/llvm/llvm-project/pull/77040>`_,
   `#76671 <https://github.com/llvm/llvm-project/pull/76671>`_,
   `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
   `#76557 <https://github.com/llvm/llvm-project/pull/76557>`_,
-  `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_)
+  `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_,
+  `#76979 <https://github.com/llvm/llvm-project/pull/76979>`_)
 
 - Fixed a false negative for when accessing a nonnull property (ObjC).
   (`1dceba3a3684 <https://github.com/llvm/llvm-project/commit/1dceba3a3684d12394731e09a6cf3efcebf07a3a>`_)
