@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-hardening-mode=none
+// UNSUPPORTED: libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: availability-verbose_abort-missing
 
 // <atomic>
