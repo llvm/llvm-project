@@ -1106,11 +1106,17 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
     Res = EmitDeclRefLValue(DRE).getPointer(*this);
     Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
                                     getPointerAlign(), "dre.load");
-  } else {
+  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
+    LValue LV = EmitMemberExpr(ME);
+    Address Addr = LV.getAddress(*this);
+    Res = Addr.getPointer();
+  } else if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
     Res = Addr.getPointer();
+  } else {
+    return nullptr;
   }
 
   llvm::Value *Zero = Builder.getInt32(0);
