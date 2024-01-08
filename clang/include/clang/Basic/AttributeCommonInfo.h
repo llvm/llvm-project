@@ -256,11 +256,7 @@ protected:
   }
 };
 
-enum class KeywordAttributeParseArgumentsKind {
-  None,
-  Optional,
-  Required
-};
+enum class KeywordAttributeParseArgumentsKind { None, Optional, Required };
 
 inline KeywordAttributeParseArgumentsKind
 getKeywordAttributeParseArgumentsKind(tok::TokenKind Kind) {
