@@ -96,6 +96,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("if_present", OpenACCClauseKind::IfPresent)
       .Case("independent", OpenACCClauseKind::Independent)
       .Case("nohost", OpenACCClauseKind::NoHost)
+      .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("worker", OpenACCClauseKind::Worker)
@@ -328,8 +329,20 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   return DirKind;
 }
 
+bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
+  return Kind == OpenACCClauseKind::Self;
+}
+
 bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
   return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If;
+}
+
+ExprResult ParseOpenACCConditionalExpr(Parser &P) {
+  // FIXME: It isn't clear if the spec saying 'condition' means the same as
+  // it does in an if/while/etc (See ParseCXXCondition), however as it was
+  // written with Fortran/C in mind, we're going to assume it just means an
+  // 'expression evaluating to boolean'.
+  return P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
 }
 
 bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
@@ -362,12 +375,7 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
       break;
     }
     case OpenACCClauseKind::If: {
-      // FIXME: It isn't clear if the spec saying 'condition' means the same as
-      // it does in an if/while/etc (See ParseCXXCondition), however as it was
-      // written with Fortran/C in mind, we're going to assume it just means an
-      // 'expression evaluating to boolean'.
-      ExprResult CondExpr =
-          P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
+      ExprResult CondExpr = ParseOpenACCConditionalExpr(P);
       // An invalid expression can be just about anything, so just give up on
       // this clause list.
       if (CondExpr.isInvalid())
@@ -379,8 +387,23 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
     }
 
     return Parens.consumeClose();
+  } else if (ClauseHasOptionalParens(Kind)) {
+    if (!Parens.consumeOpen()) {
+      switch (Kind) {
+      case OpenACCClauseKind::Self: {
+        ExprResult CondExpr = ParseOpenACCConditionalExpr(P);
+        // An invalid expression can be just about anything, so just give up on
+        // this clause list.
+        if (CondExpr.isInvalid())
+          return true;
+        break;
+      }
+      default:
+        llvm_unreachable("Not an optional parens type?");
+      }
+      Parens.consumeClose();
+    }
   }
-  // FIXME: Handle optional parens
   return false;
 }
 
