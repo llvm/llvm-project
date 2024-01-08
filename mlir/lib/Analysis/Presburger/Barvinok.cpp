@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Barvinok.h"
+#include "llvm/ADT/Sequence.h"
 
 using namespace mlir;
 using namespace presburger;
@@ -24,7 +25,7 @@ ConeV mlir::presburger::detail::getDual(ConeH cone) {
   // is represented as a row [a1, ..., an, b]
   // and that b = 0.
 
-  for (unsigned i = 0; i < numIneq; ++i) {
+  for (auto i : llvm::seq<int>(0, numIneq)) {
     assert(cone.atIneq(i, numVar) == 0 &&
            "H-representation of cone is not centred at the origin!");
     for (unsigned j = 0; j < numVar; ++j) {
@@ -83,8 +84,8 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   // Thus its ray matrix, U, is the inverse of the
   // transpose of its inequality matrix, `cone`.
   FracMatrix transp(numVar, numIneq);
-  for (unsigned i = 0; i < numVar; ++i)
-    for (unsigned j = 0; j < numIneq; ++j)
+  for (auto i : llvm::seq<int>(0, numVar))
+    for (auto j : llvm::seq<int>(0, numIneq))
       transp(j, i) = Fraction(cone.atIneq(i, j), 1);
 
   FracMatrix generators(numVar, numIneq);
@@ -95,7 +96,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   // i.e., the rows of the matrix U.
   std::vector<Point> denominator(numIneq);
   ArrayRef<Fraction> row;
-  for (unsigned i = 0; i < numVar; ++i) {
+  for (auto i : llvm::seq<int>(0, numVar)) {
     row = generators.getRow(i);
     denominator[i] = Point(row);
   }
@@ -115,8 +116,8 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   unsigned numRows = vertex.getNumRows();
   ParamPoint numerator(numColumns, numRows);
   SmallVector<Fraction> ithCol(numRows);
-  for (unsigned i = 0; i < numColumns; ++i) {
-    for (unsigned j = 0; j < numRows; ++j)
+  for (auto i : llvm::seq<int>(0, numColumns)) {
+    for (auto j : llvm::seq<int>(0, numRows))
       ithCol[j] = vertex(j, i);
     numerator.setRow(i, transp.preMultiplyWithRow(ithCol));
     numerator.negateRow(i);
