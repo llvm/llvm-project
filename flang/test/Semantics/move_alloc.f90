@@ -1,7 +1,11 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in move_alloc() subroutine calls
 program main
-  integer, allocatable :: a(:)[:], b(:)[:], c(:)[:], d(:)[:], f(:)
+  integer, allocatable :: a(:)[:], b(:)[:], f(:), g(:)
+  type alloc_component
+    integer, allocatable :: a(:)
+  end type
+  type(alloc_component) :: c[*], d[*]
   !ERROR: 'e' is an ALLOCATABLE coarray and must have a deferred coshape
   integer, allocatable :: e(:)[*]
   integer status, coindexed_status[*]
@@ -18,42 +22,39 @@ program main
   a = [ 1, 2, 3 ]
   call move_alloc(a, b, status, message)
 
-  allocate(c(3)[*])
-  c = [ 1, 2, 3 ]
-
   !ERROR: too many actual arguments for intrinsic 'move_alloc'
   call move_alloc(a, b, status, message, 1)
 
   ! standards non-conforming
   !ERROR: 'from' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c[1], d)
+  call move_alloc(c[1]%a, f)
 
   !ERROR: 'to' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d[1])
+  call move_alloc(f, d[1]%a)
 
   !ERROR: 'stat' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d, coindexed_status[1])
+  call move_alloc(f, g, coindexed_status[1])
 
   !ERROR: 'errmsg' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d, status, coindexed_message[1])
+  call move_alloc(f, g, status, coindexed_message[1])
 
   !ERROR: 'errmsg' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d, errmsg=coindexed_message[1])
+  call move_alloc(f, g, errmsg=coindexed_message[1])
 
   !ERROR: 'errmsg' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d, errmsg=coindexed_message[1], stat=status)
+  call move_alloc(f, g, errmsg=coindexed_message[1], stat=status)
 
   !ERROR: 'stat' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d, stat=coindexed_status[1])
+  call move_alloc(f, g, stat=coindexed_status[1])
 
   !ERROR: 'stat' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c, d, errmsg=message, stat=coindexed_status[1])
+  call move_alloc(f, g, errmsg=message, stat=coindexed_status[1])
 
   !ERROR: 'from' argument to 'move_alloc' may not be a coindexed object
   !ERROR: 'to' argument to 'move_alloc' may not be a coindexed object
   !ERROR: 'stat' argument to 'move_alloc' may not be a coindexed object
   !ERROR: 'errmsg' argument to 'move_alloc' may not be a coindexed object
-  call move_alloc(c[1], d[1], stat=coindexed_status[1], errmsg=coindexed_message[1])
+  call move_alloc(c[1]%a, d[1]%a, stat=coindexed_status[1], errmsg=coindexed_message[1])
 
   !ERROR: Argument #1 to MOVE_ALLOC must be allocatable
   call move_alloc(nonAllocatable, f)
@@ -66,5 +67,10 @@ program main
 
   !ERROR: Actual argument for 'to=' has bad type or kind 'CHARACTER(KIND=1,LEN=3_8)'
   call move_alloc(ca, cb)
+
+  !ERROR: Argument #1 to MOVE_ALLOC must be allocatable
+  call move_alloc(f(::2), g)
+  !ERROR: Argument #2 to MOVE_ALLOC must be allocatable
+  call move_alloc(f, g(::2))
 
 end program main
