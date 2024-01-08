@@ -166,12 +166,11 @@ struct BufferAllocationHoistingStateBase {
 };
 
 /// Implements the actual hoisting logic for allocation nodes.
-template <typename StateT>
-class BufferAllocationHoisting : public BufferPlacementTransformationBase {
+template <typename StateT> class BufferAllocationHoisting {
 public:
   BufferAllocationHoisting(Operation *op)
-      : BufferPlacementTransformationBase(op), dominators(op),
-        postDominators(op), scopeOp(op) {}
+      : dominators(op), postDominators(op), scopeOp(op), aliases(op),
+        allocs(op), liveness(op) {}
 
   /// Moves allocations upwards.
   void hoist() {
@@ -285,6 +284,16 @@ private:
   /// The operation that this transformation is working on. It is used to also
   /// gather allocas.
   Operation *scopeOp;
+
+  /// Alias information that can be updated during the insertion of copies.
+  BufferViewFlowAnalysis aliases;
+
+  /// Stores all internally managed allocations.
+  BufferPlacementAllocs allocs;
+
+  /// The underlying liveness analysis to compute fine grained information
+  /// about alloc and dealloc positions.
+  Liveness liveness;
 };
 
 /// A state implementation compatible with the `BufferAllocationHoisting` class
@@ -365,10 +374,10 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
 //===----------------------------------------------------------------------===//
 
 /// Promotes heap-based allocations to stack-based allocations (if possible).
-class BufferPlacementPromotion : BufferPlacementTransformationBase {
+class BufferPlacementPromotion {
 public:
   BufferPlacementPromotion(Operation *op)
-      : BufferPlacementTransformationBase(op) {}
+      : aliases(op), allocs(op), liveness(op) {}
 
   /// Promote buffers to stack-based allocations.
   void promote(function_ref<bool(Value)> isSmallAlloc) {
@@ -400,6 +409,16 @@ public:
       }
     }
   }
+
+  /// Alias information that can be updated during the insertion of copies.
+  BufferViewFlowAnalysis aliases;
+
+  /// Stores all internally managed allocations.
+  BufferPlacementAllocs allocs;
+
+  /// The underlying liveness analysis to compute fine grained information
+  /// about alloc and dealloc positions.
+  Liveness liveness;
 };
 
 //===----------------------------------------------------------------------===//

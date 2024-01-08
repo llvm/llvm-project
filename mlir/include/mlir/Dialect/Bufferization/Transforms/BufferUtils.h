@@ -98,26 +98,6 @@ Block *findCommonDominator(Value value,
   return doms.findNearestCommonDominator(blocks);
 }
 
-/// The base class for all BufferPlacement transformations.
-class BufferPlacementTransformationBase {
-public:
-  using ValueSetT = BufferViewFlowAnalysis::ValueSetT;
-
-  /// Constructs a new operation base using the given root operation.
-  BufferPlacementTransformationBase(Operation *op);
-
-protected:
-  /// Alias information that can be updated during the insertion of copies.
-  BufferViewFlowAnalysis aliases;
-
-  /// Stores all internally managed allocations.
-  BufferPlacementAllocs allocs;
-
-  /// The underlying liveness analysis to compute fine grained information
-  /// about alloc and dealloc positions.
-  Liveness liveness;
-};
-
 // Create a global op for the given tensor-valued constant in the program.
 // Globals are created lazily at the top of the enclosing ModuleOp with pretty
 // names. Duplicates are avoided.

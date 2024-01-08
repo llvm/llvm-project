@@ -201,14 +201,14 @@ private:
 /// The buffer deallocation transformation which ensures that all allocs in the
 /// program have a corresponding de-allocation. As a side-effect, it might also
 /// introduce clones that in turn leads to additional deallocations.
-class BufferDeallocation : public BufferPlacementTransformationBase {
+class BufferDeallocation {
 public:
   using AliasAllocationMapT =
       llvm::DenseMap<Value, bufferization::AllocationOpInterface>;
 
   BufferDeallocation(Operation *op)
-      : BufferPlacementTransformationBase(op), dominators(op),
-        postDominators(op) {}
+      : dominators(op), postDominators(op), aliases(op), allocs(op),
+        liveness(op) {}
 
   /// Checks if all allocation operations either provide an already existing
   /// deallocation operation or implement the AllocationOpInterface. In
@@ -615,10 +615,20 @@ private:
   PostDominanceInfo postDominators;
 
   /// Stores already cloned buffers to avoid additional clones of clones.
-  ValueSetT clonedValues;
+  BufferViewFlowAnalysis::ValueSetT clonedValues;
 
   /// Maps aliases to their source allocation interfaces (inverse mapping).
   AliasAllocationMapT aliasToAllocations;
+
+  /// Alias information that can be updated during the insertion of copies.
+  BufferViewFlowAnalysis aliases;
+
+  /// Stores all internally managed allocations.
+  BufferPlacementAllocs allocs;
+
+  /// The underlying liveness analysis to compute fine grained information
+  /// about alloc and dealloc positions.
+  Liveness liveness;
 };
 
 //===----------------------------------------------------------------------===//

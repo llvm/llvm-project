@@ -91,15 +91,6 @@ void BufferPlacementAllocs::build(Operation *op) {
 // BufferPlacementTransformationBase
 //===----------------------------------------------------------------------===//
 
-/// Constructs a new transformation base using the given root operation.
-BufferPlacementTransformationBase::BufferPlacementTransformationBase(
-    Operation *op)
-    : aliases(op), allocs(op), liveness(op) {}
-
-//===----------------------------------------------------------------------===//
-// BufferPlacementTransformationBase
-//===----------------------------------------------------------------------===//
-
 FailureOr<memref::GlobalOp>
 bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
                             Attribute memorySpace) {
