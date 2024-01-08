@@ -58,7 +58,6 @@ uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
     return __builtin_amdgcn_workgroup_size_z();
   };
   UNREACHABLE("Dim outside range!");
-  return 0; // removes compile warning
 }
 
 LaneMaskTy activemask() { return __builtin_amdgcn_read_exec(); }
@@ -97,7 +96,6 @@ uint32_t getThreadIdInBlock(int32_t Dim) {
     return __builtin_amdgcn_workitem_id_z();
   };
   UNREACHABLE("Dim outside range!");
-  return 0; // removes compile warning
 }
 
 uint32_t getNumberOfThreadsInKernel() {
@@ -115,7 +113,6 @@ uint32_t getBlockIdInKernel(int32_t Dim) {
     return __builtin_amdgcn_workgroup_id_z();
   };
   UNREACHABLE("Dim outside range!");
-  return 0; // removes compile warning
 }
 
 uint32_t getNumberOfBlocksInKernel(int32_t Dim) {
