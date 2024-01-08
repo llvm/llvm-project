@@ -220,6 +220,14 @@ define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
 
 // -----
 
+; CHECK-LABEL: @new_za_func
+; CHECK-SAME: attributes {arm_new_za}
+define void @new_za_func() "aarch64_pstate_za_new" {
+  ret void
+}
+
+// -----
+
 ; CHECK-LABEL: @section_func
 ; CHECK-SAME: attributes {section = ".section.name"}
 define void @section_func() section ".section.name" {
