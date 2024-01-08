@@ -468,12 +468,15 @@ bool GreedyPatternRewriteDriver::processWorklist() {
             // If materialization fails, cleanup any operations generated for
             // the previous results.
             llvm::SmallDenseSet<Operation *> replacementOps;
-            std::transform(replacements.begin(), replacements.end(),
-                           replacementOps.begin(), [](Value replacement) {
-                             return replacement.getDefiningOp();
-                           });
-            for (Operation *op : replacementOps)
+            for (Value replacement : replacements) {
+              assert(replacement.use_empty() &&
+                     "folder reused existing op for one result but constant "
+                     "materialization failed for another result");
+              replacementOps.insert(replacement.getDefiningOp());
+            }
+            for (Operation *op : replacementOps) {
               eraseOp(op);
+            }
 
             materializationSucceeded = false;
             break;
