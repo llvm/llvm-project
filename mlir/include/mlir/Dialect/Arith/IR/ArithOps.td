@@ -137,7 +137,7 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
   let results = (outs BoolLikeOfAnyRank:$result);
 }
 
-class Arith_IntArithmeticOpWithOverflowFlag<string mnemonic, list<Trait> traits = []> :
+class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>,
       DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
@@ -148,9 +148,6 @@ class Arith_IntArithmeticOpWithOverflowFlag<string mnemonic, list<Trait> traits 
 
   let assemblyFormat = [{ $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
                           attr-dict `:` type($result) }];
-
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -208,7 +205,7 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddIOp : Arith_IntArithmeticOpWithOverflowFlag<"addi", [Commutative]> {
+def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi", [Commutative]> {
   let summary = "integer addition operation";
   let description = [{
     Performs N-bit addition on the operands. The operands are interpreted as 
@@ -221,10 +218,10 @@ def Arith_AddIOp : Arith_IntArithmeticOpWithOverflowFlag<"addi", [Commutative]> 
     these is required to be the same type. This type may be an integer scalar type, 
     a vector whose element type is integer, or a tensor of integers.
 
-    This op supports nuw/nsw flags which stands stand for "No Unsigned Wrap" and
-    "No Signed Wrap", respectively. If the nuw and/or nsw flags are present, the
-    result value is undefined if unsigned and/or signed overflow, respectively,
-    occurs.
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
 
     Example:
 
@@ -235,7 +232,7 @@ def Arith_AddIOp : Arith_IntArithmeticOpWithOverflowFlag<"addi", [Commutative]> 
     // Scalar addition with overflow flags.
     %a = arith.addi %b, %c overflow<nsw, nuw> : i64
 
-    // SIMD vector element-wise addition, e.g. for Intel SSE.
+    // SIMD vector element-wise addition.
     %f = arith.addi %g, %h : vector<4xi32>
 
     // Tensor element-wise addition.
@@ -301,7 +298,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_SubIOp : Arith_IntArithmeticOpWithOverflowFlag<"subi"> {
+def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
   let summary = [{
     Integer subtraction operation.
   }];
@@ -316,10 +313,10 @@ def Arith_SubIOp : Arith_IntArithmeticOpWithOverflowFlag<"subi"> {
     these is required to be the same type. This type may be an integer scalar type,
     a vector whose element type is integer, or a tensor of integers.
 
-    This op supports nuw/nsw flags which stands stand for "No Unsigned Wrap" and
-    "No Signed Wrap", respectively. If the nuw and/or nsw flags are present, the
-    result value is undefined if unsigned and/or signed overflow, respectively,
-    occurs.
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
 
     Example:
 
@@ -330,7 +327,7 @@ def Arith_SubIOp : Arith_IntArithmeticOpWithOverflowFlag<"subi"> {
     // Scalar subtraction with overflow flags.
     %a = arith.subi %b, %c overflow<nsw, nuw> : i64
 
-    // SIMD vector element-wise subtraction, e.g. for Intel SSE.
+    // SIMD vector element-wise subtraction.
     %f = arith.subi %g, %h : vector<4xi32>
 
     // Tensor element-wise subtraction.
@@ -345,7 +342,7 @@ def Arith_SubIOp : Arith_IntArithmeticOpWithOverflowFlag<"subi"> {
 // MulIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulIOp : Arith_IntArithmeticOpWithOverflowFlag<"muli", [Commutative]> {
+def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli", [Commutative]> {
   let summary = [{
     Integer multiplication operation.
   }];
@@ -360,10 +357,10 @@ def Arith_MulIOp : Arith_IntArithmeticOpWithOverflowFlag<"muli", [Commutative]> 
     these is required to be the same type. This type may be an integer scalar type,
     a vector whose element type is integer, or a tensor of integers.
 
-    This op supports nuw/nsw flags which stands stand for "No Unsigned Wrap" and
-    "No Signed Wrap", respectively. If the nuw and/or nsw flags are present, the
-    result value is undefined if unsigned and/or signed overflow, respectively,
-    occurs.
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
 
     Example:
 
@@ -374,7 +371,7 @@ def Arith_MulIOp : Arith_IntArithmeticOpWithOverflowFlag<"muli", [Commutative]> 
     // Scalar multiplication with overflow flags.
     %a = arith.muli %b, %c overflow<nsw, nuw> : i64
 
-    // SIMD vector element-wise multiplication, e.g. for Intel SSE.
+    // SIMD vector element-wise multiplication.
     %f = arith.muli %g, %h : vector<4xi32>
 
     // Tensor element-wise multiplication.

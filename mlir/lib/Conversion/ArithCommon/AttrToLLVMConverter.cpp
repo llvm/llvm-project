@@ -10,7 +10,6 @@
 
 using namespace mlir;
 
-// Map arithmetic fastmath enum values to LLVMIR enum values.
 LLVM::FastmathFlags
 mlir::arith::convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF) {
   LLVM::FastmathFlags llvmFMF{};
@@ -29,7 +28,6 @@ mlir::arith::convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF) {
   return llvmFMF;
 }
 
-// Create an LLVM fastmath attribute from a given arithmetic fastmath attribute.
 LLVM::FastmathFlagsAttr
 mlir::arith::convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr) {
   arith::FastMathFlags arithFMF = fmfAttr.getValue();
@@ -37,7 +35,6 @@ mlir::arith::convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr) {
       fmfAttr.getContext(), convertArithFastMathFlagsToLLVM(arithFMF));
 }
 
-// Map arithmetic overflow enum values to LLVMIR enum values.
 LLVM::IntegerOverflowFlags mlir::arith::convertArithOveflowFlagsToLLVM(
     arith::IntegerOverflowFlags arithFlags) {
   LLVM::IntegerOverflowFlags llvmFlags{};
@@ -52,7 +49,6 @@ LLVM::IntegerOverflowFlags mlir::arith::convertArithOveflowFlagsToLLVM(
   return llvmFlags;
 }
 
-// Create an LLVM overflow attribute from a given arithmetic overflow attribute.
 LLVM::IntegerOverflowFlagsAttr mlir::arith::convertArithOveflowAttrToLLVM(
     arith::IntegerOverflowFlagsAttr flagsAttr) {
   arith::IntegerOverflowFlags arithFlags = flagsAttr.getValue();

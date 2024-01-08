@@ -18,19 +18,21 @@
 
 namespace mlir {
 namespace arith {
-// Map arithmetic fastmath enum values to LLVMIR enum values.
+/// Maps arithmetic fastmath enum values to LLVM enum values.
 LLVM::FastmathFlags
 convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF);
 
-// Create an LLVM fastmath attribute from a given arithmetic fastmath attribute.
+/// Creates an LLVM fastmath attribute from a given arithmetic fastmath
+/// attribute.
 LLVM::FastmathFlagsAttr
 convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr);
 
-// Map arithmetic overflow enum values to LLVMIR enum values.
+/// Maps arithmetic overflow enum values to LLVM enum values.
 LLVM::IntegerOverflowFlags
 convertArithOveflowFlagsToLLVM(arith::IntegerOverflowFlags arithFlags);
 
-// Create an LLVM overflow attribute from a given arithmetic overflow attribute.
+/// Creates an LLVM overflow attribute from a given arithmetic overflow
+/// attribute.
 LLVM::IntegerOverflowFlagsAttr
 convertArithOveflowAttrToLLVM(arith::IntegerOverflowFlagsAttr flagsAttr);
 
@@ -44,12 +46,12 @@ public:
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     // Get the name of the arith fastmath attribute.
-    llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
+    StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
     // Remove the source fastmath attribute.
-    auto arithFMFAttr = dyn_cast_or_null<arith::FastMathFlagsAttr>(
+    auto arithFMFAttr = dyn_cast_if_present<arith::FastMathFlagsAttr>(
         convertedAttr.erase(arithFMFAttrName));
     if (arithFMFAttr) {
-      llvm::StringRef targetAttrName = TargetOp::getFastmathAttrName();
+      StringRef targetAttrName = TargetOp::getFastmathAttrName();
       convertedAttr.set(targetAttrName,
                         convertArithFastMathAttrToLLVM(arithFMFAttr));
     }
@@ -71,12 +73,12 @@ public:
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     // Get the name of the arith overflow attribute.
-    llvm::StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
+    StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
     // Remove the source overflow attribute.
-    auto arithAttr = dyn_cast_or_null<arith::IntegerOverflowFlagsAttr>(
+    auto arithAttr = dyn_cast_if_present<arith::IntegerOverflowFlagsAttr>(
         convertedAttr.erase(arithAttrName));
     if (arithAttr) {
-      llvm::StringRef targetAttrName = TargetOp::getIntegerOverflowAttrName();
+      StringRef targetAttrName = TargetOp::getIntegerOverflowAttrName();
       convertedAttr.set(targetAttrName,
                         convertArithOveflowAttrToLLVM(arithAttr));
     }
