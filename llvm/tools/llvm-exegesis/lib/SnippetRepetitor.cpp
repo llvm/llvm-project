@@ -74,6 +74,10 @@ public:
       auto Loop = Filler.addBasicBlock();
       auto Exit = Filler.addBasicBlock();
 
+      // Align the loop machine basic block to a sixteen byte boundary
+      // so that instruction fetch on modern x86 platforms works optimally.
+      Loop.MBB->setAlignment(Align(16));
+
       const unsigned LoopUnrollFactor =
           LoopBodySize <= Instructions.size()
               ? 1
