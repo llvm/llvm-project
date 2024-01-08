@@ -37,8 +37,8 @@ def clean(args):
         )
         return 1
     for path in args[1:-1]:
-       for filename in findFilesWithExtension(path, args[-1]):
-           os.remove(filename)
+        for filename in findFilesWithExtension(path, args[-1]):
+            os.remove(filename)
     return 0
 
 
@@ -51,7 +51,7 @@ def merge(args):
         return 1
     cmd = [args[0], "merge", "-o", args[1]]
     for i in range(2, len(args)):
-      cmd.extend(findFilesWithExtension(args[i], "profraw"))
+        cmd.extend(findFilesWithExtension(args[i], "profraw"))
     subprocess.check_call(cmd)
     return 0
 
