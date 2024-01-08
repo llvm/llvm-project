@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_EXPANDMEMCMP_H
-#define LLVM_CODEGEN_EXPANDMEMCMP_H
+#ifndef LLVM_TRANSFORMS_SCALAR_EXPANDMEMCMP_H
+#define LLVM_TRANSFORMS_SCALAR_EXPANDMEMCMP_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -26,4 +26,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_EXPANDMEMCMP_H
+#endif // LLVM_TRANSFORMS_SCALAR_EXPANDMEMCMP_H

@@ -23,6 +23,7 @@ static_library("Scalar") {
     "DeadStoreElimination.cpp",
     "DivRemPairs.cpp",
     "EarlyCSE.cpp",
+    "ExpandMemCmp.cpp",
     "FlattenCFGPass.cpp",
     "Float2Int.cpp",
     "GVN.cpp",

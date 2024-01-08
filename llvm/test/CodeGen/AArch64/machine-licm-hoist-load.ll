@@ -25,20 +25,23 @@ define i64 @one_dimensional(ptr %a, ptr %b, i64 %N) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:                                         ; preds = %for.body, %entry
   %i.06 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %sum.05 = phi i64 [ %spec.select, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %i.06
   %0 = load ptr, ptr %arrayidx, align 8
-  %bcmp = tail call i32 @bcmp(ptr %0, ptr %b, i64 4)
-  %tobool = icmp eq i32 %bcmp, 0
+  %1 = load i32, ptr %0, align 1
+  %2 = load i32, ptr %b, align 1
+  %3 = icmp ne i32 %1, %2
+  %4 = zext i1 %3 to i32
+  %tobool = icmp eq i32 %4, 0
   %add = zext i1 %tobool to i64
   %spec.select = add i64 %sum.05, %add
   %inc = add nuw i64 %i.06, 1
   %exitcond = icmp eq i64 %inc, %N
   br i1 %exitcond, label %for.exit, label %for.body
 
-for.exit:                                 ; preds = %for.body
+for.exit:                                         ; preds = %for.body
   ret i64 %spec.select
 }
 
@@ -79,32 +82,35 @@ define i64 @two_dimensional(ptr %a, ptr %b, i64 %N, i64 %M) {
 entry:
   br label %for.cond1.preheader
 
-for.cond1.preheader:                           ; preds = %entry, %for.cond1.for.exit3_crit_edge
+for.cond1.preheader:                              ; preds = %for.cond1.for.exit3_crit_edge, %entry
   %i.019 = phi i64 [ %inc7, %for.cond1.for.exit3_crit_edge ], [ 0, %entry ]
   %sum.018 = phi i64 [ %spec.select, %for.cond1.for.exit3_crit_edge ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %i.019
   %0 = load ptr, ptr %arrayidx, align 8
   br label %for.body4
 
-for.body4:                                     ; preds = %for.cond1.preheader, %for.body4
+for.body4:                                        ; preds = %for.body4, %for.cond1.preheader
   %j.016 = phi i64 [ 0, %for.cond1.preheader ], [ %inc, %for.body4 ]
   %sum.115 = phi i64 [ %sum.018, %for.cond1.preheader ], [ %spec.select, %for.body4 ]
   %arrayidx5 = getelementptr inbounds ptr, ptr %0, i64 %j.016
   %1 = load ptr, ptr %arrayidx5, align 8
-  %bcmp = tail call i32 @bcmp(ptr %1, ptr %b, i64 4)
-  %tobool = icmp eq i32 %bcmp, 0
+  %2 = load i32, ptr %1, align 1
+  %3 = load i32, ptr %b, align 1
+  %4 = icmp ne i32 %2, %3
+  %5 = zext i1 %4 to i32
+  %tobool = icmp eq i32 %5, 0
   %add = zext i1 %tobool to i64
   %spec.select = add i64 %sum.115, %add
   %inc = add nuw i64 %j.016, 1
   %exitcond = icmp eq i64 %inc, %M
   br i1 %exitcond, label %for.cond1.for.exit3_crit_edge, label %for.body4
 
-for.cond1.for.exit3_crit_edge:         ; preds = %for.body4
+for.cond1.for.exit3_crit_edge:                    ; preds = %for.body4
   %inc7 = add nuw i64 %i.019, 1
   %exitcond22 = icmp eq i64 %inc7, %N
   br i1 %exitcond22, label %for.exit, label %for.cond1.preheader
 
-for.exit:                                 ; preds = %for.cond1.for.exit3_crit_edge
+for.exit:                                         ; preds = %for.cond1.for.exit3_crit_edge
   ret i64 %spec.select
 }
 
@@ -159,44 +165,47 @@ define i64 @three_dimensional(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 entry:
   br label %for.cond1.preheader
 
-for.cond1.preheader:                        ; preds = %entry, %for.cond1.for.cond
+for.cond1.preheader:                              ; preds = %for.cond1.for.cond, %entry
   %i.033 = phi i64 [ %inc15, %for.cond1.for.cond ], [ 0, %entry ]
   %sum.032 = phi i64 [ %spec.select, %for.cond1.for.cond ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %i.033
   %0 = load ptr, ptr %arrayidx, align 8
   br label %for.cond5.preheader
 
-for.cond5.preheader:                     ; preds = %for.cond5.for.cond, %for.cond1.preheader
+for.cond5.preheader:                              ; preds = %for.cond5.for.cond, %for.cond1.preheader
   %j.029 = phi i64 [ 0, %for.cond1.preheader ], [ %inc12, %for.cond5.for.cond ]
   %sum.128 = phi i64 [ %sum.032, %for.cond1.preheader ], [ %spec.select, %for.cond5.for.cond ]
   %arrayidx9 = getelementptr inbounds ptr, ptr %0, i64 %j.029
   %1 = load ptr, ptr %arrayidx9, align 8
   br label %for.body8
 
-for.body8:                               ; preds = %for.body8, %for.cond5.preheader
+for.body8:                                        ; preds = %for.body8, %for.cond5.preheader
   %k.026 = phi i64 [ 0, %for.cond5.preheader ], [ %inc, %for.body8 ]
   %sum.225 = phi i64 [ %sum.128, %for.cond5.preheader ], [ %spec.select, %for.body8 ]
   %arrayidx10 = getelementptr inbounds ptr, ptr %1, i64 %k.026
   %2 = load ptr, ptr %arrayidx10, align 8
-  %bcmp = tail call i32 @bcmp(ptr %2, ptr %b, i64 4)
-  %tobool = icmp eq i32 %bcmp, 0
+  %3 = load i32, ptr %2, align 1
+  %4 = load i32, ptr %b, align 1
+  %5 = icmp ne i32 %3, %4
+  %6 = zext i1 %5 to i32
+  %tobool = icmp eq i32 %6, 0
   %add = zext i1 %tobool to i64
   %spec.select = add i64 %sum.225, %add
   %inc = add nuw i64 %k.026, 1
   %exitcond = icmp eq i64 %inc, %K
   br i1 %exitcond, label %for.cond5.for.cond, label %for.body8
 
-for.cond5.for.cond:   ; preds = %for.body8
+for.cond5.for.cond:                               ; preds = %for.body8
   %inc12 = add nuw i64 %j.029, 1
   %exitcond44 = icmp eq i64 %inc12, %M
   br i1 %exitcond44, label %for.cond1.for.cond, label %for.cond5.preheader
 
-for.cond1.for.cond: ; preds = %for.cond5.for.cond
+for.cond1.for.cond:                               ; preds = %for.cond5.for.cond
   %inc15 = add nuw i64 %i.033, 1
   %exitcond45 = icmp eq i64 %inc15, %N
   br i1 %exitcond45, label %for.exit, label %for.cond1.preheader
 
-for.exit:                                 ; preds = %for.cond1.for.cond
+for.exit:                                         ; preds = %for.cond1.for.cond
   ret i64 %spec.select
 }
 
@@ -254,14 +263,14 @@ define i64 @three_dimensional_middle(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 entry:
   br label %for.cond1.preheader
 
-for.cond1.preheader:                        ; preds = %entry, %for.cond1.for.cond
+for.cond1.preheader:                              ; preds = %for.cond1.for.cond, %entry
   %i.035 = phi i64 [ %inc16, %for.cond1.for.cond ], [ 0, %entry ]
   %sum.034 = phi i64 [ %spec.select, %for.cond1.for.cond ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %i.035
   %0 = load ptr, ptr %arrayidx, align 8
   br label %for.cond5.preheader
 
-for.cond5.preheader:                     ; preds = %for.cond5.for.cond, %for.cond1.preheader
+for.cond5.preheader:                              ; preds = %for.cond5.for.cond, %for.cond1.preheader
   %j.031 = phi i64 [ 0, %for.cond1.preheader ], [ %inc13, %for.cond5.for.cond ]
   %sum.130 = phi i64 [ %sum.034, %for.cond1.preheader ], [ %spec.select, %for.cond5.for.cond ]
   %arrayidx9 = getelementptr inbounds ptr, ptr %0, i64 %j.031
@@ -270,30 +279,33 @@ for.cond5.preheader:                     ; preds = %for.cond5.for.cond, %for.con
   %2 = load ptr, ptr %arrayidx11, align 8
   br label %for.body8
 
-for.body8:                               ; preds = %for.body8, %for.cond5.preheader
+for.body8:                                        ; preds = %for.body8, %for.cond5.preheader
   %k.028 = phi i64 [ 0, %for.cond5.preheader ], [ %inc, %for.body8 ]
   %sum.227 = phi i64 [ %sum.130, %for.cond5.preheader ], [ %spec.select, %for.body8 ]
   %arrayidx10 = getelementptr inbounds ptr, ptr %1, i64 %k.028
   %3 = load ptr, ptr %arrayidx10, align 8
-  %bcmp = tail call i32 @bcmp(ptr %3, ptr %2, i64 4)
-  %tobool = icmp eq i32 %bcmp, 0
+  %4 = load i32, ptr %3, align 1
+  %5 = load i32, ptr %2, align 1
+  %6 = icmp ne i32 %4, %5
+  %7 = zext i1 %6 to i32
+  %tobool = icmp eq i32 %7, 0
   %add = zext i1 %tobool to i64
   %spec.select = add i64 %sum.227, %add
   %inc = add nuw i64 %k.028, 1
   %exitcond = icmp eq i64 %inc, %K
   br i1 %exitcond, label %for.cond5.for.cond, label %for.body8
 
-for.cond5.for.cond:   ; preds = %for.body8
+for.cond5.for.cond:                               ; preds = %for.body8
   %inc13 = add nuw i64 %j.031, 1
   %exitcond46 = icmp eq i64 %inc13, %M
   br i1 %exitcond46, label %for.cond1.for.cond, label %for.cond5.preheader
 
-for.cond1.for.cond: ; preds = %for.cond5.for.cond
+for.cond1.for.cond:                               ; preds = %for.cond5.for.cond
   %inc16 = add nuw i64 %i.035, 1
   %exitcond47 = icmp eq i64 %inc16, %N
   br i1 %exitcond47, label %for.exit, label %for.cond1.preheader
 
-for.exit:                                 ; preds = %for.cond1.for.cond
+for.exit:                                         ; preds = %for.cond1.for.cond
   ret i64 %spec.select
 }
 
@@ -328,19 +340,27 @@ for.body.preheader:                               ; preds = %entry
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %indvars.iv
   %0 = load ptr, ptr %arrayidx, align 8
-  %call = tail call i32 @memcmp(ptr %0, ptr %b, i64 4)
-  %conv = trunc i32 %call to i8
+  %1 = load i32, ptr %0, align 1
+  %2 = load i32, ptr %b, align 1
+  %3 = call i32 @llvm.bswap.i32(i32 %1)
+  %4 = call i32 @llvm.bswap.i32(i32 %2)
+  %5 = icmp ugt i32 %3, %4
+  %6 = icmp ult i32 %3, %4
+  %7 = zext i1 %5 to i32
+  %8 = zext i1 %6 to i32
+  %9 = sub i32 %7, %8
+  %conv = trunc i32 %9 to i8
   %arrayidx2 = getelementptr inbounds i8, ptr %c, i64 %indvars.iv
   store i8 %conv, ptr %arrayidx2, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                                 ; preds = %for.body
+for.exit:                                         ; preds = %for.body
   ret void
 }
 
@@ -385,13 +405,16 @@ for.body.preheader:                               ; preds = %entry
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %sum.05 = phi i32 [ 0, %for.body.preheader ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %indvars.iv
   %0 = load ptr, ptr %arrayidx, align 8
-  %bcmp = tail call i32 @bcmp(ptr %0, ptr %b, i64 4)
-  %tobool.not = icmp eq i32 %bcmp, 0
+  %1 = load i32, ptr %0, align 1
+  %2 = load i32, ptr %b, align 1
+  %3 = icmp ne i32 %1, %2
+  %4 = zext i1 %3 to i32
+  %tobool.not = icmp eq i32 %4, 0
   %add = zext i1 %tobool.not to i32
   %spec.select = add nuw nsw i32 %sum.05, %add
   tail call void @func()
@@ -399,7 +422,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                                 ; preds = %for.body
+for.exit:                                         ; preds = %for.body
   ret i32 %spec.select
 }
 
@@ -431,20 +454,32 @@ define i64 @one_dimensional_two_loads(ptr %a, ptr %b, i64 %N) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:                                         ; preds = %for.body, %entry
   %i.06 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %sum.05 = phi i64 [ %spec.select, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %i.06
   %0 = load ptr, ptr %arrayidx, align 8
-  %bcmp = tail call i32 @bcmp(ptr %0, ptr %b, i64 6)
-  %tobool = icmp eq i32 %bcmp, 0
+  %1 = load i32, ptr %0, align 1
+  %2 = load i32, ptr %b, align 1
+  %3 = xor i32 %1, %2
+  %4 = getelementptr i8, ptr %0, i64 4
+  %5 = getelementptr i8, ptr %b, i64 4
+  %6 = load i16, ptr %4, align 1
+  %7 = load i16, ptr %5, align 1
+  %8 = zext i16 %6 to i32
+  %9 = zext i16 %7 to i32
+  %10 = xor i32 %8, %9
+  %11 = or i32 %3, %10
+  %12 = icmp ne i32 %11, 0
+  %13 = zext i1 %12 to i32
+  %tobool = icmp eq i32 %13, 0
   %add = zext i1 %tobool to i64
   %spec.select = add i64 %sum.05, %add
   %inc = add nuw i64 %i.06, 1
   %exitcond = icmp eq i64 %inc, %N
   br i1 %exitcond, label %for.exit, label %for.body
 
-for.exit:                                 ; preds = %for.body
+for.exit:                                         ; preds = %for.body
   ret i64 %spec.select
 }
 
@@ -475,18 +510,18 @@ define i64 @hoisting_no_cse(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 entry:
-  %b.val = load i64, ptr %b
+  %b.val = load i64, ptr %b, align 8
   %b.val.changed = add i64 %b.val, 1
-  store i64 %b.val.changed, ptr %c
+  store i64 %b.val.changed, ptr %c, align 8
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:                                         ; preds = %for.body, %entry
   %idx = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %sum = phi i64 [ %spec.select, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %idx
   %0 = load ptr, ptr %arrayidx, align 8
-  %x = load i64, ptr %0
-  %y = load i64, ptr %b
+  %x = load i64, ptr %0, align 8
+  %y = load i64, ptr %b, align 8
   %cmp = icmp eq i64 %x, %y
   %add = zext i1 %cmp to i64
   %spec.select = add i64 %sum, %add
@@ -494,10 +529,15 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i64 %inc, %N
   br i1 %exitcond, label %for.exit, label %for.body
 
-for.exit:                                 ; preds = %for.body
+for.exit:                                         ; preds = %for.body
   ret i64 %spec.select
 }
 
 declare i32 @bcmp(ptr, ptr, i64)
 declare i32 @memcmp(ptr, ptr, i64)
 declare void @func()
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare i32 @llvm.bswap.i32(i32) #0
+
+attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -86,6 +86,7 @@
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
@@ -111,6 +112,7 @@
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
+#include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Transforms/Scalar/NewGVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
@@ -386,6 +388,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
 
+  FPM.addPass(MergeICmpsPass());
+  FPM.addPass(ExpandMemCmpPass(TM));
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
@@ -532,6 +536,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
 
+  FPM.addPass(MergeICmpsPass());
+  FPM.addPass(ExpandMemCmpPass(TM));
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
