@@ -942,7 +942,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   if (!CountedByInst)
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
-  llvm::Type *CountedByTy = CountedByInst->getType();
+  CountedByInst = Builder.CreateIntCast(CountedByInst, ResType, IsSigned);
 
   // Build a load of the index and subtract it from the count.
   Value *IdxInst = nullptr;
@@ -953,24 +953,22 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
     bool IdxSigned = Idx->getType()->isSignedIntegerType();
     IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
-    IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
-                        : Builder.CreateZExtOrTrunc(IdxInst, CountedByTy);
+    IdxInst = Builder.CreateIntCast(IdxInst, ResType, IdxSigned);
 
     // We go ahead with the calculation here. If the index turns out to be
     // negative, we'll catch it at the end.
-    CountedByInst = Builder.CreateSub(CountedByInst, IdxInst);
-    IsSigned = true;
+    CountedByInst =
+        Builder.CreateSub(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
   }
 
   // Calculate how large the flexible array member is in bytes.
   const ArrayType *ArrayTy = Ctx.getAsArrayType(FAMDecl->getType());
   CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
   llvm::Constant *ElemSize =
-      llvm::ConstantInt::get(CountedByTy, Size.getQuantity(), IsSigned);
+      llvm::ConstantInt::get(ResType, Size.getQuantity(), IsSigned);
   Value *FAMSize =
       Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
-  FAMSize = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
-                     : Builder.CreateZExtOrTrunc(FAMSize, ResType);
+  FAMSize = Builder.CreateIntCast(FAMSize, ResType, IsSigned);
   Value *Res = FAMSize;
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {

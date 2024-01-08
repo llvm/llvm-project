@@ -1141,9 +1141,14 @@ const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
   if (!CBA)
     return nullptr;
 
-  auto GetNonAnonStructOrUnion = [](const RecordDecl *RD) {
-    while (RD && RD->isAnonymousStructOrUnion())
-      RD = cast<RecordDecl>(RD->getDeclContext());
+  auto GetNonAnonStructOrUnion =
+      [](const RecordDecl *RD) -> const RecordDecl * {
+    while (RD && RD->isAnonymousStructOrUnion()) {
+      const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext());
+      if (!R)
+        return nullptr;
+      RD = R;
+    }
     return RD;
   };
   const RecordDecl *EnclosingRD = GetNonAnonStructOrUnion(FD->getParent());
