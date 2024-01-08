@@ -177,14 +177,12 @@ extern "C" void rtdrand(void *g) {
   delete generator;
 }
 
-extern "C" void _mlir_ciface_shuffle(StridedMemRefType<uint64_t, 1> *m,
+extern "C" void _mlir_ciface_shuffle(StridedMemRefType<uint64_t, 1> *mref,
                                      void *g) {
   std::mt19937 *generator = static_cast<std::mt19937 *>(g);
-  uint64_t s = m->sizes[0];
-  std::vector<uint64_t> arr(s);
-  std::iota(arr.begin(), arr.end(), 0);
-  std::shuffle(arr.begin(), arr.end(), *generator);
-  std::copy(arr.begin(), arr.end(), m->data);
+  uint64_t s = mref->sizes[0];
+  std::iota(mref->data, mref->data + s, 0);
+  std::shuffle(mref->data, mref->data + s, *generator);
 }
 
 #define IMPL_STDSORT(VNAME, V)                                                 \
