@@ -96,6 +96,8 @@ enum class OpenACCClauseKind {
   /// 'if' clause, allowed on all the Compute Constructs, Data Constructs,
   /// Executable Constructs, and Combined Constructs.
   If,
+  /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
+  Self,
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
 };
