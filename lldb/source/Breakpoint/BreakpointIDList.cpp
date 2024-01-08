@@ -82,19 +82,6 @@ bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
   return FindBreakpointID(*bp_id, position);
 }
 
-void BreakpointIDList::InsertStringArray(
-    llvm::ArrayRef<const char *> string_array, CommandReturnObject &result) {
-  if(string_array.empty())
-    return;
-
-  for (const char *str : string_array) {
-    auto bp_id = BreakpointID::ParseCanonicalReference(str);
-    if (bp_id)
-      m_breakpoint_ids.push_back(*bp_id);
-  }
-  result.SetStatus(eReturnStatusSuccessFinishNoResult);
-}
-
 //  This function takes OLD_ARGS, which is usually the result of breaking the
 //  command string arguments into
 //  an array of space-separated strings, and searches through the arguments for
