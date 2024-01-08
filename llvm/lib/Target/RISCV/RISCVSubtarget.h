@@ -150,7 +150,6 @@ public:
   bool hasHalfFPLoadStoreMove() const {
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
-  bool hasStdExtZbbOrZbkb() const { return HasStdExtZbb || HasStdExtZbkb; }
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;

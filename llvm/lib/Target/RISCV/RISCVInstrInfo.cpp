@@ -1317,7 +1317,7 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 // If the operation has a predicated pseudo instruction, return the pseudo
 // instruction opcode. Otherwise, return RISCV::INSTRUCTION_LIST_END.
 // TODO: Support more operations.
-unsigned getPredicatedOpcode(const RISCVSubtarget &STI, unsigned Opcode) {
+unsigned getPredicatedOpcode(unsigned Opcode) {
   switch (Opcode) {
   case RISCV::ADD:   return RISCV::PseudoCCADD;   break;
   case RISCV::SUB:   return RISCV::PseudoCCSUB;   break;
@@ -1346,14 +1346,10 @@ unsigned getPredicatedOpcode(const RISCVSubtarget &STI, unsigned Opcode) {
   case RISCV::SLLIW: return RISCV::PseudoCCSLLIW; break;
   case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
   case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
-  }
 
-  if (STI.hasStdExtZbbOrZbkb()) {
-    switch (Opcode) {
-    case RISCV::ANDN: return RISCV::PseudoCCANDN; break;
-    case RISCV::ORN:  return RISCV::PseudoCCORN;  break;
-    case RISCV::XNOR: return RISCV::PseudoCCXNOR; break;
-    }
+  case RISCV::ANDN: return RISCV::PseudoCCANDN;   break;
+  case RISCV::ORN:  return RISCV::PseudoCCORN;    break;
+  case RISCV::XNOR: return RISCV::PseudoCCXNOR;   break;
   }
 
   return RISCV::INSTRUCTION_LIST_END;
@@ -1372,8 +1368,7 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!MI)
     return nullptr;
   // Check if MI can be predicated and folded into the CCMOV.
-  if (getPredicatedOpcode(MI->getMF()->getSubtarget<RISCVSubtarget>(),
-                          MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
+  if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
     return nullptr;
   // Don't predicate li idiom.
   if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
@@ -1449,7 +1444,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
     return nullptr;
 
-  unsigned PredOpc = getPredicatedOpcode(STI, DefMI->getOpcode());
+  unsigned PredOpc = getPredicatedOpcode(DefMI->getOpcode());
   assert(PredOpc != RISCV::INSTRUCTION_LIST_END && "Unexpected opcode!");
 
   // Create a new predicated version of DefMI.
