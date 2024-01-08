@@ -1098,43 +1098,20 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
 
   // Find the base struct expr (i.e. p in p->a.b.c.d).
   const Expr *StructBase = StructAccessBase(RD).Visit(Base);
-  if (!StructBase)
+  if (!StructBase || StructBase->HasSideEffects(getContext()))
     return nullptr;
 
   llvm::Value *Res = nullptr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
     Res = EmitDeclRefLValue(DRE).getPointer(*this);
-
-    const Type *Ty = DRE->getType().getTypePtr();
-    Res = Builder.CreateAlignedLoad(ConvertType(QualType(Ty, 0)), Res,
+    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
                                     getPointerAlign(), "dre.load");
   } else {
-    Address Addr = Address::invalid();
-    auto I = LocalDeclMap.find(FAMDecl);
-    if (I != LocalDeclMap.end()) {
-      Res = I->second.getPointer();
-      Addr = Address(Res, ConvertType(FAMDecl->getType()), getPointerAlign());
-    }
-
-    bool NeedLoad = true;
-    if (!Res && !StructBase->HasSideEffects(getContext())) {
-      LValueBaseInfo EltBaseInfo;
-      TBAAAccessInfo EltTBAAInfo;
-      Addr = EmitPointerWithAlignment(StructBase, &EltBaseInfo, &EltTBAAInfo);
-      NeedLoad = false;
-    }
-
-    if (!Addr.isValid())
-      return nullptr;
-
-    if (NeedLoad)
-      Res = Builder.CreateLoad(Addr, /*isVolatile=*/false, "struct.load");
-
+    LValueBaseInfo BaseInfo;
+    TBAAAccessInfo TBAAInfo;
+    Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
     Res = Addr.getPointer();
   }
-
-  if (!Res)
-    return nullptr;
 
   llvm::Value *Zero = Builder.getInt32(0);
   RecIndicesTy Indices;
@@ -1159,12 +1136,8 @@ const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
     return nullptr;
 
   auto GetNonAnonStructOrUnion = [](const RecordDecl *RD) {
-    while (RD && RD->isAnonymousStructOrUnion()) {
-      const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext());
-      if (!R)
-        break;
-      RD = R;
-    }
+    while (RD && RD->isAnonymousStructOrUnion())
+      RD = cast<RecordDecl>(RD->getDeclContext());
     return RD;
   };
   const RecordDecl *EnclosingRD = GetNonAnonStructOrUnion(FD->getParent());

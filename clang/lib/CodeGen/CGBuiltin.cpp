@@ -893,7 +893,6 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
       if (const auto *IL = dyn_cast<IntegerLiteral>(Idx)) {
         int64_t Val = IL->getValue().getSExtValue();
         if (Val < 0)
-          // __bdos returns 0 for negative indexes into an array in a struct.
           return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
         if (Val == 0)
@@ -999,7 +998,8 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   if (IdxInst)
     Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(IdxInst), Cmp);
 
-  return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
+  Value *Default = getDefaultBuiltinObjectSizeResult(Type, ResType);
+  return Builder.CreateSelect(Cmp, Res, Default);
 }
 
 /// Returns a Value corresponding to the size of the given expression.
