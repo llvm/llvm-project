@@ -4113,13 +4113,13 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     }
   }
 
-  void handleImageRequiresUsmMode(utils::XnackBuildMode xnackImageMode) {
+  void handleImageRequiresUsmMode(utils::XnackBuildMode XnackImageMode) {
     bool IsXnackActiveOnSystem = IsXnackEnabled();
 
-    if ((xnackImageMode == utils::XnackBuildMode::XNACK_ANY) ||
-        (xnackImageMode == utils::XnackBuildMode::XNACK_PLUS &&
+    if ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
+        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4 &&
          IsXnackActiveOnSystem) ||
-        (xnackImageMode == utils::XnackBuildMode::XNACK_MINUS &&
+        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4 &&
          !IsXnackActiveOnSystem)) {
       DisableAllocationsForMapsOnApus = true; // Zero-copy
 
@@ -4128,7 +4128,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     }
 
     if (!IsXnackActiveOnSystem &&
-        (xnackImageMode != utils::XnackBuildMode::XNACK_PLUS)) {
+        (XnackImageMode != ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4)) {
       FAILURE_MESSAGE(
           "Running a program that requries XNACK on a system where XNACK is "
           "disabled. This may cause problems when using a OS-allocated pointer "
@@ -4137,15 +4137,15 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     }
   }
 
-  void handleDefaultMode(utils::XnackBuildMode xnackImageMode) {
+  void handleDefaultMode(utils::XnackBuildMode XnackImageMode) {
     // assuming that copying is required
     DisableAllocationsForMapsOnApus = false;
     bool IsXnackActiveOnSystem = IsXnackEnabled();
 
     if (IsXnackActiveOnSystem &&
         (hasAPUDevice() || ZeroCopyForMapsOnUsm.get()) &&
-        ((xnackImageMode == utils::XnackBuildMode::XNACK_ANY) ||
-         (xnackImageMode == utils::XnackBuildMode::XNACK_PLUS))) {
+        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
+         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4))) {
       DisableAllocationsForMapsOnApus = true; // Zero-copy
 
       if (hasAPUDevice() && APUPrefault.get()) {
@@ -4155,8 +4155,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     }
 
     if (!IsXnackActiveOnSystem && hasAPUDevice() && APUPrefault.get() &&
-        ((xnackImageMode == utils::XnackBuildMode::XNACK_ANY) ||
-         (xnackImageMode == utils::XnackBuildMode::XNACK_MINUS))) {
+        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
+         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4))) {
       DisableAllocationsForMapsOnApus = true; // Zero-copy
       PrepopulateGPUPageTable = true;         // Pre-faulting
       return;
