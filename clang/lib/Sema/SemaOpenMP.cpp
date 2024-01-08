@@ -6161,6 +6161,9 @@ bool Sema::mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
       } else if (ParentDirective == OMPD_parallel ||
                  ParentDirective == OMPD_target_parallel)
         BindKind = OMPC_BIND_parallel;
+    } else if (ParentDirective == OMPD_teams ||
+               ParentDirective == OMPD_target_teams) {
+      BindKind = OMPC_BIND_teams;
     } else {
       // bind clause is present in loop directive. When the loop directive is
       // changed to a new directive the bind clause is not used. So, we should
