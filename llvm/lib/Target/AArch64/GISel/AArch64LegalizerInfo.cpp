@@ -366,7 +366,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v4s32, p0, s128, 8},
                                  {v2s64, p0, s128, 8}})
       // These extends are also legal
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
+      .legalForTypesWithMemDesc(
+          {{s32, p0, s8, 8}, {s32, p0, s16, 8}, {s64, p0, s32, 8}})
       .widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s8, s64)
