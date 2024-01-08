@@ -350,6 +350,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("riscv64", Is64Bit)
                     .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
+                    .Case("experimental", HasExperimental)
                     .Default(std::nullopt);
   if (Result)
     return *Result;
@@ -382,6 +383,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
   FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
 
+  if (llvm::is_contained(Features, "+experimental"))
+    HasExperimental = true;
+
   return true;
 }
 
@@ -412,8 +416,7 @@ static void handleFullArchString(StringRef FullArchStr,
   Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
-  if (!RII) {
-    consumeError(RII.takeError());
+  if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
     Features.push_back("+" + FullArchStr.str());
   } else {

@@ -1334,8 +1334,9 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::SetDefaultDeviceOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.getDevIndex()});
-  rewriter.replaceOp(op, {});
+  auto call = setDefaultDeviceCallBuilder.create(loc, rewriter,
+                                                 {adaptor.getDevIndex()});
+  rewriter.replaceOp(op, call);
   return success();
 }
 

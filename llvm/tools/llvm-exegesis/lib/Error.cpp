@@ -43,6 +43,8 @@ void SnippetSignal::log(raw_ostream &OS) const {
   OS << "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
   OS << ": " << strsignal(SignalNumber);
+#else
+  (void)SignalNumber;
 #endif // LLVM_ON_UNIX
 }
 

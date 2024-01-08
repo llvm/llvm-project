@@ -36,6 +36,15 @@ image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_RT_WB scope:
 image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_DEV
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: scope and th combination is not valid
 
+s_load_b32 s5, s[4:5], s0 offset:0x0 th:TH_LOAD_NT_RT
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid th value for SMEM instruction
+
+s_buffer_load_b64 s[10:11], s[4:7], s0 offset:0x0 th:TH_LOAD_RT_NT
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid th value for SMEM instruction
+
+s_load_b128 s[20:23], s[2:3], vcc_lo th:TH_LOAD_NT_HT
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid th value for SMEM instruction
+
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_HT scope:SCOPE_SE th:TH_LOAD_HT
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 

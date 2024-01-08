@@ -10,10 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ELF.h"
-
-#include "Shared/APITypes.h"
-#include "Shared/Debug.h"
+#include "Utils/ELF.h"
 
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
@@ -26,52 +23,52 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 
-/// If the given range of bytes [\p BytesBegin, \p BytesEnd) represents
-/// a valid ELF, then invoke \p Callback on the ELFObjectFileBase
-/// created from this range, otherwise, return 0.
-/// If \p Callback is invoked, then return whatever value \p Callback returns.
-template <typename F>
-static int32_t withBytesAsElf(char *BytesBegin, char *BytesEnd, F Callback) {
-  size_t Size = BytesEnd - BytesBegin;
-  StringRef StrBuf(BytesBegin, Size);
-
-  auto Magic = identify_magic(StrBuf);
-  if (Magic != file_magic::elf && Magic != file_magic::elf_relocatable &&
-      Magic != file_magic::elf_executable &&
-      Magic != file_magic::elf_shared_object && Magic != file_magic::elf_core) {
-    DP("Not an ELF image!\n");
-    return 0;
+bool utils::elf::isELF(StringRef Buffer) {
+  switch (identify_magic(Buffer)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core:
+    return true;
+  default:
+    return false;
   }
-
-  std::unique_ptr<MemoryBuffer> MemBuf =
-      MemoryBuffer::getMemBuffer(StrBuf, "", false);
-  Expected<std::unique_ptr<ObjectFile>> BinOrErr =
-      ObjectFile::createELFObjectFile(MemBuf->getMemBufferRef(),
-                                      /*InitContent=*/false);
-  if (!BinOrErr) {
-    DP("Unable to get ELF handle: %s!\n",
-       toString(BinOrErr.takeError()).c_str());
-    return 0;
-  }
-
-  auto *Object = dyn_cast<const ELFObjectFileBase>(BinOrErr->get());
-
-  if (!Object) {
-    DP("Unknown ELF format!\n");
-    return 0;
-  }
-
-  return Callback(Object);
 }
 
-// Check whether an image is valid for execution on target_id
-int32_t utils::elf::checkMachine(__tgt_device_image *Image, uint16_t TargetId) {
-  auto CheckMachine = [TargetId](const ELFObjectFileBase *Object) {
-    return TargetId == Object->getEMachine();
-  };
-  return withBytesAsElf(reinterpret_cast<char *>(Image->ImageStart),
-                        reinterpret_cast<char *>(Image->ImageEnd),
-                        CheckMachine);
+Expected<bool> utils::elf::checkMachine(StringRef Object, uint16_t EMachine) {
+  assert(isELF(Object) && "Input is not an ELF!");
+
+  Expected<ELF64LEObjectFile> ElfOrErr =
+      ELF64LEObjectFile::create(MemoryBufferRef(Object, /*Identifier=*/""),
+                                /*InitContent=*/false);
+  if (!ElfOrErr)
+    return ElfOrErr.takeError();
+
+  const auto Header = ElfOrErr->getELFFile().getHeader();
+  if (Header.e_ident[EI_CLASS] != ELFCLASS64)
+    return createError("Only 64-bit ELF files are supported");
+  if (Header.e_type != ET_EXEC && Header.e_type != ET_DYN)
+    return createError("Only executable ELF files are supported");
+
+  if (Header.e_machine == EM_AMDGPU) {
+    if (Header.e_ident[EI_OSABI] != ELFOSABI_AMDGPU_HSA)
+      return createError("Invalid AMD OS/ABI, must be AMDGPU_HSA");
+    if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V4 &&
+        Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V5)
+      return createError("Invalid AMD ABI version, must be version 4 or 5");
+    if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
+        (Header.e_flags & EF_AMDGPU_MACH) > EF_AMDGPU_MACH_AMDGCN_GFX1201)
+      return createError("Unsupported AMDGPU architecture");
+  } else if (Header.e_machine == EM_CUDA) {
+    if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)
+      return createError("Invalid CUDA addressing mode");
+    if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35 ||
+        (Header.e_flags & EF_CUDA_SM) > EF_CUDA_SM90)
+      return createError("Unsupported NVPTX architecture");
+  }
+
+  return Header.e_machine == EMachine;
 }
 
 template <class ELFT>
@@ -260,4 +257,29 @@ utils::elf::getSymbol(const ELFObjectFile<ELF64LE> &ELFObj, StringRef Name) {
   }
 
   return nullptr;
+}
+
+Expected<const void *> utils::elf::getSymbolAddress(
+    const object::ELFObjectFile<object::ELF64LE> &ELFObj,
+    const object::ELF64LE::Sym &Symbol) {
+  const ELFFile<ELF64LE> &ELFFile = ELFObj.getELFFile();
+
+  auto SecOrErr = ELFFile.getSection(Symbol.st_shndx);
+  if (!SecOrErr)
+    return SecOrErr.takeError();
+  const auto &Section = *SecOrErr;
+
+  // A section with SHT_NOBITS occupies no space in the file and has no
+  // offset.
+  if (Section->sh_type == ELF::SHT_NOBITS)
+    return createError(
+        "invalid sh_type for symbol lookup, cannot be SHT_NOBITS");
+
+  uint64_t Offset = Section->sh_offset - Section->sh_addr + Symbol.st_value;
+  if (Offset > ELFFile.getBufSize())
+    return createError("invalid offset [" + Twine(Offset) +
+                       "] into ELF file of size [" +
+                       Twine(ELFFile.getBufSize()) + "]");
+
+  return ELFFile.base() + Offset;
 }

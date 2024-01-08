@@ -720,7 +720,7 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
   // Convert scalar intergers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
-        IntegerType::get(context, constInt->getType()->getBitWidth()),
+        IntegerType::get(context, constInt->getBitWidth()),
         constInt->getValue());
   }
 
@@ -1439,6 +1439,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     } else {
       callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
+    callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
@@ -1516,6 +1517,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
           loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
           ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
+    invokeOp.setCConv(convertCConvFromLLVM(invokeInst->getCallingConv()));
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
     else

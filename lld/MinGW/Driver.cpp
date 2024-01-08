@@ -46,10 +46,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace lld;
 using namespace llvm::opt;
 using namespace llvm;
@@ -297,6 +293,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef v = a->getValue();
     if (!v.empty())
       add("-pdb:" + v);
+    if (args.hasArg(OPT_strip_all)) {
+      add("-debug:nodwarf,nosymtab");
+    } else if (args.hasArg(OPT_strip_debug)) {
+      add("-debug:nodwarf,symtab");
+    }
   } else if (args.hasArg(OPT_strip_debug)) {
     add("-debug:symtab");
   } else if (!args.hasArg(OPT_strip_all)) {

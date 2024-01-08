@@ -141,6 +141,18 @@ func.func @cosh_caller(%float: f32, %double: f64) -> (f32, f64)  {
   return %float_result, %double_result : f32, f64
 }
 
+// CHECK-LABEL: func @sinh_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @sinh_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @sinhf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.sinh %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @sinh(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.sinh %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
 // CHECK-LABEL: func @atan2_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
 // CHECK-SAME: %[[DOUBLE:.*]]: f64

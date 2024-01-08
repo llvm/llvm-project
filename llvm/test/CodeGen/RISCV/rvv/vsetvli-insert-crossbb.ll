@@ -343,7 +343,7 @@ define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    call foo@plt
+; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
@@ -400,7 +400,7 @@ define <vscale x 1 x double> @test9(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    call foo@plt
+; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -951,15 +951,16 @@ if.end:
 define void @pre_over_vle(ptr %A) {
 ; CHECK-LABEL: pre_over_vle:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, 800
+; CHECK-NEXT:    li a1, 100
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:  .LBB22_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsext.vf4 v9, v8
 ; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 8
-; CHECK-NEXT:    bne a0, a1, .LBB22_1
+; CHECK-NEXT:    bnez a1, .LBB22_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    ret
 entry:

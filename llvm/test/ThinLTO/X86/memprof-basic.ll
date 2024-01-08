@@ -148,7 +148,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ:0x[a-z0-9]+]] AllocTypes: NotColdCold ContextIds: 1 2
 
 ; DUMP: Node [[BAZ]]
-; DUMP: 	Callee: 9832687305761716512 (_Z3barv) Clones: 0 StackIds: 2	(clone 0)
+; DUMP: 	Callee: 11481133863268513686 (_Z3barv) Clones: 0 StackIds: 2	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
@@ -157,7 +157,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO:0x[a-z0-9]+]] AllocTypes: NotColdCold ContextIds: 1 2
 
 ; DUMP: Node [[FOO]]
-; DUMP: 	Callee: 5878270615442837395 (_Z3bazv) Clones: 0 StackIds: 3	(clone 0)
+; DUMP: 	Callee: 1807954217441101578 (_Z3bazv) Clones: 0 StackIds: 3	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
@@ -167,7 +167,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 2
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 6731117468105397038 (_Z3foov) Clones: 0 StackIds: 0	(clone 0)
+; DUMP: 	Callee: 8107868197919466657 (_Z3foov) Clones: 0 StackIds: 0	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -175,7 +175,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 6731117468105397038 (_Z3foov) Clones: 0 StackIds: 1	(clone 0)
+; DUMP: 	Callee: 8107868197919466657 (_Z3foov) Clones: 0 StackIds: 1	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -197,7 +197,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:		Clones: [[BAR2:0x[a-z0-9]+]]
 
 ; DUMP: Node [[BAZ]]
-; DUMP: 	Callee: 9832687305761716512 (_Z3barv) Clones: 0 StackIds: 2    (clone 0)
+; DUMP: 	Callee: 11481133863268513686 (_Z3barv) Clones: 0 StackIds: 2    (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -207,7 +207,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:		Clones: [[BAZ2:0x[a-z0-9]+]]
 
 ; DUMP: Node [[FOO]]
-; DUMP: 	Callee: 5878270615442837395 (_Z3bazv) Clones: 0 StackIds: 3    (clone 0)
+; DUMP: 	Callee: 1807954217441101578 (_Z3bazv) Clones: 0 StackIds: 3    (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -217,7 +217,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:		Clones: [[FOO2:0x[a-z0-9]+]]
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 6731117468105397038 (_Z3foov) Clones: 0 StackIds: 0     (clone 0)
+; DUMP: 	Callee: 8107868197919466657 (_Z3foov) Clones: 0 StackIds: 0     (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -225,7 +225,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 6731117468105397038 (_Z3foov) Clones: 0 StackIds: 1     (clone 0)
+; DUMP: 	Callee: 8107868197919466657 (_Z3foov) Clones: 0 StackIds: 1     (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -233,7 +233,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[FOO2]]
-; DUMP: 	Callee: 5878270615442837395 (_Z3bazv) Clones: 0 StackIds: 3    (clone 0)
+; DUMP: 	Callee: 1807954217441101578 (_Z3bazv) Clones: 0 StackIds: 3    (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -243,7 +243,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:		Clone of [[FOO]]
 
 ; DUMP: Node [[BAZ2]]
-; DUMP: 	Callee: 9832687305761716512 (_Z3barv) Clones: 0 StackIds: 2    (clone 0)
+; DUMP: 	Callee: 11481133863268513686 (_Z3barv) Clones: 0 StackIds: 2    (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -344,7 +344,7 @@ attributes #0 = { noinline optnone }
 ; DOTCLONED: }
 
 
-; DISTRIB: ^[[BAZ:[0-9]+]] = gv: (guid: 5878270615442837395, {{.*}} callsites: ((callee: ^[[BAR:[0-9]+]], clones: (0, 1)
-; DISTRIB: ^[[FOO:[0-9]+]] = gv: (guid: 6731117468105397038, {{.*}} callsites: ((callee: ^[[BAZ]], clones: (0, 1)
-; DISTRIB: ^[[BAR]] = gv: (guid: 9832687305761716512, {{.*}} allocs: ((versions: (notcold, cold)
+; DISTRIB: ^[[BAZ:[0-9]+]] = gv: (guid: 1807954217441101578, {{.*}} callsites: ((callee: ^[[BAR:[0-9]+]], clones: (0, 1)
+; DISTRIB: ^[[FOO:[0-9]+]] = gv: (guid: 8107868197919466657, {{.*}} callsites: ((callee: ^[[BAZ]], clones: (0, 1)
+; DISTRIB: ^[[BAR]] = gv: (guid: 11481133863268513686, {{.*}} allocs: ((versions: (notcold, cold)
 ; DISTRIB: ^[[MAIN:[0-9]+]] = gv: (guid: 15822663052811949562, {{.*}} callsites: ((callee: ^[[FOO]], clones: (0), {{.*}} (callee: ^[[FOO]], clones: (1)

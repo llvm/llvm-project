@@ -92,6 +92,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isBooleanType())
     return PT_Bool;
 
+  if (T->isAnyComplexType())
+    return std::nullopt;
+
   if (T->isSignedIntegerOrEnumerationType()) {
     switch (Ctx.getIntWidth(T)) {
     case 64:

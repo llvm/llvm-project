@@ -851,35 +851,34 @@ std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
   return BinaryContentsStr;
 }
 
-void DebugStrOffsetsWriter::initialize(
-    const DWARFSection &StrOffsetsSection,
-    const std::optional<StrOffsetsContributionDescriptor> Contr) {
+void DebugStrOffsetsWriter::initialize(DWARFUnit &Unit) {
+  if (Unit.getVersion() < 5)
+    return;
+  const DWARFSection &StrOffsetsSection = Unit.getStringOffsetSection();
+  const std::optional<StrOffsetsContributionDescriptor> &Contr =
+      Unit.getStringOffsetsTableContribution();
   if (!Contr)
     return;
-
   const uint8_t DwarfOffsetByteSize = Contr->getDwarfOffsetByteSize();
   assert(DwarfOffsetByteSize == 4 &&
          "Dwarf String Offsets Byte Size is not supported.");
-  uint32_t Index = 0;
+  StrOffsets.reserve(Contr->Size);
   for (uint64_t Offset = 0; Offset < Contr->Size; Offset += DwarfOffsetByteSize)
-    IndexToAddressMap[Index++] = support::endian::read32le(
-        StrOffsetsSection.Data.data() + Contr->Base + Offset);
+    StrOffsets.push_back(support::endian::read32le(
+        StrOffsetsSection.Data.data() + Contr->Base + Offset));
 }
 
 void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address) {
-  assert(IndexToAddressMap.count(Index) > 0 && "Index is not found.");
   IndexToAddressMap[Index] = Address;
   StrOffsetSectionWasModified = true;
 }
 
 void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
                                             DIEBuilder &DIEBldr) {
-  if (IndexToAddressMap.empty())
-    return;
-
   std::optional<AttrInfo> AttrVal =
       findAttributeInfo(Unit.getUnitDIE(), dwarf::DW_AT_str_offsets_base);
-  assert(AttrVal && "DW_AT_str_offsets_base not present.");
+  if (!AttrVal)
+    return;
   std::optional<uint64_t> Val = AttrVal->V.getAsSectionOffset();
   assert(Val && "DW_AT_str_offsets_base Value not present.");
   DIE &Die = *DIEBldr.getUnitDIEbyUnit(Unit);
@@ -888,11 +887,14 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
   auto RetVal = ProcessedBaseOffsets.find(*Val);
   // Handling re-use of str-offsets section.
   if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
+    initialize(Unit);
+    // Update String Offsets that were modified.
+    for (const auto &Entry : IndexToAddressMap)
+      StrOffsets[Entry.first] = Entry.second;
     // Writing out the header for each section.
-    support::endian::write(
-        *StrOffsetsStream,
-        static_cast<uint32_t>(IndexToAddressMap.size() * 4 + 4),
-        llvm::endianness::little);
+    support::endian::write(*StrOffsetsStream,
+                           static_cast<uint32_t>(StrOffsets.size() * 4 + 4),
+                           llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
                            llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),
@@ -904,8 +906,8 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
                            StrListBaseAttrInfo.getForm(),
                            DIEInteger(BaseOffset));
-    for (const auto &Entry : IndexToAddressMap)
-      support::endian::write(*StrOffsetsStream, Entry.second,
+    for (const uint32_t Offset : StrOffsets)
+      support::endian::write(*StrOffsetsStream, Offset,
                              llvm::endianness::little);
   } else {
     DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
@@ -915,6 +917,7 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
 
   StrOffsetSectionWasModified = false;
   IndexToAddressMap.clear();
+  StrOffsets.clear();
 }
 
 void DebugStrWriter::create() {

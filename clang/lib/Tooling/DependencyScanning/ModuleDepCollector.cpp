@@ -119,6 +119,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  // LLVM options are not going to affect the AST
+  CI.getFrontendOpts().LLVMArgs.clear();
 
   // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();

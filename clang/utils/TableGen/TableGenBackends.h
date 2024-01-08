@@ -25,8 +25,16 @@ class RecordKeeper;
 namespace clang {
 
 void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
+/**
+  @param PriorizeIfSubclassOf These classes should be prioritized in the output.
+  This is useful to force enum generation/jump tables/lookup tables to be more
+  compact in both size and surrounding code in hot functions. An example use is
+  in Decl for classes that inherit from DeclContext, for functions like
+  castFromDeclContext.
+  */
 void EmitClangASTNodes(llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
-                       const std::string &N, const std::string &S);
+                       const std::string &N, const std::string &S,
+                       std::string_view PriorizeIfSubclassOf = "");
 void EmitClangBasicReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangBasicWriter(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangTypeNodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
@@ -112,6 +120,7 @@ void EmitSmeBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeStreamingAttrs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltinZAState(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitMveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitMveBuiltinDef(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

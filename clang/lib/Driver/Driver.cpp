@@ -86,6 +86,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -670,10 +671,15 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     if (Args.hasArg(options::OPT_march_EQ) ||
         Args.hasArg(options::OPT_mcpu_EQ)) {
       StringRef ArchName = tools::riscv::getRISCVArch(Args, Target);
-      if (ArchName.starts_with_insensitive("rv32"))
-        Target.setArch(llvm::Triple::riscv32);
-      else if (ArchName.starts_with_insensitive("rv64"))
-        Target.setArch(llvm::Triple::riscv64);
+      auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+          ArchName, /*EnableExperimentalExtensions=*/true);
+      if (!llvm::errorToBool(ISAInfo.takeError())) {
+        unsigned XLen = (*ISAInfo)->getXLen();
+        if (XLen == 32)
+          Target.setArch(llvm::Triple::riscv32);
+        else if (XLen == 64)
+          Target.setArch(llvm::Triple::riscv64);
+      }
     }
   }
 
