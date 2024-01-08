@@ -984,7 +984,9 @@ static void inferFrameworkLink(Module *Mod) {
   assert(!Mod->isSubFramework() &&
          "Can only infer linking for top-level frameworks");
 
-  Mod->LinkLibraries.push_back(Module::LinkLibrary(Mod->Name,
+  StringRef FrameworkName(Mod->Name);
+  FrameworkName.consume_back("_Private");
+  Mod->LinkLibraries.push_back(Module::LinkLibrary(FrameworkName.str(),
                                                    /*IsFramework=*/true));
 }
 

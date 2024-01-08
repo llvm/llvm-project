@@ -683,6 +683,8 @@ public:
 
   bool hasScalarAddSub64() const { return getGeneration() >= GFX12; }
 
+  bool hasScalarSMulU64() const { return getGeneration() >= GFX12; }
+
   bool hasUnpackedD16VMem() const {
     return HasUnpackedD16VMem;
   }
