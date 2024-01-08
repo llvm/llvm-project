@@ -1162,8 +1162,8 @@ Improvements
   (`c3a87ddad62a <https://github.com/llvm/llvm-project/commit/c3a87ddad62a6cc01acaccc76592bc6730c8ac3c>`_,
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
-- Improved the ``alpha.unix.Stream`` checker by modeling more functions like,
-  ``fflush``, ``fputs``, ``fgetc``, ``fputc``, ``fopen``, ``fdopen``, ``fgets``, ``tmpfile``.
+- Improved the ``alpha.unix.Stream`` checker by modeling more functions:
+  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``.
   (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
   `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
