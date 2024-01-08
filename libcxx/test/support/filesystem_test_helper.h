@@ -330,16 +330,16 @@ struct scoped_test_env
 // Android platform warns about tmpnam, since the problem does not appear
 // on Android, let's not apply it for Android.
 #  if !defined(__ANDROID__)
-      if (file.size() <= sizeof(address.sun_path)) {
-        file = std::tmpnam(nullptr);
-      }
-#  endif
-      assert(file.size() <= sizeof(address.sun_path));
-      ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
-      int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
-      assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
-      return file;
+    if (file.size() <= sizeof(address.sun_path)) {
+      file = std::tmpnam(nullptr);
     }
+#  endif
+    assert(file.size() <= sizeof(address.sun_path));
+    ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
+    int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
+    return file;
+  }
 #endif
 
     fs::path test_root;
