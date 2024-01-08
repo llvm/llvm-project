@@ -10,8 +10,8 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H
 
 #include "RISCVTargetStreamer.h"
-#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFStreamer.h"
 
 using namespace llvm;
 
@@ -76,7 +76,7 @@ public:
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 
   void finish() override;
-  void startFunction() override {getStreamer().startFunction();}
+  void startFunction() override { getStreamer().startFunction(); }
 };
 
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,
