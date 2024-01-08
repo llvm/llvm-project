@@ -101,7 +101,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
     denominator[i] = Point(row);
   }
 
-  // The vertex is v : d x (n+1)
+  // The vertex is v \in Z^{d x (n+1)}
   // We need to find affine functions of parameters λ_i(p)
   // such that v = Σ λ_i(p)*u_i.
   // The λi are given by the columns of Λ = v^T U^{-1} = v^T transp.
