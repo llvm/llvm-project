@@ -2,52 +2,47 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zimop -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZIMOP
 
-declare i64 @llvm.riscv.mopr0.i64(i64 %a)
+declare i64 @llvm.riscv.mopr.i64(i64 %a, i64 %b)
 
 define i64 @mopr0_64(i64 %a) nounwind {
 ; RV64ZIMOP-LABEL: mopr0_64:
 ; RV64ZIMOP:       # %bb.0:
 ; RV64ZIMOP-NEXT:    mop.r.0 a0, a0
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.mopr0.i64(i64 %a)
+  %tmp = call i64 @llvm.riscv.mopr.i64(i64 %a, i64 0)
   ret i64 %tmp
 }
-
-declare i64 @llvm.riscv.mopr31.i64(i64 %a)
 
 define i64 @mopr31_64(i64 %a) nounwind {
 ; RV64ZIMOP-LABEL: mopr31_64:
 ; RV64ZIMOP:       # %bb.0:
 ; RV64ZIMOP-NEXT:    mop.r.31 a0, a0
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.mopr31.i64(i64 %a)
+  %tmp = call i64 @llvm.riscv.mopr.i64(i64 %a, i64 31)
   ret i64 %tmp
 }
 
-declare i64 @llvm.riscv.moprr0.i64(i64 %a, i64 %b)
+declare i64 @llvm.riscv.moprr.i64(i64 %a, i64 %b, i64 %c)
 
 define i64 @moprr0_64(i64 %a, i64 %b) nounwind {
 ; RV64ZIMOP-LABEL: moprr0_64:
 ; RV64ZIMOP:       # %bb.0:
 ; RV64ZIMOP-NEXT:    mop.rr.0 a0, a0, a1
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.moprr0.i64(i64 %a, i64 %b)
+  %tmp = call i64 @llvm.riscv.moprr.i64(i64 %a, i64 %b, i64 0)
   ret i64 %tmp
 }
-
-declare i64 @llvm.riscv.moprr7.i64(i64 %a, i64 %b)
 
 define i64 @moprr7_64(i64 %a, i64 %b) nounwind {
 ; RV64ZIMOP-LABEL: moprr7_64:
 ; RV64ZIMOP:       # %bb.0:
 ; RV64ZIMOP-NEXT:    mop.rr.7 a0, a0, a1
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.moprr7.i64(i64 %a, i64 %b)
+  %tmp = call i64 @llvm.riscv.moprr.i64(i64 %a, i64 %b, i64 7)
   ret i64 %tmp
 }
 
-
-declare i32 @llvm.riscv.mopr0.i32(i32 %a)
+declare i32 @llvm.riscv.mopr.i32(i32 %a, i32 %b)
 
 define signext i32 @mopr0_32(i32 signext %a) nounwind {
 ; RV64ZIMOP-LABEL: mopr0_32:
@@ -55,11 +50,9 @@ define signext i32 @mopr0_32(i32 signext %a) nounwind {
 ; RV64ZIMOP-NEXT:    mop.r.0 a0, a0
 ; RV64ZIMOP-NEXT:    sext.w a0, a0
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.mopr0.i32(i32 %a)
+  %tmp = call i32 @llvm.riscv.mopr.i32(i32 %a, i32 0)
   ret i32 %tmp
 }
-
-declare i32 @llvm.riscv.mopr31.i32(i32 %a)
 
 define signext i32 @mopr31_32(i32 signext %a) nounwind {
 ; RV64ZIMOP-LABEL: mopr31_32:
@@ -67,11 +60,11 @@ define signext i32 @mopr31_32(i32 signext %a) nounwind {
 ; RV64ZIMOP-NEXT:    mop.r.31 a0, a0
 ; RV64ZIMOP-NEXT:    sext.w a0, a0
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.mopr31.i32(i32 %a)
+  %tmp = call i32 @llvm.riscv.mopr.i32(i32 %a, i32 31)
   ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.moprr0.i32(i32 %a, i32 %b)
+declare i32 @llvm.riscv.moprr.i32(i32 %a, i32 %b, i32 %c)
 
 define signext i32 @moprr0_32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZIMOP-LABEL: moprr0_32:
@@ -79,11 +72,9 @@ define signext i32 @moprr0_32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZIMOP-NEXT:    mop.rr.0 a0, a0, a1
 ; RV64ZIMOP-NEXT:    sext.w a0, a0
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.moprr0.i32(i32 %a, i32 %b)
+  %tmp = call i32 @llvm.riscv.moprr.i32(i32 %a, i32 %b, i32 0)
   ret i32 %tmp
 }
-
-declare i32 @llvm.riscv.moprr7.i32(i32 %a, i32 %b)
 
 define signext i32 @moprr7_32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZIMOP-LABEL: moprr7_32:
@@ -91,7 +82,7 @@ define signext i32 @moprr7_32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZIMOP-NEXT:    mop.rr.7 a0, a0, a1
 ; RV64ZIMOP-NEXT:    sext.w a0, a0
 ; RV64ZIMOP-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.moprr7.i32(i32 %a, i32 %b)
+  %tmp = call i32 @llvm.riscv.moprr.i32(i32 %a, i32 %b, i32 7)
   ret i32 %tmp
 }
 
