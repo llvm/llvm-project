@@ -4067,9 +4067,16 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
                      options::OPT_fno_spell_checking);
 
   // Show iteration counts of loops by runtime profile.
-  if (Args.hasArg(options::OPT_fdiagnostics_show_profile_count))
-    CmdArgs.append({"-fdiagnostics-show-profile-count", "-mllvm",
-                    "-enable-profile-count-metadata"});
+  if (Args.hasArg(options::OPT_fdiagnostics_show_profile_count)) {
+    // Profile count need information from runtime profile
+    if (!(Args.hasArg(options::OPT_fprofile_instr_use) ||
+          Args.hasArg(options::OPT_fprofile_instr_use_EQ))) {
+      D.getDiags().Report(diag::warn_drv_diagnostics_profile_count_requires_pgo)
+          << "-fdiagnostics-show-profile-count";
+    }
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-enable-profile-count-metadata");
+  }
 }
 
 DwarfFissionKind tools::getDebugFissionKind(const Driver &D,

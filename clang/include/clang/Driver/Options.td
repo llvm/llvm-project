@@ -1934,7 +1934,7 @@ defm diagnostics_show_hotness : BoolFOption<"diagnostics-show-hotness",
           "Enable profile hotness information in diagnostic line">,
   NegFlag<SetFalse>>;
 def fdiagnostics_show_profile_count : Flag<["-"], "fdiagnostics-show-profile-count">,
-    Group<f_clang_Group>,  Visibility<[ClangOption, CC1Option]>,
+    Group<f_clang_Group>,  Visibility<[ClangOption]>,
     HelpText<"Show the real loop counts from the runtime profile">;
 def fdiagnostics_hotness_threshold_EQ : Joined<["-"], "fdiagnostics-hotness-threshold=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
