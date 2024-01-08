@@ -1072,6 +1072,8 @@ void State::addInfoFor(BasicBlock &BB) {
       [[fallthrough]];
     case Intrinsic::abs:
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
+      WorkList.push_back(
+          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       break;
     }
 
@@ -1395,6 +1397,31 @@ static bool checkAndReplaceCondition(
   return false;
 }
 
+static bool checkAndReplaceMinMax(MinMaxIntrinsic *MinMax, ConstraintInfo &Info,
+                                  unsigned NumIn, unsigned NumOut,
+                                  Instruction *ContextInst, DominatorTree &DT,
+                                  SmallVectorImpl<Instruction *> &ToRemove) {
+  auto ReplaceMinMaxWithOperand = [&](MinMaxIntrinsic *MinMax, bool UseLHS) {
+    // TODO: generate reproducer for min/max.
+    MinMax->replaceAllUsesWith(MinMax->getOperand(UseLHS ? 0 : 1));
+    if (MinMax->use_empty())
+      ToRemove.push_back(MinMax);
+    return true;
+  };
+
+  ICmpInst::Predicate Pred =
+      ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+  if (auto ImpliedCondition =
+          checkCondition(Pred, MinMax->getOperand(0), MinMax->getOperand(1),
+                         MinMax, Info, NumIn, NumOut, ContextInst))
+    return ReplaceMinMaxWithOperand(MinMax, *ImpliedCondition);
+  if (auto ImpliedCondition =
+          checkCondition(Pred, MinMax->getOperand(1), MinMax->getOperand(0),
+                         MinMax, Info, NumIn, NumOut, ContextInst))
+    return ReplaceMinMaxWithOperand(MinMax, !*ImpliedCondition);
+  return false;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -1695,6 +1722,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                          ReproducerCondStack, DFSInStack);
         }
         Changed |= Simplified;
+      } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
+        Changed |= checkAndReplaceMinMax(MinMax, Info, CB.NumIn, CB.NumOut,
+                                         CB.getContextInst(), S.DT, ToRemove);
       }
       continue;
     }

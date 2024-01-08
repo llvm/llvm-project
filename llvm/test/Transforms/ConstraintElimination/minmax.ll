@@ -352,8 +352,7 @@ define i32 @simplify_slt_smax_val(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[B]], i32 [[ADD]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[B]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -376,8 +375,7 @@ define i32 @simplify_slt_smax_val_commuted(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD]], i32 [[B]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[B]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -424,8 +422,7 @@ define i32 @simplify_sgt_smax_val(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[B]], i32 [[ADD]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -472,8 +469,7 @@ define i32 @simplify_sge_smax_val(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[B]], i32 [[ADD]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -496,8 +492,7 @@ define i32 @simplify_ult_umax_val(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[B]], i32 [[ADD]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[B]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -520,8 +515,7 @@ define i32 @simplify_slt_smin_val(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smin.i32(i32 [[B]], i32 [[ADD]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -544,8 +538,7 @@ define i32 @simplify_ult_umin_val(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umin.i32(i32 [[B]], i32 [[ADD]])
-; CHECK-NEXT:    ret i32 [[MAX]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 -1
 ;
