@@ -238,6 +238,20 @@ static LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
   return Ret;
 }
 
+static LLVMBasicBlockRef find_bb_in_func(LLVMValueRef Fn, const char *BBName) {
+  LLVMBasicBlockRef CurBB = LLVMGetFirstBasicBlock(Fn);
+  while (CurBB != nullptr) {
+
+    const char *CurBBName = LLVMGetBasicBlockName(CurBB);
+    if (strcmp(CurBBName, BBName) == 0)
+      return CurBB;
+
+    CurBB = LLVMGetNextBasicBlock(CurBB);
+  }
+
+  return nullptr;
+}
+
 static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
   if (!LLVMIsAConstant(Cst))
     report_fatal_error("Expected a constant");
@@ -430,6 +444,17 @@ static LLVMValueRef clone_inline_asm(LLVMValueRef Asm, LLVMModuleRef M) {
                           ConstraintString, ConstraintStringSize,
                           HasSideEffects, NeedsAlignStack, AsmDialect,
                           CanUnwind);
+}
+
+static LLVMBasicBlockRef declare_bb_in_func(LLVMValueRef DstFn,
+                                            LLVMBasicBlockRef Src) {
+  const char *Name = LLVMGetBasicBlockName(Src);
+
+  if (find_bb_in_func(DstFn, Name) != nullptr)
+    report_fatal_error("Trying to re-declare existing basic block");
+
+  LLVMBasicBlockRef DstBB = LLVMAppendBasicBlock(DstFn, Name);
+  return DstBB;
 }
 
 struct FunCloner {
@@ -1042,8 +1067,15 @@ struct FunCloner {
     if (Name != VName)
       report_fatal_error("Basic block name mismatch");
 
-    LLVMBasicBlockRef BB = LLVMAppendBasicBlock(Fun, Name);
-    return BBMap[Src] = BB;
+    // Scan for existing basic blocks that we forward-declared
+    // If a basic block is not cached in BBMap already, then it should exist
+    // in Fun, since we should have pre-declared all basic blocks earlier in
+    // declare_symbols
+    if (LLVMBasicBlockRef ExistingBB = find_bb_in_func(Fun, Name))
+      return BBMap[Src] = ExistingBB;
+
+    report_fatal_error("Trying to declare new basic block");
+    return nullptr;
   }
 
   LLVMBasicBlockRef CloneBB(LLVMBasicBlockRef Src) {
@@ -1186,6 +1218,16 @@ FunDecl:
           LLVMAddAttributeAtIndex(F, i, DstA);
         }
       }
+    }
+
+    // Declare any basic blocks in this function:
+    // We need to do this here, in case any blockaddress value's are used,
+    // in which case we may reference basic blocks in any function
+    // Therefore, declare them before actually cloning any function
+    LLVMBasicBlockRef CurSrcBB = LLVMGetFirstBasicBlock(Cur);
+    while (CurSrcBB != nullptr) {
+      declare_bb_in_func(F, CurSrcBB);
+      CurSrcBB = LLVMGetNextBasicBlock(CurSrcBB);
     }
 
     Next = LLVMGetNextFunction(Cur);
