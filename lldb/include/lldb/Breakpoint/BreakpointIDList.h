@@ -33,7 +33,7 @@ public:
 
   size_t GetSize() const;
 
-  const BreakpointID &GetBreakpointIDAtIndex(size_t index) const;
+  BreakpointID GetBreakpointIDAtIndex(size_t index) const;
 
   bool RemoveBreakpointIDAtIndex(size_t index);
 
@@ -63,7 +63,6 @@ public:
 
 private:
   BreakpointIDArray m_breakpoint_ids;
-  BreakpointID m_invalid_id;
 
   BreakpointIDList(const BreakpointIDList &) = delete;
   const BreakpointIDList &operator=(const BreakpointIDList &) = delete;

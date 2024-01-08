@@ -20,17 +20,15 @@ using namespace lldb_private;
 
 // class BreakpointIDList
 
-BreakpointIDList::BreakpointIDList()
-    : m_invalid_id(LLDB_INVALID_BREAK_ID, LLDB_INVALID_BREAK_ID) {}
+BreakpointIDList::BreakpointIDList() : m_breakpoint_ids() {}
 
 BreakpointIDList::~BreakpointIDList() = default;
 
 size_t BreakpointIDList::GetSize() const { return m_breakpoint_ids.size(); }
 
-const BreakpointID &
-BreakpointIDList::GetBreakpointIDAtIndex(size_t index) const {
+BreakpointID BreakpointIDList::GetBreakpointIDAtIndex(size_t index) const {
   return ((index < m_breakpoint_ids.size()) ? m_breakpoint_ids[index]
-                                            : m_invalid_id);
+                                            : BreakpointID());
 }
 
 bool BreakpointIDList::RemoveBreakpointIDAtIndex(size_t index) {
