@@ -249,6 +249,8 @@ PrettyStackTraceFormat::PrettyStackTraceFormat(const char *Format, ...) {
   va_start(AP, Format);
   vsnprintf(Str.data(), Size, Format, AP);
   va_end(AP);
+  // Remove the '\0' for printing.
+  Str.pop_back();
 }
 
 void PrettyStackTraceFormat::print(raw_ostream &OS) const { OS << Str << "\n"; }
