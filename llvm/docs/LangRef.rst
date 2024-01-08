@@ -419,8 +419,9 @@ added in the future:
 "``preserve_nonecc``" - The `PreserveNone` calling convention
     This calling convention doesn't preserve any general registers. So all
     general registers are caller saved registers. It also uses all general
-    registers to pass arguments. This attribute doesn't impact floating-point
-    registers (XMMs/YMMs). Floating-point registers still follow the c calling
+    registers to pass arguments. This attribute doesn't impact non-general
+    purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
+    Non-general purpose registers still follow the standard c calling
     convention.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access

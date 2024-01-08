@@ -1059,9 +1059,10 @@ def CC_Intel_OCL_BI : CallingConv<[
 def CC_X86_64_Preserve_None : CallingConv<[
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
-  //   - RBP  frame pointer
-  //   - R10  'nest' parameter
-  //   - RBX  base pointer
+  //   - RBP        frame pointer
+  //   - R10        'nest' parameter
+  //   - RBX        base pointer
+  //   - R16 - R31  these are not available everywhere
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D,
 	                         R11D, R12D, R13D, R14D, R15D, EAX]>>,
 
