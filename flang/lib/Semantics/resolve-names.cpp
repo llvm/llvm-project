@@ -5940,9 +5940,9 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
     }
     if (const auto *pointeeType{pointee->GetType()}) {
       if (const auto *derived{pointeeType->AsDerived()}) {
-        if (!derived->typeSymbol().get<DerivedTypeDetails>().sequence()) {
+        if (!IsSequenceOrBindCType(derived)) {
           Say(pointeeName,
-              "Type of Cray pointee '%s' is a non-sequence derived type"_err_en_US);
+              "Type of Cray pointee '%s' is a derived type that is neither SEQUENCE nor BIND(C)"_err_en_US);
         }
       }
     }
@@ -6177,15 +6177,13 @@ void DeclarationVisitor::CheckCommonBlocks() {
         Say(name,
             "Unlimited polymorphic pointer '%s' may not appear in a COMMON block"_err_en_US);
       } else if (const auto *derived{type->AsDerived()}) {
-        auto &typeSymbol{derived->typeSymbol()};
-        if (!typeSymbol.attrs().test(Attr::BIND_C) &&
-            !typeSymbol.get<DerivedTypeDetails>().sequence()) {
+        if (!IsSequenceOrBindCType(derived)) {
           Say(name,
               "Derived type '%s' in COMMON block must have the BIND or"
               " SEQUENCE attribute"_err_en_US);
         }
         UnorderedSymbolSet typeSet;
-        CheckCommonBlockDerivedType(name, typeSymbol, typeSet);
+        CheckCommonBlockDerivedType(name, derived->typeSymbol(), typeSet);
       }
     }
   }

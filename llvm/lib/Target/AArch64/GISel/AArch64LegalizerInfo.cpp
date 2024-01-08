@@ -282,6 +282,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
       .minScalar(0, s32)
       .libcallFor({s32, s64});
+  getActionDefinitionsBuilder(G_FPOWI)
+      .scalarize(0)
+      .minScalar(0, s32)
+      .libcallFor({{s32, s32}, {s64, s32}});
 
   getActionDefinitionsBuilder(G_INSERT)
       .legalIf(all(typeInSet(0, {s32, s64, p0}),
@@ -362,7 +366,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v4s32, p0, s128, 8},
                                  {v2s64, p0, s128, 8}})
       // These extends are also legal
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
+      .legalForTypesWithMemDesc(
+          {{s32, p0, s8, 8}, {s32, p0, s16, 8}, {s64, p0, s32, 8}})
       .widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s8, s64)
@@ -761,17 +766,35 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf(
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
+  LegalityPredicate UseOutlineAtomics = [&ST](const LegalityQuery &Query) {
+    return ST.outlineAtomics() && !ST.hasLSE();
+  };
+
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
-      .customIf([](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() == 128;
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0),
+                   predNot(UseOutlineAtomics)))
+      .customIf(all(typeIs(0, s128), predNot(UseOutlineAtomics)))
+      .customIf([UseOutlineAtomics](const LegalityQuery &Query) {
+        return Query.Types[0].getSizeInBits() == 128 &&
+               !UseOutlineAtomics(Query);
       })
+      .libcallIf(all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(1, p0),
+                     UseOutlineAtomics))
       .clampScalar(0, s32, s64);
 
+  getActionDefinitionsBuilder({G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
+                               G_ATOMICRMW_SUB, G_ATOMICRMW_AND, G_ATOMICRMW_OR,
+                               G_ATOMICRMW_XOR})
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0),
+                   predNot(UseOutlineAtomics)))
+      .libcallIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(1, p0),
+                     UseOutlineAtomics))
+      .clampScalar(0, s32, s64);
+
+  // Do not outline these atomics operations, as per comment in
+  // AArch64ISelLowering.cpp's shouldExpandAtomicRMWInIR().
   getActionDefinitionsBuilder(
-      {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
-       G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
-       G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
+      {G_ATOMICRMW_MIN, G_ATOMICRMW_MAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
       .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
       .clampScalar(0, s32, s64);
 
@@ -989,6 +1012,23 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s16, 8)
       .lower();
 
+  // For fmul reductions we need to split up into individual operations. We
+  // clamp to 128 bit vectors then to 64bit vectors to produce a cascade of
+  // smaller types, followed by scalarizing what remains.
+  getActionDefinitionsBuilder(G_VECREDUCE_FMUL)
+      .minScalarOrElt(0, MinFPScalar)
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s32, 2)
+      .clampMaxNumElements(1, s16, 4)
+      .scalarize(1)
+      .lower();
+
+  getActionDefinitionsBuilder({G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL})
+      .scalarize(2)
+      .lower();
+
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
       .legalFor({{s8, v16s8},
                  {s8, v8s8},
@@ -1137,8 +1177,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   verify(*ST.getInstrInfo());
 }
 
-bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                          MachineInstr &MI) const {
+bool AArch64LegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;

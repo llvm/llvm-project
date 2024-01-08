@@ -2507,10 +2507,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // char *mkdtemp(char *template);
-    // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "mkdtemp", Signature(ArgTypes{CharPtrTy}, RetType{CharPtrTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // char *getcwd(char *buf, size_t size);
     // FIXME: Improve for errno modeling.

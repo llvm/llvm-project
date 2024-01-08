@@ -84,6 +84,9 @@ public:
   bool applyMappingMAD_64_32(MachineIRBuilder &B,
                              const OperandsMapper &OpdMapper) const;
 
+  void applyMappingSMULU64(MachineIRBuilder &B,
+                           const OperandsMapper &OpdMapper) const;
+
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
 

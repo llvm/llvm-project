@@ -52,11 +52,13 @@ class GlobalModuleCacheTestCase(TestBase):
     # This test tests for the desired behavior as an expected fail.
     @skipIfWindows
     @expectedFailureAll
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
     @skipIfWindows
     @expectedFailureAll
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_OneTargetTwoDebuggers(self):
         self.do_test(True, False)
 

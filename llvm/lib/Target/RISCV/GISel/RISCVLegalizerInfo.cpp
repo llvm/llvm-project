@@ -113,7 +113,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
   auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
-  if (ST.hasStdExtZbb())
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
     BSWAPActions.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
   else
     BSWAPActions.maxScalar(0, sXLen).lower();
@@ -411,8 +411,9 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
-bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                        MachineInstr &MI) const {
+bool RISCVLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
   switch (MI.getOpcode()) {

@@ -125,15 +125,6 @@ defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2
 
 let SubtargetPredicate = HasVOP3PInsts in {
 
-// Undo sub x, c -> add x, -c canonicalization since c is more likely
-// an inline immediate than -c.
-// The constant will be emitted as a mov, and folded later.
-// TODO: We could directly encode the immediate now
-def : GCNPat<
-  (add (v2i16 (VOP3PMods v2i16:$src0, i32:$src0_modifiers)), NegSubInlineConstV216:$src1),
-  (V_PK_SUB_U16 $src0_modifiers, $src0, SRCMODS.OP_SEL_1, NegSubInlineConstV216:$src1)
->;
-
 // Integer operations with clamp bit set.
 class VOP3PSatPat<SDPatternOperator pat, Instruction inst> : GCNPat<
   (pat (v2i16 (VOP3PMods v2i16:$src0, i32:$src0_modifiers)),

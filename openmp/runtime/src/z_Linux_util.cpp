@@ -29,7 +29,9 @@
 #include <semaphore.h>
 #endif // KMP_OS_LINUX
 #include <sys/resource.h>
+#if !KMP_OS_AIX
 #include <sys/syscall.h>
+#endif
 #include <sys/time.h>
 #include <sys/times.h>
 #include <unistd.h>
@@ -1832,7 +1834,7 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -2210,9 +2212,9 @@ int __kmp_is_address_mapped(void *addr) {
   }
 #elif KMP_OS_WASI
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
-#elif KMP_OS_DRAGONFLY || KMP_OS_SOLARIS
+#elif KMP_OS_DRAGONFLY || KMP_OS_SOLARIS || KMP_OS_AIX
 
-  // FIXME(DragonFly, Solaris): Implement this
+  // FIXME(DragonFly, Solaris, AIX): Implement this
   found = 1;
 
 #else
@@ -2317,7 +2319,7 @@ int __kmp_get_load_balance(int max) {
   // Open "/proc/" directory.
   proc_dir = opendir("/proc");
   if (proc_dir == NULL) {
-    // Cannot open "/prroc/". Probably the kernel does not support it. Return an
+    // Cannot open "/proc/". Probably the kernel does not support it. Return an
     // error now and in subsequent calls.
     running_threads = -1;
     permanent_error = 1;
@@ -2330,9 +2332,14 @@ int __kmp_get_load_balance(int max) {
 
   proc_entry = readdir(proc_dir);
   while (proc_entry != NULL) {
+#if KMP_OS_AIX
+    // Proc entry name starts with a digit. Assume it is a  process' directory.
+    if (isdigit(proc_entry->d_name[0])) {
+#else
     // Proc entry is a directory and name starts with a digit. Assume it is a
     // process' directory.
     if (proc_entry->d_type == DT_DIR && isdigit(proc_entry->d_name[0])) {
+#endif
 
 #ifdef KMP_DEBUG
       ++total_processes;
@@ -2376,7 +2383,11 @@ int __kmp_get_load_balance(int max) {
         task_entry = readdir(task_dir);
         while (task_entry != NULL) {
           // It is a directory and name starts with a digit.
+#if KMP_OS_AIX
+          if (isdigit(task_entry->d_name[0])) {
+#else
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
+#endif
 
             // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,
@@ -2486,7 +2497,7 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
