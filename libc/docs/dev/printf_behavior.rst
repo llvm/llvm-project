@@ -13,7 +13,7 @@ C standard and POSIX standard. If any behavior is not mentioned here, it should
 be assumed to follow the behavior described in those standards.
 
 The LLVM-libc codebase is under active development, and may change. This
-document was last updated [August 18, 2023] by [michaelrj] and may
+document was last updated [January 8, 2024] by [michaelrj] and may
 not be accurate after this point.
 
 The behavior of LLVM-libc's printf is heavily influenced by compile-time flags.
