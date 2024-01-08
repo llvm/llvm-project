@@ -111,6 +111,9 @@ int main(int argc, char **argv) {
     return llvm_test_diagnostic_handler();
   } else if (argc == 2 && !strcmp(argv[1], "--test-dibuilder")) {
     return llvm_test_dibuilder();
+  } else if (argc == 2 &&
+             !strcmp(argv[1], "--module-list-global-block-address-values")) {
+    return llvm_module_list_global_block_address_values();
   } else {
     print_usage();
   }

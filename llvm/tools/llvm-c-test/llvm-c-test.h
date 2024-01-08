@@ -28,6 +28,7 @@ LLVMModuleRef llvm_load_module(bool Lazy, bool New);
 int llvm_module_dump(bool Lazy, bool New);
 int llvm_module_list_functions(void);
 int llvm_module_list_globals(void);
+int llvm_module_list_global_block_address_values(void);
 
 // calc.c
 int llvm_calc(void);
