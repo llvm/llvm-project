@@ -629,7 +629,7 @@ define void @caller() nounwind {
 ; ILP32-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
 ; ILP32-NEXT:    flw fa5, 124(s1)
 ; ILP32-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
-; ILP32-NEXT:    call callee@plt
+; ILP32-NEXT:    call callee
 ; ILP32-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
 ; ILP32-NEXT:    fsw fa5, 124(s1)
 ; ILP32-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
@@ -772,7 +772,7 @@ define void @caller() nounwind {
 ; LP64-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
 ; LP64-NEXT:    flw fa5, 124(s1)
 ; LP64-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
-; LP64-NEXT:    call callee@plt
+; LP64-NEXT:    call callee
 ; LP64-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
 ; LP64-NEXT:    fsw fa5, 124(s1)
 ; LP64-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
@@ -915,7 +915,7 @@ define void @caller() nounwind {
 ; ILP32F-NEXT:    flw fs5, 116(s1)
 ; ILP32F-NEXT:    flw fs6, 120(s1)
 ; ILP32F-NEXT:    flw fs7, 124(s1)
-; ILP32F-NEXT:    call callee@plt
+; ILP32F-NEXT:    call callee
 ; ILP32F-NEXT:    fsw fs7, 124(s1)
 ; ILP32F-NEXT:    fsw fs6, 120(s1)
 ; ILP32F-NEXT:    fsw fs5, 116(s1)
@@ -1058,7 +1058,7 @@ define void @caller() nounwind {
 ; LP64F-NEXT:    flw fs5, 116(s1)
 ; LP64F-NEXT:    flw fs6, 120(s1)
 ; LP64F-NEXT:    flw fs7, 124(s1)
-; LP64F-NEXT:    call callee@plt
+; LP64F-NEXT:    call callee
 ; LP64F-NEXT:    fsw fs7, 124(s1)
 ; LP64F-NEXT:    fsw fs6, 120(s1)
 ; LP64F-NEXT:    fsw fs5, 116(s1)
@@ -1201,7 +1201,7 @@ define void @caller() nounwind {
 ; ILP32D-NEXT:    flw fs5, 116(s1)
 ; ILP32D-NEXT:    flw fs6, 120(s1)
 ; ILP32D-NEXT:    flw fs7, 124(s1)
-; ILP32D-NEXT:    call callee@plt
+; ILP32D-NEXT:    call callee
 ; ILP32D-NEXT:    fsw fs7, 124(s1)
 ; ILP32D-NEXT:    fsw fs6, 120(s1)
 ; ILP32D-NEXT:    fsw fs5, 116(s1)
@@ -1344,7 +1344,7 @@ define void @caller() nounwind {
 ; LP64D-NEXT:    flw fs5, 116(s1)
 ; LP64D-NEXT:    flw fs6, 120(s1)
 ; LP64D-NEXT:    flw fs7, 124(s1)
-; LP64D-NEXT:    call callee@plt
+; LP64D-NEXT:    call callee
 ; LP64D-NEXT:    fsw fs7, 124(s1)
 ; LP64D-NEXT:    fsw fs6, 120(s1)
 ; LP64D-NEXT:    fsw fs5, 116(s1)

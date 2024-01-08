@@ -8,7 +8,7 @@ tablegen(LLVM X86GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM X86GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM X86GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM X86GenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM X86GenEVEX2VEXTables.inc -gen-x86-EVEX2VEX-tables)
+tablegen(LLVM X86GenCompressEVEXTables.inc -gen-x86-compress-evex-tables)
 tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
@@ -61,7 +61,7 @@ set(sources
   X86InstrFMA3Info.cpp
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
-  X86EvexToVex.cpp
+  X86CompressEVEX.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp

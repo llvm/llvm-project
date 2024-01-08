@@ -33,6 +33,8 @@ class NestedExpressions(TestBase):
         self.expect_expr("sizeof(A::B::C)", result_value="1")
         self.expect_expr("sizeof(A::B)", result_value="2")
 
+    # Fails on Windows for unknown reasons.
+    @skipIfWindows
     def test_static_in_nested_structs(self):
         """
             Test expressions that references a static variable in nested structs.

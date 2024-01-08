@@ -19,9 +19,10 @@
 
 namespace mlir {
 namespace presburger {
+namespace detail {
 
 // A parametric point is a vector, each of whose elements
-// is an affine function of n parameters. Each row
+// is an affine function of n parameters. Each column
 // in the matrix represents the affine function and
 // has n+1 elements.
 using ParamPoint = FracMatrix;
@@ -55,7 +56,7 @@ public:
       : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
 #ifndef NDEBUG
     for (const ParamPoint &term : numerators)
-      assert(term.getNumColumns() == numParam + 1 &&
+      assert(term.getNumRows() == numParam + 1 &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
 #endif // NDEBUG
@@ -83,7 +84,8 @@ public:
     std::vector<std::vector<Point>> sumDenominators = denominators;
     sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
                            gf.denominators.end());
-    return GeneratingFunction(0, sumSigns, sumNumerators, sumDenominators);
+    return GeneratingFunction(numParam, sumSigns, sumNumerators,
+                              sumDenominators);
   }
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
@@ -128,6 +130,7 @@ private:
   std::vector<std::vector<Point>> denominators;
 };
 
+} // namespace detail
 } // namespace presburger
 } // namespace mlir
 
