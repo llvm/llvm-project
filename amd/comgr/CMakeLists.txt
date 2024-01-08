@@ -214,6 +214,11 @@ include(bc2h)
 include(opencl_pch)
 include(DeviceLibs)
 
+if (WIN32)
+  set_target_properties(amd_comgr PROPERTIES
+    OUTPUT_NAME "amd_comgr_${amd_comgr_VERSION_MAJOR}")
+endif()
+
 set_target_properties(amd_comgr PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED Yes
