@@ -507,6 +507,10 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
   }
 
   // Try to use unmerge for irregular vector split where possible
+  // For example when splitting a <6 x i32> into <4 x i32> with <2 x i32>
+  // leftover, it becomes:
+  //  <2 x i32> %2, <2 x i32>%3, <2 x i32> %4 = G_UNMERGE_VALUE <6 x i32> %1
+  //  <4 x i32> %5 = G_CONCAT_VECTOR <2 x i32> %2, <2 x i32> %3
   if (RegTy.isVector() && MainTy.isVector()) {
     unsigned RegNumElts = RegTy.getNumElements();
     unsigned MainNumElts = MainTy.getNumElements();

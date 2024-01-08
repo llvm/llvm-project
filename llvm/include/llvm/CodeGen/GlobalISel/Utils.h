@@ -262,7 +262,7 @@ bool extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
                   MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
 
 /// Version which handles irregular sub-vector splits.
-void extractVectorParts(Register Reg, unsigned NumElst,
+void extractVectorParts(Register Reg, unsigned NumElts,
                         SmallVectorImpl<Register> &VRegs,
                         MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
 

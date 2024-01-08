@@ -4893,7 +4893,7 @@ LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
 
   SmallVector<Register> SplitSrcs;
   unsigned NumParts = SrcTy.getNumElements();
-  extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs);
+  extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs, MIRBuilder, MRI);
   Register Acc = ScalarReg;
   for (unsigned i = 0; i < NumParts; i++)
     Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]})
