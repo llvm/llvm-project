@@ -13999,17 +13999,14 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   // encloses the call and whose return type contains a placeholder type as if
   // the UnresolvedLookupExpr was type-dependent.
   if (OverloadResult == OR_Success) {
-    FunctionDecl *FDecl = Best->Function;
+    const FunctionDecl *FDecl = Best->Function;
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
-      if (auto TP = FDecl->getTemplateInstantiationPattern(false)) {
-        if (TP->willHaveBody()) {
-          CallExpr *CE =
-              CallExpr::Create(Context, Fn, Args, Context.DependentTy,
-                               VK_PRValue, RParenLoc, CurFPFeatureOverrides());
-          result = CE;
-          return result;
-        }
+      if (const auto *TP =
+              FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+          TP && TP->willHaveBody()) {
+        return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       }
     }
   }
