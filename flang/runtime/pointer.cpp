@@ -16,8 +16,9 @@
 
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
-void RTNAME(PointerNullifyIntrinsic)(Descriptor &pointer, TypeCategory category,
+void RTDEF(PointerNullifyIntrinsic)(Descriptor &pointer, TypeCategory category,
     int kind, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   pointer.Establish(TypeCode{category, kind},
@@ -25,20 +26,20 @@ void RTNAME(PointerNullifyIntrinsic)(Descriptor &pointer, TypeCategory category,
       CFI_attribute_pointer);
 }
 
-void RTNAME(PointerNullifyCharacter)(Descriptor &pointer, SubscriptValue length,
+void RTDEF(PointerNullifyCharacter)(Descriptor &pointer, SubscriptValue length,
     int kind, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   pointer.Establish(
       kind, length, nullptr, rank, nullptr, CFI_attribute_pointer);
 }
 
-void RTNAME(PointerNullifyDerived)(Descriptor &pointer,
+void RTDEF(PointerNullifyDerived)(Descriptor &pointer,
     const typeInfo::DerivedType &derivedType, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   pointer.Establish(derivedType, nullptr, rank, nullptr, CFI_attribute_pointer);
 }
 
-void RTNAME(PointerSetBounds)(Descriptor &pointer, int zeroBasedDim,
+void RTDEF(PointerSetBounds)(Descriptor &pointer, int zeroBasedDim,
     SubscriptValue lower, SubscriptValue upper) {
   INTERNAL_CHECK(zeroBasedDim >= 0 && zeroBasedDim < pointer.rank());
   pointer.GetDimension(zeroBasedDim).SetBounds(lower, upper);
@@ -47,28 +48,28 @@ void RTNAME(PointerSetBounds)(Descriptor &pointer, int zeroBasedDim,
 
 // TODO: PointerSetCoBounds
 
-void RTNAME(PointerSetDerivedLength)(
+void RTDEF(PointerSetDerivedLength)(
     Descriptor &pointer, int which, SubscriptValue x) {
   DescriptorAddendum *addendum{pointer.Addendum()};
   INTERNAL_CHECK(addendum != nullptr);
   addendum->SetLenParameterValue(which, x);
 }
 
-void RTNAME(PointerApplyMold)(
+void RTDEF(PointerApplyMold)(
     Descriptor &pointer, const Descriptor &mold, int rank) {
   pointer.ApplyMold(mold, rank);
 }
 
-void RTNAME(PointerAssociateScalar)(Descriptor &pointer, void *target) {
+void RTDEF(PointerAssociateScalar)(Descriptor &pointer, void *target) {
   pointer.set_base_addr(target);
 }
 
-void RTNAME(PointerAssociate)(Descriptor &pointer, const Descriptor &target) {
+void RTDEF(PointerAssociate)(Descriptor &pointer, const Descriptor &target) {
   pointer = target;
   pointer.raw().attribute = CFI_attribute_pointer;
 }
 
-void RTNAME(PointerAssociateLowerBounds)(Descriptor &pointer,
+void RTDEF(PointerAssociateLowerBounds)(Descriptor &pointer,
     const Descriptor &target, const Descriptor &lowerBounds) {
   pointer = target;
   pointer.raw().attribute = CFI_attribute_pointer;
@@ -84,7 +85,7 @@ void RTNAME(PointerAssociateLowerBounds)(Descriptor &pointer,
   }
 }
 
-void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
+void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
     const Descriptor &target, const Descriptor &bounds, const char *sourceFile,
     int sourceLine) {
   pointer = target;
@@ -122,7 +123,7 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
   }
 }
 
-int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
+int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
@@ -141,7 +142,7 @@ int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
   return stat;
 }
 
-int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
+int RTDEF(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
   int stat{RTNAME(PointerAllocate)(
@@ -153,7 +154,7 @@ int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
   return stat;
 }
 
-int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
+int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
@@ -167,7 +168,7 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
       errMsg, hasStat);
 }
 
-int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
+int RTDEF(PointerDeallocatePolymorphic)(Descriptor &pointer,
     const typeInfo::DerivedType *derivedType, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(PointerDeallocate)(
@@ -187,11 +188,11 @@ int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
   return stat;
 }
 
-bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {
+bool RTDEF(PointerIsAssociated)(const Descriptor &pointer) {
   return pointer.raw().base_addr != nullptr;
 }
 
-bool RTNAME(PointerIsAssociatedWith)(
+bool RTDEF(PointerIsAssociatedWith)(
     const Descriptor &pointer, const Descriptor *target) {
   if (!target) {
     return pointer.raw().base_addr != nullptr;
@@ -220,5 +221,6 @@ bool RTNAME(PointerIsAssociatedWith)(
 
 // TODO: PointerCheckLengthParameter
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

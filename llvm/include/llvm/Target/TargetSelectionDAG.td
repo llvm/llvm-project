@@ -614,6 +614,12 @@ def strict_sint_to_fp : SDNode<"ISD::STRICT_SINT_TO_FP",
                                SDTIntToFPOp, [SDNPHasChain]>;
 def strict_uint_to_fp : SDNode<"ISD::STRICT_UINT_TO_FP",
                                SDTIntToFPOp, [SDNPHasChain]>;
+
+def strict_f16_to_fp  : SDNode<"ISD::STRICT_FP16_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
+def strict_fp_to_f16  : SDNode<"ISD::STRICT_FP_TO_FP16",
+                               SDTFPToIntOp, [SDNPHasChain]>;
+
 def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
 def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
 
@@ -1063,6 +1069,10 @@ def extloadi32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = i32;
 }
+def extloadi64 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
+}
 def extloadf16 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = f16;
@@ -1092,6 +1102,10 @@ def sextloadi32 : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = i32;
 }
+def sextloadi64 : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
+}
 
 def zextloadi1  : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
   let IsLoad = true;
@@ -1108,6 +1122,10 @@ def zextloadi16 : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
 def zextloadi32 : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = i32;
+}
+def zextloadi64 : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
 }
 
 def extloadvi1  : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
@@ -1207,6 +1225,12 @@ def truncstorei32 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i32;
+  let IsTruncStore = true;
+}
+def truncstorei64 : PatFrag<(ops node:$val, node:$ptr),
+                            (truncstore node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i64;
   let IsTruncStore = true;
 }
 def truncstoref16 : PatFrag<(ops node:$val, node:$ptr),
@@ -1557,6 +1581,13 @@ def any_fsetcc : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
 def any_fsetccs : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
                           [(strict_fsetccs node:$lhs, node:$rhs, node:$pred),
                            (setcc node:$lhs, node:$rhs, node:$pred)]>;
+
+def any_f16_to_fp : PatFrags<(ops node:$src),
+                              [(f16_to_fp node:$src),
+                               (strict_f16_to_fp node:$src)]>;
+def any_fp_to_f16 : PatFrags<(ops node:$src),
+                              [(fp_to_f16 node:$src),
+                               (strict_fp_to_f16 node:$src)]>;
 
 multiclass binary_atomic_op_ord {
   def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

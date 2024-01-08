@@ -1461,6 +1461,14 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
     if (DI && processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
                                 DI->getVariable(), DI->getDebugLoc()))
       FuncInfo.PreprocessedDbgDeclares.insert(DI);
+
+    for (const DPValue &DPV : I.getDbgValueRange()) {
+      if (DPV.getType() == DPValue::LocationType::Declare &&
+          processDbgDeclare(FuncInfo, DPV.getVariableLocationOp(0),
+                            DPV.getExpression(), DPV.getVariable(),
+                            DPV.getDebugLoc()))
+        FuncInfo.PreprocessedDPVDeclares.insert(&DPV);
+    }
   }
 }
 
@@ -1606,6 +1614,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         if (isFoldedOrDeadInstruction(Inst, *FuncInfo) ||
             ElidedArgCopyInstrs.count(Inst)) {
           --NumFastIselRemaining;
+          FastIS->handleDbgInfo(Inst);
           continue;
         }
 
@@ -1617,6 +1626,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         if (FastIS->selectInstruction(Inst)) {
           --NumFastIselRemaining;
           ++NumFastIselSuccess;
+
+          FastIS->handleDbgInfo(Inst);
           // If fast isel succeeded, skip over all the folded instructions, and
           // then see if there is a load right before the selected instructions.
           // Try to fold the load if so.
@@ -1632,6 +1643,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
             // If we succeeded, don't re-select the load.
             LLVM_DEBUG(dbgs()
                        << "FastISel folded load: " << *BeforeInst << "\n");
+            FastIS->handleDbgInfo(BeforeInst);
             BI = std::next(BasicBlock::const_iterator(BeforeInst));
             --NumFastIselRemaining;
             ++NumFastIselSuccess;
@@ -2778,7 +2790,7 @@ CheckInteger(const unsigned char *MatcherTable, unsigned &MatcherIndex,
   Val = decodeSignRotatedValue(Val);
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(N);
-  return C && C->getSExtValue() == Val;
+  return C && C->getAPIntValue().trySExtValue() == Val;
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -3604,12 +3616,24 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           CurDAG->getTargetConstant(Val, SDLoc(NodeToMatch), VT), nullptr));
       continue;
     }
-    case OPC_EmitRegister: {
-      MVT::SimpleValueType VT =
-          static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+    case OPC_EmitRegister:
+    case OPC_EmitRegisterI32:
+    case OPC_EmitRegisterI64: {
+      MVT::SimpleValueType VT;
+      switch (Opcode) {
+      case OPC_EmitRegisterI32:
+        VT = MVT::i32;
+        break;
+      case OPC_EmitRegisterI64:
+        VT = MVT::i64;
+        break;
+      default:
+        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        break;
+      }
       unsigned RegNo = MatcherTable[MatcherIndex++];
-      RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
-                              CurDAG->getRegister(RegNo, VT), nullptr));
+      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
+          CurDAG->getRegister(RegNo, VT), nullptr));
       continue;
     }
     case OPC_EmitRegister2: {
@@ -4161,8 +4185,7 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
     Msg << "\nIn function: " << MF->getName();
   } else {
     bool HasInputChain = N->getOperand(0).getValueType() == MVT::Other;
-    unsigned iid =
-      cast<ConstantSDNode>(N->getOperand(HasInputChain))->getZExtValue();
+    unsigned iid = N->getConstantOperandVal(HasInputChain);
     if (iid < Intrinsic::num_intrinsics)
       Msg << "intrinsic %" << Intrinsic::getBaseName((Intrinsic::ID)iid);
     else if (const TargetIntrinsicInfo *TII = TM.getIntrinsicInfo())

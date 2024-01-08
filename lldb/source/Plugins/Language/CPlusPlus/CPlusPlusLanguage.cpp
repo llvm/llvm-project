@@ -466,7 +466,7 @@ protected:
   }
 
   void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
-    if (!llvm::StringRef(currentParserPos(), this->numLeft()).startswith(From))
+    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
       return;
 
     // We found a match. Append unmodified input up to this point.

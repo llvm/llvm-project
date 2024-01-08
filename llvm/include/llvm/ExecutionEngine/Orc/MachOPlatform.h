@@ -345,6 +345,8 @@ protected:
   virtual jitlink::Block &createHeaderBlock(JITDylib &JD, jitlink::LinkGraph &G,
                                             jitlink::Section &HeaderSection);
 
+  MachOPlatform &MOP;
+
 private:
   struct HeaderSymbol {
     const char *Name;
@@ -359,8 +361,6 @@ private:
   static MaterializationUnit::Interface
   createHeaderInterface(MachOPlatform &MOP,
                         const SymbolStringPtr &HeaderStartSymbol);
-
-  MachOPlatform &MOP;
 };
 
 /// Simple MachO header graph builder.

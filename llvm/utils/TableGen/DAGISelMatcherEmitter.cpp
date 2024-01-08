@@ -587,7 +587,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     return CurrentIdx - StartIdx + 1;
   }
 
- case Matcher::CheckType:
+  case Matcher::CheckType:
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
       MVT::SimpleValueType VT = cast<CheckTypeMatcher>(N)->getType();
       switch (VT) {
@@ -600,24 +600,24 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
         return 2;
       }
     }
-    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
-       << ", " << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
+    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo() << ", "
+       << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
     return 3;
 
- case Matcher::CheckChildType: {
-   MVT::SimpleValueType VT = cast<CheckChildTypeMatcher>(N)->getType();
-   switch (VT) {
-   case MVT::i32:
-   case MVT::i64:
-     OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-        << "TypeI" << MVT(VT).getScalarSizeInBits() << ",\n";
-     return 1;
-   default:
-     OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-        << "Type, " << getEnumName(VT) << ",\n";
-     return 2;
-   }
- }
+  case Matcher::CheckChildType: {
+    MVT::SimpleValueType VT = cast<CheckChildTypeMatcher>(N)->getType();
+    switch (VT) {
+    case MVT::i32:
+    case MVT::i64:
+      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+         << "TypeI" << MVT(VT).getSizeInBits() << ",\n";
+      return 1;
+    default:
+      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+         << "Type, " << getEnumName(VT) << ",\n";
+      return 2;
+    }
+  }
 
   case Matcher::CheckInteger: {
     OS << "OPC_CheckInteger, ";
@@ -704,7 +704,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     case MVT::i32:
     case MVT::i64:
       OpBytes = 1;
-      OS << "OPC_EmitInteger" << MVT(VT).getScalarSizeInBits() << ", ";
+      OS << "OPC_EmitInteger" << MVT(VT).getSizeInBits() << ", ";
       break;
     default:
       OpBytes = 2;
@@ -723,7 +723,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     switch (VT) {
     case MVT::i32:
       OpBytes = 1;
-      OS << "OPC_EmitStringInteger" << MVT(VT).getScalarSizeInBits() << ", ";
+      OS << "OPC_EmitStringInteger" << MVT(VT).getSizeInBits() << ", ";
       break;
     default:
       OpBytes = 2;
@@ -737,24 +737,35 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
   case Matcher::EmitRegister: {
     const EmitRegisterMatcher *Matcher = cast<EmitRegisterMatcher>(N);
     const CodeGenRegister *Reg = Matcher->getReg();
+    MVT::SimpleValueType VT = Matcher->getVT();
     // If the enum value of the register is larger than one byte can handle,
     // use EmitRegister2.
     if (Reg && Reg->EnumValue > 255) {
-      OS << "OPC_EmitRegister2, " << getEnumName(Matcher->getVT()) << ", ";
+      OS << "OPC_EmitRegister2, " << getEnumName(VT) << ", ";
       OS << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
       return 4;
-    } else {
-      OS << "OPC_EmitRegister, " << getEnumName(Matcher->getVT()) << ", ";
-      if (Reg) {
-        OS << getQualifiedName(Reg->TheDef) << ",\n";
-      } else {
-        OS << "0 ";
-        if (!OmitComments)
-          OS << "/*zero_reg*/";
-        OS << ",\n";
-      }
-      return 3;
     }
+    unsigned OpBytes;
+    switch (VT) {
+    case MVT::i32:
+    case MVT::i64:
+      OpBytes = 1;
+      OS << "OPC_EmitRegisterI" << MVT(VT).getSizeInBits() << ", ";
+      break;
+    default:
+      OpBytes = 2;
+      OS << "OPC_EmitRegister, " << getEnumName(VT) << ", ";
+      break;
+    }
+    if (Reg) {
+      OS << getQualifiedName(Reg->TheDef) << ",\n";
+    } else {
+      OS << "0 ";
+      if (!OmitComments)
+        OS << "/*zero_reg*/";
+      OS << ",\n";
+    }
+    return OpBytes + 1;
   }
 
   case Matcher::EmitConvertToTarget: {

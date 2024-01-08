@@ -41,14 +41,6 @@ jobs:
           chmod a+x github-automation.py
           pip install -r requirements.txt
 
-      # Will be removed shortly, just gathering info to report to Github that
-      # this is not working as expected.
-      - name: Dump Author Association
-        env:
-          AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
-        run: |
-          echo "$AUTHOR_ASSOCIATION"
-
       - name: Greet Author
         run: |
           ./github-automation.py \

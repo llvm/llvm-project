@@ -24,6 +24,50 @@
 
 using namespace llvm;
 
+bool GCStrategyMap::invalidate(Module &M, const PreservedAnalyses &PA,
+                               ModuleAnalysisManager::Invalidator &) {
+  for (const auto &F : M) {
+    if (F.isDeclaration() || !F.hasGC())
+      continue;
+    if (!StrategyMap.contains(F.getGC()))
+      return true;
+  }
+  return false;
+}
+
+AnalysisKey CollectorMetadataAnalysis::Key;
+
+CollectorMetadataAnalysis::Result
+CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  Result R;
+  auto &Map = R.StrategyMap;
+  for (auto &F : M) {
+    if (F.isDeclaration() || !F.hasGC())
+      continue;
+    if (auto GCName = F.getGC(); !Map.contains(GCName))
+      Map[GCName] = getGCStrategy(GCName);
+  }
+  return R;
+}
+
+AnalysisKey GCFunctionAnalysis::Key;
+
+GCFunctionAnalysis::Result
+GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+  assert(!F.isDeclaration() && "Can only get GCFunctionInfo for a definition!");
+  assert(F.hasGC() && "Function doesn't have GC!");
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  assert(
+      MAMProxy.cachedResultExists<CollectorMetadataAnalysis>(*F.getParent()) &&
+      "This pass need module analysis `collector-metadata`!");
+  auto &Map =
+      MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent())
+          ->StrategyMap;
+  GCFunctionInfo Info(F, *Map[F.getGC()]);
+  return Info;
+}
+
 INITIALIZE_PASS(GCModuleInfo, "collector-metadata",
                 "Create Garbage Collector Module Metadata", false, false)
 
@@ -33,6 +77,12 @@ GCFunctionInfo::GCFunctionInfo(const Function &F, GCStrategy &S)
     : F(F), S(S), FrameSize(~0LL) {}
 
 GCFunctionInfo::~GCFunctionInfo() = default;
+
+bool GCFunctionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                                FunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<GCFunctionAnalysis>();
+  return !PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>();
+}
 
 // -----------------------------------------------------------------------------
 

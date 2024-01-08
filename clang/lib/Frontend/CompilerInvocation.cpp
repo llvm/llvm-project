@@ -2829,7 +2829,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                "-interface-stub-version=ifs-v1"
             << ErrorMessage;
         ProgramAction = frontend::ParseSyntaxOnly;
-      } else if (!ArgStr.startswith("ifs-")) {
+      } else if (!ArgStr.starts_with("ifs-")) {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() + ".";
         Diags.Report(diag::err_drv_invalid_value)
@@ -4106,13 +4106,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
     // Check the version number is valid: either 3.x (0 <= x <= 9) or
     // y or y.0 (4 <= y <= current version).
-    if (!VerParts.first.startswith("0") &&
-        !VerParts.first.getAsInteger(10, Major) &&
-        3 <= Major && Major <= CLANG_VERSION_MAJOR &&
-        (Major == 3 ? VerParts.second.size() == 1 &&
-                      !VerParts.second.getAsInteger(10, Minor)
-                    : VerParts.first.size() == Ver.size() ||
-                      VerParts.second == "0")) {
+    if (!VerParts.first.starts_with("0") &&
+        !VerParts.first.getAsInteger(10, Major) && 3 <= Major &&
+        Major <= CLANG_VERSION_MAJOR &&
+        (Major == 3
+             ? VerParts.second.size() == 1 &&
+                   !VerParts.second.getAsInteger(10, Minor)
+             : VerParts.first.size() == Ver.size() || VerParts.second == "0")) {
       // Got a valid version number.
       if (Major == 3 && Minor <= 8)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver3_8);

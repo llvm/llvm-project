@@ -45,6 +45,10 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   (*ISAInfo)->toFeatures(
       Features, [&Args](const Twine &Str) { return Args.MakeArgString(Str); },
       /*AddAllExtensions=*/true);
+
+  if (EnableExperimentalExtensions)
+    Features.push_back(Args.MakeArgString("+experimental"));
+
   return true;
 }
 
@@ -163,21 +167,9 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
   }
 
-  // GCC Compatibility: -mno-save-restore is default, unless -msave-restore is
-  // specified.
-  if (Args.hasFlag(options::OPT_msave_restore, options::OPT_mno_save_restore, false))
-    Features.push_back("+save-restore");
-  else
-    Features.push_back("-save-restore");
-
   // -mno-unaligned-access is default, unless -munaligned-access is specified.
-  if (const Arg *A = Args.getLastArg(options::OPT_munaligned_access,
-                                     options::OPT_mno_unaligned_access)) {
-    if (A->getOption().matches(options::OPT_munaligned_access))
-      Features.push_back("+fast-unaligned-access");
-    else
-      Features.push_back("-fast-unaligned-access");
-  }
+  AddTargetFeature(Args, Features, options::OPT_munaligned_access,
+                   options::OPT_mno_unaligned_access, "fast-unaligned-access");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
@@ -223,10 +215,8 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /* EnableExperimentalExtension */ true);
-  if (!ParseResult)
-    // Ignore parsing error, just go 3rd step.
-    consumeError(ParseResult.takeError());
-  else
+  // Ignore parsing error, just go 3rd step.
+  if (!llvm::errorToBool(ParseResult.takeError()))
     return (*ParseResult)->computeDefaultABI();
 
   // 3. Choose a default based on the triple

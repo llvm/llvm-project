@@ -1025,8 +1025,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
 void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
-  assert(config->emachine == EM_AARCH64 &&
-         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE);
+  assert(hasMemtag());
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.

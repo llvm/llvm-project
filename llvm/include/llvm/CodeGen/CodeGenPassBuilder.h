@@ -25,14 +25,20 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
@@ -48,6 +54,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
@@ -72,15 +79,8 @@ namespace llvm {
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
-#define DUMMY_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                        \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
-    template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
-    PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
-      return PreservedAnalyses::all();                                         \
-    }                                                                          \
-  };
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     Error run(Module &, MachineFunctionAnalysisManager &) {                    \
       return Error::success();                                                 \
@@ -89,18 +89,29 @@ namespace llvm {
                           MachineFunctionAnalysisManager &) {                  \
       llvm_unreachable("this api is to make new PM api happy");                \
     }                                                                          \
-    static AnalysisKey Key;                                                    \
+    static MachinePassKey Key;                                                 \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(MachineFunction &,                                   \
                           MachineFunctionAnalysisManager &) {                  \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
+    static MachinePassKey Key;                                                 \
+  };
+#define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)          \
+  struct PASS_NAME : public AnalysisInfoMixin<PASS_NAME> {                     \
+    template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
+    using Result = struct {};                                                  \
+    template <typename IRUnitT, typename AnalysisManagerT,                     \
+              typename... ExtraArgTs>                                          \
+    Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {              \
+      return {};                                                               \
+    }                                                                          \
     static AnalysisKey Key;                                                    \
   };
-#include "MachinePassRegistry.def"
+#include "llvm/CodeGen/MachinePassRegistry.def"
 
 /// This class provides access to building LLVM's passes.
 ///
@@ -219,25 +230,27 @@ protected:
         C(&PassT::Key);
     }
 
-    template <typename PassT> void insertPass(AnalysisKey *ID, PassT Pass) {
+    template <typename PassT> void insertPass(MachinePassKey *ID, PassT Pass) {
       AfterCallbacks.emplace_back(
-          [this, ID, Pass = std::move(Pass)](AnalysisKey *PassID) {
+          [this, ID, Pass = std::move(Pass)](MachinePassKey *PassID) {
             if (PassID == ID)
               this->PM.addPass(std::move(Pass));
           });
     }
 
-    void disablePass(AnalysisKey *ID) {
+    void disablePass(MachinePassKey *ID) {
       BeforeCallbacks.emplace_back(
-          [ID](AnalysisKey *PassID) { return PassID != ID; });
+          [ID](MachinePassKey *PassID) { return PassID != ID; });
     }
 
     MachineFunctionPassManager releasePM() { return std::move(PM); }
 
   private:
     MachineFunctionPassManager &PM;
-    SmallVector<llvm::unique_function<bool(AnalysisKey *)>, 4> BeforeCallbacks;
-    SmallVector<llvm::unique_function<void(AnalysisKey *)>, 4> AfterCallbacks;
+    SmallVector<llvm::unique_function<bool(MachinePassKey *)>, 4>
+        BeforeCallbacks;
+    SmallVector<llvm::unique_function<void(MachinePassKey *)>, 4>
+        AfterCallbacks;
   };
 
   LLVMTargetMachine &TM;
@@ -624,12 +637,15 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addPass(MergeICmpsPass());
-    addPass(ExpandMemCmpPass());
+    addPass(ExpandMemCmpPass(&TM));
   }
 
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
   addPass(GCLoweringPass());
+  // FIXME: `ShadowStackGCLoweringPass` now is a
+  // module pass, so it will trigger assertion.
+  // See comment of `AddingFunctionPasses`
   addPass(ShadowStackGCLoweringPass());
   addPass(LowerConstantIntrinsicsPass());
 
@@ -685,6 +701,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
     addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::WinEH:

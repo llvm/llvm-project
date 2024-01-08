@@ -856,7 +856,7 @@ LLVM_LIBC_FUNCTION(double, log2, (double x)) {
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
-  int x_e = -FPBits_t::EXPONENT_BIAS;
+  int x_e = -FPBits_t::EXP_BIAS;
 
   if (LIBC_UNLIKELY(x_u == 0x3FF0'0000'0000'0000ULL)) {
     // log2(1.0) = +0.0
@@ -880,7 +880,7 @@ LLVM_LIBC_FUNCTION(double, log2, (double x)) {
       return x;
     }
     // Normalize denormal inputs.
-    xbits.set_val(x * 0x1.0p52);
+    xbits = FPBits_t(x * 0x1.0p52);
     x_e -= 52;
     x_u = xbits.uintval();
   }

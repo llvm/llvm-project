@@ -2102,7 +2102,7 @@ public:
                                  SourceLocation AttrLoc);
 
   CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
-  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+  bool CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs);
 
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
@@ -4799,8 +4799,6 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
-  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
-
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5644,7 +5642,6 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
-                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
@@ -7311,8 +7308,7 @@ public:
 
   /// ActOnLambdaExpr - This is called when the body of a lambda expression
   /// was successfully completed.
-  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                             Scope *CurScope);
+  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body);
 
   /// Does copying/destroying the captured variable have side effects?
   bool CaptureHasSideEffects(const sema::Capture &From);
@@ -9358,8 +9354,7 @@ public:
 
   QualType DeduceTemplateSpecializationFromInitializer(
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
-      const InitializationKind &Kind, MultiExprArg Init,
-      ParenListExpr *PL = nullptr);
+      const InitializationKind &Kind, MultiExprArg Init);
 
   QualType deduceVarTypeFromInitializer(VarDecl *VDecl, DeclarationName Name,
                                         QualType Type, TypeSourceInfo *TSI,
@@ -10268,11 +10263,13 @@ public:
     ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
   };
 
-  // Unlike the above, this evaluates constraints, which should only happen at
-  // 'constraint checking' time.
+  // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
+  // Unlike the above, this does not evaluates constraints.
+  ExprResult SubstConstraintExprWithoutSatisfaction(
+      Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
   /// Substitute the given template arguments into a list of
   /// expressions, expanding pack expansions if required.
@@ -13852,6 +13849,7 @@ private:
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool ParseSVEImmChecks(CallExpr *TheCall,
                          SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
+  bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckARMCoprocessorImmediate(const TargetInfo &TI, const Expr *CoprocArg,
