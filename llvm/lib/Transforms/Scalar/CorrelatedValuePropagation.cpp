@@ -94,11 +94,36 @@ STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumZExt, "Number of non-negative deductions");
 
+static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
+  if (Constant *C = LVI->getConstant(V, At))
+    return C;
+
+  // TODO: The following really should be sunk inside LVI's core algorithm, or
+  // at least the outer shims around such.
+  auto *C = dyn_cast<CmpInst>(V);
+  if (!C)
+    return nullptr;
+
+  Value *Op0 = C->getOperand(0);
+  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
+  if (!Op1)
+    return nullptr;
+
+  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
+      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
+  if (Result == LazyValueInfo::Unknown)
+    return nullptr;
+
+  return (Result == LazyValueInfo::True)
+             ? ConstantInt::getTrue(C->getContext())
+             : ConstantInt::getFalse(C->getContext());
+}
+
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy()) return false;
   if (isa<Constant>(S->getCondition())) return false;
 
-  Constant *C = LVI->getConstant(S->getCondition(), S);
+  Constant *C = getConstantAt(S->getCondition(), S, LVI);
   if (!C) return false;
 
   ConstantInt *CI = dyn_cast<ConstantInt>(C);
@@ -1097,30 +1122,6 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   BinOp->eraseFromParent();
   NumAnd++;
   return true;
-}
-
-
-static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
-  if (Constant *C = LVI->getConstant(V, At))
-    return C;
-
-  // TODO: The following really should be sunk inside LVI's core algorithm, or
-  // at least the outer shims around such.
-  auto *C = dyn_cast<CmpInst>(V);
-  if (!C) return nullptr;
-
-  Value *Op0 = C->getOperand(0);
-  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
-  if (!Op1) return nullptr;
-
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
-  if (Result == LazyValueInfo::Unknown)
-    return nullptr;
-
-  return (Result == LazyValueInfo::True) ?
-    ConstantInt::getTrue(C->getContext()) :
-    ConstantInt::getFalse(C->getContext());
 }
 
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
