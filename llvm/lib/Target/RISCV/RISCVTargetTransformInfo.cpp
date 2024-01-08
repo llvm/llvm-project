@@ -468,9 +468,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         //   vmv.v.x v8, a0
         //   vmsne.vi v0, v8, 0
         return LT.first *
-               (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for andi
-                getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
-                                        LT.second, CostKind));
+               (1 + getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
+                                            LT.second, CostKind));
       }
       // Example sequence:
       //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
@@ -482,11 +481,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       //   vmsne.vi  v0, v8, 0
 
       return LT.first *
-             (TLI->getLMULCost(LT.second) + // FIXME: this should be 1 for andi
-              getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM,
-                                       RISCV::VMV_X_S, RISCV::VMV_V_X,
-                                       RISCV::VMSNE_VI},
-                                      LT.second, CostKind));
+             (1 + getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM,
+                                           RISCV::VMV_X_S, RISCV::VMV_V_X,
+                                           RISCV::VMSNE_VI},
+                                          LT.second, CostKind));
     }
 
     if (HasScalar) {
@@ -531,9 +529,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    // FIXME: replace the constant `2` below with cost of {VID_V,VRSUB_VX}
-    InstructionCost GatherCost =
-        2 + getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
+    InstructionCost GatherCost = getRISCVInstructionCost(
+        {RISCV::VID_V, RISCV::VRSUB_VX, RISCV::VRGATHER_VV}, LT.second,
+        CostKind);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
     return LT.first * (LenCost + GatherCost + ExtendCost);
