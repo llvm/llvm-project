@@ -198,7 +198,7 @@ LIBC_INLINE __m256i bytewise_reverse(__m256i value) {
   // ymm = ymm[15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
   //           31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16]
   const __m256i tmp = _mm256_shuffle_epi8(value, indices);
-  // Then we shuffle accross lanes using 64 bit values.
+  // Then we shuffle across lanes using 64 bit values.
   // ymm = ymm[2,3,0,1]
   // Leading to a fully reversed vector
   // ymm = ymm[31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,
