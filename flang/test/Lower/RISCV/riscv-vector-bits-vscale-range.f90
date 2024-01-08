@@ -4,10 +4,6 @@
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=4 -mvscale-max=4  -emit-llvm -o - %s | FileCheck %s -D#VBITS=4
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=8 -mvscale-max=8  -emit-llvm -o - %s | FileCheck %s -D#VBITS=8
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=16 -mvscale-max=16  -emit-llvm -o - %s | FileCheck %s -D#VBITS=16
-! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=2 -mvscale-max=2  -emit-llvm -o - %s | FileCheck %s -D#VBITS=2
-! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=4 -mvscale-max=4  -emit-llvm -o - %s | FileCheck %s -D#VBITS=4
-! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=8 -mvscale-max=8  -emit-llvm -o - %s | FileCheck %s -D#VBITS=8
-! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=16 -mvscale-max=16  -emit-llvm -o - %s | FileCheck %s -D#VBITS=16
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=1  -emit-llvm -o - %s | FileCheck %s -D#VBITS=2 --check-prefix=CHECK-NOMAX
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=2  -emit-llvm -o - %s | FileCheck %s -D#VBITS=2 --check-prefix=CHECK-NOMAX
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=4  -emit-llvm -o - %s | FileCheck %s -D#VBITS=4 --check-prefix=CHECK-NOMAX
