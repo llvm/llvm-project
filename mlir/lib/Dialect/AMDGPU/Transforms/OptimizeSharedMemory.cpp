@@ -245,7 +245,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::amdgpu::createOptimizeSharedMemoryPass() {
-  return std::make_unique<OptimizeSharedMemoryPass>();
-}
