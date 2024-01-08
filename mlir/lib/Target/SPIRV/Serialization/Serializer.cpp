@@ -648,26 +648,6 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
-  if (auto cooperativeMatrixType =
-          dyn_cast<spirv::CooperativeMatrixNVType>(type)) {
-    uint32_t elementTypeID = 0;
-    if (failed(processTypeImpl(loc, cooperativeMatrixType.getElementType(),
-                               elementTypeID, serializationCtx))) {
-      return failure();
-    }
-    typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
-    auto getConstantOp = [&](uint32_t id) {
-      auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
-      return prepareConstantInt(loc, attr);
-    };
-    llvm::append_values(
-        operands, elementTypeID,
-        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())),
-        getConstantOp(cooperativeMatrixType.getRows()),
-        getConstantOp(cooperativeMatrixType.getColumns()));
-    return success();
-  }
-
   if (auto jointMatrixType = dyn_cast<spirv::JointMatrixINTELType>(type)) {
     uint32_t elementTypeID = 0;
     if (failed(processTypeImpl(loc, jointMatrixType.getElementType(),
