@@ -4,7 +4,7 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [16 x ptr] [ptr @_ZGVsMxv_cos, ptr @_ZGVsMxv_cosf, ptr @_ZGVsMxv_exp, ptr @_ZGVsMxv_expf, ptr @_ZGVsMxv_exp2, ptr @_ZGVsMxv_exp2f, ptr @_ZGVsMxv_exp10, ptr @_ZGVsMxv_exp10f, ptr @_ZGVsMxv_log, ptr @_ZGVsMxv_logf, ptr @_ZGVsMxv_log10, ptr @_ZGVsMxv_log10f, ptr @_ZGVsMxv_log2, ptr @_ZGVsMxv_log2f, ptr @_ZGVsMxv_sin, ptr @_ZGVsMxv_sinf], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [18 x ptr] [ptr @_ZGVsMxv_cos, ptr @_ZGVsMxv_cosf, ptr @_ZGVsMxv_exp, ptr @_ZGVsMxv_expf, ptr @_ZGVsMxv_exp2, ptr @_ZGVsMxv_exp2f, ptr @_ZGVsMxv_exp10, ptr @_ZGVsMxv_exp10f, ptr @_ZGVsMxv_log, ptr @_ZGVsMxv_logf, ptr @_ZGVsMxv_log10, ptr @_ZGVsMxv_log10f, ptr @_ZGVsMxv_log2, ptr @_ZGVsMxv_log2f, ptr @_ZGVsMxv_sin, ptr @_ZGVsMxv_sinf, ptr @_ZGVsMxvv_fmod, ptr @_ZGVsMxvv_fmodf], section "llvm.metadata"
 ;.
 define <vscale x 2 x double> @llvm_ceil_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_ceil_vscale_f64(
@@ -381,6 +381,24 @@ define <vscale x 4 x float> @llvm_trunc_vscale_f32(<vscale x 4 x float> %in) {
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call fast <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> %in)
+  ret <vscale x 4 x float> %1
+}
+
+define <vscale x 2 x double> @frem_f64(<vscale x 2 x double> %in) {
+; CHECK-LABEL: @frem_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_fmod(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x double> [[IN]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1= frem <vscale x 2 x double> %in, %in
+  ret <vscale x 2 x double> %1
+}
+
+define <vscale x 4 x float> @frem_f32(<vscale x 4 x float> %in) {
+; CHECK-LABEL: @frem_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_fmodf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x float> [[IN]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1= frem <vscale x 4 x float> %in, %in
   ret <vscale x 4 x float> %1
 }
 
