@@ -519,7 +519,6 @@ namespace llvm {
   // Expands large div/rem instructions.
   FunctionPass *createExpandLargeFpConvertPass();
 
-
   /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
   FunctionPass *createBreakFalseDeps();
 

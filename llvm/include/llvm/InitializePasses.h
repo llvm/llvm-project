@@ -102,7 +102,7 @@ void initializeEarlyTailDuplicatePass(PassRegistry&);
 void initializeEdgeBundlesPass(PassRegistry&);
 void initializeEHContGuardCatchretPass(PassRegistry &);
 void initializeExpandLargeFpConvertLegacyPassPass(PassRegistry&);
-void initializeExpandLargeDivRemLegacyPassPass(PassRegistry&);
+void initializeExpandLargeDivRemLegacyPassPass(PassRegistry &);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeExpandReductionsPass(PassRegistry&);
 void initializeExpandVectorPredicationPass(PassRegistry &);
