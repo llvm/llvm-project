@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-;; Tests that accelerator table switches correctly from TU to CU when a top level TU is re-used.
+;; Tests that we use correct accelerator table when processing nested TUs.
 ;; Assert is not triggered.
 ;; File1
 ;; struct Foo {
