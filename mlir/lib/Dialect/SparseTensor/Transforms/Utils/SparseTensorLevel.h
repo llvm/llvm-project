@@ -109,6 +109,23 @@ public:
   virtual bool randomAccessible() const = 0;
   // Whether the iterator can simply traversed by a for loop.
   virtual bool iteratableByFor() const { return false; };
+  // Get the upper bound of the sparse space that the iterator might visited. A
+  // sparse space is a subset of a dense space [0, bound), this function returns
+  // *bound*.
+  virtual Value upperBound(OpBuilder &b, Location l) const = 0;
+
+  // Serialize and deserialize the current status to/from a set of values. The
+  // ValueRange should contain values that specifies the postion and loop bound.
+  //
+  // Not every type of iterator supports the operations, e.g., non-empty
+  // subsection iterator does not because the the number of non-empty
+  // subsections can not be determined in advance.
+  //
+  // NOTE: All the values should have index type.
+  virtual SmallVector<Value> serialize() const {
+    llvm_unreachable("unsupported");
+  };
+  virtual void deserialize(ValueRange vs) { llvm_unreachable("unsupported"); };
 
   //
   // Core functions.
@@ -127,8 +144,7 @@ public:
   // Initialize the iterator according to the parent iterator's state.
   virtual void genInit(OpBuilder &, Location, const SparseIterator *) = 0;
 
-  // Return a tuple of values for *upper*, *lower* bound and *step*
-  // respectively.
+  // Return a pair of values for *upper*, *lower* bound respectively.
   virtual std::pair<Value, Value> genForCond(OpBuilder &, Location) {
     llvm_unreachable("Unsupported");
   }
@@ -136,8 +152,8 @@ public:
   virtual Value genNotEnd(OpBuilder &b, Location l) = 0;
   std::pair<Value, ValueRange> genWhileCond(OpBuilder &b, Location l,
                                             ValueRange vs) {
-    seek(vs.take_front(itVals.size()));
-    return std::make_pair(genNotEnd(b, l), vs.drop_front(itVals.size()));
+    ValueRange rem = linkNewScope(vs);
+    return std::make_pair(genNotEnd(b, l), rem);
   }
 
   // Dereference the iterator, loads the coordinate at the current position.
@@ -213,11 +229,11 @@ makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit, Value offset,
 
 std::unique_ptr<SparseIterator> makeNonEmptySubSectIterator(
     OpBuilder &b, Location l, const SparseIterator *parent,
-    std::unique_ptr<SparseIterator> &&lvlIt, Value size, unsigned stride);
+    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride);
 
-std::unique_ptr<SparseIterator>
-makeTraverseSubSectIterator(const SparseIterator *parent,
-                            std::unique_ptr<SparseIterator> &&lvlIt);
+std::unique_ptr<SparseIterator> makeTraverseSubSectIterator(
+    const SparseIterator &subsectIter, const SparseIterator &parent,
+    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride);
 
 } // namespace sparse_tensor
 } // namespace mlir

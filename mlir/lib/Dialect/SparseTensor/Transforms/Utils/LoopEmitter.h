@@ -554,6 +554,13 @@ private:
   /// Get the remaining number of constraints needed to fully *resolve*
   /// dependent levels on tensor[tid].
   unsigned remDepOnLevel(TensorId tid, Level lvl) const;
+  /// Get the reduced number of contraints on tensor[tid][lvl].
+  unsigned redDepOnLevel(TensorId tid, Level lvl) const;
+
+  SparseIterator &getCurIterator(TensorId tid, Level lvl) const {
+    assert(redDepOnLevel(tid, lvl) >= 1);
+    return *iters[tid][lvl][redDepOnLevel(tid, lvl) - 1];
+  }
 
   /// Whether the tid, lvl is fully *reduced*, i.e., the non-trivial index
   /// expression has been reduced to a trivial one.
@@ -695,10 +702,8 @@ private:
   std::vector<LoopInfo> loopStack;
 
   // Loop Sequence Stack, stores the unversial index for the current loop
-  // sequence. and a list of tids which was taken sliced.
-  // TODO: maybe we should have a LoopSeqInfo
-  std::vector<std::pair<Value, std::vector<std::tuple<TensorId, Level, bool>>>>
-      loopSeqStack;
+  // sequence. and a list of tid level that the loop sequence traverse.
+  std::vector<std::pair<Value, std::vector<TensorLevel>>> loopSeqStack;
 };
 
 } // namespace sparse_tensor

@@ -566,7 +566,10 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
         it = makeNonEmptySubSectIterator(builder, loc, parent, std::move(lvlIt),
                                          size, curDep.second);
       } else {
-        it = makeTraverseSubSectIterator(parent, std::move(lvlIt));
+        Value size = highs[getSynTensorId()][loop];
+        const SparseIterator &subSectIter = *iters[t][lvl].back();
+        it = makeTraverseSubSectIterator(subSectIter, *parent, std::move(lvlIt),
+                                         size, curDep.second);
       }
       iters[t][lvl].emplace_back(std::move(it));
     }
@@ -678,10 +681,7 @@ void LoopEmitter::categorizeIterators(
   // Finds out the tensor level that we should use to generate loops. Amongs all
   // the tensor levels, there is at most one sparse tensor level.
   for (auto [t, l] : unpackTensorLevelRange(tidLvls)) {
-    SparseIterator *it =
-        dependentLvlMap[t][l].empty()
-            ? iters[t][l].back().get()
-            : iters[t][l][iters[t][l].size() - remDepOnLevel(t, l)].get();
+    SparseIterator *it = &getCurIterator(t, l);
     if (it->randomAccessible())
       raIters.push_back(it);
     else
@@ -699,35 +699,24 @@ void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
   // TODO: sort
   assert(loopSeqStack.size() == loopStack.size());
   // Prepares for all the tensors used in the current loop sequence.
-  std::vector<std::tuple<TensorId, Level, bool>> slicedTids;
 
   for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
-    if (!dependentLvlMap[tid][lvl].empty()) {
-      bool fullyRed = genSliceBegin(builder, loc, tid, lvl);
-      slicedTids.emplace_back(tid, lvl, fullyRed);
-    } else {
-      prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
-    }
+    levelReducedDep[tid][lvl]++;
+    prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
   }
 
   // Universal Index starts from 0.
-  loopSeqStack.emplace_back(C_IDX(0), std::move(slicedTids));
+  loopSeqStack.emplace_back(C_IDX(0), tidLvls.vec());
 }
 
 void LoopEmitter::exitCurrentLoopSeq(OpBuilder &builder, Location loc) {
   assert(loopSeqStack.size() == loopStack.size() + 1);
 
-  const auto &slicedTids = loopSeqStack.back().second;
-
   // Depending on whether the slice is resolved or not at current loop sequence,
   // end them in different ways.
-  for (auto [tid, lvl, res] : slicedTids) {
-    if (!res) {
-      // If this is a unresolved-slice-driven loop, pops out the slice.
-      assert(sliceStack[tid].back().slicedOnLvl == lvl);
-      sliceStack[tid].pop_back();
-    }
-  }
+  for (auto [tid, lvl] : unpackTensorLevelRange(loopSeqStack.back().second))
+    levelReducedDep[tid][lvl]--;
+
   loopSeqStack.pop_back();
 }
 
@@ -1362,11 +1351,15 @@ void LoopEmitter::genDenseAffineAddress(OpBuilder &builder, Location loc,
 
 void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
                                              TensorId tid, Level lvl) {
-  assert(isValidLevel(tid, lvl));
+  // if this is the first level, there is no parent iterator for the current
+  // iterator.
+  // If the current iterator is a subsection-based iterator, the parent iterator
+  // is memorized by the iterator.
+  bool hasParent = lvl == 0 || !dependentLvlMap[tid][lvl].empty();
+
   const SparseIterator *parent =
-      lvl == 0 ? nullptr : iters[tid][lvl - 1].back().get();
-  SparseIterator &curIt = *iters[tid][lvl].back();
-  curIt.genInit(builder, loc, parent);
+      hasParent ? nullptr : iters[tid][lvl - 1].back().get();
+  getCurIterator(tid, lvl).genInit(builder, loc, parent);
 }
 
 void LoopEmitter::enterTensorsAtDenseLvls(
@@ -1440,7 +1433,6 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       (void)reduced;
       info.minCrd = info.offset = info.isNonEmpty = Value();
     }
-    levelReducedDep[tid][lvl]--;
   }
   if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
@@ -1535,48 +1527,26 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
   unsigned delta = 0;
   ValueRange whileRes = whileOp.getResults();
   for (auto [tid, lvl, resolved] : loopInfo.sliceDrivenInfo) {
-    // TODO: handle dense.
-    assert(isCompressedLT(lvlTypes[tid][lvl]));
-    levelReducedDep[tid][lvl]--;
-    if (!resolved) {
-      // TODO: support coiterating multiple slices
-      assert(loopInfo.sliceDrivenInfo.size() == 1);
-      auto [nxNonEmpty, nxMinCrd, nxAbsOffset] =
-          genSliceNextInduction(builder, loc, tid, lvl);
-      // Update while loop induction operands.
-      operands.push_back(nxNonEmpty);
-      operands.push_back(nxMinCrd);
-      operands.push_back(nxAbsOffset);
-
-      // Update the slice stack.
-      SliceInfo &info = sliceStack[tid].back();
-      info.isNonEmpty = whileOp.getResult(o++);
-      info.minCrd = whileOp.getResult(o++);
-      info.offset = whileOp.getResult(o++);
-      continue;
-    }
-
-    Value forwarded = nullptr;
-    if (loopInfo.trivialTidLvls.empty() &&
-        loopInfo.sliceDrivenInfo.size() == 1) {
-      // Forwards the position iterator.
-      operands.push_back(ADDI(posits[tid][lvl], one));
-      forwarded = constantI1(builder, loc, true);
+    SparseIterator &it = getCurIterator(tid, lvl);
+    if (!it.randomAccessible()) {
+      // Forward the sparse iterator.
+      Value cmp = CMPI(eq, it.getCrd(), iv);
+      it.forwardIf(builder, loc, cmp);
+      operands.append(it.getItVals().begin(), it.getItVals().end());
+      o += it.getItVals().size();
+      // Following loops continue iteration from the break point of the
+      // current while loop.
+      whileRes = it.linkNewScope(whileRes);
     } else {
-      const Value pos = posits[tid][lvl];
-      const Value nxPos = ADDI(posits[tid][lvl], one);
-      forwarded = CMPI(eq, coords[tid][lvl], iv);
-      operands.push_back(SELECT(forwarded, nxPos, pos));
+      // Make sure randomly accessible (dense) iterator is set to the right
+      // position according to the universal index.
+      Value uniIdx = whileOp.getResults().back();
+      it.locate(builder, loc, uniIdx);
     }
-    // The coordinate is invalid now.
-    coords[tid][lvl] = nullptr;
-
-    // Update the position iterator as we exit the while loop.
-    posits[tid][lvl] = whileOp->getResult(o++);
   };
 
   for (auto [tid, lvl] : unpackTensorLevelRange(loopInfo.trivialTidLvls)) {
-    SparseIterator &it = *iters[tid][lvl].back();
+    SparseIterator &it = getCurIterator(tid, lvl);
     if (!it.randomAccessible()) {
       // Forward the sparse iterator.
       Value cmp = CMPI(eq, it.getCrd(), iv);
@@ -1662,6 +1632,10 @@ unsigned LoopEmitter::remDepOnLevel(TensorId tid, Level lvl) const {
     return totalDependencies - levelReducedDep[tid][lvl];
   }
   return totalDependencies;
+}
+
+unsigned LoopEmitter::redDepOnLevel(TensorId tid, Level lvl) const {
+  return levelReducedDep[tid][lvl];
 }
 
 const LoopEmitter::SliceInfo &LoopEmitter::getMostRecentSliceOnLvl(TensorId tid,

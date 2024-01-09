@@ -1035,6 +1035,8 @@ static bool getAllTidLvlsInLatPoints(
     // Note that we generate dense indices of the output tensor
     // unconditionally, since they may not appear in the lattice, but may be
     // needed for linearized env.
+    // TODO: we should avoid introducing corner cases for all-dense sparse
+    // tensors.
     if (stt.hasEncoding() && stt.isAllDense())
       callback(env.makeTensorLevel(outTid, *outLvl), nullptr);
   }
@@ -1065,6 +1067,10 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
 
   SmallVector<TensorLevel> tidLvls;
   getAllTidLvlsInLatPoints(env, l0, curr, [&](TensorLevel tl, AffineExpr) {
+    // TODO: remove this! Duplication can be introduced due to the speical
+    // handling for all-dense "sparse" output tensor.
+    if (llvm::find(tidLvls, tl) != tidLvls.end())
+      return;
     tidLvls.emplace_back(tl);
   });
 
