@@ -256,6 +256,7 @@ FUNCTION_ANALYSIS("should-not-run-function-passes",
                   ShouldNotRunFunctionPassesAnalysis())
 FUNCTION_ANALYSIS("should-run-extra-vector-passes",
                   ShouldRunExtraVectorPasses())
+FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis())
 FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())
 FUNCTION_ANALYSIS("targetir",
                   TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis())
@@ -414,6 +415,7 @@ FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
+FUNCTION_PASS("stack-protector", StackProtectorPass(TM))
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
