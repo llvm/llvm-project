@@ -6561,6 +6561,10 @@ bool CombinerHelper::tryFoldSelectToIntMinMax(GSelect *Select,
   if (!Cmp)
     return false;
 
+  // We want to fold the icmp away and replace the select.
+  if (!MRI.hasOneNonDBGUse(Cmp->getReg(0)))
+    return false;
+
   CmpInst::Predicate Pred = Cmp->getCond();
   // We need a larger or smaller predicate for
   // canonicalization.
