@@ -487,8 +487,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
 
   globalStrides[0] = globalDim[0] * elementSizeInBytes[tensorDataType];
   for (int r = 1; r < tensorRank - 1; r++)
-    globalStrides[r] = globalStrides[r - 1] * globalDim[1] *
-                       elementSizeInBytes[tensorDataType];
+    globalStrides[r] = globalStrides[r - 1] * globalDim[r];
 
   ScopedContext scopedContext;
   mgpuTensorMapEncodeTiled(&tensorMap, tensorDataType, tensorRank32,
@@ -971,7 +970,7 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
   // Note that this adds a synchronization on the stream.
   // TODO: Do we want that?
   if (prune_flag == 2) {
-    int *dvalid = (int *)mgpuMemAlloc(sizeof(int), stream);
+    int *dvalid = (int *)mgpuMemAlloc(sizeof(int), stream, false);
     CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPruneCheck(
         &cusparseLt_env, &(matA->matmul), matA->values, dvalid, stream))
     int valid = 0;

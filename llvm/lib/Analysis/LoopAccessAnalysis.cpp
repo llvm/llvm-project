@@ -143,7 +143,7 @@ static cl::opt<bool, true> HoistRuntimeChecks(
     "hoist-runtime-checks", cl::Hidden,
     cl::desc(
         "Hoist inner loop runtime memory checks to outer loop if possible"),
-    cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(false));
+    cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(true));
 bool VectorizerParams::HoistRuntimeChecks;
 
 bool VectorizerParams::isInterleaveForced() {
@@ -666,7 +666,7 @@ public:
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
+    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
     Accesses[MemAccessInfo(Ptr, false)].insert(AccessTy);
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -675,7 +675,7 @@ public:
   /// Register a store.
   void addStore(MemoryLocation &Loc, Type *AccessTy) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
+    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
     Accesses[MemAccessInfo(Ptr, true)].insert(AccessTy);
   }
 
@@ -2703,7 +2703,10 @@ static unsigned getGEPInductionOperand(const GetElementPtrInst *Gep) {
 
     // If it's a type with the same allocation size as the result of the GEP we
     // can peel off the zero index.
-    if (DL.getTypeAllocSize(GEPTI.getIndexedType()) != GEPAllocSize)
+    TypeSize ElemSize = GEPTI.isStruct()
+                            ? DL.getTypeAllocSize(GEPTI.getIndexedType())
+                            : GEPTI.getSequentialElementStride(DL);
+    if (ElemSize != GEPAllocSize)
       break;
     --LastOperand;
   }

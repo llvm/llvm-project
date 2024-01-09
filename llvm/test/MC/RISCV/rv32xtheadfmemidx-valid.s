@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+d -mattr=+xtheadfmemidx -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+d -mattr=+xtheadfmemidx < %s \
-# RUN:     | llvm-objdump --mattr=+d --mattr=+xtheadfmemidx -d -r - \
+# RUN:     | llvm-objdump --mattr=+d --mattr=+xtheadfmemidx --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: th.flrd fa0, a1, a2, 0

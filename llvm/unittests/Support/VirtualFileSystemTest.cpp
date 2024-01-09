@@ -452,11 +452,11 @@ TEST(VirtualFileSystemTest, BasicRealFSIteration) {
   ASSERT_FALSE(EC);
   ASSERT_NE(vfs::directory_iterator(), I);
   // Check either a or c, since we can't rely on the iteration order.
-  EXPECT_TRUE(I->path().endswith("a") || I->path().endswith("c"));
+  EXPECT_TRUE(I->path().ends_with("a") || I->path().ends_with("c"));
   I.increment(EC);
   ASSERT_FALSE(EC);
   ASSERT_NE(vfs::directory_iterator(), I);
-  EXPECT_TRUE(I->path().endswith("a") || I->path().endswith("c"));
+  EXPECT_TRUE(I->path().ends_with("a") || I->path().ends_with("c"));
   I.increment(EC);
   EXPECT_EQ(vfs::directory_iterator(), I);
 }

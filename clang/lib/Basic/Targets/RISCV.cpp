@@ -237,22 +237,15 @@ ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
 
 static std::vector<std::string>
 collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
-  auto ParseResult =
-      llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesNeedOverride);
-
-  if (!ParseResult) {
-    consumeError(ParseResult.takeError());
-    return std::vector<std::string>();
-  }
-
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-
   std::vector<std::string> NonISAExtFeatureVec;
 
+  auto IsNonISAExtFeature = [](const std::string &Feature) {
+    assert(Feature.size() > 1 && (Feature[0] == '+' || Feature[0] == '-'));
+    StringRef Ext = StringRef(Feature).drop_front(); // drop the +/-
+    return !llvm::RISCVISAInfo::isSupportedExtensionFeature(Ext);
+  };
   llvm::copy_if(FeaturesNeedOverride, std::back_inserter(NonISAExtFeatureVec),
-                [&](const std::string &Feat) {
-                  return !llvm::is_contained(ImpliedFeatures, Feat);
-                });
+                IsNonISAExtFeature);
 
   return NonISAExtFeatureVec;
 }
@@ -303,7 +296,7 @@ bool RISCVTargetInfo::initFeatureMap(
   }
 
   // RISCVISAInfo makes implications for ISA features
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
+  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatures();
 
   // parseFeatures normalizes the feature set by dropping any explicit
   // negatives, and non-extension features.  We need to preserve the later
@@ -350,6 +343,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("riscv64", Is64Bit)
                     .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
+                    .Case("experimental", HasExperimental)
                     .Default(std::nullopt);
   if (Result)
     return *Result;
@@ -382,6 +376,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
   FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
 
+  if (llvm::is_contained(Features, "+experimental"))
+    HasExperimental = true;
+
   return true;
 }
 
@@ -412,12 +409,11 @@ static void handleFullArchString(StringRef FullArchStr,
   Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
-  if (!RII) {
-    consumeError(RII.takeError());
+  if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
     Features.push_back("+" + FullArchStr.str());
   } else {
-    std::vector<std::string> FeatStrings = (*RII)->toFeatureVector();
+    std::vector<std::string> FeatStrings = (*RII)->toFeatures();
     Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
   }
 }
@@ -434,14 +430,14 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
     Feature = Feature.trim();
     StringRef AttrString = Feature.split("=").second.trim();
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       // Override last features
       Ret.Features.clear();
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
 
-      if (AttrString.startswith("+")) {
+      if (AttrString.starts_with("+")) {
         // EXTENSION like arch=+v,+zbb
         SmallVector<StringRef, 1> Exts;
         AttrString.split(Exts, ",");
@@ -461,7 +457,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
         // full-arch-string like arch=rv64gcv
         handleFullArchString(AttrString, Ret.Features);
       }
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
 
@@ -475,7 +471,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
           handleFullArchString(MarchFromCPU, Ret.Features);
         }
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
 

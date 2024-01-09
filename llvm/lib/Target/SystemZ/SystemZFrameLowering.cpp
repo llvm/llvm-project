@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -993,6 +994,11 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   // be stored, then save the stack pointer register R4.
   if (hasFP(MF) || Subtarget.hasBackChain())
     CSI.push_back(CalleeSavedInfo(Regs.getStackPointerRegister()));
+
+  // If this function has an associated personality function then the
+  // environment register R5 must be saved in the DSA.
+  if (!MF.getLandingPads().empty())
+    CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;
