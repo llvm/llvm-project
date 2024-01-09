@@ -1854,7 +1854,7 @@ void DAGTypeLegalizer::SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo,
 
   // Hi = Lo + (EltCnt * Step)
   EVT EltVT = Step.getValueType();
-  APInt StepVal = cast<ConstantSDNode>(Step)->getAPIntValue();
+  APInt StepVal = Step->getAsAPIntVal();
   SDValue StartOfHi =
       DAG.getVScale(dl, EltVT, StepVal * LoVT.getVectorMinNumElements());
   StartOfHi = DAG.getSExtOrTrunc(StartOfHi, dl, HiVT.getVectorElementType());

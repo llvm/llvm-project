@@ -1649,7 +1649,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
       }
     }
     if (Node->getValueType(0) == MVT::i128) {
-      const APInt &Val = cast<ConstantSDNode>(Node)->getAPIntValue();
+      const APInt &Val = Node->getAsAPIntVal();
       SystemZVectorConstantInfo VCI(Val);
       if (VCI.isVectorConstantLegal(*Subtarget)) {
         loadVectorConstant(VCI, Node);
