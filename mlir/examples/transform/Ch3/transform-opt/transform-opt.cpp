@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the top-level file for the Transform dialect tutorial chapter 2.
+// This is the top-level file for the Transform dialect tutorial chapter 3.
 //
 //===----------------------------------------------------------------------===//
 
