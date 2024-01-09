@@ -788,20 +788,20 @@ def StreamingVLOp : ArmSME_Op<"streaming_vl", [Pure]>
   let summary = "Query the streaming vector length";
 
   let description = [{
-    This operation returns the streaming vector length for a given type size.
-    Unlike `vector.vscale` the value returned is invariant to the streaming
-    mode.
+    This operation returns the streaming vector length (SVL) for a given type
+    size. Unlike `vector.vscale` the value returned is invariant to the
+    streaming mode.
 
     Example:
     ```mlir
     // Streaming vector length in:
-    // - bytes (8-bit)
+    // - bytes (8-bit, SVL.B)
     %svl_b = arm_sme.streaming_vl <byte>
-    // - half words (16-bit)
+    // - half words (16-bit, SVL.H)
     %svl_h = arm_sme.streaming_vl <half>
-    // - words (32-bit)
+    // - words (32-bit, SVL.W)
     %svl_w = arm_sme.streaming_vl <word>
-    // - double words (64-bit)
+    // - double words (64-bit, SVL.D)
     %svl_d = arm_sme.streaming_vl <double>
     ```
   }];
