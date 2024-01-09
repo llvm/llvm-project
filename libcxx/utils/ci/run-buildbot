@@ -522,6 +522,11 @@ generic-abi-unstable)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
     check-runtimes
 ;;
+generic-optimized-speed)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
+    check-runtimes
+;;
 apple-system)
     clean
 
