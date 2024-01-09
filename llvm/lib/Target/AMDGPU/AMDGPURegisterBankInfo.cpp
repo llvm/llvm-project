@@ -441,7 +441,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
 
 // FIXME: Returns uniform if there's no source value information. This is
 // probably wrong.
-static bool isScalarLoadLegal(const MachineInstr &MI) {
+bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
   if (!MI.hasOneMemOperand())
     return false;
 
