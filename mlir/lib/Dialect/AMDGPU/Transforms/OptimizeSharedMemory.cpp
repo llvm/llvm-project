@@ -195,8 +195,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
 
   // Transform indices for the ops writing to shared memory.
   while (!shmWriteOps.empty()) {
-    Operation *shmWriteOp = shmWriteOps.back();
-    shmWriteOps.pop_back();
+    Operation *shmWriteOp = shmWriteOps.pop_back_val();
     builder.setInsertionPoint(shmWriteOp);
 
     auto indices = amdgpu::getIndices(shmWriteOp);
@@ -208,8 +207,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
 
   // Transform indices for the ops reading from shared memory.
   while (!shmReadOps.empty()) {
-    Operation *shmReadOp = shmReadOps.back();
-    shmReadOps.pop_back();
+    Operation *shmReadOp = shmReadOps.pop_back_val();
     builder.setInsertionPoint(shmReadOp);
 
     auto indices = amdgpu::getIndices(shmReadOp);
