@@ -86,8 +86,8 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 }
 
 ; Function Attrs: nounwind uwtable vscale_range(1,16)
-define void @foo(i32 noundef %x) "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
-; CHECK-LABEL: foo:
+define void @streaming_body_and_streaming_compatible_interface_multi_basic_block(i32 noundef %x) "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+; CHECK-LABEL: streaming_body_and_streaming_compatible_interface_multi_basic_block:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
