@@ -777,7 +777,9 @@ Experimental extensions
     zicfiss             0.4
     zicond              1.0
     zimop               0.1
+    zaamo               0.1
     zacas               1.0
+    zalrsc              0.1
     zfbfmin             0.8
     zcmop               0.2
     ztso                0.1

@@ -47,10 +47,14 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtA], IsSignExtendingOpW = 1 in {
+let IsSignExtendingOpW = 1 in {
+let Predicates = [HasStdExtAOrZalrsc] in {
 defm LR_W       : LR_r_aq_rl<0b010, "lr.w">, Sched<[WriteAtomicLDW, ReadAtomicLDW]>;
 defm SC_W       : AMO_rr_aq_rl<0b00011, 0b010, "sc.w">,
                   Sched<[WriteAtomicSTW, ReadAtomicSTW, ReadAtomicSTW]>;
+} // Predicates = [HasStdExtAOrZalrsc]
+
+let Predicates = [HasStdExtAOrZaamo] in {
 defm AMOSWAP_W  : AMO_rr_aq_rl<0b00001, 0b010, "amoswap.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 defm AMOADD_W   : AMO_rr_aq_rl<0b00000, 0b010, "amoadd.w">,
@@ -69,12 +73,16 @@ defm AMOMINU_W  : AMO_rr_aq_rl<0b11000, 0b010, "amominu.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 defm AMOMAXU_W  : AMO_rr_aq_rl<0b11100, 0b010, "amomaxu.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
-} // Predicates = [HasStdExtA]
+} // Predicates = [HasStdExtAOrZaamo]
+} // IsSignExtendingOpW = 1
 
-let Predicates = [HasStdExtA, IsRV64] in {
+let Predicates = [HasStdExtAOrZalrsc, IsRV64] in {
 defm LR_D       : LR_r_aq_rl<0b011, "lr.d">, Sched<[WriteAtomicLDD, ReadAtomicLDD]>;
 defm SC_D       : AMO_rr_aq_rl<0b00011, 0b011, "sc.d">,
                   Sched<[WriteAtomicSTD, ReadAtomicSTD, ReadAtomicSTD]>;
+} // Predicates = [HasStdExtAOrZalrsc, IsRV64]
+
+let Predicates = [HasStdExtAOrZaamo, IsRV64] in {
 defm AMOSWAP_D  : AMO_rr_aq_rl<0b00001, 0b011, "amoswap.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 defm AMOADD_D   : AMO_rr_aq_rl<0b00000, 0b011, "amoadd.d">,
@@ -93,7 +101,7 @@ defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
-} // Predicates = [HasStdExtA, IsRV64]
+} // Predicates = [HasStdExtAOrZaamo, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
@@ -121,7 +129,7 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 
 multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                   list<Predicate> ExtraPreds = []> {
-let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtAOrZaamo, NotHasStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
                   !cast<RVInst>(BaseInst), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -133,7 +141,7 @@ let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_seq_cst"),
                   !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
 }
-let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtAOrZaamo, HasStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
                   !cast<RVInst>(BaseInst), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -157,7 +165,7 @@ defm : AMOPat<"atomic_load_min_32", "AMOMIN_W">;
 defm : AMOPat<"atomic_load_umax_32", "AMOMAXU_W">;
 defm : AMOPat<"atomic_load_umin_32", "AMOMINU_W">;
 
-let Predicates = [HasStdExtA] in {
+let Predicates = [HasStdExtAOrZalrsc] in {
 
 /// Pseudo AMOs
 
@@ -304,7 +312,7 @@ def : Pat<(int_riscv_masked_cmpxchg_i32
           (PseudoMaskedCmpXchg32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 
-} // Predicates = [HasStdExtA]
+} // Predicates = [HasStdExtAOrZalrsc]
 
 defm : AMOPat<"atomic_swap_64", "AMOSWAP_D", i64, [IsRV64]>;
 defm : AMOPat<"atomic_load_add_64", "AMOADD_D", i64, [IsRV64]>;
@@ -316,7 +324,7 @@ defm : AMOPat<"atomic_load_min_64", "AMOMIN_D", i64, [IsRV64]>;
 defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D", i64, [IsRV64]>;
 defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64, [IsRV64]>;
 
-let Predicates = [HasStdExtA, IsRV64] in {
+let Predicates = [HasStdExtAOrZalrsc, IsRV64] in {
 
 /// 64-bit pseudo AMOs
 
@@ -361,7 +369,7 @@ def : Pat<(int_riscv_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
-} // Predicates = [HasStdExtA, IsRV64]
+} // Predicates = [HasStdExtAOrZalrsc, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Experimental RV64 i32 legalization patterns.
@@ -372,7 +380,7 @@ class PatGprGprA<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
 
 multiclass AMOPat2<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                    list<Predicate> ExtraPreds = []> {
-let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtAOrZaamo, NotHasStdExtZtso], ExtraPreds) in {
   def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_monotonic"),
                    !cast<RVInst>(BaseInst), vt>;
   def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -384,7 +392,7 @@ let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
   def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_seq_cst"),
                    !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
 }
-let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtAOrZaamo, HasStdExtZtso], ExtraPreds) in {
   def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_monotonic"),
                    !cast<RVInst>(BaseInst), vt>;
   def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_acquire"),

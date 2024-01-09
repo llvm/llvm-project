@@ -188,7 +188,9 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
 // NOTE: This table should be sorted alphabetically by extension name.
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+    {"zaamo", RISCVExtensionVersion{0, 1}},
     {"zacas", RISCVExtensionVersion{1, 0}},
+    {"zalrsc", RISCVExtensionVersion{0, 1}},
 
     {"zcmop", RISCVExtensionVersion{0, 2}},
 

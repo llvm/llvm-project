@@ -5,11 +5,19 @@
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-WMO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-TSO %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zaamo,+experimental-zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-WMO %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zaamo,+experimental-zalrsc,+experimental-ztso -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-TSO %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zaamo,+experimental-zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zaamo,+experimental-zalrsc,+experimental-ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO %s
 
 define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {

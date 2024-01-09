@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck -check-prefixes=RV32 %s
 ; RUN: llc -O3 -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64 %s
+; RUN: llc -O3 -mtriple=riscv32 -mattr=+experimental-zaamo -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32 %s
+; RUN: llc -O3 -mtriple=riscv64 -mattr=+experimental-zaamo -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64 %s
 
 define void @amoswap_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amoswap_w_discard:

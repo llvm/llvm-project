@@ -41,6 +41,30 @@ def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                            AssemblerPredicate<(all_of FeatureStdExtA),
                            "'A' (Atomic Instructions)">;
 
+def FeatureStdExtZaamo
+    : SubtargetFeature<"experimental-zaamo", "HasStdExtZaamo", "true",
+                       "'Zaamo' (Atomic Memory Operations)">;
+def HasStdExtZaamo : Predicate<"Subtarget->hasStdExtZaamo()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZaamo),
+                               "'Zaamo' (Atomic Memory Operations)">;
+def HasStdExtAOrZaamo
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
+                AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
+                                   "'A' (Atomic Instructions) or "
+                                   "'Zaamo' (Atomic Memory Operations)">;
+
+def FeatureStdExtZalrsc
+    : SubtargetFeature<"experimental-zalrsc", "HasStdExtZalrsc", "true",
+                       "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+def HasStdExtZalrsc : Predicate<"Subtarget->hasStdExtZalrsc()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZalrsc),
+                                "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+def HasStdExtAOrZalrsc
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc()">,
+                AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),
+                                   "'A' (Atomic Instructions) or "
+                                   "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+
 def FeatureStdExtF
     : SubtargetFeature<"f", "HasStdExtF", "true",
                        "'F' (Single-Precision Floating-Point)",
@@ -1044,7 +1068,7 @@ def FeatureForcedAtomics : SubtargetFeature<
     "forced-atomics", "HasForcedAtomics", "true",
     "Assume that lock-free native-width atomics are available">;
 def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",

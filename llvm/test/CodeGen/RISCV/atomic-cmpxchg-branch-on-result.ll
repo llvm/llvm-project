@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck -check-prefixes=CHECK,RV32IA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,RV64IA %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=CHECK,RV32IA %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=CHECK,RV64IA %s
 
 ; Test cmpxchg followed by a branch on the cmpxchg success value to see if the
 ; branch is folded into the cmpxchg expansion.
