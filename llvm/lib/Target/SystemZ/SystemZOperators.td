@@ -607,10 +607,6 @@ def nonvolatile_anyextloadi8  : NonvolatileLoad<anyextloadi8>;
 def nonvolatile_anyextloadi16 : NonvolatileLoad<anyextloadi16>;
 def nonvolatile_anyextloadi32 : NonvolatileLoad<anyextloadi32>;
 
-def nonatomic_ld : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return !cast<LoadSDNode>(N)->isAtomic();
-}]>;
-
 // Non-volatile stores.
 class NonvolatileStore<SDPatternOperator store>
   : PatFrag<(ops node:$src, node:$addr), (store node:$src, node:$addr), [{

@@ -4515,7 +4515,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
-SDValue SystemZTargetLowering::lowerATOMIC_I128_LDST(SDValue Op,
+SDValue SystemZTargetLowering::lowerATOMIC_LDST_I128(SDValue Op,
                                                      SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
   assert(Node->getMemoryVT() == MVT::i128 && "Only custom lowering i128.");
@@ -5645,12 +5645,11 @@ static SDValue tryBuildVectorShuffle(SelectionDAG &DAG,
   return GS.getNode(DAG, SDLoc(BVN));
 }
 
-bool SystemZTargetLowering::isVectorElementLoad(SDValue Op, EVT VecVT) const {
+bool SystemZTargetLowering::isVectorElementLoad(SDValue Op) const {
   if (Op.getOpcode() == ISD::LOAD && cast<LoadSDNode>(Op)->isUnindexed())
     return true;
   if (auto *AL = dyn_cast<AtomicSDNode>(Op))
-    if (AL->getOpcode() == ISD::ATOMIC_LOAD && SDValue(AL, 0).hasOneUse() &&
-        AL->getMemoryVT() == VecVT.getScalarType())
+    if (AL->getOpcode() == ISD::ATOMIC_LOAD)
       return true;
   if (Subtarget.hasVectorEnhancements2() && Op.getOpcode() == SystemZISD::LRV)
     return true;
@@ -5689,13 +5688,13 @@ SystemZTargetLowering::buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
   //   we would need 2 instructions to replicate it: VLVGP followed by VREPx.
   //   This is only a win if the single defined element is used more than once.
   //   In other cases we're better off using a single VLVGx.
-  if (Single.getNode() && (Count > 1 || isVectorElementLoad(Single, VT)))
+  if (Single.getNode() && (Count > 1 || isVectorElementLoad(Single)))
     return DAG.getNode(SystemZISD::REPLICATE, DL, VT, Single);
 
   // If all elements are loads, use VLREP/VLEs (below).
   bool AllLoads = true;
   for (auto Elem : Elems)
-    if (!isVectorElementLoad(Elem, VT)) {
+    if (!isVectorElementLoad(Elem)) {
       AllLoads = false;
       break;
     }
@@ -5767,7 +5766,7 @@ SystemZTargetLowering::buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     std::map<const SDNode*, unsigned> UseCounts;
     SDNode *LoadMaxUses = nullptr;
     for (unsigned I = 0; I < NumElements; ++I)
-      if (isVectorElementLoad(Elems[I], VT)) {
+      if (isVectorElementLoad(Elems[I])) {
         SDNode *Ld = Elems[I].getNode();
         UseCounts[Ld]++;
         if (LoadMaxUses == nullptr || UseCounts[LoadMaxUses] < UseCounts[Ld])
@@ -6129,7 +6128,7 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_SWAPW);
   case ISD::ATOMIC_STORE:
   case ISD::ATOMIC_LOAD:
-    return lowerATOMIC_I128_LDST(Op, DAG);
+    return lowerATOMIC_LDST_I128(Op, DAG);
   case ISD::ATOMIC_LOAD_ADD:
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_ADD);
   case ISD::ATOMIC_LOAD_SUB:

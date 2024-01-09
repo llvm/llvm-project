@@ -170,12 +170,11 @@ define i64 @f14(i64 %a, ptr %src) {
   ret i64 %sub
 }
 
-; Check that maeb (reg/mem) is *not* used for an atomic load.
 define float @f15(float %f1, ptr %ptr, float %acc) {
 ; CHECK-LABEL: f15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lde %f1, 0(%r2)
-; CHECK-NEXT:    wfmasb %f0, %f0, %f1, %f2
+; CHECK-NEXT:    maeb %f2, %f0, 0(%r2)
+; CHECK-NEXT:    ldr %f0, %f2
 ; CHECK-NEXT:    br %r14
   %f2 = load atomic float, ptr %ptr seq_cst, align 4
   %res = call float @llvm.fma.f32 (float %f1, float %f2, float %acc)
@@ -387,6 +386,39 @@ define void @f25_b(ptr %src, ptr %dst) {
   ret void
 }
 
+; Do *not* use vlrep for an extending load.
+define <4 x i32> @f25_c(ptr %ptr) {
+; CHECK-LABEL: f25_c:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lb %r0, 0(%r2)
+; CHECK-NEXT:    vlvgp %v0, %r0, %r0
+; CHECK-NEXT:    vrepf %v24, %v0, 1
+; CHECK-NEXT:    br %r14
+  %L = load atomic i8, ptr %ptr seq_cst, align 4
+  %S = sext i8 %L to i32
+  %val = insertelement <4 x i32> undef, i32 %S, i32 0
+  %ret = shufflevector <4 x i32> %val, <4 x i32> undef,
+                       <4 x i32> zeroinitializer
+  ret <4 x i32> %ret
+}
+
+; Do *not* use vlrep if there is another scalar use.
+define <4 x i32> @f25_d(ptr %ptr, ptr %dst) {
+; CHECK-LABEL: f25_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    l %r0, 0(%r2)
+; CHECK-NEXT:    vlvgp %v0, %r0, %r0
+; CHECK-NEXT:    vrepf %v24, %v0, 1
+; CHECK-NEXT:    st %r0, 0(%r3)
+; CHECK-NEXT:    br %r14
+  %L = load atomic i32, ptr %ptr seq_cst, align 4
+  store i32 %L, ptr %dst, align 4
+  %val = insertelement <4 x i32> undef, i32 %L, i32 0
+  %ret = shufflevector <4 x i32> %val, <4 x i32> undef,
+                       <4 x i32> zeroinitializer
+  ret <4 x i32> %ret
+}
+
 define void @f26(ptr %src, ptr %dst) {
 ; CHECK-LABEL: f26:
 ; CHECK:       # %bb.0:
@@ -411,6 +443,8 @@ define void @f26_b(ptr %src, ptr %dst) {
   store volatile <2 x double> %v, ptr %dst
   ret void
 }
+
+
 
 ; Vector Load logical element and zero.
 define <16 x i8> @f27(ptr %ptr) {
@@ -607,7 +641,7 @@ define void @f43(ptr %ptr) {
 define void @f44(ptr %ptr) {
 ; CHECK-LABEL: f44:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI48_0
+; CHECK-NEXT:    larl %r1, .LCPI50_0
 ; CHECK-NEXT:    ld %f0, 0(%r1)
 ; CHECK-NEXT:    std %f0, 0(%r2)
 ; CHECK-NEXT:    bcr 14, %r0

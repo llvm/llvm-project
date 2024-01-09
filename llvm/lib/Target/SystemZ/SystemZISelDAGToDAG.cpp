@@ -1516,13 +1516,10 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
   MachineMemOperand *MMO = MemAccess->getMemOperand();
   assert(MMO && "Expected a memory operand.");
 
-  // These instructions are not atomic.
-  if (MMO->isAtomic())
-    return false;
-
   // The memory access must have a proper alignment and no index register.
+  // ATOMIC_LOADs do not have the offset operand.
   if (MemAccess->getAlign().value() < StoreSize ||
-      !MemAccess->getOffset().isUndef())
+      (!MMO->isAtomic() && !MemAccess->getOffset().isUndef()))
     return false;
 
   // The MMO must not have an unaligned offset.

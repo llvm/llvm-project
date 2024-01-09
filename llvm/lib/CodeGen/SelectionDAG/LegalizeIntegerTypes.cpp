@@ -352,12 +352,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
   if (N->getOpcode() == ISD::ATOMIC_LOAD) {
     ISD::LoadExtType ETy = cast<AtomicSDNode>(N)->getExtensionType();
     if (ETy == ISD::NON_EXTLOAD) {
-      if (TLI.getExtendForAtomicOps() == ISD::SIGN_EXTEND)
+      switch (TLI.getExtendForAtomicOps()) {
+      case ISD::SIGN_EXTEND:
         ETy = ISD::SEXTLOAD;
-      else if (TLI.getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+        break;
+      case ISD::ZERO_EXTEND:
         ETy = ISD::ZEXTLOAD;
-      else
+        break;
+      case ISD::ANY_EXTEND:
         ETy = ISD::EXTLOAD;
+        break;
+      default:
+        llvm_unreachable("Invalid atomic op extension");
+      }
     }
     cast<AtomicSDNode>(Res)->setExtensionType(ETy);
   }
