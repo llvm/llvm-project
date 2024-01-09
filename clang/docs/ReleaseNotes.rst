@@ -696,6 +696,9 @@ Bug Fixes in This Version
 - Clang now accepts recursive non-dependent calls to functions with deduced
   return type.
   Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
+- Fix assertion failure when initializing union containing struct with
+  flexible array member using empty initializer list.
+  Fixes (`#77085 <https://github.com/llvm/llvm-project/issues/77085>`_)
 
 
 Bug Fixes to Compiler Builtins
