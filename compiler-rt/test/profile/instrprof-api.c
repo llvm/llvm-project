@@ -29,8 +29,8 @@ int foo() {
 int main() {
   int z = foo() + 3;
   __llvm_profile_set_filename("rawprof.profraw");
-  // PROFGEN: call void @__llvm_profile_set_filename(ptr noundef @.str)
-  // PROFUSE-NOT: call void @__llvm_profile_set_filename(ptr noundef @.str)
+  // PROFGEN: call void @__llvm_profile_set_filename(ptr noundef @{{.*}})
+  // PROFUSE-NOT: call void @__llvm_profile_set_filename(ptr noundef @{{.*}})
   if (__llvm_profile_dump())
     return 2;
   // PROFGEN: %call1 = call {{(signext )*}}i32 @__llvm_profile_dump()

@@ -383,6 +383,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     ompt::connectLibrary();
 #endif
 
+#ifdef USES_DYNAMIC_FFI
+    if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
+      return std::move(Err);
+#endif
+
     return NUM_DEVICES;
   }
 
