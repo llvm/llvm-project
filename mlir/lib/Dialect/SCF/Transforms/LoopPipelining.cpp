@@ -339,8 +339,9 @@ LoopPipelinerInternal::getDefiningOpAndDistance(Value value) {
   return {def, distance};
 }
 
-/// Compute unrolled cycles of each op and verify that each op is scheduled
-/// after its operands (modulo the distance between producer and consumer).
+/// Compute unrolled cycles of each op (consumer) and verify that each op is
+/// scheduled after its operands (producers) while adjusting for the distance
+/// between producer and consumer.
 bool LoopPipelinerInternal::verifySchedule() {
   int64_t numCylesPerIter = opOrder.size();
   // Pre-compute the unrolled cycle of each op.
