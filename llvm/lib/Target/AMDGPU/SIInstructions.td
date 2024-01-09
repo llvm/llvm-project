@@ -111,7 +111,6 @@ def ATOMIC_FENCE : SPseudoInstSI<
   [(atomic_fence (i32 timm:$ordering), (i32 timm:$scope))],
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
-  let maybeAtomic = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
@@ -563,6 +562,7 @@ def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   let hasNoSchedulingInfo = 1;
   let FixedSize = 1;
   let isMeta = 1;
+  let maybeAtomic = 0;
 }
 
 // Used as an isel pseudo to directly emit initialization with an
