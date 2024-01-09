@@ -114,12 +114,12 @@ __nth_element(
         while (true) {
           while (!__comp(*__first, *__i)) {
             ++__i;
-            _LIBCPP_ASSERT_UNCATEGORIZED(
+            _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
                 __i != __last,
                 "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
           }
           do {
-            _LIBCPP_ASSERT_UNCATEGORIZED(
+            _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
                 __j != __first,
                 "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
             --__j;
@@ -150,13 +150,13 @@ __nth_element(
         // __m still guards upward moving __i
         while (__comp(*__i, *__m)) {
           ++__i;
-          _LIBCPP_ASSERT_UNCATEGORIZED(
+          _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
               __i != __last,
               "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
         }
         // It is now known that a guard exists for downward moving __j
         do {
-          _LIBCPP_ASSERT_UNCATEGORIZED(
+          _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
               __j != __first,
               "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
           --__j;

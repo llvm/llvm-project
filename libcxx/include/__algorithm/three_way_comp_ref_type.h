@@ -50,15 +50,17 @@ struct __debug_three_way_comp {
       __expected = _Order::greater;
     if (__o == _Order::greater)
       __expected = _Order::less;
-    _LIBCPP_ASSERT_UNCATEGORIZED(__comp_(__l, __r) == __expected, "Comparator does not induce a strict weak ordering");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __comp_(__l, __r) == __expected, "Comparator does not induce a strict weak ordering");
     (void)__l;
     (void)__r;
   }
 };
 
-// Pass the comparator by lvalue reference. Or in debug mode, using a
-// debugging wrapper that stores a reference.
-#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+// Pass the comparator by lvalue reference. Or in the extensive hardening mode and above, using a debugging wrapper that
+// stores a reference.
+#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE ||                                                    \
+      _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 template <class _Comp>
 using __three_way_comp_ref_type = __debug_three_way_comp<_Comp>;
 #  else

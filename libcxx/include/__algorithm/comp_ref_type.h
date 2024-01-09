@@ -44,7 +44,7 @@ struct __debug_less {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 inline _LIBCPP_HIDE_FROM_ABI decltype((void)std::declval<_Compare&>()(
       std::declval<_LHS&>(), std::declval<_RHS&>()))
   __do_compare_assert(int, _LHS& __l, _RHS& __r) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__comp_(__l, __r), "Comparator does not induce a strict weak ordering");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__comp_(__l, __r), "Comparator does not induce a strict weak ordering");
     (void)__l;
     (void)__r;
   }
@@ -53,10 +53,9 @@ struct __debug_less {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 inline _LIBCPP_HIDE_FROM_ABI void __do_compare_assert(long, _LHS&, _RHS&) {}
 };
 
-// Pass the comparator by lvalue reference. Or in debug mode, using a
-// debugging wrapper that stores a reference.
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-template <class _Comp>
+// Pass the comparator by lvalue reference. Or in the extensive hardening mode and above, using a debugging wrapper that
+// stores a reference.
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE || _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 using __comp_ref_type = __debug_less<_Comp>;
 #else
 template <class _Comp>
