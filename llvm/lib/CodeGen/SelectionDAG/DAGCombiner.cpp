@@ -26542,10 +26542,10 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
       }
 
       APInt Bits;
-      if (isa<ConstantSDNode>(Elt))
-        Bits = Elt->getAsAPIntVal();
-      else if (isa<ConstantFPSDNode>(Elt))
-        Bits = cast<ConstantFPSDNode>(Elt)->getValueAPF().bitcastToAPInt();
+      if (auto *Cst = dyn_cast<ConstantSDNode>(Elt))
+        Bits = Cst->getAPIntValue();
+      else if (auto *CstFP = dyn_cast<ConstantFPSDNode>(Elt))
+        Bits = CstFP->getValueAPF().bitcastToAPInt();
       else
         return SDValue();
 
