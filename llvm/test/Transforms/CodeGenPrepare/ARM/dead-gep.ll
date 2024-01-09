@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S %s -o - | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S %s -o - | FileCheck %s
 target triple = "thumbv7-apple-ios7.0.0"
 
 

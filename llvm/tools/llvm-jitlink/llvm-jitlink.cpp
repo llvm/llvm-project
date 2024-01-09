@@ -1547,8 +1547,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
-    if (StringRef(InputFile).endswith(".a") ||
-        StringRef(InputFile).endswith(".lib"))
+    if (StringRef(InputFile).ends_with(".a") ||
+        StringRef(InputFile).ends_with(".lib"))
       continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
@@ -1648,7 +1648,7 @@ static Error addLibraries(Session &S,
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
     StringRef InputFile = *InputFileItr;
-    if (!InputFile.endswith(".a") && !InputFile.endswith(".lib"))
+    if (!InputFile.ends_with(".a") && !InputFile.ends_with(".lib"))
       continue;
     LibraryLoad LL;
     LL.LibName = InputFile.str();

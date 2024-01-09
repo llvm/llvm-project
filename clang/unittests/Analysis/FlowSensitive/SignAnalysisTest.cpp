@@ -133,7 +133,7 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
   auto &A = State.Env.arena();
   const Formula *Comp;
-  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValue(*BO))) {
+  if (BoolValue *V = State.Env.get<BoolValue>(*BO)) {
     Comp = &V->formula();
   } else {
     Comp = &A.makeAtomRef(A.makeAtom());

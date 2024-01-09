@@ -2519,7 +2519,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
-  assert(!GV->getName().startswith("llvm.") &&
+  assert(!GV->getName().starts_with("llvm.") &&
          "Unhandled intrinsic global variable.");
 
   if (GV->hasComdat())

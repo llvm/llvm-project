@@ -1885,8 +1885,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   return InitSeq.Perform(*this, Entity, InitKind, InitExpr);
 }
 
-ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                                 Scope *CurScope) {
+ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);

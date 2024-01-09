@@ -1515,6 +1515,23 @@ def : Pat<(X86add_flag_nocf GR32:$src1, 128),
 def : Pat<(X86add_flag_nocf GR64:$src1, 128),
           (SUB64ri32 GR64:$src1, -128)>;
 
+// Depositing value to 8/16 bit subreg:
+def : Pat<(or (and GR64:$dst, -256), 
+              (i64 (zextloadi8 addr:$src))),
+          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+
+def : Pat<(or (and GR32:$dst, -256), 
+              (i32 (zextloadi8 addr:$src))),
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+
+def : Pat<(or (and GR64:$dst, -65536), 
+              (i64 (zextloadi16 addr:$src))),
+          (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+
+def : Pat<(or (and GR32:$dst, -65536), 
+              (i32 (zextloadi16 addr:$src))),
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>; 
+
 // The same trick applies for 32-bit immediate fields in 64-bit
 // instructions.
 def : Pat<(add GR64:$src1, 0x0000000080000000),

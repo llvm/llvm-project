@@ -23,12 +23,12 @@ namespace llvm {
 
 class AArch64Subtarget;
 
-/// This class provides the information for the target register banks.
 class AArch64LegalizerInfo : public LegalizerInfo {
 public:
   AArch64LegalizerInfo(const AArch64Subtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
@@ -64,6 +64,7 @@ private:
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 LegalizerHelper &Helper) const;
   bool legalizeDynStackAlloc(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizePrefetch(MachineInstr &MI, LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

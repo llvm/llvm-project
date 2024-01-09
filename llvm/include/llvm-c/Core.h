@@ -483,6 +483,29 @@ typedef enum {
 
 typedef unsigned LLVMAttributeIndex;
 
+enum {
+  LLVMFastMathAllowReassoc = (1 << 0),
+  LLVMFastMathNoNaNs = (1 << 1),
+  LLVMFastMathNoInfs = (1 << 2),
+  LLVMFastMathNoSignedZeros = (1 << 3),
+  LLVMFastMathAllowReciprocal = (1 << 4),
+  LLVMFastMathAllowContract = (1 << 5),
+  LLVMFastMathApproxFunc = (1 << 6),
+  LLVMFastMathNone = 0,
+  LLVMFastMathAll = LLVMFastMathAllowReassoc | LLVMFastMathNoNaNs |
+                    LLVMFastMathNoInfs | LLVMFastMathNoSignedZeros |
+                    LLVMFastMathAllowReciprocal | LLVMFastMathAllowContract |
+                    LLVMFastMathApproxFunc,
+};
+
+/**
+ * Flags to indicate what fast-math-style optimizations are allowed
+ * on operations.
+ *
+ * See https://llvm.org/docs/LangRef.html#fast-math-flags
+ */
+typedef unsigned LLVMFastMathFlags;
+
 /**
  * @}
  */
@@ -3005,6 +3028,74 @@ LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
  */
 
 /**
+ * @defgroup LLVMCCoreOperandBundle Operand Bundles
+ *
+ * Functions in this group operate on LLVMOperandBundleRef instances that
+ * correspond to llvm::OperandBundleDef instances.
+ *
+ * @see llvm::OperandBundleDef
+ *
+ * @{
+ */
+
+/**
+ * Create a new operand bundle.
+ *
+ * Every invocation should be paired with LLVMDisposeOperandBundle() or memory
+ * will be leaked.
+ *
+ * @param Tag Tag name of the operand bundle
+ * @param TagLen Length of Tag
+ * @param Args Memory address of an array of bundle operands
+ * @param NumArgs Length of Args
+ */
+LLVMOperandBundleRef LLVMCreateOperandBundle(const char *Tag, size_t TagLen,
+                                             LLVMValueRef *Args,
+                                             unsigned NumArgs);
+
+/**
+ * Destroy an operand bundle.
+ *
+ * This must be called for every created operand bundle or memory will be
+ * leaked.
+ */
+void LLVMDisposeOperandBundle(LLVMOperandBundleRef Bundle);
+
+/**
+ * Obtain the tag of an operand bundle as a string.
+ *
+ * @param Bundle Operand bundle to obtain tag of.
+ * @param Len Out parameter which holds the length of the returned string.
+ * @return The tag name of Bundle.
+ * @see OperandBundleDef::getTag()
+ */
+const char *LLVMGetOperandBundleTag(LLVMOperandBundleRef Bundle, size_t *Len);
+
+/**
+ * Obtain the number of operands for an operand bundle.
+ *
+ * @param Bundle Operand bundle to obtain operand count of.
+ * @return The number of operands.
+ * @see OperandBundleDef::input_size()
+ */
+unsigned LLVMGetNumOperandBundleArgs(LLVMOperandBundleRef Bundle);
+
+/**
+ * Obtain the operand for an operand bundle at the given index.
+ *
+ * @param Bundle Operand bundle to obtain operand of.
+ * @param Index An operand index, must be less than
+ * LLVMGetNumOperandBundleArgs().
+ * @return The operand.
+ */
+LLVMValueRef LLVMGetOperandBundleArgAtIndex(LLVMOperandBundleRef Bundle,
+                                            unsigned Index);
+
+/**
+ * @}
+ */
+
+/**
  * @defgroup LLVMCCoreValueBasicBlock Basic Block
  *
  * A basic block represents a single entry single exit section of code.
@@ -3452,6 +3543,24 @@ LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef C);
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr);
 
 /**
+ * Obtain the number of operand bundles attached to this instruction.
+ *
+ * This only works on llvm::CallInst and llvm::InvokeInst instructions.
+ *
+ * @see llvm::CallBase::getNumOperandBundles()
+ */
+unsigned LLVMGetNumOperandBundles(LLVMValueRef C);
+
+/**
+ * Obtain the operand bundle attached to this instruction at the given index.
+ * Use LLVMDisposeOperandBundle to free the operand bundle.
+ *
+ * This only works on llvm::CallInst and llvm::InvokeInst instructions.
+ */
+LLVMOperandBundleRef LLVMGetOperandBundleAtIndex(LLVMValueRef C,
+                                                 unsigned Index);
+
+/**
  * Obtain whether a call instruction is a tail call.
  *
  * This only works on llvm::CallInst instructions.
@@ -3815,6 +3924,10 @@ LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
                               const char *Name);
+LLVMValueRef LLVMBuildInvokeWithOperandBundles(
+    LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn, LLVMValueRef *Args,
+    unsigned NumArgs, LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
+    LLVMOperandBundleRef *Bundles, unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildUnreachable(LLVMBuilderRef);
 
 /* Exception Handling */
@@ -3986,6 +4099,33 @@ LLVMBool LLVMGetNNeg(LLVMValueRef NonNegInst);
 void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg);
 
 /**
+ * Get the flags for which fast-math-style optimizations are allowed for this
+ * value.
+ *
+ * Only valid on floating point instructions.
+ * @see LLVMCanValueUseFastMathFlags
+ */
+LLVMFastMathFlags LLVMGetFastMathFlags(LLVMValueRef FPMathInst);
+
+/**
+ * Sets the flags for which fast-math-style optimizations are allowed for this
+ * value.
+ *
+ * Only valid on floating point instructions.
+ * @see LLVMCanValueUseFastMathFlags
+ */
+void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF);
+
+/**
+ * Check if a given value can potentially have fast math flags.
+ *
+ * Will return true for floating point arithmetic instructions, and for select,
+ * phi, and call instructions whose type is a floating point type, or a vector
+ * or array thereof. See https://llvm.org/docs/LangRef.html#fast-math-flags
+ */
+LLVMBool LLVMCanValueUseFastMathFlags(LLVMValueRef Inst);
+
+/**
  * Gets whether the instruction has the disjoint flag set.
  * Only valid for or instructions.
  */
@@ -4121,6 +4261,11 @@ LLVMValueRef LLVMBuildPhi(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildCall2(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
                             LLVMValueRef *Args, unsigned NumArgs,
                             const char *Name);
+LLVMValueRef
+LLVMBuildCallWithOperandBundles(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
+                                LLVMValueRef *Args, unsigned NumArgs,
+                                LLVMOperandBundleRef *Bundles,
+                                unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildSelect(LLVMBuilderRef, LLVMValueRef If,
                              LLVMValueRef Then, LLVMValueRef Else,
                              const char *Name);

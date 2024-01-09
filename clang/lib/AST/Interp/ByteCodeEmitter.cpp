@@ -61,6 +61,11 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
       MD->getParent()->getCaptureFields(LC, LTC);
 
       for (auto Cap : LC) {
+        // Static lambdas cannot have any captures. If this one does,
+        // it has already been diagnosed and we can only ignore it.
+        if (MD->isStatic())
+          return nullptr;
+
         unsigned Offset = R->getField(Cap.second)->Offset;
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};

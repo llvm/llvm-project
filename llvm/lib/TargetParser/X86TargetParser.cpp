@@ -162,8 +162,6 @@ constexpr FeatureBitset FeaturesAlderlake =
 constexpr FeatureBitset FeaturesSierraforest =
     FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
     FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
-constexpr FeatureBitset FeaturesGrandridge =
-    FeaturesSierraforest | FeatureRAOINT;
 constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
     FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
@@ -369,7 +367,7 @@ constexpr ProcInfo Processors[] = {
   // Sierraforest microarchitecture based processors.
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
-  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge, 'p', false },
+  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Granite Rapids microarchitecture based processors.
   { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
   // Granite Rapids D microarchitecture based processors.

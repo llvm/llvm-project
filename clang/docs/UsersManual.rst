@@ -1468,6 +1468,7 @@ floating point semantic models: precise (the default), strict, and fast.
    With the exception of ``-ffp-contract=fast``, using any of the options
    below to disable any of the individual optimizations in ``-ffast-math``
    will cause ``__FAST_MATH__`` to no longer be set.
+   ``-ffast-math`` enables ``-fcx-limited-range``.
 
    This option implies:
 
@@ -1833,6 +1834,20 @@ floating point semantic models: precise (the default), strict, and fast.
      alias for ``standard``.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
+
+.. option:: -fcx-limited-range:
+
+   This option enables the naive mathematical formulas for complex division and
+   multiplication with no NaN checking of results. The default is
+   ``-fno-cx-limited-range``, but this option is enabled by the ``-ffast-math``
+   option.
+
+.. option:: -fcx-fortran-rules:
+
+   This option enables the naive mathematical formulas for complex
+   multiplication and enables application of Smith's algorithm for complex
+   division. See SMITH, R. L. Algorithm 116: Complex division. Commun.
+   ACM 5, 8 (1962). The default is ``-fno-cx-fortran-rules``.
 
 .. _floating-point-environment:
 

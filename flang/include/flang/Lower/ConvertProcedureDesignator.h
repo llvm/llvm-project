@@ -60,5 +60,13 @@ mlir::Value
 convertProcedureDesignatorInitialTarget(Fortran::lower::AbstractConverter &,
                                         mlir::Location,
                                         const Fortran::semantics::Symbol &sym);
+
+/// Given the value of a "PASS" actual argument \p passedArg and the
+/// evaluate::ProcedureDesignator for the call, address and dereference
+/// the argument's procedure pointer component that must be called.
+mlir::Value derefPassProcPointerComponent(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::ProcedureDesignator &proc, mlir::Value passedArg,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_PROCEDURE_DESIGNATOR_H

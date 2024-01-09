@@ -1125,8 +1125,11 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   rewriter.setInsertionPoint(target);
   FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
   if (failed(res)) {
-    return mlir::emitSilenceableFailure(target->getLoc())
-           << "cannot rewrite to pad + expand + transpose";
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "cannot lower to transpose + collapse + extract";
+    diag.attachNote(target->getLoc()) << "target payload op";
+    return diag;
   }
   transformResults.push_back(res->emptyOp);
   transformResults.push_back(res->transposeOp);

@@ -1148,6 +1148,60 @@ SDValue SelectionDAGBuilder::getControlRoot() {
   return updateRoot(PendingExports);
 }
 
+void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
+                                             DILocalVariable *Variable,
+                                             DIExpression *Expression,
+                                             DebugLoc DL) {
+  assert(Variable && "Missing variable");
+
+  // Check if address has undef value.
+  if (!Address || isa<UndefValue>(Address) ||
+      (Address->use_empty() && !isa<Argument>(Address))) {
+    LLVM_DEBUG(
+        dbgs()
+        << "dbg_declare: Dropping debug info (bad/undef/unused-arg address)\n");
+    return;
+  }
+
+  bool IsParameter = Variable->isParameter() || isa<Argument>(Address);
+
+  SDValue &N = NodeMap[Address];
+  if (!N.getNode() && isa<Argument>(Address))
+    // Check unused arguments map.
+    N = UnusedArgNodeMap[Address];
+  SDDbgValue *SDV;
+  if (N.getNode()) {
+    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
+      Address = BCI->getOperand(0);
+    // Parameters are handled specially.
+    auto *FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
+    if (IsParameter && FINode) {
+      // Byval parameter. We have a frame index at this point.
+      SDV = DAG.getFrameIndexDbgValue(Variable, Expression, FINode->getIndex(),
+                                      /*IsIndirect*/ true, DL, SDNodeOrder);
+    } else if (isa<Argument>(Address)) {
+      // Address is an argument, so try to emit its dbg value using
+      // virtual register info from the FuncInfo.ValueMap.
+      EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
+                               FuncArgumentDbgValueKind::Declare, N);
+      return;
+    } else {
+      SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
+                            true, DL, SDNodeOrder);
+    }
+    DAG.AddDbgValue(SDV, IsParameter);
+  } else {
+    // If Address is an argument then try to emit its dbg value using
+    // virtual register info from the FuncInfo.ValueMap.
+    if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
+                                  FuncArgumentDbgValueKind::Declare, N)) {
+      LLVM_DEBUG(dbgs() << "dbg_declare: Dropping debug info"
+                        << " (could not emit func-arg dbg_value)\n");
+    }
+  }
+  return;
+}
+
 void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
   // Add SDDbgValue nodes for any var locs here. Do so before updating
   // SDNodeOrder, as this mapping is {Inst -> Locs BEFORE Inst}.
@@ -1181,6 +1235,16 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
+
+    if (DPV.getType() == DPValue::LocationType::Declare) {
+      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+        continue;
+      LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DPV
+                        << "\n");
+      handleDebugDeclare(DPV.getVariableLocationOp(0), Variable, Expression,
+                         DPV.getDebugLoc());
+      continue;
+    }
 
     // A DPValue with no locations is a kill location.
     SmallVector<Value *, 4> Values(DPV.location_ops());
@@ -3290,6 +3354,8 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   }
   if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I))
     Flags.setExact(ExactOp->isExact());
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    Flags.setDisjoint(DisjointOp->isDisjoint());
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
@@ -4048,7 +4114,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       unsigned IdxSize = DAG.getDataLayout().getIndexSizeInBits(AS);
       MVT IdxTy = MVT::getIntegerVT(IdxSize);
       TypeSize ElementSize =
-          DAG.getDataLayout().getTypeAllocSize(GTI.getIndexedType());
+          GTI.getSequentialElementStride(DAG.getDataLayout());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
       APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());
@@ -6218,61 +6284,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (AssignmentTrackingEnabled ||
         FuncInfo.PreprocessedDbgDeclares.count(&DI))
       return;
-    // Assume dbg.declare can not currently use DIArgList, i.e.
-    // it is non-variadic.
-    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
+    LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DI << "\n");
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
-    assert(Variable && "Missing variable");
-    LLVM_DEBUG(dbgs() << "SelectionDAG visiting debug intrinsic: " << DI
-                      << "\n");
-    // Check if address has undef value.
-    const Value *Address = DI.getVariableLocationOp(0);
-    if (!Address || isa<UndefValue>(Address) ||
-        (Address->use_empty() && !isa<Argument>(Address))) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
-                        << " (bad/undef/unused-arg address)\n");
-      return;
-    }
-
-    bool isParameter = Variable->isParameter() || isa<Argument>(Address);
-
-    SDValue &N = NodeMap[Address];
-    if (!N.getNode() && isa<Argument>(Address))
-      // Check unused arguments map.
-      N = UnusedArgNodeMap[Address];
-    SDDbgValue *SDV;
-    if (N.getNode()) {
-      if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
-        Address = BCI->getOperand(0);
-      // Parameters are handled specially.
-      auto FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
-      if (isParameter && FINode) {
-        // Byval parameter. We have a frame index at this point.
-        SDV =
-            DAG.getFrameIndexDbgValue(Variable, Expression, FINode->getIndex(),
-                                      /*IsIndirect*/ true, dl, SDNodeOrder);
-      } else if (isa<Argument>(Address)) {
-        // Address is an argument, so try to emit its dbg value using
-        // virtual register info from the FuncInfo.ValueMap.
-        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
-                                 FuncArgumentDbgValueKind::Declare, N);
-        return;
-      } else {
-        SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
-                              true, dl, SDNodeOrder);
-      }
-      DAG.AddDbgValue(SDV, isParameter);
-    } else {
-      // If Address is an argument then try to emit its dbg value using
-      // virtual register info from the FuncInfo.ValueMap.
-      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
-                                    FuncArgumentDbgValueKind::Declare, N)) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
-                          << " (could not emit func-arg dbg_value)\n");
-      }
-    }
+    // Assume dbg.declare can not currently use DIArgList, i.e.
+    // it is non-variadic.
+    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
+    handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
+                       DI.getDebugLoc());
     return;
   }
   case Intrinsic::dbg_label: {
@@ -10609,8 +10629,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     else if (CLI.RetZExt)
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
-    for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
-      EVT VT = RetTys[I];
+    for (EVT VT : RetTys) {
       MVT RegisterVT = getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
                                                      CLI.CallConv, VT);
       unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
@@ -11620,92 +11639,16 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   }
 }
 
-unsigned SelectionDAGBuilder::caseClusterRank(const CaseCluster &CC,
-                                              CaseClusterIt First,
-                                              CaseClusterIt Last) {
-  return std::count_if(First, Last + 1, [&](const CaseCluster &X) {
-    if (X.Prob != CC.Prob)
-      return X.Prob > CC.Prob;
-
-    // Ties are broken by comparing the case value.
-    return X.Low->getValue().slt(CC.Low->getValue());
-  });
-}
-
 void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
                                         const SwitchWorkListItem &W,
                                         Value *Cond,
                                         MachineBasicBlock *SwitchMBB) {
   assert(W.FirstCluster->Low->getValue().slt(W.LastCluster->Low->getValue()) &&
          "Clusters not sorted?");
-
   assert(W.LastCluster - W.FirstCluster + 1 >= 2 && "Too small to split!");
 
-  // Balance the tree based on branch probabilities to create a near-optimal (in
-  // terms of search time given key frequency) binary search tree. See e.g. Kurt
-  // Mehlhorn "Nearly Optimal Binary Search Trees" (1975).
-  CaseClusterIt LastLeft = W.FirstCluster;
-  CaseClusterIt FirstRight = W.LastCluster;
-  auto LeftProb = LastLeft->Prob + W.DefaultProb / 2;
-  auto RightProb = FirstRight->Prob + W.DefaultProb / 2;
-
-  // Move LastLeft and FirstRight towards each other from opposite directions to
-  // find a partitioning of the clusters which balances the probability on both
-  // sides. If LeftProb and RightProb are equal, alternate which side is
-  // taken to ensure 0-probability nodes are distributed evenly.
-  unsigned I = 0;
-  while (LastLeft + 1 < FirstRight) {
-    if (LeftProb < RightProb || (LeftProb == RightProb && (I & 1)))
-      LeftProb += (++LastLeft)->Prob;
-    else
-      RightProb += (--FirstRight)->Prob;
-    I++;
-  }
-
-  while (true) {
-    // Our binary search tree differs from a typical BST in that ours can have up
-    // to three values in each leaf. The pivot selection above doesn't take that
-    // into account, which means the tree might require more nodes and be less
-    // efficient. We compensate for this here.
-
-    unsigned NumLeft = LastLeft - W.FirstCluster + 1;
-    unsigned NumRight = W.LastCluster - FirstRight + 1;
-
-    if (std::min(NumLeft, NumRight) < 3 && std::max(NumLeft, NumRight) > 3) {
-      // If one side has less than 3 clusters, and the other has more than 3,
-      // consider taking a cluster from the other side.
-
-      if (NumLeft < NumRight) {
-        // Consider moving the first cluster on the right to the left side.
-        CaseCluster &CC = *FirstRight;
-        unsigned RightSideRank = caseClusterRank(CC, FirstRight, W.LastCluster);
-        unsigned LeftSideRank = caseClusterRank(CC, W.FirstCluster, LastLeft);
-        if (LeftSideRank <= RightSideRank) {
-          // Moving the cluster to the left does not demote it.
-          ++LastLeft;
-          ++FirstRight;
-          continue;
-        }
-      } else {
-        assert(NumRight < NumLeft);
-        // Consider moving the last element on the left to the right side.
-        CaseCluster &CC = *LastLeft;
-        unsigned LeftSideRank = caseClusterRank(CC, W.FirstCluster, LastLeft);
-        unsigned RightSideRank = caseClusterRank(CC, FirstRight, W.LastCluster);
-        if (RightSideRank <= LeftSideRank) {
-          // Moving the cluster to the right does not demot it.
-          --LastLeft;
-          --FirstRight;
-          continue;
-        }
-      }
-    }
-    break;
-  }
-
-  assert(LastLeft + 1 == FirstRight);
-  assert(LastLeft >= W.FirstCluster);
-  assert(FirstRight <= W.LastCluster);
+  auto [LastLeft, FirstRight, LeftProb, RightProb] =
+      SL->computeSplitWorkItemInfo(W);
 
   // Use the first element on the right as pivot since we will make less-than
   // comparisons against it.

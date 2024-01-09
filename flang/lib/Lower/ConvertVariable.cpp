@@ -238,6 +238,10 @@ mlir::Value Fortran::lower::genInitialDataTarget(
         /*nonDeferredParams=*/std::nullopt);
   // Pointer initial data target, and NULL(mold).
   for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
+    // Derived type component symbols should not be instantiated as objects
+    // on their own.
+    if (sym->owner().IsDerivedType())
+      continue;
     // Length parameters processing will need care in global initializer
     // context.
     if (hasDerivedTypeWithLengthParameters(sym))
@@ -2138,8 +2142,6 @@ void Fortran::lower::mapSymbolAttributes(
       if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        if (argType.isa<fir::RecordType>())
-          TODO(loc, "derived type argument passed by value");
         mlir::Type symType = converter.genType(sym);
         addr = builder.create<fir::AllocaOp>(loc, symType);
         if (isCptrByVal) {

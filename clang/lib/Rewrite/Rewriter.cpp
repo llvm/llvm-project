@@ -386,7 +386,7 @@ bool Rewriter::IncreaseIndentation(CharSourceRange range,
   }
   if (parentSpace.size() >= startSpace.size())
     return true;
-  if (!startSpace.startswith(parentSpace))
+  if (!startSpace.starts_with(parentSpace))
     return true;
 
   StringRef indent = startSpace.substr(parentSpace.size());
@@ -399,7 +399,7 @@ bool Rewriter::IncreaseIndentation(CharSourceRange range,
     while (isWhitespaceExceptNL(MB[i]))
       ++i;
     StringRef origIndent = MB.substr(offs, i-offs);
-    if (origIndent.startswith(startSpace))
+    if (origIndent.starts_with(startSpace))
       RB.InsertText(offs, indent, /*InsertAfter=*/false);
   }
 

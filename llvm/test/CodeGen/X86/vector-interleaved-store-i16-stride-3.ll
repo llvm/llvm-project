@@ -652,8 +652,7 @@ define void @store_i16_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,0,0,u,1,1,u,2>
 ; AVX512F-NEXT:    vpermd %ymm0, %ymm2, %ymm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
-; AVX512F-NEXT:    vpandn %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512F-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,ymm0[10,11],zero,zero,zero,zero,ymm0[12,13],zero,zero,zero,zero,ymm0[14,15],zero,zero,zero,zero,ymm0[16,17],zero,zero,zero,zero,ymm0[18,19],zero,zero,zero,zero
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm2

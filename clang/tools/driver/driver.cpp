@@ -122,7 +122,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
       GetStableCStr(SavedStrings, Edit.substr(1));
     OS << "### Adding argument " << Str << " at end\n";
     Args.push_back(Str);
-  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.endswith("/") &&
+  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.ends_with("/") &&
              Edit.slice(2, Edit.size() - 1).contains('/')) {
     StringRef MatchPattern = Edit.substr(2).split('/').first;
     StringRef ReplPattern = Edit.substr(2).split('/').second;
@@ -403,7 +403,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // Handle -cc1 integrated tools.
-  if (Args.size() >= 2 && StringRef(Args[1]).startswith("-cc1"))
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
 
   // Handle options that need handling before the real command line parsing in

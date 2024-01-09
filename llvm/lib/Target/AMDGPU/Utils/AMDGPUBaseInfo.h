@@ -505,6 +505,10 @@ struct CanBeVOPD {
   bool Y;
 };
 
+/// \returns SIEncodingFamily used for VOPD encoding on a \p ST.
+LLVM_READONLY
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
+
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
 
@@ -524,7 +528,7 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -747,15 +751,20 @@ public:
   // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
   // for the specified component and MC operand. The callback must return 0
   // if the operand is not a register or not a VGPR.
-  bool hasInvalidOperand(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-    return getInvalidCompOperandIndex(GetRegIdx).has_value();
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
+  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         bool SkipSrc = false) const {
+    return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      bool SkipSrc = false) const;
 
 private:
   RegIndices
@@ -1229,6 +1238,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16: // mandatory literal is always size 4
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return 4;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -1281,16 +1291,19 @@ LLVM_READNONE
 bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
+std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);
 
 LLVM_READNONE
-bool isInlinableIntLiteralV216(int32_t Literal);
+std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
 
 LLVM_READNONE
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType);
+bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
-bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralV2I16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV2F16(uint32_t Literal);
 
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
@@ -1324,7 +1337,7 @@ std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
 std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                      int64_t ByteOffset);
 
-/// For FLAT segment the offset must be positive;
+/// For pre-GFX12 FLAT instructions the offset must be positive;
 /// MSB is ignored and forced to zero.
 ///
 /// \return The number of bits available for the signed offset field in flat

@@ -753,8 +753,8 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 4
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 192
@@ -824,12 +824,12 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER7]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER8]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER9]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 4
-; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 8
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 12
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 384

@@ -2263,6 +2263,10 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
 def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
                           (XGR GR64:$y, (NGR GR64:$y, GR64:$x))>;
 
+// Use LCGR/AGHI for i64 xor with -1.
+def : Pat<(xor GR64:$x, (i64 -1)),
+          (AGHI (LCGR GR64:$x), (i64 -1))>;
+
 // Shift/rotate instructions only use the last 6 bits of the second operand
 // register, so we can safely use NILL (16 fewer bits than NILF) to only AND the
 // last 16 bits.

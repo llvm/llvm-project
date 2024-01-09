@@ -54,6 +54,16 @@ constexpr bool test() {
     assert(ymwd.index() == 2);
   }
 
+  { // Test year wrapping
+    year_month_weekday ymwd{year{2020}, month{4}, weekday_indexed{Tuesday, 2}};
+
+    ymwd += months{12};
+    assert((ymwd == year_month_weekday{year{2021}, month{4}, weekday_indexed{Tuesday, 2}}));
+
+    ymwd -= months{12};
+    assert((ymwd == year_month_weekday{year{2020}, month{4}, weekday_indexed{Tuesday, 2}}));
+  }
+
   return true;
 }
 

@@ -36,11 +36,13 @@ def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmINX">;
 def GPRPF64AsFPR : AsmOperandClass {
   let Name = "GPRPF64AsFPR";
   let ParserMethod = "parseGPRAsFPR";
+  let PredicateMethod = "isGPRAsFPR";
   let RenderMethod = "addRegOperands";
 }
 
 def GPRF64AsFPR : AsmOperandClass {
   let Name = "GPRF64AsFPR";
+  let PredicateMethod = "isGPRAsFPR";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
 }

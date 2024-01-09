@@ -93,9 +93,9 @@ namespace llvm {
   MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
                                                       bool AbortOnFailedISel);
 
-  /// createCodeGenPreparePass - Transform the code to expose more pattern
+  /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
   /// matching during instruction selection.
-  FunctionPass *createCodeGenPreparePass();
+  FunctionPass *createCodeGenPrepareLegacyPass();
 
   /// This pass implements generation of target-specific intrinsics to support
   /// handling of complex number arithmetic
@@ -324,10 +324,6 @@ namespace llvm {
   /// branch folding).
   extern char &GCMachineCodeAnalysisID;
 
-  /// Creates a pass to print GC metadata.
-  ///
-  FunctionPass *createGCInfoPrinter(raw_ostream &OS);
-
   /// MachineCSE - This pass performs global CSE on machine instructions.
   extern char &MachineCSEID;
 
@@ -524,7 +520,7 @@ namespace llvm {
   FunctionPass *createExpandLargeFpConvertPass();
 
   // This pass expands memcmp() to load/stores.
-  FunctionPass *createExpandMemCmpPass();
+  FunctionPass *createExpandMemCmpLegacyPass();
 
   /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
   FunctionPass *createBreakFalseDeps();

@@ -205,7 +205,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     std::unique_ptr<WasmYAML::Section> S;
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM: {
-      if (WasmSec.Name.startswith("reloc.")) {
+      if (WasmSec.Name.starts_with("reloc.")) {
         // Relocations are attached the sections they apply to rather than
         // being represented as a custom section in the YAML output.
         continue;
