@@ -486,23 +486,39 @@ func.func @linalg_transpose_tensor_pack_fold_dynamic_outer_dims_tile_dims_tile_s
 
 // -----
 
-func.func @linalg_transpose_tensor_cast_tensor_pack_fold(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x57x56x2x32xf32> {
-  %0 = tensor.empty() : tensor<1x56x57x64xf32>
-  %transposed = linalg.transpose
-    ins(%arg0 : tensor<56x57x1x64xf32>)
-    outs(%0 : tensor<1x56x57x64xf32>)
-    permutation = [2, 0, 1, 3]
+func.func @linalg_transpose_tensor_pack_multiple_tiles(%arg0: tensor<?x32x128xbf16>) -> tensor<32x?x64x16x2xbf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : bf16
+  %dim = tensor.dim %arg0, %c0 : tensor<?x32x128xbf16>
 
-  %transposed_cast = tensor.cast %transposed : tensor<1x56x57x64xf32> to tensor<?x56x57x64xf32> 
-  %1 = tensor.empty() : tensor<1x57x56x2x32xf32>
-  %pack = tensor.pack %transposed_cast
-    outer_dims_perm = [0, 2, 1, 3]
-    inner_dims_pos = [3]
-    inner_tiles = [32]
-    into %1 : tensor<?x56x57x64xf32> -> tensor<1x57x56x2x32xf32>
-  return %pack : tensor<1x57x56x2x32xf32>
+  %0 = tensor.empty(%dim) : tensor<32x128x?xbf16>
+  %transposed = linalg.transpose 
+    ins(%arg0 : tensor<?x32x128xbf16>) 
+    outs(%0 : tensor<32x128x?xbf16>) 
+    permutation = [1, 2, 0]
+
+  %2 = tensor.empty(%dim) : tensor<32x?x64x16x2xbf16>
+  %pack = tensor.pack %transposed 
+    padding_value(%cst : bf16) 
+    outer_dims_perm = [0, 2, 1] 
+    inner_dims_pos = [2, 1] 
+    inner_tiles = [16, 2] 
+    into %2 : tensor<32x128x?xbf16> -> tensor<32x?x64x16x2xbf16>
+  return %pack : tensor<32x?x64x16x2xbf16>
 }
-//CHECK-LABEL: func @linalg_transpose_tensor_cast_tensor_pack_fold(
-// CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
-//      CHECK:   linalg.transpose
-//      CHECK:   tensor.pack
+//      CHECK:   #[[map:.+]] = affine_map<()[s0] -> (s0 ceildiv 16)>
+//CHECK-LABEL:   func.func @linalg_transpose_tensor_pack_multiple_tiles(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<?x32x128xbf16>) -> tensor<32x?x64x16x2xbf16> {
+//      CHECK:   %[[C0:.+]] = arith.constant 0 : index
+//      CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : bf16
+//      CHECK:   %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x32x128xbf16>
+//      CHECK:   %[[VAL0:.+]] = affine.apply #[[map:.+]]()[%[[DIM]]]
+//      CHECK:   %[[VAL1:.+]] = tensor.empty(%[[VAL0]]) : tensor<32x?x64x16x2xbf16>
+//      CHECK:   %[[PACK:.+]] = tensor.pack %[[ARG0]] 
+// CHECK-SAME:      padding_value(%[[CST]] : bf16) 
+// CHECK-SAME:      outer_dims_perm = [1, 0, 2] 
+// CHECK-SAME:      inner_dims_pos = [0, 2] 
+// CHECK-SAME:      inner_tiles = [16, 2] 
+// CHECK-SAME:      into %[[VAL1]] : tensor<?x32x128xbf16> -> tensor<32x?x64x16x2xbf16>
+//      CHECK:   return %[[PACK]] : tensor<32x?x64x16x2xbf16>
+//      CHECK:  }

@@ -248,10 +248,10 @@ struct FoldConsumerPackWithProducerLinalgTransposeOp
     if (!outerDimsPerm.empty())
       applyPermutationToVector(newOuterDimsPermVec, outerDimsPerm);
 
-    for (auto dim : innerDimsPos) {
-      newInnerDimsPosVec.push_back(llvm::find(transposePermutation, dim) -
-                                   transposePermutation.begin());
-    }
+    // Can't use applyPermutationToVector for newInnerDimsPosVec since input and
+    // permutation rank won't necessarily be equal in all cases.
+    for (auto dim : innerDimsPos)
+      newInnerDimsPosVec.push_back(transposePermutation[dim]);
 
     Value output = packOp.createDestinationTensor(
         rewriter, packOp.getLoc(), transposeOp.getOperand(0),
