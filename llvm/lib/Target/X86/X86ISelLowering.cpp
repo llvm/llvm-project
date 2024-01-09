@@ -7371,7 +7371,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
 /// index.
 static int getUnderlyingExtractedFromVec(SDValue &ExtractedFromVec,
                                          SDValue ExtIdx) {
-  int Idx = cast<ConstantSDNode>(ExtIdx)->getZExtValue();
+  int Idx = ExtIdx->getAsZExtVal();
   if (!isa<ShuffleVectorSDNode>(ExtractedFromVec))
     return Idx;
 
@@ -8795,7 +8795,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     MachineFunction &MF = DAG.getMachineFunction();
     MachinePointerInfo MPI = MachinePointerInfo::getConstantPool(MF);
     SDValue Ld = DAG.getLoad(VT, dl, DAG.getEntryNode(), LegalDAGConstVec, MPI);
-    unsigned InsertC = cast<ConstantSDNode>(InsIndex)->getZExtValue();
+    unsigned InsertC = InsIndex->getAsZExtVal();
     unsigned NumEltsInLow128Bits = 128 / VT.getScalarSizeInBits();
     if (InsertC < NumEltsInLow128Bits)
       return DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Ld, VarElt, InsIndex);
@@ -17756,7 +17756,7 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                      DAG.getBitcast(MVT::v4i32, Vec), Idx));
 
-    unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+    unsigned IdxVal = Idx->getAsZExtVal();
     SDValue Extract = DAG.getNode(X86ISD::PEXTRB, dl, MVT::i32, Vec,
                                   DAG.getTargetConstant(IdxVal, dl, MVT::i8));
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
@@ -24069,7 +24069,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // a >= b ? -1 :  0 -> RES = setcc_carry
   // a >= b ?  0 : -1 -> RES = ~setcc_carry
   if (Cond.getOpcode() == X86ISD::SUB) {
-    unsigned CondCode = cast<ConstantSDNode>(CC)->getZExtValue();
+    unsigned CondCode = CC->getAsZExtVal();
 
     if ((CondCode == X86::COND_AE || CondCode == X86::COND_B) &&
         (isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
@@ -25367,8 +25367,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
       if (IntrData->Type == INTR_TYPE_3OP_IMM8 &&
           Src3.getValueType() != MVT::i8) {
-        Src3 = DAG.getTargetConstant(
-            cast<ConstantSDNode>(Src3)->getZExtValue() & 0xff, dl, MVT::i8);
+        Src3 = DAG.getTargetConstant(Src3->getAsZExtVal() & 0xff, dl, MVT::i8);
       }
 
       // We specify 2 possible opcodes for intrinsics with rounding modes.
@@ -25393,8 +25392,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       assert(Op.getOperand(4)->getOpcode() == ISD::TargetConstant);
       SDValue Src4 = Op.getOperand(4);
       if (Src4.getValueType() != MVT::i8) {
-        Src4 = DAG.getTargetConstant(
-            cast<ConstantSDNode>(Src4)->getZExtValue() & 0xff, dl, MVT::i8);
+        Src4 = DAG.getTargetConstant(Src4->getAsZExtVal() & 0xff, dl, MVT::i8);
       }
 
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
@@ -26796,7 +26794,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                   {Chain, Op1, Op2, Size}, VT, MMO);
       Chain = Res.getValue(1);
       Res = DAG.getZExtOrTrunc(getSETCC(X86::COND_B, Res, DL, DAG), DL, VT);
-      unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+      unsigned Imm = Op2->getAsZExtVal();
       if (Imm)
         Res = DAG.getNode(ISD::SHL, DL, VT, Res,
                           DAG.getShiftAmountConstant(Imm, VT, DL));
@@ -41845,7 +41843,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
-    unsigned ShAmt = cast<ConstantSDNode>(Op1)->getZExtValue();
+    unsigned ShAmt = Op1->getAsZExtVal();
     if (ShAmt >= BitWidth)
       break;
 
@@ -42630,7 +42628,7 @@ static SDValue combinevXi1ConstantToInteger(SDValue Op, SelectionDAG &DAG) {
   APInt Imm(SrcVT.getVectorNumElements(), 0);
   for (unsigned Idx = 0, e = Op.getNumOperands(); Idx < e; ++Idx) {
     SDValue In = Op.getOperand(Idx);
-    if (!In.isUndef() && (cast<ConstantSDNode>(In)->getZExtValue() & 0x1))
+    if (!In.isUndef() && (In->getAsZExtVal() & 0x1))
       Imm.setBit(Idx);
   }
   EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), Imm.getBitWidth());
@@ -53307,7 +53305,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   if (Index.getOpcode() == ISD::ADD &&
       Index.getValueType().getVectorElementType() == PtrVT &&
       isa<ConstantSDNode>(Scale)) {
-    uint64_t ScaleAmt = cast<ConstantSDNode>(Scale)->getZExtValue();
+    uint64_t ScaleAmt = Scale->getAsZExtVal();
     if (auto *BV = dyn_cast<BuildVectorSDNode>(Index.getOperand(1))) {
       BitVector UndefElts;
       if (ConstantSDNode *C = BV->getConstantSplatNode(&UndefElts)) {

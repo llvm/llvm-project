@@ -854,6 +854,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   setMinCmpXchgSizeInBits(32);
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -5811,7 +5812,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   // Get the intrinsic ID
-  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  unsigned IntrinNo = Intrin.getNode()->getAsZExtVal();
   switch (IntrinNo) {
   default:
     return;

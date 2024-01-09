@@ -814,8 +814,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
-      setOperationAction(
-          {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
+      setOperationAction({ISD::AVGFLOORU, ISD::SADDSAT, ISD::UADDSAT,
+                          ISD::SSUBSAT, ISD::USUBSAT},
+                         VT, Legal);
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
@@ -1184,9 +1185,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
 
-        setOperationAction(
-            {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT,
-            Custom);
+        setOperationAction({ISD::AVGFLOORU, ISD::SADDSAT, ISD::UADDSAT,
+                            ISD::SSUBSAT, ISD::USUBSAT},
+                           VT, Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -3496,7 +3497,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
 
     for (unsigned I = 0; I < NumElts;) {
       SDValue V = Op.getOperand(I);
-      bool BitValue = !V.isUndef() && cast<ConstantSDNode>(V)->getZExtValue();
+      bool BitValue = !V.isUndef() && V->getAsZExtVal();
       Bits |= ((uint64_t)BitValue << BitPos);
       ++BitPos;
       ++I;
@@ -3627,8 +3628,8 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     for (const auto &OpIdx : enumerate(Op->op_values())) {
       const auto &SeqV = OpIdx.value();
       if (!SeqV.isUndef())
-        SplatValue |= ((cast<ConstantSDNode>(SeqV)->getZExtValue() & EltMask)
-                       << (OpIdx.index() * EltBitSize));
+        SplatValue |=
+            ((SeqV->getAsZExtVal() & EltMask) << (OpIdx.index() * EltBitSize));
     }
 
     // On RV64, sign-extend from 32 to 64 bits where possible in order to
@@ -3657,10 +3658,10 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // would require bit-manipulation instructions to construct the splat value.
   SmallVector<SDValue> Sequence;
   const auto *BV = cast<BuildVectorSDNode>(Op);
-  if (VT.isInteger() && EltBitSize < 64 &&
+  if (VT.isInteger() && EltBitSize < Subtarget.getELen() &&
       ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
       BV->getRepeatedSequence(Sequence) &&
-      (Sequence.size() * EltBitSize) <= 64) {
+      (Sequence.size() * EltBitSize) <= Subtarget.getELen()) {
     unsigned SeqLen = Sequence.size();
     MVT ViaIntVT = MVT::getIntegerVT(EltBitSize * SeqLen);
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32 ||
@@ -3683,8 +3684,8 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     // vector type.
     for (const auto &SeqV : Sequence) {
       if (!SeqV.isUndef())
-        SplatValue |= ((cast<ConstantSDNode>(SeqV)->getZExtValue() & EltMask)
-                       << (EltIdx * EltBitSize));
+        SplatValue |=
+            ((SeqV->getAsZExtVal() & EltMask) << (EltIdx * EltBitSize));
       EltIdx++;
     }
 
@@ -3945,8 +3946,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
           (isa<RegisterSDNode>(VL) &&
            cast<RegisterSDNode>(VL)->getReg() == RISCV::X0))
         NewVL = DAG.getRegister(RISCV::X0, MVT::i32);
-      else if (isa<ConstantSDNode>(VL) &&
-               isUInt<4>(cast<ConstantSDNode>(VL)->getZExtValue()))
+      else if (isa<ConstantSDNode>(VL) && isUInt<4>(VL->getAsZExtVal()))
         NewVL = DAG.getNode(ISD::ADD, DL, VL.getValueType(), VL, VL);
 
       if (NewVL) {
@@ -5465,6 +5465,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
   OP_CASE(USUBSAT)
+  OP_CASE(AVGFLOORU)
   OP_CASE(FADD)
   OP_CASE(FSUB)
   OP_CASE(FMUL)
@@ -5569,7 +5570,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    124 &&
+                    125 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5595,7 +5596,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    124 &&
+                    125 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -6459,6 +6460,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
+  case ISD::AVGFLOORU:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -7913,8 +7915,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // Use tail agnostic policy if Idx is the last index of Vec.
   unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
   if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
-      cast<ConstantSDNode>(Idx)->getZExtValue() + 1 ==
-          VecVT.getVectorNumElements())
+      Idx->getAsZExtVal() + 1 == VecVT.getVectorNumElements())
     Policy = RISCVII::TAIL_AGNOSTIC;
   SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, ValInVec,
                                 Idx, Mask, InsertVL, Policy);
@@ -8174,7 +8175,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
       const auto [MinVLMAX, MaxVLMAX] =
           RISCVTargetLowering::computeVLMAXBounds(VT, Subtarget);
 
-      uint64_t AVLInt = cast<ConstantSDNode>(AVL)->getZExtValue();
+      uint64_t AVLInt = AVL->getAsZExtVal();
       if (AVLInt <= MinVLMAX) {
         I32VL = DAG.getConstant(2 * AVLInt, DL, XLenVT);
       } else if (AVLInt >= 2 * MaxVLMAX) {
@@ -8240,8 +8241,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
     SDValue Mask = Operands[NumOps - 3];
     SDValue MaskedOff = Operands[1];
     // Assume Policy operand is the last operand.
-    uint64_t Policy =
-        cast<ConstantSDNode>(Operands[NumOps - 1])->getZExtValue();
+    uint64_t Policy = Operands[NumOps - 1]->getAsZExtVal();
     // We don't need to select maskedoff if it's undef.
     if (MaskedOff.isUndef())
       return Vec;
@@ -18595,6 +18595,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UDIV_VL)
   NODE_NAME_CASE(UREM_VL)
   NODE_NAME_CASE(XOR_VL)
+  NODE_NAME_CASE(AVGFLOORU_VL)
   NODE_NAME_CASE(SADDSAT_VL)
   NODE_NAME_CASE(UADDSAT_VL)
   NODE_NAME_CASE(SSUBSAT_VL)
