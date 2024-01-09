@@ -929,6 +929,9 @@ public:
   /// Helper method returns the integer value of a ConstantSDNode operand.
   inline uint64_t getConstantOperandVal(unsigned Num) const;
 
+  /// Helper method returns the zero-extended integer value of a ConstantSDNode.
+  inline uint64_t getAsZExtVal() const;
+
   /// Helper method returns the APInt of a ConstantSDNode operand.
   inline const APInt &getConstantOperandAPInt(unsigned Num) const;
 
@@ -1643,6 +1646,10 @@ public:
 
 uint64_t SDNode::getConstantOperandVal(unsigned Num) const {
   return cast<ConstantSDNode>(getOperand(Num))->getZExtValue();
+}
+
+uint64_t SDNode::getAsZExtVal() const {
+  return cast<ConstantSDNode>(this)->getZExtValue();
 }
 
 const APInt &SDNode::getConstantOperandAPInt(unsigned Num) const {

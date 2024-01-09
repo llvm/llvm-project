@@ -1442,7 +1442,7 @@ void DAGTypeLegalizer::SplitVecRes_EXTRACT_SUBVECTOR(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
 
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, LoVT, Vec, Idx);
-  uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  uint64_t IdxVal = Idx->getAsZExtVal();
   Hi = DAG.getNode(
       ISD::EXTRACT_SUBVECTOR, dl, HiVT, Vec,
       DAG.getVectorIdxConstant(IdxVal + LoVT.getVectorMinNumElements(), dl));
@@ -1466,7 +1466,7 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_SUBVECTOR(SDNode *N, SDValue &Lo,
   // If we know the index is in the first half, and we know the subvector
   // doesn't cross the boundary between the halves, we can avoid spilling the
   // vector, and insert into the lower half of the split vector directly.
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  unsigned IdxVal = Idx->getAsZExtVal();
   if (IdxVal + SubElems <= LoElems) {
     Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, LoVT, Lo, SubVec, Idx);
     return;
@@ -3279,7 +3279,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_INSERT_SUBVECTOR(SDNode *N,
   SDValue Lo, Hi;
   GetSplitVector(SubVec, Lo, Hi);
 
-  uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  uint64_t IdxVal = Idx->getAsZExtVal();
   uint64_t LoElts = Lo.getValueType().getVectorMinNumElements();
 
   SDValue FirstInsertion =
@@ -3301,7 +3301,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   GetSplitVector(N->getOperand(0), Lo, Hi);
 
   uint64_t LoEltsMin = Lo.getValueType().getVectorMinNumElements();
-  uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  uint64_t IdxVal = Idx->getAsZExtVal();
 
   if (IdxVal < LoEltsMin) {
     assert(IdxVal + SubVT.getVectorMinNumElements() <= LoEltsMin &&
@@ -5257,7 +5257,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   EVT InVT = InOp.getValueType();
 
   // Check if we can just return the input vector after widening.
-  uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  uint64_t IdxVal = Idx->getAsZExtVal();
   if (IdxVal == 0 && InVT == WidenVT)
     return InOp;
 
