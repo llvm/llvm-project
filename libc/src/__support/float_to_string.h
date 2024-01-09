@@ -572,17 +572,13 @@ public:
   }
 
   LIBC_INLINE constexpr size_t get_positive_blocks() {
-    if (exponent >= -FRACTION_LEN) {
-      const uint32_t idx =
-          exponent < 0
-              ? 0
-              : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-      const uint32_t len =
-          internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
-      return len;
-    } else {
+    if (exponent < -FRACTION_LEN)
       return 0;
-    }
+    const uint32_t idx =
+        exponent < 0
+            ? 0
+            : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
+    return internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
   }
 
   // This takes the index of a block after the decimal point (a negative block)
@@ -614,7 +610,7 @@ public:
                                 internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
                                BLOCK_SIZE) -
                               1;
-      return len = static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
+      return static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
     }
     return 0;
 #else
@@ -668,9 +664,8 @@ template <> class FloatToString<long double> {
       cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> &int_num) {
     // WORD_SIZE is the width of the numbers used to internally represent the
     // UInt
-    for (size_t i = 0; i < EXTRA_INT_WIDTH / int_num.WORD_SIZE; ++i) {
+    for (size_t i = 0; i < EXTRA_INT_WIDTH / int_num.WORD_SIZE; ++i)
       int_num[i + (FLOAT_AS_INT_WIDTH / int_num.WORD_SIZE)] = 0;
-    }
   }
 
   // init_convert initializes float_as_int, cur_block, and block_buffer based on
@@ -775,7 +770,7 @@ public:
   LIBC_INLINE constexpr bool is_lowest_block(size_t negative_block_index) {
     // The decimal representation of 2**(-i) will have exactly i digits after
     // the decimal point.
-    int num_requested_digits =
+    const int num_requested_digits =
         static_cast<int>((negative_block_index + 1) * BLOCK_SIZE);
 
     return num_requested_digits > -exponent;
@@ -798,7 +793,7 @@ public:
     // point, and 1 with the second and so on. This converts to the same
     // block_index used everywhere else.
 
-    int block_index = -1 - negative_block_index;
+    const int block_index = -1 - negative_block_index;
 
     // If we're currently after the requested block (remember these are
     // negative indices) we reset the number to the start. This is only
