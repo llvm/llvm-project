@@ -5036,8 +5036,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
 #define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
-      case Intrinsic::x86_encodekey128: Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128); break;
-      case Intrinsic::x86_encodekey256: Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256); break;
+      case Intrinsic::x86_encodekey128:
+        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
+        break;
+      case Intrinsic::x86_encodekey256:
+        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
+        break;
 #undef GET_EGPR_IF_ENABLED
       }
 
