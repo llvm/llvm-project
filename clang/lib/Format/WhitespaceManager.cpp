@@ -1445,10 +1445,8 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
         if (!Cells.empty())
           Cells.back().EndIndex = i;
 
-        if (const auto *Next = C.Tok->getNextNonComment();
-            Next && Next->isNot(tok::r_brace)) { // dangling comma
+        if (C.Tok->getNextNonComment()->isNot(tok::r_brace)) // dangling comma
           ++Cell;
-        }
       }
     } else if (Depth == 1) {
       if (C.Tok == MatchingParen) {
