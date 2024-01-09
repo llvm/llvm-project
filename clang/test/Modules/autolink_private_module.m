@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
+
 // Test that autolink hints for frameworks don't use the private module name.
 // RUN: rm -rf %t && mkdir %t
 // RUN: split-file %s %t
