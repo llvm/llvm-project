@@ -1430,6 +1430,17 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC = getToolChain(
       *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
+  if (TC.getTriple().isAndroid()) {
+    llvm::Triple Triple = TC.getTriple();
+    StringRef TripleVersionName = Triple.getEnvironmentVersionString();
+
+    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
+      Diags.Report(diag::err_drv_triple_version_invalid)
+          << TripleVersionName << TC.getTripleString();
+      ContainsError = true;
+    }
+  }
+
   // Report warning when arm64EC option is overridden by specified target
   if ((TC.getTriple().getArch() != llvm::Triple::aarch64 ||
        TC.getTriple().getSubArch() != llvm::Triple::AArch64SubArch_arm64ec) &&
