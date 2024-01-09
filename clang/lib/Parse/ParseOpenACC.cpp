@@ -90,6 +90,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
       .Case("auto", OpenACCClauseKind::Auto)
+      .Case("copy", OpenACCClauseKind::Copy)
       .Case("default", OpenACCClauseKind::Default)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("if", OpenACCClauseKind::If)
@@ -334,7 +335,8 @@ bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
 }
 
 bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
-  return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If;
+  return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If ||
+         Kind == OpenACCClauseKind::Copy;
 }
 
 ExprResult ParseOpenACCConditionalExpr(Parser &P) {
@@ -345,8 +347,85 @@ ExprResult ParseOpenACCConditionalExpr(Parser &P) {
   return P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
 }
 
-bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
-  BalancedDelimiterTracker Parens(P, tok::l_paren,
+// Skip until we see the end of pragma token, but don't consume it. This is us
+// just giving up on the rest of the pragma so we can continue executing. We
+// have to do this because 'SkipUntil' considers paren balancing, which isn't
+// what we want.
+void SkipUntilEndOfDirective(Parser &P) {
+  while (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
+    P.ConsumeAnyToken();
+}
+
+} // namespace
+
+// OpenACC 3.3, section 1.7:
+// To simplify the specification and convey appropriate constraint information,
+// a pqr-list is a comma-separated list of pdr items. The one exception is a
+// clause-list, which is a list of one or more clauses optionally separated by
+// commas.
+void Parser::ParseOpenACCClauseList() {
+  bool FirstClause = true;
+  while (getCurToken().isNot(tok::annot_pragma_openacc_end)) {
+    // Comma is optional in a clause-list.
+    if (!FirstClause && getCurToken().is(tok::comma))
+      ConsumeToken();
+    FirstClause = false;
+
+    // Recovering from a bad clause is really difficult, so we just give up on
+    // error.
+    if (ParseOpenACCClause()) {
+      SkipUntilEndOfDirective(*this);
+      return;
+    }
+  }
+}
+
+bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
+  // FIXME: Future clauses will require 'special word' parsing, check for one,
+  // then parse it based on whether it is a clause that requires a 'special
+  // word'.
+  (void)Kind;
+
+  // If the var parsing fails, skip until the end of the directive as this is
+  // an expression and gets messy if we try to continue otherwise.
+  if (ParseOpenACCVar())
+    return true;
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    // If the var parsing fails, skip until the end of the directive as this is
+    // an expression and gets messy if we try to continue otherwise.
+    if (ParseOpenACCVar())
+      return true;
+  }
+  return false;
+}
+// The OpenACC Clause List is a comma or space-delimited list of clauses (see
+// the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
+// really have its owner grammar and each individual one has its own definition.
+// However, they all are named with a single-identifier (or auto/default!)
+// token, followed in some cases by either braces or parens.
+bool Parser::ParseOpenACCClause() {
+  // A number of clause names are actually keywords, so accept a keyword that
+  // can be converted to a name.
+  if (expectIdentifierOrKeyword(*this))
+    return true;
+
+  OpenACCClauseKind Kind = getOpenACCClauseKind(getCurToken());
+
+  if (Kind == OpenACCClauseKind::Invalid)
+    return Diag(getCurToken(), diag::err_acc_invalid_clause)
+           << getCurToken().getIdentifierInfo();
+
+  // Consume the clause name.
+  ConsumeToken();
+
+  return ParseOpenACCClauseParams(Kind);
+}
+
+bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
+  BalancedDelimiterTracker Parens(*this, tok::l_paren,
                                   tok::annot_pragma_openacc_end);
 
   if (ClauseHasRequiredParens(Kind)) {
@@ -354,34 +433,38 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
       // We are missing a paren, so assume that the person just forgot the
       // parameter.  Return 'false' so we try to continue on and parse the next
       // clause.
-      P.SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openacc_end,
-                  Parser::StopBeforeMatch);
+      SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
       return false;
     }
 
     switch (Kind) {
     case OpenACCClauseKind::Default: {
-      Token DefKindTok = P.getCurToken();
+      Token DefKindTok = getCurToken();
 
-      if (expectIdentifierOrKeyword(P))
+      if (expectIdentifierOrKeyword(*this))
         break;
 
-      P.ConsumeToken();
+      ConsumeToken();
 
       if (getOpenACCDefaultClauseKind(DefKindTok) ==
           OpenACCDefaultClauseKind::Invalid)
-        P.Diag(DefKindTok, diag::err_acc_invalid_default_clause_kind);
+        Diag(DefKindTok, diag::err_acc_invalid_default_clause_kind);
 
       break;
     }
     case OpenACCClauseKind::If: {
-      ExprResult CondExpr = ParseOpenACCConditionalExpr(P);
+      ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
       // An invalid expression can be just about anything, so just give up on
       // this clause list.
       if (CondExpr.isInvalid())
         return true;
       break;
     }
+    case OpenACCClauseKind::Copy:
+      if (ParseOpenACCClauseVarList(Kind))
+        return true;
+      break;
     default:
       llvm_unreachable("Not a required parens type?");
     }
@@ -391,7 +474,7 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
     if (!Parens.consumeOpen()) {
       switch (Kind) {
       case OpenACCClauseKind::Self: {
-        ExprResult CondExpr = ParseOpenACCConditionalExpr(P);
+        ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
         // An invalid expression can be just about anything, so just give up on
         // this clause list.
         if (CondExpr.isInvalid())
@@ -406,62 +489,6 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
   }
   return false;
 }
-
-// The OpenACC Clause List is a comma or space-delimited list of clauses (see
-// the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
-// really have its owner grammar and each individual one has its own definition.
-// However, they all are named with a single-identifier (or auto/default!)
-// token, followed in some cases by either braces or parens.
-bool ParseOpenACCClause(Parser &P) {
-  // A number of clause names are actually keywords, so accept a keyword that
-  // can be converted to a name.
-  if (expectIdentifierOrKeyword(P))
-    return true;
-
-  OpenACCClauseKind Kind = getOpenACCClauseKind(P.getCurToken());
-
-  if (Kind == OpenACCClauseKind::Invalid)
-    return P.Diag(P.getCurToken(), diag::err_acc_invalid_clause)
-           << P.getCurToken().getIdentifierInfo();
-
-  // Consume the clause name.
-  P.ConsumeToken();
-
-  return ParseOpenACCClauseParams(P, Kind);
-}
-
-// Skip until we see the end of pragma token, but don't consume it. This is us
-// just giving up on the rest of the pragma so we can continue executing. We
-// have to do this because 'SkipUntil' considers paren balancing, which isn't
-// what we want.
-void SkipUntilEndOfDirective(Parser &P) {
-  while (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
-    P.ConsumeAnyToken();
-}
-
-// OpenACC 3.3, section 1.7:
-// To simplify the specification and convey appropriate constraint information,
-// a pqr-list is a comma-separated list of pdr items. The one exception is a
-// clause-list, which is a list of one or more clauses optionally separated by
-// commas.
-void ParseOpenACCClauseList(Parser &P) {
-  bool FirstClause = true;
-  while (P.getCurToken().isNot(tok::annot_pragma_openacc_end)) {
-    // Comma is optional in a clause-list.
-    if (!FirstClause && P.getCurToken().is(tok::comma))
-      P.ConsumeToken();
-    FirstClause = false;
-
-    // Recovering from a bad clause is really difficult, so we just give up on
-    // error.
-    if (ParseOpenACCClause(P)) {
-      SkipUntilEndOfDirective(P);
-      return;
-    }
-  }
-}
-
-} // namespace
 
 /// OpenACC 3.3, section 2.16:
 /// In this section and throughout the specification, the term wait-argument
@@ -664,7 +691,7 @@ void Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present.
-  ParseOpenACCClauseList(*this);
+  ParseOpenACCClauseList();
 
   Diag(getCurToken(), diag::warn_pragma_acc_unimplemented);
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
