@@ -173,6 +173,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v16bf16, &AMDGPU::SGPR_256RegClass);
     addRegisterClass(MVT::v32i16, &AMDGPU::SGPR_512RegClass);
     addRegisterClass(MVT::v32f16, &AMDGPU::SGPR_512RegClass);
+    addRegisterClass(MVT::v32bf16, &AMDGPU::SGPR_512RegClass);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -719,11 +720,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::LOAD, MVT::v32i16, MVT::v16i32);
     setOperationAction(ISD::LOAD, MVT::v32f16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v32f16, MVT::v16i32);
+    setOperationAction(ISD::LOAD, MVT::v32bf16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v32bf16, MVT::v16i32);
 
     setOperationAction(ISD::STORE, MVT::v32i16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v32i16, MVT::v16i32);
     setOperationAction(ISD::STORE, MVT::v32f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v32f16, MVT::v16i32);
+    setOperationAction(ISD::STORE, MVT::v32bf16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v32bf16, MVT::v16i32);
 
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v2i32, Expand);
