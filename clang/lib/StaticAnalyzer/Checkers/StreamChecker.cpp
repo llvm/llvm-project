@@ -953,7 +953,8 @@ void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
   // Failure of 'ungetc' does not result in feof or ferror state.
   // If the PutVal has value of EofVal the function should "fail", but this is
   // the same transition as the success state.
-  // FIXME: Is it possible that StateFailed == StateNotFailed ?
+  // In this case only one state transition is added by the analyzer (the two
+  // new states may be similar).
   ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
   StreamState NewSS = StreamState::getOpened(Desc);
   StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
