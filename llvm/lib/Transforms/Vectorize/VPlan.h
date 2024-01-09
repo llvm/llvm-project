@@ -12,6 +12,8 @@
 ///    VPBlockBase, together implementing a Hierarchical CFG;
 /// 2. Pure virtual VPRecipeBase serving as the base class for recipes contained
 ///    within VPBasicBlocks;
+/// 3. Pure virtual VPSingleDefRecipe serving as a base class for recipes that
+///    also inherit from VPValue.
 /// 3. VPInstruction, a concrete Recipe and VPUser modeling a single planned
 ///    instruction;
 /// 4. The VPlan class holding a candidate for vectorization;
@@ -700,8 +702,7 @@ public:
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
 /// instructions. VPRecipeBase owns the VPValues it defines through VPDef
 /// and is responsible for deleting its defined values. Single-value
-/// VPRecipeBases that also inherit from VPValue must make sure to inherit from
-/// VPRecipeBase before VPValue.
+/// recipes must inherit from VPSingleDef instead of inheriting from both VPRecipeBase and VPValue separately.
 class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
                      public VPDef,
                      public VPUser {
@@ -815,7 +816,7 @@ public:
     return R->getVPDefID() == VPDefID;                                         \
   }
 
-/// A common base class for recipes defining a single result value.
+/// VPSingleDef is a base class for recipes for modeling a sequence of one or more output IR that define a single result VPValue.
 class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
@@ -869,13 +870,12 @@ public:
     return R && classof(R);
   }
 
-  /// Returns the underlying instruction, if the recipe is a VPValue or nullptr
-  /// otherwise.
+  /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
-    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    return cast<Instruction>(getUnderlyingValue());
   }
   const Instruction *getUnderlyingInstr() const {
-    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    return cast<Instruction>(getUnderlyingValue());
   }
 };
 
@@ -1492,9 +1492,6 @@ public:
     auto *B = V->getDefiningRecipe();
     return B && B->getVPDefID() >= VPRecipeBase::VPFirstHeaderPHISC &&
            B->getVPDefID() <= VPRecipeBase::VPLastHeaderPHISC;
-  }
-  static inline bool classof(const VPSingleDefRecipe *R) {
-    return classof(cast<VPRecipeBase>(R));
   }
 
   /// Generate the phi nodes.

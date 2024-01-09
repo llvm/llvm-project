@@ -8943,10 +8943,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPSingleDefRecipe *Cur = Worklist[I];
       for (VPUser *U : Cur->users()) {
         auto *UserRecipe = dyn_cast<VPSingleDefRecipe>(U);
-        if (!UserRecipe)
+        if (!UserRecipe) {
+          assert(isa<VPLiveOut>(U) && "U must either be a VPSingleDef or VPLiveOut");
           continue;
-        assert(UserRecipe->getNumDefinedValues() == 1 &&
-               "recipes must define exactly one result value");
+        }
         Worklist.insert(UserRecipe);
       }
     }

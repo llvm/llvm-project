@@ -415,7 +415,7 @@ void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
       VPSingleDefRecipe *FoundUserCast = nullptr;
       for (auto *U : FindMyCast->users()) {
         auto *UserCast = dyn_cast<VPSingleDefRecipe>(U);
-        if (UserCast && UserCast->getNumDefinedValues() == 1 &&
+        if (UserCast &&
             UserCast->getUnderlyingValue() == IRCast) {
           FoundUserCast = UserCast;
           break;
