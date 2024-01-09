@@ -343,6 +343,10 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
       LV.merge(getTypeLinkageAndVisibility(Arg.getNullPtrType()));
       continue;
 
+    case TemplateArgument::StructuralValue:
+      LV.merge(getLVForValue(Arg.getAsStructuralValue(), computation));
+      continue;
+
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =

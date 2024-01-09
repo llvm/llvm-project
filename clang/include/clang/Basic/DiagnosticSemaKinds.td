@@ -2253,6 +2253,8 @@ def warn_cxx17_compat_aggregate_init_paren_list : Warning<
 def err_reference_bind_to_bitfield : Error<
   "%select{non-const|volatile}0 reference cannot bind to "
   "bit-field%select{| %1}2">;
+def err_reference_bind_to_bitfield_in_cce : Error<
+  "reference cannot bind to bit-field in converted constant expression">;
 def err_reference_bind_to_vector_element : Error<
   "%select{non-const|volatile}0 reference cannot bind to vector element">;
 def err_reference_bind_to_matrix_element : Error<
@@ -5136,8 +5138,6 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
-def err_non_type_template_arg_unsupported : Error<
-  "sorry, non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
@@ -5189,9 +5189,6 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
-def err_template_arg_member_ptr_base_derived_not_supported : Error<
-  "sorry, non-type template argument of pointer-to-member type %1 that refers "
-  "to member %q0 of a different class is not supported yet">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
 def ext_template_arg_extra_parens : ExtWarn<

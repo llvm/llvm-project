@@ -7168,6 +7168,9 @@ TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
 
   case clang::TemplateArgument::Pack:
     return eTemplateArgumentKindPack;
+
+  case clang::TemplateArgument::StructuralValue:
+    return eTemplateArgumentKindStructuralValue;
   }
   llvm_unreachable("Unhandled clang::TemplateArgument::ArgKind");
 }

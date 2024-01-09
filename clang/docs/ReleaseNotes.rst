@@ -147,6 +147,8 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P1907R1 <https://wg21.link/P1907R1>` which extends allowed non-type template argument
+  kinds with e.g. floating point values and pointers and references to subobjects.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

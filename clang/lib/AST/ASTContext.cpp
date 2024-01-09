@@ -6746,6 +6746,11 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
 
+    case TemplateArgument::StructuralValue:
+      return TemplateArgument(*this,
+                              getCanonicalType(Arg.getStructuralValueType()),
+                              Arg.getAsStructuralValue());
+
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()),
                               /*isNullPtr*/ false, Arg.getIsDefaulted());

@@ -628,6 +628,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, Arg1.getAsExpr(),
                                     Arg2.getAsExpr());
 
+  case TemplateArgument::StructuralValue:
+    // FIXME: Do we need to customize the comparison?
+    return Arg1.structurallyEquals(Arg2);
+
   case TemplateArgument::Pack:
     return IsStructurallyEquivalent(Context, Arg1.pack_elements(),
                                     Arg2.pack_elements());

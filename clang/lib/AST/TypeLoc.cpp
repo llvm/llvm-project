@@ -586,6 +586,7 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
     case TemplateArgument::Integral:
     case TemplateArgument::Declaration:
     case TemplateArgument::NullPtr:
+    case TemplateArgument::StructuralValue:
       ArgInfos[i] = TemplateArgumentLocInfo();
       break;
 
