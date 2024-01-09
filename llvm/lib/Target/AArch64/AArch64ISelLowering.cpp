@@ -4852,15 +4852,14 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, Reinterpret, Mask);
 }
 
-SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
-                                           SMEAttrs Attrs, SDLoc DL,
-                                           EVT VT) const {
-  if (Attrs.hasStreamingInterfaceOrBody() &&
-      !Attrs.hasStreamingCompatibleInterface())
+SDValue AArch64TargetLowering::getPStateSM(
+    SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs, SDLoc DL, EVT VT,
+    bool AllowStreamingCompatibleInterface) const {
+  if (Attrs.hasStreamingInterfaceOrBody() && !AllowStreamingCompatibleInterface)
     return DAG.getConstant(1, DL, VT);
 
   if (Attrs.hasNonStreamingInterfaceAndBody() &&
-      !Attrs.hasStreamingCompatibleInterface())
+      !AllowStreamingCompatibleInterface)
     return DAG.getConstant(0, DL, VT);
 
   SDValue Callee = DAG.getExternalSymbol("__arm_sme_state",
@@ -6890,7 +6889,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (IsLocallyStreaming) {
     SDValue PStateSM;
     if (Attrs.hasStreamingCompatibleInterface()) {
-      PStateSM = getPStateSM(DAG, Chain, Attrs, DL, MVT::i64);
+      PStateSM = getPStateSM(DAG, Chain, Attrs, DL, MVT::i64, true);
       Register Reg = MF.getRegInfo().createVirtualRegister(
           getRegClassFor(PStateSM.getValueType().getSimpleVT()));
       FuncInfo->setPStateSMReg(Reg);

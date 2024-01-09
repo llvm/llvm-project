@@ -46,59 +46,49 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
 define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: sm_body_caller_sm_compatible_caller_normal_callee:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    .cfi_offset b8, -40
-; CHECK-NEXT:    .cfi_offset b9, -48
-; CHECK-NEXT:    .cfi_offset b10, -56
-; CHECK-NEXT:    .cfi_offset b11, -64
-; CHECK-NEXT:    .cfi_offset b12, -72
-; CHECK-NEXT:    .cfi_offset b13, -80
-; CHECK-NEXT:    .cfi_offset b14, -88
-; CHECK-NEXT:    .cfi_offset b15, -96
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x20, x0, #0x1
-; CHECK-NEXT:    tbz w20, #0, .LBB1_4
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    bl normal_callee
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    tbz w19, #0, .LBB1_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    bl normal_callee
-; CHECK-NEXT:    tbz w20, #0, .LBB1_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB1_6:
-; CHECK-NEXT:    tbz w19, #0, .LBB1_8
-; CHECK-NEXT:  // %bb.7:
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:  .LBB1_8:
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @normal_callee()
   ret void
 }
 
-define void @sm_body_caller_sm_compatible_caller_streaming_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
-; CHECK-LABEL: sm_body_caller_sm_compatible_caller_streaming_callee:
-; CHECK:       // %bb.0:
+; Function Attrs: nounwind uwtable vscale_range(1,16)
+define void @foo(i32 noundef %x) "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+; CHECK-LABEL: foo:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
@@ -115,63 +105,52 @@ define void @sm_body_caller_sm_compatible_caller_streaming_callee() "aarch64_pst
 ; CHECK-NEXT:    .cfi_offset b13, -64
 ; CHECK-NEXT:    .cfi_offset b14, -72
 ; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_2
-; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    bl streaming_callee
-; CHECK-NEXT:    tbz w19, #0, .LBB2_4
-; CHECK-NEXT:  // %bb.3:
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
-  call void @streaming_callee()
-  ret void
-}
-
-define void @sm_body_caller_sm_compatible_caller_streaming_compatible_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
-; CHECK-LABEL: sm_body_caller_sm_compatible_caller_streaming_compatible_callee:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_offset b8, -24
-; CHECK-NEXT:    .cfi_offset b9, -32
-; CHECK-NEXT:    .cfi_offset b10, -40
-; CHECK-NEXT:    .cfi_offset b11, -48
-; CHECK-NEXT:    .cfi_offset b12, -56
-; CHECK-NEXT:    .cfi_offset b13, -64
-; CHECK-NEXT:    .cfi_offset b14, -72
-; CHECK-NEXT:    .cfi_offset b15, -80
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbnz w19, #0, .LBB3_2
-; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:  .LBB2_2: // %entry
+; CHECK-NEXT:    cbz w8, .LBB2_6
+; CHECK-NEXT:  // %bb.3: // %if.else
 ; CHECK-NEXT:    bl streaming_compatible_callee
-; CHECK-NEXT:    tbz w19, #0, .LBB3_4
-; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    tbz w19, #0, .LBB2_5
+; CHECK-NEXT:  // %bb.4: // %if.else
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:  .LBB2_5: // %if.else
 ; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @streaming_compatible_callee()
+; CHECK-NEXT:  .LBB2_6: // %if.then
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    bl normal_callee
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    tbz w19, #0, .LBB2_8
+; CHECK-NEXT:  // %bb.7: // %if.then
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB2_8: // %if.then
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %cmp = icmp eq i32 %x, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  tail call void @normal_callee()
+  br label %return
+
+if.else:                                          ; preds = %entry
+  tail call void @streaming_compatible_callee()
+  br label %return
+
+return:                                           ; preds = %if.else, %if.then
   ret void
 }

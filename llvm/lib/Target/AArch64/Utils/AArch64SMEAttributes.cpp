@@ -65,6 +65,16 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 std::optional<bool>
 SMEAttrs::requiresSMChange(const SMEAttrs &Callee,
                            bool BodyOverridesInterface) const {
+  // If the caller has a streaming body and streaming compatible interface,
+  // we will have already conditionally enabled streaming mode on function
+  // entry. We need to disable streaming mode when a callee does not have A
+  // streaming interface, body, or streaming compatible interface.
+  if (hasStreamingBody() && hasStreamingCompatibleInterface())
+    return (!Callee.hasStreamingInterfaceOrBody() &&
+            !Callee.hasStreamingCompatibleInterface())
+               ? std::optional<bool>(false)
+               : std::nullopt;
+
   // If the transition is not through a call (e.g. when considering inlining)
   // and Callee has a streaming body, then we can ignore the interface of
   // Callee.
