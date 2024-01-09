@@ -5,6 +5,10 @@
 
 define void @main() {
 entry:
+
+; CHECK-DAG: OpCapability Float16
+; CHECK-DAG: OpCapability Float64
+
 ; CHECK-DAG:     %[[#half:]] = OpTypeFloat 16
 ; CHECK-DAG:    %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG:   %[[#double:]] = OpTypeFloat 64
