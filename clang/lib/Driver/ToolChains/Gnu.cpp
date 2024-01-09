@@ -2251,6 +2251,15 @@ void Generic_GCC::GCCInstallationDetector::init(
     return;
   }
 
+  // If --gcc-triple is specified use this instead of trying to
+  // auto-detect a triple.
+  if (const Arg *A =
+          Args.getLastArg(clang::driver::options::OPT_gcc_triple_EQ)) {
+    StringRef GCCTriple = A->getValue();
+    CandidateTripleAliases.clear();
+    CandidateTripleAliases.push_back(GCCTriple);
+  }
+
   // Compute the set of prefixes for our search.
   SmallVector<std::string, 8> Prefixes;
   StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);

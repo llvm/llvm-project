@@ -7475,10 +7475,12 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
-  MVT IVT = VT.changeVectorElementTypeToInteger();
+  MVT IVT =
+      VT.changeVectorElementType(Subtarget.hasFP16() ? MVT::f16 : MVT::i16);
   SmallVector<SDValue, 16> NewOps;
   for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I)
-    NewOps.push_back(DAG.getBitcast(MVT::i16, Op.getOperand(I)));
+    NewOps.push_back(DAG.getBitcast(Subtarget.hasFP16() ? MVT::f16 : MVT::i16,
+                                    Op.getOperand(I)));
   SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
   return DAG.getBitcast(VT, Res);
 }
@@ -14369,6 +14371,13 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                   const APInt &Zeroable,
                                   const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
+  if (VT == MVT::v8bf16) {
+    V1 = DAG.getBitcast(MVT::v8i16, V1);
+    V2 = DAG.getBitcast(MVT::v8i16, V2);
+    return DAG.getBitcast(VT,
+                          DAG.getVectorShuffle(MVT::v8i16, DL, V1, V2, Mask));
+  }
+
   switch (VT.SimpleTy) {
   case MVT::v2i64:
     return lowerV2I64Shuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
@@ -17096,14 +17105,14 @@ static SDValue lower512BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG, /*SimpleOnly*/ false);
   }
 
-  if (VT == MVT::v32f16) {
+  if (VT == MVT::v32f16 || VT == MVT::v32bf16) {
     if (!Subtarget.hasBWI())
       return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG,
                                   /*SimpleOnly*/ false);
 
     V1 = DAG.getBitcast(MVT::v32i16, V1);
     V2 = DAG.getBitcast(MVT::v32i16, V2);
-    return DAG.getBitcast(MVT::v32f16,
+    return DAG.getBitcast(VT,
                           DAG.getVectorShuffle(MVT::v32i16, DL, V1, V2, Mask));
   }
 
@@ -21515,9 +21524,8 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
   RTLIB::Libcall LC =
       RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::bf16);
   SDValue Res =
-      makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16,
-                     DAG.getBitcast(MVT::i32, Res));
+      makeLibCall(DAG, LC, MVT::f16, Op.getOperand(0), CallOptions, DL).first;
+  return DAG.getBitcast(MVT::i16, Res);
 }
 
 /// Depending on uarch and/or optimizing for size, we might prefer to use a
@@ -57664,7 +57672,7 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
 }
 
 Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
-  if (ML->isInnermost() &&
+  if (ML && ML->isInnermost() &&
       ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
   return TargetLowering::getPrefLoopAlignment();

@@ -487,7 +487,7 @@ defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
 defvar VM1VTs = [vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
                  vbfloat16m1_t, vfloat16m1_t, vfloat32m1_t,
                  vfloat64m1_t, vint8mf2_t, vint8mf4_t, vint8mf8_t,
-	               vint16mf2_t, vint16mf4_t, vint32mf2_t,
+                 vint16mf2_t, vint16mf4_t, vint32mf2_t,
                  vfloat16mf4_t, vfloat16mf2_t, vbfloat16mf4_t,
                  vbfloat16mf2_t, vfloat32mf2_t];
 

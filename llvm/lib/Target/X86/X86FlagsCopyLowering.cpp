@@ -173,7 +173,6 @@ static FlagArithMnemonic getMnemonicFromOpcode(unsigned Opcode) {
 
 #define LLVM_EXPAND_ADC_SBB_INSTR(MNEMONIC)                                    \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rr)                                        \
-  LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rr_REV)                                    \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rm)                                        \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, mr)                                        \
   case X86::MNEMONIC##8ri:                                                     \

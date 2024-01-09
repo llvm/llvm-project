@@ -72,25 +72,42 @@ enum class OpenACCAtomicKind {
 
 /// Represents the kind of an OpenACC clause.
 enum class OpenACCClauseKind {
-  // 'finalize' clause, allowed on 'exit data' directive.
+  /// 'finalize' clause, allowed on 'exit data' directive.
   Finalize,
-  // 'if_present' clause, allowed on 'host_data' and 'update' directives.
+  /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
   IfPresent,
-  // 'seq' clause, allowed on 'loop' and 'routine' directives.
+  /// 'seq' clause, allowed on 'loop' and 'routine' directives.
   Seq,
-  // 'independent' clause, allowed on 'loop' directives.
+  /// 'independent' clause, allowed on 'loop' directives.
   Independent,
-  // 'auto' clause, allowed on 'loop' directives.
+  /// 'auto' clause, allowed on 'loop' directives.
   Auto,
-  // 'worker' clause, allowed on 'loop' and 'routine' directives.
+  /// 'worker' clause, allowed on 'loop' and 'routine' directives.
   Worker,
-  // 'vector' clause, allowed on 'loop' and 'routine' directives. Takes no
-  // arguments for 'routine', so the 'loop' version is not yet implemented
-  // completely.
+  /// 'vector' clause, allowed on 'loop' and 'routine' directives. Takes no
+  /// arguments for 'routine', so the 'loop' version is not yet implemented
+  /// completely.
   Vector,
-  // 'nohost' clause, allowed on 'routine' directives.
+  /// 'nohost' clause, allowed on 'routine' directives.
   NoHost,
-  // Represents an invalid clause, for the purposes of parsing.
+  /// 'default' clause, allowed on parallel, serial, kernel (and compound)
+  /// constructs.
+  Default,
+  /// 'if' clause, allowed on all the Compute Constructs, Data Constructs,
+  /// Executable Constructs, and Combined Constructs.
+  If,
+  /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
+  Self,
+  /// Represents an invalid clause, for the purposes of parsing.
+  Invalid,
+};
+
+enum class OpenACCDefaultClauseKind {
+  /// 'none' option.
+  None,
+  /// 'present' option.
+  Present,
+  /// Not a valid option.
   Invalid,
 };
 } // namespace clang

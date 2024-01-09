@@ -6920,7 +6920,7 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
   MVT VT = N->getSimpleValueType(0);
   SDLoc DL(N);
 
-  if (!Subtarget.hasShortForwardBranchOpt()) {
+  if (!Subtarget.hasConditionalMoveFusion()) {
     // (select c, -1, y) -> -c | y
     if (isAllOnesConstant(TrueV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
@@ -7084,7 +7084,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
     // Unless we have the short forward branch optimization.
-    if (!Subtarget.hasShortForwardBranchOpt())
+    if (!Subtarget.hasConditionalMoveFusion())
       return DAG.getNode(
           ISD::OR, DL, VT,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
@@ -12209,7 +12209,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   if (VT.isVector())
     return SDValue();
 
-  if (!Subtarget.hasShortForwardBranchOpt()) {
+  if (!Subtarget.hasConditionalMoveFusion()) {
     // (select cond, x, (and x, c)) has custom lowering with Zicond.
     if ((!Subtarget.hasStdExtZicond() &&
          !Subtarget.hasVendorXVentanaCondOps()) ||
@@ -14440,7 +14440,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = useInversedSetcc(N, DAG, Subtarget))
     return V;
 
-  if (Subtarget.hasShortForwardBranchOpt())
+  if (Subtarget.hasConditionalMoveFusion())
     return SDValue();
 
   SDValue TrueVal = N->getOperand(1);
@@ -15178,7 +15178,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
 
-    if (!Subtarget.hasShortForwardBranchOpt()) {
+    if (!Subtarget.hasConditionalMoveFusion()) {
       // (select c, -1, y) -> -c | y
       if (isAllOnesConstant(TrueV)) {
         SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
@@ -18215,20 +18215,9 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // split it and then direct call can be matched by PseudoCALL.
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
-
-    unsigned OpFlags = RISCVII::MO_CALL;
-    if (!getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV))
-      OpFlags = RISCVII::MO_PLT;
-
-    Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
+    Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    unsigned OpFlags = RISCVII::MO_CALL;
-
-    if (!getTargetMachine().shouldAssumeDSOLocal(*MF.getFunction().getParent(),
-                                                 nullptr))
-      OpFlags = RISCVII::MO_PLT;
-
-    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, OpFlags);
+    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, RISCVII::MO_CALL);
   }
 
   // The first call operand is the chain and the second is the target address.
