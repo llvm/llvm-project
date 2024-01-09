@@ -3549,9 +3549,9 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     AccelTypeUnitsDebugNames.convertDieToOffset();
     AccelDebugNames.addTypeEntries(AccelTypeUnitsDebugNames);
     AccelTypeUnitsDebugNames.clear();
+    setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
   }
   CU.addDIETypeSignature(RefDie, Signature);
-  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
 }
 
 // Add the Name along with its companion DIE to the appropriate accelerator
