@@ -109,6 +109,7 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandRV32ZdinxStore(MBB, MBBI);
   case RISCV::PseudoRV32ZdinxLD:
     return expandRV32ZdinxLoad(MBB, MBBI);
+  case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR:
   case RISCV::PseudoCCADD:
   case RISCV::PseudoCCSUB:
@@ -134,6 +135,9 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCSLLIW:
   case RISCV::PseudoCCSRLIW:
   case RISCV::PseudoCCSRAIW:
+  case RISCV::PseudoCCANDN:
+  case RISCV::PseudoCCORN:
+  case RISCV::PseudoCCXNOR:
     return expandCCOp(MBB, MBBI, NextMBBI);
   case RISCV::PseudoVSETVLI:
   case RISCV::PseudoVSETVLIX0:
@@ -191,7 +195,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   Register DestReg = MI.getOperand(0).getReg();
   assert(MI.getOperand(4).getReg() == DestReg);
 
-  if (MI.getOpcode() == RISCV::PseudoCCMOVGPR) {
+  if (MI.getOpcode() == RISCV::PseudoCCMOVGPR ||
+      MI.getOpcode() == RISCV::PseudoCCMOVGPRNoX0) {
     // Add MV.
     BuildMI(TrueBB, DL, TII->get(RISCV::ADDI), DestReg)
         .add(MI.getOperand(5))
@@ -225,6 +230,9 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCSLLIW: NewOpc = RISCV::SLLIW; break;
     case RISCV::PseudoCCSRLIW: NewOpc = RISCV::SRLIW; break;
     case RISCV::PseudoCCSRAIW: NewOpc = RISCV::SRAIW; break;
+    case RISCV::PseudoCCANDN:  NewOpc = RISCV::ANDN;  break;
+    case RISCV::PseudoCCORN:   NewOpc = RISCV::ORN;   break;
+    case RISCV::PseudoCCXNOR:  NewOpc = RISCV::XNOR;  break;
     }
     BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
         .add(MI.getOperand(5))

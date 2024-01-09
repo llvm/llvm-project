@@ -696,6 +696,9 @@ Bug Fixes in This Version
 - Clang now accepts recursive non-dependent calls to functions with deduced
   return type.
   Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
+- Fix assertion failure when initializing union containing struct with
+  flexible array member using empty initializer list.
+  Fixes (`#77085 <https://github.com/llvm/llvm-project/issues/77085>`_)
 
 
 Bug Fixes to Compiler Builtins
@@ -1150,9 +1153,10 @@ Improvements
 ^^^^^^^^^^^^
 
 - Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
-  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp`` and
-  ``errno`` behavior.
+  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp``,
+  ``getcwd`` and ``errno`` behavior.
   (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
+  `#77040 <https://github.com/llvm/llvm-project/pull/77040>`_,
   `#76671 <https://github.com/llvm/llvm-project/pull/76671>`_,
   `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
   `#76557 <https://github.com/llvm/llvm-project/pull/76557>`_,

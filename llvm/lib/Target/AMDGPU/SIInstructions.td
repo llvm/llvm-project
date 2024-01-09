@@ -111,7 +111,6 @@ def ATOMIC_FENCE : SPseudoInstSI<
   [(atomic_fence (i32 timm:$ordering), (i32 timm:$scope))],
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
-  let maybeAtomic = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
@@ -563,6 +562,7 @@ def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   let hasNoSchedulingInfo = 1;
   let FixedSize = 1;
   let isMeta = 1;
+  let maybeAtomic = 0;
 }
 
 // Used as an isel pseudo to directly emit initialization with an
@@ -1800,6 +1800,38 @@ def : BitConvert <v8i64,  v16f32, VReg_512>;
 def : BitConvert <v8f64,  v16f32, VReg_512>;
 def : BitConvert <v16f32, v8i64,  VReg_512>;
 def : BitConvert <v16f32, v8f64,  VReg_512>;
+
+
+
+def : BitConvert <v32bf16, v32i16, VReg_512>;
+def : BitConvert <v32i16, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v32i16, SReg_512>;
+def : BitConvert <v32i16, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v32f16, VReg_512>;
+def : BitConvert <v32f16, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v32f16, SReg_512>;
+def : BitConvert <v32f16, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v16i32, VReg_512>;
+def : BitConvert <v16i32, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v16i32, SReg_512>;
+def : BitConvert <v16i32, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v16f32, VReg_512>;
+def : BitConvert <v16f32, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v16f32, SReg_512>;
+def : BitConvert <v16f32, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v8f64, VReg_512>;
+def : BitConvert <v8f64, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v8f64, SReg_512>;
+def : BitConvert <v8f64, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v8i64, VReg_512>;
+def : BitConvert <v8i64, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v8i64, SReg_512>;
+def : BitConvert <v8i64, v32bf16, SReg_512>;
 
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;
@@ -3885,13 +3917,13 @@ def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
 
-def G_AMDGPU_S_MUL_U64_U32_PSEUDO : AMDGPUGenericInstruction {
+def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;
 }
 
-def G_AMDGPU_S_MUL_I64_I32_PSEUDO : AMDGPUGenericInstruction {
+def G_AMDGPU_S_MUL_I64_I32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;

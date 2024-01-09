@@ -6892,16 +6892,16 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     break;
   }
 
-  // Split s_mul_u64 in 32-bit vector multiplications.
   case AMDGPU::S_MUL_U64:
+    // Split s_mul_u64 in 32-bit vector multiplications.
     splitScalarSMulU64(Worklist, Inst, MDT);
     Inst.eraseFromParent();
     return;
 
-  // This is a special case of s_mul_u64 where all the operands are either zero
-  // extended or sign extended.
   case AMDGPU::S_MUL_U64_U32_PSEUDO:
   case AMDGPU::S_MUL_I64_I32_PSEUDO:
+    // This is a special case of s_mul_u64 where all the operands are either
+    // zero extended or sign extended.
     splitScalarSMulPseudo(Worklist, Inst, MDT);
     Inst.eraseFromParent();
     return;

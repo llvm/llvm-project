@@ -814,8 +814,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
-      setOperationAction(
-          {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
+      setOperationAction({ISD::AVGFLOORU, ISD::SADDSAT, ISD::UADDSAT,
+                          ISD::SSUBSAT, ISD::USUBSAT},
+                         VT, Legal);
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
@@ -1184,9 +1185,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
 
-        setOperationAction(
-            {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT,
-            Custom);
+        setOperationAction({ISD::AVGFLOORU, ISD::SADDSAT, ISD::UADDSAT,
+                            ISD::SSUBSAT, ISD::USUBSAT},
+                           VT, Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -3657,10 +3658,10 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // would require bit-manipulation instructions to construct the splat value.
   SmallVector<SDValue> Sequence;
   const auto *BV = cast<BuildVectorSDNode>(Op);
-  if (VT.isInteger() && EltBitSize < 64 &&
+  if (VT.isInteger() && EltBitSize < Subtarget.getELen() &&
       ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
       BV->getRepeatedSequence(Sequence) &&
-      (Sequence.size() * EltBitSize) <= 64) {
+      (Sequence.size() * EltBitSize) <= Subtarget.getELen()) {
     unsigned SeqLen = Sequence.size();
     MVT ViaIntVT = MVT::getIntegerVT(EltBitSize * SeqLen);
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32 ||
@@ -5465,6 +5466,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
   OP_CASE(USUBSAT)
+  OP_CASE(AVGFLOORU)
   OP_CASE(FADD)
   OP_CASE(FSUB)
   OP_CASE(FMUL)
@@ -5569,7 +5571,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    124 &&
+                    125 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5595,7 +5597,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    124 &&
+                    125 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -6459,6 +6461,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
+  case ISD::AVGFLOORU:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -6920,7 +6923,7 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
   MVT VT = N->getSimpleValueType(0);
   SDLoc DL(N);
 
-  if (!Subtarget.hasShortForwardBranchOpt()) {
+  if (!Subtarget.hasConditionalMoveFusion()) {
     // (select c, -1, y) -> -c | y
     if (isAllOnesConstant(TrueV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
@@ -7084,7 +7087,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
     // Unless we have the short forward branch optimization.
-    if (!Subtarget.hasShortForwardBranchOpt())
+    if (!Subtarget.hasConditionalMoveFusion())
       return DAG.getNode(
           ISD::OR, DL, VT,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
@@ -12209,7 +12212,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   if (VT.isVector())
     return SDValue();
 
-  if (!Subtarget.hasShortForwardBranchOpt()) {
+  if (!Subtarget.hasConditionalMoveFusion()) {
     // (select cond, x, (and x, c)) has custom lowering with Zicond.
     if ((!Subtarget.hasStdExtZicond() &&
          !Subtarget.hasVendorXVentanaCondOps()) ||
@@ -14440,7 +14443,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = useInversedSetcc(N, DAG, Subtarget))
     return V;
 
-  if (Subtarget.hasShortForwardBranchOpt())
+  if (Subtarget.hasConditionalMoveFusion())
     return SDValue();
 
   SDValue TrueVal = N->getOperand(1);
@@ -15178,7 +15181,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
 
-    if (!Subtarget.hasShortForwardBranchOpt()) {
+    if (!Subtarget.hasConditionalMoveFusion()) {
       // (select c, -1, y) -> -c | y
       if (isAllOnesConstant(TrueV)) {
         SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
@@ -18595,6 +18598,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UDIV_VL)
   NODE_NAME_CASE(UREM_VL)
   NODE_NAME_CASE(XOR_VL)
+  NODE_NAME_CASE(AVGFLOORU_VL)
   NODE_NAME_CASE(SADDSAT_VL)
   NODE_NAME_CASE(UADDSAT_VL)
   NODE_NAME_CASE(SSUBSAT_VL)

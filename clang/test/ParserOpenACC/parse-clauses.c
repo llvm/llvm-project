@@ -236,6 +236,85 @@ void IfClause() {
   for(;;){}
 }
 
+void SyncClause() {
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self, seq
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self(
+  for(;;){}
+
+  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self( seq
+  for(;;){}
+
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self(, seq
+  for(;;){}
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self)
+  for(;;){}
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self) seq
+  for(;;){}
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self), seq
+  for(;;){}
+
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self(), seq
+  for(;;){}
+
+  // expected-error@+3{{expected expression}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self(,), seq
+  for(;;){}
+
+  // expected-error@+2{{use of undeclared identifier 'invalid_expr'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial loop self(invalid_expr), seq
+  for(;;){}
+
+  int i, j;
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial self(i > j
+  for(;;){}
+
+  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial self(i > j, seq
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial self(i > j)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial self(1+5>3), seq
+  for(;;){}
+}
+
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
