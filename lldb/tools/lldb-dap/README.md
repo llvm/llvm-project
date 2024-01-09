@@ -125,7 +125,7 @@ The JSON configuration file can contain the following `lldb-dap` specific launch
 |**type**           |string  |Y| Must be "lldb-dap".
 |**request**        |string  |Y| Must be "attach".
 |**program**        |string  | | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
-|**pid**            |number  | | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **porgram**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
+|**pid**            |number  | | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickProcess}` will allow interactive process selection in the IDE.
 |**stopOnEntry**    |boolean| | Whether to stop program immediately after launching.
 |**waitFor**        |boolean | | Wait for the process to launch.
 |**initCommands**   |[string]| | LLDB commands executed upon debugger startup prior to creating the LLDB target. Commands and command output will be sent to the debugger console when they are executed.
