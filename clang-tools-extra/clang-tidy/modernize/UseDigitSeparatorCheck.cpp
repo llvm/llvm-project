@@ -272,8 +272,14 @@ void UseDigitSeparatorCallbacks::MacroDefined(const Token &MacroNameTok,
     }
 
     // Get formatting literal text
-    const llvm::APInt IntegerValue =
-        llvm::APInt(128, std::stoul(OriginalLiteralString));
+    llvm::APInt IntegerValue;
+    if (llvm::StringRef(OriginalLiteralString).starts_with("0b")) {
+      std::string BinaryNumber = OriginalLiteralString;
+      BinaryNumber.erase(0, 2);
+      IntegerValue = llvm::APInt(128, std::stoul(BinaryNumber, nullptr, 2));
+    } else {
+      IntegerValue = llvm::APInt(128, std::stoul(OriginalLiteralString));
+    }
     const std::string FormatedLiteralString =
         getFormatedIntegerString(OriginalLiteralString, IntegerValue);
 
