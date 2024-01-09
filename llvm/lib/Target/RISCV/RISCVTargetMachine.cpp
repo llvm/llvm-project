@@ -80,6 +80,11 @@ static cl::opt<bool> EnableRISCVDeadRegisterElimination(
              " them with stores to x0"),
     cl::init(true));
 
+// TODO: This should be controlled by -mtls-dialect=<option>
+cl::opt<bool> EnableRISCVTLSDESC("riscv-enable-tlsdesc",
+                                 cl::desc("Enable the tlsdesc for RISC-V"),
+                                 cl::Hidden);
+
 static cl::opt<bool>
     EnableSinkFold("riscv-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),

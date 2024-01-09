@@ -44,6 +44,7 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   bool relaxOnce(int pass) const override;
 };
 
@@ -119,6 +120,8 @@ RISCV::RISCV() {
     tlsGotRel = R_RISCV_TLS_TPREL32;
   }
   gotRel = symbolicRel;
+
+  tlsDescRel = R_RISCV_TLSDESC_CALL;
 
   // .got[0] = _DYNAMIC
   gotHeaderEntriesNum = 1;
@@ -298,6 +301,13 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return R_TLSGD_PC;
   case R_RISCV_TLS_GOT_HI20:
     return R_GOT_PC;
+  case R_RISCV_TLSDESC_HI20:
+    return R_TLSDESC_PC;
+  case R_RISCV_TLSDESC_LOAD_LO12:
+  case R_RISCV_TLSDESC_ADD_LO12:
+    return R_TLSDESC;
+  case R_RISCV_TLSDESC_CALL:
+    return R_TLSDESC_CALL;
   case R_RISCV_TPREL_HI20:
   case R_RISCV_TPREL_LO12_I:
   case R_RISCV_TPREL_LO12_S:
@@ -420,6 +430,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_PCREL_HI20:
   case R_RISCV_TLS_GD_HI20:
   case R_RISCV_TLS_GOT_HI20:
+  case R_RISCV_TLSDESC_HI20:
   case R_RISCV_TPREL_HI20:
   case R_RISCV_HI20: {
     uint64_t hi = val + 0x800;
@@ -430,6 +441,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case R_RISCV_PCREL_LO12_I:
   case R_RISCV_TPREL_LO12_I:
+  case R_RISCV_TLSDESC_LOAD_LO12:
+  case R_RISCV_TLSDESC_ADD_LO12:
   case R_RISCV_LO12_I: {
     uint64_t hi = (val + 0x800) >> 12;
     uint64_t lo = val - (hi << 12);
@@ -555,6 +568,13 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       break;
     }
   }
+}
+
+RelExpr RISCV::adjustTlsExpr(RelType type, RelExpr expr) const {
+  if (expr == R_RELAX_TLS_GD_TO_IE) {
+    return R_RELAX_TLS_GD_TO_IE_ABS;
+  }
+  return expr;
 }
 
 namespace {

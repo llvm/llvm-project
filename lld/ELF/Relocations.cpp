@@ -1269,7 +1269,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSDESC_GOTPLT>(expr) &&
+            R_TLSDESC_GOTPLT, R_RISCV_TLSDESC_HI>(expr) &&
       config->shared) {
     if (expr != R_TLSDESC_CALL) {
       sym.setFlags(NEEDS_TLSDESC);
@@ -1333,7 +1333,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
-            R_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
+            R_LOONGARCH_TLSGD_PAGE_PC, R_RISCV_TLSDESC_HI>(expr)) {
     if (!toExecRelax) {
       sym.setFlags(NEEDS_TLSGD);
       c.addReloc({expr, type, offset, addend, &sym});

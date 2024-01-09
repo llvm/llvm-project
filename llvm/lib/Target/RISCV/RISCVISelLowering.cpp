@@ -51,6 +51,8 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+extern cl::opt<bool> EnableRISCVTLSDESC;
+
 static cl::opt<unsigned> ExtensionMaxWebSize(
     DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
     cl::desc("Give the maximum size (in number of nodes) of the web of "
@@ -6857,6 +6859,23 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   return LowerCallTo(CLI).first;
 }
 
+SDValue RISCVTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  const GlobalValue *GV = N->getGlobal();
+
+  // Use a PC-relative addressing mode to access the global dynamic GOT address.
+  // This generates the pattern (PseudoLA_TLSDESC sym), which expands to
+  //
+  // auipc tX, %tlsdesc_hi(symbol)         // R_RISCV_TLSDESC_HI20(symbol)
+  // lw    tY, tX, %tlsdesc_lo_load(label) // R_RISCV_TLSDESC_LOAD_LO12_I(label)
+  // addi  a0, tX, %tlsdesc_lo_add(label)  // R_RISCV_TLSDESC_ADD_LO12_I(label)
+  // jalr  t0, tY                          // R_RISCV_TLSDESC_CALL(label)
+  SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
+  return SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLSDESC, DL, Ty, Addr), 0);
+}
+
 SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
@@ -6881,7 +6900,8 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     break;
   case TLSModel::LocalDynamic:
   case TLSModel::GeneralDynamic:
-    Addr = getDynamicTLSAddr(N, DAG);
+    Addr =
+        EnableRISCVTLSDESC ? getTLSDescAddr(N, DAG) : getDynamicTLSAddr(N, DAG);
     break;
   }
 
