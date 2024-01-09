@@ -423,7 +423,6 @@ public:
   void setFinalizedType(TokenType T) {
     if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
       return;
-
     Type = T;
     TypeIsFinalized = true;
   }

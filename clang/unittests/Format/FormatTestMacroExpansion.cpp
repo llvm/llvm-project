@@ -257,40 +257,37 @@ TEST_F(FormatTestMacroExpansion,
 
 TEST_F(FormatTestMacroExpansion, CommaAsOperator) {
   FormatStyle Style = getGoogleStyle();
-  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b, c)=a=(b); if(x) c");
-  verifyFormat(R"(ASSIGN_OR_RETURN(auto reader,
-                 logs::proxy::Reader::NewReader(log_filename, access_options,
-                                                reader_options),
-                 _ << aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa << aaaaaa << aaaaaaaaa
-                   << aaaaaaaaaaaa << aaaaaaaaaaa << aaaaaaaaaaaa);
-)", Style);
+  Style.ColumnLimit = 42;
+  Style.Macros.push_back("MACRO(a, b, c)=a=(b); if(x) c");
+  verifyFormat("MACRO(auto a,\n"
+               "      looooongfunction(first, second,\n"
+               "                       third),\n"
+               "      fourth);",
+               Style);
 }
 
 TEST_F(FormatTestMacroExpansion, ForcedBreakDiffers) {
   FormatStyle Style = getGoogleStyle();
-  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a=(b)");
-  EXPECT_EQ(R"(
-//
-ASSIGN_OR_RETURN(const lllllllllllllllllllllllllll xxxxxxxxxxxxxxx,
-                 aaaaaaaaaaaaaaaaaaaaaa(
-                     bbbbbbbbb, ccccccccccccccccccccccccccccc, dddddddddddd));
-)", format(R"(
-//
-ASSIGN_OR_RETURN(const lllllllllllllllllllllllllll xxxxxxxxxxxxxxx,
-                 aaaaaaaaaaaaaaaaaaaaaa(
-                     bbbbbbbbb, ccccccccccccccccccccccccccccc, dddddddddddd));
-)", Style));
+  Style.ColumnLimit = 40;
+  Style.Macros.push_back("MACRO(a, b)=a=(b)");
+  verifyFormat("//\n"
+               "MACRO(const type variable,\n"
+               "      functtioncall(\n"
+               "          first, longsecondarg, third));\n",
+               Style);
 }
 
-TEST_F(FormatTestMacroExpansion, PreferNotBreakingBetweenReturnTypeAndFunction) {
+TEST_F(FormatTestMacroExpansion,
+       PreferNotBreakingBetweenReturnTypeAndFunction) {
   FormatStyle Style = getGoogleStyle();
-  Style.Macros.push_back("MOCK_METHOD(r, n, a, s)=r n a s");
+  Style.ColumnLimit = 22;
+  Style.Macros.push_back("MOCK_METHOD(r, n, a)=r n a");
   // In the expanded code, we parse a full function signature, and afterwards
   // know that we prefer not to break before the function name.
-  verifyFormat(R"(MOCK_METHOD(
-    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
-    (cccccccccccccccccccccccccccccc), (const, override));
-)", Style);
+  verifyFormat("MOCK_METHOD(\n"
+               "    type, variable,\n"
+               "    (type));\n",
+               Style);
 }
 
 } // namespace
