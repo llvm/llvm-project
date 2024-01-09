@@ -63,7 +63,7 @@ unsigned Matrix<T>::appendExtraRow(ArrayRef<T> elems) {
 }
 
 template <typename T>
-Matrix<T> Matrix<T>::transpose() {
+Matrix<T> Matrix<T>::transpose() const {
   Matrix<T> transp(nColumns, nRows);
   for (unsigned row = 0; row < nRows; ++row)
     for (unsigned col = 0; col < nColumns; ++col)

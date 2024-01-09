@@ -132,14 +132,16 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 
   // Suppose the vertex is given by the matrix [ 2  2   0], with 2 params
   //                                           [-1 -1/2 1]
-  // and the cone has H-representation [0  -1] => U-matrix [ 2 -1]
-  //                                   [-1 -2]             [-1  0]
+  // and the cone has H-representation [0  -1],
+  //                                   [-1 -2]
+  // i.e., its generators are given by U = [2  -1].
+  //                                       [-1  0]
   // Therefore Λ will be given by [ 1    0 ] and the negation of this will be
   // stored as the numerator.
   //                              [ 1/2 -1 ]
   //                              [ -1  -2 ]
 
   // Algebraically, the numerator exponent is
-  // [ -2 ⌊ -N - M/2 +1 ⌋ + 1 ⌊ 0 +M +2 ⌋ ] -> first  COLUMN of U is [2, -1]
-  // [  1 ⌊ -N - M/2 +1 ⌋ + 0 ⌊ 0 +M +2 ⌋ ] -> second COLUMN of U is [-1, 0]
+  // [ -2 ⌊ - N - M/2 + 1 ⌋ + 1 ⌊ 0 + M + 2 ⌋ ] -> first  COLUMN of U is [2, -1]
+  // [  1 ⌊ - N - M/2 + 1 ⌋ + 0 ⌊ 0 + M + 2 ⌋ ] -> second COLUMN of U is [-1, 0]
 }
