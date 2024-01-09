@@ -6192,7 +6192,8 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
 
   // Instantiate a dynamic noexcept expression, if any.
   if (isComputedNoexcept(ESI.Type)) {
-    // Update this scrope because ContextDecl in Sema will be used in TransformExpr.
+    // Update this scrope because ContextDecl in Sema will be used in
+    // TransformExpr.
     auto *Method = dyn_cast_or_null<CXXMethodDecl>(ESI.SourceTemplate);
     Sema::CXXThisScopeRAII ThisScope(
         SemaRef, Method ? Method->getParent() : nullptr,
