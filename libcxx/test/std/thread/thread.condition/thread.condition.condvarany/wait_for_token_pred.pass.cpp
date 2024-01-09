@@ -177,6 +177,32 @@ void test() {
     [[maybe_unused]] MyThread my_thread;
   }
 
+  // request_stop potentially in-between check and wait
+  {
+    std::stop_source ss;
+    std::condition_variable_any cv;
+    Mutex mutex;
+    Lock lock{mutex};
+
+    std::atomic_bool pred_started        = false;
+    std::atomic_bool request_stop_called = false;
+    auto thread                          = support::make_test_thread([&]() {
+      pred_started.wait(false);
+      ss.request_stop();
+      request_stop_called.store(true);
+    });
+
+    std::same_as<bool> auto r = cv.wait_for(lock, ss.get_token(), 1h, [&]() {
+      pred_started.store(true);
+      request_stop_called.wait(false);
+      return false;
+    });
+    assert(!r);
+    thread.join();
+
+    assert(lock.owns_lock());
+  }
+
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   // Throws: Any exception thrown by pred.
   {

@@ -126,7 +126,6 @@ public:
 #include <__condition_variable/condition_variable.h>
 #include <__config>
 #include <__memory/shared_ptr.h>
-#include <__memory/unique_ptr.h>
 #include <__mutex/lock_guard.h>
 #include <__mutex/mutex.h>
 #include <__mutex/tag_types.h>
@@ -201,19 +200,26 @@ inline void condition_variable_any::notify_all() _NOEXCEPT {
   __cv_.notify_all();
 }
 
-struct __lock_external {
-  template <class _Lock>
-  _LIBCPP_HIDE_FROM_ABI void operator()(_Lock* __m) {
-    __m->lock();
+template <class _Lock>
+struct __unlock_guard {
+  _Lock& __lock_;
+
+  _LIBCPP_HIDE_FROM_ABI __unlock_guard(_Lock& __lock) : __lock_(__lock) { __lock_.unlock(); }
+
+  _LIBCPP_HIDE_FROM_ABI ~__unlock_guard() noexcept // turns exception to std::terminate
+  {
+    __lock_.lock();
   }
+
+  __unlock_guard(const __unlock_guard&)            = delete;
+  __unlock_guard& operator=(const __unlock_guard&) = delete;
 };
 
 template <class _Lock>
 void condition_variable_any::wait(_Lock& __lock) {
   shared_ptr<mutex> __mut = __mut_;
   unique_lock<mutex> __lk(*__mut);
-  __lock.unlock();
-  unique_ptr<_Lock, __lock_external> __lxx(&__lock);
+  __unlock_guard<_Lock> __unlock(__lock);
   lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
   __cv_.wait(__lk);
 } // __mut_.unlock(), __lock.lock()
@@ -228,8 +234,7 @@ template <class _Lock, class _Clock, class _Duration>
 cv_status condition_variable_any::wait_until(_Lock& __lock, const chrono::time_point<_Clock, _Duration>& __t) {
   shared_ptr<mutex> __mut = __mut_;
   unique_lock<mutex> __lk(*__mut);
-  __lock.unlock();
-  unique_ptr<_Lock, __lock_external> __lxx(&__lock);
+  __unlock_guard<_Lock> __unlock(__lock);
   lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
   return __cv_.wait_until(__lk, __t);
 } // __mut_.unlock(), __lock.lock()
@@ -257,25 +262,60 @@ condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Pe
 #  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 template <class _Lock, class _Predicate>
-bool condition_variable_any::wait(_Lock& __lock, stop_token __stoken, _Predicate __pred) {
-  stop_callback __cb(__stoken, [this] { notify_all(); });
-  while (!__stoken.stop_requested()) {
+bool condition_variable_any::wait(_Lock& __user_lock, stop_token __stoken, _Predicate __pred) {
+  // It is not safe to call the destructor on the other thread while waiting,
+  // even if we copy the shared_ptr<mutex> inside the function,
+  // because the stop_callback needs the internal cv.
+  // In order to make it work, we need to change the ABI to make both
+  // mutex and internal cv to be hold inside the shared_ptr, and
+  // make a local copy inside this function
+
+  if (__stoken.stop_requested())
+    return __pred();
+  std::stop_callback __cb(__stoken, [this] { notify_all(); });
+
+  while (true) {
     if (__pred())
       return true;
-    wait(__lock);
-  }
+
+    // We need to take the internal lock before checking stop_requested,
+    // so that the notification cannot come in between the stop_requested
+    // check and entering the wait.
+    // Note that the stop_callback takes the same internal lock before notifying
+    unique_lock<mutex> __internal_lock(*__mut_);
+    if (__stoken.stop_requested())
+      break;
+
+    __unlock_guard<_Lock> __unlock(__user_lock);
+    unique_lock<mutex> __internal_lock2(std::move(__internal_lock));
+    __cv_.wait(__internal_lock2);
+  } // __mut_.unlock(), __lock.lock()
   return __pred();
 }
 
 template <class _Lock, class _Clock, class _Duration, class _Predicate>
 bool condition_variable_any::wait_until(
-    _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred) {
+    _Lock& __user_lock,
+    stop_token __stoken,
+    const chrono::time_point<_Clock, _Duration>& __abs_time,
+    _Predicate __pred) {
+  if (__stoken.stop_requested())
+    return __pred();
   stop_callback __cb(__stoken, [this] { notify_all(); });
-  while (!__stoken.stop_requested()) {
+
+  while (true) {
     if (__pred())
       return true;
-    if (wait_until(__lock, __abs_time) == cv_status::timeout)
-      return __pred();
+
+    unique_lock<mutex> __internal_lock(*__mut_);
+    if (__stoken.stop_requested())
+      break;
+
+    __unlock_guard<_Lock> __unlock(__user_lock);
+    unique_lock<mutex> __internal_lock2(std::move(__internal_lock));
+
+    if (__cv_.wait_until(__internal_lock2, __abs_time) == cv_status::timeout)
+      break;
   }
   return __pred();
 }
