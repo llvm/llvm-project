@@ -220,7 +220,8 @@ public:
 
   static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM,
                                             mlir::Location loc, StringRef name,
-                                            mlir::Type t, bool isCst = false);
+                                            mlir::Type t, bool isCst = false,
+                                            mlir::Operation *insertPoint = nullptr);
 
   /// Return the mlir::Value for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
@@ -444,6 +445,14 @@ public:
   /// This must be called after dllimport/dllexport is set.
   void setGVProperties(mlir::Operation *Op, const NamedDecl *D) const;
   void setGVPropertiesAux(mlir::Operation *Op, const NamedDecl *D) const;
+
+  /// Replace the present global `Old` with the given global `New`. Their symbol
+  /// names must match; their types can be different. Usages of the old global
+  /// will be automatically updated if their types mismatch.
+  ///
+  /// This function will erase the old global. This function will NOT insert the
+  /// new global into the module.
+  void replaceGlobal(mlir::cir::GlobalOp Old, mlir::cir::GlobalOp New);
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
