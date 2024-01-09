@@ -68,9 +68,8 @@ public:
   parseFeatures(unsigned XLen, const std::vector<std::string> &Features);
 
   /// Convert RISC-V ISA info to a feature vector.
-  void toFeatures(std::vector<StringRef> &Features,
-                  llvm::function_ref<StringRef(const Twine &)> StrAlloc,
-                  bool AddAllExtensions) const;
+  std::vector<std::string> toFeatures(bool AddAllExtensions = false,
+                                      bool IgnoreUnknown = true) const;
 
   const OrderedExtensionMap &getExtensions() const { return Exts; };
 
@@ -83,7 +82,6 @@ public:
 
   bool hasExtension(StringRef Ext) const;
   std::string toString() const;
-  std::vector<std::string> toFeatureVector() const;
   StringRef computeDefaultABI() const;
 
   static bool isSupportedExtensionFeature(StringRef Ext);
