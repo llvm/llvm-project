@@ -25,21 +25,30 @@ def X86rao_xor  : SDNode<"X86ISD::AXOR", SDTRAOBinaryArith,
 def X86rao_and  : SDNode<"X86ISD::AAND", SDTRAOBinaryArith,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
-multiclass RAOINT_BASE<string OpcodeStr> {
+multiclass RAOINT_BASE<string OpcodeStr, string Suffix = ""> {
   let Predicates = [HasRAOINT] in
-    def 32mr : I<0xfc, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
-                 !strconcat("a", OpcodeStr, "{l}\t{$src, $dst|$dst, $src}"),
-                 [(!cast<SDNode>("X86rao_" # OpcodeStr) addr:$dst, GR32:$src)]>,
-               Sched<[WriteALURMW]>;
+    def 32mr#Suffix : I<0xfc, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
+                        !strconcat("a", OpcodeStr, "{l}\t{$src, $dst|$dst, $src}"),
+                        [(!cast<SDNode>("X86rao_" # OpcodeStr) addr:$dst, GR32:$src)]>,
+                      Sched<[WriteALURMW]>;
 
   let Predicates = [HasRAOINT, In64BitMode] in
-    def 64mr : I<0xfc, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
-                 !strconcat("a", OpcodeStr, "{q}\t{$src, $dst|$dst, $src}"),
-                 [(!cast<SDNode>("X86rao_" # OpcodeStr) addr:$dst, GR64:$src)]>,
-               Sched<[WriteALURMW]>, REX_W;
+    def 64mr#Suffix : I<0xfc, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
+                        !strconcat("a", OpcodeStr, "{q}\t{$src, $dst|$dst, $src}"),
+                        [(!cast<SDNode>("X86rao_" # OpcodeStr) addr:$dst, GR64:$src)]>,
+                      Sched<[WriteALURMW]>, REX_W;
 }
 
+let Predicates = [HasRAOINT, NoEGPR] in {
 defm AADD : RAOINT_BASE<"add">, T8;
 defm AAND : RAOINT_BASE<"and">, T8, PD;
 defm AOR  : RAOINT_BASE<"or" >, T8, XD;
 defm AXOR : RAOINT_BASE<"xor">, T8, XS;
+}
+
+let Predicates = [HasRAOINT, HasEGPR, In64BitMode] in {
+defm AADD : RAOINT_BASE<"add", "_EVEX">, EVEX, NoCD8, T_MAP4;
+defm AAND : RAOINT_BASE<"and", "_EVEX">, EVEX, NoCD8, T_MAP4, PD;
+defm AOR  : RAOINT_BASE<"or", "_EVEX">, EVEX, NoCD8, T_MAP4, XD;
+defm AXOR : RAOINT_BASE<"xor", "_EVEX">, EVEX, NoCD8, T_MAP4, XS;
+}
