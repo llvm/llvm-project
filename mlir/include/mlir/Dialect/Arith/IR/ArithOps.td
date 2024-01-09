@@ -140,10 +140,11 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
 class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>,
-      DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
+       DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs,
       DefaultValuedAttr<
-        Arith_IntegerOverflowAttr, "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags)>,
+        Arith_IntegerOverflowAttr,
+        "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags)>,
     Results<(outs SignlessIntegerLike:$result)> {
 
   let assemblyFormat = [{ $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
