@@ -466,13 +466,14 @@ def CollectMatchingOp : TransformDialectOp<"collect_matching", [
     DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let summary = "Collects all payload ops that match the given named matcher";
   let description = [{
-    Collects operations nested under `root` or other payload IR objects that
-    match the given matcher expressed as a named sequence. The matcher sequence
-    must accept exactly one argument that it is not allowed to modify. It must
-    yield as many values as this op has results. Each of the yielded values must
-    be associated with exactly one payload object. If any operation in the
-    matcher sequence produces a silenceable failure, the matcher advances to the
-    next payload operation in the walk order without finishing the sequence.
+    Collects operations or other payload IR objects nested under `root`
+    (inclusive) that match the given matcher expressed as a named sequence. The
+    matcher sequence must accept exactly one argument that it is not allowed to
+    modify. It must yield as many values as this op has results. Each of the
+    yielded values must be associated with exactly one payload object. If any
+    operation in the matcher sequence produces a silenceable failure, the
+    matcher advances to the next payload operation in the walk order without
+    finishing the sequence.
 
     The i-th result of this operation is constructed by concatenating the i-th
     yielded payload IR objects of all successful matcher sequence applications.
