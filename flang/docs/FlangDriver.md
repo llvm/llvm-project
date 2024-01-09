@@ -221,11 +221,12 @@ function, as a final link stage will occur that will provide the `Fortran_main`
 library when creating the final executable.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
-must be specified. This can be done with the cmake build flag `DEFAULT_SYSROOT`
+must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`
 or by using the `-isysroot` flag when linking a binary. On other targets
-`-isysroot` doesn't change the linker command line. While with Clang
-`-isysroot` also changes the sysroot for includes, with Flang it only affects
-Darwin libraries' sysroot.
+`-isysroot` doesn't change the linker command line (it only affects the header
+search path). While with Clang `-isysroot` also changes the sysroot for
+includes, with Flang (and Fortran in general) it only affects Darwin libraries'
+sysroot.
 
 ## Frontend Driver
 Flang's frontend driver is the main interface between compiler developers and
