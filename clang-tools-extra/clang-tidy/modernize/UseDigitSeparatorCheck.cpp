@@ -278,9 +278,11 @@ void UseDigitSeparatorCallbacks::MacroDefined(const Token &MacroNameTok,
       BinaryNumber.erase(0, 2);
       IntegerValue = llvm::APInt(128, std::stoul(BinaryNumber, nullptr, 2));
     } else if (llvm::StringRef(OriginalLiteralString).starts_with("0x")) {
-      IntegerValue = llvm::APInt(128, std::stoul(OriginalLiteralString, nullptr, 16));
+      IntegerValue =
+          llvm::APInt(128, std::stoul(OriginalLiteralString, nullptr, 16));
     } else if (llvm::StringRef(OriginalLiteralString).starts_with("0")) {
-      IntegerValue = llvm::APInt(128, std::stoul(OriginalLiteralString, nullptr, 8));
+      IntegerValue =
+          llvm::APInt(128, std::stoul(OriginalLiteralString, nullptr, 8));
     } else {
       IntegerValue = llvm::APInt(128, std::stoul(OriginalLiteralString));
     }
