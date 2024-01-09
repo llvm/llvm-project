@@ -1594,13 +1594,15 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost, ExitBB);
+        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
+                                   ExitBB);
 
         // Add debug values if the PN is a induction variable.
         PHINode *IndVar = L->getInductionVariable(*SE);
         if (PN->getIncomingValue(i) == IndVar)
           if (BasicBlock *Successor = ExitBB->getSingleSuccessor())
-            addDebugValuesToIncomingValue(Successor, PN->getIncomingValue(i), PN);
+            addDebugValuesToIncomingValue(Successor, PN->getIncomingValue(i),
+                                          PN);
       }
     }
   }
