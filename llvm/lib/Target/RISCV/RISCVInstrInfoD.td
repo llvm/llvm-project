@@ -54,7 +54,6 @@ def FPR64INX : RegisterOperand<GPR> {
 
 def FPR64IN32X : RegisterOperand<GPRPair> {
   let ParserMatchClass = GPRPairAsFPR;
-  let DecoderMethod = "DecodeGPRPairRegisterClass";
 }
 
 def DExt       : ExtInfo<"", "", [HasStdExtD], f64, FPR64, FPR32, FPR64, ?>;
