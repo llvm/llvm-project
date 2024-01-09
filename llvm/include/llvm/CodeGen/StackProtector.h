@@ -66,7 +66,7 @@ public:
 };
 
 class SSPLayoutAnalysis : public AnalysisInfoMixin<SSPLayoutAnalysis> {
-  friend class AnalysisInfoMixin<SSPLayoutAnalysis>;
+  friend struct AnalysisInfoMixin<SSPLayoutAnalysis>;
   using SSPLayoutMap = SSPLayoutInfo::SSPLayoutMap;
 
   static AnalysisKey Key;
