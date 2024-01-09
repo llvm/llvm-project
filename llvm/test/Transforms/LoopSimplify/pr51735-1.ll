@@ -12,16 +12,18 @@
 
 ; CHECK: if.then:
 ; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG]], {{.*}}
+; CHECK:   call void @llvm.dbg.value(metadata i32 %Var.1, metadata ![[VAR:[0-9]+]], {{.*}}
 ; CHECK:   br label %for.end, {{.*}}
 
 ; CHECK: if.else:
-; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG]], {{.*}}
+; CHECK:   call void @llvm.dbg.value(metadata i32 %Var.2, metadata ![[VAR:[0-9]+]], {{.*}}
 ; CHECK:   br label %for.end, {{.*}}
 
 ; CHECK: for.end:
 ; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG]], {{.*}}
 
 ; CHECK-DAG: ![[DBG]] = !DILocalVariable(name: "Index"{{.*}})
+; CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "Var"{{.*}})
 
 define dso_local noundef i32 @"?nop@@YAHH@Z"(i32 noundef %Param) !dbg !11 {
 entry:

@@ -1338,11 +1338,12 @@ struct RewritePhi {
   const SCEV *ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
+  BasicBlock *ExitBlock;       // Exit block for PHI node.
 
   RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
-             bool H)
+             bool H, BasicBlock *Exit)
       : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
-        HighCost(H) {}
+        HighCost(H), ExitBlock(Exit) {}
 };
 
 // Check whether it is possible to delete the loop after rewriting exit
@@ -1413,10 +1414,19 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
   return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
 }
 
-void llvm::addDebugValuesToLoopVariable(Loop *L, Value *ExitValue,
+void llvm::addDebugValuesToIncomingValue(BasicBlock *Successor, Value *IndVar,
+                                         PHINode *PN) {
+  SmallVector<DbgVariableIntrinsic *> DbgUsers;
+  findDbgUsers(DbgUsers, IndVar);
+  for (auto *DebugUser : DbgUsers) {
+    auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
+    Cloned->replaceVariableLocationOp(0u, PN);
+    Cloned->insertBefore(Successor->getFirstNonPHI());
+  }
+}
+
+void llvm::addDebugValuesToLoopVariable(BasicBlock *Successor, Value *ExitValue,
                                         PHINode *PN) {
-  SmallVector<BasicBlock *> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
   SmallVector<DbgVariableIntrinsic *> DbgUsers;
   findDbgUsers(DbgUsers, PN);
   for (auto *DebugUser : DbgUsers) {
@@ -1424,11 +1434,9 @@ void llvm::addDebugValuesToLoopVariable(Loop *L, Value *ExitValue,
     // get updated, which is fine as that is the existing behaviour.
     if (DebugUser->hasArgList())
       continue;
-    for (BasicBlock *Exit : ExitBlocks) {
-      auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
-      Cloned->replaceVariableLocationOp(0u, ExitValue);
-      Cloned->insertBefore(Exit->getFirstNonPHI());
-    }
+    auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
+    Cloned->replaceVariableLocationOp(0u, ExitValue);
+    Cloned->insertBefore(Successor->getFirstNonPHI());
   }
 }
 
@@ -1439,7 +1447,10 @@ void llvm::addDebugValuesToLoopVariable(Loop *L, ScalarEvolution *SE,
   const SCEV *PNSCEV = SE->getSCEVAtScope(PN, L->getParentLoop());
   if (auto *Const = dyn_cast<SCEVConstant>(PNSCEV)) {
     Value *FinalIVValue = Const->getValue();
-    addDebugValuesToLoopVariable(L, FinalIVValue, PN);
+    SmallVector<BasicBlock *> ExitBlocks;
+    L->getExitBlocks(ExitBlocks);
+    for (BasicBlock *Exit : ExitBlocks)
+      addDebugValuesToLoopVariable(Exit, FinalIVValue, PN);
   }
 }
 
@@ -1583,22 +1594,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
+        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost, ExitBB);
 
         // Add debug values if the PN is a induction variable.
         PHINode *IndVar = L->getInductionVariable(*SE);
-        for (Value *V : PN->incoming_values())
-          if (V == IndVar) {
-            if (BasicBlock *Successor = ExitBB->getSingleSuccessor()) {
-              SmallVector<DbgVariableIntrinsic *> DbgUsers;
-              findDbgUsers(DbgUsers, V);
-              for (auto *DebugUser : DbgUsers) {
-                auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
-                Cloned->replaceVariableLocationOp(0u, PN);
-                Cloned->insertBefore(Successor->getFirstNonPHI());
-              }
-            }
-          }
+        if (PN->getIncomingValue(i) == IndVar)
+          if (BasicBlock *Successor = ExitBB->getSingleSuccessor())
+            addDebugValuesToIncomingValue(Successor, PN->getIncomingValue(i), PN);
       }
     }
   }
@@ -1657,7 +1659,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // Replace PN with ExitVal if that is legal and does not break LCSSA.
     if (PN->getNumIncomingValues() == 1 &&
         LI->replacementPreservesLCSSAForm(PN, ExitVal)) {
-      addDebugValuesToLoopVariable(L, ExitVal, PN);
+      addDebugValuesToLoopVariable(Phi.ExitBlock, ExitVal, PN);
       PN->replaceAllUsesWith(ExitVal);
       PN->eraseFromParent();
     }
