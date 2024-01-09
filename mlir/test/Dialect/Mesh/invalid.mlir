@@ -169,7 +169,15 @@ func.func @process_multi_index_wrong_number_of_results_empty_mesh_axes() -> (ind
 func.func @process_multi_index_invalid_mesh_name() -> (index) {
   // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
   %0 = mesh.process_multi_index on @this_mesh_symbol_does_not_exist : index
-  return %0#0 : index
+  return %0 : index
+}
+
+// -----
+
+func.func @process_linear_index_invalid_mesh_name() -> (index) {
+  // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
+  %0 = mesh.process_linear_index on @this_mesh_symbol_does_not_exist : index
+  return %0 : index
 }
 
 // -----

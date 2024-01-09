@@ -180,6 +180,13 @@ func.func @process_multi_index_empty_axes() -> (index, index, index) {
   return %0#0, %0#1, %0#2 : index, index, index
 }
 
+// CHECK-LABEL: func @process_linear_index
+func.func @process_linear_index() -> index {
+  // CHECK: %[[RES:.*]] = mesh.process_linear_index on @mesh0 : index
+  %0 = mesh.process_linear_index on @mesh0 : index
+  // CHECK: return %[[RES]] : index
+  return %0 : index
+}
 
 // CHECK-LABEL: func @all_reduce
 func.func @all_reduce(
