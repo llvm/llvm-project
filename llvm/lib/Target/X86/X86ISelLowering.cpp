@@ -47031,8 +47031,8 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
 
   SDValue N00 = N0.getOperand(0);
   SDValue N01 = N0.getOperand(1);
-  APInt ShlConst = (N01)->getAsAPIntVal();
-  APInt SarConst = (N1)->getAsAPIntVal();
+  APInt ShlConst = N01->getAsAPIntVal();
+  APInt SarConst = N1->getAsAPIntVal();
   EVT CVT = N1.getValueType();
 
   if (SarConst.isNegative())
