@@ -35,7 +35,7 @@ define i64 @blam(ptr %start, ptr %end, ptr %ptr.2) {
 ; CHECK-NEXT:    br i1 [[EC_2]], label [[LOOP_2_EXIT:%.*]], label [[LOOP_2_LATCH]]
 ; CHECK:       loop.2.latch:
 ; CHECK-NEXT:    [[IV2_NEXT]] = getelementptr inbounds [[STRUCT_HOGE]], ptr [[IV2]], i64 1
-; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add i64 [[LSR_IV2]], 16
+; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add nuw i64 [[LSR_IV2]], 16
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER]]
 ; CHECK:       loop.2.exit:
 ; CHECK-NEXT:    ret i64 [[LSR_IV2]]

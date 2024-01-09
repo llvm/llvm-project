@@ -16,7 +16,7 @@ define void @japi1__unsafe_getindex_65028(ptr addrspace(10) %arg) {
 ; CHECK-NEXT:    br label [[L86:%.*]]
 ; CHECK:       L86:
 ; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], [[L86]] ], [ -2, [[TOP:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT5]] = add nsw i64 [[LSR_IV4]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT5]] = add nuw nsw i64 [[LSR_IV4]], 2
 ; CHECK-NEXT:    br i1 false, label [[L86]], label [[IF29:%.*]]
 ; CHECK:       if29:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(10) [[ARG]], i64 -8
