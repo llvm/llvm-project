@@ -543,3 +543,19 @@ double AssignmentPostfixScientificNotFormattedFloat4 = -1.2345678e-10F;
 #define MINUS_BINARY_NOT_FORMATTED_INTEGER -0b11101101
 // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of integer literal '0b11101101' [modernize-use-digit-separator]
 // CHECK-FIXES: 0b1110'1101
+
+#define OCT_NOT_FORMATTED_INTEGER 037512
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of integer literal '037512' [modernize-use-digit-separator]
+// CHECK-FIXES: 037'512
+
+#define MINUS_OCT_NOT_FORMATTED_INTEGER -037512
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: unformatted representation of integer literal '037512' [modernize-use-digit-separator]
+// CHECK-FIXES: 037'512
+
+#define HEX_NOT_FORMATTED_INTEGER 0x4f356
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of integer literal '0x4f356' [modernize-use-digit-separator]
+// CHECK-FIXES: 0x4'F356
+
+#define MINUS_HEX_NOT_FORMATTED_INTEGER -0x4f356
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: unformatted representation of integer literal '0x4f356' [modernize-use-digit-separator]
+// CHECK-FIXES: 0x4'F356
