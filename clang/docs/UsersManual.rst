@@ -2809,6 +2809,110 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
+Fine Tuning Profile Collection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The PGO infrastructure provides user program knobs to fine tune profile
+collection. Specifically, the PGO runtime provides the following functions
+that can be used to control the regions in the program where profiles should
+be collected.
+
+ * ``void __llvm_profile_set_filename(const char *Name)``: changes the name of
+   the profile file to ``Name``.
+ * ``void __llvm_profile_reset_counters(void)``: resets all counters to zero.
+ * ``int __llvm_profile_dump(void)``: write the profile data to disk.
+ * ``int __llvm_orderfile_dump(void)``: write the order file to disk.
+
+For example, the following pattern can be used to skip profiling program
+initialization, profile two specific hot regions, and skip profiling program
+cleanup:
+
+.. code-block:: c
+
+    int main() {
+      initialize();
+
+      // Reset all profile counters to 0 to omit profile collected during
+      // initialize()'s execution.
+      __llvm_profile_reset_counters();
+      ... hot region 1
+      // Dump the profile for hot region 1.
+      __llvm_profile_set_filename("region1.profraw");
+      __llvm_profile_dump();
+
+      // Reset counters before proceeding to hot region 2.
+      __llvm_profile_reset_counters();
+      ... hot region 2
+      // Dump the profile for hot region 2.
+      __llvm_profile_set_filename("region2.profraw");
+      __llvm_profile_dump();
+
+      // Since the profile has been dumped, no further profile data
+      // will be collected beyond the above __llvm_profile_dump().
+      cleanup();
+      return 0;
+    }
+
+These APIs' names can be introduced to user programs in two ways.
+They can be declared as weak symbols on platforms which support
+treating weak symbols as ``null`` during linking. For example, the user can
+have
+
+.. code-block:: c
+
+    __attribute__((weak)) int __llvm_profile_dump(void);
+
+    // Then later in the same source file
+    if (__llvm_profile_dump)
+      if (__llvm_profile_dump() != 0) { ... }
+    // The first if condition tests if the symbol is actually defined.
+    // Profile dumping only happens if the symbol is defined. Hence,
+    // the user program works correctly during normal (not profile-generate)
+    // executions.
+
+Alternatively, the user program can include the header
+``profile/instr_prof_interface.h``, which contains the API names. For example,
+
+.. code-block:: c
+
+    #include "profile/instr_prof_interface.h"
+
+    // Then later in the same source file
+    if (__llvm_profile_dump() != 0) { ... }
+
+The user code does not need to check if the API names are defined, because
+these names are automatically replaced by ``(0)`` or the equivalence of noop
+if the ``clang`` is not compiling for profile generation.
+
+Such replacement can happen because ``clang`` adds one of two macros depending
+on the ``-fprofile-generate`` and the ``-fprofile-use`` flags.
+
+ * ``__LLVM_INSTR_PROFILE_GENERATE``: defined when one of
+   ``-fprofile[-instr]-generate``/``-fcs-profile-generate`` is in effect.
+ * ``__LLVM_INSTR_PROFILE_USE``: defined when one of
+   ``-fprofile-use``/``-fprofile-instr-use`` is in effect.
+
+The two macros can be used to provide more flexibiilty so a user program
+can execute code specifically intended for profile generate or profile use.
+For example, a user program can have special logging during profile generate:
+
+.. code-block:: c
+
+    #if __LLVM_INSTR_PROFILE_GENERATE
+    expensive_logging_of_full_program_state();
+    #endif
+
+The logging is automatically excluded during a normal build of the program,
+hence it does not impact performance during a normal execution.
+
+It is advised to use such fine tuning only in a program's cold regions. The weak
+symbols can introduce extra control flow (the ``if`` checks), while the macros
+(hence declarations they guard in ``profile/instr_prof_interface.h``)
+can change the control flow of the functions that use them between profile
+generation and profile use (which can lead to discarded counters in such
+functions). Using these APIs in the program's cold regions introduces less
+overhead and leads to more optimized code.
+
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
