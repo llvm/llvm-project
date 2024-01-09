@@ -12972,7 +12972,7 @@ public:
   QualType FindCompositeObjCPointerType(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation QuestionLoc);
 
-  bool DiagnoseConditionalForNull(Expr *LHSExpr, Expr *RHSExpr,
+  bool DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,
                                   SourceLocation QuestionLoc);
 
   void DiagnoseAlwaysNonNullPointer(Expr *E,
