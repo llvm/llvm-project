@@ -1677,9 +1677,6 @@ static void readConfigs(opt::InputArgList &args) {
         getPackDynRelocs(args);
   }
 
-  config->relrPackAuthDynRelocs = getZFlag(
-      args, "pack-relative-auth-relocs", "nopack-relative-auth-relocs", false);
-
   if (auto *arg = args.getLastArg(OPT_symbol_ordering_file)){
     if (args.hasArg(OPT_call_graph_ordering_file))
       error("--symbol-ordering-file and --call-graph-order-file "

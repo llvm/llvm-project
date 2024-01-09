@@ -450,9 +450,6 @@ template <class ELFT> void elf::createSyntheticSections() {
     if (config->relrPackDynRelocs) {
       part.relrDyn = std::make_unique<RelrSection<ELFT>>(threadCount);
       add(*part.relrDyn);
-    }
-
-    if (config->relrPackAuthDynRelocs) {
       part.relrAuthDyn = std::make_unique<RelrSection<ELFT>>(
           threadCount, /*isAArch64Auth=*/true);
       add(*part.relrAuthDyn);

@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared2.s -o %t.so.o
 // RUN: ld.lld -shared %t.so.o -soname=so -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: ld.lld -pie -z nopack-relative-auth-relocs %t.o %t.so -o %t2
+// RUN: ld.lld -pie -z nopack-relative-relocs %t.o %t.so -o %t2
 // RUN: llvm-readobj -r %t2 | FileCheck --check-prefix=UNPACKED %s
 
 // UNPACKED:          Section ({{.+}}) .rela.dyn {
@@ -42,7 +42,7 @@
 // UNPACKED-NEXT:       0x30700 R_AARCH64_AUTH_ABS64 zed2 0x0
 // UNPACKED-NEXT:     }
 
-// RUN: ld.lld -pie -z pack-relative-auth-relocs %t.o %t.so -o %t2
+// RUN: ld.lld -pie -z pack-relative-relocs %t.o %t.so -o %t2
 // RUN: llvm-readobj -S --dynamic-table %t2 | FileCheck --check-prefix=RELR-HEADERS %s
 // RUN: llvm-readobj -r --raw-relr %t2 | FileCheck --check-prefix=RAW-RELR %s
 // RUN: llvm-readobj -r %t2 | FileCheck --check-prefix=RELR %s
