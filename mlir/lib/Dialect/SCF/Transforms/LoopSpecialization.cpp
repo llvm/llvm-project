@@ -128,7 +128,14 @@ static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp forOp,
 
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
-  partialIteration = cast<scf::ForOp>(b.clone(*forOp.getOperation()));
+  IRMapping map;
+  auto constStepOp =
+      b.create<arith::ConstantIndexOp>(forOp.getLoc(), *stepInt / 2);
+  // The new for loop for the remaining iterations has half the step size
+  // as continuous peeling requires the step size to diminish exponentially
+  // across subsequent loops.
+  map.map(forOp.getStep(), constStepOp);
+  partialIteration = cast<scf::ForOp>(b.clone(*forOp.getOperation(), map));
   partialIteration.getLowerBoundMutable().assign(splitBound);
   forOp.replaceAllUsesWith(partialIteration->getResults());
   partialIteration.getInitArgsMutable().assign(forOp->getResults());
@@ -188,7 +195,6 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
     return failure();
 
   Value initialUb = forOp.getUpperBound();
-  Value initialStep = forOp.getStep();
   uint64_t loopStep = *stepInt;
   currentLoop = forOp;
   AffineExpr sym0, sym1, sym2;
@@ -206,12 +212,7 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
   SmallVector<scf::ForOp> loops;
   while (loopStep) {
     b.setInsertionPoint(currentLoop);
-    auto constStepOp =
-        b.create<arith::ConstantIndexOp>(currentLoop.getLoc(), loopStep);
-    b.updateRootInPlace(currentLoop, [&]() {
-      currentLoop.getStepMutable().assign(constStepOp);
-    });
-    b.setInsertionPoint(currentLoop);
+
     Value splitBound = b.createOrFold<affine::AffineApplyOp>(
         currentLoop.getLoc(), splitMap,
         ValueRange{currentLoop.getLowerBound(), currentLoop.getUpperBound(),
@@ -220,19 +221,12 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
         splitLoopHelper(b, currentLoop, partialIteration, splitBound);
 
     // Canonicalize min/max affine operations
-    // It uses scf::rewritePeeledMinMaxOp to identify operations to be replaced,
-    // they are then replaced by the current step size.
-    // TODO: Alternative method - update affine map to reflect the corrected
-    // loop step - Example: min(ub - iv, 8) -> min(ub - iv, 4)
     currentLoop.walk([&](Operation *affineOp) {
-      if (isa<AffineMinOp, AffineMaxOp>(affineOp)) {
-        FailureOr<AffineApplyOp> result = scf::rewritePeeledMinMaxOp(
-            b, affineOp, currentLoop.getInductionVar(), initialUb, initialStep,
-            /*insideLoop=*/true);
-        // correct the step of the newly created affine op
-        if (succeeded(result))
-          b.replaceOp(result.value(), currentLoop.getStep());
-      }
+      if (isa<AffineMinOp, AffineMaxOp>(affineOp))
+        scf::rewritePeeledMinMaxOp(b, affineOp, currentLoop.getInductionVar(),
+                                   initialUb, currentLoop.getStep(),
+                                   /*insideLoop=*/true);
+
       return WalkResult::advance();
     });
 
