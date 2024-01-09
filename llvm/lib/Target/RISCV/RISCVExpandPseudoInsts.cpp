@@ -135,6 +135,9 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCSLLIW:
   case RISCV::PseudoCCSRLIW:
   case RISCV::PseudoCCSRAIW:
+  case RISCV::PseudoCCANDN:
+  case RISCV::PseudoCCORN:
+  case RISCV::PseudoCCXNOR:
     return expandCCOp(MBB, MBBI, NextMBBI);
   case RISCV::PseudoVSETVLI:
   case RISCV::PseudoVSETVLIX0:
@@ -227,6 +230,9 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCSLLIW: NewOpc = RISCV::SLLIW; break;
     case RISCV::PseudoCCSRLIW: NewOpc = RISCV::SRLIW; break;
     case RISCV::PseudoCCSRAIW: NewOpc = RISCV::SRAIW; break;
+    case RISCV::PseudoCCANDN:  NewOpc = RISCV::ANDN;  break;
+    case RISCV::PseudoCCORN:   NewOpc = RISCV::ORN;   break;
+    case RISCV::PseudoCCXNOR:  NewOpc = RISCV::XNOR;  break;
     }
     BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
         .add(MI.getOperand(5))
