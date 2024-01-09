@@ -214,9 +214,9 @@ template <typename T> constexpr bool isSorted(T &&Extensions) {
   return true;
 }
 
-static_assert(isSorted(SupportedExtensions) &&
+static_assert(isSorted(SupportedExtensions),
               "Extensions are not sorted by name");
-static_assert(isSorted(SupportedExperimentalExtensions) &&
+static_assert(isSorted(SupportedExperimentalExtensions),
               "Experimental extensions are not sorted by name");
 
 static void PrintExtension(StringRef Name, StringRef Version,
@@ -1132,7 +1132,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {"zvl8192b", {ImpliedExtsZvl8192b}},
 };
 
-static_assert(isSorted(ImpliedExts) &&
+static_assert(isSorted(ImpliedExts),
               "Implied extensions are not sorted by name");
 
 void RISCVISAInfo::updateImplication() {
