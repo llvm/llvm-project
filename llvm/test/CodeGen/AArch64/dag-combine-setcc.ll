@@ -266,19 +266,19 @@ define i1 @combine_setcc_eq0_conjunction_xor_or(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
-  %1 = load i64, ptr %a, align 1
-  %2 = load i64, ptr %b, align 1
-  %3 = xor i64 %1, %2
-  %4 = getelementptr i8, ptr %a, i64 8
-  %5 = getelementptr i8, ptr %b, i64 8
-  %6 = load i64, ptr %4, align 1
-  %7 = load i64, ptr %5, align 1
-  %8 = xor i64 %6, %7
-  %9 = or i64 %3, %8
-  %10 = icmp ne i64 %9, 0
-  %11 = zext i1 %10 to i32
-  %cmp = icmp eq i32 %11, 0
-  ret i1 %cmp
+  %a.0 = load i64, ptr %a, align 1
+  %b.0 = load i64, ptr %b, align 1
+  %xor1 = xor i64 %a.0, %b.0
+  %1 = getelementptr i8, ptr %a, i64 8
+  %2 = getelementptr i8, ptr %b, i64 8
+  %a.8 = load i64, ptr %1, align 1
+  %b.8 = load i64, ptr %2, align 1
+  %xor2 = xor i64 %a.8, %b.8
+  %or = or i64 %xor1, %xor2
+  %cmp1 = icmp ne i64 %or, 0
+  %ext = zext i1 %cmp to i32
+  %cmp2 = icmp eq i32 %ext, 0
+  ret i1 %cmp2
 }
 
 define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
@@ -290,18 +290,18 @@ define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
-  %1 = load i64, ptr %a, align 1
-  %2 = load i64, ptr %b, align 1
-  %3 = xor i64 %1, %2
-  %4 = getelementptr i8, ptr %a, i64 8
-  %5 = getelementptr i8, ptr %b, i64 8
-  %6 = load i64, ptr %4, align 1
-  %7 = load i64, ptr %5, align 1
-  %8 = xor i64 %6, %7
-  %9 = or i64 %3, %8
-  %10 = icmp ne i64 %9, 0
-  %11 = zext i1 %10 to i32
-  ret i1 %10
+  %a.0 = load i64, ptr %a, align 1
+  %b.0 = load i64, ptr %b, align 1
+  %xor1 = xor i64 %a.0, %b.0
+  %1 = getelementptr i8, ptr %a, i64 8
+  %2 = getelementptr i8, ptr %b, i64 8
+  %a.8 = load i64, ptr %1, align 1
+  %b.8 = load i64, ptr %2, align 1
+  %xor2 = xor i64 %a.8, %b.8
+  %or = or i64 %xor1, %xor2
+  %cmp = icmp ne i64 %or, 0
+  %ext = zext i1 %cmp to i32
+  ret i1 %ext
 }
 
 ; Doesn't increase the number of instructions, where the LHS has multiple uses
