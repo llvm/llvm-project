@@ -1,5 +1,5 @@
 ;; With +relax, J below needs a relocation to ensure the target is correct
-;; after linker relaxation.
+;; after linker relaxation. See https://github.com/ClangBuiltLinux/linux/issues/1965
 
 ; RUN: llc -mtriple=riscv64 -mattr=-relax -filetype=obj < %s \
 ; RUN:     | llvm-objdump -d -r - | FileCheck %s
