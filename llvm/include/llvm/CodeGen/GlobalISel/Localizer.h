@@ -67,10 +67,7 @@ private:
 
   typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
 
-  /// If \p Op is a phi operand and not unique in that phi, that is,
-  /// there are other operands in the phi with the same register,
-  /// return true.
-  bool isNonUniquePhiValue(MachineOperand &Op) const;
+  unsigned getNumPhiUses(MachineOperand &Op) const;
 
   /// Do inter-block localization from the entry block.
   bool localizeInterBlock(MachineFunction &MF,

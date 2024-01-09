@@ -58,18 +58,19 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
   return InsertMBB == Def.getParent();
 }
 
-bool Localizer::isNonUniquePhiValue(MachineOperand &Op) const {
+unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
   MachineInstr *MI = Op.getParent();
   if (!MI->isPHI())
-    return false;
+    return 0;
 
   Register SrcReg = Op.getReg();
+  unsigned NumUses = 0;
   for (unsigned Idx = 1; Idx < MI->getNumOperands(); Idx += 2) {
     auto &MO = MI->getOperand(Idx);
     if (&MO != &Op && MO.isReg() && MO.getReg() == SrcReg)
-      return true;
+      ++NumUses;
   }
-  return false;
+  return NumUses;
 }
 
 bool Localizer::localizeInterBlock(MachineFunction &MF,
@@ -108,11 +109,12 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         continue;
       }
 
-      // If the use is a phi operand that's not unique, don't try to localize.
-      // If we do, we can cause unnecessary instruction bloat by duplicating
-      // into each predecessor block, when the existing one is sufficient and
-      // allows for easier optimization later.
-      if (isNonUniquePhiValue(MOUse))
+      // PHIs look like a single user but can use the same register in multiple
+      // edges, causing remat into each predecessor. Allow this to a certain
+      // extent.
+      unsigned NumPhiUses = getNumPhiUses(MOUse);
+      const unsigned PhiThreshold = 2; // FIXME: Tune this more.
+      if (NumPhiUses > PhiThreshold)
         continue;
 
       LLVM_DEBUG(dbgs() << "Fixing non-local use\n");
@@ -164,19 +166,23 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
       if (!UseMI.isPHI())
         Users.insert(&UseMI);
     }
-    // If all the users were PHIs then they're not going to be in our block,
-    // don't try to move this instruction.
-    if (Users.empty())
-      continue;
-
     MachineBasicBlock::iterator II(MI);
-    ++II;
-    while (II != MBB.end() && !Users.count(&*II))
+    // If all the users were PHIs then they're not going to be in our block, we
+    // may still benefit from sinking, especially since the value might be live
+    // across a call.
+    if (Users.empty()) {
+      // Make sure we don't sink in between
+      // two terminator sequences by scanning forward, not backward.
+      II = MBB.getFirstTerminatorForward();
+      LLVM_DEBUG(dbgs() << "Only phi users: moving " << *MI << " to the end\n");
+    } else {
       ++II;
-
-    assert(II != MBB.end() && "Didn't find the user in the MBB");
-    LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II
-                      << '\n');
+      while (II != MBB.end() && !Users.count(&*II))
+        ++II;
+      assert(II != MBB.end() && "Didn't find the user in the MBB");
+      LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II
+                        << '\n');
+    }
 
     MI->removeFromParent();
     MBB.insert(II, MI);
