@@ -158,6 +158,7 @@ template <typename T> struct XCOFFSectionHeader {
 
   // The low order 16 bits of section flags denotes the section type.
   static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
+  static constexpr unsigned SectionDwarfSubflagsTypeMask = 0xffff0000u;
 
 public:
   StringRef getName() const;

@@ -513,8 +513,12 @@ void XCOFFWriter::writeSectionHeaders() {
   for (uint16_t I = 0, E = Obj.Sections.size(); I < E; ++I) {
     XCOFFYAML::Section DerivedSec = InitSections[I];
     writeName(DerivedSec.SectionName, W);
+    int32_t DwarfSubtype = 0; 
+    if (YamlSec.DwarfSectionSubtype)
+      DwarfSubtype = static_cast<int32_t>(*YamlSec.DwarfSectionSubtype); 
+
+    // Virtual address is the same as physical address.
     if (Is64Bit) {
-      // Virtual address is the same as physical address.
       W.write<uint64_t>(DerivedSec.Address); // Physical address
       W.write<uint64_t>(DerivedSec.Address); // Virtual address
       W.write<uint64_t>(DerivedSec.Size);
@@ -523,7 +527,7 @@ void XCOFFWriter::writeSectionHeaders() {
       W.write<uint64_t>(DerivedSec.FileOffsetToLineNumbers);
       W.write<uint32_t>(DerivedSec.NumberOfRelocations);
       W.write<uint32_t>(DerivedSec.NumberOfLineNumbers);
-      W.write<int32_t>(DerivedSec.Flags);
+      W.write<int32_t>(DerivedSec.Flags | DwarfSubtype);
       W.OS.write_zeros(4);
     } else {
       // Virtual address is the same as physical address.
@@ -535,7 +539,7 @@ void XCOFFWriter::writeSectionHeaders() {
       W.write<uint32_t>(DerivedSec.FileOffsetToLineNumbers);
       W.write<uint16_t>(DerivedSec.NumberOfRelocations);
       W.write<uint16_t>(DerivedSec.NumberOfLineNumbers);
-      W.write<int32_t>(DerivedSec.Flags);
+      W.write<int32_t>(DerivedSec.Flags | DwarfSubtype);
     }
   }
 }

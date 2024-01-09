@@ -95,6 +95,13 @@ Error XCOFFDumper::dumpSections(ArrayRef<Shdr> Sections) {
     YamlSec.FileOffsetToRelocations = S.FileOffsetToRelocationInfo;
     YamlSec.FileOffsetToLineNumbers = S.FileOffsetToLineNumberInfo;
     YamlSec.Flags = S.Flags;
+    if (YamlSec.Flags & XCOFF::STYP_DWARF) {
+      YamlSec.DwarfSectionSubtype =
+          static_cast<XCOFF::DwarfSectionSubtypeFlags>(
+              S.Flags &
+              XCOFFSectionHeader<
+                  XCOFFSectionHeader32>::SectionDwarfSubflagsTypeMask);
+    }
 
     // Dump section data.
     if (S.FileOffsetToRawData) {
