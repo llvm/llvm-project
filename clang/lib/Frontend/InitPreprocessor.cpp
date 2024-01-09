@@ -1364,12 +1364,22 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   TI.getTargetDefines(LangOpts, Builder);
 }
 
+static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
+                                       MacroBuilder &Builder) {
+  if (CodeGenOpts.hasProfileInstr())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_GENERATE");
+
+  if (CodeGenOpts.hasProfileIRUse() || CodeGenOpts.hasProfileClangUse())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_USE");
+}
+
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
-void clang::InitializePreprocessor(
-    Preprocessor &PP, const PreprocessorOptions &InitOpts,
-    const PCHContainerReader &PCHContainerRdr,
-    const FrontendOptions &FEOpts) {
+void clang::InitializePreprocessor(Preprocessor &PP,
+                                   const PreprocessorOptions &InitOpts,
+                                   const PCHContainerReader &PCHContainerRdr,
+                                   const FrontendOptions &FEOpts,
+                                   const CodeGenOptions &CodeGenOpts) {
   const LangOptions &LangOpts = PP.getLangOpts();
   std::string PredefineBuffer;
   PredefineBuffer.reserve(4080);
@@ -1415,6 +1425,11 @@ void clang::InitializePreprocessor(
   // current language configuration.
   InitializeStandardPredefinedMacros(PP.getTargetInfo(), PP.getLangOpts(),
                                      FEOpts, Builder);
+
+  // The PGO instrumentation profile macros are driven by options
+  // -fprofile[-instr]-generate/-fcs-profile-generate/-fprofile[-instr]-use,
+  // hence they are not guarded by InitOpts.UsePredefines.
+  InitializePGOProfileMacros(CodeGenOpts, Builder);
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
   // that they come from the command line.

@@ -59,6 +59,7 @@ Implemented Papers
 - P2821R5 - span.at()
 - P0521R0 - Proposed Resolution for CA 14 (shared_ptr use_count/unique)
 - P1759R6 - Native handles and file streams
+- P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
 
 
 Improvements and New Features
