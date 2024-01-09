@@ -514,8 +514,9 @@ define amdgpu_ps float @struct_buffer_load_i8_sext_wrong_width(<4 x i32> inreg %
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_SBYTE_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SBYTE_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 8)
-  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SBYTE_BOTHEN]]
+  ; GFX8-NEXT:   [[BUFFER_LOAD_UBYTE_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 8)
+  ; GFX8-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_UBYTE_BOTHEN]], 0, 4, implicit $exec
+  ; GFX8-NEXT:   $vgpr0 = COPY [[V_BFE_I32_e64_]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; GFX12-LABEL: name: struct_buffer_load_i8_sext_wrong_width
@@ -531,8 +532,9 @@ define amdgpu_ps float @struct_buffer_load_i8_sext_wrong_width(<4 x i32> inreg %
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_SBYTE_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SBYTE_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 8)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SBYTE_VBUFFER_BOTHEN]]
+  ; GFX12-NEXT:   [[BUFFER_LOAD_UBYTE_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 8)
+  ; GFX12-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_UBYTE_VBUFFER_BOTHEN]], 0, 4, implicit $exec
+  ; GFX12-NEXT:   $vgpr0 = COPY [[V_BFE_I32_e64_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %trunc = trunc i8 %val to i4
@@ -635,8 +637,9 @@ define amdgpu_ps float @struct_buffer_load_i16_sext_wrong_width(<4 x i32> inreg 
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_LOAD_SSHORT_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SSHORT_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 8)
-  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SSHORT_BOTHEN]]
+  ; GFX8-NEXT:   [[BUFFER_LOAD_USHORT_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_USHORT_BOTHEN]], 0, 8, implicit $exec
+  ; GFX8-NEXT:   $vgpr0 = COPY [[V_BFE_I32_e64_]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; GFX12-LABEL: name: struct_buffer_load_i16_sext_wrong_width
@@ -652,8 +655,9 @@ define amdgpu_ps float @struct_buffer_load_i16_sext_wrong_width(<4 x i32> inreg 
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_LOAD_SSHORT_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SSHORT_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 8)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SSHORT_VBUFFER_BOTHEN]]
+  ; GFX12-NEXT:   [[BUFFER_LOAD_USHORT_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[BUFFER_LOAD_USHORT_VBUFFER_BOTHEN]], 0, 8, implicit $exec
+  ; GFX12-NEXT:   $vgpr0 = COPY [[V_BFE_I32_e64_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %trunc = trunc i16 %val to i8
