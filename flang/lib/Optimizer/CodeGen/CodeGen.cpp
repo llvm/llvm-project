@@ -44,6 +44,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -67,8 +68,41 @@ static constexpr unsigned defaultAlign = 8;
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
-static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context) {
-  return mlir::LLVM::LLVMPointerType::get(context);
+static inline unsigned getAllocaAddressSpace(mlir::ModuleOp module) {
+  if (mlir::Attribute addrSpace =
+          mlir::DataLayout(module).getAllocaMemorySpace())
+    return addrSpace.cast<mlir::IntegerAttr>().getUInt();
+
+  return 0u;
+}
+
+static inline unsigned getProgramAddressSpace(mlir::ModuleOp module) {
+  if (mlir::Attribute addrSpace =
+          mlir::DataLayout(module).getProgramMemorySpace())
+    return addrSpace.cast<mlir::IntegerAttr>().getUInt();
+
+  return 0u;
+}
+
+static inline unsigned
+getAllocaAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  return parentOp ? ::getAllocaAddressSpace(
+                        parentOp->getParentOfType<mlir::ModuleOp>())
+                  : 0u;
+}
+
+static inline unsigned
+getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  return parentOp ? ::getProgramAddressSpace(
+                        parentOp->getParentOfType<mlir::ModuleOp>())
+                  : 0u;
+}
+
+static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
+                                        unsigned addressSpace = 0) {
+  return mlir::LLVM::LLVMPointerType::get(context, addressSpace);
 }
 
 static inline mlir::Type getI8Type(mlir::MLIRContext *context) {
@@ -369,7 +403,7 @@ protected:
   }
 
   // Generate an alloca of size 1 for an object of type \p llvmObjectTy.
-  mlir::LLVM::AllocaOp
+  mlir::Value
   genAllocaWithType(mlir::Location loc, mlir::Type llvmObjectTy,
                     unsigned alignment,
                     mlir::ConversionPatternRewriter &rewriter) const {
@@ -378,9 +412,23 @@ protected:
     mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
     rewriter.setInsertionPointToStart(insertBlock);
     auto size = genI32Constant(loc, rewriter, 1);
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(llvmObjectTy.getContext());
-    auto al = rewriter.create<mlir::LLVM::AllocaOp>(
-        loc, llvmPtrTy, llvmObjectTy, size, alignment);
+    unsigned allocaAs = getAllocaAddressSpace(rewriter);
+    unsigned programAs = getProgramAddressSpace(rewriter);
+
+    mlir::Value al = rewriter.create<mlir::LLVM::AllocaOp>(
+        loc, ::getLlvmPtrType(llvmObjectTy.getContext(), allocaAs),
+        llvmObjectTy, size, alignment);
+
+    // if our allocation address space, is not the same as the program address
+    // space, then we must emit a cast to the program address space before use.
+    // An example case would be on AMDGPU, where the allocation address space is
+    // the numeric value 5 (private), and the program address space is 0
+    // (generic).
+    if (allocaAs != programAs) {
+      al = rewriter.create<mlir::LLVM::AddrSpaceCastOp>(
+          loc, ::getLlvmPtrType(llvmObjectTy.getContext(), programAs), al);
+    }
+
     rewriter.restoreInsertionPoint(thisPt);
     return al;
   }
@@ -532,20 +580,34 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
         size = rewriter.create<mlir::LLVM::MulOp>(
             loc, ity, size, integerCast(loc, rewriter, ity, operands[i]));
     }
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(alloc.getContext());
+
+    unsigned allocaAs = getAllocaAddressSpace(rewriter);
+    unsigned programAs = getProgramAddressSpace(rewriter);
+
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
     // attribute like before is certainly bad).
     auto llvmAlloc = rewriter.create<mlir::LLVM::AllocaOp>(
-        loc, llvmPtrTy, llvmObjectType, size);
+        loc, ::getLlvmPtrType(alloc.getContext(), allocaAs), llvmObjectType,
+        size);
     if (alloc.getPinned())
       llvmAlloc->setDiscardableAttr(alloc.getPinnedAttrName(),
                                     alloc.getPinnedAttr());
     if (alloc.getBindcName())
       llvmAlloc->setDiscardableAttr(alloc.getBindcNameAttrName(),
                                     alloc.getBindcNameAttr());
-    rewriter.replaceOp(alloc, llvmAlloc);
+    if (allocaAs == programAs) {
+      rewriter.replaceOp(alloc, llvmAlloc);
+    } else {
+      // if our allocation address space, is not the same as the program address
+      // space, then we must emit a cast to the program address space before
+      // use. An example case would be on AMDGPU, where the allocation address
+      // space is the numeric value 5 (private), and the program address space
+      // is 0 (generic).
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(
+          alloc, ::getLlvmPtrType(alloc.getContext(), programAs), llvmAlloc);
+    }
     return mlir::success();
   }
 };
@@ -3114,7 +3176,7 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       auto storeOp =
           rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
       attachTBAATag(storeOp, boxTy, boxTy, nullptr);
-      rewriter.replaceOp(load, newBoxStorage.getResult());
+      rewriter.replaceOp(load, newBoxStorage);
     } else {
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
           load.getLoc(), llvmLoadTy, adaptor.getOperands(), load->getAttrs());
@@ -3807,6 +3869,17 @@ public:
     auto mod = getModule();
     if (!forcedTargetTriple.empty())
       fir::setTargetTriple(mod, forcedTargetTriple);
+
+    if (!forcedDataLayout.empty()) {
+      llvm::DataLayout dl(forcedDataLayout);
+      mlir::MLIRContext *context = mod.getContext();
+      mod->setAttr(
+          mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
+          mlir::StringAttr::get(context, dl.getStringRepresentation()));
+      mlir::DataLayoutSpecInterface dlSpec =
+          mlir::translateDataLayout(dl, context);
+      mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+    }
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
