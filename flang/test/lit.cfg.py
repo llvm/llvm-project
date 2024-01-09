@@ -130,7 +130,7 @@ tools = [
         "%flang",
         command=FindTool("flang-new"),
         extra_args=isysroot_flag,
-        unresolved="fatal"
+        unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
