@@ -110,12 +110,14 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
   }
 
   // Fallback to the top one.
-  uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
-  SymbolizedStackHolder symbolized_stack(
-      Symbolizer::GetOrInit()->SymbolizePC(pc));
-  if (const SymbolizedStack *frame = symbolized_stack.get()) {
-    ReportErrorSummary(error_type, frame->info, alt_tool_name);
-    return;
+  if (stack->size) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      ReportErrorSummary(error_type, frame->info, alt_tool_name);
+      return;
+    }
   }
 
   // Fallback to a summary without location.
