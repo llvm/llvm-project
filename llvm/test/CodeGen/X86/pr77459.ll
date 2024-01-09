@@ -6,58 +6,48 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 -mattr=+avx512vbmi | FileCheck %s --check-prefixes=AVX512
 
 define i4 @reverse_cmp_v4i1(<4 x i32> %a0, <4 x i32> %a1) {
-; SSE-LABEL: reverse_cmp_v4i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    leal (%rax,%rax), %ecx
-; SSE-NEXT:    andb $4, %cl
-; SSE-NEXT:    leal (,%rax,8), %edx
-; SSE-NEXT:    andb $8, %dl
-; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    shrb %cl
-; SSE-NEXT:    andb $2, %cl
-; SSE-NEXT:    orb %dl, %cl
-; SSE-NEXT:    shrb $3, %al
-; SSE-NEXT:    orb %cl, %al
-; SSE-NEXT:    # kill: def $al killed $al killed $rax
-; SSE-NEXT:    retq
+; SSE2-LABEL: reverse_cmp_v4i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
+; SSE2-NEXT:    leal (%rax,%rax), %ecx
+; SSE2-NEXT:    andb $4, %cl
+; SSE2-NEXT:    leal (,%rax,8), %edx
+; SSE2-NEXT:    andb $8, %dl
+; SSE2-NEXT:    orb %cl, %dl
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    shrb %cl
+; SSE2-NEXT:    andb $2, %cl
+; SSE2-NEXT:    orb %dl, %cl
+; SSE2-NEXT:    shrb $3, %al
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    # kill: def $al killed $al killed $rax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: reverse_cmp_v4i1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; SSE42-NEXT:    movmskps %xmm0, %eax
+; SSE42-NEXT:    # kill: def $al killed $al killed $eax
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: reverse_cmp_v4i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; AVX2-NEXT:    vmovmskps %xmm0, %eax
-; AVX2-NEXT:    leal (%rax,%rax), %ecx
-; AVX2-NEXT:    andb $4, %cl
-; AVX2-NEXT:    leal (,%rax,8), %edx
-; AVX2-NEXT:    andb $8, %dl
-; AVX2-NEXT:    orb %cl, %dl
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrb %cl
-; AVX2-NEXT:    andb $2, %cl
-; AVX2-NEXT:    orb %dl, %cl
-; AVX2-NEXT:    shrb $3, %al
-; AVX2-NEXT:    orb %cl, %al
-; AVX2-NEXT:    # kill: def $al killed $al killed $rax
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: reverse_cmp_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
-; AVX512-NEXT:    kmovd %k0, %ecx
-; AVX512-NEXT:    movl %ecx, %eax
-; AVX512-NEXT:    andb $8, %al
-; AVX512-NEXT:    leal (%rcx,%rcx), %edx
-; AVX512-NEXT:    andb $4, %dl
-; AVX512-NEXT:    leal (,%rcx,8), %esi
-; AVX512-NEXT:    andb $8, %sil
-; AVX512-NEXT:    orb %dl, %sil
-; AVX512-NEXT:    shrb %cl
-; AVX512-NEXT:    andb $2, %cl
-; AVX512-NEXT:    orb %sil, %cl
-; AVX512-NEXT:    shrb $3, %al
-; AVX512-NEXT:    orb %cl, %al
+; AVX512-NEXT:    vpmovm2d %k0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; AVX512-NEXT:    vpmovd2m %xmm0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
   %cmp = icmp eq <4 x i32> %a0, %a1
   %mask = bitcast <4 x i1> %cmp to i4
@@ -67,66 +57,54 @@ define i4 @reverse_cmp_v4i1(<4 x i32> %a0, <4 x i32> %a1) {
 declare i4 @llvm.bitreverse.i4(i4)
 
 define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
-; SSE-LABEL: reverse_cmp_v8i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE-NEXT:    packsswb %xmm0, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    rolb $4, %al
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andb $51, %cl
-; SSE-NEXT:    shlb $2, %cl
-; SSE-NEXT:    shrb $2, %al
-; SSE-NEXT:    andb $51, %al
-; SSE-NEXT:    orb %cl, %al
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andb $85, %cl
-; SSE-NEXT:    addb %cl, %cl
-; SSE-NEXT:    shrb %al
-; SSE-NEXT:    andb $85, %al
-; SSE-NEXT:    orb %cl, %al
-; SSE-NEXT:    # kill: def $al killed $al killed $eax
-; SSE-NEXT:    retq
+; SSE2-LABEL: reverse_cmp_v8i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
+; SSE2-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    rolb $4, %al
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andb $51, %cl
+; SSE2-NEXT:    shlb $2, %cl
+; SSE2-NEXT:    shrb $2, %al
+; SSE2-NEXT:    andb $51, %al
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andb $85, %cl
+; SSE2-NEXT:    addb %cl, %cl
+; SSE2-NEXT:    shrb %al
+; SSE2-NEXT:    andb $85, %al
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: reverse_cmp_v8i1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqw %xmm1, %xmm0
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1]
+; SSE42-NEXT:    packsswb %xmm0, %xmm0
+; SSE42-NEXT:    pmovmskb %xmm0, %eax
+; SSE42-NEXT:    # kill: def $al killed $al killed $eax
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: reverse_cmp_v8i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,12,10,8,6,4,2,0,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX2-NEXT:    rolb $4, %al
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andb $51, %cl
-; AVX2-NEXT:    shlb $2, %cl
-; AVX2-NEXT:    shrb $2, %al
-; AVX2-NEXT:    andb $51, %al
-; AVX2-NEXT:    orb %cl, %al
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andb $85, %cl
-; AVX2-NEXT:    addb %cl, %cl
-; AVX2-NEXT:    shrb %al
-; AVX2-NEXT:    andb $85, %al
-; AVX2-NEXT:    orb %cl, %al
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: reverse_cmp_v8i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
+; AVX512-NEXT:    vpmovm2d %k0, %ymm0
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpmovd2m %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    rolb $4, %al
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andb $51, %cl
-; AVX512-NEXT:    shlb $2, %cl
-; AVX512-NEXT:    shrb $2, %al
-; AVX512-NEXT:    andb $51, %al
-; AVX512-NEXT:    orb %cl, %al
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andb $85, %cl
-; AVX512-NEXT:    addb %cl, %cl
-; AVX512-NEXT:    shrb %al
-; AVX512-NEXT:    andb $85, %al
-; AVX512-NEXT:    orb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cmp = icmp eq <8 x i16> %a0, %a1
   %mask = bitcast <8 x i1> %cmp to i8
@@ -136,76 +114,56 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 declare i8 @llvm.bitreverse.i8(i8)
 
 define i16 @reverse_cmp_v16i1(<16 x i8> %a0, <16 x i8> %a1) {
-; SSE-LABEL: reverse_cmp_v16i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    rolw $8, %ax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; SSE-NEXT:    shll $4, %ecx
-; SSE-NEXT:    shrl $4, %eax
-; SSE-NEXT:    andl $3855, %eax # imm = 0xF0F
-; SSE-NEXT:    orl %ecx, %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andl $13107, %ecx # imm = 0x3333
-; SSE-NEXT:    shrl $2, %eax
-; SSE-NEXT:    andl $13107, %eax # imm = 0x3333
-; SSE-NEXT:    leal (%rax,%rcx,4), %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andl $21845, %ecx # imm = 0x5555
-; SSE-NEXT:    shrl %eax
-; SSE-NEXT:    andl $21845, %eax # imm = 0x5555
-; SSE-NEXT:    leal (%rax,%rcx,2), %eax
-; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
-; SSE-NEXT:    retq
+; SSE2-LABEL: reverse_cmp_v16i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    rolw $8, %ax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andl $3855, %ecx # imm = 0xF0F
+; SSE2-NEXT:    shll $4, %ecx
+; SSE2-NEXT:    shrl $4, %eax
+; SSE2-NEXT:    andl $3855, %eax # imm = 0xF0F
+; SSE2-NEXT:    orl %ecx, %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andl $13107, %ecx # imm = 0x3333
+; SSE2-NEXT:    shrl $2, %eax
+; SSE2-NEXT:    andl $13107, %eax # imm = 0x3333
+; SSE2-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andl $21845, %ecx # imm = 0x5555
+; SSE2-NEXT:    shrl %eax
+; SSE2-NEXT:    andl $21845, %eax # imm = 0x5555
+; SSE2-NEXT:    leal (%rax,%rcx,2), %eax
+; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: reverse_cmp_v16i1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE42-NEXT:    pmovmskb %xmm0, %eax
+; SSE42-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: reverse_cmp_v16i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX2-NEXT:    rolw $8, %ax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; AVX2-NEXT:    shll $4, %ecx
-; AVX2-NEXT:    shrl $4, %eax
-; AVX2-NEXT:    andl $3855, %eax # imm = 0xF0F
-; AVX2-NEXT:    orl %ecx, %eax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $13107, %ecx # imm = 0x3333
-; AVX2-NEXT:    shrl $2, %eax
-; AVX2-NEXT:    andl $13107, %eax # imm = 0x3333
-; AVX2-NEXT:    leal (%rax,%rcx,4), %eax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $21845, %ecx # imm = 0x5555
-; AVX2-NEXT:    shrl %eax
-; AVX2-NEXT:    andl $21845, %eax # imm = 0x5555
-; AVX2-NEXT:    leal (%rax,%rcx,2), %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: reverse_cmp_v16i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX512-NEXT:    vpmovm2w %k0, %ymm0
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512-NEXT:    vpermw %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    rolw $8, %ax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; AVX512-NEXT:    shll $4, %ecx
-; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    andl $3855, %eax # imm = 0xF0F
-; AVX512-NEXT:    orl %ecx, %eax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andl $13107, %ecx # imm = 0x3333
-; AVX512-NEXT:    shrl $2, %eax
-; AVX512-NEXT:    andl $13107, %eax # imm = 0x3333
-; AVX512-NEXT:    leal (%rax,%rcx,4), %eax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andl $21845, %ecx # imm = 0x5555
-; AVX512-NEXT:    shrl %eax
-; AVX512-NEXT:    andl $21845, %eax # imm = 0x5555
-; AVX512-NEXT:    leal (%rax,%rcx,2), %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cmp = icmp eq <16 x i8> %a0, %a1
   %mask = bitcast <16 x i1> %cmp to i16
@@ -215,80 +173,54 @@ define i16 @reverse_cmp_v16i1(<16 x i8> %a0, <16 x i8> %a1) {
 declare i16 @llvm.bitreverse.i16(i16)
 
 define i32 @reverse_cmp_v32i1(<32 x i8> %a0, <32 x i8> %a1) {
-; SSE-LABEL: reverse_cmp_v32i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    pcmpeqb %xmm3, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %ecx
-; SSE-NEXT:    shll $16, %ecx
-; SSE-NEXT:    orl %eax, %ecx
-; SSE-NEXT:    bswapl %ecx
-; SSE-NEXT:    movl %ecx, %eax
-; SSE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; SSE-NEXT:    shll $4, %eax
-; SSE-NEXT:    shrl $4, %ecx
-; SSE-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; SSE-NEXT:    orl %eax, %ecx
-; SSE-NEXT:    movl %ecx, %eax
-; SSE-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; SSE-NEXT:    shrl $2, %ecx
-; SSE-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; SSE-NEXT:    leal (%rcx,%rax,4), %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; SSE-NEXT:    shrl %eax
-; SSE-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; SSE-NEXT:    leal (%rax,%rcx,2), %eax
-; SSE-NEXT:    retq
+; SSE2-LABEL: reverse_cmp_v32i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    pcmpeqb %xmm3, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-NEXT:    shll $16, %ecx
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    bswapl %ecx
+; SSE2-NEXT:    movl %ecx, %eax
+; SSE2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; SSE2-NEXT:    shll $4, %eax
+; SSE2-NEXT:    shrl $4, %ecx
+; SSE2-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movl %ecx, %eax
+; SSE2-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; SSE2-NEXT:    shrl $2, %ecx
+; SSE2-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; SSE2-NEXT:    leal (%rcx,%rax,4), %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; SSE2-NEXT:    shrl %eax
+; SSE2-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; SSE2-NEXT:    leal (%rax,%rcx,2), %eax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: reverse_cmp_v32i1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE42-NEXT:    pcmpeqb %xmm3, %xmm1
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE42-NEXT:    pshufb %xmm2, %xmm1
+; SSE42-NEXT:    pmovmskb %xmm1, %ecx
+; SSE42-NEXT:    pshufb %xmm2, %xmm0
+; SSE42-NEXT:    pmovmskb %xmm0, %eax
+; SSE42-NEXT:    shll $16, %eax
+; SSE42-NEXT:    orl %ecx, %eax
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: reverse_cmp_v32i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    bswapl %eax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; AVX2-NEXT:    shll $4, %ecx
-; AVX2-NEXT:    shrl $4, %eax
-; AVX2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; AVX2-NEXT:    orl %ecx, %eax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; AVX2-NEXT:    shrl $2, %eax
-; AVX2-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; AVX2-NEXT:    leal (%rax,%rcx,4), %eax
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; AVX2-NEXT:    shrl %eax
-; AVX2-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; AVX2-NEXT:    leal (%rax,%rcx,2), %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: reverse_cmp_v32i1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    bswapl %eax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; AVX512-NEXT:    shll $4, %ecx
-; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; AVX512-NEXT:    orl %ecx, %eax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; AVX512-NEXT:    shrl $2, %eax
-; AVX512-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; AVX512-NEXT:    leal (%rax,%rcx,4), %eax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; AVX512-NEXT:    shrl %eax
-; AVX512-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; AVX512-NEXT:    leal (%rax,%rcx,2), %eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
   %cmp = icmp eq <32 x i8> %a0, %a1
   %mask = bitcast <32 x i1> %cmp to i32
   %rev = tail call i32 @llvm.bitreverse.i32(i32 %mask)
@@ -297,101 +229,83 @@ define i32 @reverse_cmp_v32i1(<32 x i8> %a0, <32 x i8> %a1) {
 declare i32 @llvm.bitreverse.i32(i32)
 
 define i64 @reverse_cmp_v64i1(<64 x i8> %a0, <64 x i8> %a1) {
-; SSE-LABEL: reverse_cmp_v64i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqb %xmm4, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    pcmpeqb %xmm5, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %ecx
-; SSE-NEXT:    shll $16, %ecx
-; SSE-NEXT:    orl %eax, %ecx
-; SSE-NEXT:    pcmpeqb %xmm6, %xmm2
-; SSE-NEXT:    pmovmskb %xmm2, %eax
-; SSE-NEXT:    pcmpeqb %xmm7, %xmm3
-; SSE-NEXT:    pmovmskb %xmm3, %edx
-; SSE-NEXT:    shll $16, %edx
-; SSE-NEXT:    orl %eax, %edx
-; SSE-NEXT:    shlq $32, %rdx
-; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    bswapq %rdx
-; SSE-NEXT:    movq %rdx, %rax
-; SSE-NEXT:    shrq $4, %rax
-; SSE-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; SSE-NEXT:    andq %rcx, %rax
-; SSE-NEXT:    andq %rcx, %rdx
-; SSE-NEXT:    shlq $4, %rdx
-; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; SSE-NEXT:    movq %rdx, %rcx
-; SSE-NEXT:    andq %rax, %rcx
-; SSE-NEXT:    shrq $2, %rdx
-; SSE-NEXT:    andq %rax, %rdx
-; SSE-NEXT:    leaq (%rdx,%rcx,4), %rax
-; SSE-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; SSE-NEXT:    movq %rax, %rdx
-; SSE-NEXT:    andq %rcx, %rdx
-; SSE-NEXT:    shrq %rax
-; SSE-NEXT:    andq %rcx, %rax
-; SSE-NEXT:    leaq (%rax,%rdx,2), %rax
-; SSE-NEXT:    retq
+; SSE2-LABEL: reverse_cmp_v64i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    pcmpeqb %xmm5, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-NEXT:    shll $16, %ecx
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    pcmpeqb %xmm6, %xmm2
+; SSE2-NEXT:    pmovmskb %xmm2, %eax
+; SSE2-NEXT:    pcmpeqb %xmm7, %xmm3
+; SSE2-NEXT:    pmovmskb %xmm3, %edx
+; SSE2-NEXT:    shll $16, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    bswapq %rdx
+; SSE2-NEXT:    movq %rdx, %rax
+; SSE2-NEXT:    shrq $4, %rax
+; SSE2-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NEXT:    andq %rcx, %rax
+; SSE2-NEXT:    andq %rcx, %rdx
+; SSE2-NEXT:    shlq $4, %rdx
+; SSE2-NEXT:    orq %rax, %rdx
+; SSE2-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; SSE2-NEXT:    movq %rdx, %rcx
+; SSE2-NEXT:    andq %rax, %rcx
+; SSE2-NEXT:    shrq $2, %rdx
+; SSE2-NEXT:    andq %rax, %rdx
+; SSE2-NEXT:    leaq (%rdx,%rcx,4), %rax
+; SSE2-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; SSE2-NEXT:    movq %rax, %rdx
+; SSE2-NEXT:    andq %rcx, %rdx
+; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    andq %rcx, %rax
+; SSE2-NEXT:    leaq (%rax,%rdx,2), %rax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: reverse_cmp_v64i1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE42-NEXT:    pcmpeqb %xmm5, %xmm1
+; SSE42-NEXT:    pcmpeqb %xmm6, %xmm2
+; SSE42-NEXT:    pcmpeqb %xmm7, %xmm3
+; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE42-NEXT:    pshufb %xmm4, %xmm3
+; SSE42-NEXT:    pmovmskb %xmm3, %eax
+; SSE42-NEXT:    pshufb %xmm4, %xmm2
+; SSE42-NEXT:    pmovmskb %xmm2, %ecx
+; SSE42-NEXT:    shll $16, %ecx
+; SSE42-NEXT:    orl %eax, %ecx
+; SSE42-NEXT:    pshufb %xmm4, %xmm1
+; SSE42-NEXT:    pmovmskb %xmm1, %edx
+; SSE42-NEXT:    pshufb %xmm4, %xmm0
+; SSE42-NEXT:    pmovmskb %xmm0, %eax
+; SSE42-NEXT:    shll $16, %eax
+; SSE42-NEXT:    orl %edx, %eax
+; SSE42-NEXT:    shlq $32, %rax
+; SSE42-NEXT:    orq %rcx, %rax
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: reverse_cmp_v64i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqb %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
+; AVX2-NEXT:    vpmovmskb %ymm1, %ecx
+; AVX2-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    vpcmpeqb %ymm3, %ymm1, %ymm0
-; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
-; AVX2-NEXT:    shlq $32, %rcx
-; AVX2-NEXT:    orq %rax, %rcx
-; AVX2-NEXT:    bswapq %rcx
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    shrq $4, %rax
-; AVX2-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
-; AVX2-NEXT:    andq %rdx, %rax
-; AVX2-NEXT:    andq %rdx, %rcx
-; AVX2-NEXT:    shlq $4, %rcx
-; AVX2-NEXT:    orq %rax, %rcx
-; AVX2-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; AVX2-NEXT:    movq %rcx, %rdx
-; AVX2-NEXT:    andq %rax, %rdx
-; AVX2-NEXT:    shrq $2, %rcx
-; AVX2-NEXT:    andq %rax, %rcx
-; AVX2-NEXT:    leaq (%rcx,%rdx,4), %rax
-; AVX2-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; AVX2-NEXT:    movq %rax, %rdx
-; AVX2-NEXT:    andq %rcx, %rdx
-; AVX2-NEXT:    shrq %rax
-; AVX2-NEXT:    andq %rcx, %rax
-; AVX2-NEXT:    leaq (%rax,%rdx,2), %rax
+; AVX2-NEXT:    shlq $32, %rax
+; AVX2-NEXT:    orq %rcx, %rax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: reverse_cmp_v64i1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
-; AVX512-NEXT:    kmovq %k0, %rax
-; AVX512-NEXT:    bswapq %rax
-; AVX512-NEXT:    movq %rax, %rcx
-; AVX512-NEXT:    shrq $4, %rcx
-; AVX512-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
-; AVX512-NEXT:    andq %rdx, %rcx
-; AVX512-NEXT:    andq %rdx, %rax
-; AVX512-NEXT:    shlq $4, %rax
-; AVX512-NEXT:    orq %rcx, %rax
-; AVX512-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; AVX512-NEXT:    movq %rax, %rdx
-; AVX512-NEXT:    andq %rcx, %rdx
-; AVX512-NEXT:    shrq $2, %rax
-; AVX512-NEXT:    andq %rcx, %rax
-; AVX512-NEXT:    leaq (%rax,%rdx,4), %rax
-; AVX512-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; AVX512-NEXT:    movq %rax, %rdx
-; AVX512-NEXT:    andq %rcx, %rdx
-; AVX512-NEXT:    shrq %rax
-; AVX512-NEXT:    andq %rcx, %rax
-; AVX512-NEXT:    leaq (%rax,%rdx,2), %rax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
   %cmp = icmp eq <64 x i8> %a0, %a1
   %mask = bitcast <64 x i1> %cmp to i64
   %rev = tail call i64 @llvm.bitreverse.i64(i64 %mask)
@@ -400,5 +314,4 @@ define i64 @reverse_cmp_v64i1(<64 x i8> %a0, <64 x i8> %a1) {
 declare i64 @llvm.bitreverse.i64(i64)
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; SSE2: {{.*}}
-; SSE42: {{.*}}
+; SSE: {{.*}}
