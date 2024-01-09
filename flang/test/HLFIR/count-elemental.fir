@@ -191,10 +191,10 @@ func.func @_QFPtest_multi(%arg0: !fir.ref<!fir.array<4x7x2xi32>> {fir.bindc_name
 // CHECK-NEXT:     %[[V5:.*]]:2 = hlfir.declare %arg2 {uniq_name = "_QFFtestEval"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK-NEXT:     %[[V6:.*]] = hlfir.designate %[[V1]]#0 (%c1:%c4:%c1, %c1:%c7:%c1, %c1:%c2:%c1)  shape %[[V0]] : (!fir.ref<!fir.array<4x7x2xi32>>, index, index, index, index, index, index, index, index, index, !fir.shape<3>) -> !fir.ref<!fir.array<4x7x2xi32>>
 // CHECK-NEXT:     %[[V7:.*]] = fir.load %[[V5]]#0 : !fir.ref<i32>
-// CHECK-NEXT:     %[[V8:.*]] = fir.do_loop %arg3 = %c1 to %c4 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) {
+// CHECK-NEXT:     %[[V8:.*]] = fir.do_loop %arg3 = %c1 to %c2 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) {
 // CHECK-NEXT:       %[[V10:.*]] = fir.do_loop %arg5 = %c1 to %c7 step %c1 iter_args(%arg6 = %arg4) -> (i32) {
-// CHECK-NEXT:         %[[V11:.*]] = fir.do_loop %arg7 = %c1 to %c2 step %c1 iter_args(%arg8 = %arg6) -> (i32) {
-// CHECK-NEXT:           %[[V12:.*]] = hlfir.designate %[[V6]] (%arg3, %arg5, %arg7)  : (!fir.ref<!fir.array<4x7x2xi32>>, index, index, index) -> !fir.ref<i32>
+// CHECK-NEXT:         %[[V11:.*]] = fir.do_loop %arg7 = %c1 to %c4 step %c1 iter_args(%arg8 = %arg6) -> (i32) {
+// CHECK-NEXT:           %[[V12:.*]] = hlfir.designate %[[V6]] (%arg7, %arg5, %arg3)  : (!fir.ref<!fir.array<4x7x2xi32>>, index, index, index) -> !fir.ref<i32>
 // CHECK-NEXT:           %[[V13:.*]] = fir.load %[[V12]] : !fir.ref<i32>
 // CHECK-NEXT:           %[[V14:.*]] = arith.cmpi sge, %[[V13]], %[[V7]] : i32
 // CHECK-NEXT:           %[[V15:.*]] = arith.addi %arg8, %c1_i32 : i32

@@ -671,14 +671,15 @@ static mlir::Value generateReductionLoop(fir::FirOpBuilder &builder,
   mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
 
   // Create a reduction loop nest. We use one-based indices so that they can be
-  // passed to the elemental.
-  llvm::SmallVector<mlir::Value> indices;
+  // passed to the elemental, and reverse the order so that they can be
+  // generated in column-major order for better performance.
+  llvm::SmallVector<mlir::Value> indices(extents.size(), mlir::Value{});
   for (unsigned i = 0; i < extents.size(); ++i) {
-    auto loop =
-        builder.create<fir::DoLoopOp>(loc, oneIdx, extents[i], oneIdx, false,
-                                      /*finalCountValue=*/false, reduction);
+    auto loop = builder.create<fir::DoLoopOp>(
+        loc, oneIdx, extents[extents.size() - i - 1], oneIdx, false,
+        /*finalCountValue=*/false, reduction);
     reduction = loop.getRegionIterArgs()[0];
-    indices.push_back(loop.getInductionVar());
+    indices[extents.size() - i - 1] = loop.getInductionVar();
     // Set insertion point to the loop body so that the next loop
     // is inserted inside the current one.
     builder.setInsertionPointToStart(loop.getBody());
