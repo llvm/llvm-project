@@ -19,6 +19,7 @@
 #include "llvm/Support/Error.h"
 
 #include <cstring>
+#include <string>
 
 using namespace llvm;
 using namespace omp;
@@ -177,73 +178,81 @@ bool GenericGlobalHandlerTy::hasProfilingGlobals(GenericDeviceTy &Device,
 Expected<GPUProfGlobals>
 GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
                                              DeviceImageTy &Image) {
-  GPUProfGlobals profdata;
+  GPUProfGlobals DeviceProfileData;
   auto ELFObj = getELFObjectFile(Image);
   if (!ELFObj)
     return ELFObj.takeError();
-  profdata.targetTriple = ELFObj->makeTriple();
+  DeviceProfileData.TargetTriple = ELFObj->makeTriple();
+
   // Iterate through elf symbols
-  for (auto &sym : ELFObj->symbols()) {
-    if (auto name = sym.getName()) {
-      // Check if given current global is a profiling global based
-      // on name
-      if (name->equals(getInstrProfNamesVarName())) {
-        // Read in profiled function names
-        std::vector<char> chars(sym.getSize() / sizeof(char), ' ');
-        GlobalTy NamesGlobal(name->str(), sym.getSize(), chars.data());
-        if (auto Err = readGlobalFromDevice(Device, Image, NamesGlobal))
-          return Err;
-        std::string names(chars.begin(), chars.end());
-        profdata.names = std::move(names);
-      } else if (name->starts_with(getInstrProfCountersVarPrefix())) {
-        // Read global variable profiling counts
-        std::vector<int64_t> counts(sym.getSize() / sizeof(int64_t), 0);
-        GlobalTy CountGlobal(name->str(), sym.getSize(), counts.data());
-        if (auto Err = readGlobalFromDevice(Device, Image, CountGlobal))
-          return Err;
-        profdata.counts.push_back(std::move(counts));
-      } else if (name->starts_with(getInstrProfDataVarPrefix())) {
-        // Read profiling data for this global variable
-        __llvm_profile_data data{};
-        GlobalTy DataGlobal(name->str(), sym.getSize(), &data);
-        if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
-          return Err;
-        profdata.data.push_back(std::move(data));
-      }
+  for (auto &Sym : ELFObj->symbols()) {
+    auto NameOrErr = Sym.getName();
+    if (!NameOrErr)
+      return ELFObj.takeError();
+
+    // Check if given current global is a profiling global based
+    // on name
+    if (NameOrErr->equals(getInstrProfNamesVarName())) {
+      // Read in profiled function names
+      DeviceProfileData.NamesData = SmallVector<uint8_t>(Sym.getSize(), 0);
+      GlobalTy NamesGlobal(NameOrErr->str(), Sym.getSize(),
+                           DeviceProfileData.NamesData.data());
+      if (auto Err = readGlobalFromDevice(Device, Image, NamesGlobal))
+        return Err;
+    } else if (NameOrErr->starts_with(getInstrProfCountersVarPrefix())) {
+      // Read global variable profiling counts
+      SmallVector<int64_t> Counts(Sym.getSize() / sizeof(int64_t), 0);
+      GlobalTy CountGlobal(NameOrErr->str(), Sym.getSize(), Counts.data());
+      if (auto Err = readGlobalFromDevice(Device, Image, CountGlobal))
+        return Err;
+      DeviceProfileData.Counts.push_back(std::move(Counts));
+    } else if (NameOrErr->starts_with(getInstrProfDataVarPrefix())) {
+      // Read profiling data for this global variable
+      __llvm_profile_data Data{};
+      GlobalTy DataGlobal(NameOrErr->str(), Sym.getSize(), &Data);
+      if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
+        return Err;
+      DeviceProfileData.Data.push_back(std::move(Data));
     }
   }
-  return profdata;
+  return DeviceProfileData;
 }
 
 void GPUProfGlobals::dump() const {
-  llvm::outs() << "======= GPU Profile =======\nTarget: " << targetTriple.str()
+  llvm::outs() << "======= GPU Profile =======\nTarget: " << TargetTriple.str()
                << "\n";
 
   llvm::outs() << "======== Counters =========\n";
-  for (const auto &count : counts) {
+  for (const auto &Count : Counts) {
     llvm::outs() << "[";
-    for (size_t i = 0; i < count.size(); i++) {
+    for (size_t i = 0; i < Count.size(); i++) {
       if (i == 0)
         llvm::outs() << " ";
-      llvm::outs() << count[i] << " ";
+      llvm::outs() << Count[i] << " ";
     }
     llvm::outs() << "]\n";
   }
 
   llvm::outs() << "========== Data ===========\n";
-  for (const auto &d : data) {
+  for (const auto &ProfData : Data) {
     llvm::outs() << "{ ";
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
-  llvm::outs() << d.Name << " ";
+  llvm::outs() << ProfData.Name << " ";
 #include "llvm/ProfileData/InstrProfData.inc"
     llvm::outs() << " }\n";
   }
 
   llvm::outs() << "======== Functions ========\n";
-  InstrProfSymtab symtab;
-  if (Error Err = symtab.create(StringRef(names))) {
+  std::string s;
+  s.reserve(NamesData.size());
+  for (uint8_t Name : NamesData) {
+    s.push_back((char)Name);
+  }
+
+  InstrProfSymtab Symtab;
+  if (Error Err = Symtab.create(StringRef(s))) {
     consumeError(std::move(Err));
   }
-  symtab.dumpNames(llvm::outs());
+  Symtab.dumpNames(llvm::outs());
   llvm::outs() << "===========================\n";
 }

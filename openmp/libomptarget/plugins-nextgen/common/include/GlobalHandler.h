@@ -13,8 +13,7 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
-#include <string>
-#include <vector>
+#include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -60,18 +59,19 @@ public:
   void setPtr(void *P) { Ptr = P; }
 };
 
-typedef void *IntPtrT;
+using IntPtrT = void *;
 struct __llvm_profile_data {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
+  std::remove_const<Type>::type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
 /// PGO profiling data extracted from a GPU device
 struct GPUProfGlobals {
-  std::string names;
-  std::vector<std::vector<int64_t>> counts;
-  std::vector<__llvm_profile_data> data;
-  Triple targetTriple;
+  SmallVector<uint8_t> NamesData;
+  SmallVector<SmallVector<int64_t>> Counts;
+  SmallVector<__llvm_profile_data> Data;
+  Triple TargetTriple;
 
   void dump() const;
 };
