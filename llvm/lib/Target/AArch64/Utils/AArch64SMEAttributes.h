@@ -29,14 +29,19 @@ public:
   // Enum with bitmasks for each individual SME feature.
   enum Mask {
     Normal = 0,
-    SM_Enabled = 1 << 0,    // aarch64_pstate_sm_enabled
-    SM_Compatible = 1 << 1, // aarch64_pstate_sm_compatible
-    SM_Body = 1 << 2,       // aarch64_pstate_sm_body
-    ZA_Shared = 1 << 3,     // aarch64_pstate_sm_shared
-    ZA_New = 1 << 4,        // aarch64_pstate_sm_new
-    ZA_Preserved = 1 << 5,  // aarch64_pstate_sm_preserved
-    ZA_NoLazySave = 1 << 6, // Used for SME ABI routines to avoid lazy saves
-    All = ZA_Preserved - 1
+    SM_Enabled = 1 << 0,     // aarch64_pstate_sm_enabled
+    SM_Compatible = 1 << 1,  // aarch64_pstate_sm_compatible
+    SM_Body = 1 << 2,        // aarch64_pstate_sm_body
+    ZA_Shared = 1 << 3,      // aarch64_pstate_sm_shared
+    ZA_New = 1 << 4,         // aarch64_pstate_sm_new
+    ZA_Preserved = 1 << 5,   // aarch64_pstate_sm_preserved
+    ZA_NoLazySave = 1 << 6,  // Used for SME ABI routines to avoid lazy saves
+    ZT0_New = 1 << 7,        // aarch64_sme_zt0_new
+    ZT0_In = 1 << 8,         // aarch64_sme_zt0_in
+    ZT0_Out = 1 << 9,        // aarch64_sme_zt0_out
+    ZT0_InOut = 1 << 10,     // aarch64_sme_zt0_inout
+    ZT0_Preserved = 1 << 11, // aarch64_sme_zt0_preserved
+    All = ZT0_Preserved - 1
   };
 
   SMEAttrs(unsigned Mask = Normal) : Bitmask(0) { set(Mask); }
@@ -86,6 +91,17 @@ public:
     return hasZAState() && Callee.hasPrivateZAInterface() &&
            !(Callee.Bitmask & ZA_NoLazySave);
   }
+
+  // Interfaces to query ZT0 State
+  bool hasNewZT0Body() const { return Bitmask & ZT0_New; }
+  bool isZT0In() const { return Bitmask & ZT0_In; }
+  bool isZT0Out() const { return Bitmask & ZT0_Out; }
+  bool isZT0InOut() const { return Bitmask & ZT0_InOut; }
+  bool preservesZT0() const { return Bitmask & ZT0_Preserved; }
+  bool sharesZT0() const {
+    return Bitmask & (ZT0_In | ZT0_Out | ZT0_InOut | ZT0_Preserved);
+  }
+  bool hasZT0State() const { return hasNewZT0Body() || sharesZT0(); }
 };
 
 } // namespace llvm

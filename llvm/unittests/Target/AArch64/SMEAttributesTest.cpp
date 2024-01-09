@@ -50,6 +50,37 @@ TEST(SMEAttributes, Constructors) {
                       ->getFunction("foo"))
                   .preservesZA());
 
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_in\"")
+                      ->getFunction("foo"))
+                  .isZT0In());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_out\"")
+                      ->getFunction("foo"))
+                  .isZT0Out());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_inout\"")
+                      ->getFunction("foo"))
+                  .isZT0InOut());
+
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_in\"")
+                      ->getFunction("foo"))
+                  .sharesZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_out\"")
+                      ->getFunction("foo"))
+                  .sharesZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_inout\"")
+                      ->getFunction("foo"))
+                  .sharesZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_preserved\"")
+                      ->getFunction("foo"))
+                  .sharesZT0());
+
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_preserved\"")
+                      ->getFunction("foo"))
+                  .preservesZT0());
+
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_new\"")
+                      ->getFunction("foo"))
+                  .hasNewZT0Body());
+
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
                      "SM_Enabled and SM_Compatible are mutually exclusive");
@@ -57,6 +88,29 @@ TEST(SMEAttributes, Constructors) {
                      "ZA_New and ZA_Shared are mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZA_New | SA::ZA_Preserved),
                      "ZA_New and ZA_Preserved are mutually exclusive");
+
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_In),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_Out),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_InOut),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_Preserved),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_In | SA::ZT0_Out),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_In | SA::ZT0_InOut),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_Out | SA::ZT0_InOut),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_Preserved | SA::ZT0_In),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_Preserved | SA::ZT0_Out),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT0_Preserved | SA::ZT0_InOut),
+                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
 
   // Test that the set() methods equally check validity.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled).set(SA::SM_Compatible),
@@ -95,6 +149,55 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(SA(SA::Normal).hasNewZABody());
   ASSERT_FALSE(SA(SA::Normal).hasZAState());
   ASSERT_FALSE(SA(SA::Normal).preservesZA());
+
+  // Test ZT0 State interfaces
+  ASSERT_TRUE(SA(SA::ZT0_In).isZT0In());
+  ASSERT_FALSE(SA(SA::ZT0_In).isZT0Out());
+  ASSERT_FALSE(SA(SA::ZT0_In).isZT0InOut());
+  ASSERT_FALSE(SA(SA::ZT0_In).preservesZT0());
+  ASSERT_FALSE(SA(SA::ZT0_In).hasNewZT0Body());
+  ASSERT_TRUE(SA(SA::ZT0_In).sharesZT0());
+  ASSERT_TRUE(SA(SA::ZT0_In).hasZT0State());
+
+  ASSERT_TRUE(SA(SA::ZT0_Out).isZT0Out());
+  ASSERT_FALSE(SA(SA::ZT0_Out).isZT0In());
+  ASSERT_FALSE(SA(SA::ZT0_Out).isZT0InOut());
+  ASSERT_FALSE(SA(SA::ZT0_Out).preservesZT0());
+  ASSERT_FALSE(SA(SA::ZT0_Out).hasNewZT0Body());
+  ASSERT_TRUE(SA(SA::ZT0_Out).sharesZT0());
+  ASSERT_TRUE(SA(SA::ZT0_Out).hasZT0State());
+
+  ASSERT_TRUE(SA(SA::ZT0_InOut).isZT0InOut());
+  ASSERT_FALSE(SA(SA::ZT0_InOut).isZT0In());
+  ASSERT_FALSE(SA(SA::ZT0_InOut).isZT0Out());
+  ASSERT_FALSE(SA(SA::ZT0_InOut).preservesZT0());
+  ASSERT_FALSE(SA(SA::ZT0_InOut).hasNewZT0Body());
+  ASSERT_TRUE(SA(SA::ZT0_InOut).sharesZT0());
+  ASSERT_TRUE(SA(SA::ZT0_InOut).hasZT0State());
+
+  ASSERT_TRUE(SA(SA::ZT0_Preserved).preservesZT0());
+  ASSERT_FALSE(SA(SA::ZT0_Preserved).isZT0In());
+  ASSERT_FALSE(SA(SA::ZT0_Preserved).isZT0Out());
+  ASSERT_FALSE(SA(SA::ZT0_Preserved).isZT0InOut());
+  ASSERT_FALSE(SA(SA::ZT0_Preserved).hasNewZT0Body());
+  ASSERT_TRUE(SA(SA::ZT0_Preserved).sharesZT0());
+  ASSERT_TRUE(SA(SA::ZT0_Preserved).hasZT0State());
+
+  ASSERT_TRUE(SA(SA::ZT0_New).hasNewZT0Body());
+  ASSERT_FALSE(SA(SA::ZT0_New).isZT0In());
+  ASSERT_FALSE(SA(SA::ZT0_New).isZT0Out());
+  ASSERT_FALSE(SA(SA::ZT0_New).isZT0InOut());
+  ASSERT_FALSE(SA(SA::ZT0_New).preservesZT0());
+  ASSERT_FALSE(SA(SA::ZT0_New).sharesZT0());
+  ASSERT_TRUE(SA(SA::ZT0_New).hasZT0State());
+
+  ASSERT_FALSE(SA(SA::Normal).isZT0In());
+  ASSERT_FALSE(SA(SA::Normal).isZT0Out());
+  ASSERT_FALSE(SA(SA::Normal).isZT0InOut());
+  ASSERT_FALSE(SA(SA::Normal).preservesZT0());
+  ASSERT_FALSE(SA(SA::Normal).hasNewZT0Body());
+  ASSERT_FALSE(SA(SA::Normal).sharesZT0());
+  ASSERT_FALSE(SA(SA::Normal).hasZT0State());
 }
 
 TEST(SMEAttributes, Transitions) {

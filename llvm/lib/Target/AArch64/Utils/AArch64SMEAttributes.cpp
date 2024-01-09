@@ -18,8 +18,11 @@ void SMEAttrs::set(unsigned M, bool Enable) {
   else
     Bitmask &= ~M;
 
+  // Streaming Mode Attrs
   assert(!(hasStreamingInterface() && hasStreamingCompatibleInterface()) &&
          "SM_Enabled and SM_Compatible are mutually exclusive");
+
+  // ZA Attrs
   assert(!(hasNewZABody() && hasSharedZAInterface()) &&
          "ZA_New and ZA_Shared are mutually exclusive");
   assert(!(hasNewZABody() && preservesZA()) &&
@@ -28,6 +31,11 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "ZA_New and ZA_NoLazySave are mutually exclusive");
   assert(!(hasSharedZAInterface() && (Bitmask & ZA_NoLazySave)) &&
          "ZA_Shared and ZA_NoLazySave are mutually exclusive");
+
+  // ZT0 Attrs
+  assert((!sharesZT0() || (hasNewZT0Body() ^ isZT0In() ^ isZT0InOut() ^
+                           isZT0Out() ^ preservesZT0())) &&
+         "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
 }
 
 SMEAttrs::SMEAttrs(const CallBase &CB) {
@@ -60,6 +68,16 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= ZA_New;
   if (Attrs.hasFnAttr("aarch64_pstate_za_preserved"))
     Bitmask |= ZA_Preserved;
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_in"))
+    Bitmask |= ZT0_In;
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_out"))
+    Bitmask |= ZT0_Out;
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_inout"))
+    Bitmask |= ZT0_InOut;
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_preserved"))
+    Bitmask |= ZT0_Preserved;
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_new"))
+    Bitmask |= ZT0_New;
 }
 
 std::optional<bool>
