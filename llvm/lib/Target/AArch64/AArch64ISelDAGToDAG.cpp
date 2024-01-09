@@ -4275,6 +4275,64 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // Essentially: rotr (xor(x, y), imm) -> xar (x, y, imm)
+  // Rotate by a constant is a funnel shift in IR which is exanded to
+  // an OR with shifted operands.
+  // We do the following transform:
+  //   OR N0, N1 -> xar (x, y, imm)
+  // Where:
+  //   N1 = SRL_PRED true, V, splat(imm)  --> rotr amount
+  //   N0 = SHL_PRED true, V, splat(bits-imm)
+  //   V = (xor x, y)
+  if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+    if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
+        N1.getOpcode() != AArch64ISD::SRL_PRED)
+      std::swap(N0, N1);
+    if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
+        N1.getOpcode() != AArch64ISD::SRL_PRED)
+      return false;
+
+    auto *TLI = static_cast<const AArch64TargetLowering *>(getTargetLowering());
+    if (!TLI->isAllActivePredicate(*CurDAG, N0.getOperand(0)) ||
+        !TLI->isAllActivePredicate(*CurDAG, N1.getOperand(0)))
+      return false;
+
+    SDValue XOR = N0.getOperand(1);
+    if (XOR.getOpcode() != ISD::XOR || XOR != N1.getOperand(1))
+      return false;
+
+    SDValue LConst = N0.getOperand(2);
+    SDValue RConst = N1.getOperand(2);
+    if (RConst.getOpcode() != ISD::SPLAT_VECTOR ||
+        LConst.getOpcode() != ISD::SPLAT_VECTOR)
+      return false;
+    if (!isa<ConstantSDNode>(RConst.getOperand(0).getNode()) ||
+        !isa<ConstantSDNode>(LConst.getOperand(0).getNode()))
+      return false;
+
+    uint64_t ShlAmt = LConst->getConstantOperandVal(0);
+    uint64_t ShrAmt = RConst->getConstantOperandVal(0);
+
+    if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())
+      return false;
+
+    SDLoc DL(N);
+    SDValue Imm = CurDAG->getTargetConstant(ShrAmt, DL, MVT::i32);
+
+    SDValue Ops[] = {XOR.getOperand(0), XOR.getOperand(1), Imm};
+    if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+            VT, {AArch64::XAR_ZZZI_B, AArch64::XAR_ZZZI_H, AArch64::XAR_ZZZI_S,
+                 AArch64::XAR_ZZZI_D})) {
+      CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+      return true;
+    }
+    return false;
+  }
+
+  if (!Subtarget->hasSHA3())
+    return false;
 
   if (N0->getOpcode() != AArch64ISD::VSHL ||
       N1->getOpcode() != AArch64ISD::VLSHR)
@@ -4367,7 +4425,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   case ISD::OR:
     if (tryBitfieldInsertOp(Node))
       return;
-    if (Subtarget->hasSHA3() && trySelectXAR(Node))
+    if (trySelectXAR(Node))
       return;
     break;
 
