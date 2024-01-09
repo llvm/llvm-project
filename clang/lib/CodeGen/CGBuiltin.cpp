@@ -1000,8 +1000,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   if (IdxInst)
     Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(IdxInst), Cmp);
 
-  Value *Default = getDefaultBuiltinObjectSizeResult(Type, ResType);
-  return Builder.CreateSelect(Cmp, Res, Default);
+  return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
 /// Returns a Value corresponding to the size of the given expression.
