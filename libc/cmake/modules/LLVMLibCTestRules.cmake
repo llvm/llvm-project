@@ -605,7 +605,7 @@ function(add_integration_test test_name)
 endfunction(add_integration_test)
 
 set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
-    -fpie -ffreestanding -fno-exceptions -fno-rtti -DLIBC_HERMETIC_TEST)
+    -fpie -ffreestanding -fno-exceptions -fno-rtti)
 # The GPU build requires overriding the default CMake triple and architecture.
 if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS

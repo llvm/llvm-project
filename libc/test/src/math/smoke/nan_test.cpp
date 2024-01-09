@@ -42,8 +42,8 @@ TEST_F(LlvmLibcNanTest, RandomString) {
   run_test("123 ", 0x7ff8000000000000);
 }
 
-#if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && !defined(LIBC_HERMETIC_TEST)
+#ifndef LIBC_HAVE_ADDRESS_SANITIZER
 TEST_F(LlvmLibcNanTest, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nan(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }
-#endif // !LIBC_HAVE_ADDRESS_SANITIZER && !LIBC_HERMETIC_TEST
+#endif // LIBC_HAVE_ADDRESS_SANITIZER
