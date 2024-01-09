@@ -47,4 +47,3 @@ PLUGIN_API_HANDLE(data_notify_mapped, false);
 PLUGIN_API_HANDLE(data_notify_unmapped, false);
 PLUGIN_API_HANDLE(set_device_offset, false);
 PLUGIN_API_HANDLE(initialize_record_replay, false);
-PLUGIN_API_HANDLE(use_auto_zero_copy, false);

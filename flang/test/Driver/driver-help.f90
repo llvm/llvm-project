@@ -94,6 +94,7 @@
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -gline-directives-only  Emit debug line info directives only
 ! HELP-NEXT: -gline-tables-only      Emit debug line number tables only
+! HELP-NEXT: -gpulibc                Link the LLVM C Library for GPUs
 ! HELP-NEXT: -g                      Generate source-level debug information
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
@@ -228,6 +229,7 @@
 ! HELP-FC1-NEXT: -fversion-loops-for-stride
 ! HELP-FC1-NEXT:                         Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
+! HELP-FC1-NEXT: -gpulibc                Link the LLVM C Library for GPUs
 ! HELP-FC1-NEXT: -help                   Display available options
 ! HELP-FC1-NEXT: -init-only              Only execute frontend initialization
 ! HELP-FC1-NEXT: -I <dir>                Add directory to the end of the list of include search paths

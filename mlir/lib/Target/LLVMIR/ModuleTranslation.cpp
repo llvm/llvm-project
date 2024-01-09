@@ -190,6 +190,26 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       layoutStream.flush();
       continue;
     }
+    if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
+      auto value = cast<IntegerAttr>(entry.getValue());
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-P" << space;
+      layoutStream.flush();
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutGlobalMemorySpaceKey) {
+      auto value = cast<IntegerAttr>(entry.getValue());
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-G" << space;
+      layoutStream.flush();
+      continue;
+    }
     if (key.getValue() == DLTIDialect::kDataLayoutAllocaMemorySpaceKey) {
       auto value = cast<IntegerAttr>(entry.getValue());
       uint64_t space = value.getValue().getZExtValue();
