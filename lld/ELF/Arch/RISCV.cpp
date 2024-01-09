@@ -43,6 +43,7 @@ public:
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
 };
 
@@ -307,6 +308,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_RELAX:
     return config->relax ? R_RELAX_HINT : R_NONE;
   case R_RISCV_SET_ULEB128:
+  case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
@@ -512,6 +514,46 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   default:
     llvm_unreachable("unknown relocation");
+  }
+}
+
+void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
+  for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
+    const Relocation &rel = sec.relocs()[i];
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val =
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr);
+
+    switch (rel.expr) {
+    case R_RELAX_HINT:
+      break;
+    case R_RISCV_LEB128:
+      if (i + 1 < size) {
+        const Relocation &rel1 = sec.relocs()[i + 1];
+        if (rel.type == R_RISCV_SET_ULEB128 &&
+            rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
+          auto val = rel.sym->getVA(rel.addend) - rel1.sym->getVA(rel1.addend);
+          if (overwriteULEB128(loc, val) >= 0x80)
+            errorOrWarn(sec.getLocation(rel.offset) + ": ULEB128 value " +
+                        Twine(val) + " exceeds available space; references '" +
+                        lld::toString(*rel.sym) + "'");
+          ++i;
+          continue;
+        }
+      }
+      errorOrWarn(sec.getLocation(rel.offset) +
+                  ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128");
+      return;
+    default:
+      relocate(loc, rel, val);
+      break;
+    }
   }
 }
 
