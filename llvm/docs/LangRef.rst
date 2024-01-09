@@ -27228,9 +27228,6 @@ obviously not constant. However, a call like
 function is inlined, if the value passed to the function parameter was
 a constant.
 
-On the other hand, if constant folding is not run, it will never
-evaluate to true, even in simple cases.
-
 .. _int_ptrmask:
 
 '``llvm.ptrmask``' Intrinsic
