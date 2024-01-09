@@ -956,8 +956,8 @@ void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
   // In this case only one state transition is added by the analyzer (the two
   // new states may be similar).
   ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
-  StreamState NewSS = StreamState::getOpened(Desc);
-  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
+  StateFailed =
+      StateFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
   C.addTransition(StateFailed);
 }
 
