@@ -262,19 +262,23 @@ AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
 }
 
 AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
-  // Check if this MemLoc is already registered
-  AliasSet *&AS = PointerMap[MemLoc];
-  if (AS) {
-    if (AS->Forward) {
-      // Update PointerMap entry to point to new target
-      AliasSet *OldAS = AS;
-      AS = OldAS->getForwardedTarget(*this);
-      AS->addRef();
-      OldAS->dropRef(*this);
+  // The alias sets are indexed with a map from the memory locations' pointer
+  // values. If the memory location is already registered, we can find it in the
+  // alias set associated with its pointer.
+  AliasSet *&MapEntry = PointerMap[MemLoc.Ptr];
+  if (MapEntry) {
+    AliasSet *AS = MapEntry->getForwardedTarget(*this);
+    if (llvm::is_contained(AS->MemoryLocs, MemLoc)) {
+      if (AS != MapEntry) {
+        AS->addRef();
+        MapEntry->dropRef(*this);
+        MapEntry = AS;
+      }
+      return *AS;
     }
-    return *AS;
   }
 
+  AliasSet *AS;
   bool MustAliasAll = false;
   if (AliasAnyAS) {
     // At this point, the AST is saturated, so we only have one active alias
@@ -287,16 +291,37 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
                  mergeAliasSetsForPointer(MemLoc, MustAliasAll)) {
     // Add it to the alias set it aliases.
     AS = AliasAS;
+  } else if (MapEntry) {
+    // Although we have an independent memory location, forgo creating a new
+    // alias set to retain the implementation invariant that all memory
+    // locations with the same pointer value are in the same alias set.
+    // (This is only known to occur for undef pointer values, which AA treats as
+    // noalias.)
+    AS = MapEntry->getForwardedTarget(*this);
+    AS->Alias = AliasSet::SetMayAlias;
   } else {
     // Otherwise create a new alias set to hold the loaded pointer.
-    AS = new AliasSet();
-    AliasSets.push_back(AS);
+    AliasSets.push_back(AS = new AliasSet());
     MustAliasAll = true;
   }
-  // Register MemLoc in selected alias set
+
+  // Register MemLoc in selected alias set.
   AS->addPointer(*this, MemLoc, MustAliasAll);
-  // PointerMap entry now points to the alias set
-  AS->addRef();
+  // Register selected alias set in pointer map (or ensure it is consistent with
+  // earlier map entry after taking into account new merging).
+  if (MapEntry) {
+    if (MapEntry->Forward) {
+      AliasSet *NewAS = MapEntry->getForwardedTarget(*this);
+      NewAS->addRef();
+      MapEntry->dropRef(*this);
+      MapEntry = NewAS;
+    }
+    assert(MapEntry == AS && "Memory locations with same pointer value cannot "
+                             "be in different alias sets");
+  } else {
+    AS->addRef();
+    MapEntry = AS;
+  }
   return *AS;
 }
 
@@ -539,7 +564,7 @@ void AliasSetTracker::print(raw_ostream &OS) const {
   OS << "Alias Set Tracker: " << AliasSets.size();
   if (AliasAnyAS)
     OS << " (Saturated)";
-  OS << " alias sets for " << PointerMap.size() << " memory locations.\n";
+  OS << " alias sets for " << PointerMap.size() << " pointer values.\n";
   for (const AliasSet &AS : *this)
     AS.print(OS);
   OS << "\n";

@@ -4,7 +4,7 @@
 @d = global i8 2, align 1
 
 ; CHECK: Alias sets for function 'test_alloca_argmemonly':
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %a, LocationSize::precise(1))
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref    Pointers: (ptr %d, unknown before-or-after), (ptr %s, unknown before-or-after)
 define void @test_alloca_argmemonly(ptr %s, ptr %d) {
@@ -16,9 +16,9 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_readonly_arg'
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %d, unknown before-or-after)
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] must alias, Ref       Pointers: (ptr %s, unknown before-or-after), (ptr %s, LocationSize::precise(1))
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (ptr %s, unknown before-or-after), (ptr %s, LocationSize::precise(1))
 define i8 @test_readonly_arg(ptr noalias %s, ptr noalias %d) {
 entry:
   call void @my_memcpy(ptr %d, ptr %s, i64 1)
@@ -27,7 +27,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_noalias_argmemonly':
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %a, LocationSize::precise(1))
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref    Pointers: (ptr %d, unknown before-or-after), (ptr %s, unknown before-or-after)
 define void @test_noalias_argmemonly(ptr noalias %a, ptr %s, ptr %d) {
@@ -38,9 +38,9 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test5':
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 4 memory locations.
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] must alias, Mod/Ref Pointers: (ptr %a, LocationSize::precise(1)), (ptr %a, unknown before-or-after)
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] must alias, Mod Pointers: (ptr %b, unknown before-or-after), (ptr %b, LocationSize::precise(1))
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod/Ref Pointers: (ptr %a, LocationSize::precise(1)), (ptr %a, unknown before-or-after)
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod Pointers: (ptr %b, unknown before-or-after), (ptr %b, LocationSize::precise(1))
 define void @test5(ptr noalias %a, ptr noalias %b) {
 entry:
   store i8 1, ptr %a, align 1
@@ -50,9 +50,9 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_argcollapse':
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 4 memory locations.
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] must alias, Mod/Ref Pointers: (ptr %a, LocationSize::precise(1)), (ptr %a, unknown before-or-after)
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] must alias, Mod/Ref Pointers: (ptr %b, unknown before-or-after), (ptr %b, LocationSize::precise(1))
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod/Ref Pointers: (ptr %a, LocationSize::precise(1)), (ptr %a, unknown before-or-after)
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod/Ref Pointers: (ptr %b, unknown before-or-after), (ptr %b, LocationSize::precise(1))
 define void @test_argcollapse(ptr noalias %a, ptr noalias %b) {
 entry:
   store i8 1, ptr %a, align 1
@@ -62,7 +62,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_memcpy1':
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod/Ref Pointers: (ptr %b, unknown before-or-after)
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod/Ref Pointers: (ptr %a, unknown before-or-after)
 define void @test_memcpy1(ptr noalias %a, ptr noalias %b) {
@@ -73,7 +73,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_memset1':
-; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod Pointers: (ptr %a, unknown before-or-after)
 define void @test_memset1() {
 entry:
@@ -83,7 +83,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_memset2':
-; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod Pointers: (ptr %a, unknown before-or-after)
 define void @test_memset2(ptr %a) {
 entry:
@@ -92,7 +92,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test_memset3':
-; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 2 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 2 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod Pointers: (ptr %a, unknown before-or-after), (ptr %b, unknown before-or-after)
 define void @test_memset3(ptr %a, ptr %b) {
 entry:
@@ -104,7 +104,7 @@ entry:
 ;; PICKUP HERE
 
 ; CHECK: Alias sets for function 'test_memset4':
-; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod Pointers: (ptr %a, unknown before-or-after)
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod Pointers: (ptr %b, unknown before-or-after)
 define void @test_memset4(ptr noalias %a, ptr noalias %b) {
@@ -120,7 +120,7 @@ declare void @my_memmove(ptr nocapture, ptr nocapture readonly, i64) argmemonly
 
 
 ; CHECK: Alias sets for function 'test_attribute_intersect':
-; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 memory locations.
+; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 pointer values.
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (ptr %a, LocationSize::precise(1))
 define i8 @test_attribute_intersect(ptr noalias %a) {
 entry:

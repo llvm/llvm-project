@@ -179,7 +179,7 @@ class AliasSetTracker {
   BatchAAResults &AA;
   ilist<AliasSet> AliasSets;
 
-  using PointerMapType = DenseMap<MemoryLocation, AliasSet *>;
+  using PointerMapType = DenseMap<AssertingVH<const Value>, AliasSet *>;
 
   // Map from pointers to their node
   PointerMapType PointerMap;
