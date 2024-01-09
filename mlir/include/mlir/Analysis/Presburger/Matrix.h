@@ -182,7 +182,7 @@ public:
   unsigned appendExtraRow(ArrayRef<T> elems);
 
   // Transpose the matrix without modifying it.
-  Matrix<T> transpose();
+  Matrix<T> transpose() const;
 
   /// Print the matrix.
   void print(raw_ostream &os) const;

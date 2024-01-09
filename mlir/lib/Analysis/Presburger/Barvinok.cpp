@@ -67,8 +67,9 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 
 /// Compute the generating function for a unimodular cone.
 /// This consists of a single term of the form
-/// x^num / prod_j (1 - x^den_j)
+/// sign * x^num / prod_j (1 - x^den_j)
 ///
+/// sign is either +1 or -1.
 /// den_j is defined as the set of generators of the cone.
 /// num is computed by expressing the vertex as a weighted
 /// sum of the generators, and then taking the floor of the
