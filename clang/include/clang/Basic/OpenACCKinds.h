@@ -98,6 +98,9 @@ enum class OpenACCClauseKind {
   If,
   /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
   Self,
+  /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
+  /// 'declare'.
+  Copy,
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
 };
