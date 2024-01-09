@@ -238,7 +238,11 @@ LIBC_INLINE __m512i bytewise_max(__m512i a, __m512i b) {
   return _mm512_max_epu8(a, b);
 }
 LIBC_INLINE uint64_t big_endian_cmp_mask(__m512i max, __m512i value) {
-#if defined(__AVX512VBMI__)
+  // The AVX512BMI version is disabled due to bad codegen.
+  // https://github.com/llvm/llvm-project/issues/77459
+  // https://github.com/llvm/llvm-project/pull/77081
+  // TODO: Re-enable when clang version meets the fixed version.
+#if false && defined(__AVX512VBMI__)
   // When AVX512BMI is available we can completely reverse the vector through
   // VPERMB __m512i _mm512_permutexvar_epi8( __m512i idx, __m512i a);
   const auto indices = _mm512_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
