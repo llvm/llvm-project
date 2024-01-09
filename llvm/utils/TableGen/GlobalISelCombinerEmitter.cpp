@@ -2316,7 +2316,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
           M.actions_begin(), getLLTCodeGenOrTempType(Ty, M), TempRegID);
     }
 
-    DstMI.addRenderer<TempRegRenderer>(TempRegID);
+    DstMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
   }
 
   // Render MIFlags
