@@ -671,6 +671,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
   case R_RISCV_ADD:
+  case R_RISCV_LEB128:
     return sym.getVA(a);
   case R_ADDEND:
     return a;
@@ -873,16 +874,6 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   default:
     llvm_unreachable("invalid expression");
   }
-}
-
-// Overwrite a ULEB128 value and keep the original length.
-static uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
-  while (*bufLoc & 0x80) {
-    *bufLoc++ = 0x80 | (val & 0x7f);
-    val >>= 7;
-  }
-  *bufLoc = val;
-  return val;
 }
 
 // This function applies relocations to sections without SHF_ALLOC bit.
