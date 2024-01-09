@@ -5926,12 +5926,8 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   // forward declarations. In case of the "dependent friend" declarations, new
   // declarations are created, but not linked in a declaration chain.
   auto IsDependentFriend = [](ClassTemplateDecl *TD) {
-    bool IsFriendTemplate = TD->getFriendObjectKind() != Decl::FOK_None;
-    DeclContext *DC = TD->getDeclContext();
-    DeclContext *LexicalDC = TD->getLexicalDeclContext();
-    bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
-                                              : DC->isDependentContext();
-    return IsFriendTemplate && IsDependentContext;
+    return TD->getFriendObjectKind() != Decl::FOK_None &&
+           TD->getLexicalDeclContext()->isDependentContext();
   };
   bool DependentFriend = IsDependentFriend(D);
 
