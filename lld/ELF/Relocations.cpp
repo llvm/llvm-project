@@ -988,8 +988,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (!config->isPic)
     return true;
 
-  // The size of a non preemptible symbol is a constant.
-  if (e == R_SIZE)
+  // Constant when referencing a non-preemptible symbol.
+  if (e == R_SIZE || e == R_RISCV_LEB128)
     return true;
 
   // For the target and the relocation, we want to know if they are
