@@ -1714,10 +1714,12 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
 static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
                                         InstCombiner::BuilderTy &Builder) {
   // X / sqrt(Y / Z) -->  X * sqrt(Z / Y)
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   auto *II = dyn_cast<IntrinsicInst>(Op1);
   if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
-      !I.hasAllowReassoc() || !I.hasAllowReciprocal())
+      !II->hasAllowReassoc() || !II->hasAllowReciprocal())
     return nullptr;
 
   Value *Y, *Z;
@@ -1727,8 +1729,8 @@ static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
     return nullptr;
   if (match(DivOp, m_FDiv(m_Value(Y), m_Value(Z)))) {
     Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
-    Value *NewSqrt = Builder.CreateIntrinsic(II->getIntrinsicID(),
-                                             II->getType(), {SwapDiv}, II);
+    Value *NewSqrt =
+        Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), SwapDiv, II);
     return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
   }
   return nullptr;
