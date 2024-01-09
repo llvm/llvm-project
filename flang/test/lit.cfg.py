@@ -126,9 +126,12 @@ if config.osx_sysroot:
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
-    ToolSubst("%flang", command=FindTool("flang-new"),
-              extra_args=isysroot_flag,
-              unresolved="fatal"),
+    ToolSubst(
+        "%flang",
+        command=FindTool("flang-new"),
+        extra_args=isysroot_flag,
+        unresolved="fatal"
+    ),
     ToolSubst(
         "%flang_fc1",
         command=FindTool("flang-new"),
@@ -170,9 +173,11 @@ if config.cc:
         and os.path.isdir(include)
     ):
         config.available_features.add("c-compiler")
-        tools.append(ToolSubst("%cc", command=config.cc,
-                               extra_args=isysroot_flag,
-                               unresolved="fatal"))
+        tools.append(
+            ToolSubst(
+                "%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"
+            )
+        )
         tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
         tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
         tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
