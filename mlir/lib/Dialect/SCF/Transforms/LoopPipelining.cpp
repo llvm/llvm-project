@@ -203,6 +203,40 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   return true;
 }
 
+/// Compute unrolled cycles of each op (consumer) and verify that each op is
+/// scheduled after its operands (producers) while adjusting for the distance
+/// between producer and consumer.
+bool LoopPipelinerInternal::verifySchedule() {
+  int64_t numCylesPerIter = opOrder.size();
+  // Pre-compute the unrolled cycle of each op.
+  DenseMap<Operation *, int64_t> unrolledCyles;
+  for (int64_t cycle = 0; cycle < numCylesPerIter; cycle++) {
+    Operation *def = opOrder[cycle];
+    auto it = stages.find(def);
+    assert(it != stages.end());
+    int64_t stage = it->second;
+    unrolledCyles[def] = cycle + stage * numCylesPerIter;
+  }
+  for (Operation *consumer : opOrder) {
+    int64_t consumerCycle = unrolledCyles[consumer];
+    for (Value operand : consumer->getOperands()) {
+      auto [producer, distance] = getDefiningOpAndDistance(operand);
+      if (!producer)
+        continue;
+      auto it = unrolledCyles.find(producer);
+      // Skip producer coming from outside the loop.
+      if (it == unrolledCyles.end())
+        continue;
+      int64_t producerCycle = it->second;
+      if (consumerCycle < producerCycle - numCylesPerIter * distance) {
+        consumer->emitError("operation scheduled before its operands");
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 /// Clone `op` and call `callback` on the cloned op's oeprands as well as any
 /// operands of nested ops that:
 /// 1) aren't defined within the new op or
@@ -337,40 +371,6 @@ LoopPipelinerInternal::getDefiningOpAndDistance(Value value) {
   if (!def)
     return {nullptr, 0};
   return {def, distance};
-}
-
-/// Compute unrolled cycles of each op (consumer) and verify that each op is
-/// scheduled after its operands (producers) while adjusting for the distance
-/// between producer and consumer.
-bool LoopPipelinerInternal::verifySchedule() {
-  int64_t numCylesPerIter = opOrder.size();
-  // Pre-compute the unrolled cycle of each op.
-  DenseMap<Operation *, int64_t> unrolledCyles;
-  for (int64_t cycle = 0; cycle < numCylesPerIter; cycle++) {
-    Operation *def = opOrder[cycle];
-    auto it = stages.find(def);
-    assert(it != stages.end());
-    int64_t stage = it->second;
-    unrolledCyles[def] = cycle + stage * numCylesPerIter;
-  }
-  for (Operation *consumer : opOrder) {
-    int64_t consumerCycle = unrolledCyles[consumer];
-    for (Value operand : consumer->getOperands()) {
-      auto [producer, distance] = getDefiningOpAndDistance(operand);
-      if (!producer)
-        continue;
-      auto it = unrolledCyles.find(producer);
-      // Skip producer coming from outside the loop.
-      if (it == unrolledCyles.end())
-        continue;
-      int64_t producerCycle = it->second;
-      if (consumerCycle < producerCycle - numCylesPerIter * distance) {
-        consumer->emitError("operation scheduled before its operands.");
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 scf::ForOp LoopPipelinerInternal::createKernelLoop(
