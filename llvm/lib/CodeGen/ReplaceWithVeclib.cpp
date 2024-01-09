@@ -170,29 +170,30 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   if (!OptInfo)
     return false;
 
+  // There is no guarantee that the vectorized instructions followed the VFABI
+  // specification when being created, this is why we need to add extra check to
+  // make sure that the operands of the vector function obtained via VFABI match
+  // the operands of the original vector instruction.
+  if (CI) {
+    for (auto VFParam : OptInfo->Shape.Parameters) {
+      if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
+        continue;
+      Type *OrigTy = OrigArgTypes[VFParam.ParamPos];
+      if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                          << ": Will not replace: wrong type at index: "
+                          << VFParam.ParamPos << ": " << *OrigTy << "\n");
+        return false;
+      }
+    }
+  }
+
   FunctionType *VectorFTy = VFABI::createFunctionType(*OptInfo, ScalarFTy);
   if (!VectorFTy)
     return false;
 
   Function *TLIFunc = getTLIFunction(I.getModule(), VectorFTy,
                                      VD->getVectorFnName(), FuncToReplace);
-
-  // For calls, bail out when their arguments do not match with the TLI mapping.
-  if (CI) {
-    int IdxNonPred = 0;
-    for (auto [OrigTy, VFParam] :
-         zip(OrigArgTypes, OptInfo->Shape.Parameters)) {
-      if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
-        continue;
-      ++IdxNonPred;
-      if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
-        LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                          << ": Will not replace: wrong type at index: "
-                          << IdxNonPred << ": " << *OrigTy << "\n");
-        return false;
-      }
-    }
-  }
 
   replaceWithTLIFunction(I, *OptInfo, TLIFunc);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `" << ScalarName

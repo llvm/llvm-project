@@ -70,16 +70,20 @@ define <vscale x 4 x float> @foo(<vscale x 4 x float> %in){
 declare <vscale x 4 x float> @llvm.powi.f32.i32(<vscale x 4 x float>, i32) #0
 )IR";
 
-// LLVM intrinsic 'powi' (in IR) has the same signature with the VecDesc.
+// The VFABI prefix in TLI describes signature which is matching the powi
+// intrinsic declaration.
 TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
   VecDesc CorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvu_powi",
-                       ElementCount::getScalable(4), true, "_ZGVsMxvu"};
+                       ElementCount::getScalable(4), /*Masked*/ true,
+                       "_ZGVsMxvu"};
   EXPECT_TRUE(run(CorrectVD, IR));
 }
 
-// LLVM intrinsic 'powi' (in IR) has different signature with the VecDesc.
+// The VFABI prefix in TLI describes signature which is not matching the powi
+// intrinsic declaration.
 TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
   VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
-                         ElementCount::getScalable(4), true, "_ZGVsMxvv"};
+                         ElementCount::getScalable(4), /*Masked*/ true,
+                         "_ZGVsMxvv"};
   EXPECT_TRUE(run(IncorrectVD, IR));
 }
