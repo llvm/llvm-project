@@ -179,7 +179,7 @@ Optimizations
    stages of compilation.
 
 :doc:`InstrProfileFormat`
-   This document explains two binary formats of IRPGO profiles.
+   This document explains two binary formats of instrumentation-based profiles.
 
 Code Generation
 ---------------
