@@ -303,7 +303,8 @@ static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
 
 static wasm::WasmTableType readTableType(WasmObjectFile::ReadContext &Ctx) {
   wasm::WasmTableType TableType;
-  TableType.ElemType = readUint8(Ctx);
+  auto ElemType = parseValType(Ctx, readVaruint32(Ctx));
+  TableType.ElemType = (uint8_t)ElemType;
   TableType.Limits = readLimits(Ctx);
   return TableType;
 }
@@ -1617,7 +1618,15 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       return make_error<GenericBinaryError>(
           "Unsupported flags for element segment", object_error::parse_failed);
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+    bool IsPassive = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) != 0;
+    bool IsDeclarative = IsPassive && (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_DECLARATIVE);
+    bool HasTableNumber = !IsPassive && (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER);
+    bool HasInitExprs = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
+    bool HasElemKind = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) && !HasInitExprs;
+
+    llvm::errs() << llvm::format("segment %d flags %x, InitExprs %d HasKind %d\n",
+      ElemSegments.capacity() - Count-1, Segment.Flags, HasInitExprs,HasElemKind);
+    if (HasTableNumber)
       Segment.TableNumber = readVaruint32(Ctx);
     else
       Segment.TableNumber = 0;
@@ -1625,41 +1634,61 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       return make_error<GenericBinaryError>("invalid TableNumber",
                                             object_error::parse_failed);
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) {
+    if (IsDeclarative && false) {
+      // Declarative segments are not used or understood by LLVM
+      /* Discard type/kind */ readVaruint32(Ctx);
+      auto DeclCount = readVaruint32(Ctx);
+      while(DeclCount--) {
+        readVaruint32(Ctx);
+      }
+      // Dummy element?
+
+    }
+    if (IsPassive || IsDeclarative) {
       Segment.Offset.Extended = false;
       Segment.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
       Segment.Offset.Inst.Value.Int32 = 0;
     } else {
       if (Error Err = readInitExpr(Segment.Offset, Ctx))
         return Err;
+      llvm::errs() << llvm::format( " active seg, read initexpr opcode %x\n", Segment.Offset.Inst.Opcode);
     }
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+    if (HasElemKind) {
       Segment.ElemKind = readUint8(Ctx);
       if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
         if (Segment.ElemKind != uint8_t(wasm::ValType::FUNCREF) &&
-            Segment.ElemKind != uint8_t(wasm::ValType::EXTERNREF)) {
-          return make_error<GenericBinaryError>("invalid reference type",
+            Segment.ElemKind != uint8_t(wasm::ValType::EXTERNREF) &&
+            Segment.ElemKind != uint8_t(wasm::ValType::OTHERREF)) {
+          return make_error<GenericBinaryError>("invalid elem type",
                                                 object_error::parse_failed);
         }
       } else {
         if (Segment.ElemKind != 0)
-          return make_error<GenericBinaryError>("invalid elemtype",
+          return make_error<GenericBinaryError>("invalid elem type",
                                                 object_error::parse_failed);
         Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
       }
+    } else if (HasInitExprs) {
+      auto ElemType = parseValType(Ctx, readVaruint32(Ctx));
+      Segment.ElemKind = uint8_t(ElemType);
     } else {
-      Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
+      Segment.ElemKind = (uint8_t)wasm::ValType::FUNCREF;
     }
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS)
-      return make_error<GenericBinaryError>(
-          "elem segment init expressions not yet implemented",
-          object_error::parse_failed);
-
     uint32_t NumElems = readVaruint32(Ctx);
-    while (NumElems--) {
-      Segment.Functions.push_back(readVaruint32(Ctx));
+    llvm::errs() << llvm::format(" num elems %d\n", NumElems);
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
+      while(NumElems--) {
+        wasm::WasmInitExpr Expr;
+        if(Error Err = readInitExpr(Expr, Ctx))
+          return Err;
+      }
+    } else {
+      while (NumElems--) {
+        Segment.Functions.push_back(readVaruint32(Ctx));
+      }
     }
     ElemSegments.push_back(Segment);
   }

@@ -81,7 +81,7 @@ struct WasmLimits {
 };
 
 struct WasmTableType {
-  uint8_t ElemType;
+  uint8_t ElemType; // TODO: make this a ValType?
   WasmLimits Limits;
 };
 
@@ -110,7 +110,7 @@ struct WasmInitExpr {
 };
 
 struct WasmGlobalType {
-  uint8_t Type;
+  uint8_t Type; // TODO: make this a ValType?
   bool Mutable;
 };
 
@@ -363,7 +363,8 @@ enum : unsigned {
 
 enum : unsigned {
   WASM_ELEM_SEGMENT_IS_PASSIVE = 0x01,
-  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02,
+  WASM_ELEM_SEGMENT_IS_DECLARATIVE = 0x02, // if passive == 1
+  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
 const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
