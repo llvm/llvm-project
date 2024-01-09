@@ -104,15 +104,16 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 
   // The vertex is v \in Z^{d x (n+1)}
   // We need to find affine functions of parameters λ_i(p)
-  // such that v = Σ λ_i(p)*u_i.
+  // such that v = Σ λ_i(p)*u_i,
+  // where u_i are the rows of U (generators)
   // The λ_i are given by the columns of Λ = v^T U^{-1}, and
   // we have transp = U^{-1}.
   // Then the exponent in the numerator will be
   // Σ -floor(-λ_i(p))*u_i.
   // Thus we store the (exponent of the) numerator as the affine function -Λ,
-  // since the generators are already stored as the exponent of the denominator.
-  // Note that the outer -1 will have to be accounted for, as it is not stored.
-  // See end for an example.
+  // since the generators u_i are already stored as the exponent of the
+  // denominator. Note that the outer -1 will have to be accounted for, as it is
+  // not stored. See end for an example.
 
   unsigned numColumns = vertex.getNumColumns();
   unsigned numRows = vertex.getNumRows();
