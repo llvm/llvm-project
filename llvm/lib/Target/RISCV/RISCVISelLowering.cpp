@@ -3657,10 +3657,10 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // would require bit-manipulation instructions to construct the splat value.
   SmallVector<SDValue> Sequence;
   const auto *BV = cast<BuildVectorSDNode>(Op);
-  if (VT.isInteger() && EltBitSize < 64 &&
+  if (VT.isInteger() && EltBitSize < Subtarget.getELen() &&
       ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
       BV->getRepeatedSequence(Sequence) &&
-      (Sequence.size() * EltBitSize) <= 64) {
+      (Sequence.size() * EltBitSize) <= Subtarget.getELen()) {
     unsigned SeqLen = Sequence.size();
     MVT ViaIntVT = MVT::getIntegerVT(EltBitSize * SeqLen);
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32 ||
