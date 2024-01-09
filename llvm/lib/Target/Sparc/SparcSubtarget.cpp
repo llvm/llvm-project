@@ -12,6 +12,7 @@
 
 #include "SparcSubtarget.h"
 #include "Sparc.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -45,12 +46,11 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
   return *this;
 }
 
-SparcSubtarget::SparcSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &TuneCPU,
-                               const std::string &FS, const TargetMachine &TM,
+SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
+                               const StringRef &FS, const TargetMachine &TM,
                                bool is64Bit)
-    : SparcGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
-      Is64Bit(is64Bit),
+    : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
+      TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {}
 
