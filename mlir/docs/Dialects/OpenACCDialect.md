@@ -1,3 +1,5 @@
+# 'acc' Dialect
+
 The `acc` dialect is an MLIR dialect for representing the OpenACC
 programming model. OpenACC is a standardized directive-based model which
 is used with C, C++, and Fortran to enable programmers to expose
@@ -446,4 +448,6 @@ operations are intended to be optimized in the following ways:
 dominates another.
 * Be able to hoist/sink such operations out of loops.
 
-[include "Dialects/OpenACCDialect.md"]
+## Operations TOC
+
+[include "Dialects/OpenACCDialectOps.md"]

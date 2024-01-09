@@ -308,8 +308,10 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
-  Register Lo = TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_32);
-  Register Hi = TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_32_hi);
+  Register Lo =
+      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
+  Register Hi =
+      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
       .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
       .addReg(MBBI->getOperand(1).getReg())
@@ -342,8 +344,10 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
-  Register Lo = TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_32);
-  Register Hi = TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_32_hi);
+  Register Lo =
+      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
+  Register Hi =
+      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
 
   // If the register of operand 1 is equal to the Lo register, then swap the
   // order of loading the Lo and Hi statements.
