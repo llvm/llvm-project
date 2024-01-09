@@ -208,14 +208,14 @@ define <vscale x 2 x i64> @xar_nxv2i64_l_neg2(<vscale x 2 x i64> %x, <vscale x 2
 define <vscale x 2 x i64> @xar_nxv2i64_l_neg3(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
 ; SVE-LABEL: xar_nxv2i64_l_neg3:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    eor z0.d, z0.d, z1.d
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: xar_nxv2i64_l_neg3:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    orr z0.d, z0.d, z1.d
+; SVE2-NEXT:    eor z0.d, z0.d, z1.d
 ; SVE2-NEXT:    ret
-    %a = or <vscale x 2 x i64> %x, %y
+    %a = xor <vscale x 2 x i64> %x, %y
     %b = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 64))
     ret <vscale x 2 x i64> %b
 }
