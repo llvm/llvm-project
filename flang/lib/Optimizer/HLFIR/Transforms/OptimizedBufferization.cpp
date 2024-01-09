@@ -750,7 +750,6 @@ public:
                                                      reduction);
       };
     } else {
-      static_assert("Expected Op to be handled");
       return mlir::failure();
     }
 
