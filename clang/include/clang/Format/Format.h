@@ -225,8 +225,8 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
-    /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers
-    /// are aligned.
+    /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    /// aligned.
     /// \code
     ///   true:
     ///   unsigned i;

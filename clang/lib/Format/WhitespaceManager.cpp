@@ -980,7 +980,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
       Style,
       [&](Change const &C) {
         if (Style.AlignConsecutiveDeclarations.AlignFunctionPointers) {
-          for (FormatToken *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
+          for (const auto *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
             if (Prev->is(tok::equal))
               return false;
           if (C.Tok->is(TT_FunctionTypeLParen))
