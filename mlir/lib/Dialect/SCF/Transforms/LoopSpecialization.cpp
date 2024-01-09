@@ -106,13 +106,14 @@ static void specializeForLoopForUnrolling(ForOp op) {
   op.erase();
 }
 
-/// Create a new for loop for the remaining iterations (partiaIteration)
+/// Create a new for loop for the remaining iterations (partialIteration)
 /// after a for loop has been peeled. This is followed by correcting the
 /// loop bounds for both loops given the index (splitBound) where the
-/// iteration space is to be split up.
+/// iteration space is to be split up. Returns failure if the loop can not
+/// be split and no new partialIteration is created.
 static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp forOp,
                                      scf::ForOp &partialIteration,
-                                     Value &splitBound) {
+                                     Value splitBound) {
   RewriterBase::InsertionGuard guard(b);
   auto lbInt = getConstantIntValue(forOp.getLowerBound());
   auto ubInt = getConstantIntValue(forOp.getUpperBound());
@@ -142,17 +143,13 @@ static LogicalResult splitLoopHelper(RewriterBase &b, scf::ForOp forOp,
 /// Convert single-iteration for loop to if-else block.
 static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
   Location loc = forOp->getLoc();
-  IRMapping mapping;
-  mapping.map(forOp.getInductionVar(), forOp.getLowerBound());
-  for (auto [arg, operand] :
-       llvm::zip_equal(forOp.getRegionIterArgs(), forOp.getInitsMutable())) {
-    mapping.map(arg, operand.get());
-  }
+
   b.setInsertionPoint(forOp);
   auto cond =
       b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                               forOp.getLowerBound(), forOp.getUpperBound());
-  auto ifOp = b.create<scf::IfOp>(loc, forOp->getResultTypes(), cond, true);
+  auto ifOp = b.create<scf::IfOp>(loc, forOp->getResultTypes(), cond,
+                                  /*withElseRegion=*/true);
   // then branch
   SmallVector<Value> bbArgReplacements;
   bbArgReplacements.push_back(forOp.getLowerBound());
@@ -198,6 +195,9 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
   bindSymbols(b.getContext(), sym0, sym1, sym2);
   AffineMap defaultSplitMap =
       AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
+  // Simplify defaultSplitMap if lower-bound is exactly divisible by step.
+  // In that case sym0 % sym2 (lb % step) is ignored as it equals 0 and
+  // we get a simpler map expressed as powerSplitMap here.
   AffineMap powerSplitMap = AffineMap::get(0, 3, {sym1 - (sym1 % sym2)});
   bool usePowerSplit = (lbInt.has_value()) &&
                        (*lbInt % *stepInt == static_cast<int64_t>(0)) &&
@@ -222,15 +222,15 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
     // Canonicalize min/max affine operations
     // It uses scf::rewritePeeledMinMaxOp to identify operations to be replaced,
     // they are then replaced by the current step size.
-    // TODO: Alternative method - update affine map to reflect the loop step
-    // Example: min(ub - iv, 8) -> min(ub - iv, 4)
+    // TODO: Alternative method - update affine map to reflect the corrected
+    // loop step - Example: min(ub - iv, 8) -> min(ub - iv, 4)
     currentLoop.walk([&](Operation *affineOp) {
       if (isa<AffineMinOp, AffineMaxOp>(affineOp)) {
         FailureOr<AffineApplyOp> result = scf::rewritePeeledMinMaxOp(
             b, affineOp, currentLoop.getInductionVar(), initialUb, initialStep,
             /*insideLoop=*/true);
         // correct the step of the newly created affine op
-        if (!failed(result))
+        if (succeeded(result))
           b.replaceOp(result.value(), currentLoop.getStep());
       }
       return WalkResult::advance();
@@ -242,7 +242,7 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
       break;
     currentLoop = partialIteration;
     uint64_t maxPower = llvm::bit_floor(loopStep);
-    loopStep = maxPower == loopStep ? maxPower >> 1 : maxPower;
+    loopStep = maxPower == loopStep ? maxPower / 2 : maxPower;
   }
 
   assert(loops.size() > 0 && "There should be at least one loop available");

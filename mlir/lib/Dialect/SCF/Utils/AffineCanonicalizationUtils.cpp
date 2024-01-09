@@ -188,8 +188,8 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
 /// * Inside the peeled loop: min(step, ub - iv) == step
 /// * Inside the partial iteration: min(step, ub - iv) == ub - iv
 ///
-/// Returns the new Affine op if the operation was replaced by a new operation;
-/// `failure` otherwise.
+/// Returns the new AffineApplyOp if the operation was replaced by a new
+/// operation; `failure` otherwise.
 ///
 /// Note: `ub` is the previous upper bound of the loop (before peeling).
 /// `insideLoop` must be true for min/max ops inside the loop and false for
