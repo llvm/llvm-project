@@ -1851,6 +1851,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                     llvm::GlobalValue::HiddenVisibility :
                     llvm::GlobalValue::DefaultVisibility;
         OffsetVar->setVisibility(ivarVisibility);
+        if (ivarVisibility != llvm::GlobalValue::HiddenVisibility)
+          CGM.setGVProperties(OffsetVar, OID->getClassInterface());
         ivarBuilder.add(OffsetVar);
         // Ivar size
         ivarBuilder.addInt(Int32Ty,
