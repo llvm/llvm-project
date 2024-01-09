@@ -108,6 +108,7 @@
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -gline-directives-only  Emit debug line info directives only
 ! CHECK-NEXT: -gline-tables-only      Emit debug line number tables only
+! CHECK-NEXT: -gpulibc                Link the LLVM C Library for GPUs
 ! CHECK-NEXT: -g                      Generate source-level debug information
 ! CHECK-NEXT: --help-hidden           Display help for hidden options
 ! CHECK-NEXT: -help                   Display available options
