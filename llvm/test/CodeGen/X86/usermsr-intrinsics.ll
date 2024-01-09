@@ -10,7 +10,7 @@ define i64 @test_int_x86_urdmsr(i64 %A) nounwind {
 ;
 ; EGPR-LABEL: test_int_x86_urdmsr:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    urdmsr %rdi, %rax # encoding: [0x62,0xf4,0x7f,0x08,0xf8,0xc7]
+; EGPR-NEXT:    urdmsr %rdi, %rax # EVEX TO LEGACY Compression encoding: [0xf2,0x0f,0x38,0xf8,0xc7]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %ret = call i64 @llvm.x86.urdmsr(i64 %A)
   ret i64 %ret
@@ -24,7 +24,7 @@ define i64 @test_int_x86_urdmsr_const() nounwind {
 ;
 ; EGPR-LABEL: test_int_x86_urdmsr_const:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    urdmsr $123, %rax # encoding: [0x62,0xf7,0x7f,0x08,0xf8,0xc0,0x7b,0x00,0x00,0x00]
+; EGPR-NEXT:    urdmsr $123, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe7,0x7b,0xf8,0xc0,0x7b,0x00,0x00,0x00]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %ret = call i64 @llvm.x86.urdmsr(i64 123)
   ret i64 %ret
@@ -42,7 +42,7 @@ define i64 @test_int_x86_urdmsr_const_i64() nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movabsq $8589934591, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0x01,0x00,0x00,0x00]
 ; EGPR-NEXT:    # imm = 0x1FFFFFFFF
-; EGPR-NEXT:    urdmsr %rax, %rax # encoding: [0x62,0xf4,0x7f,0x08,0xf8,0xc0]
+; EGPR-NEXT:    urdmsr %rax, %rax # EVEX TO LEGACY Compression encoding: [0xf2,0x0f,0x38,0xf8,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %ret = call i64 @llvm.x86.urdmsr(i64 8589934591)
   ret i64 %ret
@@ -58,7 +58,7 @@ define void @test_int_x86_uwrmsr(i64 %A, i64 %B) nounwind {
 ;
 ; EGPR-LABEL: test_int_x86_uwrmsr:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    uwrmsr %rsi, %rdi # encoding: [0x62,0xf4,0x7e,0x08,0xf8,0xfe]
+; EGPR-NEXT:    uwrmsr %rsi, %rdi # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xf8,0xfe]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.uwrmsr(i64 %A, i64 %B)
   ret void
@@ -72,7 +72,7 @@ define void @test_int_x86_uwrmsr_const(i64 %A) nounwind {
 ;
 ; EGPR-LABEL: test_int_x86_uwrmsr_const:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    uwrmsr %rdi, $123 # encoding: [0x62,0xf7,0x7e,0x08,0xf8,0xc7,0x7b,0x00,0x00,0x00]
+; EGPR-NEXT:    uwrmsr %rdi, $123 # EVEX TO VEX Compression encoding: [0xc4,0xe7,0x7a,0xf8,0xc7,0x7b,0x00,0x00,0x00]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.uwrmsr(i64 123, i64 %A)
   ret void
@@ -90,7 +90,7 @@ define void @test_int_x86_uwrmsr_const_i64(i64 %A) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movabsq $8589934591, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0x01,0x00,0x00,0x00]
 ; EGPR-NEXT:    # imm = 0x1FFFFFFFF
-; EGPR-NEXT:    uwrmsr %rdi, %rax # encoding: [0x62,0xf4,0x7e,0x08,0xf8,0xc7]
+; EGPR-NEXT:    uwrmsr %rdi, %rax # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xf8,0xc7]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.uwrmsr(i64 8589934591, i64 %A)
   ret void

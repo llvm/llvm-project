@@ -168,11 +168,6 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
 void RecognizableInstr::processInstr(DisassemblerTables &tables,
                                      const CodeGenInstruction &insn,
                                      InstrUID uid) {
-  if (insn.TheDef->getName() == "ENQCMD32_EVEX")
-  {
-    if (insn.TheDef->getName() == "yikarus")
-    return;
-  }
   if (!insn.TheDef->isSubClassOf("X86Inst"))
     return;
   RecognizableInstr recogInstr(tables, insn, uid);

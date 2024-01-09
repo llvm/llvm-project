@@ -35,7 +35,7 @@ define i32 @test_encodekey128_u32(i32 %htype, <2 x i64> %key, ptr nocapture %h) 
 ;
 ; EGPR-LABEL: test_encodekey128_u32:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    encodekey128 %edi, %eax # encoding: [0x62,0xf4,0x7e,0x08,0xda,0xc7]
+; EGPR-NEXT:    encodekey128 %edi, %eax # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xfa,0xc7]
 ; EGPR-NEXT:    movups %xmm0, (%rsi) # encoding: [0x0f,0x11,0x06]
 ; EGPR-NEXT:    movups %xmm1, 16(%rsi) # encoding: [0x0f,0x11,0x4e,0x10]
 ; EGPR-NEXT:    movups %xmm2, 32(%rsi) # encoding: [0x0f,0x11,0x56,0x20]
@@ -81,7 +81,7 @@ define i32 @test_encodekey256_u32(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_
 ;
 ; EGPR-LABEL: test_encodekey256_u32:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    encodekey256 %edi, %eax # encoding: [0x62,0xf4,0x7e,0x08,0xdb,0xc7]
+; EGPR-NEXT:    encodekey256 %edi, %eax # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xfb,0xc7]
 ; EGPR-NEXT:    movups %xmm0, (%rsi) # encoding: [0x0f,0x11,0x06]
 ; EGPR-NEXT:    movups %xmm1, 16(%rsi) # encoding: [0x0f,0x11,0x4e,0x10]
 ; EGPR-NEXT:    movups %xmm2, 32(%rsi) # encoding: [0x0f,0x11,0x56,0x20]
@@ -128,7 +128,7 @@ define zeroext i8 @test_mm_aesenc256kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) 
 ; EGPR-LABEL: test_mm_aesenc256kl_u8:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesenc256kl (%rsi), %xmm0 # encoding: [0x62,0xf4,0x7e,0x08,0xde,0x06]
+; EGPR-NEXT:    aesenc256kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xde,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
@@ -152,7 +152,7 @@ define zeroext i8 @test_mm_aesdec256kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) 
 ; EGPR-LABEL: test_mm_aesdec256kl_u8:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesdec256kl (%rsi), %xmm0 # encoding: [0x62,0xf4,0x7e,0x08,0xdf,0x06]
+; EGPR-NEXT:    aesdec256kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xdf,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
@@ -176,7 +176,7 @@ define zeroext i8 @test_mm_aesenc128kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) 
 ; EGPR-LABEL: test_mm_aesenc128kl_u8:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesenc128kl (%rsi), %xmm0 # encoding: [0x62,0xf4,0x7e,0x08,0xdc,0x06]
+; EGPR-NEXT:    aesenc128kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xdc,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
@@ -200,7 +200,7 @@ define zeroext i8 @test_mm_aesdec128kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) 
 ; EGPR-LABEL: test_mm_aesdec128kl_u8:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesdec128kl (%rsi), %xmm0 # encoding: [0x62,0xf4,0x7e,0x08,0xdd,0x06]
+; EGPR-NEXT:    aesdec128kl (%rsi), %xmm0 # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xdd,0x06]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
@@ -247,7 +247,7 @@ define zeroext i8 @test__mm_aesencwide128kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesencwide128kl (%rdx) # encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x02]
+; EGPR-NEXT:    aesencwide128kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x02]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    movaps %xmm1, 16(%rdi) # encoding: [0x0f,0x29,0x4f,0x10]
@@ -337,7 +337,7 @@ define zeroext i8 @test__mm_aesdecwide128kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesdecwide128kl (%rdx) # encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x0a]
+; EGPR-NEXT:    aesdecwide128kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x0a]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    movaps %xmm1, 16(%rdi) # encoding: [0x0f,0x29,0x4f,0x10]
@@ -427,7 +427,7 @@ define zeroext i8 @test__mm_aesencwide256kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesencwide256kl (%rdx) # encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x12]
+; EGPR-NEXT:    aesencwide256kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x12]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    movaps %xmm1, 16(%rdi) # encoding: [0x0f,0x29,0x4f,0x10]
@@ -517,7 +517,7 @@ define zeroext i8 @test__mm_aesdecwide256kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; EGPR-NEXT:    movaps 96(%rsi), %xmm6 # encoding: [0x0f,0x28,0x76,0x60]
 ; EGPR-NEXT:    movaps 112(%rsi), %xmm7 # encoding: [0x0f,0x28,0x7e,0x70]
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; EGPR-NEXT:    aesdecwide256kl (%rdx) # encoding: [0x62,0xf4,0x7e,0x08,0xd8,0x1a]
+; EGPR-NEXT:    aesdecwide256kl (%rdx) # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xd8,0x1a]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; EGPR-NEXT:    movaps %xmm1, 16(%rdi) # encoding: [0x0f,0x29,0x4f,0x10]

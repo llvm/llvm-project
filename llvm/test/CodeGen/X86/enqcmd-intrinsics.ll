@@ -27,7 +27,7 @@ define i8 @test_enqcmd(ptr %dst, ptr %src) {
 ;
 ; EGPR-LABEL: test_enqcmd:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    enqcmd (%rsi), %rdi # encoding: [0x62,0xf4,0x7f,0x08,0xf8,0x3e]
+; EGPR-NEXT:    enqcmd (%rsi), %rdi # EVEX TO LEGACY Compression encoding: [0xf2,0x0f,0x38,0xf8,0x3e]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -60,7 +60,7 @@ define i8 @test_enqcmds(ptr %dst, ptr %src) {
 ;
 ; EGPR-LABEL: test_enqcmds:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    enqcmds (%rsi), %rdi # encoding: [0x62,0xf4,0x7e,0x08,0xf8,0x3e]
+; EGPR-NEXT:    enqcmds (%rsi), %rdi # EVEX TO LEGACY Compression encoding: [0xf3,0x0f,0x38,0xf8,0x3e]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
