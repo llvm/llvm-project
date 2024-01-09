@@ -52,7 +52,12 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   Expr::EvalResult Result;
   if (E->isPRValue() && E->EvaluateAsRValue(Result, CGM.getASTContext()) &&
       !Result.hasSideEffects()) {
-    llvm_unreachable("NYI");
+    if (Result.Val.isInt()) {
+      return RValue::get(builder.getConstInt(getLoc(E->getSourceRange()),
+                                             Result.Val.getInt()));
+    }
+    if (Result.Val.isFloat())
+      llvm_unreachable("NYI");
   }
 
   // If current long-double semantics is IEEE 128-bit, replace math builtins
