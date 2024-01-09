@@ -656,8 +656,8 @@ def gen_tex_tests(target, global_tex, global_sampler):
 
         # FIXME: missing intrinsics.
         # Support for tex.grad.{cube, acube} introduced in PTX ISA version
-        # 4.3.
-        if mipmap == "grad" and geom in ("cube", "acube"):
+        # 4.3, currently supported only in unified mode.
+        if not is_unified(target) and mipmap == "grad" and geom in ("cube", "acube"):
             continue
 
         # The instruction returns a two-element vector for destination
