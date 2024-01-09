@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -749,7 +750,7 @@ void CodeGenPassBuilder<Derived>::addISelPrepare(AddIRPass &addPass) const {
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
   addPass(SafeStackPass(&TM));
-  addPass(StackProtectorPass());
+  addPass(StackProtectorPass(&TM));
 
   if (Opt.PrintISelInput)
     addPass(PrintFunctionPass(dbgs(),
