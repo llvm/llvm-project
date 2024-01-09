@@ -16,7 +16,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <array>
-#include <atomic>
 #include <optional>
 #include <string>
 #include <vector>
@@ -35,8 +34,8 @@ struct RISCVSupportedExtension {
   /// Supported version.
   RISCVExtensionVersion Version;
 
-  bool operator<(const RISCVSupportedExtension &RHS) const {
-    return StringRef(Name) < StringRef(RHS.Name);
+  constexpr bool operator<(const RISCVSupportedExtension &RHS) const {
+    return std::string_view(Name) < std::string_view(RHS.Name);
   }
 };
 
@@ -49,7 +48,7 @@ static const char *RISCVGImplications[] = {
 };
 
 // NOTE: This table should be sorted alphabetically by extension name.
-static const RISCVSupportedExtension SupportedExtensions[] = {
+static constexpr RISCVSupportedExtension SupportedExtensions[] = {
     {"a", RISCVExtensionVersion{2, 1}},
     {"c", RISCVExtensionVersion{2, 0}},
     {"d", RISCVExtensionVersion{2, 2}},
@@ -187,7 +186,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 };
 
 // NOTE: This table should be sorted alphabetically by extension name.
-static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+static constexpr RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zacas", RISCVExtensionVersion{1, 0}},
 
     {"zcmop", RISCVExtensionVersion{0, 2}},
@@ -207,18 +206,18 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zvfbfwma", RISCVExtensionVersion{0, 8}},
 };
 
-static void verifyTables() {
-#ifndef NDEBUG
-  static std::atomic<bool> TableChecked(false);
-  if (!TableChecked.load(std::memory_order_relaxed)) {
-    assert(llvm::is_sorted(SupportedExtensions) &&
-           "Extensions are not sorted by name");
-    assert(llvm::is_sorted(SupportedExperimentalExtensions) &&
-           "Experimental extensions are not sorted by name");
-    TableChecked.store(true, std::memory_order_relaxed);
-  }
-#endif
+// TODO: Replace with std::is_sorted once we move to C++20
+template <typename T> constexpr bool isSorted(T &&Extensions) {
+  for (size_t I = 0; I < std::size(Extensions) - 1; I++)
+    if (!(Extensions[I] < Extensions[I + 1]))
+      return false;
+  return true;
 }
+
+static_assert(isSorted(SupportedExtensions) &&
+              "Extensions are not sorted by name");
+static_assert(isSorted(SupportedExperimentalExtensions) &&
+              "Experimental extensions are not sorted by name");
 
 static void PrintExtension(StringRef Name, StringRef Version,
                            StringRef Description) {
@@ -359,8 +358,6 @@ bool RISCVISAInfo::isSupportedExtensionFeature(StringRef Ext) {
 }
 
 bool RISCVISAInfo::isSupportedExtension(StringRef Ext) {
-  verifyTables();
-
   for (auto ExtInfo : {ArrayRef(SupportedExtensions),
                        ArrayRef(SupportedExperimentalExtensions)}) {
     auto I = llvm::lower_bound(ExtInfo, Ext, LessExtName());
@@ -1062,11 +1059,11 @@ static const char *ImpliedExtsZvl65536b[] = {"zvl32768b"};
 static const char *ImpliedExtsZvl8192b[] = {"zvl4096b"};
 
 struct ImpliedExtsEntry {
-  StringLiteral Name;
+  const char *Name;
   ArrayRef<const char *> Exts;
 
-  bool operator<(const ImpliedExtsEntry &Other) const {
-    return Name < Other.Name;
+  constexpr bool operator<(const ImpliedExtsEntry &Other) const {
+    return std::string_view(Name) < std::string_view(Other.Name);
   }
 
   bool operator<(StringRef Other) const { return Name < Other; }
@@ -1074,66 +1071,69 @@ struct ImpliedExtsEntry {
 
 // Note: The table needs to be sorted by name.
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
-    {{"d"}, {ImpliedExtsD}},
-    {{"f"}, {ImpliedExtsF}},
-    {{"v"}, {ImpliedExtsV}},
-    {{"xsfvcp"}, {ImpliedExtsXSfvcp}},
-    {{"xsfvfnrclipxfqf"}, {ImpliedExtsXSfvfnrclipxfqf}},
-    {{"xsfvfwmaccqqq"}, {ImpliedExtsXSfvfwmaccqqq}},
-    {{"xsfvqmaccdod"}, {ImpliedExtsXSfvqmaccdod}},
-    {{"xsfvqmaccqoq"}, {ImpliedExtsXSfvqmaccqoq}},
-    {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
-    {{"zacas"}, {ImpliedExtsZacas}},
-    {{"zcb"}, {ImpliedExtsZcb}},
-    {{"zcd"}, {ImpliedExtsZcd}},
-    {{"zce"}, {ImpliedExtsZce}},
-    {{"zcf"}, {ImpliedExtsZcf}},
-    {{"zcmop"}, {ImpliedExtsZcmop}},
-    {{"zcmp"}, {ImpliedExtsZcmp}},
-    {{"zcmt"}, {ImpliedExtsZcmt}},
-    {{"zdinx"}, {ImpliedExtsZdinx}},
-    {{"zfa"}, {ImpliedExtsZfa}},
-    {{"zfbfmin"}, {ImpliedExtsZfbfmin}},
-    {{"zfh"}, {ImpliedExtsZfh}},
-    {{"zfhmin"}, {ImpliedExtsZfhmin}},
-    {{"zfinx"}, {ImpliedExtsZfinx}},
-    {{"zhinx"}, {ImpliedExtsZhinx}},
-    {{"zhinxmin"}, {ImpliedExtsZhinxmin}},
-    {{"zicfiss"}, {ImpliedExtsZicfiss}},
-    {{"zicntr"}, {ImpliedExtsZicntr}},
-    {{"zihpm"}, {ImpliedExtsZihpm}},
-    {{"zk"}, {ImpliedExtsZk}},
-    {{"zkn"}, {ImpliedExtsZkn}},
-    {{"zks"}, {ImpliedExtsZks}},
-    {{"zvbb"}, {ImpliedExtsZvbb}},
-    {{"zve32f"}, {ImpliedExtsZve32f}},
-    {{"zve32x"}, {ImpliedExtsZve32x}},
-    {{"zve64d"}, {ImpliedExtsZve64d}},
-    {{"zve64f"}, {ImpliedExtsZve64f}},
-    {{"zve64x"}, {ImpliedExtsZve64x}},
-    {{"zvfbfmin"}, {ImpliedExtsZvfbfmin}},
-    {{"zvfbfwma"}, {ImpliedExtsZvfbfwma}},
-    {{"zvfh"}, {ImpliedExtsZvfh}},
-    {{"zvfhmin"}, {ImpliedExtsZvfhmin}},
-    {{"zvkn"}, {ImpliedExtsZvkn}},
-    {{"zvknc"}, {ImpliedExtsZvknc}},
-    {{"zvkng"}, {ImpliedExtsZvkng}},
-    {{"zvknhb"}, {ImpliedExtsZvknhb}},
-    {{"zvks"}, {ImpliedExtsZvks}},
-    {{"zvksc"}, {ImpliedExtsZvksc}},
-    {{"zvksg"}, {ImpliedExtsZvksg}},
-    {{"zvl1024b"}, {ImpliedExtsZvl1024b}},
-    {{"zvl128b"}, {ImpliedExtsZvl128b}},
-    {{"zvl16384b"}, {ImpliedExtsZvl16384b}},
-    {{"zvl2048b"}, {ImpliedExtsZvl2048b}},
-    {{"zvl256b"}, {ImpliedExtsZvl256b}},
-    {{"zvl32768b"}, {ImpliedExtsZvl32768b}},
-    {{"zvl4096b"}, {ImpliedExtsZvl4096b}},
-    {{"zvl512b"}, {ImpliedExtsZvl512b}},
-    {{"zvl64b"}, {ImpliedExtsZvl64b}},
-    {{"zvl65536b"}, {ImpliedExtsZvl65536b}},
-    {{"zvl8192b"}, {ImpliedExtsZvl8192b}},
+    {"d", {ImpliedExtsD}},
+    {"f", {ImpliedExtsF}},
+    {"v", {ImpliedExtsV}},
+    {"xsfvcp", {ImpliedExtsXSfvcp}},
+    {"xsfvfnrclipxfqf", {ImpliedExtsXSfvfnrclipxfqf}},
+    {"xsfvfwmaccqqq", {ImpliedExtsXSfvfwmaccqqq}},
+    {"xsfvqmaccdod", {ImpliedExtsXSfvqmaccdod}},
+    {"xsfvqmaccqoq", {ImpliedExtsXSfvqmaccqoq}},
+    {"xtheadvdot", {ImpliedExtsXTHeadVdot}},
+    {"zacas", {ImpliedExtsZacas}},
+    {"zcb", {ImpliedExtsZcb}},
+    {"zcd", {ImpliedExtsZcd}},
+    {"zce", {ImpliedExtsZce}},
+    {"zcf", {ImpliedExtsZcf}},
+    {"zcmop", {ImpliedExtsZcmop}},
+    {"zcmp", {ImpliedExtsZcmp}},
+    {"zcmt", {ImpliedExtsZcmt}},
+    {"zdinx", {ImpliedExtsZdinx}},
+    {"zfa", {ImpliedExtsZfa}},
+    {"zfbfmin", {ImpliedExtsZfbfmin}},
+    {"zfh", {ImpliedExtsZfh}},
+    {"zfhmin", {ImpliedExtsZfhmin}},
+    {"zfinx", {ImpliedExtsZfinx}},
+    {"zhinx", {ImpliedExtsZhinx}},
+    {"zhinxmin", {ImpliedExtsZhinxmin}},
+    {"zicfiss", {ImpliedExtsZicfiss}},
+    {"zicntr", {ImpliedExtsZicntr}},
+    {"zihpm", {ImpliedExtsZihpm}},
+    {"zk", {ImpliedExtsZk}},
+    {"zkn", {ImpliedExtsZkn}},
+    {"zks", {ImpliedExtsZks}},
+    {"zvbb", {ImpliedExtsZvbb}},
+    {"zve32f", {ImpliedExtsZve32f}},
+    {"zve32x", {ImpliedExtsZve32x}},
+    {"zve64d", {ImpliedExtsZve64d}},
+    {"zve64f", {ImpliedExtsZve64f}},
+    {"zve64x", {ImpliedExtsZve64x}},
+    {"zvfbfmin", {ImpliedExtsZvfbfmin}},
+    {"zvfbfwma", {ImpliedExtsZvfbfwma}},
+    {"zvfh", {ImpliedExtsZvfh}},
+    {"zvfhmin", {ImpliedExtsZvfhmin}},
+    {"zvkn", {ImpliedExtsZvkn}},
+    {"zvknc", {ImpliedExtsZvknc}},
+    {"zvkng", {ImpliedExtsZvkng}},
+    {"zvknhb", {ImpliedExtsZvknhb}},
+    {"zvks", {ImpliedExtsZvks}},
+    {"zvksc", {ImpliedExtsZvksc}},
+    {"zvksg", {ImpliedExtsZvksg}},
+    {"zvl1024b", {ImpliedExtsZvl1024b}},
+    {"zvl128b", {ImpliedExtsZvl128b}},
+    {"zvl16384b", {ImpliedExtsZvl16384b}},
+    {"zvl2048b", {ImpliedExtsZvl2048b}},
+    {"zvl256b", {ImpliedExtsZvl256b}},
+    {"zvl32768b", {ImpliedExtsZvl32768b}},
+    {"zvl4096b", {ImpliedExtsZvl4096b}},
+    {"zvl512b", {ImpliedExtsZvl512b}},
+    {"zvl64b", {ImpliedExtsZvl64b}},
+    {"zvl65536b", {ImpliedExtsZvl65536b}},
+    {"zvl8192b", {ImpliedExtsZvl8192b}},
 };
+
+static_assert(isSorted(ImpliedExts) &&
+              "Implied extensions are not sorted by name");
 
 void RISCVISAInfo::updateImplication() {
   bool HasE = Exts.count("e") != 0;
@@ -1145,8 +1145,6 @@ void RISCVISAInfo::updateImplication() {
     auto Version = findDefaultVersion("i");
     addExtension("i", Version->Major, Version->Minor);
   }
-
-  assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
 
   // This loop may execute over 1 iteration since implication can be layered
   // Exits loop if no more implication is applied
