@@ -73,13 +73,4 @@ static inline void aliasIntoMemref(DataSizeT size, T *data,
 } // namespace part_tensor
 } // namespace mlir
 
-extern "C" {
-
-MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newPartTensor( // NOLINT
-    StridedMemRefType<index_type, 1> *partSizesRef,
-    StridedMemRefType<index_type, 1> *dimSizesRef, PrimaryType valTp,
-    Action action, void *ptr);
-
-} // extern "C"
-
 #endif // MLIR_EXECUTIONENGINE_PARTTENSORRUNTIME_H
