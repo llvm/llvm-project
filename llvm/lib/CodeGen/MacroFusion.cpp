@@ -128,6 +128,12 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
     }
   }
 
+  // Mark the second instruction of fusible pair as MachineInstr::Fusible if
+  // this mutation is running in pre-ra scheduler.
+  if (!DAG.MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
+    SecondSU.getInstr()->setFlag(MachineInstr::Fusible);
+
   ++NumFused;
   return true;
 }
