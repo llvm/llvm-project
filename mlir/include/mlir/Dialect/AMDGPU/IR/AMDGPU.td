@@ -42,16 +42,6 @@ def AMDGPU_Dialect : Dialect {
     static bool isSharedMemoryAddressSpace(Attribute type);
 
     /// Defines the MemRef memory space attribute numeric value that indicates
-    /// a memref is located in global memory. This should correspond to the
-    /// value used in ROCDL.
-    static constexpr unsigned kGlobalMemoryAddressSpace = 1;
-
-    /// Defines the MemRef memory space attribute numeric value that indicates
-    /// a memref is located in private memory. This should correspond to the
-    /// value used in ROCDL.
-    static constexpr unsigned kPrivateMemoryAddressSpace = 2;
-
-    /// Defines the MemRef memory space attribute numeric value that indicates
     /// a memref is located in shared memory. This should correspond to the
     /// value used in ROCDL.
     static constexpr unsigned kSharedMemoryAddressSpace = 3;
