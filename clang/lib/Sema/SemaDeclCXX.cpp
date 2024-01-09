@@ -17220,9 +17220,17 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
   } break;
 
   case APValue::ValueKind::Array:
-  case APValue::ValueKind::Vector:
+  case APValue::ValueKind::Vector: {
+    llvm::raw_svector_ostream OS(Str);
+    OS << '(';
+    OS << T.getUnqualifiedType();
+    OS << ')';
+    V.printPretty(OS, Context, T);
+  } break;
+
   case APValue::ValueKind::Struct: {
     llvm::raw_svector_ostream OS(Str);
+    OS << T.getUnqualifiedType();
     V.printPretty(OS, Context, T);
   } break;
 

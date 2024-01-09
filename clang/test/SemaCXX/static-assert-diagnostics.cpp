@@ -7,7 +7,7 @@ struct A {
 
 constexpr auto a0 = A{0, 0, 3, 4, 5};
 
-// expected-note@+1 {{evaluates to '{0, {0, 3, 4}, 5} == {1, {2, 3, 4}, 5}'}}
+// expected-note@+1 {{evaluates to 'A{0, {0, 3, 4}, 5} == A{1, {2, 3, 4}, 5}'}}
 static_assert(a0 == A{1, {2, 3, 4}, 5}); // expected-error {{failed}}
 
 struct _arr {
@@ -20,7 +20,7 @@ struct _arr {
   }
 };
 
-// expected-note@+1 {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
+// expected-note@+1 {{{evaluates to '_arr{{2, 3, 4}} == (int[3]){0, 3, 4}'}}}
 static_assert(_arr{2, 3, 4} == a0.b); // expected-error {{failed}}
 
 struct B {
@@ -28,7 +28,7 @@ struct B {
   bool operator==(const B&) const = default;
 };
 
-// expected-note@+1 {{evaluates to '{7, 6} == {8, 6}'}}
+// expected-note@+1 {{evaluates to 'B{7, 6} == B{8, 6}'}}
 static_assert(B{7, 6} == B{8, 6}); // expected-error {{failed}}
 
 typedef int v4si __attribute__((__vector_size__(16)));
@@ -40,10 +40,10 @@ struct C: A, B {
 
 constexpr auto cc = C{A{1, {2, 3, 4}, 5}, B{7, 6}, C::E1};
 
-// expected-note@+1 {{{evaluates to '{{1, {2, 3, 4}, 5}, {7, 6}, 0} == {{0, {0, 3, 4}, 5}, {5, 0}, 1}'}}}
+// expected-note@+1 {{{evaluates to 'C{{1, {2, 3, 4}, 5}, {7, 6}, 0} == C{{0, {0, 3, 4}, 5}, {5, 0}, 1}'}}}
 static_assert(cc == C{a0, {5}, C::E2}); // expected-error {{failed}}
 
-// this little guy? oh, I wouldn't worry about this little guy
+// define `std::bit_cast` as a helper for doing constexpr vector comparisons
 namespace std {
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
@@ -71,22 +71,24 @@ struct V {
     // surprisingly, b[0] is also not valid in a constant expression (nor v[0])
     // return b[0] == rhs.b[0] && ...
 
+    // cmp an array of bytes that does element-wise comparisons that's the same size as v
     struct cmp {
       unsigned char v [sizeof(v4si)];
       bool operator==(const cmp&) const = default;
     };
     return std::bit_cast<cmp>(v) == std::bit_cast<cmp>(rhs.v);
   };
-
 };
+constexpr bool operator==(const V& lhs, const v4si& rhs) {
+  return lhs == V{rhs};
+}
+
 static_assert(V{1, 2, 3, 4} == V{1, 2, 3, 4});
 
-// expected-note@+1 {{{evaluates to '{{1, 2, 3, 4}} == {{1, 2, 0, 4}}'}}}
+// expected-note@+1 {{{evaluates to 'V{{1, 2, 3, 4}} == V{{1, 2, 0, 4}}'}}}
 static_assert(V{1, 2, 3, 4} == V{1, 2, 0, 4}); // expected-error {{failed}}
-
-constexpr auto v = (v4si){1, 2, 3, 4};
-constexpr auto vv = V{{1, 2, 3, 4}};
-
+// expected-note@+1 {{{evaluates to 'V{{1, 2, 3, 4}} == (v4si){1, 2, 0, 4}'}}}
+static_assert(V{1, 2, 3, 4} == (v4si){1, 2, 0, 4}); // expected-error {{failed}}
 
 // there appears to be no constexpr-compatible way to write an == for
 // two `bool4`s at this time, since std::bit_cast doesn't support it
@@ -101,6 +103,13 @@ struct BV {
     return std::bit_cast<unsigned char>(b) == std::bit_cast<unsigned char>(rhs.b);
   }
 };
+constexpr bool operator==(const BV& lhs, const bool8& rhs) {
+  return lhs == BV{rhs};
+}
 
-// expected-note@+1 {{{evaluates to '{{false, true, false, false, false, false, false, false}} == {{true, false, false, false, false, false, false, false}}'}}}
+
+// expected-note@+1 {{{evaluates to 'BV{{false, true, false, false, false, false, false, false}} == BV{{true, false, false, false, false, false, false, false}}'}}}
 static_assert(BV{{0, 1}} == BV{{1, 0}}); // expected-error {{failed}}
+
+// expected-note@+1 {{{evaluates to 'BV{{false, true, false, false, false, false, false, false}} == (bool8){true, false, false, false, false, false, false, false}'}}}
+static_assert(BV{{0, 1}} == (bool8){true, false}); // expected-error {{failed}}
