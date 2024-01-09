@@ -252,7 +252,6 @@ public:
                      const MachineRegisterInfo *MRI, WaitEventType E,
                      MachineInstr &MI);
 
-  void setPendingEvent(WaitEventType E) { PendingEvents |= 1 << E; }
   unsigned hasPendingEvent() const { return PendingEvents; }
   unsigned hasPendingEvent(WaitEventType E) const {
     return PendingEvents & (1 << E);
@@ -293,7 +292,7 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
-  void setNonKernelFunctionInitialState() {
+  void setStateOnFunctionEntryOrReturn() {
     setScoreUB(VS_CNT, getWaitCountMax(VS_CNT));
     PendingEvents |= WaitEventMaskForInst[VS_CNT];
   }
@@ -1488,9 +1487,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZeroExceptVsCnt());
-      // Since there's no guaranteed wait on VsCnt, scratch stores might still
-      // be in flight.
-      ScoreBrackets->setPendingEvent(SCRATCH_WRITE_ACCESS);
+      ScoreBrackets->setStateOnFunctionEntryOrReturn();
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
@@ -1883,7 +1880,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
     auto NonKernelInitialState =
         std::make_unique<WaitcntBrackets>(ST, Limits, Encoding);
-    NonKernelInitialState->setNonKernelFunctionInitialState();
+    NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
