@@ -44,6 +44,7 @@ endif(COMPILER_RT_BUILD_ORC)
 if (COMPILER_RT_BUILD_PROFILE)
   set(PROFILE_HEADERS
     profile/InstrProfData.inc
+    profile/instr_prof_interface.h
     )
 endif(COMPILER_RT_BUILD_PROFILE)
 

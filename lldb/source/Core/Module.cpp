@@ -855,6 +855,23 @@ void Module::FindFunctions(ConstString name,
   }
 }
 
+void Module::FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
+                           FunctionNameType name_type_mask,
+                           const ModuleFunctionSearchOptions &options,
+                           SymbolContextList &sc_list) {
+  if (compiler_ctx.empty() ||
+      compiler_ctx.back().kind != CompilerContextKind::Function)
+    return;
+  ConstString name = compiler_ctx.back().name;
+  SymbolContextList unfiltered;
+  FindFunctions(name, CompilerDeclContext(), name_type_mask, options,
+                unfiltered);
+  // Filter by context.
+  for (auto &sc : unfiltered)
+    if (sc.function && compiler_ctx.equals(sc.function->GetCompilerContext()))
+      sc_list.Append(sc);
+}
+
 void Module::FindFunctions(const RegularExpression &regex,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
