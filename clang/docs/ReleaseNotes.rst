@@ -520,6 +520,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
+- Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
+  converted constant expression and not as a reference to subobject.
 
 
 Improvements to Clang's time-trace
@@ -610,7 +612,8 @@ Bug Fixes in This Version
   of template classes. Fixes
   (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
   `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_,
-  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_)
+  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_,
+  `#77411 <https://github.com/llvm/llvm-project/issues/77411>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
