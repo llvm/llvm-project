@@ -13,7 +13,9 @@
 #include "UseDigitSeparatorCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::ast_matchers;
@@ -238,6 +240,56 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   llvm_unreachable("Unreachable code in UseDigitSeparatorCheck");
+}
+
+class UseDigitSeparatorCallbacks : public PPCallbacks {
+public:
+  UseDigitSeparatorCallbacks(UseDigitSeparatorCheck *Check) : Check(Check) {}
+
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override;
+
+private:
+  UseDigitSeparatorCheck *Check;
+};
+void UseDigitSeparatorCallbacks::MacroDefined(const Token &MacroNameTok,
+                                              const MacroDirective *MD) {
+  const MacroInfo *Info = MD->getMacroInfo();
+  ArrayRef<Token> MacroTokens = Info->tokens();
+  if (Info->isBuiltinMacro() || MacroTokens.empty()) {
+    return;
+  }
+    for (const Token &T : MacroTokens) {
+      if (!T.isLiteral()) {
+        return;
+      }
+
+      // Get original literal source text
+      std::string OriginalLiteralString(T.getLiteralData(), T.getLength());
+
+      if (!isDigit(OriginalLiteralString[0])) {
+        return;
+      }
+
+      // Get formatting literal text
+      const llvm::APInt IntegerValue = llvm::APInt(128, std::stoul(OriginalLiteralString));
+      const std::string FormatedLiteralString =
+          getFormatedIntegerString(OriginalLiteralString, IntegerValue);
+
+      if (OriginalLiteralString != FormatedLiteralString) {
+        Check->diag(T.getLocation(),
+                    "unformatted representation of floating literal '%0'")
+            << OriginalLiteralString
+            << FixItHint::CreateReplacement(T.getLocation(),
+                                            FormatedLiteralString);
+      }
+    }
+}
+
+void UseDigitSeparatorCheck::registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                         Preprocessor *ModuleExpanderPP) {
+  auto Callback = std::make_unique<UseDigitSeparatorCallbacks>(this);
+  PP->addPPCallbacks(std::move(Callback));
 }
 
 } // namespace clang::tidy::modernize
