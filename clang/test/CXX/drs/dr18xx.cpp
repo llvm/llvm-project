@@ -32,7 +32,7 @@ namespace dr1802 { // dr1802: 3.1
 #if __cplusplus >= 201103L
 // Using a Wikipedia example of surrogate pair:
 // https://en.wikipedia.org/wiki/UTF-16#Examples
-constexpr char16_t a[3] = u"𐐷";
+constexpr char16_t a[3] = u"\U00010437";
 static_assert(a[0] == 0xD801, "");
 static_assert(a[1] == 0xDC37, "");
 static_assert(a[2] == 0x0, "");
