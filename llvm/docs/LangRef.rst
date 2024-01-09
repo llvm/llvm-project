@@ -3412,11 +3412,11 @@ For a simpler introduction to the ordering constraints, see the
     stronger) operations on the same address. If an address is written
     ``monotonic``-ally by one thread, and other threads ``monotonic``-ally
     read that address repeatedly, the other threads must eventually see
-    the write. This corresponds to the C++/C ``memory_order_relaxed``.
+    the write. This corresponds to the C/C++ ``memory_order_relaxed``.
 ``acquire``
     In addition to the guarantees of ``monotonic``, a
     *synchronizes-with* edge may be formed with a ``release`` operation.
-    This is intended to model C++'s ``memory_order_acquire``.
+    This is intended to model C/C++'s ``memory_order_acquire``.
 ``release``
     In addition to the guarantees of ``monotonic``, if this operation
     writes a value which is subsequently read by an ``acquire``
@@ -3424,19 +3424,19 @@ For a simpler introduction to the ordering constraints, see the
     this occurs even if the value written by a ``release`` operation
     has been modified by a read-modify-write operation before being
     read. (Such a set of operations comprises a *release
-    sequence*). This corresponds to the C++/C
+    sequence*). This corresponds to the C/C++
     ``memory_order_release``.
 ``acq_rel`` (acquire+release)
     Acts as both an ``acquire`` and ``release`` operation on its
-    address. This corresponds to the C++/C ``memory_order_acq_rel``.
+    address. This corresponds to the C/C++ ``memory_order_acq_rel``.
 ``seq_cst`` (sequentially consistent)
     In addition to the guarantees of ``acq_rel`` (``acquire`` for an
     operation that only reads, ``release`` for an operation that only
     writes), there is a global total order on all
     sequentially-consistent operations on all addresses. Each
     sequentially-consistent read sees the last preceding write to the
-    same address in this global order. This corresponds to the C++/C
-    ``memory_order_seq_cst`` and Java volatile.
+    same address in this global order. This corresponds to the C/C++
+    ``memory_order_seq_cst`` and Java ``volatile``.
 
     Note: this global total order is *not* guaranteed to be fully
     consistent with the *happens-before* partial order if
