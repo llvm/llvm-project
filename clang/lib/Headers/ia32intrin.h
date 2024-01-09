@@ -30,7 +30,7 @@
 ///    input is 0.
 ///
 /// \headerfile <x86intrin.h>
-/// 
+///
 /// This intrinsic corresponds to the \c BSF instruction or the
 ///    \c TZCNT instruction.
 ///
@@ -135,7 +135,7 @@ __bswapq(long long __A) {
 /// Counts the number of bits in the source operand having a value of 1.
 ///
 /// \headerfile <x86intrin.h>
-/// 
+///
 /// This intrinsic corresponds to the \c POPCNT instruction or a
 ///    a sequence of arithmetic and logic ops to calculate it.
 ///
@@ -263,7 +263,7 @@ _castu64_f64(unsigned long long __A) {
 ///     unsigned char operand.
 ///
 /// \headerfile <x86intrin.h>
-/// 
+///
 /// This intrinsic corresponds to the \c CRC32B instruction.
 ///
 /// \param __C
@@ -283,7 +283,7 @@ __crc32b(unsigned int __C, unsigned char __D)
 ///    unsigned short operand.
 ///
 /// \headerfile <x86intrin.h>
-/// 
+///
 /// This intrinsic corresponds to the \c CRC32W instruction.
 ///
 /// \param __C
@@ -303,7 +303,7 @@ __crc32w(unsigned int __C, unsigned short __D)
 ///    second unsigned integer operand.
 ///
 /// \headerfile <x86intrin.h>
-/// 
+///
 /// This intrinsic corresponds to the \c CRC32D instruction.
 ///
 /// \param __C
