@@ -121,6 +121,8 @@ def XLenVT : ValueTypeByHwMode<[RV32, RV64],
 // Allow f64 in GPR for ZDINX on RV64.
 def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
+def XLenPairFVT : ValueTypeByHwMode<[RV32],
+                                    [f64]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -570,9 +572,10 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = RegInfoByHwMode<[RV64], [RegInfo<64, 64, 64>]>,
+let RegInfos = RegInfoByHwMode<[RV32, RV64],
+                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
     DecoderMethod = "DecodeGPRPairRegisterClass" in
-def GPRPair : RegisterClass<"RISCV", [f64], 64, (add
+def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
