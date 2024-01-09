@@ -2566,7 +2566,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     if (LeadingZero) {
       if (!UniquedVals[Multiple-1].getNode())
         return DAG.getTargetConstant(0, SDLoc(N), MVT::i32);  // 0,0,0,undef
-      int Val = cast<ConstantSDNode>(UniquedVals[Multiple-1])->getZExtValue();
+      int Val = UniquedVals[Multiple - 1]->getAsZExtVal();
       if (Val < 16)                                   // 0,0,0,4 -> vspltisw(4)
         return DAG.getTargetConstant(Val, SDLoc(N), MVT::i32);
     }
@@ -2635,11 +2635,11 @@ bool llvm::isIntS16Immediate(SDNode *N, int16_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int16_t)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int16_t)N->getAsZExtVal();
   if (N->getValueType(0) == MVT::i32)
-    return Imm == (int32_t)cast<ConstantSDNode>(N)->getZExtValue();
+    return Imm == (int32_t)N->getAsZExtVal();
   else
-    return Imm == (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
+    return Imm == (int64_t)N->getAsZExtVal();
 }
 bool llvm::isIntS16Immediate(SDValue Op, int16_t &Imm) {
   return isIntS16Immediate(Op.getNode(), Imm);
@@ -2684,7 +2684,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int64_t)N->getAsZExtVal();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -15580,7 +15580,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         NarrowOp.getOpcode() != ISD::ROTL && NarrowOp.getOpcode() != ISD::ROTR)
       break;
 
-    uint64_t Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    uint64_t Imm = Op2->getAsZExtVal();
     // Make sure that the constant is narrow enough to fit in the narrow type.
     if (!isUInt<32>(Imm))
       break;
@@ -16795,7 +16795,7 @@ void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
     return;
   if (!isa<ConstantSDNode>(Ops[1].getNode()))
     return;
-  auto IntrinsicID = cast<ConstantSDNode>(Ops[1].getNode())->getZExtValue();
+  auto IntrinsicID = Ops[1].getNode()->getAsZExtVal();
   if (IntrinsicID != Intrinsic::ppc_tdw && IntrinsicID != Intrinsic::ppc_tw &&
       IntrinsicID != Intrinsic::ppc_trapd && IntrinsicID != Intrinsic::ppc_trap)
     return;
@@ -18430,7 +18430,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
     if (Flags & PPC::MOF_RPlusSImm16) {
       SDValue Op0 = N.getOperand(0);
       SDValue Op1 = N.getOperand(1);
-      int16_t Imm = cast<ConstantSDNode>(Op1)->getZExtValue();
+      int16_t Imm = Op1->getAsZExtVal();
       if (!Align || isAligned(*Align, Imm)) {
         Disp = DAG.getTargetConstant(Imm, DL, N.getValueType());
         Base = Op0;
