@@ -1,0 +1,10 @@
+add_mlir_unittest(MLIRGPUTests
+  ParallelLoopMapperTest.cpp
+)
+target_link_libraries(MLIRGPUTests
+  PRIVATE
+  MLIRArithDialect
+  MLIRGPUDialect
+  MLIRGPUTransforms
+  MLIRParser
+  MLIRSCFDialect)
