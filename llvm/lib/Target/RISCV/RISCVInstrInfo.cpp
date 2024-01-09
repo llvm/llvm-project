@@ -1347,9 +1347,9 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
   case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
 
-  case RISCV::ANDN: return RISCV::PseudoCCANDN;   break;
-  case RISCV::ORN:  return RISCV::PseudoCCORN;    break;
-  case RISCV::XNOR: return RISCV::PseudoCCXNOR;   break;
+  case RISCV::ANDN:  return RISCV::PseudoCCANDN;  break;
+  case RISCV::ORN:   return RISCV::PseudoCCORN;   break;
+  case RISCV::XNOR:  return RISCV::PseudoCCXNOR;  break;
   }
 
   return RISCV::INSTRUCTION_LIST_END;
