@@ -492,6 +492,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       // e.g. we have a <4 x s16> but 2 x s32 in regs.
       assert(NumElts > Regs.size());
       LLT SrcEltTy = MRI.getType(Regs[0]);
+
       LLT OriginalEltTy = MRI.getType(OrigRegs[0]).getElementType();
 
       // Input registers contain packed elements.
@@ -505,7 +506,12 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
         for (unsigned K = 0; K < EltPerReg; ++K)
           BVRegs.push_back(B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0));
       }
-      assert(BVRegs.size() == NumElts);
+
+      // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces for a <3 x s16> vector. We should have less than EltPerReg extra items.
+      if(BVRegs.size() > NumElts) {
+        assert((BVRegs.size() - NumElts) < EltPerReg);
+        BVRegs.truncate(NumElts);
+      }
       BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
     }
     B.buildTrunc(OrigRegs[0], BuildVec);
