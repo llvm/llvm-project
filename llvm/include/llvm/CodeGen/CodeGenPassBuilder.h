@@ -488,6 +488,7 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   AddIRPass addIRPass(MPM, Opt.DebugPM);
   // `ProfileSummaryInfo` is always valid.
   addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
   addISelPasses(addIRPass);
 
   AddMachinePass addPass(MFPM);
