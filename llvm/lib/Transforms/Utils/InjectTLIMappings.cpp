@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;

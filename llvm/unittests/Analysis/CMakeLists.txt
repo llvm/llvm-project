@@ -41,7 +41,6 @@ set(ANALYSIS_TEST_SOURCES
   PluginInlineOrderAnalysisTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
-  VectorFunctionABITest.cpp
   SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
   TensorSpecTest.cpp
