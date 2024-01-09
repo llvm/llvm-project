@@ -509,6 +509,7 @@ private:
   DWARF5AccelTable AccelTypeUnitsDebugNames;
   /// Used to hide which DWARF5AccelTable we are using now.
   DWARF5AccelTable *CurrentDebugNames = &AccelDebugNames;
+  DWARF5AccelTableKind CurrentKind = DWARF5AccelTableKind::CU;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
@@ -925,6 +926,7 @@ public:
 
   /// Sets the current DWARF5AccelTable to use.
   void setCurrentDWARF5AccelTable(const DWARF5AccelTableKind Kind) {
+    CurrentKind = Kind;
     switch (Kind) {
     case DWARF5AccelTableKind::CU:
       CurrentDebugNames = &AccelDebugNames;

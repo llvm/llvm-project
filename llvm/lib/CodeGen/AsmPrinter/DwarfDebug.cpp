@@ -3448,7 +3448,6 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
-  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
@@ -3461,6 +3460,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     return;
   }
 
+  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
 
@@ -3580,6 +3580,14 @@ void DwarfDebug::addAccelNameImpl(
     break;
   case AccelTableKind::Dwarf: {
     DWARF5AccelTable &Current = getCurrentDWARF5AccelTable();
+    assert((CurrentKind == DWARF5AccelTableKind::TU) ||
+           ((CurrentKind == DWARF5AccelTableKind::CU) &&
+            (Unit.getUnitDie().getTag() != dwarf::DW_TAG_type_unit)) &&
+               "Kind is CU but TU is being processed.");
+    assert((CurrentKind == DWARF5AccelTableKind::CU) ||
+           ((CurrentKind == DWARF5AccelTableKind::TU) &&
+            (Unit.getUnitDie().getTag() == dwarf::DW_TAG_type_unit)) &&
+               "Kind is TU but CU is being processed.");
     // The type unit can be discarded, so need to add references to final
     // acceleration table once we know it's complete and we emit it.
     Current.addName(Ref, Die, Unit.getUniqueID());
