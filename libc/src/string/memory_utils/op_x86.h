@@ -259,9 +259,10 @@ LIBC_INLINE uint64_t big_endian_cmp_mask(__m512i max, __m512i value) {
 #else
   // We can't byte-reverse '__m512i' in a single instruction with __AVX512BW__.
   // '_mm512_shuffle_epi8' can only shuffle within each 16-byte lane.
-  // zmm = | 16 bytes | 16 bytes | 16 bytes | 16 bytes |
   // So we only reverse groups of 8 bytes, these groups are necessarily within a
   // 16-byte lane.
+  // zmm = | 16 bytes  | 16 bytes  | 16 bytes  | 16 bytes  |
+  // zmm = | <8> | <8> | <8> | <8> | <8> | <8> | <8> | <8> |
   const __m512i indices = _mm512_set_epi8(56, 57, 58, 59, 60, 61, 62, 63, //
                                           48, 49, 50, 51, 52, 53, 54, 55, //
                                           40, 41, 42, 43, 44, 45, 46, 47, //
