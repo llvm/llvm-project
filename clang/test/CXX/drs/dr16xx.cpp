@@ -42,6 +42,28 @@ namespace dr1611 { // dr1611: dup 1658
   C c;
 }
 
+namespace dr1626 { // dr1626: no open
+// FIXME: current consensus for CWG2335 is that the examples are well-formed.
+#if __cplusplus >= 201103L
+namespace ex1 {
+template <typename T> struct C {
+  template <typename T2> static constexpr bool _S_chk() { return false; }
+  static const bool __value = _S_chk<int>();
+};
+template struct C<double>;
+} // namespace ex1
+
+namespace ex2 {
+struct C {
+  static constexpr bool _S_chk() { return false; }
+  static const bool __value = _S_chk();
+  // expected-error@-1 {{in-class initializer for static data member is not a constant expression}}
+};
+C c;
+} // namespace ex2
+#endif
+} // namespace dr1626
+
 namespace dr1631 {  // dr1631: 3.7
 #if __cplusplus >= 201103L
   // Incorrect overload resolution for single-element initializer-list
