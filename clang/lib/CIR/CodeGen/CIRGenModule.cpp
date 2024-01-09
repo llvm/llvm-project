@@ -471,7 +471,8 @@ mlir::Value CIRGenModule::getGlobalValue(const Decl *D) {
 mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
                                                  mlir::Location loc,
                                                  StringRef name, mlir::Type t,
-                                                 bool isCst) {
+                                                 bool isCst,
+                                                 mlir::Operation *insertPoint) {
   mlir::cir::GlobalOp g;
   auto &builder = CGM.getBuilder();
   {
@@ -486,8 +487,12 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
       builder.setInsertionPoint(curCGF->CurFn);
 
     g = builder.create<mlir::cir::GlobalOp>(loc, name, t, isCst);
-    if (!curCGF)
-      CGM.getModule().push_back(g);
+    if (!curCGF) {
+      if (insertPoint)
+        CGM.getModule().insert(insertPoint, g);
+      else
+        CGM.getModule().push_back(g);
+    }
 
     // Default to private until we can judge based on the initializer,
     // since MLIR doesn't allow public declarations.
@@ -499,6 +504,35 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
 
 void CIRGenModule::setCommonAttributes(GlobalDecl GD, mlir::Operation *GV) {
   assert(!UnimplementedFeature::setCommonAttributes());
+}
+
+void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
+                                 mlir::cir::GlobalOp New) {
+  assert(Old.getSymName() == New.getSymName() && "symbol names must match");
+
+  // If the types does not match, update all references to Old to the new type.
+  auto OldTy = Old.getSymType();
+  auto NewTy = New.getSymType();
+  if (OldTy != NewTy) {
+    auto OldSymUses = Old.getSymbolUses(theModule.getOperation());
+    if (OldSymUses.has_value()) {
+      for (auto Use : *OldSymUses) {
+        auto *UserOp = Use.getUser();
+        assert((isa<mlir::cir::GetGlobalOp>(UserOp) ||
+                isa<mlir::cir::GlobalOp>(UserOp)) &&
+               "GlobalOp symbol user is neither a GetGlobalOp nor a GlobalOp");
+
+        if (auto GGO = dyn_cast<mlir::cir::GetGlobalOp>(Use.getUser())) {
+          auto UseOpResultValue = GGO.getAddr();
+          UseOpResultValue.setType(
+              mlir::cir::PointerType::get(builder.getContext(), NewTy));
+        }
+      }
+    }
+  }
+
+  // Remove old global from the module.
+  Old.erase();
 }
 
 /// If the specified mangled name is not in the module,
@@ -592,11 +626,14 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
   auto GV = CIRGenModule::createGlobalOp(*this, loc, MangledName, Ty,
-                                         /*isConstant=*/false);
+                                         /*isConstant=*/false,
+                                         /*insertPoint=*/Entry.getOperation());
 
   // If we already created a global with the same mangled name (but different
-  // type) before, take its name and remove it from its parent.
-  assert(!Entry && "not implemented");
+  // type) before, replace it with the new global.
+  if (Entry) {
+    replaceGlobal(Entry, GV);
+  }
 
   // This is the first use or definition of a mangled name.  If there is a
   // deferred decl with this name, remember that we need to emit it at the end
