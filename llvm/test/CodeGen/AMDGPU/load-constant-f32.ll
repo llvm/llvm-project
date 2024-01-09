@@ -58,10 +58,10 @@ define amdgpu_kernel void @constant_load_v8f32(ptr addrspace(4) noalias nocaptur
 ; GFX12-LABEL: constant_load_v8f32:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b128 s[8:11], s[0:1], 0x24
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s12, s[10:11], 0x0
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[8:9], 0x0
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_f32 s0, s0, s12
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_add_f32 s0, s1, s0
