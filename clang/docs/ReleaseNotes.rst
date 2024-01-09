@@ -936,6 +936,14 @@ X86 Support
 - Support ISA of ``AVX10.1``.
 - ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
 - Added ABI handling for ``__float128`` to match with GCC.
+- Emit warnings for options to enable knl/knm specific ISAs: AVX512PF, AVX512ER
+  and PREFETCHWT1. From next version (LLVM 19), these ISAs' intrinsic supports
+  will be deprecated:
+  * intrinsic series of *_exp2a23_*
+  * intrinsic series of *_rsqrt28_*
+  * intrinsic series of *_rcp28_*
+  * intrinsic series of *_prefetch_i[3|6][2|4]gather_*
+  * intrinsic series of *_prefetch_i[3|6][2|4]scatter_*
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
