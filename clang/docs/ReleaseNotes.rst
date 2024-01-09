@@ -702,6 +702,9 @@ Bug Fixes in This Version
 - Fix assertion failure when initializing union containing struct with
   flexible array member using empty initializer list.
   Fixes (`#77085 <https://github.com/llvm/llvm-project/issues/77085>`_)
+- Fix assertion crash due to failed scope restoring caused by too-early VarDecl
+  invalidation by invalid initializer Expr.
+  Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
 
 
 Bug Fixes to Compiler Builtins
