@@ -522,7 +522,7 @@ struct OuterProductOpConversion
 ///
 /// Example:
 ///
-///   %0 = arm_sme.streaming_vl <half_words>
+///   %0 = arm_sme.streaming_vl <half>
 ///
 /// is converted to:
 ///
@@ -541,13 +541,13 @@ struct StreamingVLOpConversion
     auto i64Type = rewriter.getI64Type();
     auto *intrOp = [&]() -> Operation * {
       switch (streamingVlOp.getTypeSize()) {
-      case arm_sme::TypeSize::Bytes:
+      case arm_sme::TypeSize::Byte:
         return rewriter.create<arm_sme::aarch64_sme_cntsb>(loc, i64Type);
-      case arm_sme::TypeSize::HalfWords:
+      case arm_sme::TypeSize::Half:
         return rewriter.create<arm_sme::aarch64_sme_cntsh>(loc, i64Type);
-      case arm_sme::TypeSize::Words:
+      case arm_sme::TypeSize::Word:
         return rewriter.create<arm_sme::aarch64_sme_cntsw>(loc, i64Type);
-      case arm_sme::TypeSize::DoubleWords:
+      case arm_sme::TypeSize::Double:
         return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
       }
     }();

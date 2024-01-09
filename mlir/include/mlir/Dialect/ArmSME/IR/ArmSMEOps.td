@@ -223,18 +223,18 @@ def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
   let defaultValue = "CombiningKind::Add";
 }
 
-def TypeSize : I32EnumAttr<"TypeSize", "Size of vector type", [
-  I32EnumAttrCase<"Bytes"      , 0, "bytes">,
-  I32EnumAttrCase<"HalfWords"  , 1, "half_words">,
-  I32EnumAttrCase<"Words"      , 2, "words">,
-  I32EnumAttrCase<"DoubleWords", 3, "double_words">,
+def TypeSize : I32EnumAttr<"TypeSize", "Size of a vector element type", [
+  I32EnumAttrCase<"Byte"  , 0, "byte">,
+  I32EnumAttrCase<"Half"  , 1, "half">,
+  I32EnumAttrCase<"Word"  , 2, "word">,
+  I32EnumAttrCase<"Double", 3, "double">,
 ]> {
   let cppNamespace = "::mlir::arm_sme";
   let genSpecializedAttr = 0;
 }
 
 def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
-                                          "type_size"> {
+                                   "type_size"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
@@ -788,20 +788,21 @@ def StreamingVLOp : ArmSME_Op<"streaming_vl", [Pure]>
   let summary = "Query the streaming vector length";
 
   let description = [{
-    This operation returns the streaming vector length for a type size. Unlike
-    `vector.vscale` the value returned is invariant to the streaming mode.
+    This operation returns the streaming vector length for a given type size.
+    Unlike `vector.vscale` the value returned is invariant to the streaming
+    mode.
 
     Example:
     ```mlir
     // Streaming vector length in:
     // - bytes (8-bit)
-    %svl_b = arm_sme.streaming_vl <bytes>
+    %svl_b = arm_sme.streaming_vl <byte>
     // - half words (16-bit)
-    %svl_h = arm_sme.streaming_vl <half_words>
+    %svl_h = arm_sme.streaming_vl <half>
     // - words (32-bit)
-    %svl_w = arm_sme.streaming_vl <words>
+    %svl_w = arm_sme.streaming_vl <word>
     // - double words (64-bit)
-    %svl_d = arm_sme.streaming_vl <double_words>
+    %svl_d = arm_sme.streaming_vl <double>
     ```
   }];
 

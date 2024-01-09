@@ -571,7 +571,7 @@ func.func @arm_sme_move_tile_slice_to_vector_ver_i128(%tile_slice_index : index)
 // CHECK: %[[INDEX_COUNT:.*]] = arith.index_cast %[[COUNT]] : i64 to index
 // CHECK: return %[[INDEX_COUNT]] : index
 func.func @arm_sme_streaming_vl_bytes() -> index {
-  %svl_b = arm_sme.streaming_vl <bytes>
+  %svl_b = arm_sme.streaming_vl <byte>
   return %svl_b : index
 }
 
@@ -580,7 +580,7 @@ func.func @arm_sme_streaming_vl_bytes() -> index {
 // CHECK-LABEL: @arm_sme_streaming_vl_half_words
 // CHECK: "arm_sme.intr.cntsh"() : () -> i64
 func.func @arm_sme_streaming_vl_half_words() -> index {
-  %svl_h = arm_sme.streaming_vl <half_words>
+  %svl_h = arm_sme.streaming_vl <half>
   return %svl_h : index
 }
 
@@ -589,7 +589,7 @@ func.func @arm_sme_streaming_vl_half_words() -> index {
 // CHECK-LABEL: @arm_sme_streaming_vl_words
 // CHECK: "arm_sme.intr.cntsw"() : () -> i64
 func.func @arm_sme_streaming_vl_words() -> index {
-  %svl_w = arm_sme.streaming_vl <words>
+  %svl_w = arm_sme.streaming_vl <word>
   return %svl_w : index
 }
 
@@ -598,6 +598,6 @@ func.func @arm_sme_streaming_vl_words() -> index {
 // CHECK-LABEL: @arm_sme_streaming_vl_double_words
 // CHECK: "arm_sme.intr.cntsd"() : () -> i64
 func.func @arm_sme_streaming_vl_double_words() -> index {
-  %svl_d = arm_sme.streaming_vl <double_words>
+  %svl_d = arm_sme.streaming_vl <double>
   return %svl_d : index
 }
