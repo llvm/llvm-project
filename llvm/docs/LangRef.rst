@@ -3441,7 +3441,7 @@ For a simpler introduction to the ordering constraints, see the
     Note: this global total order is *not* guaranteed to be fully
     consistent with the *happens-before* partial order if
     non-``seq_cst`` accesses are involved. See the C++ standard
-    `[atomics.order] <https://eel.is/c++draft/atomics.order>`_ section
+    `[atomics.order] <https://wg21.link/atomics.order>`_ section
     for more details on the exact guarantees.
 
 .. _syncscope:
@@ -10764,7 +10764,7 @@ fence must be compatible with the individual total orders of
 ``monotonic`` (or stronger) memory accesses occurring before and after
 such a fence. The exact semantics of this interaction are somewhat
 complicated, see the C++ standard's `[atomics.order]
-<https://eel.is/c++draft/atomics.order>`_ section for more details.
+<https://wg21.link/atomics.order>`_ section for more details.
 
 A ``fence`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.

@@ -14,13 +14,13 @@ asynchronous signals.
 The atomic instructions are designed specifically to provide readable IR and
 optimized code generation for the following:
 
-* The C++ ``<atomic>`` header and C <stdatomic.h> headers. These were
-  originally added in C++11 and C11. The memory model has been
+* The C++ ``<atomic>`` header and C ``<stdatomic.h>`` headers. These
+  were originally added in C++11 and C11. The memory model has been
   subsequently adjusted to correct errors in the initial
   specification, so LLVM currently intends to implement the version
   specified by C++20. (See the `C++20 draft standard
-  <https://isocpp.org/files/papers/N4860.pdf>`_ or the `latest C++
-  draft <https://eel.is/c++draft/>`_. The latest `C2x draft
+  <https://isocpp.org/files/papers/N4860.pdf>`_ or the unofficial
+  `latest C++ draft <https://eel.is/c++draft/>`_. A `C2x draft
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf>`_ is
   also available, though the text has not yet been updated with the
   errata corrected by C++20.)
