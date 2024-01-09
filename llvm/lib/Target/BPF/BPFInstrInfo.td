@@ -728,9 +728,20 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
 // load 64-bit global addr into register
 def : Pat<(BPFWrapper tglobaladdr:$in), (LD_imm64 tglobaladdr:$in)>;
 
-// 0xffffFFFF doesn't fit into simm32, optimize common case
-def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),
-          (SRL_ri (SLL_ri (i64 GPR:$src), 32), 32)>;
+// 0xffffFFFF doesn't fit into simm32, optimize common case.
+// Use sequence 'rX <<= 32; rX >>= 32;' if 32-bits ops are not available.
+let Predicates = [BPFNoALU32] in {
+  def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),
+            (SRL_ri (SLL_ri (i64 GPR:$src), 32), 32)>;
+}
+// Use sequence 'wX = wX' if 32-bits ops are available.
+let Predicates = [BPFHasALU32] in {
+  def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),
+            (INSERT_SUBREG
+              (i64 (IMPLICIT_DEF)),
+              (MOV_rr_32 (i32 (EXTRACT_SUBREG GPR:$src, sub_32))),
+              sub_32)>;
+}
 
 // Calls
 def : Pat<(BPFcall tglobaladdr:$dst), (JAL tglobaladdr:$dst)>;
