@@ -428,9 +428,8 @@ PatternType CombineRuleOperandTypeChecker::inferImmediateType(
         continue;
 
       // Named operand with the same name, try to infer that.
-      if (PatternType InferTy =
-              inferNamedOperandType(IP, Op.getOperandName(), TECs,
-                                    /*IncludeSelf=*/true))
+      if (PatternType InferTy = inferNamedOperandType(IP, Op.getOperandName(),
+                                                      TECs, /*AllowSelf=*/true))
         return InferTy;
     }
   }
