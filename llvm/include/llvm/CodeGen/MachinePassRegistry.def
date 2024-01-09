@@ -34,6 +34,7 @@ MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 #endif
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis, ())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
+FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis, ())
 FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
                   (std::move(TM.getTargetIRAnalysis())))
 #undef FUNCTION_ANALYSIS
@@ -65,6 +66,7 @@ FUNCTION_PASS("safe-stack", SafeStackPass, (TM))
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
 FUNCTION_PASS("select-optimize", SelectOptimizePass, (TM))
 FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass, (TM))
+FUNCTION_PASS("stack-protector", StackProtectorPass, (TM))
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
@@ -134,7 +136,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
 DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
-DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MACHINE_MODULE_PASS
