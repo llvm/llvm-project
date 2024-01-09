@@ -51,6 +51,7 @@ FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass, (TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass, (TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
+FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, (TM))
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass, (TM))
 FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass, (TM))
@@ -133,7 +134,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
 DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
-DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 #undef DUMMY_FUNCTION_PASS
 
