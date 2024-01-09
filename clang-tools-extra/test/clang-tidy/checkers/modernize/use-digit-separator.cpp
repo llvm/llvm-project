@@ -524,3 +524,14 @@ double AssignmentPostfixScientificNotFormattedFloat2 = -1.2345678E+10f;
 double AssignmentPostfixScientificNotFormattedFloat4 = -1.2345678e-10F;
 // CHECK-MESSAGES: :[[@LINE-1]]:57: warning: unformatted representation of floating literal '1.2345678e-10F' [modernize-use-digit-separator]
 // CHECK-FIXES: {{^}}double AssignmentPostfixScientificNotFormattedFloat4 = -1.234'567'8e-10F;{{$}}
+
+
+// Macros
+
+#define NOT_FORMATTED_INTEGER 1234567
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: unformatted representation of integer literal '1234567' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234'567
+
+#define MINUS_NOT_FORMATTED_INTEGER -1234567
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of integer literal '1234567' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234'567

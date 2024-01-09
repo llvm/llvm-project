@@ -261,7 +261,7 @@ void UseDigitSeparatorCallbacks::MacroDefined(const Token &MacroNameTok,
   }
   for (const Token &T : MacroTokens) {
     if (!T.isLiteral()) {
-      return;
+      continue;
     }
 
     // Get original literal source text
@@ -279,7 +279,7 @@ void UseDigitSeparatorCallbacks::MacroDefined(const Token &MacroNameTok,
 
     if (OriginalLiteralString != FormatedLiteralString) {
       Check->diag(T.getLocation(),
-                  "unformatted representation of floating literal '%0'")
+                  "unformatted representation of integer literal '%0'")
           << OriginalLiteralString
           << FixItHint::CreateReplacement(T.getLocation(),
                                           FormatedLiteralString);
