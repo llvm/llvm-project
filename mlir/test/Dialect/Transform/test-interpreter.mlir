@@ -2384,8 +2384,7 @@ module @named_inclusion attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.sequence failures(propagate) {
-  ^bb0(%arg0: !transform.any_op):
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
     // expected-error @below {{result #0, associated with 2 payload objects, expected 1}}
     transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.yield
@@ -2400,8 +2399,7 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.sequence failures(propagate) {
-  ^bb0(%arg0: !transform.any_op):
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
     // expected-error @below {{unresolved external symbol @matcher}}
     transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.yield
@@ -2413,17 +2411,16 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  // expected-remark @below {{matched}}
-  transform.sequence failures(propagate) {
-  ^bb0(%arg0: !transform.any_op):
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
     // expected-remark @below {{matched}}
     %0 = transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-remark @below {{matched}}
     transform.test_print_remark_at_operand %0, "matched" : !transform.any_op
     transform.yield
   }
 
   transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
-    transform.match.operation_name %arg0 ["transform.sequence", "transform.collect_matching"] : !transform.any_op
+    transform.match.operation_name %arg0 ["transform.test_print_remark_at_operand", "transform.collect_matching"] : !transform.any_op
     transform.yield %arg0 : !transform.any_op
   }
 }
