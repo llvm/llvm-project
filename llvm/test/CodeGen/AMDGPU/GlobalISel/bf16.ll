@@ -9,6 +9,8 @@
 ; llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 | FileCheck %s -check-prefix=GFX11
 ; llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 | FileCheck %s -check-prefix=GFX11
 
+; TODO: Once all cases are working, merge with bf16.ll in parent directory.
+
 define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_load_store:
 ; GCN:       ; %bb.0:
