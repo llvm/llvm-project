@@ -485,8 +485,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     if (NumElts == Regs.size())
       BuildVec = B.buildBuildVector(BVType, Regs).getReg(0);
     else {
-      SmallVector<Register, 0> BVRegs;
-      BVRegs.reserve(NumElts);
+      SmallVector<Register, 0> BVRegs(NumElts);
 
       // Vector elements are packed in the inputs.
       // e.g. we have a <4 x s16> but 2 x s32 in regs.
@@ -507,8 +506,9 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
           BVRegs.push_back(B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0));
       }
 
-      // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces for a <3 x s16> vector. We should have less than EltPerReg extra items.
-      if(BVRegs.size() > NumElts) {
+      // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces
+      // for a <3 x s16> vector. We should have less than EltPerReg extra items.
+      if (BVRegs.size() > NumElts) {
         assert((BVRegs.size() - NumElts) < EltPerReg);
         BVRegs.truncate(NumElts);
       }
