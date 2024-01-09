@@ -140,6 +140,11 @@ def SuSecondsT : NamedType<"suseconds_t">;
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 
+def ActionType : NamedType<"ACTION">;
+def EntryType : NamedType<"ENTRY">;
+def EntryTypePtr : PtrType<EntryType>;
+def EntryTypePtrPtr : PtrType<EntryTypePtr>;
+
 class Macro<string name> {
   string Name = name;
 }

@@ -140,11 +140,11 @@ def main():
         # straightforward to adapt the code below to explore more combinations.
         # For these simple orderings, dim2lvl and lvl2dim are the same.
         levels = [
-            [st.DimLevelType.compressed_nu, st.DimLevelType.singleton],
-            [st.DimLevelType.dense, st.DimLevelType.dense],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.dense],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [st.LevelType.compressed_nu, st.LevelType.singleton],
+            [st.LevelType.dense, st.LevelType.dense],
+            [st.LevelType.dense, st.LevelType.compressed],
+            [st.LevelType.compressed, st.LevelType.dense],
+            [st.LevelType.compressed, st.LevelType.compressed],
         ]
         orderings = [
             ir.AffineMap.get_permutation([0, 1]),

@@ -849,14 +849,14 @@ std::string VariableNamer::createIndexName() {
     ContainerName = TheContainer->getName();
 
   size_t Len = ContainerName.size();
-  if (Len > 1 && ContainerName.endswith(Style == NS_UpperCase ? "S" : "s")) {
+  if (Len > 1 && ContainerName.ends_with(Style == NS_UpperCase ? "S" : "s")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 1));
     // E.g.: (auto thing : things)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
-  if (Len > 2 && ContainerName.endswith(Style == NS_UpperCase ? "S_" : "s_")) {
+  if (Len > 2 && ContainerName.ends_with(Style == NS_UpperCase ? "S_" : "s_")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 2));
     // E.g.: (auto thing : things_)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())

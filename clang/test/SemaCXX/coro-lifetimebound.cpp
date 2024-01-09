@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra -Wno-error=unreachable-code -Wno-unused
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra -Wno-error=unreachable-code -Wno-unused -Wno-c++23-lambda-attributes
 
 #include "Inputs/std-coroutine.h"
 
@@ -64,14 +64,8 @@ Co<int> bar_coro(const int &b, int c) {
       : bar_coro(0, 1); // expected-warning {{returning address of local temporary object}}
 }
 
-#define CORO_WRAPPER \
-  _Pragma("clang diagnostic push") \
-  _Pragma("clang diagnostic ignored \"-Wc++23-extensions\"") \
-  [[clang::coro_wrapper]] \
-  _Pragma("clang diagnostic pop")
-
 void lambdas() {
-  auto unsafe_lambda = [] CORO_WRAPPER (int b) {
+  auto unsafe_lambda = [] [[clang::coro_wrapper]] (int b) {
     return foo_coro(b); // expected-warning {{address of stack memory associated with parameter}}
   };
   auto coro_lambda = [] (const int&) -> Co<int> {
@@ -121,3 +115,18 @@ CoNoCRT<int> bar(int a) {
   co_return 1;
 }
 } // namespace not_a_crt
+
+// =============================================================================
+// Not lifetime bound coroutine wrappers: [[clang::coro_disable_lifetimebound]].
+// =============================================================================
+namespace disable_lifetimebound {
+Co<int> foo(int x) {  co_return x; }
+
+[[clang::coro_wrapper, clang::coro_disable_lifetimebound]] 
+Co<int> foo_wrapper(const int& x) { return foo(x); }
+
+[[clang::coro_wrapper]] Co<int> caller() {
+  // The call to foo_wrapper is wrapper is safe.
+  return foo_wrapper(1);
+}
+} // namespace disable_lifetimebound

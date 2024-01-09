@@ -13,7 +13,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <stdint.h>
-#include <vector>
 
 #define HEX8(v) llvm::format_hex(v, 4)
 #define HEX16(v) llvm::format_hex(v, 6)

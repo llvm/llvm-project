@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
-#include "omptargetplugin.h"
+
+#include "Shared/PluginAPI.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -194,10 +196,6 @@ int main(int argc, char **argv) {
   }
 
   delete[] recored_data;
-
-  // TODO: calling unregister lib causes plugin deinit error for nextgen
-  // plugins.
-  //__tgt_unregister_lib(&Desc);
 
   return 0;
 }

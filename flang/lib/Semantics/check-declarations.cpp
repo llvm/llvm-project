@@ -1357,6 +1357,9 @@ void CheckHelper::CheckSubprogram(
     if (auto msg{evaluate::CheckStatementFunction(
             symbol, *stmtFunction, context_.foldingContext())}) {
       SayWithDeclaration(symbol, std::move(*msg));
+    } else if (IsPointer(symbol)) {
+      SayWithDeclaration(symbol,
+          "A statement function must not have the POINTER attribute"_err_en_US);
     } else if (details.result().flags().test(Symbol::Flag::Implicit)) {
       // 15.6.4 p2 weird requirement
       if (const Symbol *

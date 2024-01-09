@@ -72,12 +72,14 @@ entry:
   ret void
 }
 
-; FIXME: This test violates constant bus restriction.
+; Make sure we do not violate constant bus restriction with 3 scalar inputs and simingly inlinable literal.
 
 define amdgpu_ps void @test_llvm_amdgcn_fdot2_bf16_bf16_sis(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16_sis:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    v_dot2_bf16_bf16 v2, s0, 0x10001, s1
+; GFX11-NEXT:    v_mov_b32_e32 v2, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dot2_bf16_bf16 v2, s0, 0x10001, v2
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

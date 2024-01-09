@@ -9,6 +9,7 @@
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -51,6 +52,21 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
   /// device-side async tokens cannot be materialized in nvvm. We just
   /// convert them to a dummy i32 type in order to easily drop them during
   /// conversion.
+  populateGpuMemorySpaceAttributeConversions(
+      llvmTypeConverter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+        case gpu::AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+        return 0;
+      });
   llvmTypeConverter.addConversion(
       [&](nvgpu::DeviceAsyncTokenType type) -> Type {
         return llvmTypeConverter.convertType(
@@ -964,7 +980,7 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
       loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero,
-      Value());
+      Value(), Value());
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());

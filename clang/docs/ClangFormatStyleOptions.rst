@@ -2046,6 +2046,21 @@ the configuration (without a prefix: ``Auto``).
       };
     }
 
+.. _BreakAdjacentStringLiterals:
+
+**BreakAdjacentStringLiterals** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <BreakAdjacentStringLiterals>`
+  Break between adjacent string literals.
+
+  .. code-block:: c++
+
+     true:
+     return "Code"
+            "\0\52\26\55\55\0"
+            "x013"
+            "\02\xBA";
+     false:
+     return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
@@ -4195,6 +4210,32 @@ the configuration (without a prefix: ``Auto``).
                  u = c;
              }]
      }
+
+.. _ObjCPropertyAttributeOrder:
+
+**ObjCPropertyAttributeOrder** (``List of Strings``) :versionbadge:`clang-format 18` :ref:`¶ <ObjCPropertyAttributeOrder>`
+  The order in which ObjC property attributes should appear.
+
+  Attributes in code will be sorted in the order specified. Any attributes
+  encountered that are not mentioned in this array will be sorted last, in
+  stable order. Comments between attributes will leave the attributes
+  untouched.
+
+  .. warning::
+
+   Using this option could lead to incorrect code formatting due to
+   clang-format's lack of complete semantic information. As such, extra
+   care should be taken to review code changes made by this option.
+
+  .. code-block:: yaml
+
+    ObjCPropertyAttributeOrder: [
+        class, direct,
+        atomic, nonatomic,
+        assign, retain, strong, copy, weak, unsafe_unretained,
+        readonly, readwrite, getter, setter,
+        nullable, nonnull, null_resettable, null_unspecified
+    ]
 
 .. _ObjCSpaceAfterProperty:
 

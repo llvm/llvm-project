@@ -36,6 +36,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -2382,12 +2383,6 @@ public:
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
 
-  bool isRVVType(unsigned ElementCount) const;
-
-  bool isRVVType() const;
-
-  bool isRVVType(unsigned Bitwidth, bool IsFloat, bool IsBFloat = false) const;
-
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
 
@@ -4229,6 +4224,8 @@ public:
     ExceptionSpecInfo() = default;
 
     ExceptionSpecInfo(ExceptionSpecificationType EST) : Type(EST) {}
+
+    void instantiate();
   };
 
   /// Extra information about a function prototype. ExtProtoInfo is not
@@ -7284,36 +7281,6 @@ inline bool Type::isOpenCLSpecificType() const {
          isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
 }
 
-inline bool Type::isRVVType() const {
-#define RVV_TYPE(Name, Id, SingletonId) \
-  isSpecificBuiltinType(BuiltinType::Id) ||
-  return
-#include "clang/Basic/RISCVVTypes.def"
-    false; // end of boolean or operation.
-}
-
-inline bool Type::isRVVType(unsigned ElementCount) const {
-  bool Ret = false;
-#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP, IsBF)                                            \
-  if (NumEls == ElementCount)                                                  \
-    Ret |= isSpecificBuiltinType(BuiltinType::Id);
-#include "clang/Basic/RISCVVTypes.def"
-  return Ret;
-}
-
-inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat,
-                            bool IsBFloat) const {
-  bool Ret = false;
-#define RVV_TYPE(Name, Id, SingletonId)
-#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP, IsBF)                                            \
-  if (ElBits == Bitwidth && IsFloat == IsFP && IsBFloat == IsBF)               \
-    Ret |= isSpecificBuiltinType(BuiltinType::Id);
-#include "clang/Basic/RISCVVTypes.def"
-  return Ret;
-}
-
 inline bool Type::isTemplateTypeParmType() const {
   return isa<TemplateTypeParmType>(CanonicalType);
 }
@@ -7524,7 +7491,7 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
 /// spaces into a diagnostic with <<.
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
                                              LangAS AS) {
-  PD.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
+  PD.AddTaggedVal(llvm::to_underlying(AS),
                   DiagnosticsEngine::ArgumentKind::ak_addrspace);
   return PD;
 }

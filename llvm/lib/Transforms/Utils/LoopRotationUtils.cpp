@@ -541,31 +541,31 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // duplication.
     using DbgIntrinsicHash =
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
-    auto makeHash = [](DbgVariableIntrinsic *D) -> DbgIntrinsicHash {
+    auto makeHash = [](auto *D) -> DbgIntrinsicHash {
       auto VarLocOps = D->location_ops();
       return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
                D->getVariable()},
               D->getExpression()};
     };
+
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
     for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I))
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         DbgIntrinsics.insert(makeHash(DII));
-      else
+        // Until RemoveDIs supports dbg.declares in DPValue format, we'll need
+        // to collect DPValues attached to any other debug intrinsics.
+        for (const DPValue &DPV : DII->getDbgValueRange())
+          DbgIntrinsics.insert(makeHash(&DPV));
+      } else {
         break;
+      }
     }
 
-    // Duplicate implementation for DPValues, the non-instruction format of
-    // debug-info records in RemoveDIs.
-    auto makeHashDPV = [](const DPValue &D) -> DbgIntrinsicHash {
-      auto VarLocOps = D.location_ops();
-      return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
-               D.getVariable()},
-              D.getExpression()};
-    };
-    for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader)))
-      for (const DPValue &DPV : I.getDbgValueRange())
-        DbgIntrinsics.insert(makeHashDPV(DPV));
+    // Build DPValue hashes for DPValues attached to the terminator, which isn't
+    // considered in the loop above.
+    for (const DPValue &DPV :
+         OrigPreheader->getTerminator()->getDbgValueRange())
+      DbgIntrinsics.insert(makeHash(&DPV));
 
     // Remember the local noalias scope declarations in the header. After the
     // rotation, they must be duplicated and the scope must be cloned. This
@@ -616,6 +616,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
               LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
           RemapDPValueRange(M, DbgValueRange, ValueMap,
                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+          // Erase anything we've seen before.
+          for (DPValue &DPV : make_early_inc_range(DbgValueRange))
+            if (DbgIntrinsics.count(makeHash(&DPV)))
+              DPV.eraseFromParent();
         }
 
         NextDbgInst = I->getDbgValueRange().begin();
@@ -633,13 +637,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInst);
-        // Erase anything we've seen before.
-        for (DPValue &DPV : make_early_inc_range(Range))
-          if (DbgIntrinsics.count(makeHashDPV(DPV)))
-            DPV.eraseFromParent();
         RemapDPValueRange(M, Range, ValueMap,
                           RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         NextDbgInst = std::nullopt;
+        // Erase anything we've seen before.
+        for (DPValue &DPV : make_early_inc_range(Range))
+          if (DbgIntrinsics.count(makeHash(&DPV)))
+            DPV.eraseFromParent();
       }
 
       // Eagerly remap the operands of the instruction.
@@ -704,12 +708,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // as U1'' and U1' scopes will not be compatible wrt to the local restrict
 
       // Clone the llvm.experimental.noalias.decl again for the NewHeader.
-      Instruction *NewHeaderInsertionPoint = &(*NewHeader->getFirstNonPHI());
+      BasicBlock::iterator NewHeaderInsertionPoint =
+          NewHeader->getFirstNonPHIIt();
       for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions) {
         LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
                           << *NAD << "\n");
         Instruction *NewNAD = NAD->clone();
-        NewNAD->insertBefore(NewHeaderInsertionPoint);
+        NewNAD->insertBefore(*NewHeader, NewHeaderInsertionPoint);
       }
 
       // Scopes must now be duplicated, once for OrigHeader and once for

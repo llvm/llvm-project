@@ -15,9 +15,8 @@ output (if the underlying baremetal enviroment supports QEMU semihosting).
 
 import argparse
 import os
-import platform
-import subprocess
 import sys
+import shutil
 
 
 def main():
@@ -34,8 +33,13 @@ def main():
     parser.add_argument("test_binary")
     parser.add_argument("test_args", nargs=argparse.ZERO_OR_MORE, default=[])
     args = parser.parse_args()
+
+    if not shutil.which(args.qemu):
+        sys.exit(f"Failed to find QEMU binary from --qemu value: '{args.qemu}'")
+
     if not os.path.exists(args.test_binary):
         sys.exit(f"Expected argument to be a test executable: '{args.test_binary}'")
+
     qemu_commandline = [
         args.qemu,
         "-chardev",

@@ -391,7 +391,7 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
         if (MI.getOpcode() != SPIRV::OpExtInst)
           continue;
         auto Set = MI.getOperand(2).getImm();
-        if (MAI.ExtInstSetMap.find(Set) == MAI.ExtInstSetMap.end())
+        if (!MAI.ExtInstSetMap.contains(Set))
           MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
       }
     }

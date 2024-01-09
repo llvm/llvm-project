@@ -177,6 +177,10 @@
         {
           "kind": "identifier",
           "spelling": "myInterfaceTypeProp"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -237,6 +241,10 @@
         {
           "kind": "identifier",
           "spelling": "myInterfaceInstanceProp"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -305,6 +313,10 @@
         {
           "kind": "identifier",
           "spelling": "myCategoryTypeProp"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -365,6 +377,10 @@
         {
           "kind": "identifier",
           "spelling": "myCategoryInstanceProp"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -483,6 +499,10 @@
         {
           "kind": "identifier",
           "spelling": "myProtocolTypeProp"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -543,6 +563,10 @@
         {
           "kind": "identifier",
           "spelling": "myProtocolInstanceProp"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

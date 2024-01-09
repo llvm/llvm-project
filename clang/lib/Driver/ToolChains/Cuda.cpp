@@ -78,6 +78,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_120;
   if (raw_version < 12020)
     return CudaVersion::CUDA_121;
+  if (raw_version < 12030)
+    return CudaVersion::CUDA_122;
+  if (raw_version < 12040)
+    return CudaVersion::CUDA_123;
   return CudaVersion::NEW;
 }
 
@@ -234,7 +238,7 @@ CudaInstallationDetector::CudaInstallationDetector(
         // Process all bitcode filenames that look like
         // libdevice.compute_XX.YY.bc
         const StringRef LibDeviceName = "libdevice.";
-        if (!(FileName.startswith(LibDeviceName) && FileName.endswith(".bc")))
+        if (!(FileName.starts_with(LibDeviceName) && FileName.ends_with(".bc")))
           continue;
         StringRef GpuArch = FileName.slice(
             LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
@@ -671,6 +675,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(123, 83);
+    CASE_CUDA_VERSION(122, 82);
     CASE_CUDA_VERSION(121, 81);
     CASE_CUDA_VERSION(120, 80);
     CASE_CUDA_VERSION(118, 78);

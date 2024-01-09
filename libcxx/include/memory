@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_MEMORY
 #define _LIBCPP_MEMORY
 
+// clang-format off
+
 /*
     memory synopsis
 
@@ -627,7 +629,7 @@ public:
     T& operator*() const noexcept;
     T* operator->() const noexcept;
     long use_count() const noexcept;
-    bool unique() const noexcept;
+    bool unique() const noexcept;  // deprected in C++17, removed in C++20
     explicit operator bool() const noexcept;
     template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
@@ -913,6 +915,8 @@ template<size_t N, class T>
 }  // std
 
 */
+
+// clang-format on
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>

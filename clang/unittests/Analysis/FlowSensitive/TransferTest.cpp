@@ -2635,6 +2635,55 @@ TEST(TransferTest, BindTemporary) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocation) {
+  std::string Code = R"(
+    struct A {
+      virtual ~A() = default;
+    };
+
+    void target() {
+      A();
+      (void)0; // [[p]]
+    }
+  )";
+  using ast_matchers::cxxBindTemporaryExpr;
+  using ast_matchers::cxxTemporaryObjectExpr;
+  using ast_matchers::exprWithCleanups;
+  using ast_matchers::has;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // The expresssion `A()` in the code above produces the following
+        // structure, consisting of three prvalues of record type.
+        // `Env.getResultObjectLocation()` should return the same location for
+        // all of these.
+        auto MatchResult = match(
+            traverse(TK_AsIs,
+                     exprWithCleanups(
+                         has(cxxBindTemporaryExpr(
+                                 has(cxxTemporaryObjectExpr().bind("toe")))
+                                 .bind("bte")))
+                         .bind("ewc")),
+            ASTCtx);
+        auto *TOE = selectFirst<CXXTemporaryObjectExpr>("toe", MatchResult);
+        ASSERT_NE(TOE, nullptr);
+        auto *EWC = selectFirst<ExprWithCleanups>("ewc", MatchResult);
+        ASSERT_NE(EWC, nullptr);
+        auto *BTE = selectFirst<CXXBindTemporaryExpr>("bte", MatchResult);
+        ASSERT_NE(BTE, nullptr);
+
+        RecordStorageLocation &Loc = Env.getResultObjectLocation(*TOE);
+        EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*EWC));
+        EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*BTE));
+      });
+}
+
 TEST(TransferTest, StaticCast) {
   std::string Code = R"(
     void target(int Foo) {

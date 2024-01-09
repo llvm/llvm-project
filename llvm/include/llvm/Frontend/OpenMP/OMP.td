@@ -2018,8 +2018,16 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   ];
 }
 def OMP_Workshare : Directive<"workshare"> {}
-def OMP_EndDo : Directive<"end do"> {}
-def OMP_EndDoSimd : Directive<"end do simd"> {}
+def OMP_EndDo : Directive<"end do"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_EndDoSimd : Directive<"end do simd"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
 def OMP_EndSections : Directive<"end sections"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>

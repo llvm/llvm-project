@@ -56,6 +56,9 @@ struct CustomDataLayoutSpec
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.custom_data_layout_spec";
+
   static CustomDataLayoutSpec get(MLIRContext *ctx,
                                   ArrayRef<DataLayoutEntryInterface> entries) {
     return Base::get(ctx, entries);
@@ -82,6 +85,8 @@ struct SingleQueryType
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SingleQueryType)
 
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.single_query";
 
   static SingleQueryType get(MLIRContext *ctx) { return Base::get(ctx); }
 
@@ -130,6 +135,8 @@ struct TypeNoLayout : public Type::TypeBase<TypeNoLayout, Type, TypeStorage> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TypeNoLayout)
 
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.no_layout";
 
   static TypeNoLayout get(MLIRContext *ctx) { return Base::get(ctx); }
 };

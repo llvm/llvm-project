@@ -86,7 +86,7 @@ protected:
     const std::optional<StateT> &MaybeState = BlockStates[Block->getBlockID()];
     assert(MaybeState.has_value());
     return *MaybeState;
-  };
+  }
 
   std::unique_ptr<ASTUnit> AST;
   std::unique_ptr<ControlFlowContext> CFCtx;
@@ -514,8 +514,17 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
 public:
-  explicit SpecialBoolAnalysis(ASTContext &Context)
-      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {}
+  explicit SpecialBoolAnalysis(ASTContext &Context, Environment &Env)
+      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {
+    Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
+        [](QualType Ty) -> llvm::StringMap<QualType> {
+          RecordDecl *RD = Ty->getAsRecordDecl();
+          if (RD == nullptr || RD->getIdentifier() == nullptr ||
+              RD->getName() != "SpecialBool")
+            return {};
+          return {{"is_set", RD->getASTContext().BoolTy}};
+        });
+  }
 
   static NoopLattice initialElement() { return {}; }
 
@@ -530,66 +539,17 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
                           getASTContext()))) {
-      cast<RecordValue>(Env.getValue(*E))
-          ->setProperty("is_set", Env.getBoolLiteralValue(false));
+      Env.setValue(Env.getResultObjectLocation(*E).getSyntheticField("is_set"),
+                   Env.getBoolLiteralValue(false));
     } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
                    "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
                                                        SpecialBoolRecordDecl))))
                                      .bind("call"),
                                  *S, getASTContext()))) {
-      auto &ObjectLoc =
-          *cast<RecordStorageLocation>(getImplicitObjectLocation(*E, Env));
-
-      refreshRecordValue(ObjectLoc, Env)
-          .setProperty("is_set", Env.getBoolLiteralValue(true));
+      if (RecordStorageLocation *ObjectLoc = getImplicitObjectLocation(*E, Env))
+        Env.setValue(ObjectLoc->getSyntheticField("is_set"),
+                     Env.getBoolLiteralValue(true));
     }
-  }
-
-  ComparisonResult compare(QualType Type, const Value &Val1,
-                           const Environment &Env1, const Value &Val2,
-                           const Environment &Env2) override {
-    const auto *Decl = Type->getAsCXXRecordDecl();
-    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
-        Decl->getName() != "SpecialBool")
-      return ComparisonResult::Unknown;
-
-    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return IsSet2 == nullptr ? ComparisonResult::Same
-                               : ComparisonResult::Different;
-
-    if (IsSet2 == nullptr)
-      return ComparisonResult::Different;
-
-    return Env1.proves(IsSet1->formula()) == Env2.proves(IsSet2->formula())
-               ? ComparisonResult::Same
-               : ComparisonResult::Different;
-  }
-
-  // Always returns `true` to accept the `MergedVal`.
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override {
-    const auto *Decl = Type->getAsCXXRecordDecl();
-    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
-        Decl->getName() != "SpecialBool")
-      return true;
-
-    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return true;
-
-    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
-    if (IsSet2 == nullptr)
-      return true;
-
-    auto &IsSet = MergedEnv.makeAtomicBoolValue();
-    MergedVal.setProperty("is_set", IsSet);
-    if (Env1.proves(IsSet1->formula()) && Env2.proves(IsSet2->formula()))
-      MergedEnv.assume(IsSet.formula());
-
-    return true;
   }
 };
 
@@ -602,7 +562,7 @@ protected:
             AnalysisInputs<SpecialBoolAnalysis>(
                 Code, ast_matchers::hasName("target"),
                 [](ASTContext &Context, Environment &Env) {
-                  return SpecialBoolAnalysis(Context);
+                  return SpecialBoolAnalysis(Context, Env);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
             /*VerifyResults=*/[&Match](const llvm::StringMap<
@@ -650,7 +610,9 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto GetFoo = [FooDecl](const Environment &Env) -> const Formula & {
-          return cast<BoolValue>(Env.getValue(*FooDecl)->getProperty("is_set"))
+          auto *Loc =
+              cast<RecordStorageLocation>(Env.getStorageLocation(*FooDecl));
+          return cast<BoolValue>(Env.getValue(Loc->getSyntheticField("is_set")))
               ->formula();
         };
 
@@ -661,11 +623,11 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
       });
 }
 
-class OptionalIntAnalysis final
-    : public DataflowAnalysis<OptionalIntAnalysis, NoopLattice> {
+class NullPointerAnalysis final
+    : public DataflowAnalysis<NullPointerAnalysis, NoopLattice> {
 public:
-  explicit OptionalIntAnalysis(ASTContext &Context)
-      : DataflowAnalysis<OptionalIntAnalysis, NoopLattice>(Context) {}
+  explicit NullPointerAnalysis(ASTContext &Context)
+      : DataflowAnalysis<NullPointerAnalysis, NoopLattice>(Context) {}
 
   static NoopLattice initialElement() { return {}; }
 
@@ -674,40 +636,37 @@ public:
     if (!CS)
       return;
     const Stmt *S = CS->getStmt();
-    auto OptionalIntRecordDecl = recordDecl(hasName("OptionalInt"));
-    auto HasOptionalIntType = hasType(OptionalIntRecordDecl);
+    const Expr *E = dyn_cast<Expr>(S);
+    if (!E)
+      return;
 
-    SmallVector<BoundNodes, 1> Matches = match(
-        stmt(anyOf(cxxConstructExpr(HasOptionalIntType).bind("construct"),
-                   cxxOperatorCallExpr(
-                       callee(cxxMethodDecl(ofClass(OptionalIntRecordDecl))))
-                       .bind("operator"))),
-        *S, getASTContext());
-    if (const auto *E = selectFirst<CXXConstructExpr>(
-            "construct", Matches)) {
-      cast<RecordValue>(Env.getValue(*E))
-          ->setProperty("has_value", Env.getBoolLiteralValue(false));
-    } else if (const auto *E =
-                   selectFirst<CXXOperatorCallExpr>("operator", Matches)) {
-      assert(E->getNumArgs() > 0);
-      auto *Object = E->getArg(0);
-      assert(Object != nullptr);
+    if (!E->getType()->isPointerType())
+      return;
 
-      refreshRecordValue(*Object, Env)
-          .setProperty("has_value", Env.getBoolLiteralValue(true));
+    // Make sure we have a `PointerValue` for `E`.
+    auto *PtrVal = cast_or_null<PointerValue>(Env.getValue(*E));
+    if (PtrVal == nullptr) {
+      PtrVal = cast<PointerValue>(Env.createValue(E->getType()));
+      Env.setValue(*E, *PtrVal);
     }
+
+    if (auto *Cast = dyn_cast<ImplicitCastExpr>(E);
+        Cast && Cast->getCastKind() == CK_NullToPointer)
+      PtrVal->setProperty("is_null", Env.getBoolLiteralValue(true));
+    else if (auto *Op = dyn_cast<UnaryOperator>(E);
+             Op && Op->getOpcode() == UO_AddrOf)
+      PtrVal->setProperty("is_null", Env.getBoolLiteralValue(false));
   }
 
   ComparisonResult compare(QualType Type, const Value &Val1,
                            const Environment &Env1, const Value &Val2,
                            const Environment &Env2) override {
-    // Nothing to say about a value that does not model an `OptionalInt`.
-    if (!Type->isRecordType() ||
-        Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
+    // Nothing to say about a value that is not a pointer.
+    if (!Type->isPointerType())
       return ComparisonResult::Unknown;
 
-    auto *Prop1 = Val1.getProperty("has_value");
-    auto *Prop2 = Val2.getProperty("has_value");
+    auto *Prop1 = Val1.getProperty("is_null");
+    auto *Prop2 = Val2.getProperty("is_null");
     assert(Prop1 != nullptr && Prop2 != nullptr);
     return areEquivalentValues(*Prop1, *Prop2) ? ComparisonResult::Same
                                                : ComparisonResult::Different;
@@ -716,23 +675,22 @@ public:
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,
              Environment &MergedEnv) override {
-    // Nothing to say about a value that does not model an `OptionalInt`.
-    if (!Type->isRecordType() ||
-        Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
+    // Nothing to say about a value that is not a pointer.
+    if (!Type->isPointerType())
       return false;
 
-    auto *HasValue1 = cast_or_null<BoolValue>(Val1.getProperty("has_value"));
-    if (HasValue1 == nullptr)
+    auto *IsNull1 = cast_or_null<BoolValue>(Val1.getProperty("is_null"));
+    if (IsNull1 == nullptr)
       return false;
 
-    auto *HasValue2 = cast_or_null<BoolValue>(Val2.getProperty("has_value"));
-    if (HasValue2 == nullptr)
+    auto *IsNull2 = cast_or_null<BoolValue>(Val2.getProperty("is_null"));
+    if (IsNull2 == nullptr)
       return false;
 
-    if (HasValue1 == HasValue2)
-      MergedVal.setProperty("has_value", *HasValue1);
+    if (IsNull1 == IsNull2)
+      MergedVal.setProperty("is_null", *IsNull1);
     else
-      MergedVal.setProperty("has_value", MergedEnv.makeTopBoolValue());
+      MergedVal.setProperty("is_null", MergedEnv.makeTopBoolValue());
     return true;
   }
 };
@@ -741,23 +699,14 @@ class WideningTest : public Test {
 protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match) {
-    tooling::FileContentMappings FilesContents;
-    FilesContents.push_back(
-        std::make_pair<std::string, std::string>("widening_test_defs.h", R"(
-      struct OptionalInt {
-        OptionalInt() = default;
-        OptionalInt& operator=(int);
-      };
-    )"));
     ASSERT_THAT_ERROR(
-        checkDataflow<OptionalIntAnalysis>(
-            AnalysisInputs<OptionalIntAnalysis>(
+        checkDataflow<NullPointerAnalysis>(
+            AnalysisInputs<NullPointerAnalysis>(
                 Code, ast_matchers::hasName("target"),
                 [](ASTContext &Context, Environment &Env) {
-                  return OptionalIntAnalysis(Context);
+                  return NullPointerAnalysis(Context);
                 })
-                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
-                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
+                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
             /*VerifyResults=*/[&Match](const llvm::StringMap<
                                            DataflowAnalysisState<NoopLattice>>
                                            &Results,
@@ -769,13 +718,12 @@ protected:
 
 TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
   std::string Code = R"(
-    #include "widening_test_defs.h"
-
     void target(bool Cond) {
-      OptionalInt Foo;
+      int *Foo = nullptr;
+      int i = 0;
       /*[[p1]]*/
       if (Cond) {
-        Foo = 1;
+        Foo = &i;
         /*[[p2]]*/
       }
       (void)0;
@@ -798,27 +746,27 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
           return Env.getValue(*FooDecl);
         };
 
-        EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
-                  &Env1.getBoolLiteralValue(false));
-        EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
-                  &Env2.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env1)->getProperty("is_null"),
+                  &Env1.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env2)->getProperty("is_null"),
+                  &Env2.getBoolLiteralValue(false));
         EXPECT_TRUE(
-            isa<TopBoolValue>(GetFooValue(Env3)->getProperty("has_value")));
+            isa<TopBoolValue>(GetFooValue(Env3)->getProperty("is_null")));
       });
 }
 
 TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
   std::string Code = R"(
-    #include "widening_test_defs.h"
-
     void target(bool Cond) {
-      OptionalInt Foo;
+      int *Foo = nullptr;
+      int i1 = 0;
+      int i2 = 0;
       /*[[p1]]*/
       if (Cond) {
-        Foo = 1;
+        Foo = &i1;
         /*[[p2]]*/
       } else {
-        Foo = 2;
+        Foo = &i2;
         /*[[p3]]*/
       }
       (void)0;
@@ -843,14 +791,14 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
           return Env.getValue(*FooDecl);
         };
 
-        EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
-                  &Env1.getBoolLiteralValue(false));
-        EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
-                  &Env2.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env3)->getProperty("has_value"),
-                  &Env3.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env4)->getProperty("has_value"),
-                  &Env4.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env1)->getProperty("is_null"),
+                  &Env1.getBoolLiteralValue(true));
+        EXPECT_EQ(GetFooValue(Env2)->getProperty("is_null"),
+                  &Env2.getBoolLiteralValue(false));
+        EXPECT_EQ(GetFooValue(Env3)->getProperty("is_null"),
+                  &Env3.getBoolLiteralValue(false));
+        EXPECT_EQ(GetFooValue(Env4)->getProperty("is_null"),
+                  &Env4.getBoolLiteralValue(false));
       });
 }
 
@@ -887,13 +835,13 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
 
 TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
   std::string Code = R"(
-    #include "widening_test_defs.h"
-
     void target(bool Cond) {
-      OptionalInt Foo;
-      Foo = 1;
+      int *Foo;
+      int i1 = 0;
+      int i2 = 0;
+      Foo = &i1;
       while (Cond) {
-        Foo = 2;
+        Foo = &i2;
       }
       (void)0;
       /*[[p]]*/
@@ -910,8 +858,8 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal = Env.getValue(*FooDecl);
-        EXPECT_EQ(FooVal->getProperty("has_value"),
-                  &Env.getBoolLiteralValue(true));
+        EXPECT_EQ(FooVal->getProperty("is_null"),
+                  &Env.getBoolLiteralValue(false));
       });
 }
 

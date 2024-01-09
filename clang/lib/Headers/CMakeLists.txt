@@ -139,6 +139,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  adcintrin.h
   adxintrin.h
   ammintrin.h
   amxcomplexintrin.h
@@ -387,6 +388,8 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
   # Generate arm_cde.h
   clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
+  # Generate arm_vector_types.h
+  clang_generate_header(-gen-arm-vector-type arm_neon.td arm_vector_types.h)
 
   # Add headers to target specific lists
   list(APPEND arm_common_generated_files
@@ -403,6 +406,7 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
     "${CMAKE_CURRENT_BINARY_DIR}/arm_sve.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_sme_draft_spec_subject_to_change.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_bf16.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/arm_vector_types.h"
     )
 endif()
 if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)

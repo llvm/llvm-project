@@ -220,6 +220,8 @@ BENIGN_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization wit
 BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
+ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_Full, "Enable use of range reduction for complex arithmetics.")
+
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 
 BENIGN_LANGOPT(AccessControl     , 1, 1, "C++ access control")
@@ -454,6 +456,7 @@ ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAd
 ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddressKeyKind::AKey,
              "Key used for return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, "Branch-target enforcement enabled")
+LANGOPT(BranchProtectionPAuthLR, 1, 0, "Use PC as a diversifier using PAuthLR NOP instructions.")
 
 LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 
