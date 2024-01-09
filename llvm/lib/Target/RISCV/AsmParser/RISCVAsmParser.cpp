@@ -1295,7 +1295,7 @@ unsigned RISCVAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
 
   for (unsigned I = 0; I < MCID.NumOperands; ++I) {
-    if (MCID.operands()[I].RegClass == RISCV::GPRPF64RegClassID) {
+    if (MCID.operands()[I].RegClass == RISCV::GPRPairRegClassID) {
       const auto &Op = Inst.getOperand(I);
       assert(Op.isReg());
 

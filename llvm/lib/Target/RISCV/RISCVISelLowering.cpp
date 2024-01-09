@@ -138,7 +138,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       addRegisterClass(MVT::f64, &RISCV::GPRRegClass);
     else
-      addRegisterClass(MVT::f64, &RISCV::GPRPF64RegClass);
+      addRegisterClass(MVT::f64, &RISCV::GPRPairRegClass);
   }
 
   static const MVT::SimpleValueType BoolVecVTs[] = {
@@ -16344,7 +16344,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   Register SrcReg = MI.getOperand(2).getReg();
 
   const TargetRegisterClass *SrcRC = MI.getOpcode() == RISCV::SplitF64Pseudo_INX
-                                         ? &RISCV::GPRPF64RegClass
+                                         ? &RISCV::GPRPairRegClass
                                          : &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
@@ -16383,7 +16383,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   Register HiReg = MI.getOperand(2).getReg();
 
   const TargetRegisterClass *DstRC =
-      MI.getOpcode() == RISCV::BuildPairF64Pseudo_INX ? &RISCV::GPRPF64RegClass
+      MI.getOpcode() == RISCV::BuildPairF64Pseudo_INX ? &RISCV::GPRPairRegClass
                                                       : &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
@@ -18751,7 +18751,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
         return std::make_pair(0U, &RISCV::GPRF32RegClass);
       if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &RISCV::GPRPF64RegClass);
+        return std::make_pair(0U, &RISCV::GPRPairRegClass);
       return std::make_pair(0U, &RISCV::GPRNoX0RegClass);
     case 'f':
       if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
@@ -18933,7 +18933,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // Subtarget into account.
   if (Res.second == &RISCV::GPRF16RegClass ||
       Res.second == &RISCV::GPRF32RegClass ||
-      Res.second == &RISCV::GPRPF64RegClass)
+      Res.second == &RISCV::GPRPairRegClass)
     return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
   return Res;
