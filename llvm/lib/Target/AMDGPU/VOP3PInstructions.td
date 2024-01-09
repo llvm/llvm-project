@@ -863,11 +863,11 @@ let isCommutable = 1, isReMaterializable = 1 in {
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
 
   let SubtargetPredicate = HasBF16PackedInsts in {
-    defm V_PK_ADD_BF16     : VOP3PInst<"v_pk_add_bf16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>>;
-    defm V_PK_MUL_BF16     : VOP3PInst<"v_pk_mul_bf16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>>;
-    defm V_PK_MIN_NUM_BF16 : VOP3PInst<"v_pk_min_num_bf16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>>;
-    defm V_PK_MAX_NUM_BF16 : VOP3PInst<"v_pk_max_num_bf16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>>;
-    defm V_PK_FMA_BF16     : VOP3PInst<"v_pk_fma_bf16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16, VOP3_PACKED>>;
+    defm V_PK_ADD_BF16     : VOP3PInst<"v_pk_add_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fadd>;
+    defm V_PK_MUL_BF16     : VOP3PInst<"v_pk_mul_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fmul>;
+    defm V_PK_MIN_NUM_BF16 : VOP3PInst<"v_pk_min_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fminnum_like>;
+    defm V_PK_MAX_NUM_BF16 : VOP3PInst<"v_pk_max_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fmaxnum_like>;
+    defm V_PK_FMA_BF16     : VOP3PInst<"v_pk_fma_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fma>;
   }
 } // End isCommutable = 1, isReMaterializable = 1
 
