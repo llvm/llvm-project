@@ -327,7 +327,7 @@ const int STACK_TRACE_TAG_VPTR = STACK_TRACE_TAG_FIELDS + 1;
 
 // Unwind the stack for fatal error, as the parameter `stack` is
 // empty without origins.
-#define GET_FATAL_STACK_TRACE_AGAIN_IF_EMPTY(STACK)                           \
+#define GET_FATAL_STACK_TRACE_IF_EMPTY(STACK)                                 \
   if (msan_inited && (STACK)->size == 0) {                                    \
     (STACK)->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
                     common_flags()->fast_unwind_on_fatal);                    \

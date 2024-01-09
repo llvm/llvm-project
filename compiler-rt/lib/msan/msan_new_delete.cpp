@@ -30,19 +30,19 @@ namespace std {
 
 
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
-#  define OPERATOR_NEW_BODY(nothrow)                \
-    GET_MALLOC_STACK_TRACE;                         \
-    void *res = msan_malloc(size, &stack);          \
-    if (!nothrow && UNLIKELY(!res)) {               \
-      GET_FATAL_STACK_TRACE_AGAIN_IF_EMPTY(&stack); \
-      ReportOutOfMemory(size, &stack);              \
-    }                                               \
+#  define OPERATOR_NEW_BODY(nothrow)          \
+    GET_MALLOC_STACK_TRACE;                   \
+    void *res = msan_malloc(size, &stack);    \
+    if (!nothrow && UNLIKELY(!res)) {         \
+      GET_FATAL_STACK_TRACE_IF_EMPTY(&stack); \
+      ReportOutOfMemory(size, &stack);        \
+    }                                         \
     return res
 #  define OPERATOR_NEW_BODY_ALIGN(nothrow)                \
     GET_MALLOC_STACK_TRACE;                               \
     void *res = msan_memalign((uptr)align, size, &stack); \
     if (!nothrow && UNLIKELY(!res)) {                     \
-      GET_FATAL_STACK_TRACE_AGAIN_IF_EMPTY(&stack);       \
+      GET_FATAL_STACK_TRACE_IF_EMPTY(&stack);             \
       ReportOutOfMemory(size, &stack);                    \
     }                                                     \
     return res;
