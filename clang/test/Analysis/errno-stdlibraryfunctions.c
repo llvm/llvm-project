@@ -89,3 +89,17 @@ void errno_getcwd(char *Buf, size_t Sz) {
     if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }
+
+void errno_fputc(int C, FILE *Fp) {
+  int Ret = fputc(C, Fp);
+  if (Ret == EOF) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no warning
+  } else if (C >= 0 && C <= 255) {
+    clang_analyzer_eval(Ret == C);   // expected-warning{{TRUE}}
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+  } else {
+    clang_analyzer_eval(Ret != C);   // expected-warning{{TRUE}}
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}

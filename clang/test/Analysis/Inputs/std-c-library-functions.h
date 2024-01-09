@@ -37,6 +37,7 @@ int toascii(int);
 
 int getc(FILE *);
 int fgetc(FILE *);
+int fputc(int c, FILE *stream);
 int getchar(void);
 size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);

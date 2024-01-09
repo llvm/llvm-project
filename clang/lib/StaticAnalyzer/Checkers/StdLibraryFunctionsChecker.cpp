@@ -2277,6 +2277,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                 .Case({}, ErrnoMustBeChecked)
                                 .ArgConstraint(NotNull(ArgNo(0))));
 
+    // int fputc(int c, FILE *stream);
+    addToFunctionSummaryMap(
+        "fputc", Signature(ArgTypes{IntTy, FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case({ArgumentCondition(0, WithinRange, Range(0, UCharRangeMax)),
+                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(0, OutOfRange, Range(0, UCharRangeMax)),
+                   ReturnValueCondition(WithinRange, Range(0, UCharRangeMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(1))));
+
     // void clearerr(FILE *stream);
     addToFunctionSummaryMap(
         "clearerr", Signature(ArgTypes{FilePtrTy}, RetType{VoidTy}),
