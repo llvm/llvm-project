@@ -382,7 +382,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccnz .LBB7_2
 ; GCN-NEXT:  ; %bb.1: ; %bb1
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0 glc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 3
 ; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0

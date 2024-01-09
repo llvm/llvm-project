@@ -11,7 +11,7 @@ define amdgpu_cs void @test_sink_smem_offset_400(ptr addrspace(4) inreg %ptr, i3
 ; GFX67-NEXT:  .LBB0_1: ; %loop
 ; GFX67-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX67-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX67-NEXT:    s_load_dword s3, s[0:1], 0x64
+; GFX67-NEXT:    s_load_dword s3, s[0:1], 0x64 glc
 ; GFX67-NEXT:    s_add_i32 s2, s2, -1
 ; GFX67-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX67-NEXT:    s_cbranch_scc1 .LBB0_1
@@ -23,7 +23,7 @@ define amdgpu_cs void @test_sink_smem_offset_400(ptr addrspace(4) inreg %ptr, i3
 ; GFX89-NEXT:  .LBB0_1: ; %loop
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_load_dword s3, s[0:1], 0x190
+; GFX89-NEXT:    s_load_dword s3, s[0:1], 0x190 glc
 ; GFX89-NEXT:    s_add_i32 s2, s2, -1
 ; GFX89-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX89-NEXT:    s_cbranch_scc1 .LBB0_1
@@ -35,7 +35,7 @@ define amdgpu_cs void @test_sink_smem_offset_400(ptr addrspace(4) inreg %ptr, i3
 ; GFX12-NEXT:  .LBB0_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x190
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x190 th:TH_LOAD_RT_NT
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
@@ -65,7 +65,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000(ptr addrspace(4) inreg %ptr, i
 ; GFX6-NEXT:  .LBB1_1: ; %loop
 ; GFX6-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX6-NEXT:    s_load_dword s3, s[0:1], 0x0 glc
 ; GFX6-NEXT:    s_add_i32 s2, s2, -1
 ; GFX6-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX6-NEXT:    s_cbranch_scc1 .LBB1_1
@@ -77,7 +77,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000(ptr addrspace(4) inreg %ptr, i
 ; GFX7-NEXT:  .LBB1_1: ; %loop
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_load_dword s3, s[0:1], 0x3e8
+; GFX7-NEXT:    s_load_dword s3, s[0:1], 0x3e8 glc
 ; GFX7-NEXT:    s_add_i32 s2, s2, -1
 ; GFX7-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX7-NEXT:    s_cbranch_scc1 .LBB1_1
@@ -89,7 +89,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000(ptr addrspace(4) inreg %ptr, i
 ; GFX89-NEXT:  .LBB1_1: ; %loop
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_load_dword s3, s[0:1], 0xfa0
+; GFX89-NEXT:    s_load_dword s3, s[0:1], 0xfa0 glc
 ; GFX89-NEXT:    s_add_i32 s2, s2, -1
 ; GFX89-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX89-NEXT:    s_cbranch_scc1 .LBB1_1
@@ -101,7 +101,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000(ptr addrspace(4) inreg %ptr, i
 ; GFX12-NEXT:  .LBB1_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0xfa0
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0xfa0 th:TH_LOAD_RT_NT
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
@@ -131,7 +131,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000000(ptr addrspace(4) inreg %ptr
 ; GFX689-NEXT:  .LBB2_1: ; %loop
 ; GFX689-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX689-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX689-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX689-NEXT:    s_load_dword s3, s[0:1], 0x0 glc
 ; GFX689-NEXT:    s_add_i32 s2, s2, -1
 ; GFX689-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX689-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -143,7 +143,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000000(ptr addrspace(4) inreg %ptr
 ; GFX7-NEXT:  .LBB2_1: ; %loop
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_load_dword s3, s[0:1], 0xf4240
+; GFX7-NEXT:    s_load_dword s3, s[0:1], 0xf4240 glc
 ; GFX7-NEXT:    s_add_i32 s2, s2, -1
 ; GFX7-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX7-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -155,7 +155,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000000(ptr addrspace(4) inreg %ptr
 ; GFX12-NEXT:  .LBB2_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x3d0900
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x3d0900 th:TH_LOAD_RT_NT
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
@@ -185,7 +185,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000(ptr addrspace(4) inreg %pt
 ; GFX689-NEXT:  .LBB3_1: ; %loop
 ; GFX689-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX689-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX689-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX689-NEXT:    s_load_dword s3, s[0:1], 0x0 glc
 ; GFX689-NEXT:    s_add_i32 s2, s2, -1
 ; GFX689-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX689-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -197,7 +197,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000(ptr addrspace(4) inreg %pt
 ; GFX7-NEXT:  .LBB3_1: ; %loop
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_load_dword s3, s[0:1], 0x989680
+; GFX7-NEXT:    s_load_dword s3, s[0:1], 0x989680 glc
 ; GFX7-NEXT:    s_add_i32 s2, s2, -1
 ; GFX7-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX7-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -210,7 +210,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000(ptr addrspace(4) inreg %pt
 ; GFX12-NEXT:  .LBB3_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0 th:TH_LOAD_RT_NT
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
@@ -240,7 +240,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000000(ptr addrspace(4) inreg 
 ; GFX6789-NEXT:  .LBB4_1: ; %loop
 ; GFX6789-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX6789-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6789-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX6789-NEXT:    s_load_dword s3, s[0:1], 0x0 glc
 ; GFX6789-NEXT:    s_add_i32 s2, s2, -1
 ; GFX6789-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX6789-NEXT:    s_cbranch_scc1 .LBB4_1
@@ -256,7 +256,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000000(ptr addrspace(4) inreg 
 ; GFX12-NEXT:  .LBB4_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0 th:TH_LOAD_RT_NT
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
@@ -286,7 +286,7 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ; GFX678-NEXT:  .LBB5_1: ; %loop
 ; GFX678-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX678-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX678-NEXT:    s_load_dword s3, s[0:1], 0x0 glc
 ; GFX678-NEXT:    s_add_i32 s2, s2, -1
 ; GFX678-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX678-NEXT:    s_cbranch_scc1 .LBB5_1
@@ -298,7 +298,7 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ; GFX9-NEXT:  .LBB5_1: ; %loop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s3, s[0:1], -0x190
+; GFX9-NEXT:    s_load_dword s3, s[0:1], -0x190 glc
 ; GFX9-NEXT:    s_add_i32 s2, s2, -1
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB5_1
@@ -310,7 +310,7 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ; GFX12-NEXT:  .LBB5_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], -0x190
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], -0x190 th:TH_LOAD_RT_NT
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
