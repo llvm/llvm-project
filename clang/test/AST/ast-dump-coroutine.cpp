@@ -32,15 +32,38 @@ struct Task {
   std::coroutine_handle<promise_type> handle;
 };
 
-// Verify the implicit AST nodes for coroutines.
 Task test()  {
   co_await 1;
+// Writen souce code, verify no implicit bit for the co_await expr.
+// CHECK:        CompoundStmt {{.*}}
+// CHECK-NEXT:   | `-ExprWithCleanups {{.*}} 'int'
+// CHECK-NEXT:   |   `-CoawaitExpr {{.*}} 'int'{{$}}
+// CHECK-NEXT:   |     |-IntegerLiteral {{.*}} <col:12> 'int' 1
+// CHECK-NEXT:   |     |-MaterializeTemporaryExpr {{.*}} 'awaiter'
+// CHECK-NEXT:   |     | `-CXXMemberCallExpr {{.*}} 'awaiter'
+// CHECK-NEXT:   |     |   |-MemberExpr {{.*}} .await_transform
 }
+// Verify the implicit AST nodes for coroutines.
 // CHECK:        |-DeclStmt {{.*}}
 // CHECK-NEXT:   | `-VarDecl {{.*}} implicit used __promise
 // CHECK-NEXT:   |   `-CXXConstructExpr {{.*}}
 // CHECK-NEXT:   |-ExprWithCleanups {{.*}} 'void'
 // CHECK-NEXT:   | `-CoawaitExpr {{.*}} 'void' implicit
-//                 ...
+// CHECK-NEXT:       |-CXXMemberCallExpr  {{.*}} 'std::suspend_always'
+// CHECK-NEXT:       |   | `-MemberExpr {{.*}} .initial_suspend
+//                   ...
 // FIXME: the CoreturnStmt should be marked as implicit
-// CHECK: CoreturnStmt {{.*}} <col:6>
+// CHECK: CoreturnStmt {{.*}} <col:6>{{$}}
+
+Task test2()  {
+// Writen souce code, verify no implicit bit for the co_return expr.
+// CHECK:        CompoundStmt {{.*}}
+// CHECK-NEXT:   | `-CoreturnStmt {{.*}} <line:{{.*}}:{{.*}}>{{$}}
+  co_return;
+}
+// Verify the implicit AST nodes for coroutines.
+// CHECK:        |-DeclStmt {{.*}}
+// CHECK-NEXT:   | `-VarDecl {{.*}} implicit used __promise
+//               ...
+// FIXME: the CoreturnStmt should be marked as implicit
+// CHECK: CoreturnStmt {{.*}} <col:6>{{$}}
