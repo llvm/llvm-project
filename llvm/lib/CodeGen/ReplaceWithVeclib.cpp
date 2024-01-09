@@ -178,6 +178,11 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
     for (auto VFParam : OptInfo->Shape.Parameters) {
       if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
         continue;
+
+      // tryDemangleForVFABI must return valid ParamPos, otherwise it could be
+      // a bug in the VFABI parser.
+      assert(VFParam.ParamPos < OrigArgTypes.size() &&
+             "ParamPos has invalid range.");
       Type *OrigTy = OrigArgTypes[VFParam.ParamPos];
       if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
         LLVM_DEBUG(dbgs() << DEBUG_TYPE
