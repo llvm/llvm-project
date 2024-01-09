@@ -1,4 +1,4 @@
-//===-- CharSet.h - Utility class to convert between char sets ----*- C++ -*-=//
+//===-- CharSet.h - Characters set conversion class ---------------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,9 +35,9 @@ public:
 
   /// Converts a string.
   /// \param[in] Source source string
-  /// \param[in,out] Result container for converted string
+  /// \param[out] Result container for converted string
   /// \param[in] ShouldAutoFlush Append shift-back sequence after conversion
-  /// for multi-byte encodings iff true.
+  /// for stateful encodings if true.
   /// \return error code in case something went wrong
   ///
   /// The following error codes can occur, among others:
@@ -59,9 +59,9 @@ public:
   /// Restore the conversion to the original state.
   /// \return error code in case something went wrong
   ///
-  /// If the original character set or the destination character set
-  /// are multi-byte character sets, set the shift state to the initial
-  /// state. Otherwise this is a no-op.
+  /// If the destination character set is a stateful character set,
+  /// set the shift state to the initial state.
+  /// Otherwise this is a no-op.
   virtual std::error_code flush() const = 0;
 
   virtual std::error_code flush(SmallVectorImpl<char> &Result) const = 0;
@@ -80,7 +80,6 @@ enum class id {
 } // end namespace text_encoding
 
 /// Utility class to convert between different character set encodings.
-/// The class always supports converting between EBCDIC 1047 and Latin-1/UTF-8.
 class CharSetConverter {
   // details::CharSetConverterImplBase *Converter;
   std::unique_ptr<details::CharSetConverterImplBase> Converter;
@@ -121,31 +120,28 @@ public:
 
   /// Converts a string.
   /// \param[in] Source source string
-  /// \param[in,out] Result container for converted string
+  /// \param[out] Result container for converted string
   /// \param[in] ShouldAutoFlush Append shift-back sequence after conversion
-  /// for multi-byte encodings.
+  /// for stateful encodings.
   /// \return error code in case something went wrong
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush = true) const {
     return Converter->convert(Source, Result, ShouldAutoFlush);
   }
 
+  ErrorOr<std::string> convert(StringRef Source,
+                               bool ShouldAutoFlush = true) const {
+    SmallString<1> Result;
+    auto EC = Converter->convert(Source, Result, ShouldAutoFlush);
+    if (!EC)
+      return std::string(Result);
+    return EC;
+  }
+
   char convert(char SingleChar) const {
     SmallString<1> Result;
     Converter->convert(StringRef(&SingleChar, 1), Result, false);
     return Result[0];
-  }
-
-  /// Converts a string.
-  /// \param[in] Source source string
-  /// \param[in,out] Result container for converted string
-  /// \param[in] ShouldAutoFlush Append shift-back sequence after conversion
-  /// for multi-byte encodings iff true.
-  /// \return error code in case something went wrong
-  std::error_code convert(const std::string &Source,
-                          SmallVectorImpl<char> &Result,
-                          bool ShouldAutoFlush = true) const {
-    return convert(StringRef(Source), Result, ShouldAutoFlush);
   }
 
   std::error_code flush() const { return Converter->flush(); }

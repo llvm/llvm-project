@@ -1,4 +1,4 @@
-//===-- CharSet.cpp - Utility class to convert between char sets --*- C++ -*-=//
+//===-- CharSet.cpp - Characters sets conversion class ------------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,8 @@ using namespace llvm;
 
 // Normalize the charset name with the charset alias matching algorithm proposed
 // in https://www.unicode.org/reports/tr22/tr22-8.html#Charset_Alias_Matching.
-void normalizeCharSetName(StringRef CSName, SmallVectorImpl<char> &Normalized) {
+static void normalizeCharSetName(StringRef CSName,
+                                 SmallVectorImpl<char> &Normalized) {
   bool PrevDigit = false;
   for (auto Ch : CSName) {
     if (isAlnum(Ch)) {
@@ -49,13 +50,24 @@ void normalizeCharSetName(StringRef CSName, SmallVectorImpl<char> &Normalized) {
 std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
   SmallString<16> Normalized;
   normalizeCharSetName(CSName, Normalized);
-#define CSNAME(CS, STR)                                                        \
-  if (Normalized.equals(STR))                                                  \
-  return CS
-  CSNAME(text_encoding::id::UTF8, "utf8");
-  CSNAME(text_encoding::id::IBM1047, "ibm1047");
-#undef CSNAME
+  if (Normalized.equals("utf8"))
+    return text_encoding::id::UTF8;
+  if (Normalized.equals("ibm1047"))
+    return text_encoding::id::IBM1047;
   return std::nullopt;
+}
+
+void HandleOverflow(size_t &Capacity, char *&Output, size_t &OutputLength,
+                    SmallVectorImpl<char> &Result) {
+  // No space left in output buffer. Double the size of the underlying
+  // memory in the SmallVectorImpl, adjust pointer and length and continue
+  // the conversion.
+  Capacity = (Capacity < std::numeric_limits<size_t>::max() / 2)
+                 ? 2 * Capacity
+                 : std::numeric_limits<size_t>::max();
+  Result.resize_for_overwrite(Capacity);
+  Output = static_cast<char *>(Result.data());
+  OutputLength = Capacity;
 }
 
 namespace {
@@ -138,30 +150,11 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
                                              SmallVectorImpl<char> &Result,
                                              bool ShouldAutoFlush) const {
   // Setup the output. We directly write into the SmallVector.
+  Result.resize_for_overwrite(Source.size());
   size_t OutputLength, Capacity = Result.capacity();
   char *Output, *Out;
 
   UErrorCode EC = U_ZERO_ERROR;
-
-  auto HandleError = [&Capacity, &Output, &OutputLength,
-                      &Result](UErrorCode UEC) {
-    if (UEC == U_BUFFER_OVERFLOW_ERROR &&
-        Capacity < std::numeric_limits<size_t>::max()) {
-      // No space left in output buffer. Double the size of the underlying
-      // memory in the SmallVectorImpl, adjust pointer and length and continue
-      // the conversion.
-      Capacity = (Capacity < std::numeric_limits<size_t>::max() / 2)
-                     ? 2 * Capacity
-                     : std::numeric_limits<size_t>::max();
-      Result.resize_for_overwrite(Capacity);
-      Output = static_cast<char *>(Result.data());
-      OutputLength = Capacity;
-      return std::error_code();
-    } else {
-      // Some other error occured.
-      return std::error_code(errno, std::generic_category());
-    }
-  };
 
   do {
     EC = U_ZERO_ERROR;
@@ -176,10 +169,15 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
     ucnv_convertEx(ToConvDesc, FromConvDesc, &Output, Out + OutputLength,
                    &Input, In + InputLength, /*pivotStart=*/NULL,
                    /*pivotSource=*/NULL, /*pivotTarget=*/NULL,
-                   /*pivotLimit=*/NULL, /*reset=*/true, /*flush=*/true, &EC);
+                   /*pivotLimit=*/NULL, /*reset=*/true,
+                   /*flush=*/ShouldAutoFlush, &EC);
     if (U_FAILURE(EC)) {
-      if (auto error = HandleError(EC))
-        return error;
+      if (EC == U_BUFFER_OVERFLOW_ERROR &&
+          Capacity < std::numeric_limits<size_t>::max())
+        HandleOverflow(Capacity, Output, OutputLength, Result);
+      else
+        // Some other error occured.
+        return std::error_code(errno, std::generic_category());
     } else if (U_SUCCESS(EC))
       break;
   } while (U_FAILURE(EC));
@@ -215,8 +213,8 @@ std::error_code CharSetConverterIconv::convert(StringRef Source,
   size_t InputLength = Source.size();
   char *Input = InputLength ? const_cast<char *>(Source.data()) : nullptr;
   // Setup the output. We directly write into the SmallVector.
+  Result.resize_for_overwrite(Source.size());
   size_t Capacity = Result.capacity();
-  Result.resize_for_overwrite(Capacity);
   char *Output = InputLength ? static_cast<char *>(Result.data()) : nullptr;
   size_t OutputLength = Capacity;
 
@@ -227,16 +225,7 @@ std::error_code CharSetConverterIconv::convert(StringRef Source,
     if (Ret == static_cast<size_t>(-1)) {
       // An error occured. Check if we can gracefully handle it.
       if (errno == E2BIG && Capacity < std::numeric_limits<size_t>::max()) {
-        // No space left in output buffer. Double the size of the underlying
-        // memory in the SmallVectorImpl, adjust pointer and length and continue
-        // the conversion.
-        const size_t Used = Capacity - OutputLength;
-        Capacity = (Capacity < std::numeric_limits<size_t>::max() / 2)
-                       ? 2 * Capacity
-                       : std::numeric_limits<size_t>::max();
-        Result.resize_for_overwrite(Capacity);
-        Output = static_cast<char *>(Result.data()) + Used;
-        OutputLength = Capacity - Used;
+        HandleOverflow(Capacity, Output, OutputLength, Result);
         return std::error_code();
       } else {
         // Some other error occured.
@@ -276,48 +265,7 @@ std::error_code CharSetConverterIconv::flush() const {
 
 std::error_code
 CharSetConverterIconv::flush(SmallVectorImpl<char> &Result) const {
-  char *Output = Result.data();
-  size_t OutputLength = Result.capacity();
-  size_t Capacity = Result.capacity();
-  Result.resize_for_overwrite(Capacity);
-
-  // Handle errors returned from iconv().
-  auto HandleError = [&Capacity, &Output, &OutputLength, &Result](size_t Ret) {
-    if (Ret == static_cast<size_t>(-1)) {
-      // An error occured. Check if we can gracefully handle it.
-      if (errno == E2BIG && Capacity < std::numeric_limits<size_t>::max()) {
-        // No space left in output buffer. Increase the size of the underlying
-        // memory in the SmallVectorImpl by 2 bytes, adjust pointer and length
-        // and continue the conversion.
-        const size_t Used = Capacity - OutputLength;
-        Capacity = (Capacity < std::numeric_limits<size_t>::max() - 2)
-                       ? 2 + Capacity
-                       : std::numeric_limits<size_t>::max();
-        Result.resize_for_overwrite(Capacity);
-        Output = static_cast<char *>(Result.data()) + Used;
-        OutputLength = Capacity - Used;
-        return std::error_code();
-      } else {
-        // Some other error occured.
-        return std::error_code(errno, std::generic_category());
-      }
-    } else {
-      // A positive return value indicates that some characters were converted
-      // in a nonreversible way, that is, replaced with a SUB symbol. Returning
-      // an error in this case makes sure that both conversion routines behave
-      // in the same way.
-      return std::make_error_code(std::errc::illegal_byte_sequence);
-    }
-  };
-
-  size_t Ret;
-  while ((Ret = iconv(ConvDesc, nullptr, nullptr, &Output, &OutputLength)))
-    if (auto EC = HandleError(Ret))
-      return EC;
-
-  // Re-adjust size to actual size.
-  Result.resize(Capacity - OutputLength);
-  return std::error_code();
+  return convert(nullptr, Result);
 }
 
 #endif // HAVE_ICONV
