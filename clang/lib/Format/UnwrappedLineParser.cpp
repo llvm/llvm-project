@@ -2315,6 +2315,10 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
     if (Next->is(tok::greater))
       return false;
   }
+  if (const auto Kind = FormatTok->Tok.getKind();
+      tok::isLiteral(Kind) && !tok::isStringLiteral(Kind)) {
+    return false;
+  }
   parseSquare(/*LambdaIntroducer=*/true);
   return true;
 }
