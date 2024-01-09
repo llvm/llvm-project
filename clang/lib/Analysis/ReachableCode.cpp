@@ -17,6 +17,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
@@ -58,6 +59,45 @@ static bool isTrivialDoWhile(const CFGBlock *B, const Stmt *S) {
     }
   }
   return false;
+}
+
+// Check if the block starts with a coroutine statement and see if the given
+// unreachable 'S' is the substmt of the coroutine statement.
+//
+// We suppress the unreachable warning for cases where an unreachable code is
+// a substmt of the coroutine statement, becase removing it will change the
+// function semantic if this is the only coroutine statement of the coroutine.
+static bool isInCoroutineStmt(const CFGBlock *Block, const Stmt* S) {
+  // The coroutine statement, co_return, co_await, or co_yield.
+  const Stmt* CoroStmt = nullptr;
+  // Find the first coroutine statement in the block.
+  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
+       ++I)
+    if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+      const Stmt *S = CS->getStmt();
+      if (llvm::isa<CoreturnStmt>(S) || llvm::isa<CoroutineSuspendExpr>(S)) {
+        CoroStmt = S ;
+        break;
+      }
+    }
+  if (!CoroStmt)
+    return false;
+
+  struct Checker : RecursiveASTVisitor<Checker> {
+    const Stmt *StmtToCheck;
+    bool CoroutineSubStmt = false;
+    Checker(const Stmt *S) : StmtToCheck(S) {}
+    bool VisitStmt(const Stmt *S) {
+      if (S == StmtToCheck)
+        CoroutineSubStmt = true;
+      return true;
+    }
+    // The 'S' stmt captured in the CFG can be implicit.
+    bool shouldVisitImplicitCode() const { return true; }
+  };
+  Checker checker(S);
+  checker.TraverseStmt(const_cast<Stmt *>(CoroStmt));
+  return checker.CoroutineSubStmt;
 }
 
 static bool isBuiltinUnreachable(const Stmt *S) {
@@ -623,7 +663,7 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
   if (isa<BreakStmt>(S)) {
     UK = reachable_code::UK_Break;
   } else if (isTrivialDoWhile(B, S) || isBuiltinUnreachable(S) ||
-             isBuiltinAssumeFalse(B, S, C)) {
+             isBuiltinAssumeFalse(B, S, C) || isInCoroutineStmt(B, S)) {
     return;
   }
   else if (isDeadReturn(B, S)) {
