@@ -12,7 +12,7 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   SyntheticTypeNameBuilder.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinkerParallel
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker/Parallel
 
   DEPENDS
   intrinsics_gen
@@ -22,7 +22,7 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   BinaryFormat
   CodeGen
   DebugInfoDWARF
-  DWARFLinkerBase
+  DWARFLinker
   MC
   Object
   Support

@@ -1,11 +1,11 @@
-add_llvm_component_library(LLVMDWARFLinker
+add_llvm_component_library(LLVMDWARFLinkerClassic
   DWARFLinkerCompileUnit.cpp
   DWARFLinkerDeclContext.cpp
   DWARFLinker.cpp
   DWARFStreamer.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker/Classic
 
   DEPENDS
   intrinsics_gen
@@ -16,7 +16,7 @@ add_llvm_component_library(LLVMDWARFLinker
   CodeGen
   CodeGenTypes
   DebugInfoDWARF
-  DWARFLinkerBase
+  DWARFLinker
   MC
   Object
   Support
