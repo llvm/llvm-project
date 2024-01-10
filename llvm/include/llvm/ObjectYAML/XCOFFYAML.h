@@ -26,7 +26,7 @@ struct FileHeader {
   int32_t TimeStamp;
   llvm::yaml::Hex64 SymbolTableOffset;
   int32_t NumberOfSymTableEntries;
-  uint16_t AuxHeaderSize;
+  std::optional<uint16_t> AuxHeaderSize;
   llvm::yaml::Hex16 Flags;
 };
 
