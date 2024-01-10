@@ -1688,6 +1688,7 @@ private:
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
+  bool validateNeg(const MCInst &Inst, int OpName);
   bool validateDPP(const MCInst &Inst, const OperandVector &Operands);
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOPLiteral(const MCInst &Inst, const OperandVector &Operands);
@@ -4357,6 +4358,41 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, int OpName) {
+  assert(OpName == AMDGPU::OpName::neg_lo || OpName == AMDGPU::OpName::neg_hi);
+
+  const unsigned Opc = Inst.getOpcode();
+  uint64_t TSFlags = MII.get(Opc).TSFlags;
+
+  // v_dot4 fp8/bf8 neg_lo/neg_hi not allowed on src0 and src1 (allowed on src2)
+  if (!(TSFlags & SIInstrFlags::IsDOT))
+    return true;
+
+  int NegIdx = AMDGPU::getNamedOperandIdx(Opc, OpName);
+  if (NegIdx == -1)
+    return true;
+
+  unsigned Neg = Inst.getOperand(NegIdx).getImm();
+
+  // Instructions that have neg_lo or neg_hi operand but neg modifier is allowed
+  // on some src operands but not allowed on other.
+  // It is convenient that such instructions don't have src_modifiers operand
+  // for src operands that don't allow neg because they also don't allow opsel.
+
+  int SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
+                    AMDGPU::OpName::src1_modifiers,
+                    AMDGPU::OpName::src2_modifiers};
+
+  for (unsigned i = 0; i < 3; ++i) {
+    if (!AMDGPU::hasNamedOperand(Opc, SrcMods[i])) {
+      if (Neg & (1 << i))
+        return false;
+    }
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
                                   const OperandVector &Operands) {
   const unsigned Opc = Inst.getOpcode();
@@ -4832,6 +4868,16 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateOpSel(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyOpSel, Operands),
       "invalid op_sel operand");
+    return false;
+  }
+  if (!validateNeg(Inst, AMDGPU::OpName::neg_lo)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyNegLo, Operands),
+          "invalid neg_lo operand");
+    return false;
+  }
+  if (!validateNeg(Inst, AMDGPU::OpName::neg_hi)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyNegHi, Operands),
+          "invalid neg_hi operand");
     return false;
   }
   if (!validateDPP(Inst, Operands)) {

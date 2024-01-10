@@ -1260,14 +1260,19 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
   int NumOps = 0;
   int Ops[3];
 
-  for (int OpName : { AMDGPU::OpName::src0_modifiers,
-                      AMDGPU::OpName::src1_modifiers,
-                      AMDGPU::OpName::src2_modifiers }) {
-    int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
-    if (Idx == -1)
+  std::pair<int, int> MOps[] = {
+      {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src0},
+      {AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src1},
+      {AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::src2}};
+  int DefaultValue = (Mod == SISrcMods::OP_SEL_1);
+
+  for (auto [SrcMod, Src] : MOps) {
+    if (!AMDGPU::hasNamedOperand(Opc, Src))
       break;
 
-    Ops[NumOps++] = MI->getOperand(Idx).getImm();
+    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, SrcMod);
+    Ops[NumOps++] =
+        (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
   const bool HasDstSel =
