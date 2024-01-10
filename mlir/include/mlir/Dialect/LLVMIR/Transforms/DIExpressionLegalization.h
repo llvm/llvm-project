@@ -24,6 +24,13 @@ namespace LLVM {
 //===----------------------------------------------------------------------===//
 
 /// Adjacent DW_OP_LLVM_fragment should be merged into one.
+///
+/// E.g.
+///   #llvm.di_expression<[
+///     DW_OP_LLVM_fragment(32, 32), DW_OP_LLVM_fragment(32, 64)
+///   ]>
+/// =>
+///   #llvm.di_expression<[DW_OP_LLVM_fragment(64, 32)]>
 class MergeFragments : public DIExpressionRewriter::ExprRewritePattern {
 public:
   OpIterT match(OpIterRange operators) const override;
