@@ -175,7 +175,7 @@ protected:
   // Function object to maintain state while adding codegen IR passes.
   class AddIRPass {
   public:
-    AddIRPass(ModulePassManager &MPM, bool DebugPM) : MPM(MPM) {}
+    AddIRPass(ModulePassManager &MPM) : MPM(MPM) {}
     ~AddIRPass() {
       if (!FPM.isEmpty())
         MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -187,17 +187,16 @@ protected:
                     "Only module pass and function pass are supported.");
 
       // Add Function Pass
-      if constexpr (is_detected<is_function_pass_t, PassT>::value) {
+      if constexpr (is_detected<is_function_pass_t, PassT>::value)
         FPM.addPass(std::forward<PassT>(Pass));
-        return;
+      else {
+        // Add Module Pass
+        if (!FPM.isEmpty()) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+          FPM = FunctionPassManager();
+        }
+        MPM.addPass(std::forward<PassT>(Pass));
       }
-
-      // Add Module Pass
-      if (!FPM.isEmpty()) {
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        FPM = FunctionPassManager();
-      }
-      MPM.addPass(std::forward<PassT>(Pass));
     }
 
   private:
@@ -477,7 +476,7 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
     ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
-  AddIRPass addIRPass(MPM, Opt.DebugPM);
+  AddIRPass addIRPass(MPM);
   // `ProfileSummaryInfo` is always valid.
   addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
