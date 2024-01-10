@@ -11219,6 +11219,12 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+  // Heuristaclly tells if the function is promise::get_return_object().
+  static bool isGetReturnObject(const FunctionDecl *FD) {
+    return isa_and_nonnull<CXXMethodDecl>(FD) &&
+           FD->getDeclName().isIdentifier() &&
+           FD->getName().equals("get_return_object") && FD->param_empty();
+  }
 
   // As a clang extension, enforces that a non-coroutine function must be marked
   // with [[clang::coro_wrapper]] if it returns a type marked with

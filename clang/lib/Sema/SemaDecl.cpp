@@ -15846,8 +15846,7 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
   // Allow `get_return_object()`.
-  if (FD->getDeclName().isIdentifier() &&
-      FD->getName().equals("get_return_object") && FD->param_empty())
+  if (isGetReturnObject(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
