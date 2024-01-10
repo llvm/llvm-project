@@ -29,7 +29,7 @@ class PfmIssueCounter<string resource_name, string counter>
 }
 
 // Definition of a validation event. A validation event represents a specific
-// event that can be meaasured using performance counters that is interesting
+// event that can be measured using performance counters that is interesting
 // in regard to the snippet state.
 class ValidationEvent <int event_number> {
   int EventNumber = event_number;

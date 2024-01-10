@@ -111,8 +111,8 @@ struct ValidationCounterInfo {
   unsigned PfmCounterID;
 };
 
-bool CompareValidationCounterInfo(ValidationCounterInfo &LHS,
-                                  ValidationCounterInfo &RHS) {
+bool EventNumberLess(const ValidationCounterInfo &LHS,
+                     const ValidationCounterInfo &RHS) {
   return LHS.EventNumber < RHS.EventNumber;
 }
 
@@ -141,7 +141,7 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
            getPfmCounterId(ValidationCounter->getValueAsString("Counter"))});
     }
     std::sort(ValidationCounters.begin(), ValidationCounters.end(),
-              CompareValidationCounterInfo);
+              EventNumberLess);
     OS << "\nstatic const std::pair<ValidationEvent, const char*> " << Target
        << Def.getName() << "ValidationCounters[] = {\n";
     for (const ValidationCounterInfo &VCI : ValidationCounters) {
