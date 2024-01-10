@@ -276,7 +276,7 @@ define i1 @combine_setcc_eq0_conjunction_xor_or(ptr %a, ptr %b) {
   %xor2 = xor i64 %a.8, %b.8
   %or = or i64 %xor1, %xor2
   %cmp1 = icmp ne i64 %or, 0
-  %ext = zext i1 %cmp to i32
+  %ext = zext i1 %cmp1 to i32
   %cmp2 = icmp eq i32 %ext, 0
   ret i1 %cmp2
 }
@@ -301,7 +301,7 @@ define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
   %or = or i64 %xor1, %xor2
   %cmp = icmp ne i64 %or, 0
   %ext = zext i1 %cmp to i32
-  ret i1 %ext
+  ret i1 %cmp
 }
 
 ; Doesn't increase the number of instructions, where the LHS has multiple uses

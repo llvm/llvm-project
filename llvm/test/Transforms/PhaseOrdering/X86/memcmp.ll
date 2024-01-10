@@ -42,14 +42,14 @@ define i1 @length0_lt(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i32 @length2(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length2(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) #0
@@ -59,11 +59,13 @@ define i32 @length2(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length2_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length2_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i16 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) #0
   %c = icmp eq i32 %m, 0
@@ -73,12 +75,15 @@ define i1 @length2_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length2_lt(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length2_lt(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[TMP7]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) #0
@@ -89,12 +94,15 @@ define i1 @length2_lt(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length2_gt(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length2_gt(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP7]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) #0
@@ -105,7 +113,7 @@ define i1 @length2_gt(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length2_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length2_eq_const(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[TMP1]], 12849
 ; CHECK-NEXT:    ret i1 [[TMP2]]
@@ -118,7 +126,7 @@ define i1 @length2_eq_const(ptr %X) #0 {
 ; Function Attrs: nounwind
 define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length2_eq_nobuiltin_attr(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 2) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -131,16 +139,16 @@ define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i32 @length3(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length3(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  loadbb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
-; CHECK:       res_block:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i16 @llvm.bswap.i16(i16 [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i16 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i16 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; CHECK:       res_block:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i16 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 -1, i32 1
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
 ; CHECK:       loadbb1:
@@ -150,7 +158,7 @@ define i32 @length3(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP13:%.*]] = sub nsw i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br label [[ENDBLOCK]]
 ; CHECK:       endblock:
 ; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP13]], [[LOADBB1]] ], [ [[TMP6]], [[RES_BLOCK]] ]
@@ -163,19 +171,20 @@ define i32 @length3(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length3_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length3_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i16 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i16 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i8 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP8]] to i16
-; CHECK-NEXT:    [[TMP10:%.*]] = or i16 [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i16 [[TMP10]], 0
-; CHECK-NEXT:    ret i1 [[TMP11]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP7]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i16 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i16 [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i16 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[TMP12]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) #0
   %c = icmp ne i32 %m, 0
@@ -185,7 +194,7 @@ define i1 @length3_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i32 @length4(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length4(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
@@ -193,9 +202,9 @@ define i32 @length4(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[DOTNEG]], [[TMP7]]
-; CHECK-NEXT:    ret i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) #0
   ret i32 %m
@@ -204,7 +213,7 @@ define i32 @length4(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length4_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length4_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], [[TMP2]]
@@ -218,7 +227,7 @@ define i1 @length4_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length4_lt(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length4_lt(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
@@ -234,7 +243,7 @@ define i1 @length4_lt(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length4_gt(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length4_gt(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
@@ -250,10 +259,12 @@ define i1 @length4_gt(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length4_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length4_eq_const(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 875770417
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 875770417
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([65 x i8], ptr @.str, i32 0, i32 1), i64 4) #0
   %c = icmp eq i32 %m, 0
@@ -263,16 +274,16 @@ define i1 @length4_eq_const(ptr %X) #0 {
 ; Function Attrs: nounwind
 define i32 @length5(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length5(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  loadbb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
-; CHECK:       res_block:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; CHECK:       res_block:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 -1, i32 1
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
 ; CHECK:       loadbb1:
@@ -282,7 +293,7 @@ define i32 @length5(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP13:%.*]] = sub nsw i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br label [[ENDBLOCK]]
 ; CHECK:       endblock:
 ; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP13]], [[LOADBB1]] ], [ [[TMP6]], [[RES_BLOCK]] ]
@@ -295,19 +306,20 @@ define i32 @length5(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length5_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length5_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i8 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
-; CHECK-NEXT:    ret i1 [[TMP11]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP7]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[TMP12]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) #0
   %c = icmp ne i32 %m, 0
@@ -317,27 +329,31 @@ define i1 @length5_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length5_lt(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length5_lt(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  loadbb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
-; CHECK:       res_block:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; CHECK:       res_block:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 -1, i32 1
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
 ; CHECK:       loadbb1:
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[X]], i64 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[Y]], i64 4
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[X]], i64 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[Y]], i64 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i8 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP9]] to i32
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP10]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br label [[ENDBLOCK]]
 ; CHECK:       endblock:
-; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i1 [ [[TMP10]], [[LOADBB1]] ], [ [[TMP5]], [[RES_BLOCK]] ]
-; CHECK-NEXT:    ret i1 [[PHI_RES]]
+; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP13]], [[LOADBB1]] ], [ [[TMP6]], [[RES_BLOCK]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[PHI_RES]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) #0
   %c = icmp slt i32 %m, 0
@@ -347,17 +363,18 @@ define i1 @length5_lt(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length7_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length7_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Y]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    ret i1 [[TMP9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i32 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
+; CHECK-NEXT:    ret i1 [[TMP10]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 7) #0
   %c = icmp ne i32 %m, 0
@@ -367,7 +384,7 @@ define i1 @length7_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i32 @length8(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length8(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[TMP1]])
@@ -375,9 +392,9 @@ define i32 @length8(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[DOTNEG]], [[TMP7]]
-; CHECK-NEXT:    ret i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) #0
   ret i32 %m
@@ -386,11 +403,13 @@ define i32 @length8(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length8_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length8_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) #0
   %c = icmp eq i32 %m, 0
@@ -400,7 +419,7 @@ define i1 @length8_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length8_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length8_eq_const(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 3978425819141910832
 ; CHECK-NEXT:    ret i1 [[TMP2]]
@@ -413,19 +432,22 @@ define i1 @length8_eq_const(ptr %X) #0 {
 ; Function Attrs: nounwind
 define i1 @length9_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length9_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i8 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP10]], 0
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP13]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 9) #0
   %c = icmp eq i32 %m, 0
@@ -435,19 +457,22 @@ define i1 @length9_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length10_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length10_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i16 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i16 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP10]], 0
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i16 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP13]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 10) #0
   %c = icmp eq i32 %m, 0
@@ -457,17 +482,20 @@ define i1 @length10_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length11_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length11_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Y]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = and i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    ret i1 [[DOTNOT2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 11) #0
   %c = icmp eq i32 %m, 0
@@ -477,19 +505,20 @@ define i1 @length11_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length12_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length12_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[TMP10]], 0
-; CHECK-NEXT:    ret i1 [[TMP11]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[TMP12]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 12) #0
   %c = icmp ne i32 %m, 0
@@ -499,13 +528,13 @@ define i1 @length12_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i32 @length12(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length12(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  loadbb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP2]], [[LOADBB:%.*]] ], [ [[TMP13:%.*]], [[LOADBB1]] ]
@@ -522,7 +551,7 @@ define i32 @length12(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP10]])
 ; CHECK-NEXT:    [[TMP13]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP14]] = zext i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[ENDBLOCK]], label [[RES_BLOCK]]
 ; CHECK:       endblock:
 ; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP6]], [[RES_BLOCK]] ]
@@ -535,17 +564,20 @@ define i32 @length12(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length13_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length13_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 5
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Y]], i64 5
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 5
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 5
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = and i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    ret i1 [[DOTNOT2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 13) #0
   %c = icmp eq i32 %m, 0
@@ -555,17 +587,20 @@ define i1 @length13_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length14_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length14_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 6
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Y]], i64 6
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 6
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = and i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    ret i1 [[DOTNOT2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 14) #0
   %c = icmp eq i32 %m, 0
@@ -575,17 +610,20 @@ define i1 @length14_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length15_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @length15_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 7
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Y]], i64 7
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 7
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = and i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    ret i1 [[DOTNOT2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 15) #0
   %c = icmp eq i32 %m, 0
@@ -595,13 +633,13 @@ define i1 @length15_eq(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i32 @length16(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length16(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  loadbb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP2]], [[LOADBB:%.*]] ], [ [[TMP11:%.*]], [[LOADBB1]] ]
@@ -616,7 +654,7 @@ define i32 @length16(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP11]] = tail call i64 @llvm.bswap.i64(i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP12]] = tail call i64 @llvm.bswap.i64(i64 [[TMP10]])
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[ENDBLOCK]], label [[RES_BLOCK]]
 ; CHECK:       endblock:
 ; CHECK-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP6]], [[RES_BLOCK]] ]
@@ -629,7 +667,7 @@ define i32 @length16(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length16_eq(ptr %x, ptr %y) #0 {
 ; CHECK-LABEL: define i1 @length16_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i128 [[TMP1]], [[TMP2]]
@@ -643,10 +681,12 @@ define i1 @length16_eq(ptr %x, ptr %y) #0 {
 ; Function Attrs: nounwind
 define i1 @length16_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length16_eq_const(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i128 [[TMP1]], 70720121592765328381466889075544961328
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i128 [[TMP1]], 70720121592765328381466889075544961328
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 16) #0
   %c = icmp eq i32 %m, 0
@@ -657,7 +697,7 @@ define i1 @length16_eq_const(ptr %X) #0 {
 define i32 @length24(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length24(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(24) [[X]], ptr noundef nonnull dereferenceable(24) [[Y]], i64 24) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(24) [[X]], ptr noundef nonnull dereferenceable(24) [[Y]], i64 24) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 24) #0
@@ -667,19 +707,22 @@ define i32 @length24(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length24_eq(ptr %x, ptr %y) #0 {
 ; CHECK-LABEL: define i1 @length24_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i128 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i128 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i64 [[TMP8]] to i128
-; CHECK-NEXT:    [[TMP10:%.*]] = or i128 [[TMP3]], [[TMP9]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i128 [[TMP10]], 0
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i64 [[TMP6]] to i128
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i64 [[TMP7]] to i128
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i128 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i128 [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i128 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP13]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 24) #0
   %cmp = icmp eq i32 %call, 0
@@ -689,13 +732,13 @@ define i1 @length24_eq(ptr %x, ptr %y) #0 {
 ; Function Attrs: nounwind
 define i1 @length24_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length24_eq_const(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i128 [[TMP1]], 70720121592765328381466889075544961328
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 3689065127958034230
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i64 [[TMP5]] to i128
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i64 [[TMP4]] to i128
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i128 [[TMP5]], 3689065127958034230
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i128 [[TMP2]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i128 [[TMP7]], 0
 ; CHECK-NEXT:    ret i1 [[TMP8]]
@@ -709,7 +752,7 @@ define i1 @length24_eq_const(ptr %X) #0 {
 define i32 @length32(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length32(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(32) [[X]], ptr noundef nonnull dereferenceable(32) [[Y]], i64 32) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(32) [[X]], ptr noundef nonnull dereferenceable(32) [[Y]], i64 32) #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 32) #0
@@ -719,17 +762,20 @@ define i32 @length32(ptr %X, ptr %Y) #0 {
 ; Function Attrs: nounwind
 define i1 @length32_eq(ptr %x, ptr %y) #0 {
 ; CHECK-LABEL: define i1 @length32_eq(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 16
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Y]], i64 16
-; CHECK-NEXT:    [[TMP5:%.*]] = load i128, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Y]], i64 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i128, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i128 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = and i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    ret i1 [[DOTNOT2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i128 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i128 [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i128 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 32) #0
   %cmp = icmp eq i32 %call, 0
@@ -739,14 +785,15 @@ define i1 @length32_eq(ptr %x, ptr %y) #0 {
 ; Function Attrs: nounwind
 define i1 @length32_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length32_eq_const(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[X]], i64 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i128 [[TMP1]], 70720121592765328381466889075544961328
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i128 [[TMP3]], 65382562593882267225249597816672106294
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    ret i1 [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i128 [[TMP1]], 70720121592765328381466889075544961328
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i128 [[TMP4]], 65382562593882267225249597816672106294
+; CHECK-NEXT:    [[TMP6:%.*]] = or i128 [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    ret i1 [[TMP7]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 32) #0
   %c = icmp ne i32 %m, 0
@@ -757,7 +804,7 @@ define i1 @length32_eq_const(ptr %X) #0 {
 define i32 @length64(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @length64(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(64) [[X]], ptr noundef nonnull dereferenceable(64) [[Y]], i64 64) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(64) [[X]], ptr noundef nonnull dereferenceable(64) [[Y]], i64 64) #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 64) #0
@@ -768,7 +815,7 @@ define i32 @length64(ptr %X, ptr %Y) #0 {
 define i1 @length64_eq(ptr %x, ptr %y) #0 {
 ; CHECK-LABEL: define i1 @length64_eq(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(64) [[X]], ptr noundef nonnull dereferenceable(64) [[Y]], i64 64) #[[ATTR5]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(64) [[X]], ptr noundef nonnull dereferenceable(64) [[Y]], i64 64) #[[ATTR2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -781,7 +828,7 @@ define i1 @length64_eq(ptr %x, ptr %y) #0 {
 define i1 @length64_eq_const(ptr %X) #0 {
 ; CHECK-LABEL: define i1 @length64_eq_const(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(64) [[X]], ptr noundef nonnull dereferenceable(64) @.str, i64 64) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(64) [[X]], ptr noundef nonnull dereferenceable(64) @.str, i64 64) #[[ATTR2]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -794,7 +841,7 @@ define i1 @length64_eq_const(ptr %X) #0 {
 define i32 @huge_length(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i32 @huge_length(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(9223372036854775807) [[X]], ptr noundef nonnull dereferenceable(9223372036854775807) [[Y]], i64 9223372036854775807) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(9223372036854775807) [[X]], ptr noundef nonnull dereferenceable(9223372036854775807) [[Y]], i64 9223372036854775807) #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 9223372036854775807) #0
@@ -805,7 +852,7 @@ define i32 @huge_length(ptr %X, ptr %Y) #0 {
 define i1 @huge_length_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @huge_length_eq(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(9223372036854775807) [[X]], ptr noundef nonnull dereferenceable(9223372036854775807) [[Y]], i64 9223372036854775807) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(9223372036854775807) [[X]], ptr noundef nonnull dereferenceable(9223372036854775807) [[Y]], i64 9223372036854775807) #[[ATTR2]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -818,7 +865,7 @@ define i1 @huge_length_eq(ptr %X, ptr %Y) #0 {
 define i32 @nonconst_length(ptr %X, ptr %Y, i64 %size) #0 {
 ; CHECK-LABEL: define i32 @nonconst_length(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]], i64 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 [[SIZE]]) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 [[SIZE]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 %size) #0
@@ -829,7 +876,7 @@ define i32 @nonconst_length(ptr %X, ptr %Y, i64 %size) #0 {
 define i1 @nonconst_length_eq(ptr %X, ptr %Y, i64 %size) #0 {
 ; CHECK-LABEL: define i1 @nonconst_length_eq(
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]], i64 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 [[SIZE]]) #[[ATTR5]]
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 [[SIZE]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -841,11 +888,13 @@ define i1 @nonconst_length_eq(ptr %X, ptr %Y, i64 %size) #0 {
 ; Function Attrs: nounwind
 define i1 @bcmp_length2(ptr %X, ptr %Y) #0 {
 ; CHECK-LABEL: define i1 @bcmp_length2(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i16 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %m = tail call i32 @bcmp(ptr %X, ptr %Y, i64 2) #0
   %c = icmp eq i32 %m, 0
