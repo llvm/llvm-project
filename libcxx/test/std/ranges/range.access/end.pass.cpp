@@ -197,7 +197,7 @@ static_assert(!std::is_invocable_v<RangeEndT, EndFunction &&>);
 
 static_assert( std::is_invocable_v<RangeEndT,  EndFunction const&>);
 static_assert(!std::is_invocable_v<RangeEndT,  EndFunction &&>);
-static_assert( std::is_invocable_v<RangeEndT,  EndFunction &>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+static_assert(std::is_invocable_v<RangeEndT,  EndFunction &>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeCEndT, EndFunction const&>);
 static_assert( std::is_invocable_v<RangeCEndT, EndFunction &>);
 

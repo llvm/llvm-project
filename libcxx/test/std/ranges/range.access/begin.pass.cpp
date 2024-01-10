@@ -196,7 +196,7 @@ struct BeginFunction {
 };
 static_assert( std::is_invocable_v<RangeBeginT,  BeginFunction const&>);
 static_assert(!std::is_invocable_v<RangeBeginT,  BeginFunction &&>);
-static_assert( std::is_invocable_v<RangeBeginT,  BeginFunction &>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
+static_assert(std::is_invocable_v<RangeBeginT,  BeginFunction &>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeCBeginT, BeginFunction const&>);
 static_assert( std::is_invocable_v<RangeCBeginT, BeginFunction &>);
 
