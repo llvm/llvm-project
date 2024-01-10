@@ -145,8 +145,10 @@ public:
   virtual void genInit(OpBuilder &, Location, const SparseIterator *) = 0;
 
   // Return a pair of values for *upper*, *lower* bound respectively.
-  virtual std::pair<Value, Value> genForCond(OpBuilder &, Location) {
-    llvm_unreachable("Unsupported");
+  virtual std::pair<Value, Value> genForCond(OpBuilder &b, Location l) {
+    assert(randomAccessible());
+    // Random-access iterator is traversed by coordinate, i.e., [curCrd, UB).
+    return {deref(b, l), upperBound(b, l)};
   }
 
   virtual Value genNotEnd(OpBuilder &b, Location l) = 0;

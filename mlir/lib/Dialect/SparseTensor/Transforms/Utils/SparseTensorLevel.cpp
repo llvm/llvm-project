@@ -230,24 +230,24 @@ public:
 
   SmallVector<Value> serialize() const override {
     SmallVector<Value> ret;
-    if (randomAccessible())
+    ret.push_back(itPos);
+    if (randomAccessible()) {
+      // Loop high is implicit (defined by `upperBound()`) for random-access
+      // iterator, but we need to memorize posLo for linearization.
       ret.push_back(posLo);
-    else {
-      ret.push_back(itPos);
-      ret.push_back(loopHi);
+    } else {
+      ret.push_back(posHi);
     }
     return ret;
   };
 
   void deserialize(ValueRange vs) override {
-    if (randomAccessible()) {
-      assert(vs.size() == 1);
-      posLo = vs.front();
-    } else {
-      assert(vs.size() == 2);
-      seek(vs.front());
-      loopHi = vs.back();
-    }
+    assert(vs.size() == 2);
+    seek(vs.front());
+    if (randomAccessible())
+      posLo = vs.back();
+    else
+      posHi = vs.back();
   };
 
   ValuePair getCurPosition() const override { return {itPos, nullptr}; }
@@ -259,23 +259,28 @@ public:
     if (parent)
       std::tie(pos, hi) = parent->getCurPosition();
 
-    std::tie(posLo, loopHi) = stl.peekRangeAt(b, l, pos, hi);
+    std::tie(posLo, posHi) = stl.peekRangeAt(b, l, pos, hi);
     // Seek to the lowest position.
     seek(posLo);
   }
 
   ValuePair genForCond(OpBuilder &b, Location l) override {
-    assert(iteratableByFor());
-    return std::make_pair(getLoopLo(b, l), loopHi);
+    if (randomAccessible())
+      return {deref(b, l), upperBound(b, l)};
+    return std::make_pair(getLoopLo(b, l), posHi);
   }
 
   Value genNotEnd(OpBuilder &b, Location l) override {
     // We used the first level bound as the bound the collapsed set of levels.
-    return CMPI(ult, itPos, loopHi);
+    return CMPI(ult, itPos, posHi);
   }
 
   Value deref(OpBuilder &b, Location l) override {
-    updateCrd(stl.peekCrdAt(b, l, itPos));
+    if (randomAccessible()) {
+      updateCrd(SUBI(itPos, posLo));
+    } else {
+      updateCrd(stl.peekCrdAt(b, l, itPos));
+    }
     return getCrd();
   };
 
@@ -300,7 +305,7 @@ public:
 
   Value itPos; // the position that represent the iterator
 
-  Value posLo, loopHi;
+  Value posLo, posHi;
   const SparseTensorLevel &stl;
 };
 
@@ -405,11 +410,7 @@ public:
 
   bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return randomAccessible(); };
-  Value upperBound(OpBuilder &b, Location l) const override {
-    Value maxWrapCrd = SUBI(wrap->upperBound(b, l), C_IDX(1));
-    Value maxCrd = fromWrapCrd(b, l, maxWrapCrd);
-    return ADDI(maxCrd, C_IDX(1));
-  };
+  Value upperBound(OpBuilder &b, Location l) const override { return size; };
 
   SmallVector<Value> serialize() const override { return wrap->serialize(); };
   void deserialize(ValueRange vs) override { wrap->deserialize(vs); };
@@ -422,17 +423,11 @@ public:
       // TODO: we can skip this when stride == 1 and offset == 0, we can also
       // use binary search here.
       forwardIf(b, l, genShouldFilter(b, l));
+    } else {
+      // Else, locate to the slice.offset, which is the first coordinate
+      // included by the slice.
+      wrap->locate(b, l, offset);
     }
-  }
-
-  ValuePair genForCond(OpBuilder &b, Location l) override {
-    assert(randomAccessible());
-
-    auto [lo, hi] = wrap->genForCond(b, l);
-    // if offset < lo, we use lo - offset as the new lower bound, else we use 0.
-    Value loInBound = CMPI(ult, offset, lo);
-    lo = SELECT(loInBound, SUBI(lo, offset), C_IDX(0));
-    return {lo, size};
   }
 
   Value genNotEnd(OpBuilder &b, Location l) override;
@@ -534,11 +529,6 @@ public:
 
   void genInit(OpBuilder &b, Location l, const SparseIterator *) override;
 
-  std::pair<Value, Value> genForCond(OpBuilder &b, Location l) override {
-    // Yield a dense range [curCrd, upperBound).
-    return {deref(b, l), upperBound(b, l)};
-  }
-
   void locate(OpBuilder &b, Location l, Value crd) override {
     Value absOff = crd;
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
@@ -622,22 +612,15 @@ public:
   void genInit(OpBuilder &b, Location l, const SparseIterator *) override {
     if (llvm::isa<NonEmptySubSectIterator>(parent)) {
       if (randomAccessible()) {
-        // A dense range can be inferred without caching.
+        // We continue from the parent's offset.
         wrap->deserialize(subSect.wrap->serialize());
-        // Locate the random accessible iterator to the offset of the
-        // subsection to iterate over [offset, offset + size) later.
-        wrap->locate(b, l, subSect.getAbsOff());
         return;
       }
+      // Else deserializing from the cached values.
       wrap->deserialize(subSect.loadItVals(b, l, C_IDX(0)));
     } else {
       llvm_unreachable("Not implemented");
     }
-  }
-
-  std::pair<Value, Value> genForCond(OpBuilder &b, Location l) override {
-    // Yield a dense range [curCrd, upperBound).
-    return {deref(b, l), upperBound(b, l)};
   }
 
   void locate(OpBuilder &b, Location l, Value crd) override {
