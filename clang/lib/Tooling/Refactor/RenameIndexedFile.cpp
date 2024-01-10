@@ -584,18 +584,19 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
         Occurrence.Kind == IndexedOccurrence::IndexedObjCMessageSend
             ? ObjCSymbolSelectorKind::MessageSend
             : ObjCSymbolSelectorKind::MethodDecl;
-    llvm::Expected<SmallVector<SourceLocation>> SelectorPieces =
-        findObjCSymbolSelectorPieces(Tokens, SM, Tok.location(),
-                                     Symbols[SymbolIndex].Name, Kind);
-    if (SelectorPieces) {
-      OldSymbolOccurrence Result(OldSymbolOccurrence::MatchingSymbol,
-                                 /*IsMacroExpansion=*/false, SymbolIndex,
-                                 std::move(*SelectorPieces));
-      Consumer.handleOccurrence(Result, SM, LangOpts);
-    } else {
+    SmallVector<SourceLocation> SelectorPieces;
+    llvm::Error Error = findObjCSymbolSelectorPieces(Tokens, SM, Tok.location(),
+                                                     Symbols[SymbolIndex].Name,
+                                                     Kind, SelectorPieces);
+    if (Error) {
       // Ignore the error. We simply skip over all selectors that didn't match.
-      consumeError(SelectorPieces.takeError());
+      consumeError(std::move(Error));
+      continue;
     }
+    OldSymbolOccurrence Result(OldSymbolOccurrence::MatchingSymbol,
+                               /*IsMacroExpansion=*/false, SymbolIndex,
+                               std::move(SelectorPieces));
+    Consumer.handleOccurrence(Result, SM, LangOpts);
   }
 }
 

@@ -1535,7 +1535,6 @@ TEST(RenameTest, PrepareRenameObjC) {
   for (Position Point : Input.points()) {
     auto Results = runPrepareRename(Server, Path, Point,
                                     /*NewName=*/std::nullopt, {});
-    // Verify that for multi-file rename, we only return main-file occurrences.
     ASSERT_TRUE(bool(Results)) << Results.takeError();
     ASSERT_EQ(Results->OldName, "performAction:with:");
   }
@@ -1947,8 +1946,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
 TEST(CrossFileRenameTests, ObjC) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-xobjective-c"};
-  // rename is runnning on all "^" points in FooH, and "[[]]" ranges are the
-  // expected rename occurrences.
+  // rename is runnning on all "^" points in FooH.
   struct Case {
     llvm::StringRef FooH;
     llvm::StringRef FooM;
