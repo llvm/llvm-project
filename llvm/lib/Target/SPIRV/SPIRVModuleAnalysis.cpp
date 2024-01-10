@@ -731,6 +731,8 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypePointer: {
+    if (!ST.isOpenCLEnv())
+      break;
     auto SC = MI.getOperand(1).getImm();
     Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand, SC,
                                ST);
@@ -739,7 +741,7 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
-    if (ST.isOpenCLEnv() && TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+    if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
         TypeDef->getOperand(1).getImm() == 16)
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
