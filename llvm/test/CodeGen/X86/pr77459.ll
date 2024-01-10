@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64 | FileCheck %s --check-prefixes=SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 -mattr=+avx512vbmi | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512,AVX512-V4
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 -mattr=+avx512vbmi | FileCheck %s --check-prefixes=AVX512,AVX512-VBMI
 
 define i4 @reverse_cmp_v4i1(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE2-LABEL: reverse_cmp_v4i1:
@@ -221,6 +221,28 @@ define i32 @reverse_cmp_v32i1(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; AVX512-V4-LABEL: reverse_cmp_v32i1:
+; AVX512-V4:       # %bb.0:
+; AVX512-V4-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
+; AVX512-V4-NEXT:    vpmovm2b %k0, %ymm0
+; AVX512-V4-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16]
+; AVX512-V4-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX512-V4-NEXT:    vpmovb2m %ymm0, %k0
+; AVX512-V4-NEXT:    kmovd %k0, %eax
+; AVX512-V4-NEXT:    vzeroupper
+; AVX512-V4-NEXT:    retq
+;
+; AVX512-VBMI-LABEL: reverse_cmp_v32i1:
+; AVX512-VBMI:       # %bb.0:
+; AVX512-VBMI-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
+; AVX512-VBMI-NEXT:    vpmovm2b %k0, %ymm0
+; AVX512-VBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512-VBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
+; AVX512-VBMI-NEXT:    vpmovb2m %ymm0, %k0
+; AVX512-VBMI-NEXT:    kmovd %k0, %eax
+; AVX512-VBMI-NEXT:    vzeroupper
+; AVX512-VBMI-NEXT:    retq
   %cmp = icmp eq <32 x i8> %a0, %a1
   %mask = bitcast <32 x i1> %cmp to i32
   %rev = tail call i32 @llvm.bitreverse.i32(i32 %mask)
@@ -306,6 +328,28 @@ define i64 @reverse_cmp_v64i1(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX2-NEXT:    orq %rcx, %rax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; AVX512-V4-LABEL: reverse_cmp_v64i1:
+; AVX512-V4:       # %bb.0:
+; AVX512-V4-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
+; AVX512-V4-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512-V4-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,47,46,45,44,43,42,41,40,39,38,37,36,35,34,33,32,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48]
+; AVX512-V4-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[6,7,4,5,2,3,0,1]
+; AVX512-V4-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512-V4-NEXT:    kmovq %k0, %rax
+; AVX512-V4-NEXT:    vzeroupper
+; AVX512-V4-NEXT:    retq
+;
+; AVX512-VBMI-LABEL: reverse_cmp_v64i1:
+; AVX512-VBMI:       # %bb.0:
+; AVX512-VBMI-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
+; AVX512-VBMI-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512-VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512-VBMI-NEXT:    vpermb %zmm0, %zmm1, %zmm0
+; AVX512-VBMI-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512-VBMI-NEXT:    kmovq %k0, %rax
+; AVX512-VBMI-NEXT:    vzeroupper
+; AVX512-VBMI-NEXT:    retq
   %cmp = icmp eq <64 x i8> %a0, %a1
   %mask = bitcast <64 x i1> %cmp to i64
   %rev = tail call i64 @llvm.bitreverse.i64(i64 %mask)
