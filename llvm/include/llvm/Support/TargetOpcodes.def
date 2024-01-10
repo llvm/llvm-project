@@ -173,7 +173,7 @@ HANDLE_TARGET_OPCODE(FAULTING_OP)
 /// Precedes a machine instruction to add patchability constraints.  An
 /// instruction after PATCHABLE_OP has to either have a minimum
 /// size or be preceded with a nop of that size.  The first operand is
-/// an immediate denoting the minimum size of the instruction.
+/// an immediate denoting the minimum size of the following instruction.
 HANDLE_TARGET_OPCODE(PATCHABLE_OP)
 
 /// This is a marker instruction which gets translated into a nop sled, useful
