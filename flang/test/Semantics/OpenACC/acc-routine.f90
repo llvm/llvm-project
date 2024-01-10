@@ -14,6 +14,16 @@ subroutine sub3()
   !$acc routine bind(sub1)
 end subroutine
 
+subroutine sub4()
+  !ERROR: Only the dim argument is allowed on the GANG clause on the ROUTINE directive
+  !$acc routine gang(num: 1)
+end subroutine
+
+subroutine sub5()
+  !ERROR: Only the dim argument is allowed on the GANG clause on the ROUTINE directive
+  !$acc routine gang(static: 1)
+end subroutine
+
 subroutine sub6()
   !ERROR: Clause GANG is not allowed if clause GANG appears on the ROUTINE directive
   !$acc routine gang gang
