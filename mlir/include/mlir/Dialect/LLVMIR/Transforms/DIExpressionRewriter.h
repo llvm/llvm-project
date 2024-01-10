@@ -35,7 +35,7 @@ public:
     using OpIterRange = llvm::iterator_range<OpIterT>;
 
     virtual ~ExprRewritePattern() = default;
-    /// Check whether a particular prefix of operators matches this pattern.
+    /// Checks whether a particular prefix of operators matches this pattern.
     /// The provided argument is guaranteed non-empty.
     /// Return the iterator after the last matched element.
     virtual OpIterT match(OpIterRange) const = 0;

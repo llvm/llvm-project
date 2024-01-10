@@ -53,7 +53,7 @@ void mlir::LLVM::legalizeDIExpressionsRecursively(Operation *op) {
   LLVM::DIExpressionRewriter rewriter;
   rewriter.addPattern(std::make_unique<MergeFragments>());
 
-  mlir::AttrTypeReplacer replacer;
+  AttrTypeReplacer replacer;
   replacer.addReplacement([&rewriter](LLVM::DIExpressionAttr expr) {
     return rewriter.simplify(expr);
   });
