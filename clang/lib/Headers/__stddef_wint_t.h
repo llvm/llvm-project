@@ -7,9 +7,10 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef _WINT_T
+/* Always define wint_t when modules are available. */
+#if !defined(_WINT_T) || __has_feature(modules)
+#if !__has_feature(modules)
 #define _WINT_T
-
+#endif
 typedef __WINT_TYPE__ wint_t;
-
 #endif

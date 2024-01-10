@@ -7,9 +7,10 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef _PTRDIFF_T
+#if !defined(_PTRDIFF_T) || __has_feature(modules)
+/* Always define ptrdiff_t when modules are available. */
+#if !__has_feature(modules)
 #define _PTRDIFF_T
-
+#endif
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
-
 #endif
