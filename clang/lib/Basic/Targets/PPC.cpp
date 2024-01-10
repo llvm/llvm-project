@@ -803,7 +803,7 @@ const TargetInfo::GCCRegAlias PPCTargetInfo::GCCRegAliases[] = {
     {{"fr22"}, "f22"}, {{"fr23"}, "f23"},   {{"fr24"}, "f24"},
     {{"fr25"}, "f25"}, {{"fr26"}, "f26"},   {{"fr27"}, "f27"},
     {{"fr28"}, "f28"}, {{"fr29"}, "f29"},   {{"fr30"}, "f30"},
-    {{"fr31"}, "f31"}, {{"cc"}, "cr0"},
+    {{"fr31"}, "f31"}, {{"cc"}, "cr0"},     {{"ca"},   "xer"},
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
