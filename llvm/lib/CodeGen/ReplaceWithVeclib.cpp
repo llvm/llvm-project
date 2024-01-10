@@ -108,7 +108,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // Compute the argument types of the corresponding scalar call and the scalar
   // function name. For calls, it additionally finds the function to replace
   // and checks that all vector operands match the previously found EC.
-  SmallVector<Type *, 8> ScalarArgTypes, OrigArgTypes;
+  SmallVector<Type *, 8> ScalarArgTypes;
   std::string ScalarName;
   Function *FuncToReplace = nullptr;
   auto *CI = dyn_cast<CallInst>(&I);
@@ -118,7 +118,6 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
     assert(IID != Intrinsic::not_intrinsic && "Not an intrinsic");
     for (auto Arg : enumerate(CI->args())) {
       auto *ArgTy = Arg.value()->getType();
-      OrigArgTypes.push_back(ArgTy);
       if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
         ScalarArgTypes.push_back(ArgTy);
       } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
@@ -181,9 +180,9 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
       // tryDemangleForVFABI must return valid ParamPos, otherwise it could be
       // a bug in the VFABI parser.
-      assert(VFParam.ParamPos < OrigArgTypes.size() &&
+      assert(VFParam.ParamPos < CI->arg_size() &&
              "ParamPos has invalid range.");
-      Type *OrigTy = OrigArgTypes[VFParam.ParamPos];
+      Type *OrigTy = CI->getArgOperand(VFParam.ParamPos)->getType();
       if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
         LLVM_DEBUG(dbgs() << DEBUG_TYPE
                           << ": Will not replace: wrong type at index: "
