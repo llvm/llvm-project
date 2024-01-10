@@ -705,6 +705,10 @@ Bug Fixes in This Version
 - Fix assertion crash due to failed scope restoring caused by too-early VarDecl
   invalidation by invalid initializer Expr.
   Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
+- Fix assertion failure when declaring a template friend function with
+  a constrained parameter in a template class that declares a class method
+  or lambda at different depth.
+  Fixes (`#75426 <https://github.com/llvm/llvm-project/issues/75426>`_)
 
 
 Bug Fixes to Compiler Builtins
