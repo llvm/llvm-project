@@ -102,13 +102,11 @@ private:
       return false;
 
     auto ArgSVal = Call.getArgSVal(0);
+    const auto *ArgExpr = Call.getArgExpr(0);
+    if (!ArgExpr)
+      return false;
 
-    // The argument is either a const reference or a right value reference.
-    // We need the type referred.
-    const auto *ArgType = ArgSVal.getType(C.getASTContext())
-                              .getTypePtr()
-                              ->getPointeeType()
-                              .getTypePtr();
+    const auto *ArgType = ArgExpr->getType().getTypePtr();
     if (!isStdAny(ArgType))
       return false;
 
