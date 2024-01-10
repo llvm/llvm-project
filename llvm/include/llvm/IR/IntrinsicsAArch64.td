@@ -3095,23 +3095,23 @@ let TargetPrefix = "aarch64" in {
                             [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [IntrNoMem]>;
 
-  class SME2_CVT_FtoI_VG2_Intrinsic
+  class SME2_CVT_ItoF_VG2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [IntrNoMem]>;
 
-  class SME2_CVT_ItoF_VG2_Intrinsic
+  class SME2_CVT_FtoI_VG2_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [llvm_anyvector_ty, LLVMMatchType<0>],
                             [IntrNoMem]>;
 
-  class SME2_CVT_FtoI_VG4_Intrinsic
+  class SME2_CVT_ItoF_VG4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>,
                              LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [IntrNoMem]>;
 
-  class SME2_CVT_ItoF_VG4_Intrinsic
+  class SME2_CVT_FtoI_VG4_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>,
                              LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
